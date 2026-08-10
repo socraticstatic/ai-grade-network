@@ -27,7 +27,7 @@ describe('SteerToSave', () => {
     const realized = beforeTotal - CC.egress().total;
     expect(realized).toBeGreaterThan(0);
     await waitFor(() =>
-      expect(screen.getByText(/captured this session/i)).toBeInTheDocument());
+      expect(screen.getByText(/captured so far/i)).toBeInTheDocument());
     // The headline shows exactly the realized delta (rounded, with thousands separators).
     expect(
       screen.getByText(new RegExp(`\\$${Math.round(realized).toLocaleString()}/mo captured`, 'i')),

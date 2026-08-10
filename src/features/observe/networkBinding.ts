@@ -270,8 +270,11 @@ function buildKpis(cc: CloudControl): Kpi[] {
       sub: `across ${rows.length} flows`,
     },
     { key: 'loss', label: 'Packet Loss', value: loss.toFixed(2), unit: '%' },
-    { key: 'egress', label: 'Egress', value: fmtDollars(eg.total), sub: '/mo' },
-    { key: 'under-control', label: 'Under Control', value: String(rk.pctUnderControl), unit: '%' },
+    // Row 50 of the phase-0 metric audit: "Egress" named traffic while the
+    // figure is spend. Row 51: "Under Control" was builder language for
+    // what the verdict line calls "on the AT&T fabric". Labels only.
+    { key: 'egress', label: 'Egress Spend', value: fmtDollars(eg.total), sub: '/mo' },
+    { key: 'under-control', label: 'On the AT&T Fabric', value: String(rk.pctUnderControl), unit: '%' },
     { key: 'savings', label: 'Savings', value: fmtDollars(eg.savings), sub: '/mo' },
   ];
 }

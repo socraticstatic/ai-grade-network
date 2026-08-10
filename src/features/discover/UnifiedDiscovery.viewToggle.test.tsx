@@ -90,7 +90,7 @@ describe('UnifiedDiscovery estate summary band', () => {
   it('estate-summary-band renders one row with the six headline figures', () => {
     renderUD();
     const band = screen.getByTestId('estate-summary-band');
-    for (const label of ['Sites', 'Active on-ramps', 'Clouds · Regions', 'Workloads', 'Attached', 'Exposed endpoints']) {
+    for (const label of ['Sites', 'Active on-ramps', 'Clouds · Regions', 'Workloads', 'Attached VPCs', 'Exposed endpoints']) {
       expect(within(band).getByText(label), `${label} missing from the summary band`).toBeInTheDocument();
     }
     // one row — not the three per-domain sections it replaces

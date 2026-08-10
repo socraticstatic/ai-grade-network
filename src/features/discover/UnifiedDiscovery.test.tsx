@@ -3,7 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { UnifiedDiscovery } from './UnifiedDiscovery';
 import { CC } from '../../engine';
-import { estateDomains } from './discoveryModel';
+import { estateDomains, type Cloud } from './discoveryModel';
 import { ID_RENAME_WARNING } from '../govern/groupLanguage';
 // No engine provider wrapper — the engine is a singleton read via useCloudControl.
 // A MemoryRouter is required because the embedded FlowBar reads the active route.
@@ -24,6 +24,20 @@ describe('UnifiedDiscovery drill-down tree', () => {
      say what each section is for". Deleting the `<div><h2>{d.label}</h2>
      <p>{d.blurb}</p></div>` block left every discover and tour test green,
      because the `estate-*` testids are satisfied by empty sections. */
+  /* Row 19 of the phase-0 metric audit: the flow-bar CTA used to read
+     "Attach {n} public workloads", which collides with AWS's own workload
+     count rendered one row below it. Naming what "public" means (still on
+     the public internet) removes the ambiguity — copy only, same count. */
+  it('the flow-bar CTA names the workloads as still on the public internet', () => {
+    renderUD();
+    const clouds = CC.clouds as Cloud[];
+    const publicWorkloads = clouds.filter(c => !c.attached).reduce((s, c) => s + c.workloads, 0);
+    expect(publicWorkloads, 'fixture must have an unattached cloud for this CTA to render').toBeGreaterThan(0);
+    expect(
+      screen.getByRole('link', { name: `Attach the ${publicWorkloads} workloads still on the public internet` }),
+    ).toBeInTheDocument();
+  });
+
   it('renders a heading and a blurb for each of the three domains', () => {
     renderUD();
     const domains = estateDomains(CC);

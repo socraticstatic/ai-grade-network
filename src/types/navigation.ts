@@ -14,6 +14,11 @@ export interface TabItem {
   label: string;
   icon?: ReactNode;
   count?: number;
+  /** Accessible name/title for the count badge, when a bare number would
+   *  inherit the tab's own label and read as the wrong noun (e.g. a
+   *  violations count on a "Policies" tab). Falls back to no explicit name
+   *  when omitted — copy-only addition, no visible text change. */
+  countLabel?: string;
   disabled?: boolean;
   category?: string;
 }

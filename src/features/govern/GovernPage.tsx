@@ -46,6 +46,10 @@ export function GovernPage() {
       label: 'Policies',
       icon: <AttIcon name="check-shield" className="h-4 w-4 mr-1.5" />,
       count: violations.length || undefined,
+      // Row 58 of the phase-0 metric audit: a bare count on a "Policies"
+      // tab inherits that noun and reads as a (wrong) policy count. The
+      // number is right; it needed its own accessible name.
+      countLabel: violations.length ? `${violations.length} open violations` : undefined,
     },
     // Groups sits beside Policies because a group is what a policy names —
     // the two are read together, and a group was until now invisible.

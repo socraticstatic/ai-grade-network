@@ -76,11 +76,14 @@ export function insightKpis(cc: CloudControl): InsightKpi[] {
           : 'all on governed paths',
       subTone: 'neutral',
     },
+    // Row 78 of the phase-0 metric audit: the card said "Cost" while the
+    // emphasis toggle above it (InsightsPage.tsx) labels the same figure
+    // "Spend", and "Savings $X (Y%)" never named what the saving beats.
     {
       key: 'cost',
-      title: 'Cost',
+      title: 'Spend',
       value: fmtUsd(totals.spendToday),
-      sub: savingsReal ? `Savings ${fmtUsd(totals.savings)} (${savingsPct}%)` : '/today',
+      sub: savingsReal ? `Saved ${fmtUsd(totals.savings)} vs external models (${savingsPct}%)` : '/today',
       subTone: savingsReal ? 'savings' : 'neutral',
     },
     {
@@ -104,8 +107,17 @@ export function insightKpis(cc: CloudControl): InsightKpi[] {
       value: String(denied.length),
       /* This estate's denials are all token-policy denials - recordDecision
          quotes the trace's own DENIED sentence. No other denial kind exists,
-         so no other kind is claimed. */
-      sub: denied.length === 1 ? '1 policy denial' : `${denied.length} policy denials`,
+         so no other kind is claimed.
+         Row 81 of the phase-0 metric audit: the zero case read "Blocked
+         requests · 0" beside "0 policy denials" — the same zero stated
+         twice. The zero branch now reads as a sentence; non-zero counts are
+         unchanged. */
+      sub:
+        denied.length === 0
+          ? 'no request denied by policy today'
+          : denied.length === 1
+            ? '1 policy denial'
+            : `${denied.length} policy denials`,
       subTone: 'neutral',
     },
   ];

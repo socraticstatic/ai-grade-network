@@ -9,7 +9,10 @@ export function AssessmentFindingsWidget(_props: LayerWidgetProps) {
     return [
       { label: 'Recoverable', value: `$${Math.round(r.recoverableMo).toLocaleString()}/mo` },
       { label: 'Security events', value: String(r.securityEvents) },
-      { label: 'Invisible share', value: `${Math.round(r.invisibleSharePct)}%` },
+      // Row 10 of the phase-0 metric audit: "Invisible share" named a
+      // fraction of nothing stated. Same figure, no new derivation — the
+      // label now completes the sentence the big number starts.
+      { label: 'of traffic you cannot see', value: `${Math.round(r.invisibleSharePct)}%` },
     ];
   });
   return (

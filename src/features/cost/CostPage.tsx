@@ -61,10 +61,16 @@ export function CostPage() {
           <div className="rounded-xl border border-fw-secondary bg-white p-4">
             <SteerToSave />
           </div>
+          {/* Row 73 of the phase-0 metric audit: "Commit draw" is carrier
+              billing vocabulary. Every number the new sentence needs was
+              already on the tile — copy only. */}
           <StatTile
-            label="Commit draw"
+            label="Commitment"
             value={`$${billing.commitDraw.toLocaleString()}`}
-            meter={{ pct: billing.commitPct, label: `Commit draw ${billing.commitPct}% of $${billing.commit.toLocaleString()}` }}
+            meter={{
+              pct: billing.commitPct,
+              label: `$${billing.commitDraw.toLocaleString()} of your $${billing.commit.toLocaleString()} commitment used (${billing.commitPct}%)`,
+            }}
           />
         </aside>
       </div>

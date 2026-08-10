@@ -34,6 +34,38 @@ describe('insightKpis', () => {
       String(log.filter(d => !d.allowed).length),
     );
   });
+
+  /* Row 78 of the phase-0 metric audit: the "cost" tile's title said "Cost"
+     while the emphasis toggle above it (InsightsPage.tsx) labels the same
+     figure "Spend", and "Savings $X (Y%)" never named the counterfactual.
+     Same values, matching title, one clause naming what the saving beats. */
+  it('the cost KPI is titled Spend and names the external-model counterfactual', () => {
+    // Drive a self-hosted route so spendIfExternal genuinely exceeds
+    // spendToday (helion-70b at $0.9/M vs GPT-class at $5/M) — the fixture
+    // is unmetered before any request, so this test earns its own traffic
+    // rather than asserting against a live-ticking baseline.
+    CC.promptTrace!('rd-helion', 'helion-70b', 'insights figures test - cost KPI');
+    const totals = aiSpendTotals(CC);
+    expect(totals.savings, 'the driven trace must produce a real saving for this assertion to mean anything').toBeGreaterThan(0);
+    const kpis = insightKpis(CC);
+    const cost = kpis.find(k => k.key === 'cost')!;
+    expect(cost.title).toBe('Spend');
+    const savingsPct = Math.round((totals.savings / totals.spendIfExternal) * 100);
+    expect(cost.sub).toBe(`Saved ${fmtUsd(totals.savings)} vs external models (${savingsPct}%)`);
+  });
+
+  /* Row 81: "Blocked requests · 0" paired with a sub-line reading "0 policy
+     denials" — the same zero stated twice. Copy only; the doubled-zero case
+     now reads as a sentence. This must run before the driven-trace tests
+     below mutate the decision log. */
+  it('the blocked-requests sub reads as a sentence when nothing was denied', () => {
+    const log = CC.decisionLog!();
+    const denied = log.filter(d => !d.allowed);
+    expect(denied.length, 'fixture must start with zero denials for this assertion to mean anything').toBe(0);
+    const kpis = insightKpis(CC);
+    const blocked = kpis.find(k => k.key === 'blocked')!;
+    expect(blocked.sub).toBe('no request denied by policy today');
+  });
 });
 
 describe('requestRows', () => {

@@ -31,9 +31,13 @@ export function TabGroup({ tabs, activeTab, onChange, className = '' }: TabGroup
             {tab.icon}
             <span>{tab.label}</span>
             {tab.count !== undefined && (
-              <span className={`ml-2 rounded-full px-2.5 py-0.5 text-figma-sm font-medium ${
-                activeTab === tab.id ? 'bg-fw-blue-light text-fw-link' : 'bg-fw-wash text-fw-heading'
-              }`}>
+              <span
+                className={`ml-2 rounded-full px-2.5 py-0.5 text-figma-sm font-medium ${
+                  activeTab === tab.id ? 'bg-fw-blue-light text-fw-link' : 'bg-fw-wash text-fw-heading'
+                }`}
+                aria-label={tab.countLabel}
+                title={tab.countLabel}
+              >
                 {tab.count}
               </span>
             )}

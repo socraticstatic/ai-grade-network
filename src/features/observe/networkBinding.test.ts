@@ -13,6 +13,16 @@ describe('networkBinding', () => {
     expect(b.records('none').length).toBeGreaterThan(0);
     expect(b.briefing().narrative.length).toBeGreaterThan(0);
   });
+  /* Rows 50-51 of the phase-0 metric audit: "Egress" read as a traffic
+     measurement with a dollar sign beside it, and "Under Control" was
+     builder language for what the verdict line calls "on the AT&T fabric".
+     Labels only — same keys, same values, same derivations. */
+  it('names the egress KPI as spend and the control KPI in the product\'s own noun', () => {
+    const kpis = b.kpis();
+    expect(kpis.find(k => k.key === 'egress')!.label).toBe('Egress Spend');
+    expect(kpis.find(k => k.key === 'under-control')!.label).toBe('On the AT&T Fabric');
+  });
+
   it('group-by path collapses records into private/public buckets', () => {
     const byPath = b.records('path').map(r => r.label.toLowerCase());
     expect(byPath.some(l => /private|public/.test(l))).toBe(true);

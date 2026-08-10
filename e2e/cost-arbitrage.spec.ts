@@ -43,7 +43,7 @@ test('attaching a path on Cost raises the hero savings and flips the bucket to c
   const capturedRow = page.locator('li', { hasText: label });
   await expect(capturedRow.getByText(/on the fabric/i)).toBeVisible();
   // The session tally appeared.
-  await expect(page.getByText(/captured this session/i)).toBeVisible();
+  await expect(page.getByText(/captured so far/i)).toBeVisible();
 
   expect(errors, errors.join('\n')).toEqual([]);
 });

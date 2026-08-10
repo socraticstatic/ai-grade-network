@@ -28,8 +28,10 @@ export function SteerToSave() {
     <section aria-labelledby="sts-h">
       <h2 id="sts-h" className="text-sm font-semibold text-fw-heading">Steer to save</h2>
       {captured > 0 && (
+        // Row 76 of the phase-0 metric audit: same "session" problem as
+        // ArbitrageBreakdown's row 72 — copy only.
         <p className="mt-1 text-xs font-medium text-fw-success" role="status">
-          ${captured.toLocaleString()}/mo captured this session
+          ${captured.toLocaleString()}/mo captured so far
         </p>
       )}
       <ul className="mt-2 space-y-2">

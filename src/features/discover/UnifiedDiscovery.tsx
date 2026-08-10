@@ -385,7 +385,12 @@ export function UnifiedDiscovery() {
     { key: 'onramps', value: onrampsStat.value, of: onrampsStat.of, label: onrampsStat.label },
     { key: 'cloudsRegions', value: `${cloudsStat.value} · ${regionsStat.value}`, label: 'Clouds · Regions' },
     { key: 'workloads', value: workloadsStat.value, label: workloadsStat.label },
-    { key: 'attached', value: attachedStat.value, label: attachedStat.label },
+    // Row 24 of the phase-0 metric audit: the shared "Attached" stat label
+    // (also rendered inside the folded breakdown below, out of this row's
+    // scope) reads as an unnamed count beside a regions tile and a
+    // workloads tile. Override at this call site only — naming the unit
+    // "VPCs" points straight at the Private/Public badges in the tree.
+    { key: 'attached', value: attachedStat.value, label: 'Attached VPCs' },
     { key: 'aiExposed', value: aiExposedStat.value, label: aiExposedStat.label },
   ];
   /* Latency comes from `fabricModel()`, the one region-latency derivation this
@@ -467,7 +472,7 @@ export function UnifiedDiscovery() {
       <FlowBar
         cta={
           publicWorkloads > 0
-            ? { label: `Attach ${publicWorkloads} public workloads`, to: '/naas/connect?from=discover' }
+            ? { label: `Attach the ${publicWorkloads} workloads still on the public internet`, to: '/naas/connect?from=discover' }
             : undefined
         }
       />

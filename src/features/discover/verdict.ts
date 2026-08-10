@@ -7,7 +7,9 @@ export function discoverVerdict(model: FabricModel): string {
   const clouds = new Set(model.regions.map(r => r.cloudId)).size;
   const attached = model.regions.filter(r => r.path === 'private').length;
   const pub = total - attached;
-  return `Your estate spans ${total} regions across ${clouds} cloud${clouds === 1 ? '' : 's'}. ` +
-    `${attached} ${attached === 1 ? 'is' : 'are'} on the AT&T fabric; ` +
-    `${pub} still ride${pub === 1 ? 's' : ''} the public internet.`;
+  // Row 18 of the phase-0 metric audit: the sentence opened on inventory
+  // ("spans 9 regions") and buried the gap in its last clause. Same three
+  // numbers, reordered so the gap leads — copy only.
+  return `${pub} of your ${total} cloud region${total === 1 ? '' : 's'} still ride${pub === 1 ? 's' : ''} the public internet. ` +
+    `${attached} ${attached === 1 ? 'is' : 'are'} on the AT&T fabric, across ${clouds} cloud${clouds === 1 ? '' : 's'}.`;
 }

@@ -23,8 +23,11 @@ export function ServiceInsertion() {
       <div className="flex items-center gap-3 px-5 py-3 border-b border-fw-secondary bg-fw-wash">
         <AttIcon name="hub" className="h-5 w-5 text-fw-body" />
         <span className="font-medium text-fw-heading">Service insertion</span>
+        {/* Row 64 of the phase-0 metric audit: "0 / 5 inserted" was
+            deployment vocabulary for a posture claim. Same fraction,
+            product noun. */}
         <span className="text-figma-xs text-fw-bodyLight">
-          {services.filter(s => s.inserted).length} / {services.length} inserted
+          {services.filter(s => s.inserted).length} of {services.length} inspection services in the path
         </span>
       </div>
 

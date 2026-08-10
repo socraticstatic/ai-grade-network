@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, test, expect, afterEach, vi } from 'vitest';
 import { TokenBudgetsWidget } from './TokenBudgetsWidget';
 import { CC } from '../../../../engine';
+import { fmtTokens } from '../../../ai-fabric/aiSpend';
 
 /* Navigation is asserted by destination, not by router internals — same
    pattern IntentThreads.tsx's own tests use. */
@@ -23,6 +24,22 @@ describe('TokenBudgetsWidget', () => {
     expect(policies.length).toBeGreaterThan(0);
     expect(screen.getAllByTestId('token-policy-row')).toHaveLength(policies.length);
     expect(screen.getByText(policies[0].tag)).toBeInTheDocument();
+  });
+
+  /* Row 11 of the phase-0 metric audit: "0 of 2.40B" led with a raw token
+     count nobody reads in two seconds, with the honest "0%" reading
+     trailing after a " · ". Reorder, not a new derivation — the meter's own
+     pct and budget, pct leading. */
+  test('a metered row leads with the percentage of its daily budget', () => {
+    renderWidget();
+    const meters = CC.tokenMeterList() as { tag: string; pct: number }[];
+    const policies = CC.tokenPolicyList() as { tag: string; budget: number }[];
+    const metered = policies.find(p => meters.some(m => m.tag === p.tag));
+    expect(metered, 'fixture must have at least one metered policy').toBeTruthy();
+    const meter = meters.find(m => m.tag === metered!.tag)!;
+    expect(
+      screen.getByText(`${meter.pct}% of a ${fmtTokens(metered!.budget)}/day budget`),
+    ).toBeInTheDocument();
   });
 
   test('Enforce stages the policy patch into the review tray, without mutating the estate', () => {

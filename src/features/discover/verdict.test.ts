@@ -15,7 +15,7 @@ describe('discoverVerdict', () => {
     const v = discoverVerdict(model([
       region('aws', 'private'), region('aws', 'public'), region('azure', 'public'),
     ]));
-    expect(v).toBe('Your estate spans 3 regions across 2 clouds. 1 is on the AT&T fabric; 2 still ride the public internet.');
+    expect(v).toBe('2 of your 3 cloud regions still ride the public internet. 1 is on the AT&T fabric, across 2 clouds.');
   });
   it('empty estate returns a sentence, not silence', () => {
     expect(discoverVerdict(model([]))).toBe('No estate mapped yet. Connect a cloud to begin.');
