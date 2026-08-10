@@ -36,7 +36,13 @@ function regionList(){
 const ANOMALY={key:'aws/euw1',at:0.62,factor:2.3,
   title:'Transit congestion · eu-west-1',
   explain:()=>{
+    // euw1 is acme's own seed region (aws eu-west-1) - meridian's swap
+    // replaces aws's region set with use1/usw2, so it doesn't resolve
+    // there. This narrative names a specific ACME event class; degrade to
+    // a generic explanation rather than crash netops' default Observe
+    // stage, which calls this unconditionally.
     const euw=regions.aws.find(r=>r.id==='euw1'), L=_lat('euw1');
+    if(!euw)return `<b>Transit congestion · eu-west-1</b> — this estate profile does not model eu-west-1, so this event class does not apply.`;
     return `<b>eu-west-1 latency spiked to ~${Math.round(L.publicMs*ANOMALY.factor)}ms</b> for roughly 4 hours. The signature — latency up, throughput flat, every other region steady — is upstream transit congestion on the public path, not an application change. ${euw.attached?`Since attaching over Direct Connect this session, eu-west-1 rides the private envelope (${L.privateMs}ms to its on-ramp) where transit events like this cannot reach it.`:'eu-west-1 still rides public transit — Direct Connect · Equinix DC2 already terminates near it; attaching removes exposure to exactly this class of event.'}`;
   }};
 
@@ -196,8 +202,12 @@ function obsSummary(){
     ?`${att.length} of ${rl.length} regions ride the private envelope — ${envelope} to the on-ramp serving each.`
     :`None of the ${rl.length} regions ride the private envelope yet.`} ${pub.length?`${pub.length} still depend on public transit${worst?` — <b>${worst.region.name}</b> is the outlier at ${_lat(worst.region.id).publicMs}ms on the public path`:''}.`:'Nothing depends on public transit.'}`);
   parts.push(`Egress is running ${'$'+(e.total/1000).toFixed(1)}k/mo${e.pub?` with ${'$'+(e.pub/1000).toFixed(1)}k still on public rates`:' — fully on committed private pricing'}${e.savings?`; private-path savings hold at ${'$'+(e.savings/1000).toFixed(1)}k/mo`:''}.`);
+  // euw1 is acme's own seed region - doesn't resolve once meridian's swap
+  // replaces aws's region set. Skip the sentence rather than crash the
+  // narrative every /naas/observe render depends on (same idiom as the
+  // ANOMALY.explain guard above).
   const euw=regions.aws.find(r=>r.id==='euw1');
-  parts.push(`One anomaly in the window: a transit-congestion spike on eu-west-1${euw.attached?' — before it attached; the private path is immune to that event class':' — it remains exposed to that event class until attached'}.`);
+  if(euw)parts.push(`One anomaly in the window: a transit-congestion spike on eu-west-1${euw.attached?' — before it attached; the private path is immune to that event class':' — it remains exposed to that event class until attached'}.`);
   return parts.join(' ');
 }
 

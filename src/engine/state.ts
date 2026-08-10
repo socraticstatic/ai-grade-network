@@ -396,7 +396,13 @@ function counts(){
    architecture, not an exposure - once fw-inspect-01 is inline, vpc-dmz-03
    stops counting against the posture and the story can actually close. */
 function designedPublic(){
-  return fixes.fwInspection&&!vpcs.use1.find(v=>v.id==='vpcdmz').attached?1:0;
+  // vpcdmz is acme's own seed VPC id inside the use1 region. meridian's
+  // swap REPLACES cc.vpcs.use1 wholesale with its own hub+spoke VPCs (see
+  // estateProfile.ts's mergeRecord for vpcs) - the key survives, but no
+  // element in it carries acme's ids. A region/VPC this estate doesn't
+  // model has no "public-by-design DMZ" story to account for, so it
+  // contributes 0 rather than crashing every scores()/posture() call.
+  return fixes.fwInspection&&!(vpcs.use1.find(v=>v.id==='vpcdmz')?.attached??true)?1:0;
 }
 function publicVpcs(){const c=counts();return Math.max(0,c.vpcs-c.attached-designedPublic());}
 function aiExposed(){
@@ -455,6 +461,12 @@ function scores(){
   const c=counts();
   const share=c.attached/c.vpcs;
   const e=CC.egress();
+  // uks is acme's own seed region (Azure UK South) - meridian's swap
+  // replaces azure's region set with scus/eus2, so uks doesn't resolve
+  // there. Same null-guard idiom as state-routing.ts's cloudToCloud(): a
+  // region this estate doesn't model contributes no bonus/penalty rather
+  // than crashing the whole scores() derivation every posture tile reads.
+  // usw2 (aws) is untouched by meridian's swap and always resolves.
   const uks=regions.azure.find(r=>r.id==='uks');
   const usw2=regions.aws.find(r=>r.id==='usw2');
   return {
@@ -462,7 +474,7 @@ function scores(){
     exposure: Math.min(95,87-3*publicVpcs()+(fixes.fwInspection?2:0)+(fixes.dnsFirewall?2:0)+(fixes.dataPerimeter?2:0)),
     policy: 78-5*violations().length,
     cost: Math.min(95,Math.round(90-24*(e.pub/29900))),
-    perf: Math.min(95,71+(uks.attached?8:0)+(usw2.attached?5:0)),
+    perf: Math.min(95,71+((uks?.attached??true)?8:0)+(usw2.attached?5:0)),
     address: addressPlan().conflicts?70:94,
     // the tokens layer is governed too - or it isn't, and the score says so
     ai: aiGovScore(),

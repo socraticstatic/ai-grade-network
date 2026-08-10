@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { CC } from '../../engine';
 import { useCloudControl, useCloudControlActions } from '../../engine/react/useCloudControl';
+import { ROLLUP_THRESHOLD } from '../discover/discoveryModel';
 import {
   ID_RENAME_WARNING,
   groupIdFromName,
@@ -106,6 +107,15 @@ export function GroupBuilder({ open, onOpenChange }: GroupBuilderProps) {
             ...branches.map(b => ({ id: b.id, name: b.name, what: 'Branch site' })),
             ...vpcs.map(v => ({ id: v.id, name: v.name, what: 'Cloud workload' })),
           ];
+
+  // Global Constraint: no component renders a per-entity row for a
+  // collection larger than ROLLUP_THRESHOLD. Under meridian, `pickable` is
+  // every branch + VPC in the estate (4,213 for 'mixed') - a checkbox per
+  // row would be 4,213 DOM nodes. Cap the rendered list and name what's
+  // hidden rather than build search/virtualization here; picking a member
+  // outside the shown set still works via the tag-rule predicates below.
+  const pickableShown = pickable.slice(0, ROLLUP_THRESHOLD);
+  const pickableOverflow = pickable.length - ROLLUP_THRESHOLD;
 
   const changeKind = (next: '' | GroupKind) => {
     setKind(next);
@@ -295,8 +305,12 @@ export function GroupBuilder({ open, onOpenChange }: GroupBuilderProps) {
           Members ({members.length} picked)
         </legend>
         <div className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-fw-secondary bg-fw-wash p-2 grid grid-cols-1 sm:grid-cols-2 gap-1">
-          {pickable.map(o => (
-            <label key={o.id} className="flex items-center gap-2 px-1 py-0.5 text-figma-xs text-fw-body">
+          {pickableShown.map(o => (
+            <label
+              key={o.id}
+              data-testid="member-row"
+              className="flex items-center gap-2 px-1 py-0.5 text-figma-xs text-fw-body"
+            >
               <input
                 type="checkbox"
                 checked={members.includes(o.id)}
@@ -307,6 +321,14 @@ export function GroupBuilder({ open, onOpenChange }: GroupBuilderProps) {
               <span className="ml-auto shrink-0 text-fw-bodyLight">{o.what}</span>
             </label>
           ))}
+          {pickableOverflow > 0 && (
+            <div
+              data-testid="member-row-more"
+              className="col-span-full flex items-center px-1 py-0.5 text-figma-xs text-fw-bodyLight"
+            >
+              + {pickableOverflow.toLocaleString()} more — narrow by class or region
+            </div>
+          )}
         </div>
       </fieldset>
 

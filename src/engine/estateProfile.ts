@@ -118,6 +118,22 @@ export function applyEstateProfile(cc: EngineSeeds, profile: EstateProfile): voi
     mergeArrayById(cc.clouds as { id: string }[], next.clouds as { id: string }[]);
     mergeRecord(cc.regions, next.regions as Record<string, unknown[]>);
     mergeRecord(cc.vpcs, next.vpcs as Record<string, unknown[]>);
+    // mergeRecord ADDS/REPLACES the vpcs keys `next` names (meridian's own
+    // region ids) but never REMOVES one - unlike regions above, where
+    // Object.assign(cc.regions, {aws:[...], azure:[...]}) replaces the
+    // WHOLE aws/azure arrays, dropping acme's euw1/wus2/uks region
+    // entries outright. Those region ids are gone from cc.regions, but
+    // cc.vpcs['euw1']/['wus2']/['uks'] still hold acme's VPCs under keys
+    // no live region names - orphans addressPlan() and any regionName()
+    // lookup would misattribute. Drop any vpcs key whose region id isn't
+    // in the merged regions record; the cw/neb-preserving cloud merge
+    // above is untouched by this.
+    const liveRegionIds = new Set(
+      Object.values(cc.regions as Record<string, { id: string }[]>).flatMap(rs => rs.map(r => r.id)),
+    );
+    for (const k of Object.keys(cc.vpcs)) {
+      if (!liveRegionIds.has(k)) delete (cc.vpcs as Record<string, unknown[]>)[k];
+    }
   } else {
     // Acme restore stays the hard guarantee: a full wholesale replace from
     // the complete snapshot, so any key a meridian merge left behind (e.g.

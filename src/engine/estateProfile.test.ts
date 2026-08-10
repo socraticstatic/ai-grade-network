@@ -57,4 +57,40 @@ describe('estateProfile', () => {
     const restored = (CC.regions as { aws: { id: string; attached: boolean }[] }).aws.find(r => r.id === 'usw2')!;
     expect(restored.attached).toBe(false); // reverted to the ORIGINAL value, not the mutation
   });
+
+  /* Finding 3 — mergeRecord(cc.vpcs, next.vpcs) only ADDS/REPLACES the keys
+   * `next` names; it never removes one. Merging regions, by contrast,
+   * replaces the WHOLE aws/azure arrays, so acme's euw1/wus2/uks region
+   * ids vanish from cc.regions the instant meridian applies. Without the
+   * vpcs-key prune, cc.vpcs['euw1']/['wus2']/['uks'] survive as orphans:
+   * ACME VPCs filed under region ids that exist under no cloud while
+   * meridian is active. */
+  it('meridian-active vpcs keys are a subset of live region ids (no orphaned acme vpc keys)', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    try {
+      const regions = CC.regions as Record<string, { id: string }[]>;
+      const liveRegionIds = new Set(Object.values(regions).flatMap(rs => rs.map(r => r.id)));
+      const vpcs = CC.vpcs as Record<string, unknown[]>;
+      for (const key of Object.keys(vpcs)) {
+        expect(liveRegionIds.has(key), `orphaned vpcs key '${key}' names no live region under meridian`).toBe(true);
+      }
+      // sanity: acme's dropped region ids are actually gone, not just untested
+      expect(vpcs.euw1).toBeUndefined();
+      expect(vpcs.wus2).toBeUndefined();
+      expect(vpcs.uks).toBeUndefined();
+      // and meridian's own region ids are present
+      expect(vpcs.use1).toBeDefined();
+      expect(vpcs.scus).toBeDefined();
+    } finally {
+      applyEstateProfile(CC as never, 'acme');
+    }
+  });
+
+  it('acme restore after a meridian round trip has the exact original acme vpcs key set', () => {
+    const before = Object.keys(CC.vpcs as Record<string, unknown[]>).sort();
+    applyEstateProfile(CC as never, 'meridian');
+    applyEstateProfile(CC as never, 'acme');
+    const after = Object.keys(CC.vpcs as Record<string, unknown[]>).sort();
+    expect(after).toEqual(before);
+  });
 });
