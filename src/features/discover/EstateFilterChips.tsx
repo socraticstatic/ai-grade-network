@@ -47,13 +47,19 @@ function Chip({
 }
 
 /** Fixed dc→office→branch→atm label order, matching `CLASS_ORDER` in
- *  discoveryModel.ts — the same order `siteRollup` already returns rows in. */
+ *  discoveryModel.ts — the same order `siteRollup` already returns rows in.
+ *  Unlike the cloud chips (filtered to clouds actually present, an open
+ *  set), the four site classes are a closed taxonomy — the same fixed-set
+ *  idiom `path` and `domain` already use — so every label renders whenever
+ *  the group is shown, whether or not this tenant's estate happens to hold
+ *  a site in that class today. */
 const SITE_CLASS_LABEL: Record<SiteClass, string> = {
   dc: 'Data centers',
   office: 'Offices',
   branch: 'Branches',
   atm: 'ATMs',
 };
+const ALL_SITE_CLASSES = Object.keys(SITE_CLASS_LABEL) as SiteClass[];
 
 export function EstateFilterChips({
   model,
@@ -77,12 +83,11 @@ export function EstateFilterChips({
     clouds.push({ id: r.cloudId, name: r.cloudName });
   }
 
-  // Only present classes get a chip, in the fixed dc→office→branch→atm
-  // order — the same rule `siteRollup` already applies to its own rows, so
-  // a customer with no ATMs sees no ATM chip. The whole group stays hidden
-  // when there's nothing to narrow: one class present has no "other" to
-  // filter against.
-  const siteClasses = siteRollup(cc).map(row => row.siteClass);
+  // The group itself stays hidden when there's nothing to narrow — one
+  // class present has no "other" to filter against — but once shown it
+  // offers all four classes, not just the ones this tenant happens to hold
+  // today (see ALL_SITE_CLASSES above).
+  const showSiteClasses = siteRollup(cc).length > 1;
 
   const isActive =
     filters.cloud !== 'all' || filters.path !== 'all' || filters.domain !== 'all' || filters.siteClass !== 'all';
@@ -114,8 +119,8 @@ export function EstateFilterChips({
       <Chip label="Public internet" active={filters.path === 'public'} onClick={() => togglePath('public')} />
       <Chip label="Network" active={filters.domain === 'network'} onClick={() => toggleDomain('network')} />
       <Chip label="AI" active={filters.domain === 'ai'} onClick={() => toggleDomain('ai')} />
-      {siteClasses.length > 1 &&
-        siteClasses.map(sc => (
+      {showSiteClasses &&
+        ALL_SITE_CLASSES.map(sc => (
           <Chip
             key={sc}
             label={SITE_CLASS_LABEL[sc]}

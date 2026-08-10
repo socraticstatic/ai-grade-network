@@ -82,6 +82,51 @@ describe('UnifiedDiscovery estate filter chips', () => {
   });
 });
 
+/* Task 5 — the site-class facet's chip group. ACME's default seed carries
+   only dc + office branches (2 of the 4 classes), which is enough to clear
+   the group's `siteRollup(cc).length > 1` gate — so the group is visible
+   under the default demo tenant, not just Meridian, and all four fixed
+   labels render regardless of which classes ACME actually has (the same
+   fixed-set idiom `path`/`domain` already use, not the presence-filtered
+   idiom `cloud` uses). */
+describe('UnifiedDiscovery estate filter chips — site class', () => {
+  it('renders all four site-class chips under ACME (dc+office clears the >1 gate)', () => {
+    renderUD();
+    const chips = screen.getByTestId('estate-filter-chips');
+    for (const label of ['Data centers', 'Offices', 'Branches', 'ATMs']) {
+      expect(within(chips).getByRole('button', { name: label })).toBeInTheDocument();
+    }
+  });
+
+  it('clicking a site-class chip presses it; clicking again returns to all', () => {
+    renderUD();
+    const chips = screen.getByTestId('estate-filter-chips');
+    const dcChip = within(chips).getByRole('button', { name: 'Data centers' });
+    expect(dcChip).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(dcChip);
+    expect(dcChip).toHaveAttribute('aria-pressed', 'true');
+    // toggling one class off never presses a sibling class
+    expect(within(chips).getByRole('button', { name: 'Offices' })).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(dcChip);
+    expect(dcChip).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('a pressed site-class chip surfaces Clear filters, same as the other facets', () => {
+    renderUD();
+    const chips = screen.getByTestId('estate-filter-chips');
+    expect(within(chips).queryByRole('button', { name: /clear filters/i })).not.toBeInTheDocument();
+
+    fireEvent.click(within(chips).getByRole('button', { name: 'Offices' }));
+    expect(within(chips).getByRole('button', { name: /clear filters/i })).toBeInTheDocument();
+
+    fireEvent.click(within(chips).getByRole('button', { name: /clear filters/i }));
+    expect(within(chips).getByRole('button', { name: 'Offices' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(chips).queryByRole('button', { name: /clear filters/i })).not.toBeInTheDocument();
+  });
+});
+
 /* Task 4 — the three stat sections (Network / Cloud / AI workflows) compress
    into one at-a-glance summary band; the full sections fold behind a
    disclosure. The band re-uses the same domain derivations the sections
