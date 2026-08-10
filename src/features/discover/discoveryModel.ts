@@ -52,6 +52,7 @@ export interface Tag {
 /** A customer premises. Distinct from `onramps[].site`, which is the AT&T
  *  colo facility an on-ramp lives in — a branch is the customer's own
  *  building, and is what the stakeholder note means by "San Jose". */
+export type SiteClass = 'dc' | 'office' | 'branch' | 'atm';
 export interface Branch {
   id: string;
   name: string;
@@ -59,6 +60,7 @@ export interface Branch {
   cidrs: string[];
   onrampId?: string;
   cloudTags?: Record<string, string>;
+  siteClass: SiteClass;
 }
 
 /** Tree node keys are path-joined: `aws`, `aws/use1`, `aws/use1/vpcprod`. */

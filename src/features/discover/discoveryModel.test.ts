@@ -16,6 +16,8 @@ import {
   isBranchKey,
   selectionMemberIds,
   selectionKind,
+  type Branch,
+  type SiteClass,
 } from './discoveryModel';
 import { CC } from '../../engine';
 
@@ -134,6 +136,19 @@ describe('discovery selection', () => {
     expect(r.branchIds).toEqual(['br-sjc']);
     expect(r.vpcIds).toEqual(['vpcwest']);
     expect(r.count).toBe(2);
+  });
+
+  it('every seeded branch carries a site class', () => {
+    const classes: SiteClass[] = ['dc', 'office', 'branch', 'atm'];
+    const branches = branchesOf(CC as never);
+    expect(branches.length).toBeGreaterThan(0);
+    branches.forEach(b => expect(classes).toContain(b.siteClass));
+  });
+
+  it('ACME: Ashburn DC is a dc, the rest are offices', () => {
+    const byId = Object.fromEntries(branchesOf(CC as never).map(b => [b.id, b.siteClass]));
+    expect(byId['br-ash']).toBe('dc');
+    expect(byId['br-sjc']).toBe('office');
   });
 });
 

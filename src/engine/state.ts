@@ -47,12 +47,12 @@ const onramps=[
    carry no `tags` array: the governance taxonomy is a cloud-workload
    concept, so governanceTag predicates match no branch, by design. */
 const branches=[
-  {id:'br-sjc',name:'San Jose campus',city:'San Jose',geo:[37.34,-121.89],cidrs:['10.60.0.0/20'],onrampId:'dx1',cloudTags:{Region:'west',Env:'prod',Owner:'facilities'}},
-  {id:'br-sfo',name:'San Francisco office',city:'San Francisco',geo:[37.77,-122.42],cidrs:['10.60.16.0/20'],onrampId:'dx1',cloudTags:{Region:'west',Env:'prod',Owner:'facilities'}},
-  {id:'br-bkl',name:'Berkeley lab',city:'Berkeley',geo:[37.87,-122.27],cidrs:['10.60.32.0/20'],onrampId:'dx1',cloudTags:{Region:'west',Env:'prod',Owner:'facilities'}},
-  {id:'br-dal',name:'Dallas HQ',city:'Dallas',geo:[32.78,-96.80],cidrs:['10.61.0.0/20'],onrampId:'nb2',cloudTags:{Region:'central',Env:'prod',Owner:'facilities'}},
-  {id:'br-chi',name:'Chicago branch',city:'Chicago',geo:[41.88,-87.63],cidrs:['10.62.0.0/20'],onrampId:'er1',cloudTags:{Region:'central',Env:'prod',Owner:'facilities'}},
-  {id:'br-ash',name:'Ashburn DC',city:'Ashburn',geo:[39.04,-77.49],cidrs:['10.63.0.0/20'],onrampId:'nb1',cloudTags:{Region:'east',Env:'prod',Owner:'facilities'}},
+  {id:'br-sjc',name:'San Jose campus',city:'San Jose',geo:[37.34,-121.89],cidrs:['10.60.0.0/20'],onrampId:'dx1',cloudTags:{Region:'west',Env:'prod',Owner:'facilities'},siteClass:'office'},
+  {id:'br-sfo',name:'San Francisco office',city:'San Francisco',geo:[37.77,-122.42],cidrs:['10.60.16.0/20'],onrampId:'dx1',cloudTags:{Region:'west',Env:'prod',Owner:'facilities'},siteClass:'office'},
+  {id:'br-bkl',name:'Berkeley lab',city:'Berkeley',geo:[37.87,-122.27],cidrs:['10.60.32.0/20'],onrampId:'dx1',cloudTags:{Region:'west',Env:'prod',Owner:'facilities'},siteClass:'office'},
+  {id:'br-dal',name:'Dallas HQ',city:'Dallas',geo:[32.78,-96.80],cidrs:['10.61.0.0/20'],onrampId:'nb2',cloudTags:{Region:'central',Env:'prod',Owner:'facilities'},siteClass:'office'},
+  {id:'br-chi',name:'Chicago branch',city:'Chicago',geo:[41.88,-87.63],cidrs:['10.62.0.0/20'],onrampId:'er1',cloudTags:{Region:'central',Env:'prod',Owner:'facilities'},siteClass:'office'},
+  {id:'br-ash',name:'Ashburn DC',city:'Ashburn',geo:[39.04,-77.49],cidrs:['10.63.0.0/20'],onrampId:'nb1',cloudTags:{Region:'east',Env:'prod',Owner:'facilities'},siteClass:'dc'},
 ];
 
 const clouds=[
