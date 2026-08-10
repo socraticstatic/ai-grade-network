@@ -58,10 +58,13 @@ describe('StackPanel — the cross-section states engine figures', () => {
      Estate at a glance already states them, and four numbers stacked in a
      NaaS-shaped rail read as a broken panel. The band itself, its blurb
      and its four verb links stay. */
-  test('the AI band keeps its verbs and drops its figures', () => {
+  test('the AI band keeps its verbs and drops its figures — and renders no empty figures slot at all', () => {
     renderPanel();
-    const strip = screen.getByTestId('stack-figures-ai');
-    expect(strip).toBeEmptyDOMElement();
+    // Fix-wave review finding 3: figures={null} used to still render the
+    // bordered `stack-figures-ai` container (border-t + padding) with
+    // nothing inside it. LiveBand now skips the slot entirely when figures
+    // is null, so the testid should not exist at all.
+    expect(screen.queryByTestId('stack-figures-ai')).not.toBeInTheDocument();
     const band = screen.getByTestId('stack-band-ai');
     expect(within(band).getByText(/AI/)).toBeInTheDocument();
   });

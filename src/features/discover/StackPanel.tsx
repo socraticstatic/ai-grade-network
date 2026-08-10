@@ -92,12 +92,14 @@ function LiveBand({
           ))}
         </div>
       </div>
-      <div
-        data-testid={`stack-figures-${layer.key}`}
-        className="mt-2.5 pt-2.5 border-t border-fw-secondary/50 flex flex-wrap items-baseline gap-x-5 gap-y-1"
-      >
-        {figures}
-      </div>
+      {figures !== null && (
+        <div
+          data-testid={`stack-figures-${layer.key}`}
+          className="mt-2.5 pt-2.5 border-t border-fw-secondary/50 flex flex-wrap items-baseline gap-x-5 gap-y-1"
+        >
+          {figures}
+        </div>
+      )}
       {children}
     </div>
   );

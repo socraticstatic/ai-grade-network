@@ -44,6 +44,16 @@ describe('KpiStrip', () => {
     expect(screen.queryByTestId('kpi-requests')).not.toBeInTheDocument();
     expect(screen.getByTestId('kpi-ttft')).toHaveTextContent('ms');
   });
+
+  /* Fix-wave review finding 1: the strip's wide-breakpoint grid was still
+     5 columns after row 80 cut the Requests card to 4, leaving a ~230px
+     dead trailing column. */
+  it('grids four columns at the wide breakpoint, not five', () => {
+    const { container } = render(<KpiStrip kpis={insightKpis(CC)} />);
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.className).toContain('min-[1200px]:grid-cols-4');
+    expect(grid.className).not.toMatch(/grid-cols-5\b/);
+  });
 });
 
 describe('Requests panel', () => {

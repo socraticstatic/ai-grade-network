@@ -26,6 +26,16 @@ describe('EstateFiguresWidget', () => {
     expect(screen.getByText('Egress on public transit')).toBeInTheDocument();
   });
 
+  /* Fix-wave review finding 2: with a single figure (NaaS always has
+     exactly one post-audit), the figures grid must not force a second,
+     empty column. */
+  test('NaaS single figure does not force a two-column grid', () => {
+    renderIn('naas');
+    const figures = screen.getAllByTestId('estate-figure');
+    expect(figures).toHaveLength(1);
+    expect(figures[0].parentElement?.className).not.toMatch(/grid-cols-2\b/);
+  });
+
   /* Row 4: "Regions on the fabric" demoted — Connect's own verdict line
      already states it. Row 5: "Sites" cut (wrong count, duplicated on
      Discover). Row 7: "Still on the table" cut (a third rendering of the
@@ -44,7 +54,10 @@ describe('EstateFiguresWidget', () => {
     if (f.ungovernedTokensToday > 0) {
       expect(screen.getByText(exposureFigure(f))).toBeInTheDocument();
       expect(screen.getByText('tokens today rode the public internet')).toBeInTheDocument();
-      expect(screen.getAllByTestId('estate-figure')).toHaveLength(2);
+      const figures = screen.getAllByTestId('estate-figure');
+      expect(figures).toHaveLength(2);
+      // Two figures still sit two-up.
+      expect(figures[0].parentElement?.className).toMatch(/grid-cols-2\b/);
     } else {
       expect(screen.getAllByTestId('estate-figure')).toHaveLength(1);
     }

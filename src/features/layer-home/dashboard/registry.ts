@@ -33,13 +33,15 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
   },
   'estate-figures': {
     id: 'estate-figures', title: 'Estate at a glance',
-    description: 'The four live figures for this layer.',
-    /* w:2, for two reasons that happen to be the same reason. Four figures
-       stacked in a one-column card made a tall, narrow ribbon of numbers; and
-       the board's widths summed to 5 across a 3-column grid, so the last row
-       always left a hole. At w:2 the figures sit two-up and the widths sum to
-       6, which tiles exactly. */
-    icon: Gauge, category: 'Overview', surface: 'both', defaultSize: { w: 2, h: 1 },
+    description: 'The live figures for this layer.',
+    /* w:1. This card used to hold four figures and earned a w:2, two-up
+       layout for them. The phase-0 metric audit's cuts (rows 4-7 on NaaS,
+       14-16 on AI) took that down to one figure on NaaS and one-or-two on
+       AI, and a w:2 card holding one figure left half the card empty
+       (fix-wave review finding 2). w:1 matches the smaller content; the
+       widget's own inner grid still goes two-up on the rare render with two
+       figures (see EstateFiguresWidget.tsx). */
+    icon: Gauge, category: 'Overview', surface: 'both', defaultSize: { w: 1, h: 1 },
     component: EstateFiguresWidget,
   },
   'assessment-findings': {

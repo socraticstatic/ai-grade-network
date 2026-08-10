@@ -178,19 +178,25 @@ Two rules recur often enough to name once and cite by name in the notes:
 | 86 | AI Govern | `TokenPolicies.tsx:78` | "**0 / 4** enforced" | `tokenPolicyList().filter(enforced)` | Platform/ML | PASS — the governance gap | PASS — Enforce per row | PASS — the three-state pill below refuses to over-claim | PASS | `keep` | |
 | 87 | AI Govern | `TokenPolicies.tsx:126` | Budget column `2,400,000,000` | `p.budget` | Platform/ML | FAIL | PASS | PASS | FAIL — ten digits, unformatted, where the same figure renders as `2.40B` on the layer home (row 11) | `relabel` | **Divergence:** T1+T4 fail with T3 passing, which predicts `cut`; the figure is correct and the failure is formatting inconsistency with the same number elsewhere. `fmtTokens` already exists, so this is one call site and no new derivation. Copy: **`2.40B`**. |
 | 88 | AI Govern | `AgentsPanel.tsx:22` | "**3 / 3** enabled" | `agentList().filter(enabled)` | Platform/ML | FAIL — inventory | PASS — Suspend per row | PASS | PASS | `keep` | **Divergence:** T1 fails; kept because this is a section header counting the rows immediately beneath it, the same honest shape as rows 34 and 59. |
+| 90 | Layer home (both) | `StandingIntentsWidget.tsx:63` | `{i.reading.evidence}` — the declared intent's status sentence (e.g. "cwe-01 rides public transit at 92ms; the fabric path is 3ms.") | `cc.intentList()[].reading.evidence`, computed by `state-intents.ts`'s 16-entry `CATALOG[].evaluate()` (latency ms, jitter ms, utilization %, flow/region counts, token %) | Exec | FAIL — the evidence sentence states an operational or posture fact (latency, jitter, utilization, a count), never a dollar figure — the same reading as `TokenBudgetsWidget` (row 11) | PASS — `Synchronize` (`intent-synchronize`) stages the compiled repair into the twin whenever `reading.moves.length > 0` | PASS — each sentence measures exactly what it names (ms is ms, % is %, a count is a count) | PASS — one clause, concrete, no builder explanation needed | `keep` | **Divergence:** T1 fails alone, which the default tolerates as `keep` (same reasoning as rows 4, 47-49); this sentence is the widget's entire content, not a duplicate of anything else on either board, and it states the one thing the user themselves declared. Row not audited by Task 1; added by the whole-branch fix-wave review (finding 4) — see row 91 for the one branch of this sentence that fails a second test. |
+| 91 | Layer home (both) | `StandingIntentsWidget.tsx:63` → `state-intents.ts:230` | `"{tag} stands at {pct}% of its {budget}-token budget."` (Cap token spend intent, violated branch) | `CC.tokenMeterList()` `m.pct`, `m.budget` — `m.budget.toLocaleString()` renders every digit (e.g. "2,400,000,000-token budget") | Exec | FAIL — a ceiling stated in tokens, not a saving (same reading as row 11) | PASS — `Synchronize` stages the `{kind:'policy',tag,patch:{enforced:true}}` repair | FAIL — ten raw digits where `TokenBudgetsWidget` (rows 11/87) states the identical kind of budget as `2.40B` via `fmtTokens` | FAIL — a ten-digit number is not a two-second read | `phase-2c` | **Divergence:** T1+T4 both fail, which predicts `cut`; not cut because the sentence is real, wanted content (same family as row 90) and the only defect is formatting — the same defect class row 87 fixed with `fmtTokens`. A pure copy fix would be `relabel`, matching row 87 — but the only render site for this sentence is `state-intents.ts:230`, under `src/engine/**`, and the phase's Global Constraints scope relabel copy to what "only touch[es] text and existing `fw-*`-token components"; an engine string template is neither. **Fix-wave judgment call:** the engine file is treated as off-limits for this phase's copy-only relabel, so this stays `phase-2c` rather than being edited — until `state-intents.ts`'s evidence string routes `m.budget` through `fmtTokens` (or the widget is given the raw value to format itself, which would be an interface change, not a copy change). |
 
-**Rows: 89** (rows 1-88, with 29 split into 29a and 29b).
+**Rows: 91** (rows 1-88 with 29 split into 29a and 29b, plus 90-91 added by the fix-wave review).
 
 ## Verdict tally
 
 | Verdict | Count |
 |---|---|
-| `keep` | 46 |
+| `keep` | 47 |
 | `relabel` | 17 |
 | `cut` | 15 |
-| `phase-2c` | 6 |
+| `phase-2c` | 7 |
 | `demote` | 5 |
-| **Total** | **89** |
+| **Total** | **91** |
+
+Rows 90-91 (`StandingIntentsWidget`, added by the fix-wave review — see "Fix-wave
+addendum" under Applied) account for the `keep` and `phase-2c` increases over the
+original Task 1 tally of 89.
 
 Every verdict cell holds exactly one verdict. Rows 31 and 45 are `cut` with a stated
 scope in the Action note (part of the row's rendering survives); rows 29a and 29b were
@@ -333,11 +339,16 @@ that assumption still holds.
 
 ## Applied
 
-Phase 0, Task 4. Every `keep` row (46) needed no change and carries no line below —
+Phase 0, Task 4. Every `keep` row (47) needed no change and carries no line below —
 this section covers the 43 rows that did. `done` cites the commit that applied it;
 `deferred-to-2c` rows are the seed list for the roadmap's Phase 2c (their target
 needs a derivation, a structure, or a reconciliation a copy change cannot reach — see
 each row's own Action note above for what that is).
+
+Rows 90-91 are a later addition (see "Fix-wave addendum" below): the whole-branch
+review that closed this program found `StandingIntentsWidget` missing from the
+inventory entirely, so its two rows were appended and applied out of Task 4's
+original sequence.
 
 | Row | Verdict | Disposition |
 |---|---|---|
@@ -384,6 +395,36 @@ each row's own Action note above for what that is).
 | 80 | `demote` | done (f26e8e4) — "Requests" KPI card removed from the AI Insights strip; the request deep dive's own opening sentence (row 82) already states the count. `InsightsPage.tsx`'s emphasis toggle also dropped the now-dead `requests` option. |
 | 81 | `relabel` | done (2fbff91) — AI Insights "Blocked requests" sub-line de-doubled: "no request denied by policy today". |
 | 87 | `relabel` | done (2fbff91) — `TokenPolicies` Budget column now renders through `fmtTokens` (e.g. `2.40B`), matching row 11's layer-home format. |
+| 91 | `phase-2c` | deferred-to-2c — `state-intents.ts:230`'s cap-token-spend evidence sentence needs `m.budget` routed through `fmtTokens` (same fix as row 87); the fix-wave review judged the engine-file string template out of scope for a copy-only relabel in this phase — see row 91's own Divergence clause and the addendum below. |
+
+### Fix-wave addendum — StandingIntentsWidget (rows 90-91)
+
+The final whole-branch review that closed this program found `StandingIntentsWidget`
+missing from the inventory: Task 1's brief named it in the files-to-read list, but no
+row in the original table cited it, so the doc's own claim of complete coverage of
+the five layer-home widgets covered only four. Rows 90-91 close that gap.
+
+Row 90 (`keep`) needed no code change: the widget's evidence-sentence render already
+passes T2-T4, and its T1 failure is the same kind the audit tolerates elsewhere (rows
+4, 47-49) rather than one that calls for a fix.
+
+Row 91 is the one branch of that same sentence with a real defect: `cap-token-spend`'s
+violated evidence prints `m.budget.toLocaleString()` — ten raw digits, e.g.
+`"2,400,000,000-token budget"` — on the same board where `TokenBudgetsWidget` states
+the identical kind of figure as `2.40B` via `fmtTokens`. This is the exact defect row
+87 fixed at `TokenPolicies.tsx:126`. The difference is the render site: row 87's fix
+touched a feature component that renders a raw number it can format on its own; row
+91's only render site is the evidence *string itself*, authored inside
+`src/engine/state-intents.ts` (line 230), which the phase's Global Constraints scope
+out of a copy-only relabel ("Flywheel compliance: copy changes only touch text and
+existing `fw-*`-token components" — an engine file is neither). The fix-wave treated
+that boundary as binding rather than making an exception for a copy-only edit, so row
+91 stays `phase-2c` and `state-intents.ts` was not touched. Un-deferring it needs
+either `state-intents.ts:230` calling `fmtTokens(m.budget)` directly (a one-line
+engine change, if a future phase judges evidence-string formatting to be fair game
+inside the engine) or `StandingIntentsWidget` receiving the raw `m.budget` value
+alongside the composed sentence so the widget can format it itself (an interface
+change, not a copy change).
 
 ### Orphaned derivations left behind (not this program's to remove)
 
