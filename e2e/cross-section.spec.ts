@@ -12,12 +12,13 @@ test('design on the twin: stage usw2 → engine-priced delta → commit → the 
   const panel = page.getByTestId('stack-panel');
   await expect(panel).toBeVisible();
 
-  // The NaaS band states a live regions-on-fabric figure. Capture it.
+  // The NaaS band states a live "still on the table" savings figure — it
+  // falls as regions attach and their savings are captured. Capture it.
   const naasStrip = page.getByTestId('stack-figures-naas');
   await expect(naasStrip).toBeVisible();
   const beforeText = await naasStrip.innerText();
-  const before = beforeText.match(/(\d+)\/(\d+)\s*regions on the fabric/);
-  expect(before, 'the NaaS band must state regions on the fabric').toBeTruthy();
+  const before = beforeText.match(/\$([\d,]+)\/mo\s*still on the table/);
+  expect(before, 'the NaaS band must state savings still on the table').toBeTruthy();
 
   // Design mode reveals the usw2 attach with its latency arrow.
   await page.getByTestId('design-toggle').click();
@@ -37,18 +38,21 @@ test('design on the twin: stage usw2 → engine-priced delta → commit → the 
   await page.getByTestId('design-commit').click();
   await expect(tray).toContainText('committed to the estate');
   const afterText = await naasStrip.innerText();
-  const after = afterText.match(/(\d+)\/(\d+)\s*regions on the fabric/);
-  expect(Number(after![1])).toBeGreaterThan(Number(before![1]));
+  const after = afterText.match(/\$([\d,]+)\/mo\s*still on the table/);
+  expect(
+    Number(after![1].replace(/,/g, '')),
+    'attaching usw2 captures its saving, so less is left on the table',
+  ).toBeLessThan(Number(before![1].replace(/,/g, '')));
 
   await page.goto('/#/naas/connect', { waitUntil: 'domcontentloaded' });
   const usw2Edge = page.locator('[data-fabric-edge][data-region-id="usw2"]').first();
   await expect(usw2Edge).toHaveAttribute('data-path', 'private');
 
-  // Undo reverts the committed move — the cross-section reads it back down.
+  // Undo reverts the committed move — the cross-section reads it back up.
   await page.goto('/#/discover', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: /undo/i }).click();
   const restoredText = await page.getByTestId('stack-figures-naas').innerText();
-  const restored = restoredText.match(/(\d+)\/(\d+)\s*regions on the fabric/);
+  const restored = restoredText.match(/\$([\d,]+)\/mo\s*still on the table/);
   expect(restored![1]).toBe(before![1]);
 });
 

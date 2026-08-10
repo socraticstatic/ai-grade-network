@@ -330,3 +330,92 @@ that assumption still holds.
   same number today. In an estate where AI savings are non-zero they would differ by an
   unexplained amount under two savings labels — which is a stronger argument for row
   8's `cut`, not a weaker one.
+
+## Applied
+
+Phase 0, Task 4. Every `keep` row (46) needed no change and carries no line below —
+this section covers the 43 rows that did. `done` cites the commit that applied it;
+`deferred-to-2c` rows are the seed list for the roadmap's Phase 2c (their target
+needs a derivation, a structure, or a reconciliation a copy change cannot reach — see
+each row's own Action note above for what that is).
+
+| Row | Verdict | Disposition |
+|---|---|---|
+| 2 | `phase-2c` | deferred-to-2c — needs one reconciled savings derivation between `arbitrage().availableSavings` and `advisorDraft().deltas.egressSavingMo` before either the exec board or the Discover advisor chip can carry an honest total. |
+| 4 | `demote` | done (f26e8e4) — "Regions on the fabric" tile removed from `EstateFiguresWidget`; Connect's verdict line (row 37) already states it. |
+| 5 | `cut` | done (f26e8e4) — "Sites" tile removed from `EstateFiguresWidget`. |
+| 7 | `cut` | done (f26e8e4) — "Still on the table" tile removed from `EstateFiguresWidget`. |
+| 8 | `cut` | done (f26e8e4) — "Recoverable" KPI removed from `AssessmentFindingsWidget`. |
+| 9 | `phase-2c` | deferred-to-2c — needs a link affordance on `AssessmentFindingsWidget` (it has none today) before the ready copy ("7 open security findings" → `/naas/govern`) can land. |
+| 10 | `relabel` | done (2fbff91) — "Invisible share" → "of traffic you cannot see" in `AssessmentFindingsWidget`. |
+| 11 | `relabel` | done (2fbff91) — `TokenBudgetsWidget` reordered to lead with the percentage ("0% of a 2.40B/day budget"). Minor deferred: renders `2.40B` (existing `fmtTokens` form), not the audit's literal `2.4B` — see Concerns. |
+| 13 | `phase-2c` | deferred-to-2c — needs an explicit "no traffic metered yet" empty state in `TokenBudgetsWidget` for a budget row with no matching meter. |
+| 14 | `cut` | done (f26e8e4) — "Model endpoints ready" tile removed from `EstateFiguresWidget` (AI). |
+| 15 | `demote` | done (f26e8e4) — merged with row 16 into one warned line in `EstateFiguresWidget` (AI); see row 16. |
+| 16 | `relabel` | done (f26e8e4) — merged with row 15's demote into one line: `All {tokensToday} tokens today rode the public internet` (or the partial-governance branch — see Task 3's Concerns) when `ungovernedTokensToday > 0`. |
+| 18 | `relabel` | done (2fbff91) — Discover's verdict line reordered to open on the gap: "8 of your 9 cloud regions still ride the public internet. 1 is on the AT&T fabric, across 6 clouds." |
+| 19 | `relabel` | done (2fbff91) — FlowBar CTA reworded to "Attach the 142 workloads still on the public internet". |
+| 21 | `demote` | done (f26e8e4) — "Active on-ramps" tile removed from Discover's summary band; the same stat still renders inside the `estate-breakdown` disclosure's Network domain. |
+| 24 | `relabel` | done (2fbff91) — "ATTACHED" → "ATTACHED VPCS" in Discover's summary band. |
+| 26 | `phase-2c` | deferred-to-2c — same reconciliation as row 2; one derivation must win before the Discover advisor chip's `$52,961/mo` and the exec board's `$19,900/mo` agree. |
+| 27 | `demote` | done (f26e8e4) — all four AI-band figures removed from `StackPanel`; the band's verb links and blurb stay. Same four figures already state on the AI layer home (rows 14-17). |
+| 28 | `cut` | done (f26e8e4) — "N clouds · N regions · N VPCs" prose line removed from `StackPanel`'s Cloud band; `cloudStratum()` deleted outright as its only consumer. |
+| 29a | `cut` | done (f26e8e4) — "regions on the fabric" and "sites" figures removed from `StackPanel`'s NaaS band; row 29b's egress/savings pair stays. |
+| 31 | `cut` | done (f26e8e4) — the `StatTiles` beside each Discover cloud row removed; the prose subtitle one line up stays. |
+| 33 | `cut` | done (f26e8e4) — the "N workloads reachable over the public internet" alert banner removed from `UnifiedDiscovery`. |
+| 35 | `cut` | done (f26e8e4) — "Routes" stat removed from the folded `estate-breakdown` disclosure. |
+| 36 | `cut` | done (f26e8e4) — "Gateways" stat removed from the folded `estate-breakdown` disclosure. |
+| 37 | `relabel` | done (2fbff91) — Connect's verdict line grammar/zero-branch fixed: "1 of 9 regions is on the AT&T fabric, none with dual paths. 8 still ride the public internet." |
+| 38 | `cut` | done (f26e8e4) — "On the fabric" tile removed from `ConnectPage`'s `FabricPanel`. |
+| 40 | `cut` | done (f26e8e4) — "Still public" tile removed from `ConnectPage`'s `FabricPanel`. |
+| 44 | `phase-2c` | deferred-to-2c — needs either a real derivation for "4 paths · 2 diverse sites · failover detect in 900ms (BFD)" or an explicit "how the fabric is built" frame; the figure is hardcoded today. |
+| 45 | `cut` | done (f26e8e4) — the leading "N on the fabric ·" count removed from `ConnectionsList`; the descriptive tail stays. |
+| 50 | `relabel` | done (2fbff91) — Observe KPI "EGRESS" → "EGRESS SPEND". |
+| 51 | `relabel` | done (2fbff91) — Observe KPI "UNDER CONTROL" → "ON THE AT&T FABRIC". |
+| 55 | `cut` | done (f26e8e4) — the "13% of network traffic (…)" narrative block removed from `buildBriefing`. |
+| 56 | `cut` | done (f26e8e4) — the "87% of flows (…)" narrative block removed from `buildBriefing`; the briefing now opens on row 57's denial sentence when there are denials. |
+| 58 | `relabel` | done (2fbff91) — Govern's Policies tab badge given the accessible name/title "7 open violations" (visible `7` unchanged; `TabItem`/`TabGroup` gained an optional `countLabel` to carry it). |
+| 64 | `relabel` | done (2fbff91) — `ServiceInsertion` "0 / 5 inserted" → "0 of 5 inspection services in the path". |
+| 72 | `relabel` | done (2fbff91) — `ArbitrageBreakdown` "…captured this session" → "…captured so far". |
+| 73 | `relabel` | done (2fbff91) — Cost's commit-draw sentence rewritten: "$19,200 of your $30,000 commitment used (64%)". Minor deferred: the tile's own header label was changed to "Commitment" (not a literal string from the audit's Action note) — see Concerns. |
+| 74 | `phase-2c` | deferred-to-2c — `EgressTrend`'s Y-axis tick formatter needs a fix (repeated `$1k/d` labels), which is an arithmetic defect, not a copy change. |
+| 76 | `relabel` | done (2fbff91) — `SteerToSave` "…captured this session" → "…captured so far" (same fix as row 72). |
+| 78 | `relabel` | done (2fbff91) — AI Insights "Cost" card → "Spend", sub → "Saved $29.96 vs external models (59%)". |
+| 80 | `demote` | done (f26e8e4) — "Requests" KPI card removed from the AI Insights strip; the request deep dive's own opening sentence (row 82) already states the count. `InsightsPage.tsx`'s emphasis toggle also dropped the now-dead `requests` option. |
+| 81 | `relabel` | done (2fbff91) — AI Insights "Blocked requests" sub-line de-doubled: "no request denied by policy today". |
+| 87 | `relabel` | done (2fbff91) — `TokenPolicies` Budget column now renders through `fmtTokens` (e.g. `2.40B`), matching row 11's layer-home format. |
+
+### Orphaned derivations left behind (not this program's to remove)
+
+Surfaced by Task 3's report; none are `src/engine/**` derivations, so none block a
+future cleanup pass on the engine itself:
+
+- **`counts().routes` / `counts().gateways`** (`src/engine/state.ts:389-390`) — engine
+  derivations. Their only consumer (`discoveryModel.ts`'s Network domain stats) was
+  removed by rows 35-36; `counts()` itself stays fully alive for every other field.
+- **`aiStratum().modelsReady` / `.modelsTotal` / `.identityCount`**
+  (`src/features/discover/stackFigures.ts`) — lost their last UI consumer (row 27's
+  `StackPanel` figures, row 14's `EstateFiguresWidget` tile) but the owning function,
+  `aiStratum()`, stays alive for `tokensToday`/`ungovernedTokensToday`/`spendToday`.
+- **`naasStratum().regionsAttached` / `.regionsTotal` / `.sites`**
+  (`src/features/discover/stackFigures.ts`) — lost their last UI consumer (rows 4, 5,
+  29a) but `naasStratum()` stays alive for `egressPubMo`/`egressPrivMo`/`availableSavingsMo`.
+- **`InsightKpi`'s `'requests'` key union member** (`src/features/ai-fabric/insights/insightsFigures.ts:35`)
+  — stale now that row 80 removed the Requests card; `InsightsPage.tsx`'s emphasis
+  toggle no longer offers it, but the type still names it.
+
+`cloudStratum()` / `CloudStratumFigures` (`stackFigures.ts`, row 28's only consumer)
+was the one exception: deleted outright in f26e8e4, not left orphaned, because it was
+a whole local helper with zero remaining callers rather than a function losing one
+field among several still in use.
+
+### Deferred minors (word-choice, not structural)
+
+- **Row 73's tile header.** The Action note gave one sentence for the meter's caption;
+  the tile's separate `label` prop needed its own fix, and Task 2 chose "Commitment"
+  (lifted from the given sentence's vocabulary) since no replacement was literally
+  quoted. `src/features/cost/CostPage.tsx:64`.
+- **Row 11 / row 87's digit count.** The audit's own copy quotes `2.4B`; the shipped
+  `fmtTokens` helper renders `2.40B` (two decimals, the same convention `fmtTokens`
+  already used for `M`). Task 2 kept the existing formatter rather than special-case
+  one digit of precision. `src/features/ai-fabric/TokenBudgetsWidget.tsx:51`.
