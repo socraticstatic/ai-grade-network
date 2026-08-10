@@ -49,16 +49,36 @@ const MERIDIAN_ONRAMP: OnrampSeed = {
 
 type Snapshot = ReturnType<typeof snapshot>;
 let acmeSnapshot: Snapshot | null = null;
+// Deep-clone, not a shallow spread: a shallow `[...cc.branches]` /
+// `{...cc.regions}` copies the CONTAINER but keeps the same element
+// objects, and engine actions mutate those elements in place
+// (state.ts:181-183 activateOnramp sets o.active/cl.attached/r.attached
+// on the SAME objects; state.ts:258-260 restore() does too). A shallow
+// snapshot taken before a mutate -> swap-to-meridian -> swap-back-to-acme
+// round trip would silently hand back the mutated objects, not the
+// original acme seed values. structuredClone is safe here: every seed
+// container is plain JSON-safe data (no functions, no class instances).
+// This only deep-copies the SNAPSHOT's own storage - cc.branches etc.
+// keep their original array/object identity via swap()/swapRecord()
+// below, unaffected by how the snapshot itself is stored.
 function snapshot(cc: EngineSeeds) {
-  return {
-    branches: [...cc.branches], clouds: [...cc.clouds],
-    regions: { ...cc.regions }, vpcs: { ...cc.vpcs },
-  };
+  return structuredClone({
+    branches: cc.branches, clouds: cc.clouds,
+    regions: cc.regions, vpcs: cc.vpcs,
+  });
 }
 
 export function applyEstateProfile(cc: EngineSeeds, profile: EstateProfile): void {
   acmeSnapshot ??= snapshot(cc);
-  const next = profile === 'meridian' ? meridianEstate() : acmeSnapshot;
+  // Re-clone acmeSnapshot on EVERY acme application, not just at capture:
+  // swap()/swapRecord() below hand `next`'s own arrays/objects to cc by
+  // reference (push(...next), Object.assign(target, next)), so if `next`
+  // were acmeSnapshot itself, cc.regions.aws etc. would BECOME the
+  // snapshot's own arrays - the next in-place engine mutation (activateOnramp,
+  // restore(), ...) would corrupt the stored snapshot along with live state,
+  // and the snapshot would no longer be restorable. meridianEstate() needs
+  // no such clone - it already returns fresh objects on every call.
+  const next = profile === 'meridian' ? meridianEstate() : structuredClone(acmeSnapshot);
   swap(cc.branches, next.branches as unknown[]);
   swap(cc.clouds, next.clouds as unknown[]);
   swapRecord(cc.regions, next.regions as Record<string, unknown[]>);

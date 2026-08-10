@@ -40,4 +40,21 @@ describe('estateProfile', () => {
     expect(CC.onramps.some((o: { id: string }) => o.id === 'mt-nb1')).toBe(false);
     expect(CC.onramps.length).toBe(4); // restored to the original acme seed count
   });
+
+  it('acme restore reverts a mutation made in place after the acme snapshot was taken', () => {
+    // engine actions (e.g. activateOnramp, restore()) mutate seed elements
+    // IN PLACE - simulate that here instead of going through activateOnramp,
+    // to isolate the snapshot depth from any other engine behavior.
+    const regions = CC.regions as { aws: { id: string; attached: boolean }[] };
+    const usw2 = regions.aws.find(r => r.id === 'usw2')!;
+    expect(usw2.attached).toBe(false); // original acme seed value
+
+    usw2.attached = true;
+
+    applyEstateProfile(CC as never, 'meridian');
+    applyEstateProfile(CC as never, 'acme');
+
+    const restored = (CC.regions as { aws: { id: string; attached: boolean }[] }).aws.find(r => r.id === 'usw2')!;
+    expect(restored.attached).toBe(false); // reverted to the ORIGINAL value, not the mutation
+  });
 });
