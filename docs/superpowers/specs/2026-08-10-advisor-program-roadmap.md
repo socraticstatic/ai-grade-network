@@ -42,6 +42,20 @@ Phase 1 ──┬─► Phase 2a ──┬─► Phase 3
 Phase 2c ────────────────┘
 ```
 
+## Binding constraints (all phases)
+
+**Flywheel compliance.** Every new surface uses the Flywheel 3 tokens already in `tailwind.config.js` (`fw-*` colors, ATT Aleck Sans, cobalt-600 primary interactive, the existing radius/spacing idiom of shipped components). No ad-hoc hex values, no new color ramps, no components that couldn't sit in the SDCI Figma. Where the advisor needs a pattern Flywheel doesn't name (scan checklist, evidence chip), it is composed from Flywheel primitives and documented for back-porting into the Figma library.
+
+**Borrowed from the video** (the advisor UX inherits these specific elements, adapted to Flywheel):
+- Entry banner: "Not sure..." observation + proof chips + single CTA.
+- Minimal intake with inline verification and trust copy at the moment of ask.
+- Scan theater: named analysis steps checked off one by one; status chip in the header flipping "Analyzing..." → "Recommendation ready."
+- Two panes: chat narrates left, canvas carries the payload right; the canvas must stand alone with the rail deleted.
+- Evidence chips land in the rail before the cards finish; every card carries inline evidence with a "why we recommend this" popover citing peer/estate data.
+- Savings-led headline card above itemized detail; sticky total with the savings restated.
+- Editable recommendation with instant re-check ("change anything and I'll re-check your savings").
+- Stateful chat input: disabled "Building your recommendation..." until ready, then "Ask about your recommendation," with seeded suggested questions.
+
 ## Out of scope for this program
 
 Real credential handling and live cloud crawling (demo stays engine-seeded), advisor checkout/commerce, LMCC integration changes, portal-wide rebrand work (guarded by rebrand.test.ts, untouched).
