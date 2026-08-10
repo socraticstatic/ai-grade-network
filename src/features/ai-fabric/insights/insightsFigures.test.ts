@@ -14,9 +14,11 @@ import {
    promptTrace, which appends to the decision log and meters spend. Order
    matters - the driven-trace tests run after the shape assertions. */
 describe('insightKpis', () => {
-  it('states exactly the five gateway KPIs, in Figma order', () => {
+  /* Row 80 of the phase-0 metric audit: "Requests" cut off the strip — four
+     KPIs now, not five. */
+  it('states exactly the four gateway KPIs, in Figma order', () => {
     const kpis = insightKpis(CC);
-    expect(kpis.map(k => k.key)).toEqual(['tokens', 'cost', 'ttft', 'requests', 'blocked']);
+    expect(kpis.map(k => k.key)).toEqual(['tokens', 'cost', 'ttft', 'blocked']);
   });
 
   it('the cost KPI states the aiSpendTotals figures, not its own', () => {
@@ -26,13 +28,25 @@ describe('insightKpis', () => {
     expect(kpis.find(k => k.key === 'tokens')!.value).toBe(fmtTokens(totals.tokensToday));
   });
 
-  it('requests and blocked count the decision log', () => {
+  it('blocked counts the decision log', () => {
     const log = CC.decisionLog!();
     const kpis = insightKpis(CC);
-    expect(kpis.find(k => k.key === 'requests')!.value).toBe(String(log.length));
     expect(kpis.find(k => k.key === 'blocked')!.value).toBe(
       String(log.filter(d => !d.allowed).length),
     );
+  });
+
+  /* Row 80: the request deep dive's own opening sentence (RequestDeepDive
+     -> requestVerdict()) already states this count, over requestRows(cc)
+     rather than the raw decision log — this is the fact that makes the
+     demote safe: every decision the engine records carries a tag and a
+     modelId, so requestRows' `tag !== null && modelId !== null` filter
+     never actually narrows decisionLog(). */
+  it('drops the Requests KPI — requestRows(cc) agrees with decisionLog().length', () => {
+    const log = CC.decisionLog!();
+    const kpis = insightKpis(CC);
+    expect(kpis.find(k => k.key === 'requests')).toBeUndefined();
+    expect(requestRows(CC).length).toBe(log.length);
   });
 
   /* Row 78 of the phase-0 metric audit: the "cost" tile's title said "Cost"

@@ -3,7 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { UnifiedDiscovery } from './UnifiedDiscovery';
 import { CC } from '../../engine';
-import { estateDomains, type Cloud } from './discoveryModel';
+import { estateDomains, cloudRegionCount, cloudVpcCount, type Cloud } from './discoveryModel';
 import { ID_RENAME_WARNING } from '../govern/groupLanguage';
 // No engine provider wrapper — the engine is a singleton read via useCloudControl.
 // A MemoryRouter is required because the embedded FlowBar reads the active route.
@@ -14,7 +14,6 @@ describe('UnifiedDiscovery drill-down tree', () => {
     renderUD();
     // estate tiles
     expect(screen.getByText('VPC · VNet')).toBeInTheDocument();
-    expect(screen.getByText('Gateways')).toBeInTheDocument();
     // cloud rows (buttons carry aria-label = cloud name)
     expect(screen.getByRole('button', { name: 'AWS' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'CoreWeave' })).toBeInTheDocument();
@@ -61,6 +60,43 @@ describe('UnifiedDiscovery drill-down tree', () => {
     // The figure is the ACTIVE count, not the circuit inventory — the review's
     // complaint was a tile that read 4 while only 1 carried traffic.
     expect(CC.activeOnramps()).toBeLessThan(CC.onramps.length);
+  });
+
+  /* Row 21 of the phase-0 metric audit: "Active on-ramps" demoted off the
+     always-visible summary band — the fraction is true, but the band has
+     no room for the denominator's blurb ("active over every circuit on
+     order"), which the estate-breakdown disclosure's Network domain
+     already carries beside the same stat (asserted above). */
+  it('drops the on-ramps tile from the summary band', () => {
+    renderUD();
+    const band = screen.getByTestId('estate-summary-band');
+    expect(within(band).queryByText('Active on-ramps')).not.toBeInTheDocument();
+  });
+
+  /* Row 31: the cloud row's per-cloud stat tiles cut — the same three
+     numbers already render as the row's prose subtitle, one row up. */
+  it('states each cloud\'s regions/VPC/workload counts once, not as tiles too', () => {
+    renderUD();
+    const clouds = CC.clouds as Cloud[];
+    const c = clouds[0];
+    const row = screen.getByRole('button', { name: c.name });
+    expect(
+      within(row).getByText(`${cloudRegionCount(CC, c.id)} regions · ${cloudVpcCount(CC, c.id)} VPC/VNet · ${c.workloads} workloads`),
+    ).toBeInTheDocument();
+    // The tile rendering of the same figures — a bare "Regions" caption —
+    // is gone; only the domain-level "Regions" stat inside the (separate)
+    // estate-breakdown disclosure remains.
+    expect(within(row).queryByText('Regions')).not.toBeInTheDocument();
+    expect(within(row).queryByText('Workloads')).not.toBeInTheDocument();
+  });
+
+  /* Row 33: the "N workloads reachable over the public internet" alert cut
+     — a third rendering of the FlowBar CTA's own count, with no action
+     attached. */
+  it('does not render the public-workloads alert the FlowBar CTA already states', () => {
+    renderUD();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/reachable over the public internet/)).not.toBeInTheDocument();
   });
 
   /* The tour's Discover beat speaks about clouds, regions and VPCs. Anchoring

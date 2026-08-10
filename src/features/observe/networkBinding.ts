@@ -280,22 +280,16 @@ function buildKpis(cc: CloudControl): Kpi[] {
 }
 
 function buildBriefing(cc: CloudControl): Briefing {
-  const rk = cc.routingKpis();
-  const rows = cc.routeFlows() as RouteFlowRow[];
-  const total = rows.reduce((s, r) => s + r.gbps, 0) || 1;
-  const publicGbps = rows.filter(r => !r.current.attControlled).reduce((s, r) => s + r.gbps, 0);
-  const pctPublic = Math.round((publicGbps / total) * 100);
   const summary = stripTags(String(cc.obsSummary()));
 
+  // Rows 55-56 of the phase-0 metric audit: the two narrative blocks that
+  // used to open this briefing cut — a third statement of the verdict
+  // line's 13% (row 55) and an 87%-of-Gbps sentence mislabelled "of flows"
+  // (row 56), on a screen whose KPI strip (rows 50-51) and verdict line
+  // (row 46) already carry both numbers. Their derivations (`routeFlows()`
+  // filtered by control state) have no other consumer in this function and
+  // are noted as orphaned in this task's report.
   const narrative: BriefingBlock[] = [
-    {
-      text: `${rk.pctUnderControl}% of network traffic (${rk.controlledGbps} of ${rk.totalGbps} Gbps) rides the AT&T-controlled path.`,
-      emphasis: 'strong',
-    },
-    {
-      text: `${pctPublic}% of flows (${publicGbps.toFixed(1)} Gbps) still cross the public internet, exposed to congestion and higher egress rates.`,
-      emphasis: 'risk',
-    },
     { text: summary },
   ];
 

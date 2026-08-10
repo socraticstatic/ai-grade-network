@@ -87,12 +87,15 @@ describe('UnifiedDiscovery estate filter chips', () => {
    disclosure. The band re-uses the same domain derivations the sections
    already compute — no new data paths. */
 describe('UnifiedDiscovery estate summary band', () => {
-  it('estate-summary-band renders one row with the six headline figures', () => {
+  /* Row 21 of the phase-0 metric audit: "Active on-ramps" demoted off this
+     band — five headline figures remain, not six. */
+  it('estate-summary-band renders one row with the five headline figures', () => {
     renderUD();
     const band = screen.getByTestId('estate-summary-band');
-    for (const label of ['Sites', 'Active on-ramps', 'Clouds · Regions', 'Workloads', 'Attached VPCs', 'Exposed endpoints']) {
+    for (const label of ['Sites', 'Clouds · Regions', 'Workloads', 'Attached VPCs', 'Exposed endpoints']) {
       expect(within(band).getByText(label), `${label} missing from the summary band`).toBeInTheDocument();
     }
+    expect(within(band).queryByText('Active on-ramps')).not.toBeInTheDocument();
     // one row — not the three per-domain sections it replaces
     expect(within(band).queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
     expect(within(band).queryByTestId('estate-network')).not.toBeInTheDocument();
@@ -107,11 +110,14 @@ describe('UnifiedDiscovery estate summary band', () => {
     expect(breakdown).not.toHaveAttribute('open');
     expect(within(breakdown).getByText('Show the breakdown')).toBeInTheDocument();
 
-    // A per-section-only label — never one of the band's six headline
-    // figures — lives inside the breakdown and nowhere else.
-    expect(within(breakdown).getByText('Routes')).toBeInTheDocument();
+    // A per-section-only label — never one of the band's five headline
+    // figures — lives inside the breakdown and nowhere else. ("Routes" and
+    // "Gateways", the Network domain's other two per-section-only stats,
+    // were cut by rows 35-36 of the phase-0 metric audit; "Subnets" is the
+    // Cloud domain's own still-standing example of the same shape.)
+    expect(within(breakdown).getByText('Subnets')).toBeInTheDocument();
     const band = screen.getByTestId('estate-summary-band');
-    expect(within(band).queryByText('Routes')).not.toBeInTheDocument();
+    expect(within(band).queryByText('Subnets')).not.toBeInTheDocument();
 
     // the previous three sections are all still there, inside the fold
     expect(within(breakdown).getByTestId('estate-network')).toBeInTheDocument();

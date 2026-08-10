@@ -36,8 +36,10 @@ async function prep(page: Page) {
    that renders an empty shell is exactly the failure this loop catches, and
    each AI screen's `mustSee` names the block that moved onto it. */
 const SCREENS = [
-  // Discover: the public-exposure finding strip (Task 5) — real estate rollup.
-  { route: '/discover', mustSee: /workloads? reachable over the public internet/i },
+  // Discover: the FlowBar's public-exposure CTA — real estate rollup. (Row
+  // 33 of the phase-0 metric audit cut the finding-strip alert this used
+  // to match — a third, action-less rendering of the same count.)
+  { route: '/discover', mustSee: /workloads? still on the public internet/i },
   // NaaS Connect: the cloud-fabric copy (section description) — the steerable
   // Paths table moved to Observe.
   { route: '/naas/connect', mustSee: /AT&T fabric|on-ramps?/i },

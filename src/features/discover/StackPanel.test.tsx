@@ -3,8 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, test, expect } from 'vitest';
 import { StackPanel } from './StackPanel';
 import { CC } from '../../engine';
-import { fmtUsd } from '../ai-fabric/aiSpend';
-import { aiStratum, naasStratum, cloudStratum, attachOpportunities } from './stackFigures';
+import { naasStratum, attachOpportunities } from './stackFigures';
 
 const renderPanel = () =>
   render(<MemoryRouter><StackPanel /></MemoryRouter>);
@@ -53,30 +52,41 @@ describe('StackPanel — the IA contracts hold', () => {
 });
 
 describe('StackPanel — the cross-section states engine figures', () => {
-  test('the AI band restates aiStratum, spend in /ai/cost vocabulary', () => {
+  /* Row 27 of the phase-0 metric audit: the AI band's four figures
+     (model endpoints ready, tokens today, public-internet exposure, spend
+     + identities) demoted off this screen — the AI layer home's own
+     Estate at a glance already states them, and four numbers stacked in a
+     NaaS-shaped rail read as a broken panel. The band itself, its blurb
+     and its four verb links stay. */
+  test('the AI band keeps its verbs and drops its figures', () => {
     renderPanel();
-    const fig = aiStratum(CC);
     const strip = screen.getByTestId('stack-figures-ai');
-    expect(within(strip).getByText(`${fig.modelsReady}/${fig.modelsTotal}`)).toBeInTheDocument();
-    expect(within(strip).getByText(fmtUsd(fig.spendToday))).toBeInTheDocument();
+    expect(strip).toBeEmptyDOMElement();
+    const band = screen.getByTestId('stack-band-ai');
+    expect(within(band).getByText(/AI/)).toBeInTheDocument();
   });
 
-  test('the NaaS band restates naasStratum and names the public path', () => {
+  test('the NaaS band states egress and the savings on the table, not the region/site counts', () => {
     renderPanel();
     const fig = naasStratum(CC);
     const strip = screen.getByTestId('stack-figures-naas');
-    expect(within(strip).getByText(`${fig.regionsAttached}/${fig.regionsTotal}`)).toBeInTheDocument();
     expect(within(strip).getByText(/egress on public transit/)).toBeInTheDocument();
     expect(within(strip).getByText(`$${Math.round(fig.availableSavingsMo).toLocaleString()}/mo`)).toBeInTheDocument();
+    // Row 29a: "regions on the fabric" and "sites" cut — both restate
+    // figures shown better elsewhere on the same page (rows 20, 21/37).
+    expect(within(strip).queryByText('regions on the fabric')).not.toBeInTheDocument();
+    expect(within(strip).queryByText('sites')).not.toBeInTheDocument();
   });
 
-  test('the Cloud band states the real estate counts, nothing else numeric', () => {
+  /* Row 28: the "N clouds · N regions · N VPCs" count cut — a third
+     rendering of the summary band's own tiles on the same screen
+     (Discover's rows 22, 24). The band's job, "its own layer, next",
+     stays. */
+  test('the Cloud band names its place in the stack and states no count', () => {
     renderPanel();
-    const fig = cloudStratum(CC);
     const band = screen.getByTestId('stack-band-cloud');
-    expect(within(band).getByText(
-      `${fig.clouds} clouds · ${fig.regions} regions · ${fig.vpcs} VPCs in the estate today.`,
-    )).toBeInTheDocument();
+    expect(within(band).getByText('its own layer, next')).toBeInTheDocument();
+    expect(within(band).queryByText(/VPCs in the estate today/)).not.toBeInTheDocument();
   });
 });
 
@@ -114,7 +124,7 @@ describe('StackPanel — design mode', () => {
     expect(naasStratum(CC)).toEqual(before);
   });
 
-  test('commit applies through the engine and the band figure moves; undo restores', () => {
+  test('commit applies through the engine and the band restates the live figure; undo restores', () => {
     renderPanel();
     const before = naasStratum(CC);
     fireEvent.click(screen.getByTestId('design-toggle'));
@@ -122,11 +132,15 @@ describe('StackPanel — design mode', () => {
     fireEvent.click(screen.getByTestId(`move-attach-${opp.regionId}`));
     fireEvent.click(screen.getByTestId('design-commit'));
     const after = naasStratum(CC);
+    // The engine mutated — any attach grows the attached-region count, even
+    // when it does not move THIS band's remaining figures (egress/savings
+    // move only for the specific on-ramp bucket the attach captures; see
+    // stackFigures.test.ts's opportunity-pricing tests).
     expect(after.regionsAttached).toBeGreaterThan(before.regionsAttached);
     expect(screen.getByTestId('design-tray').textContent).toContain('committed to the estate');
-    // The band restates the new figure.
+    // The band re-renders off the post-commit engine state, not a stale value.
     expect(within(screen.getByTestId('stack-figures-naas'))
-      .getByText(`${after.regionsAttached}/${after.regionsTotal}`)).toBeInTheDocument();
+      .getByText(`$${Math.round(after.availableSavingsMo).toLocaleString()}/mo`)).toBeInTheDocument();
     // Restore the shared engine for the rest of the suite.
     expect(CC.undo()).toBeTruthy();
     expect(naasStratum(CC).regionsAttached).toBe(before.regionsAttached);

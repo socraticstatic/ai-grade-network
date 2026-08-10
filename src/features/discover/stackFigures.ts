@@ -36,12 +36,6 @@ export interface NaasStratumFigures {
   availableSavingsMo: number;
 }
 
-export interface CloudStratumFigures {
-  clouds: number;
-  regions: number;
-  vpcs: number;
-}
-
 export function aiStratum(cc: CloudControl): AiStratumFigures {
   const totals = aiSpendTotals(cc);
   const catalog = (cc.modelCatalog?.() ?? []) as { ready: boolean }[];
@@ -67,11 +61,6 @@ export function naasStratum(cc: CloudControl): NaasStratumFigures {
     egressPrivMo: egress.priv,
     availableSavingsMo: arb.availableSavings,
   };
-}
-
-export function cloudStratum(cc: CloudControl): CloudStratumFigures {
-  const counts = cc.counts();
-  return { clouds: counts.clouds, regions: counts.regions, vpcs: counts.vpcs };
 }
 
 /* ------------------------- design mode: the moves ------------------------- */

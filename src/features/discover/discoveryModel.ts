@@ -232,11 +232,16 @@ export function estateDomains(cc: CloudControl): EstateDomain[] {
          adds mid-provisioning, so "available" would claim readiness the
          denominator does not hold. "On order" makes no such claim. */
       blurb: 'Your sites and the AT&T on-ramps reaching them — active over every circuit on order, so control is a count, not a claim.',
+      // Rows 35-36 of the phase-0 metric audit: "Routes" and "Gateways"
+      // cut — already folded behind this disclosure and failing every
+      // test regardless ("routes" is ambiguous between routing-protocol
+      // routes and route tables; a gateway is not a first-class object
+      // anywhere else in this product). `counts().routes` / `.gateways`
+      // (state.ts) have no other consumer and are noted as orphaned
+      // engine derivations.
       stats: [
         { key: 'sites', label: 'Sites', value: branches.length },
         { key: 'onramps', label: 'Active on-ramps', value: activeOnramps, of: onramps.length },
-        { key: 'routes', label: 'Routes', value: c.routes },
-        { key: 'gateways', label: 'Gateways', value: c.gateways },
       ],
       cta: { label: 'Order and attach circuits in NaaS · Connect', to: '/naas/connect' },
     },

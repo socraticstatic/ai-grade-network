@@ -59,7 +59,12 @@ export function ConnectionsList({ model, selected, onSelect, onProvisioned }: Co
     <section aria-labelledby="connections-heading" className="rounded-2xl border border-fw-secondary bg-fw-base overflow-hidden" data-testid="connections-list">
       <div className="flex items-center gap-2 px-5 py-3 border-b border-fw-secondary bg-fw-wash">
         <h2 id="connections-heading" className="font-medium text-fw-heading">Connections</h2>
-        <span className="text-figma-xs text-fw-bodyLight">{connections.length} on the fabric · reliability · performance · private/public</span>
+        {/* Row 45 of the phase-0 metric audit: the leading "{n} on the
+            fabric" count cut — a fourth rendering of "1 on the fabric" on
+            this screen (the verdict line, the Connect page's own tiles,
+            and this list's own row count). The descriptive tail — what
+            the list actually states per row — stays. */}
+        <span className="text-figma-xs text-fw-bodyLight">reliability · performance · private/public</span>
       </div>
 
       {connections.length === 0 ? (

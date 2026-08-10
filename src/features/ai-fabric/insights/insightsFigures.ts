@@ -94,13 +94,13 @@ export function insightKpis(cc: CloudControl): InsightKpi[] {
       sub: `P95 across ${catalog.length} models`,
       subTone: 'neutral',
     },
-    {
-      key: 'requests',
-      title: 'Requests',
-      value: String(log.length),
-      sub: 'total today',
-      subTone: 'neutral',
-    },
+    // Row 80 of the phase-0 metric audit: "Requests" cut from the KPI
+    // strip — a gateway screen reading "6 requests today" reads as a
+    // broken meter, not a small estate, and the request deep dive's own
+    // opening sentence (RequestDeepDive.tsx, requestVerdict()) already
+    // states this same count (`log.length` === `requestRows(cc).length`;
+    // every decision the engine records carries a tag and a modelId, so
+    // requestRows' filter never actually narrows the log).
     {
       key: 'blocked',
       title: 'Blocked requests',

@@ -18,11 +18,13 @@ import { ProvisionWizard } from './ProvisionWizard';
 function FabricPanel({ model }: { model: FabricModel }) {
   const attached = model.regions.filter(r => r.path === 'private');
   const dual = attached.filter(r => r.reliability === 'dual');
-  const publicRegions = model.regions.filter(r => r.path === 'public');
+  // Rows 38 and 40 of the phase-0 metric audit: "On the fabric" and "Still
+  // public" cut — both restate the verdict line directly above this panel
+  // (`connectVerdict`, row 37), which states the same 1-vs-8 split as one
+  // sentence. `dual` and `model.c2c` stay: neither is said anywhere else
+  // on this screen.
   const stats = [
-    { label: 'On the fabric', value: `${attached.length}`, sub: `of ${model.regions.length} regions`, tone: 'text-fw-link' },
     { label: 'Dual / resilient', value: `${dual.length}`, sub: 'diverse paths', tone: 'text-fw-success' },
-    { label: 'Still public', value: `${publicRegions.length}`, sub: 'on the internet', tone: 'text-fw-bodyLight' },
     { label: 'Cloud-to-cloud', value: `${model.c2c.length}`, sub: `${model.c2c.filter(c => c.controlled).length} on fabric`, tone: 'text-fw-heading' },
   ];
   return (

@@ -52,7 +52,10 @@ export function InsightsPage() {
   const [params, setParams] = useSearchParams();
   const tab = tabFromParam(params.get('tab'));
   const [filters, setFilters] = useState<RequestFilters>(EMPTY_FILTERS);
-  const [emphasis, setEmphasis] = useState<'tokens' | 'requests' | 'cost'>('tokens');
+  // Row 80 of the phase-0 metric audit cut the "Requests" KPI card; the
+  // emphasis toggle drops the option that pointed at it rather than leave
+  // a control that highlights nothing.
+  const [emphasis, setEmphasis] = useState<'tokens' | 'cost'>('tokens');
   const ago = useUpdatedAgo();
 
   const view = useCloudControlLive(cc => ({
@@ -93,7 +96,7 @@ export function InsightsPage() {
             aria-label="Emphasize a figure"
             className="flex rounded-xl bg-fw-accent p-1"
           >
-            {(['tokens', 'requests', 'cost'] as const).map(u => (
+            {(['tokens', 'cost'] as const).map(u => (
               <button
                 key={u}
                 type="button"

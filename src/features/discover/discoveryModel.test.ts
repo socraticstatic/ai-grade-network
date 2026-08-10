@@ -37,8 +37,6 @@ describe('discoveryModel', () => {
     expect(stats.map(s => s.key)).toEqual([
       'sites',
       'onramps',
-      'routes',
-      'gateways',
       'clouds',
       'regions',
       'vpcs',
@@ -160,8 +158,6 @@ type Engine = typeof CC;
 const TILE_SOURCE: Record<string, (cc: Engine) => number> = {
   sites: cc => cc.branches.length,
   onramps: cc => cc.activeOnramps(),
-  routes: cc => cc.counts().routes,
-  gateways: cc => cc.counts().gateways,
   clouds: cc => cc.counts().clouds,
   regions: cc => cc.counts().regions,
   vpcs: cc => cc.counts().vpcs,
@@ -214,7 +210,7 @@ describe('estateDomains', () => {
 
   it('every domain carries the tiles the brief assigned it', () => {
     const [net, cloud, ai] = estateDomains(CC as never);
-    expect(net.stats.map(s => s.key)).toEqual(['sites', 'onramps', 'routes', 'gateways']);
+    expect(net.stats.map(s => s.key)).toEqual(['sites', 'onramps']);
     expect(cloud.stats.map(s => s.key)).toEqual([
       'clouds', 'regions', 'vpcs', 'subnets', 'workloads', 'attached',
     ]);
@@ -253,8 +249,6 @@ describe('estateDomains', () => {
     const snapshotBefore = estateStats(CC as never);
 
     try {
-      region.routes += 7;                 // routes
-      region.gateways += 3;               // gateways
       region.subnets += 5;                // subnets
       region.ai = !seedRegionAi;          // aiRegions
       cloud.workloads += 11;              // workloads
@@ -296,8 +290,6 @@ describe('estateDomains', () => {
       cloud.workloads -= 11;
       region.ai = seedRegionAi;
       region.subnets -= 5;
-      region.gateways -= 3;
-      region.routes -= 7;
     }
 
     // the restore actually restored — later tests read a clean seed.
@@ -305,7 +297,6 @@ describe('estateDomains', () => {
     // moves both together, so it alone cannot see a leak; the snapshot
     // `toEqual` below is the absolute check.
     expectEveryTileAgreesWithEngine(CC, 'after restore');
-    expect(CC.counts().routes).toBe(124);
     expect(estateStats(CC as never)).toEqual(snapshotBefore);
   });
 

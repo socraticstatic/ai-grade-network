@@ -34,11 +34,14 @@ function Harness() {
 }
 
 describe('KpiStrip', () => {
-  it('renders the five engine KPIs', () => {
+  /* Row 80 of the phase-0 metric audit: "Requests" cut — four KPIs, not
+     five. */
+  it('renders the four engine KPIs', () => {
     render(<KpiStrip kpis={insightKpis(CC)} />);
-    ['tokens', 'cost', 'ttft', 'requests', 'blocked'].forEach(key => {
+    ['tokens', 'cost', 'ttft', 'blocked'].forEach(key => {
       expect(screen.getByTestId(`kpi-${key}`)).toBeInTheDocument();
     });
+    expect(screen.queryByTestId('kpi-requests')).not.toBeInTheDocument();
     expect(screen.getByTestId('kpi-ttft')).toHaveTextContent('ms');
   });
 });

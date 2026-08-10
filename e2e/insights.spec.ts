@@ -19,7 +19,7 @@ const trace = (page: Page) =>
     CC.promptTrace('rd-helion', 'helion-70b', 'e2e insights walk');
   });
 
-test('boots to the anatomy: five KPI cards, the sankey, the request log', async ({ page }) => {
+test('boots to the anatomy: four KPI cards, the sankey, the request log', async ({ page }) => {
   await seedAuth(page);
   await page.goto('/#/ai/observe', { waitUntil: 'domcontentloaded' });
 
@@ -27,9 +27,12 @@ test('boots to the anatomy: five KPI cards, the sankey, the request log', async 
   // log disclosure is ever opened.
   await expect(page.getByTestId('requests-verdict')).toBeVisible();
 
-  for (const key of ['tokens', 'cost', 'ttft', 'requests', 'blocked']) {
+  for (const key of ['tokens', 'cost', 'ttft', 'blocked']) {
     await expect(page.getByTestId(`kpi-${key}`)).toBeVisible();
   }
+  // Row 80 of the phase-0 metric audit: the Requests KPI card cut — the
+  // deep dive's own verdict sentence above already states this count.
+  await expect(page.getByTestId('kpi-requests')).not.toBeVisible();
   await expect(page.getByTestId('sankey')).toBeVisible();
   // One ribbon per metered identity - the seeded estate has three.
   expect(await page.locator('[data-testid^="sankey-ribbon-"]').count()).toBeGreaterThanOrEqual(3);
@@ -40,13 +43,16 @@ test('boots to the anatomy: five KPI cards, the sankey, the request log', async 
   await expect(page.getByTestId('requests-table')).toBeVisible();
 });
 
-test('a driven request rows in and moves the Requests KPI', async ({ page }) => {
+/* Row 80: the Requests KPI card is gone, so this now tracks the same count
+   through the deep dive's own verdict sentence ("N requests today: …"),
+   which is where the audit's demote sends it. */
+test('a driven request rows in and moves the request count the deep dive states', async ({ page }) => {
   await seedAuth(page);
   await page.goto('/#/ai/observe', { waitUntil: 'domcontentloaded' });
 
-  const kpi = page.getByTestId('kpi-requests');
-  await expect(kpi).toBeVisible();
-  const before = Number((await kpi.innerText()).match(/\d+/)?.[0] ?? '0');
+  const verdict = page.getByTestId('requests-verdict');
+  await expect(verdict).toBeVisible();
+  const before = Number((await verdict.innerText()).match(/^(\d+) requests today/)?.[1] ?? '0');
 
   // The row this test reads back lives in the raw log disclosure - open it
   // once, up front, so the row is actually reachable after the trace.
@@ -58,7 +64,7 @@ test('a driven request rows in and moves the Requests KPI', async ({ page }) => 
       .emit({ type: 'hits' }),
   );
 
-  await expect(kpi).toContainText(String(before + 1));
+  await expect(verdict).toContainText(`${before + 1} requests today`);
   const row = page.locator('[data-testid^="req-row-"]').first();
   await expect(row).toContainText('rd-helion');
   await expect(row).toContainText('200');

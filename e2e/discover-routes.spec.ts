@@ -1,38 +1,20 @@
 import { test, expect } from '@playwright/test';
 import { seedAuth } from '../tests/e2e/helpers';
 
-/* Routes as a discovered object type: the Discover estate header shows a
-   Routes tile whose figure AGREES with the engine at that moment — a CC
-   derivation, never a pinned number. Gateways is asserted alongside because
-   this change un-hardcoded it; its displayed figure must not have moved. */
-test('Discover shows a Routes estate tile derived from counts()', async ({ page }) => {
+/* Rows 35-36 of the phase-0 metric audit: the Routes and Gateways tiles
+   this file used to guard were cut outright, not relocated — they were
+   already folded behind the estate-breakdown disclosure and still failed
+   every test ("routes" ambiguous between BGP routes and route tables, a
+   gateway not a first-class object anywhere else in the product). Their
+   engine source (`counts().routes` / `.gateways`, src/engine/state.ts) has
+   no other consumer and is left in place, orphaned. */
+test('Discover does not render Routes or Gateways tiles anywhere on the page', async ({ page }) => {
   await seedAuth(page);
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  // Routes and Gateways live in the full breakdown now — the summary band
-  // above it only carries the six headline figures. Open the disclosure
-  // once so the section is actually visible, not just present in the DOM.
   await page.getByTestId('estate-breakdown').locator('summary').click();
 
-  const counts = await page.evaluate(
-    () =>
-      (window as unknown as { CC: { counts: () => { routes: number; gateways: number } } }).CC.counts(),
-  );
-  expect(counts.routes).toBeGreaterThan(0);
-  expect(counts.gateways).toBe(38); // un-hardcoding must not move the figure
-
-  // The Routes and Gateways tiles now live in the "Network" domain section,
-  // not a flat row — locate the tile by its label, then assert the sibling
-  // value div next to it, so the section split doesn't weaken the check.
-  const network = page.getByTestId('estate-network');
-  await expect(network).toBeVisible();
-
-  const routesLabel = network.locator('div').filter({ hasText: /^Routes$/ });
-  await expect(routesLabel).toHaveCount(1);
-  await expect(routesLabel.locator('..')).toContainText(String(counts.routes));
-
-  const gatewaysLabel = network.locator('div').filter({ hasText: /^Gateways$/ });
-  await expect(gatewaysLabel).toHaveCount(1);
-  await expect(gatewaysLabel.locator('..')).toContainText(String(counts.gateways));
+  await expect(page.getByText('Routes', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Gateways', { exact: true })).toHaveCount(0);
 });
 
 /* Task B — Discover reads in three parts: network, cloud, AI workflows.
@@ -61,11 +43,6 @@ test('Discover reads in three domains', async ({ page }) => {
     await expect(blurb).toBeVisible();
     expect(((await blurb.textContent()) ?? '').trim().length).toBeGreaterThan(30);
   }
-
-  const routes = await page.evaluate(
-    () => (window as unknown as { CC: { counts(): { routes: number } } }).CC.counts().routes,
-  );
-  await expect(page.getByTestId('estate-network')).toContainText(String(routes));
 });
 
 /* The On-ramps tile used to read `onramps.length` — 4 — beside a sentence

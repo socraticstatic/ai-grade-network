@@ -374,15 +374,18 @@ export function UnifiedDiscovery() {
   const stat = (domainKey: (typeof domains)[number]['key'], statKey: string) =>
     domains.find(d => d.key === domainKey)!.stats.find(s => s.key === statKey)!;
   const sitesStat = stat('network', 'sites');
-  const onrampsStat = stat('network', 'onramps');
   const cloudsStat = stat('cloud', 'clouds');
   const regionsStat = stat('cloud', 'regions');
   const workloadsStat = stat('cloud', 'workloads');
   const attachedStat = stat('cloud', 'attached');
   const aiExposedStat = stat('ai', 'aiExposed');
+  // Row 21 of the phase-0 metric audit: "Active on-ramps" demoted off this
+  // band — the figure is true but its denominator ("circuits on order")
+  // needs the blurb the estate-breakdown disclosure's Network domain
+  // already carries beside the same stat; the band tile had no room for
+  // it. No new JSX: the disclosure below already states this stat.
   const summaryTiles: { key: string; value: React.ReactNode; of?: number; label: string }[] = [
     { key: 'sites', value: sitesStat.value, label: sitesStat.label },
-    { key: 'onramps', value: onrampsStat.value, of: onrampsStat.of, label: onrampsStat.label },
     { key: 'cloudsRegions', value: `${cloudsStat.value} · ${regionsStat.value}`, label: 'Clouds · Regions' },
     { key: 'workloads', value: workloadsStat.value, label: workloadsStat.label },
     // Row 24 of the phase-0 metric audit: the shared "Attached" stat label
@@ -447,8 +450,10 @@ export function UnifiedDiscovery() {
     setJustDiscovered(cloudId);
   };
 
-  // Reveal stagger runs on the top-level cloud rows (+1 slot for the finding strip).
-  const stagger = useRevealStagger(clouds.length + 1);
+  // Reveal stagger runs on the top-level cloud rows. (Row 33 of the phase-0
+  // metric audit cut the public-workloads alert that used to claim the
+  // trailing +1 slot here.)
+  const stagger = useRevealStagger(clouds.length);
 
   return (
     <div className="space-y-5">
@@ -561,13 +566,10 @@ export function UnifiedDiscovery() {
                       {cloudRegionCount(cc, c.id)} regions · {cloudVpcCount(cc, c.id)} VPC/VNet · {c.workloads} workloads
                     </div>
                   </div>
-                  <StatTiles
-                    items={[
-                      { v: cloudRegionCount(cc, c.id), l: 'Regions' },
-                      { v: cloudVpcCount(cc, c.id), l: 'VPC/VNet' },
-                      { v: c.workloads, l: 'Workloads' },
-                    ]}
-                  />
+                  {/* Row 31 of the phase-0 metric audit: the same three
+                      numbers cut from here — they render twice in one row,
+                      once as this prose subtitle and once as stat tiles.
+                      The prose (the readable half) stays. */}
                   <ConnIndicator cc={cc} cloudId={c.id} />
                 </button>
 
@@ -707,17 +709,11 @@ export function UnifiedDiscovery() {
           })}
         </div>
         )}
-
-        {publicWorkloads > 0 && (
-          <div
-            role="alert"
-            style={stagger(clouds.length)}
-            className="flex items-center gap-2 rounded-2xl border border-l-2 border-fw-secondary border-l-fw-primary bg-fw-wash px-4 py-3 text-figma-sm font-medium text-fw-bodyLight"
-          >
-            <Globe size={15} className="shrink-0 text-fw-bodyLight" aria-hidden="true" />
-            {publicWorkloads} workload{publicWorkloads === 1 ? '' : 's'} reachable over the public internet
-          </div>
-        )}
+        {/* Row 33 of the phase-0 metric audit: this alert cut — the third
+            rendering of the public-workloads count on this screen (the
+            FlowBar CTA above states it with an action attached; a row in
+            the AWS cloud coincidentally states the same number too). The
+            CTA is the stronger rendering and stays. */}
       </div>
 
       {/* At-a-glance summary band: the six headline figures a viewer reaches

@@ -6,8 +6,12 @@ import { useCloudControlLive } from '../../../../engine/react/useCloudControl';
 export function AssessmentFindingsWidget(_props: LayerWidgetProps) {
   const kpis = useCloudControlLive(cc => {
     const r = cc.assessmentReport();
+    // Row 8 of the phase-0 metric audit: "Recoverable" cut — a third noun
+    // for the same $19,900/mo the board already leads with under "Money on
+    // the table" (row 1) and states again under "Still on the table" (row
+    // 7, also cut). `assessmentReport().recoverableMo` keeps its other
+    // consumer in AssessmentPage.tsx.
     return [
-      { label: 'Recoverable', value: `$${Math.round(r.recoverableMo).toLocaleString()}/mo` },
       { label: 'Security events', value: String(r.securityEvents) },
       // Row 10 of the phase-0 metric audit: "Invisible share" named a
       // fraction of nothing stated. Same figure, no new derivation — the
