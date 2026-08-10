@@ -532,7 +532,7 @@ export function UnifiedDiscovery() {
 
         {/* Estate filter chips — scope both the tree and the map from one
             control. Sits directly under the Tree/Map toggle row. */}
-        <EstateFilterChips model={fabricModel} filters={estateFilters} onChange={setEstateFilters} />
+        <EstateFilterChips model={fabricModel} cc={cc} filters={estateFilters} onChange={setEstateFilters} />
 
         {/* Cloud tree */}
         {view === 'map' && <AttachmentMap filters={estateFilters} />}
