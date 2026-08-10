@@ -31,7 +31,7 @@ A second seeded tenant (working name: **Meridian Trust**) in the engine's seed d
 - Cloud estate: 2 providers, hub-spoke - per-region transit hub VPC + spoke VPCs tagged by business unit (`retail`, `payments`, `risk`, `ai-lab`), platform-vs-application split mirrored from landing-zone practice.
 - Estate carries the finding seeds Phase 2a needs: untagged AI workloads in `ai-lab`, unattached regions, public-egress flows, SPOF regions.
 
-Tenant selection uses the existing preview-tenant mechanism (`Preview tenant: ACME` today). Switching tenants is the demo's scale toggle.
+**Estate profile mechanism (new - no tenant switcher exists today; the "Preview tenant: ACME" chrome was the deck's mockup, not our code).** A boot-time profile flag (`?estate=meridian` URL param, persisted to `localStorage.estateProfile`) selects the seed set. The swap happens in a module imported immediately after `./state` in `src/engine/index.ts` and mutates the seed arrays **in place** - `state.ts` returns `{branches, clouds, regions, vpcs, ...}` by reference (state.ts:493) and downstream modules (state-billing's steer baseline) freeze derivations at module load, so replacement must precede them and must not break array identity. A visible switcher UI is deferred to Phase 2a; the URL flag is the demo toggle.
 
 ### Rollup derivations
 
