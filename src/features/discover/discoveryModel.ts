@@ -81,6 +81,15 @@ export const vpcKey = (cloudId: string, regionId: string, vpcId: string) => `${c
 export const branchKey = (branchId: string) => `site/${branchId}`;
 export const isBranchKey = (key: string) => key.startsWith('site/');
 
+/** A site-rollup drill-in key (SitesPanel, Task 6) — namespaced the same way
+ *  branch keys are, so `site-class/branch` can never collide with a cloud id
+ *  either. Distinct from `isBranchKey`: a rollup key names a whole CLASS of
+ *  sites, not one site, and `openSummary` below must not mistake it for a
+ *  depth-2 cloud-tree key (a real region path, e.g. `aws/use1`, also splits
+ *  into two `/`-segments). */
+export const siteClassKey = (cls: SiteClass) => `site-class/${cls}`;
+export const isSiteClassKey = (key: string) => key.startsWith('site-class/');
+
 export const branchesOf = (cc: CloudControl): Branch[] => ((cc.branches || []) as Branch[]);
 
 /** Selection keys are tree paths; the engine's group `members` are estate
@@ -324,13 +333,20 @@ export function toggleKey(open: ReadonlySet<string>, key: string): Set<string> {
 }
 
 /**
- * Port of the original `updateScope()` — a human summary of how deep the tree
- * is currently expanded. Resource maps (depth-3 keys) win over regions.
+ * Port of the original `updateScope()` — a human summary of how deep the
+ * CLOUD TREE is currently expanded. Resource maps (depth-3 keys) win over
+ * regions. `site-class/${cls}` keys (Task 6's rollup drill-in, sharing this
+ * same open-set) also split into two `/`-segments — the same depth a real
+ * region path (`aws/use1`) has — so they're excluded before the depth check
+ * rather than miscounted as a region: this summary describes the tree
+ * beside the Tree/Map toggle, not SitesPanel's independent rollup state,
+ * which sits in its own section below with no summary line of its own.
  */
 export function openSummary(open: ReadonlySet<string>): string {
   let maps = 0;
   let regions = 0;
   open.forEach(k => {
+    if (isSiteClassKey(k)) return;
     const depth = k.split('/').length;
     if (depth === 3) maps++;
     else if (depth === 2) regions++;

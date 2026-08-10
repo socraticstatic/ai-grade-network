@@ -36,6 +36,8 @@ import {
   ROLLUP_THRESHOLD,
   CLASS_ORDER,
   SITE_CLASS_PLURAL,
+  siteClassKey,
+  isSiteClassKey,
   type Branch,
   type Cloud,
   type Region,
@@ -49,6 +51,12 @@ import {
   kindNoun,
 } from '../govern/groupLanguage';
 import type { CloudControl } from '../../engine/types';
+
+/** Shared once, not re-constructed per row/render — every comma-formatted
+ *  count on this screen (rollup rows, the "more" overflow row, the sites
+ *  panel's own premises count) reads through this one instance, so a count
+ *  in the thousands is never rendered unformatted next to one that is. */
+const nf = new Intl.NumberFormat('en-US');
 
 /* ------------------------------ atoms ------------------------------ */
 
@@ -194,7 +202,6 @@ function SiteRollupRow({
   selected: ReadonlySet<string>;
   onToggle: (key: string) => void;
 }) {
-  const nf = new Intl.NumberFormat('en-US');
   const onNet = group.filter(b => b.onrampId).length;
   const overflow = group.length - ROLLUP_THRESHOLD;
   return (
@@ -268,7 +275,7 @@ function SitesPanel({
         <MapPin size={16} className="shrink-0 text-fw-bodyLight" aria-hidden="true" />
         <span className="font-semibold text-fw-heading">Your sites</span>
         <span className="text-figma-xs text-fw-bodyLight">
-          {branches.length} premises · your own buildings, not a cloud
+          {nf.format(branches.length)} premises · your own buildings, not a cloud
         </span>
       </div>
       <ul className="grid grid-cols-1 gap-1 p-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -280,8 +287,8 @@ function SitesPanel({
                   key={group[0].siteClass}
                   siteClass={group[0].siteClass}
                   group={group}
-                  open={open.has(`site-class/${group[0].siteClass}`)}
-                  onToggleOpen={() => onToggleOpen(`site-class/${group[0].siteClass}`)}
+                  open={open.has(siteClassKey(group[0].siteClass))}
+                  onToggleOpen={() => onToggleOpen(siteClassKey(group[0].siteClass))}
                   selected={selected}
                   onToggle={onToggle}
                 />
@@ -618,16 +625,26 @@ export function UnifiedDiscovery() {
           </div>
           {view === 'tree' && (
             <div className="flex items-center gap-1.5">
+              {/* Deliberately scoped to the CLOUD TREE only: `allKeys(cc)`
+                  never contains `site-class/${cls}` keys (SitesPanel's own
+                  rollup drill-in, Task 6), and these two buttons sit inside
+                  the Tree-view-only controls, beside `openSummary` above —
+                  not a "collapse everything on the page" action. Preserving
+                  whatever site-class keys are already in `open` means
+                  Expand all / Collapse all can't silently close a rollup a
+                  viewer had drilled into (review finding C2) — each acts on
+                  the tree's own keys and unions/filters around whatever
+                  site-class keys happen to be open, leaving them alone. */}
               <button
                 type="button"
-                onClick={() => setOpen(new Set(allKeys(cc)))}
+                onClick={() => setOpen(o => new Set([...allKeys(cc), ...[...o].filter(isSiteClassKey)]))}
                 className="h-7 rounded-full border border-fw-secondary bg-fw-base px-3 text-figma-xs font-medium text-fw-body transition-colors hover:bg-fw-wash"
               >
                 Expand all
               </button>
               <button
                 type="button"
-                onClick={() => setOpen(new Set())}
+                onClick={() => setOpen(o => new Set([...o].filter(isSiteClassKey)))}
                 className="h-7 rounded-full border border-fw-secondary bg-fw-base px-3 text-figma-xs font-medium text-fw-body transition-colors hover:bg-fw-wash"
               >
                 Collapse all

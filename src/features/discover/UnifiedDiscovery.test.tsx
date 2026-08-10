@@ -438,4 +438,33 @@ describe('UnifiedDiscovery site rollups', () => {
     expect(screen.getAllByTestId('site-cluster-marker').length).toBeLessThan(ROLLUP_THRESHOLD);
     expect(screen.queryAllByTestId('site-node')).toHaveLength(0);
   });
+
+  /* Review finding C4: filtering to a class that is itself at/under the
+     threshold must render its ordinary per-site rows, not a rollup — the
+     rollup decision reads `filteredBranches.length` (Task 6's own wiring of
+     `branchMatches` into rendering), not Meridian's unfiltered total.
+     Meridian's dc class has exactly 3 branches (meridianEstate.ts). */
+  it('filtering to a class at/under the threshold renders per-site rows, not a rollup (Meridian dc=3)', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    const chips = screen.getByTestId('estate-filter-chips');
+    fireEvent.click(within(chips).getByRole('button', { name: 'Data centers' }));
+    expect(screen.getAllByTestId('site-row')).toHaveLength(3);
+    expect(screen.queryByTestId('site-rollup-row')).not.toBeInTheDocument();
+  });
+
+  /* Review finding C5: the rollup label's exact format — comma-formatted
+     count, the class's plural noun, and the "on AT&T" onNet phrasing.
+     Meridian's non-ATM classes (dc/office/branch) always carry `onrampId`
+     (meridianEstate.ts — only the ATM class gates it on a coin flip), so
+     the "branches" rollup's onNet is deterministically its full count:
+     2,840 of 2,840. */
+  it('a rollup row states the class count and AT&T reach, comma-formatted', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    const branchRollup = screen
+      .getAllByTestId('site-rollup-row')
+      .find(row => /branches/.test(row.textContent || ''))!;
+    expect(branchRollup.textContent).toContain('2,840 branches · 2,840 on AT&T');
+  });
 });

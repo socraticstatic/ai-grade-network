@@ -47,11 +47,20 @@ const swapRecord = (target: Record<string, unknown[]>, next: Record<string, unkn
  * on undefined). Merging by id/key instead only touches the clouds meridian
  * actually names, leaving gcp/oci/cw/neb exactly as acme's live state left
  * them — meridian is silent about the AI clouds, not claiming they vanish. */
+/* Order-preserving: an id `next` also names REPLACES in its ORIGINAL
+ * position in `target` (so acme's [aws,azure,gcp,oci,cw,neb] stays exactly
+ * that order under meridian, meridian's aws/azure swapped in place); an id
+ * `next` names that `target` doesn't already have is APPENDED. A naive
+ * "keep the untouched ones, then push every `next` entry" (the first cut of
+ * this fix) instead reordered the array to [gcp,oci,cw,neb,aws,azure] on
+ * every meridian swap - same membership, wrong position. */
 const mergeArrayById = (target: { id: string }[], next: { id: string }[]) => {
-  const nextIds = new Set(next.map(n => n.id));
-  const kept = target.filter(t => !nextIds.has(t.id));
+  const nextById = new Map(next.map(n => [n.id, n]));
+  const targetIds = new Set(target.map(t => t.id));
+  const merged = target.map(t => nextById.get(t.id) ?? t);
+  const appended = next.filter(n => !targetIds.has(n.id));
   target.length = 0;
-  target.push(...kept, ...next);
+  target.push(...merged, ...appended);
 };
 const mergeRecord = (target: Record<string, unknown[]>, next: Record<string, unknown[]>) => {
   Object.assign(target, next); // only overwrites/adds keys `next` names; every other key untouched

@@ -293,12 +293,29 @@ function flows(){
      up front and indexing by object id produces the identical per-flow
      result (`groupsFor`/`resolveGroup` are pure derivations of the same live
      `groups` + estate state the two calls below read) at
-     O(groups·estateSize + flows) instead of O(flows·groups·estateSize). */
-  const groupIndex={};
+     O(groups·estateSize + flows) instead of O(flows·groups·estateSize).
+
+     Two hardening notes vs. the first cut of this index:
+     - `groupsFor(id)` adds a group id to its result AT MOST ONCE per group,
+       even if `id` happens to appear in BOTH that group's branchIds and
+       vpcIds (an OR check, not two independent pushes) - a 'mixed'-kind
+       group could in principle match an id both ways. Building `ids` as a
+       Set of this ONE group's branchIds+vpcIds before pushing (rather than
+       looping branchIds then vpcIds separately) preserves that "once per
+       group" contract instead of double-tagging.
+     - `Object.create(null)` rather than `{}`: `groupIndex[srcId]` on an id
+       that happens to collide with an inherited Object.prototype key (e.g.
+       a branch literally named 'constructor') must read as "no groups", not
+       leak a function off the prototype chain through `||[]`. */
+  const groupIndex=Object.create(null);
   CC.groupList().forEach(function(g){
     const r=CC.resolveGroup(g.id);
-    r.branchIds.forEach(function(id){(groupIndex[id]=groupIndex[id]||[]).push(g.id);});
-    r.vpcIds.forEach(function(id){(groupIndex[id]=groupIndex[id]||[]).push(g.id);});
+    const ids=new Set(r.branchIds);
+    r.vpcIds.forEach(function(id){ids.add(id);});
+    ids.forEach(function(id){
+      if(!groupIndex[id])groupIndex[id]=[];
+      groupIndex[id].push(g.id);
+    });
   });
   out.forEach(function(f){
     const srcId=f.srcBranch||f.srcVpc||null;

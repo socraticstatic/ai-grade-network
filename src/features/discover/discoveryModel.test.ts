@@ -83,6 +83,18 @@ describe('discoveryModel', () => {
     expect(openSummary(new Set(['aws/use1/vpcprod', 'aws/use1/vpcdata']))).toBe('2 resource maps expanded');
   });
 
+  /* Task 6, review finding C1: `site-class/${cls}` (SitesPanel's rollup
+     drill-in key) splits into two `/`-segments — the same depth a real
+     region path like `aws/use1` has — so it must be excluded from the
+     depth-2 count, not miscounted as "1 region expanded" when only a site
+     rollup, not any part of the cloud tree, is open. */
+  it('openSummary ignores site-class rollup keys — they are not cloud-tree regions', () => {
+    expect(openSummary(new Set(['site-class/branch']))).toBe('collapsed view');
+    expect(openSummary(new Set(['site-class/branch', 'site-class/atm']))).toBe('collapsed view');
+    // a real region open alongside an open rollup still counts correctly
+    expect(openSummary(new Set(['aws', 'aws/use1', 'site-class/branch']))).toBe('1 region expanded');
+  });
+
   it('tagHex neutralizes the amber finance tag but keeps other hues', () => {
     const tags = CC.TAGS as Record<string, { label: string; hex: string }>;
     expect(tagHex('finance-invoices', tags)).toBe('#64748b'); // de-ambered slate
