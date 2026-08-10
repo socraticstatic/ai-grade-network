@@ -1,5 +1,11 @@
 // Load the model modules in dependency order; each extends window.CC.
 import './state';
+// Must load immediately after ./state, before every other state-* module:
+// estateProfile's boot side effect swaps the meridian/acme seed arrays in
+// place, and state-billing (loaded below) freezes its steer baseline from
+// those same arrays at import time - swap after that and billing's numbers
+// are silently stuck on the wrong estate.
+import './estateProfile';
 import './state-telemetry';
 /* Groups must load BEFORE state-rules: flows() tags every flow with group
    membership via CC.groupsFor, and state-billing calls flows() at module load
