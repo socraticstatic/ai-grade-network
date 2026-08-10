@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Globe } from 'lucide-react';
+import { Globe, Users } from 'lucide-react';
 import { useCloudControl } from '../../engine/react/useCloudControl';
 import { ProviderLogo } from '../../components/brand/ProviderLogo';
-import { buildAttachmentMapModel } from './attachmentModel';
+import { buildAttachmentMapModel, type AttachmentMapModel } from './attachmentModel';
 import { computeAttachmentLayout, NODE_H, SITE_W, WL_W } from './attachmentLayout';
 import { ChainDrawer, type MapSelection } from './ChainDrawer';
 import { DeployManagedVpcWizard } from '../connect/DeployManagedVpcWizard';
 import { EMPTY_ESTATE_FILTERS, regionMatches, type EstateFilters } from './estateFilters';
+import { needsRollup, SITE_CLASS_PLURAL, type SiteClass } from './discoveryModel';
 
 /**
  * The Attachment Map — the second lens on Discover. Four bands: sites →
@@ -24,9 +25,39 @@ const HEX = {
   line: '#dcdfe3',
 } as const;
 
+/** Past `ROLLUP_THRESHOLD`, one marker per site would be Meridian's 4,183
+ *  buttons stacked into a single SVG column — the same estate-scale problem
+ *  the tree solves with rollup rows, solved here by clustering markers by
+ *  class + metro (city) instead: one button per (siteClass, city) pair, a
+ *  count badge standing in for the sites it represents. Below the
+ *  threshold, `model.sites` passes through unchanged — the ordinary
+ *  per-site marker every existing map test already covers. */
+function clusterSites(sites: AttachmentMapModel['sites']): AttachmentMapModel['sites'] {
+  if (!needsRollup(sites.length)) return sites;
+  const groups = new Map<string, { siteClass: SiteClass; city: string; count: number }>();
+  for (const s of sites) {
+    const key = `${s.siteClass}/${s.city}`;
+    const g = groups.get(key) ?? { siteClass: s.siteClass, city: s.city, count: 0 };
+    g.count += 1;
+    groups.set(key, g);
+  }
+  const nf = new Intl.NumberFormat('en-US');
+  return [...groups.entries()].map(([key, g]) => ({
+    id: `cluster/${key}`,
+    name: `${nf.format(g.count)} ${SITE_CLASS_PLURAL[g.siteClass]}`,
+    city: g.city,
+    siteClass: g.siteClass,
+    count: g.count,
+  }));
+}
+
 export function AttachmentMap({ filters = EMPTY_ESTATE_FILTERS }: { filters?: EstateFilters } = {}) {
   const cc = useCloudControl(c => c);
-  const model = buildAttachmentMapModel(cc);
+  const rawModel = buildAttachmentMapModel(cc, filters);
+  // Clustering only replaces `sites` — the workload/region groups the rest
+  // of the map draws are untouched, and the siteClass facet never scopes
+  // them (branchMatches, estateFilters.ts).
+  const model = { ...rawModel, sites: clusterSites(rawModel.sites) };
   const layout = computeAttachmentLayout(model);
   const [sel, setSel] = useState<MapSelection | null>(null);
   const [deploy, setDeploy] = useState<{ cloudId: string; regionId: string } | null>(null);
@@ -63,22 +94,39 @@ export function AttachmentMap({ filters = EMPTY_ESTATE_FILTERS }: { filters?: Es
             AT&amp;T fabric
           </text>
 
-          {/* site edges + nodes */}
+          {/* site edges + nodes — a clustered marker (`count` set, past
+              ROLLUP_THRESHOLD) renders as a static count badge: it stands in
+              for many branches at once, so a click that resolved to one of
+              them arbitrarily would be a wrong answer, not a shortcut. */}
           {layout.sites.map(s => (
             <g key={s.id}>
               <line x1={s.edge.from.x} y1={s.edge.from.y} x2={s.edge.to.x} y2={s.edge.to.y} stroke={HEX.line} strokeWidth={1.5} />
               <foreignObject x={s.x} y={s.y - NODE_H / 2} width={SITE_W} height={NODE_H}>
-                <button
-                  type="button"
-                  className="h-full w-full truncate rounded-lg border border-fw-secondary bg-fw-base px-2 text-left text-[11px] font-medium text-fw-heading transition-colors hover:bg-fw-wash"
-                  onClick={() => {
-                    const branch = model.sites.find(b => b.id === s.id);
-                    if (branch?.onrampId) setSel({ kind: 'onramp', onrampId: branch.onrampId });
-                  }}
-                >
-                  {s.name}
-                  <span className="block text-[10px] font-normal text-fw-bodyLight">{s.city}</span>
-                </button>
+                {s.count !== undefined ? (
+                  <div
+                    data-testid="site-cluster-marker"
+                    className="flex h-full w-full items-center gap-1.5 truncate rounded-lg border border-dashed border-fw-secondary bg-fw-wash px-2 text-left text-[11px] font-medium text-fw-heading"
+                  >
+                    <Users size={12} className="shrink-0 text-fw-bodyLight" aria-hidden="true" />
+                    <span className="min-w-0">
+                      <span className="block truncate">{s.name}</span>
+                      <span className="block text-[10px] font-normal text-fw-bodyLight">{s.city}</span>
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    data-testid="site-node"
+                    className="h-full w-full truncate rounded-lg border border-fw-secondary bg-fw-base px-2 text-left text-[11px] font-medium text-fw-heading transition-colors hover:bg-fw-wash"
+                    onClick={() => {
+                      const branch = model.sites.find(b => b.id === s.id);
+                      if (branch?.onrampId) setSel({ kind: 'onramp', onrampId: branch.onrampId });
+                    }}
+                  >
+                    {s.name}
+                    <span className="block text-[10px] font-normal text-fw-bodyLight">{s.city}</span>
+                  </button>
+                )}
               </foreignObject>
             </g>
           ))}

@@ -35,6 +35,28 @@ const swapRecord = (target: Record<string, unknown[]>, next: Record<string, unkn
   Object.assign(target, next);
 };
 
+/* Meridian only models aws + azure (a bank-scale ENTERPRISE cloud estate; it
+ * makes no claim about CoreWeave/Nebius, gcp or oci). A wholesale swap() /
+ * swapRecord() DELETES every OTHER cloud's entries first, and half a dozen
+ * engine consumers (state.ts:475 gpuPrivate, state-billing.ts:61-113,
+ * state-actions.ts:214, state-console.ts:127 modelCatalog) unconditionally
+ * index CC.regions.cw.find(...) / CC.regions.neb.find(...) with no null
+ * guard — deleting the cw/neb keys crashes the instant anything touches the
+ * AI domain while meridian is active (discovered rendering UnifiedDiscovery
+ * under meridian: estateDomains() -> modelCatalog() -> `CC.regions.cw.find`
+ * on undefined). Merging by id/key instead only touches the clouds meridian
+ * actually names, leaving gcp/oci/cw/neb exactly as acme's live state left
+ * them — meridian is silent about the AI clouds, not claiming they vanish. */
+const mergeArrayById = (target: { id: string }[], next: { id: string }[]) => {
+  const nextIds = new Set(next.map(n => n.id));
+  const kept = target.filter(t => !nextIds.has(t.id));
+  target.length = 0;
+  target.push(...kept, ...next);
+};
+const mergeRecord = (target: Record<string, unknown[]>, next: Record<string, unknown[]>) => {
+  Object.assign(target, next); // only overwrites/adds keys `next` names; every other key untouched
+};
+
 /* Meridian's on-ramp: branches carry onrampId:'mt-nb1' (meridianEstate.ts),
  * but that estate doesn't define the onramp record itself - state.ts's
  * onramps[] literal shape (id/name/type/sub/ic/active/site/targets) is
@@ -80,9 +102,22 @@ export function applyEstateProfile(cc: EngineSeeds, profile: EstateProfile): voi
   // no such clone - it already returns fresh objects on every call.
   const next = profile === 'meridian' ? meridianEstate() : structuredClone(acmeSnapshot);
   swap(cc.branches, next.branches as unknown[]);
-  swap(cc.clouds, next.clouds as unknown[]);
-  swapRecord(cc.regions, next.regions as Record<string, unknown[]>);
-  swapRecord(cc.vpcs, next.vpcs as Record<string, unknown[]>);
+
+  if (profile === 'meridian') {
+    // Merge — see mergeArrayById/mergeRecord above. gcp/oci/cw/neb survive
+    // untouched; only aws + azure (meridian's own clouds) get replaced.
+    mergeArrayById(cc.clouds as { id: string }[], next.clouds as { id: string }[]);
+    mergeRecord(cc.regions, next.regions as Record<string, unknown[]>);
+    mergeRecord(cc.vpcs, next.vpcs as Record<string, unknown[]>);
+  } else {
+    // Acme restore stays the hard guarantee: a full wholesale replace from
+    // the complete snapshot, so any key a meridian merge left behind (e.g.
+    // meridian's own 'scus'/'eus2' azure region ids, which acme never had)
+    // is cleared rather than left as orphaned dead data.
+    swap(cc.clouds, next.clouds as unknown[]);
+    swapRecord(cc.regions, next.regions as Record<string, unknown[]>);
+    swapRecord(cc.vpcs, next.vpcs as Record<string, unknown[]>);
+  }
 
   // On-ramps aren't swapped wholesale: acme's seed on-ramps (nb1/dx1/er1/nb2)
   // are untouched either way. Meridian only ADDS mt-nb1 on top of them (its

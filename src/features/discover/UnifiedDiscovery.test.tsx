@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { UnifiedDiscovery } from './UnifiedDiscovery';
 import { CC } from '../../engine';
-import { estateDomains, cloudRegionCount, cloudVpcCount, type Cloud } from './discoveryModel';
+import { estateDomains, cloudRegionCount, cloudVpcCount, ROLLUP_THRESHOLD, type Cloud } from './discoveryModel';
 import { ID_RENAME_WARNING } from '../govern/groupLanguage';
+import { applyEstateProfile } from '../../engine/estateProfile';
 // No engine provider wrapper — the engine is a singleton read via useCloudControl.
 // A MemoryRouter is required because the embedded FlowBar reads the active route.
 const renderUD = () => render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
@@ -386,5 +387,55 @@ describe('Discover selection → group', () => {
     expect(r.vpcIds).toEqual([]);
     // the selection is spent
     expect(screen.queryByTestId('discover-selection')).not.toBeInTheDocument();
+  });
+});
+
+/* Task 6 — rollup rendering. Past the 50-row threshold, the site list
+   collapses into one rollup row per site class rather than a per-site row
+   for every one of Meridian's 4,183 branches. */
+describe('UnifiedDiscovery site rollups', () => {
+  afterEach(() => {
+    // The meridian tests below mutate the LIVE engine singleton — restore
+    // acme unconditionally so no later suite in the run sees meridian.
+    applyEstateProfile(CC as never, 'acme');
+  });
+
+  it('renders rollup rows, not per-site rows, past the threshold', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    expect(screen.getAllByTestId('site-rollup-row').length).toBeGreaterThanOrEqual(3);
+    expect(screen.queryAllByTestId('site-row').length).toBeLessThanOrEqual(ROLLUP_THRESHOLD);
+    applyEstateProfile(CC as never, 'acme');
+  });
+
+  it('ACME still renders its six sites as rows', () => {
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    expect(screen.getAllByTestId('site-row')).toHaveLength(6);
+    expect(screen.queryByTestId('site-rollup-row')).not.toBeInTheDocument();
+  });
+
+  it('drilling into a rollup row shows up to 50 sites plus a "more" row', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    const branchRollup = screen
+      .getAllByTestId('site-rollup-row')
+      .find(row => /branches/.test(row.textContent || ''))!;
+    expect(branchRollup).toBeTruthy();
+    fireEvent.click(branchRollup);
+    const rows = screen.getAllByTestId('site-row');
+    expect(rows.length).toBe(ROLLUP_THRESHOLD);
+    expect(screen.getByTestId('rollup-more')).toBeInTheDocument();
+    expect(screen.getByTestId('rollup-more').textContent).toMatch(/more.*filter to narrow/i);
+  });
+
+  it('the map clusters markers by class+metro past the threshold, instead of one per site', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Map view' }));
+    expect(screen.getByTestId('attachment-map')).toBeInTheDocument();
+    // clustered — far fewer markers than Meridian's 4,183 branches, and no
+    // per-site marker rendered at all
+    expect(screen.getAllByTestId('site-cluster-marker').length).toBeLessThan(ROLLUP_THRESHOLD);
+    expect(screen.queryAllByTestId('site-node')).toHaveLength(0);
   });
 });

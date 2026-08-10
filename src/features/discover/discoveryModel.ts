@@ -362,7 +362,15 @@ export function tagLabel(id: string, tags: Record<string, Tag>): string {
 export const ROLLUP_THRESHOLD = 50;
 export const needsRollup = (count: number): boolean => count > ROLLUP_THRESHOLD;
 
-const CLASS_ORDER: SiteClass[] = ['dc', 'office', 'branch', 'atm'];
+export const CLASS_ORDER: SiteClass[] = ['dc', 'office', 'branch', 'atm'];
+
+/** Lowercase plural nouns for a rollup row's prose ("2,840 branches"),
+ *  matching `CLASS_ORDER`'s fixed dc→office→branch→atm order. Distinct from
+ *  `EstateFilterChips`'s capitalized `SITE_CLASS_LABEL` (a chip label), which
+ *  reads as a heading, not a sentence. */
+export const SITE_CLASS_PLURAL: Record<SiteClass, string> = {
+  dc: 'data centers', office: 'offices', branch: 'branches', atm: 'ATMs',
+};
 
 /** One row per site class actually present, in fixed dc→office→branch→atm
  *  order (absent classes omitted rather than zero-filled — a customer with

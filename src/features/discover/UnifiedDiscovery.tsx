@@ -10,7 +10,7 @@ import { VpcMap } from './VpcMap';
 import { AttachmentMap } from './AttachmentMap';
 import { DiscoveryWizard } from './DiscoveryWizard';
 import { EstateFilterChips } from './EstateFilterChips';
-import { EMPTY_ESTATE_FILTERS, regionMatches } from './estateFilters';
+import { EMPTY_ESTATE_FILTERS, regionMatches, branchMatches } from './estateFilters';
 import { cloudConnection, regionConnection, connMeta } from './connectionState';
 import {
   allKeys,
@@ -32,6 +32,10 @@ import {
   branchesOf,
   selectionKind,
   selectionMemberIds,
+  needsRollup,
+  ROLLUP_THRESHOLD,
+  CLASS_ORDER,
+  SITE_CLASS_PLURAL,
   type Branch,
   type Cloud,
   type Region,
@@ -139,19 +143,121 @@ function SelectBox({
   );
 }
 
+/** One customer-premises card — the same row idiom whether it renders
+ *  directly in the grid (at or under threshold) or inside an expanded
+ *  rollup group (over threshold). */
+function SiteRow({
+  b,
+  selected,
+  onToggle,
+}: {
+  b: Branch;
+  selected: ReadonlySet<string>;
+  onToggle: (key: string) => void;
+}) {
+  const key = branchKey(b.id);
+  const on = selected.has(key);
+  return (
+    <li
+      data-testid="site-row"
+      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+        on ? 'border-fw-active bg-fw-ctaGhost' : 'border-fw-secondary bg-fw-wash/40'
+      }`}
+    >
+      <SelectBox id={key} name={b.name} selected={on} onToggle={onToggle} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-figma-sm font-medium text-fw-heading">{b.name}</div>
+        <div className="truncate text-[11px] text-fw-bodyLight">
+          {b.city} · <span className="font-mono">{(b.cidrs || []).join(', ')}</span>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+/** A collapsed site class past the 50-row threshold — "2,840 branches ·
+ *  1,988 on AT&T", drilling in to the same site-row cards a small estate
+ *  renders directly. `onNet` reads AT&T reach the same way `siteRollup`
+ *  does elsewhere (discoveryModel.ts) — an `onrampId` on the branch. */
+function SiteRollupRow({
+  siteClass,
+  group,
+  open,
+  onToggleOpen,
+  selected,
+  onToggle,
+}: {
+  siteClass: Branch['siteClass'];
+  group: Branch[];
+  open: boolean;
+  onToggleOpen: () => void;
+  selected: ReadonlySet<string>;
+  onToggle: (key: string) => void;
+}) {
+  const nf = new Intl.NumberFormat('en-US');
+  const onNet = group.filter(b => b.onrampId).length;
+  const overflow = group.length - ROLLUP_THRESHOLD;
+  return (
+    <li className="col-span-full rounded-xl border border-fw-secondary bg-fw-base">
+      <button
+        type="button"
+        data-testid="site-rollup-row"
+        onClick={onToggleOpen}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-fw-wash/60"
+      >
+        <Chevron open={open} />
+        <span className="text-figma-sm font-medium text-fw-heading">
+          {nf.format(group.length)} {SITE_CLASS_PLURAL[siteClass]} · {nf.format(onNet)} on AT&amp;T
+        </span>
+      </button>
+      {open && (
+        <ul className="grid grid-cols-1 gap-1 border-t border-fw-secondary p-2 sm:grid-cols-2 lg:grid-cols-3">
+          {group.slice(0, ROLLUP_THRESHOLD).map(b => (
+            <SiteRow key={b.id} b={b} selected={selected} onToggle={onToggle} />
+          ))}
+          {overflow > 0 && (
+            <li
+              data-testid="rollup-more"
+              className="col-span-full flex items-center justify-center rounded-xl border border-dashed border-fw-secondary px-3 py-2.5 text-figma-xs text-fw-bodyLight"
+            >
+              + {nf.format(overflow)} more - filter to narrow
+            </li>
+          )}
+        </ul>
+      )}
+    </li>
+  );
+}
+
 /** Customer premises. Deliberately NOT inside the cloud tree: a branch is a
  *  building the customer owns, not a resource any hyperscaler holds, and
  *  nesting it under a cloud would assert a containment that is not true.
- *  It sits above the clouds because that is where the traffic starts. */
+ *  It sits above the clouds because that is where the traffic starts.
+ *
+ *  `branches` arrives pre-narrowed by `branchMatches` (the siteClass facet) —
+ *  a filter that scopes the panel out of existence for zero matches is the
+ *  same "just render nothing" behavior the cloud tree already has for a
+ *  filter that clears every cloud, not a special empty state invented here.
+ *  Past `ROLLUP_THRESHOLD` (Meridian's 4,183 branches, never ACME's 6), the
+ *  list collapses into one rollup row per site class instead of one card
+ *  per site — the same open-set idiom (`site-class/${cls}` keys) the tree
+ *  already uses for cloud/region/VPC drill-in, so Expand/Collapse-all's
+ *  vocabulary extends here without a second state shape. */
 function SitesPanel({
   branches,
   selected,
   onToggle,
+  open,
+  onToggleOpen,
 }: {
   branches: Branch[];
   selected: ReadonlySet<string>;
   onToggle: (key: string) => void;
+  open: ReadonlySet<string>;
+  onToggleOpen: (key: string) => void;
 }) {
+  const rollup = needsRollup(branches.length);
   return (
     <div
       data-testid="discover-sites"
@@ -166,26 +272,21 @@ function SitesPanel({
         </span>
       </div>
       <ul className="grid grid-cols-1 gap-1 p-2 sm:grid-cols-2 lg:grid-cols-3">
-        {branches.map(b => {
-          const key = branchKey(b.id);
-          const on = selected.has(key);
-          return (
-            <li
-              key={b.id}
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
-                on ? 'border-fw-active bg-fw-ctaGhost' : 'border-fw-secondary bg-fw-wash/40'
-              }`}
-            >
-              <SelectBox id={key} name={b.name} selected={on} onToggle={onToggle} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-figma-sm font-medium text-fw-heading">{b.name}</div>
-                <div className="truncate text-[11px] text-fw-bodyLight">
-                  {b.city} · <span className="font-mono">{(b.cidrs || []).join(', ')}</span>
-                </div>
-              </div>
-            </li>
-          );
-        })}
+        {rollup
+          ? CLASS_ORDER.map(cls => branches.filter(b => b.siteClass === cls))
+              .filter(group => group.length > 0)
+              .map(group => (
+                <SiteRollupRow
+                  key={group[0].siteClass}
+                  siteClass={group[0].siteClass}
+                  group={group}
+                  open={open.has(`site-class/${group[0].siteClass}`)}
+                  onToggleOpen={() => onToggleOpen(`site-class/${group[0].siteClass}`)}
+                  selected={selected}
+                  onToggle={onToggle}
+                />
+              ))
+          : branches.map(b => <SiteRow key={b.id} b={b} selected={selected} onToggle={onToggle} />)}
       </ul>
     </div>
   );
@@ -436,6 +537,11 @@ export function UnifiedDiscovery() {
   const toggleSelect = (key: string) => setSelected(s => toggleKey(s, key));
   const [named, setNamed] = useState<{ label: string; id: string } | null>(null);
   const branches = branchesOf(cc);
+  // The siteClass facet — the one estate filter that narrows a branch
+  // (`branchMatches`, estateFilters.ts) — scopes the sites panel the same
+  // way `cloudMatches` above scopes the tree, so the chips actually filter
+  // both surfaces from one control instead of only the cloud tree.
+  const filteredBranches = branches.filter(b => branchMatches(b, estateFilters));
 
   // "+ Connect a cloud" wizard + the "discovered just now" flash it triggers.
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -805,7 +911,13 @@ export function UnifiedDiscovery() {
         </div>
       </details>
 
-      <SitesPanel branches={branches} selected={selected} onToggle={toggleSelect} />
+      <SitesPanel
+        branches={filteredBranches}
+        selected={selected}
+        onToggle={toggleSelect}
+        open={open}
+        onToggleOpen={toggle}
+      />
 
       {selected.size > 0 && (
         <SelectionBar

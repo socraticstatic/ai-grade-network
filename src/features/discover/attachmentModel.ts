@@ -1,9 +1,10 @@
 import type { CloudControl, ManagedVpc } from '../../engine/types';
 import { buildMap } from './buildMap';
 import {
-  regionsOf, vpcsOf, regionLatencyMap, regionLatencyPathMap,
-  type Cloud, type Region, type Vpc,
+  regionsOf, vpcsOf, regionLatencyMap, regionLatencyPathMap, branchesOf,
+  type Cloud, type Region, type Vpc, type Branch, type SiteClass,
 } from './discoveryModel';
+import { branchMatches, EMPTY_ESTATE_FILTERS, type EstateFilters } from './estateFilters';
 
 /**
  * Pure derivations for the Attachment Map — the chain from a workload through
@@ -182,7 +183,10 @@ export function workloadsOnRamp(
 
 export interface MapWorkload { cloudId: string; regionId: string; vpc: Vpc }
 export interface AttachmentMapModel {
-  sites: { id: string; name: string; city: string; onrampId?: string }[];
+  /** `count` is present only on a clustered marker (AttachmentMap.tsx,
+   *  past `ROLLUP_THRESHOLD`) — a stand-in "site" representing every branch
+   *  of one class in one metro, never emitted by this pure builder. */
+  sites: { id: string; name: string; city: string; onrampId?: string; siteClass: SiteClass; count?: number }[];
   onramps: { id: string; name: string; type: string; short: string; site: string; active: boolean }[];
   groups: {
     cloudId: string; cloudName: string; color: string;
@@ -190,11 +194,20 @@ export interface AttachmentMapModel {
   }[];
 }
 
-export function buildAttachmentMapModel(cc: CloudControl): AttachmentMapModel {
-  const branches = ((cc as unknown as { branches?: { id: string; name: string; city: string; onrampId?: string }[] }).branches ?? []);
+/**
+ * `filters` narrows `sites` by the siteClass facet — `branchMatches` (Task 5)
+ * — the same predicate the tree's SitesPanel filters by, so the estate
+ * filter chips scope the map the same way they scope the tree instead of
+ * only ever touching the cloud side (`regionMatches`, used for the region
+ * dimming below). Defaults to `EMPTY_ESTATE_FILTERS` so every existing
+ * caller (and every existing test) that doesn't pass filters keeps seeing
+ * every branch, unfiltered.
+ */
+export function buildAttachmentMapModel(cc: CloudControl, filters: EstateFilters = EMPTY_ESTATE_FILTERS): AttachmentMapModel {
+  const branches = (branchesOf(cc) as Branch[]).filter(b => branchMatches(b, filters));
   const clouds = (cc.clouds as Cloud[]).filter(c => (MAP_CLOUDS as readonly string[]).includes(c.id));
   return {
-    sites: branches.map(b => ({ id: b.id, name: b.name, city: b.city, onrampId: b.onrampId })),
+    sites: branches.map(b => ({ id: b.id, name: b.name, city: b.city, onrampId: b.onrampId, siteClass: b.siteClass })),
     onramps: rampsOf(cc).map(o => ({
       id: o.id, name: o.name, type: o.type, short: rampShort(o.type),
       site: o.site.name, active: !!o.active,
