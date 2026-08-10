@@ -16,6 +16,10 @@ import {
   isBranchKey,
   selectionMemberIds,
   selectionKind,
+  siteRollup,
+  cloudRollup,
+  needsRollup,
+  ROLLUP_THRESHOLD,
   type Branch,
   type SiteClass,
 } from './discoveryModel';
@@ -480,5 +484,27 @@ describe('region latency — one derivation for Discover and Connect', () => {
         expect(map[r.id], `${r.id} is not covered by fabricModel()`).toBeTypeOf('number');
       }
     }
+  });
+});
+
+/* Task 2 — rollup derivations and the 50-row threshold contract. */
+describe('rollups', () => {
+  it('siteRollup counts by class with onNet from onrampId presence', () => {
+    const rows = siteRollup(CC as never);
+    const office = rows.find(r => r.siteClass === 'office');
+    expect(office?.count).toBe(5);
+    expect(office?.onNet).toBe(5);           // all five ACME offices carry onrampId
+    expect(rows.map(r => r.siteClass)).toEqual(['dc', 'office']); // fixed order, absent omitted
+  });
+
+  it('cloudRollup gives one row per cloud with region and workload counts', () => {
+    const aws = cloudRollup(CC as never).find(r => r.cloudId === 'aws');
+    expect(aws?.regions).toBe(3);
+    expect(aws?.workloads).toBe(142);
+  });
+
+  it('needsRollup trips strictly above the threshold', () => {
+    expect(needsRollup(ROLLUP_THRESHOLD)).toBe(false);
+    expect(needsRollup(ROLLUP_THRESHOLD + 1)).toBe(true);
   });
 });

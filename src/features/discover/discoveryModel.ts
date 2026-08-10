@@ -354,6 +354,52 @@ export function tagLabel(id: string, tags: Record<string, Tag>): string {
   return tags[id]?.label ?? id;
 }
 
+/* --------------------------- rollups --------------------------- */
+
+/** Rows above this count collapse behind a rollup disclosure rather than
+ *  listing every leaf — the estate-scale threshold the discover tree and
+ *  filters share. */
+export const ROLLUP_THRESHOLD = 50;
+export const needsRollup = (count: number): boolean => count > ROLLUP_THRESHOLD;
+
+const CLASS_ORDER: SiteClass[] = ['dc', 'office', 'branch', 'atm'];
+
+/** One row per site class actually present, in fixed dc→office→branch→atm
+ *  order (absent classes omitted rather than zero-filled — a customer with
+ *  no ATMs sees no ATM row, not a row that reads 0). `onNet` counts branches
+ *  in that class carrying an `onrampId`, i.e. reachable over an AT&T circuit
+ *  today, not merely inventoried. */
+export function siteRollup(cc: CloudControl): { siteClass: SiteClass; count: number; onNet: number }[] {
+  const acc = new Map<SiteClass, { count: number; onNet: number }>();
+  for (const b of branchesOf(cc)) {
+    const row = acc.get(b.siteClass) ?? { count: 0, onNet: 0 };
+    row.count += 1;
+    if (b.onrampId) row.onNet += 1;
+    acc.set(b.siteClass, row);
+  }
+  return CLASS_ORDER.filter(c => acc.has(c)).map(c => ({ siteClass: c, ...acc.get(c)! }));
+}
+
+/**
+ * One row per cloud with its region and workload counts.
+ *
+ * The brief's sketch read `cc.fabricModel().clouds` — `fabricModel()` has no
+ * `clouds` field (`sites`/`onramps`/`regions`/`c2c` only; see
+ * `src/engine/types.ts`), and its `regions` carry no workload count. Cloud
+ * identity/name/workloads come off the engine's own `clouds` seed instead
+ * (`cc.clouds`, already read the same way by `allKeys()` above), and the
+ * region count reuses `cloudRegionCount`, the derivation this file already
+ * exposes and tests for the same seed.
+ */
+export function cloudRollup(cc: CloudControl): { cloudId: string; name: string; regions: number; workloads: number }[] {
+  return (cc.clouds as Cloud[]).map(cl => ({
+    cloudId: cl.id,
+    name: cl.name,
+    regions: cloudRegionCount(cc, cl.id),
+    workloads: cl.workloads,
+  }));
+}
+
 /** Gateway accent colors — de-ambered (NAT moves from amber to slate). */
 export const GW_COLOR: Record<string, string> = {
   igw: '#0057b8', // cobalt — internet gateway
