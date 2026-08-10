@@ -53,8 +53,10 @@ export function ArbitrageBreakdown() {
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold text-fw-heading">Egress by source</h2>
         {captured > 0 && (
+          // Row 72 of the phase-0 metric audit: "this session" is demo
+          // vocabulary a customer has no model for.
           <span role="status" className="text-xs font-semibold tabular-nums text-fw-success">
-            {fmt(captured)}/mo captured this session
+            {fmt(captured)}/mo captured so far
           </span>
         )}
       </div>

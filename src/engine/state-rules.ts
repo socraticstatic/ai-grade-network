@@ -280,11 +280,47 @@ function flows(){
   /* Group membership, resolved live on every call - never stored on the
      estate objects themselves. A workload added to a group tomorrow is
      matched by that group's policies tomorrow. Runs last so it sees every
-     accumulated flow, and draws no rng, so flow gbps stay byte-identical. */
+     accumulated flow, and draws no rng, so flow gbps stay byte-identical.
+
+     `CC.groupsFor(id)` re-resolves EVERY group's full membership (literal
+     members + predicates scanned over the whole branch/VPC estate) on every
+     call - fine for a single lookup, but this loop used to call it twice per
+     flow. Acme's ~250 flows made that cost invisible; Meridian's ~35,000
+     flows (4,183 branches) turned it into ~140,000 full group
+     re-resolutions, each itself O(branches+vpcs) - a render that should be
+     instant took 25+ seconds (discovered rendering UnifiedDiscovery under
+     meridian for Task 6's rollup rows). Resolving every group exactly ONCE
+     up front and indexing by object id produces the identical per-flow
+     result (`groupsFor`/`resolveGroup` are pure derivations of the same live
+     `groups` + estate state the two calls below read) at
+     O(groups·estateSize + flows) instead of O(flows·groups·estateSize).
+
+     Two hardening notes vs. the first cut of this index:
+     - `groupsFor(id)` adds a group id to its result AT MOST ONCE per group,
+       even if `id` happens to appear in BOTH that group's branchIds and
+       vpcIds (an OR check, not two independent pushes) - a 'mixed'-kind
+       group could in principle match an id both ways. Building `ids` as a
+       Set of this ONE group's branchIds+vpcIds before pushing (rather than
+       looping branchIds then vpcIds separately) preserves that "once per
+       group" contract instead of double-tagging.
+     - `Object.create(null)` rather than `{}`: `groupIndex[srcId]` on an id
+       that happens to collide with an inherited Object.prototype key (e.g.
+       a branch literally named 'constructor') must read as "no groups", not
+       leak a function off the prototype chain through `||[]`. */
+  const groupIndex=Object.create(null);
+  CC.groupList().forEach(function(g){
+    const r=CC.resolveGroup(g.id);
+    const ids=new Set(r.branchIds);
+    r.vpcIds.forEach(function(id){ids.add(id);});
+    ids.forEach(function(id){
+      if(!groupIndex[id])groupIndex[id]=[];
+      groupIndex[id].push(g.id);
+    });
+  });
   out.forEach(function(f){
     const srcId=f.srcBranch||f.srcVpc||null;
-    f.srcGroups=srcId?CC.groupsFor(srcId):[];
-    f.dstGroups=f.dstVpc?CC.groupsFor(f.dstVpc):[];
+    f.srcGroups=srcId?(groupIndex[srcId]||[]):[];
+    f.dstGroups=f.dstVpc?(groupIndex[f.dstVpc]||[]):[];
   });
   return out;
 }

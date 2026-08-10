@@ -23,7 +23,12 @@ const WL_X = 620;
 export const WL_W = 352;
 export const NODE_H = 40;
 
-export interface LayoutSite { id: string; name: string; city: string; x: number; y: number; edge: { from: Pt; to: Pt } }
+export interface LayoutSite {
+  id: string; name: string; city: string; x: number; y: number; edge: { from: Pt; to: Pt };
+  /** Present only for a clustered marker (AttachmentMap.tsx, past
+   *  ROLLUP_THRESHOLD) — a count badge instead of a single site's onramp. */
+  count?: number;
+}
 export interface LayoutWorkload {
   wl: MapWorkload;
   attached: boolean;
@@ -72,6 +77,7 @@ export function computeAttachmentLayout(model: AttachmentMapModel): AttachmentLa
     return {
       id: s.id, name: s.name, city: s.city, x: SITE_X, y,
       edge: { from: { x: SITE_X + SITE_W, y }, to: { x: FABRIC_X, y: clampBand(y) } },
+      count: s.count,
     };
   });
 

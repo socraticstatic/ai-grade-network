@@ -61,6 +61,28 @@ test('switching tabs preserves other query params instead of replacing the whole
   expect(afterPosture).toContain('tab=posture');
 });
 
+/* Row 58 of the phase-0 metric audit: the Policies tab badge is a bare
+   violations count sitting on a tab labelled "Policies" — with 8 rules and
+   7 violations, "7" reads as a wrong policy count. The number is right; it
+   needs the accessible name/title the badge never had. */
+test('the Policies tab badge names itself as open violations, not a policy count', () => {
+  render(at('/naas/govern'));
+  const violations = CC.violations() as unknown[];
+  expect(violations.length).toBeGreaterThan(0);
+  expect(screen.getByTitle(`${violations.length} open violations`)).toBeInTheDocument();
+});
+
+/* Row 64 of the phase-0 metric audit: "0 / 5 inserted" used deployment
+   vocabulary for a posture claim. Same fraction, product noun. */
+test('service insertion states coverage in the fabric, not deployment jargon', () => {
+  render(at('/naas/govern'));
+  const services = CC.serviceCatalog() as { inserted: boolean }[];
+  const inserted = services.filter(s => s.inserted).length;
+  expect(
+    screen.getByText(`${inserted} of ${services.length} inspection services in the path`),
+  ).toBeInTheDocument();
+});
+
 test('lists rules and enforcing one changes engine state (violations or enforced count)', () => {
   render(<MemoryRouter><GovernPage /></MemoryRouter>);
   const rules = CC.ruleList();

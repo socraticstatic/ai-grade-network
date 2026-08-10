@@ -5,7 +5,6 @@ import { estimateMonthlySavings, publicGbps, toSavingsRec } from '../cost/costMa
 import {
   aiStratum,
   naasStratum,
-  cloudStratum,
   attachOpportunities,
   steerOpportunities,
   stagedDeltas,
@@ -39,15 +38,6 @@ describe('stackFigures — view-mode derivations agree with the verb pages', () 
     expect(fig.egressPubMo).toBe(CC.egress().pub);
     expect(fig.egressPrivMo).toBe(CC.egress().priv);
     expect(fig.availableSavingsMo).toBe(CC.arbitrage().availableSavings);
-  });
-
-  it('Cloud stratum states only the estate counts', () => {
-    const counts = CC.counts();
-    expect(cloudStratum(CC)).toEqual({
-      clouds: counts.clouds,
-      regions: counts.regions,
-      vpcs: counts.vpcs,
-    });
   });
 });
 

@@ -25,6 +25,19 @@ it('hero renders the two bills, the savings, and the commit meter from the engin
   expect(screen.getByRole('meter', { name: /commit/i })).toBeInTheDocument();
 });
 
+/* Row 73 of the phase-0 metric audit: "Commit draw ... % of $X" is carrier
+   billing vocabulary. All three numbers the sentence needs were already on
+   the tile — copy only. */
+it('states the commitment meter in plain terms with the same three figures', () => {
+  const billing = CC.billing();
+  page();
+  expect(
+    screen.getByText(
+      `$${billing.commitDraw.toLocaleString()} of your $${billing.commit.toLocaleString()} commitment used (${billing.commitPct}%)`,
+    ),
+  ).toBeInTheDocument();
+});
+
 it('breakdown lists every egress bucket from arbitrage()', () => {
   page();
   for (const b of CC.arbitrage().buckets) {
@@ -64,7 +77,7 @@ it('steer-to-save still captures the realized delta as a running tally', async (
   if (!rec) return; // engine state already fully steered
   steeredThisFile.add(rec.flowId);
   fireEvent.click(screen.getAllByRole('button', { name: /steer to save/i })[0]);
-  await waitFor(() => expect(screen.getByText(/captured this session/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText(/captured so far/i)).toBeInTheDocument());
 });
 
 /* Minor: /naas/cost used "on the table" with opposite meanings 200px apart —

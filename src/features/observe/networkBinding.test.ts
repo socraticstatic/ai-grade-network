@@ -13,6 +13,28 @@ describe('networkBinding', () => {
     expect(b.records('none').length).toBeGreaterThan(0);
     expect(b.briefing().narrative.length).toBeGreaterThan(0);
   });
+  /* Rows 50-51 of the phase-0 metric audit: "Egress" read as a traffic
+     measurement with a dollar sign beside it, and "Under Control" was
+     builder language for what the verdict line calls "on the AT&T fabric".
+     Labels only — same keys, same values, same derivations. */
+  it('names the egress KPI as spend and the control KPI in the product\'s own noun', () => {
+    const kpis = b.kpis();
+    expect(kpis.find(k => k.key === 'egress')!.label).toBe('Egress Spend');
+    expect(kpis.find(k => k.key === 'under-control')!.label).toBe('On the AT&T Fabric');
+  });
+
+  /* Rows 55-56 of the phase-0 metric audit: the briefing's first two
+     narrative blocks cut — both restated the verdict line (row 46) and the
+     KPI strip (rows 50-51) already state the same 13%/87% split, and row
+     56's own label ("of flows") measured Gbps, not a flow count. The
+     briefing still opens with real content — the engine's own summary. */
+  it('the briefing does not restate the verdict line\'s percentages as narrative blocks', () => {
+    const narrative = b.briefing().narrative.map(n => n.text);
+    expect(narrative.some(t => /% of network traffic \(/.test(t))).toBe(false);
+    expect(narrative.some(t => /% of flows \(/.test(t))).toBe(false);
+    expect(b.briefing().narrative.length).toBeGreaterThan(0);
+  });
+
   it('group-by path collapses records into private/public buckets', () => {
     const byPath = b.records('path').map(r => r.label.toLowerCase());
     expect(byPath.some(l => /private|public/.test(l))).toBe(true);

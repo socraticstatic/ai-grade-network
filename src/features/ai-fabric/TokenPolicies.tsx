@@ -4,6 +4,7 @@ import { Boxes } from 'lucide-react';
 import { AttIcon } from '../../components/icons/AttIcon';
 import { useCloudControl } from '../../engine/react/useCloudControl';
 import { TokenPolicyBuilder } from './TokenPolicyBuilder';
+import { fmtTokens } from './aiSpend';
 
 interface TokenPolicy {
   tag: string;
@@ -123,7 +124,10 @@ export function TokenPolicies() {
                 )}
               </td>
               <td className="px-5 py-3 text-fw-body">{p.scope}</td>
-              <td className="px-5 py-3 text-fw-body tabular-nums">{p.budget.toLocaleString()}</td>
+              {/* Row 87 of the phase-0 metric audit: ten raw digits here,
+                  the same figure as `2.40B` on the layer home. One call
+                  site, no new derivation. */}
+              <td className="px-5 py-3 text-fw-body tabular-nums">{fmtTokens(p.budget)}</td>
               <td className="px-5 py-3">
                 {/* Display only — a one-click flip here bypassed review and
                     left no undo entry. Guardrail is now a builder field;

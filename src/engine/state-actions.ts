@@ -47,7 +47,11 @@ CC.postureCatalog=[
       ['Public paths',`${p} / ${c.vpcs}`,p?'r':'g'],
       ['AI workloads exposed',CC.aiExposed(),CC.aiExposed()?'r':'g'],
       ['Inline inspection',CC.fixes.fwInspection?'enforced':'missing',CC.fixes.fwInspection?'g':'r'],
-      ['Single-path regions',CC.regions.azure.find(r=>r.id==='uks').attached?0:1,CC.regions.azure.find(r=>r.id==='uks').attached?'g':'a'],
+      // uks is acme's own seed region (Azure UK South); meridian's swap
+      // replaces azure's regions with scus/eus2, so it doesn't resolve
+      // there - a region this estate doesn't model carries no single-path
+      // risk, same as if it were already attached.
+      ['Single-path regions',(CC.regions.azure.find(r=>r.id==='uks')?.attached??true)?0:1,(CC.regions.azure.find(r=>r.id==='uks')?.attached??true)?'g':'a'],
     ];},
     findings:[
       {level:'crit',title:'Ungoverned AI traffic on public internet',tags:['rd-helion','classified-helion'],resolved:()=>on('nb2').active,
@@ -139,16 +143,19 @@ CC.postureCatalog=[
 
   {id:'perf',name:'Performance',iconKey:'gauge',color:'var(--teal)',
     score:()=>CC.scores().perf,
-    summary:()=>{const uks=CC.regions.azure.find(r=>r.id==='uks');return uks.attached?'Private paths SLA-backed · no single-path regions':'Avg latency 31ms · 1 region at risk of single-path failure';},
+    // uks is acme's own seed region - not present once meridian's azure
+    // swap lands (scus/eus2). Absent => no such single-path risk, so it
+    // reads the same as an already-attached uks (??true).
+    summary:()=>{const uks=CC.regions.azure.find(r=>r.id==='uks');return (uks?.attached??true)?'Private paths SLA-backed · no single-path regions':'Avg latency 31ms · 1 region at risk of single-path failure';},
     metrics:()=>{const uks=CC.regions.azure.find(r=>r.id==='uks'),usw2=CC.regions.aws.find(r=>r.id==='usw2'),c=CC.counts();return [
       ['Avg latency (private)','12ms','g'],
       ['Avg latency (public)',CC.publicVpcs()?'34ms':'—',CC.publicVpcs()?'a':'g'],
       ['P95 latency',usw2.attached?'31ms':'62ms',usw2.attached?'g':'a'],
-      ['Single-path regions',uks.attached?0:1,uks.attached?'g':'a'],
+      ['Single-path regions',(uks?.attached??true)?0:1,(uks?.attached??true)?'g':'a'],
       ['SLA-backed paths',`${c.attached} / ${c.vpcs}`,c.attached===c.vpcs?'g':'a'],
     ];},
     findings:[
-      {level:'warn',title:'Azure UK South latency variance 31–42ms',tags:[],resolved:()=>CC.regions.azure.find(r=>r.id==='uks').attached,
+      {level:'warn',title:'Azure UK South latency variance 31–42ms',tags:[],resolved:()=>CC.regions.azure.find(r=>r.id==='uks')?.attached??true,
         desc:'vnet-emea-01 shows the widest variance of any attached-eligible region — consistent with single public path via EMEA-LON-01.',
         done:'UK South rides ExpressRoute — variance collapsed to the private-path envelope.'},
       {level:'warn',title:'us-west-2 at 62ms is the highest P95',tags:[],resolved:()=>CC.regions.aws.find(r=>r.id==='usw2').attached,

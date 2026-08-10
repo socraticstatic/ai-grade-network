@@ -14,5 +14,9 @@ export function connectVerdict(model: FabricModel): string {
   if (!pub) {
     return `All ${total} regions are on the AT&T fabric, ${dual} with dual paths.`;
   }
-  return `${attached.length} of ${total} regions are on the AT&T fabric, ${dual} with dual paths. ${pub} still ride${pub === 1 ? 's' : ''} the public internet.`;
+  // Row 37 of the phase-0 metric audit: the rendered sentence at 1-of-9
+  // attached read "1 of 9 regions ARE on the AT&T fabric, 0 with dual
+  // paths" — plural verb on a singular subject, and a bare 0 reading as a
+  // blank field. Singular/plural branch and a "none" branch, same values.
+  return `${attached.length} of ${total} regions ${attached.length === 1 ? 'is' : 'are'} on the AT&T fabric, ${dual === 0 ? 'none' : dual} with dual paths. ${pub} still ride${pub === 1 ? 's' : ''} the public internet.`;
 }

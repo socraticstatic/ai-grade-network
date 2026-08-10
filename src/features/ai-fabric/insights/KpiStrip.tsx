@@ -1,14 +1,15 @@
 import type { InsightKpi } from './insightsFigures';
 
 /**
- * The five-card gateway KPI strip (Figma 1:5088). Value 36px bold with the
- * unit beside it at 20px; the savings subtext is the one green sentence on
- * the strip. Alert red is deliberately absent here - the source comp keeps
- * even the Blocked value in heading ink, and so do we.
+ * The four-card gateway KPI strip (Figma 1:5088, minus the Requests card the
+ * phase-0 metric audit cut at row 80). Value 36px bold with the unit beside
+ * it at 20px; the savings subtext is the one green sentence on the strip.
+ * Alert red is deliberately absent here - the source comp keeps even the
+ * Blocked value in heading ink, and so do we.
  */
 export function KpiStrip({ kpis, emphasize }: { kpis: InsightKpi[]; emphasize?: InsightKpi['key'] }) {
   return (
-    <div className="grid grid-cols-2 min-[1200px]:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 min-[1200px]:grid-cols-4 gap-4">
       {kpis.map(k => (
         <div
           key={k.key}

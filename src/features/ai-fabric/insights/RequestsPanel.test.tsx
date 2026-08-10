@@ -34,12 +34,25 @@ function Harness() {
 }
 
 describe('KpiStrip', () => {
-  it('renders the five engine KPIs', () => {
+  /* Row 80 of the phase-0 metric audit: "Requests" cut — four KPIs, not
+     five. */
+  it('renders the four engine KPIs', () => {
     render(<KpiStrip kpis={insightKpis(CC)} />);
-    ['tokens', 'cost', 'ttft', 'requests', 'blocked'].forEach(key => {
+    ['tokens', 'cost', 'ttft', 'blocked'].forEach(key => {
       expect(screen.getByTestId(`kpi-${key}`)).toBeInTheDocument();
     });
+    expect(screen.queryByTestId('kpi-requests')).not.toBeInTheDocument();
     expect(screen.getByTestId('kpi-ttft')).toHaveTextContent('ms');
+  });
+
+  /* Fix-wave review finding 1: the strip's wide-breakpoint grid was still
+     5 columns after row 80 cut the Requests card to 4, leaving a ~230px
+     dead trailing column. */
+  it('grids four columns at the wide breakpoint, not five', () => {
+    const { container } = render(<KpiStrip kpis={insightKpis(CC)} />);
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.className).toContain('min-[1200px]:grid-cols-4');
+    expect(grid.className).not.toMatch(/grid-cols-5\b/);
   });
 });
 

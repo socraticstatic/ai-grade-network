@@ -79,6 +79,35 @@ describe('ConnectPage (Cloud Fabric)', () => {
     expect(screen.getByRole('link', { name: /govern these paths/i })).toHaveAttribute('href', '/naas/govern');
   });
 
+  /* Rows 38 and 40 of the phase-0 metric audit: "On the fabric" and "Still
+     public" cut from the Fabric posture panel — both restate the verdict
+     line above it. Row 39/41 ("Dual / resilient", "Cloud-to-cloud") stay. */
+  it('drops the On-the-fabric and Still-public tiles the verdict line already states', () => {
+    render(
+      <MemoryRouter initialEntries={['/naas/connect']}>
+        <ConnectPage />
+      </MemoryRouter>
+    );
+    expect(screen.queryByText('On the fabric')).not.toBeInTheDocument();
+    expect(screen.queryByText('Still public')).not.toBeInTheDocument();
+    expect(screen.getByText('Dual / resilient')).toBeInTheDocument();
+    expect(screen.getByText('Cloud-to-cloud')).toBeInTheDocument();
+  });
+
+  /* Row 45: the Connections list's leading "{n} on the fabric" count cut —
+     a fourth rendering of the same 1-vs-8 split on this screen. The
+     descriptive tail stays. */
+  it('the Connections list states what it lists, not a count restated elsewhere', () => {
+    render(
+      <MemoryRouter initialEntries={['/naas/connect']}>
+        <ConnectPage />
+      </MemoryRouter>
+    );
+    const list = screen.getByTestId('connections-list');
+    expect(within(list).getByText('reliability · performance · private/public')).toBeInTheDocument();
+    expect(within(list).queryByText(/on the fabric ·/)).not.toBeInTheDocument();
+  });
+
   it('?provision opens the wizard for that region with Dual preselected', () => {
     // West US 2 (wus2) - its on-ramp (er1) is disjoint from usw2's (dx1),
     // which the earlier provisioning test in this file activates; dx1 also

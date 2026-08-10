@@ -95,14 +95,16 @@ describe('ungoverned tokens — cold start, nothing attached', () => {
   /* Declared last in this describe: it mutates the meters and the decision
      log under a mounted screen. */
   it('states one request count on /ai/observe, not one per panel', async () => {
-    /* The REQUESTS KPI and the request table both read `decisionLog()`,
-       400px apart on one screen. The panel must subscribe live: a tick has
-       to land UNDER the mounted screen and move both. */
+    /* Row 80 of the phase-0 metric audit cut the standalone Requests KPI
+       card — it restated `decisionLog().length`, which the deep dive's own
+       verdict sentence and the request table below it both already state.
+       Those two surfaces must still agree and both subscribe live: a tick
+       has to land UNDER the mounted screen and move both. */
     const observe = at(<AiObservePage />);
-    const kpiCard = () => within(observe.container).getByTestId('kpi-requests');
+    const verdict = () => within(observe.container).getByTestId('requests-verdict');
 
-    const before = kpiCard().textContent ?? '';
-    expect(before).toContain(kpi('requests').value);
+    const before = verdict().textContent ?? '';
+    expect(before).toContain(`${requestRows(CC).length} requests today`);
 
     // Exactly what an agent tick does: trace a request, then emit `hits`.
     await act(async () => {
@@ -110,9 +112,9 @@ describe('ungoverned tokens — cold start, nothing attached', () => {
       (CC._ as unknown as { emit(e: { type: string }): void }).emit({ type: 'hits' });
     });
 
-    const after = kpiCard().textContent ?? '';
-    expect(after, 'the requests KPI froze at its mount instant').not.toBe(before);
-    expect(after).toContain(kpi('requests').value);
+    const after = verdict().textContent ?? '';
+    expect(after, 'the verdict sentence froze at its mount instant').not.toBe(before);
+    expect(after).toContain(`${requestRows(CC).length} requests today`);
 
     // And the table below it counts the same log.
     const header = within(observe.container).getByText(/^Requests \(\d+\)$/);

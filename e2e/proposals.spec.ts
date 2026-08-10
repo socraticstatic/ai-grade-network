@@ -32,13 +32,14 @@ test('a shared proposal round-trips: staged tray, same arrow, recipient commits'
   await expect(tray.getByTestId('proposal-note')).toContainText('Opened from a proposal link · 1 move');
   await expect(tray).toContainText(arrow);
 
-  // The recipient commits — the estate moves.
+  // The recipient commits — the estate moves. The NaaS band's "still on the
+  // table" savings figure falls as usw2's saving is captured.
   const strip = page.getByTestId('stack-figures-naas');
-  const before = (await strip.innerText()).match(/(\d+)\/(\d+)\s*regions on the fabric/)!;
+  const before = (await strip.innerText()).match(/\$([\d,]+)\/mo\s*still on the table/)!;
   await page.getByTestId('design-commit').click();
   await expect(tray).toContainText('committed to the estate');
-  const after = (await strip.innerText()).match(/(\d+)\/(\d+)\s*regions on the fabric/)!;
-  expect(Number(after[1])).toBeGreaterThan(Number(before[1]));
+  const after = (await strip.innerText()).match(/\$([\d,]+)\/mo\s*still on the table/)!;
+  expect(Number(after[1].replace(/,/g, ''))).toBeLessThan(Number(before[1].replace(/,/g, '')));
 });
 
 test('the advisor drafts, a human reviews — nothing commits on its own', async ({ page }) => {

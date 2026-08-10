@@ -10,7 +10,7 @@ import { VpcMap } from './VpcMap';
 import { AttachmentMap } from './AttachmentMap';
 import { DiscoveryWizard } from './DiscoveryWizard';
 import { EstateFilterChips } from './EstateFilterChips';
-import { EMPTY_ESTATE_FILTERS, regionMatches } from './estateFilters';
+import { EMPTY_ESTATE_FILTERS, regionMatches, branchMatches } from './estateFilters';
 import { cloudConnection, regionConnection, connMeta } from './connectionState';
 import {
   allKeys,
@@ -32,6 +32,12 @@ import {
   branchesOf,
   selectionKind,
   selectionMemberIds,
+  needsRollup,
+  ROLLUP_THRESHOLD,
+  CLASS_ORDER,
+  SITE_CLASS_PLURAL,
+  siteClassKey,
+  isSiteClassKey,
   type Branch,
   type Cloud,
   type Region,
@@ -45,6 +51,12 @@ import {
   kindNoun,
 } from '../govern/groupLanguage';
 import type { CloudControl } from '../../engine/types';
+
+/** Shared once, not re-constructed per row/render — every comma-formatted
+ *  count on this screen (rollup rows, the "more" overflow row, the sites
+ *  panel's own premises count) reads through this one instance, so a count
+ *  in the thousands is never rendered unformatted next to one that is. */
+const nf = new Intl.NumberFormat('en-US');
 
 /* ------------------------------ atoms ------------------------------ */
 
@@ -139,19 +151,120 @@ function SelectBox({
   );
 }
 
+/** One customer-premises card — the same row idiom whether it renders
+ *  directly in the grid (at or under threshold) or inside an expanded
+ *  rollup group (over threshold). */
+function SiteRow({
+  b,
+  selected,
+  onToggle,
+}: {
+  b: Branch;
+  selected: ReadonlySet<string>;
+  onToggle: (key: string) => void;
+}) {
+  const key = branchKey(b.id);
+  const on = selected.has(key);
+  return (
+    <li
+      data-testid="site-row"
+      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+        on ? 'border-fw-active bg-fw-ctaGhost' : 'border-fw-secondary bg-fw-wash/40'
+      }`}
+    >
+      <SelectBox id={key} name={b.name} selected={on} onToggle={onToggle} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-figma-sm font-medium text-fw-heading">{b.name}</div>
+        <div className="truncate text-[11px] text-fw-bodyLight">
+          {b.city} · <span className="font-mono">{(b.cidrs || []).join(', ')}</span>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+/** A collapsed site class past the 50-row threshold — "2,840 branches ·
+ *  1,988 on AT&T", drilling in to the same site-row cards a small estate
+ *  renders directly. `onNet` reads AT&T reach the same way `siteRollup`
+ *  does elsewhere (discoveryModel.ts) — an `onrampId` on the branch. */
+function SiteRollupRow({
+  siteClass,
+  group,
+  open,
+  onToggleOpen,
+  selected,
+  onToggle,
+}: {
+  siteClass: Branch['siteClass'];
+  group: Branch[];
+  open: boolean;
+  onToggleOpen: () => void;
+  selected: ReadonlySet<string>;
+  onToggle: (key: string) => void;
+}) {
+  const onNet = group.filter(b => b.onrampId).length;
+  const overflow = group.length - ROLLUP_THRESHOLD;
+  return (
+    <li className="col-span-full rounded-xl border border-fw-secondary bg-fw-base">
+      <button
+        type="button"
+        data-testid="site-rollup-row"
+        onClick={onToggleOpen}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-fw-wash/60"
+      >
+        <Chevron open={open} />
+        <span className="text-figma-sm font-medium text-fw-heading">
+          {nf.format(group.length)} {SITE_CLASS_PLURAL[siteClass]} · {nf.format(onNet)} on AT&amp;T
+        </span>
+      </button>
+      {open && (
+        <ul className="grid grid-cols-1 gap-1 border-t border-fw-secondary p-2 sm:grid-cols-2 lg:grid-cols-3">
+          {group.slice(0, ROLLUP_THRESHOLD).map(b => (
+            <SiteRow key={b.id} b={b} selected={selected} onToggle={onToggle} />
+          ))}
+          {overflow > 0 && (
+            <li
+              data-testid="rollup-more"
+              className="col-span-full flex items-center justify-center rounded-xl border border-dashed border-fw-secondary px-3 py-2.5 text-figma-xs text-fw-bodyLight"
+            >
+              + {nf.format(overflow)} more - filter to narrow
+            </li>
+          )}
+        </ul>
+      )}
+    </li>
+  );
+}
+
 /** Customer premises. Deliberately NOT inside the cloud tree: a branch is a
  *  building the customer owns, not a resource any hyperscaler holds, and
  *  nesting it under a cloud would assert a containment that is not true.
- *  It sits above the clouds because that is where the traffic starts. */
+ *  It sits above the clouds because that is where the traffic starts.
+ *
+ *  `branches` arrives pre-narrowed by `branchMatches` (the siteClass facet) —
+ *  a filter that scopes the panel out of existence for zero matches is the
+ *  same "just render nothing" behavior the cloud tree already has for a
+ *  filter that clears every cloud, not a special empty state invented here.
+ *  Past `ROLLUP_THRESHOLD` (Meridian's 4,183 branches, never ACME's 6), the
+ *  list collapses into one rollup row per site class instead of one card
+ *  per site — the same open-set idiom (`site-class/${cls}` keys) the tree
+ *  already uses for cloud/region/VPC drill-in, so Expand/Collapse-all's
+ *  vocabulary extends here without a second state shape. */
 function SitesPanel({
   branches,
   selected,
   onToggle,
+  open,
+  onToggleOpen,
 }: {
   branches: Branch[];
   selected: ReadonlySet<string>;
   onToggle: (key: string) => void;
+  open: ReadonlySet<string>;
+  onToggleOpen: (key: string) => void;
 }) {
+  const rollup = needsRollup(branches.length);
   return (
     <div
       data-testid="discover-sites"
@@ -162,30 +275,25 @@ function SitesPanel({
         <MapPin size={16} className="shrink-0 text-fw-bodyLight" aria-hidden="true" />
         <span className="font-semibold text-fw-heading">Your sites</span>
         <span className="text-figma-xs text-fw-bodyLight">
-          {branches.length} premises · your own buildings, not a cloud
+          {nf.format(branches.length)} premises · your own buildings, not a cloud
         </span>
       </div>
       <ul className="grid grid-cols-1 gap-1 p-2 sm:grid-cols-2 lg:grid-cols-3">
-        {branches.map(b => {
-          const key = branchKey(b.id);
-          const on = selected.has(key);
-          return (
-            <li
-              key={b.id}
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
-                on ? 'border-fw-active bg-fw-ctaGhost' : 'border-fw-secondary bg-fw-wash/40'
-              }`}
-            >
-              <SelectBox id={key} name={b.name} selected={on} onToggle={onToggle} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-figma-sm font-medium text-fw-heading">{b.name}</div>
-                <div className="truncate text-[11px] text-fw-bodyLight">
-                  {b.city} · <span className="font-mono">{(b.cidrs || []).join(', ')}</span>
-                </div>
-              </div>
-            </li>
-          );
-        })}
+        {rollup
+          ? CLASS_ORDER.map(cls => branches.filter(b => b.siteClass === cls))
+              .filter(group => group.length > 0)
+              .map(group => (
+                <SiteRollupRow
+                  key={group[0].siteClass}
+                  siteClass={group[0].siteClass}
+                  group={group}
+                  open={open.has(siteClassKey(group[0].siteClass))}
+                  onToggleOpen={() => onToggleOpen(siteClassKey(group[0].siteClass))}
+                  selected={selected}
+                  onToggle={onToggle}
+                />
+              ))
+          : branches.map(b => <SiteRow key={b.id} b={b} selected={selected} onToggle={onToggle} />)}
       </ul>
     </div>
   );
@@ -374,18 +482,26 @@ export function UnifiedDiscovery() {
   const stat = (domainKey: (typeof domains)[number]['key'], statKey: string) =>
     domains.find(d => d.key === domainKey)!.stats.find(s => s.key === statKey)!;
   const sitesStat = stat('network', 'sites');
-  const onrampsStat = stat('network', 'onramps');
   const cloudsStat = stat('cloud', 'clouds');
   const regionsStat = stat('cloud', 'regions');
   const workloadsStat = stat('cloud', 'workloads');
   const attachedStat = stat('cloud', 'attached');
   const aiExposedStat = stat('ai', 'aiExposed');
+  // Row 21 of the phase-0 metric audit: "Active on-ramps" demoted off this
+  // band — the figure is true but its denominator ("circuits on order")
+  // needs the blurb the estate-breakdown disclosure's Network domain
+  // already carries beside the same stat; the band tile had no room for
+  // it. No new JSX: the disclosure below already states this stat.
   const summaryTiles: { key: string; value: React.ReactNode; of?: number; label: string }[] = [
     { key: 'sites', value: sitesStat.value, label: sitesStat.label },
-    { key: 'onramps', value: onrampsStat.value, of: onrampsStat.of, label: onrampsStat.label },
     { key: 'cloudsRegions', value: `${cloudsStat.value} · ${regionsStat.value}`, label: 'Clouds · Regions' },
     { key: 'workloads', value: workloadsStat.value, label: workloadsStat.label },
-    { key: 'attached', value: attachedStat.value, label: attachedStat.label },
+    // Row 24 of the phase-0 metric audit: the shared "Attached" stat label
+    // (also rendered inside the folded breakdown below, out of this row's
+    // scope) reads as an unnamed count beside a regions tile and a
+    // workloads tile. Override at this call site only — naming the unit
+    // "VPCs" points straight at the Private/Public badges in the tree.
+    { key: 'attached', value: attachedStat.value, label: 'Attached VPCs' },
     { key: 'aiExposed', value: aiExposedStat.value, label: aiExposedStat.label },
   ];
   /* Latency comes from `fabricModel()`, the one region-latency derivation this
@@ -428,6 +544,11 @@ export function UnifiedDiscovery() {
   const toggleSelect = (key: string) => setSelected(s => toggleKey(s, key));
   const [named, setNamed] = useState<{ label: string; id: string } | null>(null);
   const branches = branchesOf(cc);
+  // The siteClass facet — the one estate filter that narrows a branch
+  // (`branchMatches`, estateFilters.ts) — scopes the sites panel the same
+  // way `cloudMatches` above scopes the tree, so the chips actually filter
+  // both surfaces from one control instead of only the cloud tree.
+  const filteredBranches = branches.filter(b => branchMatches(b, estateFilters));
 
   // "+ Connect a cloud" wizard + the "discovered just now" flash it triggers.
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -442,8 +563,10 @@ export function UnifiedDiscovery() {
     setJustDiscovered(cloudId);
   };
 
-  // Reveal stagger runs on the top-level cloud rows (+1 slot for the finding strip).
-  const stagger = useRevealStagger(clouds.length + 1);
+  // Reveal stagger runs on the top-level cloud rows. (Row 33 of the phase-0
+  // metric audit cut the public-workloads alert that used to claim the
+  // trailing +1 slot here.)
+  const stagger = useRevealStagger(clouds.length);
 
   return (
     <div className="space-y-5">
@@ -467,7 +590,7 @@ export function UnifiedDiscovery() {
       <FlowBar
         cta={
           publicWorkloads > 0
-            ? { label: `Attach ${publicWorkloads} public workloads`, to: '/naas/connect?from=discover' }
+            ? { label: `Attach the ${publicWorkloads} workloads still on the public internet`, to: '/naas/connect?from=discover' }
             : undefined
         }
       />
@@ -502,16 +625,26 @@ export function UnifiedDiscovery() {
           </div>
           {view === 'tree' && (
             <div className="flex items-center gap-1.5">
+              {/* Deliberately scoped to the CLOUD TREE only: `allKeys(cc)`
+                  never contains `site-class/${cls}` keys (SitesPanel's own
+                  rollup drill-in, Task 6), and these two buttons sit inside
+                  the Tree-view-only controls, beside `openSummary` above —
+                  not a "collapse everything on the page" action. Preserving
+                  whatever site-class keys are already in `open` means
+                  Expand all / Collapse all can't silently close a rollup a
+                  viewer had drilled into (review finding C2) — each acts on
+                  the tree's own keys and unions/filters around whatever
+                  site-class keys happen to be open, leaving them alone. */}
               <button
                 type="button"
-                onClick={() => setOpen(new Set(allKeys(cc)))}
+                onClick={() => setOpen(o => new Set([...allKeys(cc), ...[...o].filter(isSiteClassKey)]))}
                 className="h-7 rounded-full border border-fw-secondary bg-fw-base px-3 text-figma-xs font-medium text-fw-body transition-colors hover:bg-fw-wash"
               >
                 Expand all
               </button>
               <button
                 type="button"
-                onClick={() => setOpen(new Set())}
+                onClick={() => setOpen(o => new Set([...o].filter(isSiteClassKey)))}
                 className="h-7 rounded-full border border-fw-secondary bg-fw-base px-3 text-figma-xs font-medium text-fw-body transition-colors hover:bg-fw-wash"
               >
                 Collapse all
@@ -522,7 +655,7 @@ export function UnifiedDiscovery() {
 
         {/* Estate filter chips — scope both the tree and the map from one
             control. Sits directly under the Tree/Map toggle row. */}
-        <EstateFilterChips model={fabricModel} filters={estateFilters} onChange={setEstateFilters} />
+        <EstateFilterChips model={fabricModel} cc={cc} filters={estateFilters} onChange={setEstateFilters} />
 
         {/* Cloud tree */}
         {view === 'map' && <AttachmentMap filters={estateFilters} />}
@@ -556,13 +689,10 @@ export function UnifiedDiscovery() {
                       {cloudRegionCount(cc, c.id)} regions · {cloudVpcCount(cc, c.id)} VPC/VNet · {c.workloads} workloads
                     </div>
                   </div>
-                  <StatTiles
-                    items={[
-                      { v: cloudRegionCount(cc, c.id), l: 'Regions' },
-                      { v: cloudVpcCount(cc, c.id), l: 'VPC/VNet' },
-                      { v: c.workloads, l: 'Workloads' },
-                    ]}
-                  />
+                  {/* Row 31 of the phase-0 metric audit: the same three
+                      numbers cut from here — they render twice in one row,
+                      once as this prose subtitle and once as stat tiles.
+                      The prose (the readable half) stays. */}
                   <ConnIndicator cc={cc} cloudId={c.id} />
                 </button>
 
@@ -702,17 +832,11 @@ export function UnifiedDiscovery() {
           })}
         </div>
         )}
-
-        {publicWorkloads > 0 && (
-          <div
-            role="alert"
-            style={stagger(clouds.length)}
-            className="flex items-center gap-2 rounded-2xl border border-l-2 border-fw-secondary border-l-fw-primary bg-fw-wash px-4 py-3 text-figma-sm font-medium text-fw-bodyLight"
-          >
-            <Globe size={15} className="shrink-0 text-fw-bodyLight" aria-hidden="true" />
-            {publicWorkloads} workload{publicWorkloads === 1 ? '' : 's'} reachable over the public internet
-          </div>
-        )}
+        {/* Row 33 of the phase-0 metric audit: this alert cut — the third
+            rendering of the public-workloads count on this screen (the
+            FlowBar CTA above states it with an action attached; a row in
+            the AWS cloud coincidentally states the same number too). The
+            CTA is the stronger rendering and stays. */}
       </div>
 
       {/* At-a-glance summary band: the six headline figures a viewer reaches
@@ -804,7 +928,13 @@ export function UnifiedDiscovery() {
         </div>
       </details>
 
-      <SitesPanel branches={branches} selected={selected} onToggle={toggleSelect} />
+      <SitesPanel
+        branches={filteredBranches}
+        selected={selected}
+        onToggle={toggleSelect}
+        open={open}
+        onToggleOpen={toggle}
+      />
 
       {selected.size > 0 && (
         <SelectionBar

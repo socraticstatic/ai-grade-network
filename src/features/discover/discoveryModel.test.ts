@@ -16,6 +16,12 @@ import {
   isBranchKey,
   selectionMemberIds,
   selectionKind,
+  siteRollup,
+  cloudRollup,
+  needsRollup,
+  ROLLUP_THRESHOLD,
+  type Branch,
+  type SiteClass,
 } from './discoveryModel';
 import { CC } from '../../engine';
 
@@ -37,8 +43,6 @@ describe('discoveryModel', () => {
     expect(stats.map(s => s.key)).toEqual([
       'sites',
       'onramps',
-      'routes',
-      'gateways',
       'clouds',
       'regions',
       'vpcs',
@@ -77,6 +81,18 @@ describe('discoveryModel', () => {
     expect(openSummary(new Set(['aws', 'aws/use1']))).toBe('1 region expanded');
     expect(openSummary(new Set(['aws', 'aws/use1', 'aws/use1/vpcprod']))).toBe('1 resource map expanded');
     expect(openSummary(new Set(['aws/use1/vpcprod', 'aws/use1/vpcdata']))).toBe('2 resource maps expanded');
+  });
+
+  /* Task 6, review finding C1: `site-class/${cls}` (SitesPanel's rollup
+     drill-in key) splits into two `/`-segments — the same depth a real
+     region path like `aws/use1` has — so it must be excluded from the
+     depth-2 count, not miscounted as "1 region expanded" when only a site
+     rollup, not any part of the cloud tree, is open. */
+  it('openSummary ignores site-class rollup keys — they are not cloud-tree regions', () => {
+    expect(openSummary(new Set(['site-class/branch']))).toBe('collapsed view');
+    expect(openSummary(new Set(['site-class/branch', 'site-class/atm']))).toBe('collapsed view');
+    // a real region open alongside an open rollup still counts correctly
+    expect(openSummary(new Set(['aws', 'aws/use1', 'site-class/branch']))).toBe('1 region expanded');
   });
 
   it('tagHex neutralizes the amber finance tag but keeps other hues', () => {
@@ -137,6 +153,19 @@ describe('discovery selection', () => {
     expect(r.vpcIds).toEqual(['vpcwest']);
     expect(r.count).toBe(2);
   });
+
+  it('every seeded branch carries a site class', () => {
+    const classes: SiteClass[] = ['dc', 'office', 'branch', 'atm'];
+    const branches = branchesOf(CC as never);
+    expect(branches.length).toBeGreaterThan(0);
+    branches.forEach(b => expect(classes).toContain(b.siteClass));
+  });
+
+  it('ACME: Ashburn DC is a dc, the rest are offices', () => {
+    const byId = Object.fromEntries(branchesOf(CC as never).map(b => [b.id, b.siteClass]));
+    expect(byId['br-ash']).toBe('dc');
+    expect(byId['br-sjc']).toBe('office');
+  });
 });
 
 /* Task B — Discover reads in three parts: the network already in place, the
@@ -160,8 +189,6 @@ type Engine = typeof CC;
 const TILE_SOURCE: Record<string, (cc: Engine) => number> = {
   sites: cc => cc.branches.length,
   onramps: cc => cc.activeOnramps(),
-  routes: cc => cc.counts().routes,
-  gateways: cc => cc.counts().gateways,
   clouds: cc => cc.counts().clouds,
   regions: cc => cc.counts().regions,
   vpcs: cc => cc.counts().vpcs,
@@ -214,7 +241,7 @@ describe('estateDomains', () => {
 
   it('every domain carries the tiles the brief assigned it', () => {
     const [net, cloud, ai] = estateDomains(CC as never);
-    expect(net.stats.map(s => s.key)).toEqual(['sites', 'onramps', 'routes', 'gateways']);
+    expect(net.stats.map(s => s.key)).toEqual(['sites', 'onramps']);
     expect(cloud.stats.map(s => s.key)).toEqual([
       'clouds', 'regions', 'vpcs', 'subnets', 'workloads', 'attached',
     ]);
@@ -253,8 +280,6 @@ describe('estateDomains', () => {
     const snapshotBefore = estateStats(CC as never);
 
     try {
-      region.routes += 7;                 // routes
-      region.gateways += 3;               // gateways
       region.subnets += 5;                // subnets
       region.ai = !seedRegionAi;          // aiRegions
       cloud.workloads += 11;              // workloads
@@ -296,8 +321,6 @@ describe('estateDomains', () => {
       cloud.workloads -= 11;
       region.ai = seedRegionAi;
       region.subnets -= 5;
-      region.gateways -= 3;
-      region.routes -= 7;
     }
 
     // the restore actually restored — later tests read a clean seed.
@@ -305,7 +328,6 @@ describe('estateDomains', () => {
     // moves both together, so it alone cannot see a leak; the snapshot
     // `toEqual` below is the absolute check.
     expectEveryTileAgreesWithEngine(CC, 'after restore');
-    expect(CC.counts().routes).toBe(124);
     expect(estateStats(CC as never)).toEqual(snapshotBefore);
   });
 
@@ -474,5 +496,27 @@ describe('region latency — one derivation for Discover and Connect', () => {
         expect(map[r.id], `${r.id} is not covered by fabricModel()`).toBeTypeOf('number');
       }
     }
+  });
+});
+
+/* Task 2 — rollup derivations and the 50-row threshold contract. */
+describe('rollups', () => {
+  it('siteRollup counts by class with onNet from onrampId presence', () => {
+    const rows = siteRollup(CC as never);
+    const office = rows.find(r => r.siteClass === 'office');
+    expect(office?.count).toBe(5);
+    expect(office?.onNet).toBe(5);           // all five ACME offices carry onrampId
+    expect(rows.map(r => r.siteClass)).toEqual(['dc', 'office']); // fixed order, absent omitted
+  });
+
+  it('cloudRollup gives one row per cloud with region and workload counts', () => {
+    const aws = cloudRollup(CC as never).find(r => r.cloudId === 'aws');
+    expect(aws?.regions).toBe(3);
+    expect(aws?.workloads).toBe(142);
+  });
+
+  it('needsRollup trips strictly above the threshold', () => {
+    expect(needsRollup(ROLLUP_THRESHOLD)).toBe(false);
+    expect(needsRollup(ROLLUP_THRESHOLD + 1)).toBe(true);
   });
 });

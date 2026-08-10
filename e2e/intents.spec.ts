@@ -22,9 +22,9 @@ test('a cap intent typed in ⌘K changes the budget /ai/govern states', async ({
   await page.keyboard.press('Enter');
   await expect(dialog).toHaveCount(0);
 
-  // The budget cell moved to the figure the intent named (the table prints
-  // the raw budget; the palette label uses fmtTokens' 2.00M form).
-  await expect(row).toContainText('2,000,000');
+  // The budget cell moved to the figure the intent named — the table renders
+  // it through fmtTokens (metric audit row 87), same as the palette label.
+  await expect(row).toContainText('2.00M');
   expect(await row.innerText()).not.toBe(before);
 });
 

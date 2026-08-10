@@ -117,6 +117,13 @@ function cloudToCloud(){
   const gpuUp=onramps.find(o=>o.id==='nb2').active;
   return C2C_PAIRS.map(pair=>{
     const A=_findRegion(pair.a[1]), B=_findRegion(pair.b[1]);
+    // A pair's endpoint region is fixed by id (e.g. azure/wus2) - acme's own
+    // seed, not a claim every estate profile holds. Meridian replaces azure's
+    // region set with scus/eus2, so wus2 no longer resolves; same null-guard
+    // idiom as the branch-flow loop above (state-rules.ts) rather than a
+    // crash - a DCI pair this estate doesn't model just isn't listed, not a
+    // broken row.
+    if(!A||!B)return null;
     const label=`${A.cloud.name} ${A.r.name} ↔ ${B.cloud.name} ${B.r.name}`+(pair.dci?` (${pair.dci})`:'');
     /* Sorted shortest-first, because `currentPath` and `routeAdvisor` both take
        "the first available AT&T path" — so the reroute and the recommendation
@@ -156,7 +163,7 @@ function cloudToCloud(){
       egressPerGb:PUBLIC_EGRESS,attControlled:false,diversityGroup:'public',available:true},...att];
     return {id:pair.id,kind:'c2c',label,gbps:pair.gbps,srcCloud:pair.a[0],dstCloud:pair.b[0],
       viaPublic:pair.dci?!gpuUp:true,paths};
-  });
+  }).filter(Boolean);
 }
 
 // the curated, steerable flow set

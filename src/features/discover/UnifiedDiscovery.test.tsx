@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { UnifiedDiscovery } from './UnifiedDiscovery';
 import { CC } from '../../engine';
-import { estateDomains } from './discoveryModel';
+import { estateDomains, cloudRegionCount, cloudVpcCount, ROLLUP_THRESHOLD, type Cloud } from './discoveryModel';
 import { ID_RENAME_WARNING } from '../govern/groupLanguage';
+import { applyEstateProfile } from '../../engine/estateProfile';
 // No engine provider wrapper — the engine is a singleton read via useCloudControl.
 // A MemoryRouter is required because the embedded FlowBar reads the active route.
 const renderUD = () => render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
@@ -14,7 +15,6 @@ describe('UnifiedDiscovery drill-down tree', () => {
     renderUD();
     // estate tiles
     expect(screen.getByText('VPC · VNet')).toBeInTheDocument();
-    expect(screen.getByText('Gateways')).toBeInTheDocument();
     // cloud rows (buttons carry aria-label = cloud name)
     expect(screen.getByRole('button', { name: 'AWS' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'CoreWeave' })).toBeInTheDocument();
@@ -24,6 +24,20 @@ describe('UnifiedDiscovery drill-down tree', () => {
      say what each section is for". Deleting the `<div><h2>{d.label}</h2>
      <p>{d.blurb}</p></div>` block left every discover and tour test green,
      because the `estate-*` testids are satisfied by empty sections. */
+  /* Row 19 of the phase-0 metric audit: the flow-bar CTA used to read
+     "Attach {n} public workloads", which collides with AWS's own workload
+     count rendered one row below it. Naming what "public" means (still on
+     the public internet) removes the ambiguity — copy only, same count. */
+  it('the flow-bar CTA names the workloads as still on the public internet', () => {
+    renderUD();
+    const clouds = CC.clouds as Cloud[];
+    const publicWorkloads = clouds.filter(c => !c.attached).reduce((s, c) => s + c.workloads, 0);
+    expect(publicWorkloads, 'fixture must have an unattached cloud for this CTA to render').toBeGreaterThan(0);
+    expect(
+      screen.getByRole('link', { name: `Attach the ${publicWorkloads} workloads still on the public internet` }),
+    ).toBeInTheDocument();
+  });
+
   it('renders a heading and a blurb for each of the three domains', () => {
     renderUD();
     const domains = estateDomains(CC);
@@ -47,6 +61,43 @@ describe('UnifiedDiscovery drill-down tree', () => {
     // The figure is the ACTIVE count, not the circuit inventory — the review's
     // complaint was a tile that read 4 while only 1 carried traffic.
     expect(CC.activeOnramps()).toBeLessThan(CC.onramps.length);
+  });
+
+  /* Row 21 of the phase-0 metric audit: "Active on-ramps" demoted off the
+     always-visible summary band — the fraction is true, but the band has
+     no room for the denominator's blurb ("active over every circuit on
+     order"), which the estate-breakdown disclosure's Network domain
+     already carries beside the same stat (asserted above). */
+  it('drops the on-ramps tile from the summary band', () => {
+    renderUD();
+    const band = screen.getByTestId('estate-summary-band');
+    expect(within(band).queryByText('Active on-ramps')).not.toBeInTheDocument();
+  });
+
+  /* Row 31: the cloud row's per-cloud stat tiles cut — the same three
+     numbers already render as the row's prose subtitle, one row up. */
+  it('states each cloud\'s regions/VPC/workload counts once, not as tiles too', () => {
+    renderUD();
+    const clouds = CC.clouds as Cloud[];
+    const c = clouds[0];
+    const row = screen.getByRole('button', { name: c.name });
+    expect(
+      within(row).getByText(`${cloudRegionCount(CC, c.id)} regions · ${cloudVpcCount(CC, c.id)} VPC/VNet · ${c.workloads} workloads`),
+    ).toBeInTheDocument();
+    // The tile rendering of the same figures — a bare "Regions" caption —
+    // is gone; only the domain-level "Regions" stat inside the (separate)
+    // estate-breakdown disclosure remains.
+    expect(within(row).queryByText('Regions')).not.toBeInTheDocument();
+    expect(within(row).queryByText('Workloads')).not.toBeInTheDocument();
+  });
+
+  /* Row 33: the "N workloads reachable over the public internet" alert cut
+     — a third rendering of the FlowBar CTA's own count, with no action
+     attached. */
+  it('does not render the public-workloads alert the FlowBar CTA already states', () => {
+    renderUD();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/reachable over the public internet/)).not.toBeInTheDocument();
   });
 
   /* The tour's Discover beat speaks about clouds, regions and VPCs. Anchoring
@@ -336,5 +387,84 @@ describe('Discover selection → group', () => {
     expect(r.vpcIds).toEqual([]);
     // the selection is spent
     expect(screen.queryByTestId('discover-selection')).not.toBeInTheDocument();
+  });
+});
+
+/* Task 6 — rollup rendering. Past the 50-row threshold, the site list
+   collapses into one rollup row per site class rather than a per-site row
+   for every one of Meridian's 4,183 branches. */
+describe('UnifiedDiscovery site rollups', () => {
+  afterEach(() => {
+    // The meridian tests below mutate the LIVE engine singleton — restore
+    // acme unconditionally so no later suite in the run sees meridian.
+    applyEstateProfile(CC as never, 'acme');
+  });
+
+  it('renders rollup rows, not per-site rows, past the threshold', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    expect(screen.getAllByTestId('site-rollup-row').length).toBeGreaterThanOrEqual(3);
+    expect(screen.queryAllByTestId('site-row').length).toBeLessThanOrEqual(ROLLUP_THRESHOLD);
+    applyEstateProfile(CC as never, 'acme');
+  });
+
+  it('ACME still renders its six sites as rows', () => {
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    expect(screen.getAllByTestId('site-row')).toHaveLength(6);
+    expect(screen.queryByTestId('site-rollup-row')).not.toBeInTheDocument();
+  });
+
+  it('drilling into a rollup row shows up to 50 sites plus a "more" row', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    const branchRollup = screen
+      .getAllByTestId('site-rollup-row')
+      .find(row => /branches/.test(row.textContent || ''))!;
+    expect(branchRollup).toBeTruthy();
+    fireEvent.click(branchRollup);
+    const rows = screen.getAllByTestId('site-row');
+    expect(rows.length).toBe(ROLLUP_THRESHOLD);
+    expect(screen.getByTestId('rollup-more')).toBeInTheDocument();
+    expect(screen.getByTestId('rollup-more').textContent).toMatch(/more.*filter to narrow/i);
+  });
+
+  it('the map clusters markers by class+metro past the threshold, instead of one per site', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Map view' }));
+    expect(screen.getByTestId('attachment-map')).toBeInTheDocument();
+    // clustered — far fewer markers than Meridian's 4,183 branches, and no
+    // per-site marker rendered at all
+    expect(screen.getAllByTestId('site-cluster-marker').length).toBeLessThan(ROLLUP_THRESHOLD);
+    expect(screen.queryAllByTestId('site-node')).toHaveLength(0);
+  });
+
+  /* Review finding C4: filtering to a class that is itself at/under the
+     threshold must render its ordinary per-site rows, not a rollup — the
+     rollup decision reads `filteredBranches.length` (Task 6's own wiring of
+     `branchMatches` into rendering), not Meridian's unfiltered total.
+     Meridian's dc class has exactly 3 branches (meridianEstate.ts). */
+  it('filtering to a class at/under the threshold renders per-site rows, not a rollup (Meridian dc=3)', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    const chips = screen.getByTestId('estate-filter-chips');
+    fireEvent.click(within(chips).getByRole('button', { name: 'Data centers' }));
+    expect(screen.getAllByTestId('site-row')).toHaveLength(3);
+    expect(screen.queryByTestId('site-rollup-row')).not.toBeInTheDocument();
+  });
+
+  /* Review finding C5: the rollup label's exact format — comma-formatted
+     count, the class's plural noun, and the "on AT&T" onNet phrasing.
+     Meridian's non-ATM classes (dc/office/branch) always carry `onrampId`
+     (meridianEstate.ts — only the ATM class gates it on a coin flip), so
+     the "branches" rollup's onNet is deterministically its full count:
+     2,840 of 2,840. */
+  it('a rollup row states the class count and AT&T reach, comma-formatted', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
+    const branchRollup = screen
+      .getAllByTestId('site-rollup-row')
+      .find(row => /branches/.test(row.textContent || ''))!;
+    expect(branchRollup.textContent).toContain('2,840 branches · 2,840 on AT&T');
   });
 });

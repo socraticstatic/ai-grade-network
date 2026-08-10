@@ -57,6 +57,6 @@ describe('ArbitrageBreakdown', () => {
     const row = screen.getByText(azure.label).closest('li')!;
     expect(within(row).queryByRole('button')).toBeNull();
     expect(within(row).getByText(/on the fabric/i)).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`${fmt(azure.saving).replace(/\$/, '\\$')}/mo captured this session`))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${fmt(azure.saving).replace(/\$/, '\\$')}/mo captured so far`))).toBeInTheDocument();
   });
 });

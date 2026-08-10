@@ -5,11 +5,8 @@ import { AttIcon } from '../../components/icons/AttIcon';
 import { IntentThreads, IntentThreadOverlay } from './IntentThreads';
 import { STACK_LAYERS, type NavLayer } from '../../components/navigation/navItems';
 import { useCloudControlLive } from '../../engine/react/useCloudControl';
-import { fmtTokens, fmtUsd } from '../ai-fabric/aiSpend';
 import {
-  aiStratum,
   naasStratum,
-  cloudStratum,
   attachOpportunities,
   steerOpportunities,
   stagedDeltas,
@@ -95,12 +92,14 @@ function LiveBand({
           ))}
         </div>
       </div>
-      <div
-        data-testid={`stack-figures-${layer.key}`}
-        className="mt-2.5 pt-2.5 border-t border-fw-secondary/50 flex flex-wrap items-baseline gap-x-5 gap-y-1"
-      >
-        {figures}
-      </div>
+      {figures !== null && (
+        <div
+          data-testid={`stack-figures-${layer.key}`}
+          className="mt-2.5 pt-2.5 border-t border-fw-secondary/50 flex flex-wrap items-baseline gap-x-5 gap-y-1"
+        >
+          {figures}
+        </div>
+      )}
       {children}
     </div>
   );
@@ -274,9 +273,7 @@ export function StackPanel({ rail = false }: { rail?: boolean } = {}) {
 
   useEffect(() => () => clearTimeout(copyTimer.current), []);
 
-  const aiFig = aiStratum(cc);
   const naasFig = naasStratum(cc);
-  const cloudFig = cloudStratum(cc);
 
   const attaches = designing ? attachOpportunities(cc) : [];
   const steers = designing ? steerOpportunities(cc) : [];
@@ -401,19 +398,16 @@ export function StackPanel({ rail = false }: { rail?: boolean } = {}) {
       <IntentThreads manage={false} />
 
       <div className="space-y-1.5">
+        {/* Row 27 of the phase-0 metric audit: the four figures this band
+            used to state (model endpoints ready, tokens today, public-
+            internet exposure, spend + identities) demoted — a NaaS-shaped
+            screen stacking four zeros read as a broken panel, and the AI
+            layer home's own Estate at a glance already states them. The
+            band stays for the stack diagram; only its numbers moved. */}
         <LiveBand
           layer={ai}
           rail={rail}
-          figures={
-            <>
-              <Fig value={`${aiFig.modelsReady}/${aiFig.modelsTotal}`} label="model endpoints ready" />
-              <Fig value={fmtTokens(aiFig.tokensToday)} label="tokens today" />
-              {aiFig.ungovernedTokensToday > 0 && (
-                <Fig value={fmtTokens(aiFig.ungovernedTokensToday)} label="rode the public internet" tone="warn" />
-              )}
-              <Fig value={fmtUsd(aiFig.spendToday)} label={`spend today · ${aiFig.identityCount} identities`} />
-            </>
-          }
+          figures={null}
         >
           {designing && (
             <p className="mt-2 text-[11px] font-medium text-fw-bodyLight">
@@ -434,9 +428,10 @@ export function StackPanel({ rail = false }: { rail?: boolean } = {}) {
                 its own layer, next
               </span>
             </p>
-            <p className="text-figma-sm text-fw-bodyLight">
-              {cloudFig.clouds} clouds · {cloudFig.regions} regions · {cloudFig.vpcs} VPCs in the estate today.
-            </p>
+            {/* Row 28 of the phase-0 metric audit: the "N clouds · N regions
+                · N VPCs" count cut — a third rendering of the summary
+                band's own tiles (rows 22, 24) on the same screen. This
+                band's job is "its own layer, next", not another count. */}
           </div>
           <Link
             to="/naas/connect"
@@ -450,9 +445,13 @@ export function StackPanel({ rail = false }: { rail?: boolean } = {}) {
           layer={naas}
           rail={rail}
           figures={
+            // Row 29a of the phase-0 metric audit: "regions on the fabric"
+            // and "sites" cut — both restate figures shown better
+            // elsewhere on the same page (rows 21/37, 20) and the sites
+            // count here is wrong besides (row 5). Row 29b's pair — egress
+            // and the savings on the table — is the band's whole argument
+            // and stays.
             <>
-              <Fig value={`${naasFig.regionsAttached}/${naasFig.regionsTotal}`} label="regions on the fabric" />
-              <Fig value={`${naasFig.sites}`} label="sites" />
               <Fig value={`${money(naasFig.egressPubMo)}/mo`} label="egress on public transit" tone={naasFig.egressPubMo > 0 ? 'warn' : 'plain'} />
               <Fig value={`${money(naasFig.availableSavingsMo)}/mo`} label="still on the table" />
             </>

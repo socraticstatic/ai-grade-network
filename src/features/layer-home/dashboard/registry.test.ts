@@ -22,4 +22,12 @@ describe('widgetsForSurface', () => {
   test('the real registry is keyed by each widget id', () => {
     for (const [key, w] of Object.entries(WIDGET_REGISTRY)) expect(w.id).toBe(key);
   });
+
+  /* Fix-wave review finding 2: "Estate at a glance" was registered w:2 for
+     a "four figures, two-up" layout that the phase-0 audit's cuts (rows
+     4-7, 14-16) shrank to one or two short figures. A w:2 card holding one
+     figure left half the card empty. */
+  test('estate-figures is registered w:1, matching its post-audit content', () => {
+    expect(WIDGET_REGISTRY['estate-figures'].defaultSize.w).toBe(1);
+  });
 });

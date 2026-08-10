@@ -3,6 +3,7 @@ import { render, screen, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { TokenPolicies } from './TokenPolicies';
 import { CC } from '../../engine';
+import { fmtTokens } from './aiSpend';
 
 /* TokenPolicies now renders react-router <Link>s (the staged Enforce
    action, Task 6) instead of buttons that mutated directly — it needs a
@@ -18,6 +19,21 @@ const renderPolicies = () => render(<MemoryRouter><TokenPolicies /></MemoryRoute
    — agreement with CC.resolveGroup, never a pinned number.
 
    The engine is a shared singleton within this file: mutations last. */
+/* Row 87 of the phase-0 metric audit: the Budget column rendered
+   `p.budget.toLocaleString()` — ten raw digits — while the layer home
+   states the identical figure as `2.40B` via `fmtTokens`. One call site,
+   no new derivation. */
+describe('TokenPolicies · budget column', () => {
+  it('formats the budget with fmtTokens, not a raw locale string', () => {
+    render(<MemoryRouter><TokenPolicies /></MemoryRouter>);
+    const policies = CC.tokenPolicyList() as { tag: string; budget: number }[];
+    for (const p of policies) {
+      const row = screen.getByText(p.tag).closest('tr')!;
+      expect(row).toHaveTextContent(fmtTokens(p.budget));
+    }
+  });
+});
+
 describe('TokenPolicies · group-scoped rows', () => {
   const liveCount = () => (CC.resolveGroup('west-workloads') as { count: number }).count;
 

@@ -52,6 +52,7 @@ export interface Tag {
 /** A customer premises. Distinct from `onramps[].site`, which is the AT&T
  *  colo facility an on-ramp lives in — a branch is the customer's own
  *  building, and is what the stakeholder note means by "San Jose". */
+export type SiteClass = 'dc' | 'office' | 'branch' | 'atm';
 export interface Branch {
   id: string;
   name: string;
@@ -59,6 +60,7 @@ export interface Branch {
   cidrs: string[];
   onrampId?: string;
   cloudTags?: Record<string, string>;
+  siteClass: SiteClass;
 }
 
 /** Tree node keys are path-joined: `aws`, `aws/use1`, `aws/use1/vpcprod`. */
@@ -78,6 +80,15 @@ export const vpcKey = (cloudId: string, regionId: string, vpcId: string) => `${c
  *  than path-joined — `site/br-sjc` can never collide with a cloud id. */
 export const branchKey = (branchId: string) => `site/${branchId}`;
 export const isBranchKey = (key: string) => key.startsWith('site/');
+
+/** A site-rollup drill-in key (SitesPanel, Task 6) — namespaced the same way
+ *  branch keys are, so `site-class/branch` can never collide with a cloud id
+ *  either. Distinct from `isBranchKey`: a rollup key names a whole CLASS of
+ *  sites, not one site, and `openSummary` below must not mistake it for a
+ *  depth-2 cloud-tree key (a real region path, e.g. `aws/use1`, also splits
+ *  into two `/`-segments). */
+export const siteClassKey = (cls: SiteClass) => `site-class/${cls}`;
+export const isSiteClassKey = (key: string) => key.startsWith('site-class/');
 
 export const branchesOf = (cc: CloudControl): Branch[] => ((cc.branches || []) as Branch[]);
 
@@ -232,11 +243,16 @@ export function estateDomains(cc: CloudControl): EstateDomain[] {
          adds mid-provisioning, so "available" would claim readiness the
          denominator does not hold. "On order" makes no such claim. */
       blurb: 'Your sites and the AT&T on-ramps reaching them — active over every circuit on order, so control is a count, not a claim.',
+      // Rows 35-36 of the phase-0 metric audit: "Routes" and "Gateways"
+      // cut — already folded behind this disclosure and failing every
+      // test regardless ("routes" is ambiguous between routing-protocol
+      // routes and route tables; a gateway is not a first-class object
+      // anywhere else in this product). `counts().routes` / `.gateways`
+      // (state.ts) have no other consumer and are noted as orphaned
+      // engine derivations.
       stats: [
         { key: 'sites', label: 'Sites', value: branches.length },
         { key: 'onramps', label: 'Active on-ramps', value: activeOnramps, of: onramps.length },
-        { key: 'routes', label: 'Routes', value: c.routes },
-        { key: 'gateways', label: 'Gateways', value: c.gateways },
       ],
       cta: { label: 'Order and attach circuits in NaaS · Connect', to: '/naas/connect' },
     },
@@ -317,13 +333,20 @@ export function toggleKey(open: ReadonlySet<string>, key: string): Set<string> {
 }
 
 /**
- * Port of the original `updateScope()` — a human summary of how deep the tree
- * is currently expanded. Resource maps (depth-3 keys) win over regions.
+ * Port of the original `updateScope()` — a human summary of how deep the
+ * CLOUD TREE is currently expanded. Resource maps (depth-3 keys) win over
+ * regions. `site-class/${cls}` keys (Task 6's rollup drill-in, sharing this
+ * same open-set) also split into two `/`-segments — the same depth a real
+ * region path (`aws/use1`) has — so they're excluded before the depth check
+ * rather than miscounted as a region: this summary describes the tree
+ * beside the Tree/Map toggle, not SitesPanel's independent rollup state,
+ * which sits in its own section below with no summary line of its own.
  */
 export function openSummary(open: ReadonlySet<string>): string {
   let maps = 0;
   let regions = 0;
   open.forEach(k => {
+    if (isSiteClassKey(k)) return;
     const depth = k.split('/').length;
     if (depth === 3) maps++;
     else if (depth === 2) regions++;
@@ -345,6 +368,60 @@ export function tagHex(id: string, tags: Record<string, Tag>): string {
 }
 export function tagLabel(id: string, tags: Record<string, Tag>): string {
   return tags[id]?.label ?? id;
+}
+
+/* --------------------------- rollups --------------------------- */
+
+/** Rows above this count collapse behind a rollup disclosure rather than
+ *  listing every leaf — the estate-scale threshold the discover tree and
+ *  filters share. */
+export const ROLLUP_THRESHOLD = 50;
+export const needsRollup = (count: number): boolean => count > ROLLUP_THRESHOLD;
+
+export const CLASS_ORDER: SiteClass[] = ['dc', 'office', 'branch', 'atm'];
+
+/** Lowercase plural nouns for a rollup row's prose ("2,840 branches"),
+ *  matching `CLASS_ORDER`'s fixed dc→office→branch→atm order. Distinct from
+ *  `EstateFilterChips`'s capitalized `SITE_CLASS_LABEL` (a chip label), which
+ *  reads as a heading, not a sentence. */
+export const SITE_CLASS_PLURAL: Record<SiteClass, string> = {
+  dc: 'data centers', office: 'offices', branch: 'branches', atm: 'ATMs',
+};
+
+/** One row per site class actually present, in fixed dc→office→branch→atm
+ *  order (absent classes omitted rather than zero-filled — a customer with
+ *  no ATMs sees no ATM row, not a row that reads 0). `onNet` counts branches
+ *  in that class carrying an `onrampId`, i.e. reachable over an AT&T circuit
+ *  today, not merely inventoried. */
+export function siteRollup(cc: CloudControl): { siteClass: SiteClass; count: number; onNet: number }[] {
+  const acc = new Map<SiteClass, { count: number; onNet: number }>();
+  for (const b of branchesOf(cc)) {
+    const row = acc.get(b.siteClass) ?? { count: 0, onNet: 0 };
+    row.count += 1;
+    if (b.onrampId) row.onNet += 1;
+    acc.set(b.siteClass, row);
+  }
+  return CLASS_ORDER.filter(c => acc.has(c)).map(c => ({ siteClass: c, ...acc.get(c)! }));
+}
+
+/**
+ * One row per cloud with its region and workload counts.
+ *
+ * The brief's sketch read `cc.fabricModel().clouds` — `fabricModel()` has no
+ * `clouds` field (`sites`/`onramps`/`regions`/`c2c` only; see
+ * `src/engine/types.ts`), and its `regions` carry no workload count. Cloud
+ * identity/name/workloads come off the engine's own `clouds` seed instead
+ * (`cc.clouds`, already read the same way by `allKeys()` above), and the
+ * region count reuses `cloudRegionCount`, the derivation this file already
+ * exposes and tests for the same seed.
+ */
+export function cloudRollup(cc: CloudControl): { cloudId: string; name: string; regions: number; workloads: number }[] {
+  return (cc.clouds as Cloud[]).map(cl => ({
+    cloudId: cl.id,
+    name: cl.name,
+    regions: cloudRegionCount(cc, cl.id),
+    workloads: cl.workloads,
+  }));
 }
 
 /** Gateway accent colors — de-ambered (NAT moves from amber to slate). */

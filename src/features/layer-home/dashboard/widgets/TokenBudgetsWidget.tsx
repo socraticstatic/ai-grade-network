@@ -48,8 +48,12 @@ export function TokenBudgetsWidget(_props: LayerWidgetProps) {
                 <span className="flex-1 min-w-0">
                   <span className="text-figma-sm font-medium text-fw-heading">{p.tag}</span>
                   <span className="block text-figma-xs text-fw-bodyLight tabular-nums">
-                    {p.meter ? `${fmtTokens(p.meter.today)} of ${fmtTokens(p.budget)}` : `${fmtTokens(p.budget)} budget`}
-                    {p.meter && <> · {pct}%</>}
+                    {/* Row 11 of the phase-0 metric audit: "0 of 2.40B" led
+                        with a raw token count, with the honest "0%" reading
+                        trailing after a " · ". Reorder, not a new
+                        derivation — the same meter pct and budget, pct
+                        leading. */}
+                    {p.meter ? `${pct}% of a ${fmtTokens(p.budget)}/day budget` : `${fmtTokens(p.budget)} budget`}
                   </span>
                 </span>
                 {p.enforced ? (

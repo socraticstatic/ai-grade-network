@@ -87,6 +87,16 @@ test('every AI Fabric verb renders the block that moved onto it', async ({ page 
   }
 });
 
+// Mirrors aiSpend.ts's fmtTokens — Govern's policy table renders budgets
+// through it (metric audit row 87); Cost's per-identity table below still
+// prints the raw digit count, so only this table's assertion needs it.
+function fmtTokens(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(Math.round(n));
+}
+
 /* Govern sets the ceilings; Cost meters against them. The two screens must
    state the SAME budget for the same identity — and Govern lists policies Cost
    does not meter, which is the discrepancy a viewer notices first. Budgets do
@@ -107,7 +117,7 @@ test('AI Fabric states the same budgets on Govern and on Cost', async ({ page })
   for (const p of policies) {
     await expect(
       policyTable.getByRole('row').filter({ hasText: p.tag }),
-    ).toContainText(p.budget.toLocaleString());
+    ).toContainText(fmtTokens(p.budget));
   }
 
   await page.goto('/#/ai/teams', { waitUntil: 'domcontentloaded' });

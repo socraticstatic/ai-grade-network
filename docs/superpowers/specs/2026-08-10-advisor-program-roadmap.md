@@ -56,6 +56,17 @@ Phase 2c ────────────────┘
 - Editable recommendation with instant re-check ("change anything and I'll re-check your savings").
 - Stateful chat input: disabled "Building your recommendation..." until ready, then "Ask about your recommendation," with seeded suggested questions.
 
+## Carried follow-ups from Phases 0-1 (executed Aug 10)
+
+Recorded here because the execution ledgers are deleted with their workspaces; triaged ride-able by the final reviews.
+
+- **Meridian shows ACME's four extra clouds** (gcp/oci/cw/neb with ACME regions/VPCs). Load-bearing: swapping them out crashes `state-console` modelCatalog (regionLatency('cwe') → _findRegion iterates clouds). Clean fix: Meridian seeds its own AI clouds, or guards in the five engine files that assume them. Phase 2a prep.
+- **Meridian `cloudTags.Region` hardcoded 'east'** on every hub/spoke (Oregon/Texas included) - poisonous once anything groups by that tag (west-workloads resolves to nothing Meridian-owned). Fix in the generator when Phase 2a reads groups.
+- **C2C pairs under Meridian resolve 2 of 4** (null-guarded, no crash) - restate pairs for Meridian's regions if Observe's C2C story matters for the bank demo.
+- **Phase-2c seed list** lives in `docs/superpowers/metric-audit-2026-08.md` (7 rows incl. the two-savings-totals reconciliation and the engine-string token formatting at state-intents.ts:230).
+- **Perf budget**: 200ms tenant-switch target measured at 314ms unbundled dev load; nothing guards the budget in CI - add a profiling script if it should be enforced.
+- **42 pre-existing Playwright failures on main** (nav restructure, stale title check, one flaky live-tick test) - separate triage, chip already spawned.
+
 ## Out of scope for this program
 
 Real credential handling and live cloud crawling (demo stays engine-seeded), advisor checkout/commerce, LMCC integration changes, portal-wide rebrand work (guarded by rebrand.test.ts, untouched).
