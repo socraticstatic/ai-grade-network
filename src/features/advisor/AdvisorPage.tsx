@@ -1,165 +1,79 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCloudControl } from '../../engine/react/useCloudControl';
 import { resolveProfile } from '../../engine/estateProfile';
-import { WIZARD_PROVIDERS, validateCredential, scanSteps, type ScanStep } from '../discover/wizardModel';
-import { advisorFindings, advisorHeadline, headStart } from './advisorModel';
-import { andiAnswer } from '../andi/andiBrain';
-import { advance, markAdvisorDone, type AdvisorPhase } from './advisorPhase';
+import { markAdvisorDone } from './advisorPhase';
+import { buildScript, type CanvasItem } from './advisorScript';
+import { AdvisorConversation } from './AdvisorConversation';
 import { AdvisorCanvas } from './AdvisorCanvas';
-import { AdvisorRail } from './AdvisorRail';
 
 /**
- * `/discover/advisor` — the first-run flagship. An undiscovered tenant
- * lands here instead of the tree: observe (the AT&T head-start) → intake
- * (wizard-derived credential entry) → scanning (the scan theater) → ready
- * (headline + findings, each with a good/better/best offer ladder).
+ * `/discover/advisor` — the conversational advisor. The conversation IS the
+ * experience: the advisor opens with what AT&T already sees, asks to look
+ * at the cloud side, narrates the scan, and delivers findings one at a
+ * time as observations — while the canvas on the right materializes the
+ * artifact for whatever was just said. One-tap replies drive the whole
+ * flow (a demo never types); free text routes to Andi's grounded brain.
  *
- * This component owns the phase machine, the wizard state the intake step
- * needs, and the scan timer — all three are handed down as props so
- * AdvisorCanvas and AdvisorRail stay pure view layers (AdvisorCanvas in
- * particular has to render standalone with no rail; see its own doc
- * comment). Route registration is a later task — this module only exports
- * the component `<AdvisorPage />` renders under any router.
+ * Opt-in only: /discover never redirects here (every profile boots with
+ * the done flag seeded); the rail's "Run the advisor" card and this URL
+ * are the two ways in. Leaving by any route marks the flag - belt and
+ * suspenders, in case the boot seeding ever changes.
  */
 export default function AdvisorPage() {
   const cc = useCloudControl(c => c);
+  const profile = useMemo(() => {
+    try {
+      return resolveProfile(window.location.search, window.localStorage);
+    } catch {
+      return 'acme';
+    }
+  }, []);
+  const beats = useMemo(() => buildScript(cc), [cc]);
+  const [canvasItems, setCanvasItems] = useState<CanvasItem[]>([]);
   const navigate = useNavigate();
-  // Which profile's done-flag this session writes. Read the same way the
-  // engine's own boot swap resolves it (URL flag, else the persisted
-  // choice) rather than inventing a second source of truth for "who is
-  // this tenant".
-  const profile = resolveProfile(window.location.search, window.localStorage);
 
-  const [phase, setPhase] = useState<AdvisorPhase>('observe');
-  const [providerId, setProviderId] = useState('');
-  const [credential, setCredential] = useState('');
-  const provider = WIZARD_PROVIDERS.find(p => p.id === providerId);
-  const credValid = !!provider && validateCredential(provider, credential);
-
-  // Scan pacing — same idiom as DiscoveryWizard.tsx: steps are a precomputed
-  // CC derivation, the interval only advances an index into them.
-  const [steps, setSteps] = useState<ScanStep[]>([]);
-  const [scanIdx, setScanIdx] = useState(0);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (phase !== 'scanning' || !provider) return;
-    const s = scanSteps(cc, provider.id);
-    setSteps(s);
-    setScanIdx(0);
-    timer.current = setInterval(() => {
-      setScanIdx(i => {
-        const next = i + 1;
-        if (next >= s.length) {
-          if (timer.current) clearInterval(timer.current);
-          timer.current = null;
-        }
-        return next;
-      });
-    }, 620);
-    return () => {
-      if (timer.current) clearInterval(timer.current);
-      timer.current = null;
-    };
-  }, [phase, provider, cc]);
-
-  // steps.length > 0 guard mirrors DiscoveryWizard.tsx:76 — unreachable
-  // with today's WIZARD_PROVIDERS (every provider names at least one
-  // region), kept for the same reason DiscoveryWizard keeps it: a
-  // zero-region provider must never read as "done" before it has scanned
-  // anything.
-  const scanDone = phase === 'scanning' && steps.length > 0 && scanIdx >= steps.length;
-  useEffect(() => {
-    if (scanDone) setPhase(p => advance(p, { type: 'scan-complete' }));
-  }, [scanDone]);
-
-  const startIntake = () => setPhase(p => advance(p, { type: 'start' }));
-  const submitCredential = () => {
-    if (!credValid) return;
-    setPhase(p => advance(p, { type: 'credential-valid' }));
-  };
+  const leave = () => markAdvisorDone(profile);
   const acceptTier = (route: string) => {
-    markAdvisorDone(profile);
+    leave();
     navigate(route);
   };
-  const skip = () => {
-    markAdvisorDone(profile);
-    navigate('/discover');
-  };
-
-  const hs = headStart(cc);
-  const findings = advisorFindings(cc);
-  const headline = advisorHeadline(cc);
-  // /discover/advisor sits outside the naas/ai layer paths, so andiAnswer's
-  // layerKey is null — same as the app-wide Andi panel when no layer
-  // matches the current route (AndiPanel.tsx's layerForPath fallback).
-  const askAdvisor = (q: string) => andiAnswer(cc, q, null);
-
-  const statusChip =
-    phase === 'scanning' ? 'Analyzing your estate…' : phase === 'ready' ? 'Recommendations ready' : null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-figma-xl font-bold text-fw-heading">Advisor</h1>
-          {statusChip && (
-            <span
-              data-testid="advisor-status-chip"
-              aria-live="polite"
-              className="inline-flex items-center rounded-full bg-fw-accent px-2.5 py-1 text-figma-xs font-medium text-fw-link"
-            >
-              {statusChip}
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
+    <div className="mx-auto max-w-7xl px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="text-figma-lg font-semibold text-fw-heading">Your AT&T advisor</h1>
+        <Link
+          to="/discover"
           data-testid="advisor-skip"
-          onClick={skip}
+          onClick={leave}
           className="text-figma-sm font-medium text-fw-link hover:underline"
         >
           Skip to the estate
-        </button>
+        </Link>
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <aside
-          aria-label="Advisor narration and chat"
-          data-testid="advisor-rail"
-          className="w-full shrink-0 space-y-4 order-last lg:order-first lg:w-[360px] xl:w-[400px]"
+      <div className="flex flex-col gap-6 lg:h-[calc(100vh-190px)] lg:flex-row">
+        <section
+          aria-label="Conversation with the advisor"
+          className="min-h-[420px] w-full rounded-2xl border border-fw-secondary bg-fw-base p-4 lg:h-full lg:w-[440px] lg:shrink-0"
         >
-          <AdvisorRail
-            phase={phase}
-            steps={steps}
-            scanIdx={scanIdx}
-            findings={findings}
-            ask={askAdvisor}
-            onNavigate={to => navigate(to)}
+          <AdvisorConversation
+            cc={cc}
+            beats={beats}
+            onCanvas={item => setCanvasItems(prev => [...prev, item])}
+            onLeave={leave}
           />
-        </aside>
-
-        <div className="min-w-0 flex-1">
-          <AdvisorCanvas
-            phase={phase}
-            headStart={hs}
-            onStartIntake={startIntake}
-            providers={WIZARD_PROVIDERS}
-            providerId={providerId}
-            onSelectProvider={setProviderId}
-            provider={provider}
-            credential={credential}
-            onCredentialChange={setCredential}
-            credValid={credValid}
-            onSubmitCredential={submitCredential}
-            steps={steps}
-            scanIdx={scanIdx}
-            headline={headline}
-            findings={findings}
-            onAcceptTier={acceptTier}
-          />
-        </div>
+        </section>
+        <section aria-label="What the advisor found" className="min-w-0 flex-1 lg:overflow-y-auto">
+          {canvasItems.length === 0 ? (
+            <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-fw-secondary text-figma-sm text-fw-bodyLight">
+              What I find lands here as we talk.
+            </div>
+          ) : (
+            <AdvisorCanvas cc={cc} items={canvasItems} onAcceptTier={acceptTier} />
+          )}
+        </section>
       </div>
     </div>
   );

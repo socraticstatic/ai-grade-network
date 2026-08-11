@@ -42,14 +42,14 @@ describe('discover routing — the advisor first-run gate', () => {
     applyEstateProfile(CC as never, 'meridian');
     localStorage.setItem('estateProfile', 'meridian'); // resolveProfile reads this, not the CC swap
     renderAt('/discover');
-    expect(await screen.findByRole('heading', { name: 'Advisor' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Your AT&T advisor' })).toBeInTheDocument();
   });
 
   it('acme, already done: /discover renders the tree, not the advisor', async () => {
     markAdvisorDone('acme');
     renderAt('/discover');
     expect(await screen.findByRole('button', { name: 'AWS' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Advisor' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Your AT&T advisor' })).not.toBeInTheDocument();
   });
 
   it('meridian, already done: /discover renders the tree, not the advisor', async () => {
@@ -57,18 +57,18 @@ describe('discover routing — the advisor first-run gate', () => {
     localStorage.setItem('estateProfile', 'meridian');
     markAdvisorDone('meridian');
     renderAt('/discover');
-    expect(screen.queryByRole('heading', { name: 'Advisor' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Your AT&T advisor' })).not.toBeInTheDocument();
     expect(advisorDone('meridian')).toBe(true);
   });
 
   it('direct URL /discover/advisor always renders, regardless of the done flag', () => {
     markAdvisorDone('acme'); // done — a gate on this route would redirect away
     renderAt('/discover/advisor');
-    expect(screen.getByRole('heading', { name: 'Advisor' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your AT&T advisor' })).toBeInTheDocument();
   });
 
   it('direct URL /discover/advisor renders even with no flag at all', () => {
     renderAt('/discover/advisor');
-    expect(screen.getByRole('heading', { name: 'Advisor' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your AT&T advisor' })).toBeInTheDocument();
   });
 });
