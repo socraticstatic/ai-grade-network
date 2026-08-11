@@ -1,5 +1,17 @@
 import type { CloudControl } from '../../engine/types';
 import { DST_LABELS } from './flowLogs';
+import { branchesOf, SITE_CLASS_PLURAL, type SiteClass } from '../discover/discoveryModel';
+
+/* Branch-originated flow rows (state-rules.ts flows()) - mirrored the same
+ * way flowLogs.ts mirrors them: only the fields this band reads. */
+interface BranchFlowRow {
+  srcBranch?: string;
+  dstCloud?: string | null;
+  viaPublic?: boolean;
+  gbps: number;
+}
+
+const nfSite = new Intl.NumberFormat('en-US');
 
 // Shape of a routeFlows() row (src/engine/state-routing.ts) — untyped at the
 // source (// @ts-nocheck), so we mirror the fields this binding consumes.
@@ -43,6 +55,9 @@ function rowEndpoints(row: RouteFlowRow): { source: string; dest: string; pathKi
 export interface SankeyNode {
   name: string;
   band: 'source' | 'path' | 'dest';
+  /** Present on site-origin rollup nodes ("2,840 branches") - the class
+   *  and how many sites it aggregates. Never one node per site. */
+  rollup?: { siteClass: SiteClass; count: number };
 }
 
 export interface SankeyLink {
@@ -75,11 +90,51 @@ export function buildSankey(cc: CloudControl): SankeyModel {
     destsSet.add(dest);
   }
 
-  // Build node arrays
-  const sourceNodes: SankeyNode[] = Array.from(sourcesSet).sort().map(name => ({
-    name,
-    band: 'source' as const,
-  }));
+  /* Site-origin band: the customer's own sites, rolled up by class - the
+   * Wells Fargo answer on the money screen. Branch flow rows (one per
+   * branch x reachable VPC - ~35k under the bank estate) aggregate to at
+   * most four source nodes ("2,840 branches"), each linking through the
+   * path band to the cloud it reaches. Never one node per site. */
+  const branchClass = new Map<string, SiteClass>();
+  const classCount = new Map<SiteClass, number>();
+  for (const b of branchesOf(cc)) {
+    branchClass.set(b.id, b.siteClass);
+    classCount.set(b.siteClass, (classCount.get(b.siteClass) ?? 0) + 1);
+  }
+  const cloudName = new Map<string, string>();
+  for (const c of (cc.clouds ?? []) as { id: string; name: string }[]) cloudName.set(c.id, c.name);
+  // class -> pathKind -> dest cloud name -> gbps
+  const siteAgg = new Map<SiteClass, Map<'private' | 'public', Map<string, number>>>();
+  const ccFlows = (cc as unknown as { flows?: () => BranchFlowRow[] }).flows;
+  const branchRows = (ccFlows ? ccFlows() : []).filter(r => r.srcBranch);
+  for (const r of branchRows) {
+    const cls = branchClass.get(r.srcBranch as string);
+    const dest = cloudName.get(r.dstCloud ?? '');
+    if (!cls || !dest) continue;
+    const kind: 'private' | 'public' = r.viaPublic ? 'public' : 'private';
+    const byKind = siteAgg.get(cls) ?? new Map();
+    const byDest = byKind.get(kind) ?? new Map<string, number>();
+    byDest.set(dest, (byDest.get(dest) ?? 0) + r.gbps);
+    byKind.set(kind, byDest);
+    siteAgg.set(cls, byKind);
+    destsSet.add(dest);
+  }
+  const siteNodes: SankeyNode[] = [...siteAgg.keys()]
+    .sort((a, b) => (classCount.get(b) ?? 0) - (classCount.get(a) ?? 0))
+    .map(cls => ({
+      name: `${nfSite.format(classCount.get(cls) ?? 0)} ${SITE_CLASS_PLURAL[cls]}`,
+      band: 'source' as const,
+      rollup: { siteClass: cls, count: classCount.get(cls) ?? 0 },
+    }));
+
+  // Build node arrays - site rollups lead the source band.
+  const sourceNodes: SankeyNode[] = [
+    ...siteNodes,
+    ...Array.from(sourcesSet).sort().map(name => ({
+      name,
+      band: 'source' as const,
+    })),
+  ];
 
   const pathNodes: SankeyNode[] = [
     { name: PATH_NODES.private, band: 'path' },
@@ -149,6 +204,24 @@ export function buildSankey(cc: CloudControl): SankeyModel {
       value,
       pathKind,
     });
+  }
+
+  // Site-band links: class rollup -> path, path -> dest cloud. Same
+  // two-hop shape as the route-flow links above; values are summed gbps
+  // of real branch flows, rounded to keep the labels readable.
+  for (const [cls, byKind] of siteAgg) {
+    const clsIdx = nodes.findIndex(n => n.rollup?.siteClass === cls);
+    for (const [kind, byDest] of byKind) {
+      const pathIdx = nodeIndex.get(`path:${kind === 'private' ? PATH_NODES.private : PATH_NODES.public}`)!;
+      let total = 0;
+      for (const [dest, gbps] of byDest) {
+        const destIdx = nodeIndex.get(`dest:${dest}`)!;
+        const v = Math.round(gbps * 10) / 10;
+        total += v;
+        links.push({ source: pathIdx, target: destIdx, value: v, pathKind: kind });
+      }
+      links.push({ source: clsIdx, target: pathIdx, value: Math.round(total * 10) / 10, pathKind: kind });
+    }
   }
 
   return { nodes, links };
