@@ -63,7 +63,8 @@ test('meridian first-run: observe -> intake -> scan -> ready -> accept tier 1 ->
 
   // Open the flagship (untracked-ai) finding's ladder and accept tier 1 —
   // the good-framed "14-day assessment" tier, routed to /assessment.
-  await page.getByTestId('finding-ladder-toggle-untracked-ai').click();
+  // Tiers render in full view now - no disclosure toggle between the
+  // executive and the offers.
   await expect(page.getByTestId('finding-tier-untracked-ai-assessment')).toBeVisible();
   await page.getByTestId('finding-tier-untracked-ai-assessment').click();
 
