@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { CC } from '../../engine';
-import { andiAnswer, andiResolveCards, andiSuggestions } from './andiBrain';
+import { andiAnswer, andiResolveCards, andiSuggestions, advisorSuggestions } from './andiBrain';
 import { aiSpendRows, aiSpendTotals, fmtUsd } from '../ai-fabric/aiSpend';
 import { attachOpportunities } from '../discover/stackFigures';
+import { advisorFindings, advisorHeadline } from '../advisor/advisorModel';
+import { ladderFor } from '../advisor/offerCatalog';
 
 describe('andiBrain — every answer is engine-grounded', () => {
   it('a typed cap intent comes back as confirm-to-run, never auto-executed', () => {
@@ -70,5 +72,59 @@ describe('andiBrain — every answer is engine-grounded', () => {
         expect(answer.text ?? answer.html).not.toContain('engine can ground');
       }
     }
+  });
+
+  describe('advisor intents — grounded in advisorModel/offerCatalog', () => {
+    it('advisorSuggestions() is the three seeded rail questions, verbatim — single source of truth', () => {
+      expect(advisorSuggestions()).toEqual(['Why this finding?', 'How much do I save?', 'What is NetBond Adv?']);
+    });
+
+    it('"Why this finding?" (and close phrasings) names the flagship finding with its live count', () => {
+      const flagship = advisorFindings(CC)[0];
+      const answer = andiAnswer(CC, 'Why this finding?', null);
+      expect(answer.text).toContain(flagship.title);
+      expect(answer.text).toContain(String(flagship.count));
+      expect(answer.actions.some(a => a.kind === 'navigate')).toBe(true);
+
+      const close = andiAnswer(CC, 'tell me about this finding', null);
+      expect(close.text).toBe(answer.text);
+    });
+
+    it('"How much do I save?" (and close phrasings) states the headline savings formatted', () => {
+      const headline = advisorHeadline(CC);
+      const answer = andiAnswer(CC, 'How much do I save?', null);
+      expect(answer.text).toContain(`$${Math.round(headline.savingsMo).toLocaleString()}`);
+      expect(answer.text).toContain(String(headline.findings));
+      expect(answer.actions.some(a => a.kind === 'navigate')).toBe(true);
+
+      const close = andiAnswer(CC, 'how much would I save', null);
+      expect(close.text).toBe(answer.text);
+    });
+
+    it('"What is NetBond Adv?" (and close phrasings) returns the tier tagline plus a navigate action', () => {
+      const answer = andiAnswer(CC, 'What is NetBond Adv?', null);
+      expect(answer.text).toBeTruthy();
+      expect(answer.actions).toHaveLength(1);
+      expect(answer.actions[0].kind).toBe('navigate');
+      expect(answer.actions[0].to).toBeTruthy();
+
+      // Grounded to whichever live finding actually carries a NetBond Adv
+      // tier (falling back to the catalog's own unattached-regions entry).
+      const fromLive = advisorFindings(CC)
+        .map(f => ladderFor(f.kind).find(t => t.name === 'NetBond Adv'))
+        .find(Boolean);
+      const expected = fromLive ?? ladderFor('unattached-regions').find(t => t.name === 'NetBond Adv')!;
+      expect(answer.text).toBe(expected.tagline);
+      expect(answer.actions[0].to).toBe(expected.route);
+
+      const close = andiAnswer(CC, 'what does netbond do', null);
+      expect(close.text).toBe(answer.text);
+    });
+
+    it('an unrelated question still hits the existing fallback, unchanged', () => {
+      const answer = andiAnswer(CC, 'write me a poem about routers', null);
+      expect(answer.text).toContain('engine can ground');
+      expect(answer.actions.length).toBeGreaterThan(0);
+    });
   });
 });

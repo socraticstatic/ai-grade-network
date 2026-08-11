@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { applyEstateProfile, resolveProfile } from './estateProfile';
+import { afterEach, describe, expect, it } from 'vitest';
+import { applyEstateProfile, resolveProfile, seedAcmeAdvisorDone } from './estateProfile';
 import { CC } from './index';
+// The engine/features import boundary documented at the top of
+// estateProfile.ts ("engine files don't import from src/features/**")
+// applies to src modules, not test files — this import exists only to pin
+// seedAcmeAdvisorDone's hardcoded 'advisor:acme:done' key literal against
+// advisorPhase.ts's own advisorDoneKey()/advisorDone(), so the two can't
+// silently drift apart (see the "pins the boot seed" test below).
+import { advisorDone } from '../features/advisor/advisorPhase';
 
 describe('estateProfile', () => {
   it('resolveProfile: URL wins, persists, defaults to acme', () => {
@@ -92,5 +99,54 @@ describe('estateProfile', () => {
     applyEstateProfile(CC as never, 'acme');
     const after = Object.keys(CC.vpcs as Record<string, unknown[]>).sort();
     expect(after).toEqual(before);
+  });
+
+  describe('seedAcmeAdvisorDone', () => {
+    afterEach(() => {
+      localStorage.removeItem('advisor:acme:done');
+    });
+
+    it('seeds advisor:acme:done for acme', () => {
+      seedAcmeAdvisorDone('acme');
+      expect(localStorage.getItem('advisor:acme:done')).toBe('1');
+    });
+
+    it('leaves the flag untouched for meridian - meridian first-runs the advisor', () => {
+      seedAcmeAdvisorDone('meridian');
+      expect(localStorage.getItem('advisor:acme:done')).toBeNull();
+    });
+
+    it('tolerates a localStorage that throws', () => {
+      const realSet = localStorage.setItem;
+      localStorage.setItem = () => {
+        throw new Error('quota exceeded');
+      };
+      try {
+        expect(() => seedAcmeAdvisorDone('acme')).not.toThrow();
+      } finally {
+        localStorage.setItem = realSet;
+      }
+    });
+
+    // Review fix-up (Medium): the two prior tests only assert against the
+    // literal string 'advisor:acme:done' — a duplicate of the key
+    // advisorPhase.ts's advisorDoneKey()/advisorDone() actually read/write,
+    // not an import of it (see the file-level comment on the advisorDone
+    // import above for why). Neither test would fail if advisorPhase.ts's
+    // key FORMAT drifted (e.g. `advisor:<profile>:done` becoming
+    // `advisor-<profile>-done`) as long as advisorPhase.test.ts's own
+    // "persists under the documented key" test were updated to match — the
+    // engine literal would go stale silently, every acme user would get
+    // redirected into the advisor on every visit, and every test suite
+    // would stay green. This test closes that gap: it drives the seed
+    // through seedAcmeAdvisorDone and reads the result back through
+    // advisorDone (advisorPhase.ts's own reader, not a re-parsed literal),
+    // so a key-format drift on either side fails HERE, not silently in
+    // production.
+    it('pins the boot seed to the key advisorDone actually reads — a key-format drift on either side fails this test, not silently in production', () => {
+      expect(advisorDone('acme')).toBe(false); // sanity: clean before the seed
+      seedAcmeAdvisorDone('acme');
+      expect(advisorDone('acme')).toBe(true);
+    });
   });
 });

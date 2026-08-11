@@ -2,6 +2,8 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { useState, useEffect, Suspense, lazy, memo } from 'react';
 import { startLmccLifecycleClock } from './data/lmccLifecycleClock';
 import { restoreFromLocation } from './features/share/shareLink';
+import { resolveProfile } from './engine/estateProfile';
+import { advisorDone } from './features/advisor/advisorPhase';
 
 /**
  * A legacy-path redirect that keeps the query string.
@@ -22,6 +24,40 @@ function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
+}
+
+/**
+ * `/discover`'s first-run gate. A profile that hasn't been through the
+ * advisor yet - advisorPhase.ts's per-profile done-flag, `advisor:<profile>
+ * :done` in localStorage - lands on `/discover/advisor` instead of the
+ * tree. `<Navigate replace>`, not a history push, so the back button
+ * doesn't bounce between the two.
+ *
+ * `/discover/advisor` itself is registered below with no gate of its own -
+ * its skip/accept paths mark the flag done, then `navigate('/discover')` -
+ * so this can't loop: only `/discover` ever redirects, `/discover/advisor`
+ * never does, and a direct link to either always resolves.
+ *
+ * ACME reads as already-done from the very first render because
+ * estateProfile.ts's boot swap seeds `advisor:acme:done=1` before this
+ * component ever mounts (see seedAcmeAdvisorDone there) - existing acme
+ * flows and specs are untouched. Meridian is not seeded, so its first visit
+ * lands here.
+ *
+ * Exported (not inlined in the route's JSX) so this decision is
+ * unit-testable without mounting the rest of App's store/layout tree - see
+ * App.routing.test.tsx.
+ */
+export function DiscoverEntry() {
+  const profile = resolveProfile(window.location.search, window.localStorage);
+  if (!advisorDone(profile)) {
+    return <Navigate to="/discover/advisor" replace />;
+  }
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <LazyDiscoverPage />
+    </Suspense>
+  );
 }
 import { DashboardLayout } from './components/common/layouts';
 import { ToastContainer, AnnouncementBanner, AlertDialog, WarningDialog, ConfirmDialog } from './components/common/notifications';
@@ -46,6 +82,10 @@ const LazyDiscoverPage = lazy(() =>
     default: module.DiscoverPage
   }))
 );
+
+// The first-run advisor - already a default export (AdvisorPage.tsx), so
+// unlike the named-export pages above it needs no `.then()` reshape.
+const LazyAdvisorPage = lazy(() => import('./features/advisor/AdvisorPage'));
 
 const LazyLayerHomePage = lazy(() =>
   import('./features/layer-home/LayerHomePage').then(module => ({
@@ -367,9 +407,14 @@ function App() {
                 } />
                 {/* The office's first address - kept as a redirect. */}
                 <Route path="/work" element={<Navigate to="/tasks" replace />} />
-                <Route path="/discover" element={
+                <Route path="/discover" element={<DiscoverEntry />} />
+
+                {/* No gate here on purpose - see DiscoverEntry's doc comment.
+                    A direct link always resolves; skip/accept mark done and
+                    navigate back to /discover, which is what stops the loop. */}
+                <Route path="/discover/advisor" element={
                   <Suspense fallback={<LoadingFallback />}>
-                    <LazyDiscoverPage />
+                    <LazyAdvisorPage />
                   </Suspense>
                 } />
 

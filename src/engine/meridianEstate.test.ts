@@ -41,6 +41,15 @@ describe('meridianEstate', () => {
     expect(Object.values(e.regions).flat().some(r => r.spof)).toBe(true); // SPOF
   });
 
+  it('meridian vpc Region tags are geographically honest', () => {
+    const e = meridianEstate();
+    const regionGeo: Record<string, number> = {};
+    for (const rs of Object.values(e.regions)) for (const r of rs) regionGeo[r.id] = r.geo[1];
+    const expect3 = (lon: number) => (lon < -100 ? 'west' : lon < -90 ? 'central' : 'east');
+    for (const [rid, vs] of Object.entries(e.vpcs))
+      for (const v of vs) expect(v.cloudTags.Region).toBe(expect3(regionGeo[rid]));
+  });
+
   it('allocates every CIDR uniquely across all 4,183 sites', () => {
     const e = meridianEstate();
     const cidrs = e.branches.map(b => b.cidrs[0]);

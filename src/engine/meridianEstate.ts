@@ -188,11 +188,12 @@ export function meridianEstate(): MeridianEstate {
   const vpcs: Record<string, MeridianVpc[]> = {};
   for (const [cloudId, rs] of Object.entries(regions)) {
     for (const r of rs) {
+      const regionTag = r.geo[1] < -100 ? 'west' : r.geo[1] < -90 ? 'central' : 'east';
       const hub: MeridianVpc = {
         id: `${r.id}-hub`, name: `${cloudId === 'aws' ? 'tgw' : 'vwan'}-${r.id}`,
         cidr: `10.128.${Object.keys(vpcs).length * 8}.0/21`, azs: 3, subnets: 6, attached: r.attached,
         role: 'Transit hub · platform', vnet: cloudId === 'azure',
-        cloudTags: { Project: 'platform', Env: 'prod', Owner: 'platform', Region: 'east' },
+        cloudTags: { Project: 'platform', Env: 'prod', Owner: 'platform', Region: regionTag },
       };
       const spokes: MeridianVpc[] = bu.map((unit, i) => ({
         id: `${r.id}-${unit}`, name: `${cloudId === 'aws' ? 'vpc' : 'vnet'}-${unit}-${r.id}`,
@@ -201,7 +202,7 @@ export function meridianEstate(): MeridianEstate {
         role: `${unit} workloads`, vnet: cloudId === 'azure',
         // ai-lab spokes are the untracked-AI seed: ai:true, NO governance tags.
         ...(unit === 'ai-lab' ? { ai: true } : { tags: unit === 'payments' ? ['pci'] : ['shared-services'] }),
-        cloudTags: { Project: unit, Env: 'prod', Owner: unit, Region: 'east' },
+        cloudTags: { Project: unit, Env: 'prod', Owner: unit, Region: regionTag },
       }));
       vpcs[r.id] = [hub, ...spokes];
     }

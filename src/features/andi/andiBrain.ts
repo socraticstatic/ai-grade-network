@@ -6,10 +6,12 @@ import { advisorDraft, attachOpportunities, steerOpportunities } from '../discov
 import { workQueue } from '../work/workQueue';
 import { ruleProposals } from '../govern/ruleProposals';
 import { spineAnswer } from './andiSpine';
+import { advisorFindings, advisorHeadline } from '../advisor/advisorModel';
+import { ladderFor } from '../advisor/offerCatalog';
 
 /**
  * Andi's brain — a router over things the ENGINE can ground, never a
- * pretend LLM. Four sources, in order:
+ * pretend LLM. Five sources, in order:
  *   1. typed intents (commandRegistry.parseIntent — cap/attach/steer),
  *      returned as a confirm-to-run action, never auto-executed;
  *   1.5. spine navigation (andiSpine.spineAnswer) — an utterance asking to
@@ -19,7 +21,12 @@ import { spineAnswer } from './andiSpine';
  *      falls through past this step;
  *   2. AI-layer questions answered from aiSpend derivations;
  *   3. the engine's own grounded answer engine (CC.answerFor) for the
- *      network questions it already recognizes.
+ *      network questions it already recognizes;
+ *   4. advisor questions (the /discover/advisor rail's three seeded chips —
+ *      "Why this finding?", "How much do I save?", "What is NetBond Adv?" —
+ *      and close phrasings of them) answered from advisorModel's findings/
+ *      headline and offerCatalog's ladder, the same figures that screen
+ *      itself states.
  * Anything else gets an honest "can't ground that" with live suggestions.
  * Every figure in every answer is computed at ask time from engine state.
  */
@@ -145,6 +152,60 @@ function draftCards(cc: CloudControl): ResolveCard[] {
   return [...attaches, ...steers];
 }
 
+/** The rail's own $/mo formatting (advisorModel.ts's private `money`
+ *  helper, restated here — advisorModel does not export it, and this
+ *  module states its own copy of the figure end to end, same as
+ *  advisorModel states its own copy of every finding's prose). */
+const advisorMoney = (n: number) => `$${Math.round(n).toLocaleString()}`;
+
+/** The three seeded questions the /discover/advisor rail's chips offer —
+ *  AdvisorRail sources its chip labels from this list so the label a user
+ *  clicks always matches a question this brain can actually answer. */
+export function advisorSuggestions(): string[] {
+  return ['Why this finding?', 'How much do I save?', 'What is NetBond Adv?'];
+}
+
+/** Source 4 — advisor findings/headline/offer-ladder questions. Matches on
+ *  keyword, not exact phrase, so close phrasings of the three seeded
+ *  questions ("finding", "save", "netbond") answer the same way the chip
+ *  does. Returns null for anything else, so the router falls through to
+ *  its other sources unchanged. */
+function advisorAnswer(cc: CloudControl, q: string): AndiAnswer | null {
+  if (/finding/i.test(q)) {
+    const flagship = advisorFindings(cc)[0];
+    if (!flagship) return null;
+    return {
+      text: `${flagship.title} ${flagship.evidence}`,
+      actions: [{ label: 'See the findings', kind: 'navigate', to: '/discover/advisor' }],
+    };
+  }
+  if (/save/i.test(q)) {
+    const headline = advisorHeadline(cc);
+    const word = headline.findings === 1 ? 'finding' : 'findings';
+    return {
+      text: `${advisorMoney(headline.savingsMo)}/mo, across ${headline.findings} live ${word} the estate carries right now.`,
+      actions: [{ label: 'See the savings', kind: 'navigate', to: '/discover/advisor' }],
+    };
+  }
+  if (/netbond/i.test(q)) {
+    // Grounded to whichever LIVE finding actually offers a NetBond Adv
+    // tier — the flagship if it carries one, else the next live finding
+    // that does. Falls back to the catalog's own definition (unattached-
+    // regions carries the tier for every estate) so the question stays
+    // answerable even on an estate with no live finding of that kind.
+    const fromLive = advisorFindings(cc)
+      .map(f => ladderFor(f.kind).find(t => t.name === 'NetBond Adv'))
+      .find(Boolean);
+    const tier = fromLive ?? ladderFor('unattached-regions').find(t => t.name === 'NetBond Adv');
+    if (!tier) return null;
+    return {
+      text: tier.tagline,
+      actions: [{ label: tier.name, kind: 'navigate', to: tier.route }],
+    };
+  }
+  return null;
+}
+
 function aiAnswer(cc: CloudControl, q: string): AndiAnswer | null {
   const totals = aiSpendTotals(cc);
   if (/team.*(spend|driv)|spend.*team|most spend/i.test(q)) {
@@ -229,7 +290,12 @@ export function andiAnswer(
     return { html, actions };
   }
 
-  // 4 — honest fallback: say what CAN be grounded, live.
+  // 4 — advisor findings/headline/offer-ladder questions (the advisor
+  // rail's three seeded chips, and close phrasings of them).
+  const advisor = advisorAnswer(cc, q);
+  if (advisor) return advisor;
+
+  // 5 — honest fallback: say what CAN be grounded, live.
   return {
     text: 'I only answer what the engine can ground. Try one of these, or type an action like "cap shared-services 1m".',
     actions: andiSuggestions(layerKey).map(s => ({ label: s, kind: 'ask' as const, prompt: s })),
