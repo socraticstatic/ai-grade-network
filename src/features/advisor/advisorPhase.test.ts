@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { advance, advisorDone, advisorDoneKey, markAdvisorDone } from './advisorPhase';
+import { advance, advisorDone, advisorDoneKey, markAdvisorDone, resetAdvisorDone } from './advisorPhase';
 
 describe('advisorPhase', () => {
   describe('advance', () => {
@@ -71,6 +71,26 @@ describe('advisorPhase', () => {
         expect(advisorDone('acme')).toBe(false);
       } finally {
         localStorage.getItem = realGet;
+      }
+    });
+
+    it('resetAdvisorDone clears this profile only, the affordance behind "Run the advisor"', () => {
+      markAdvisorDone('acme');
+      markAdvisorDone('meridian');
+      resetAdvisorDone('acme');
+      expect(advisorDone('acme')).toBe(false);
+      expect(advisorDone('meridian')).toBe(true); // untouched
+    });
+
+    it('resetAdvisorDone tolerates a localStorage that throws', () => {
+      const realRemove = localStorage.removeItem;
+      localStorage.removeItem = () => {
+        throw new Error('blocked');
+      };
+      try {
+        expect(() => resetAdvisorDone('acme')).not.toThrow();
+      } finally {
+        localStorage.removeItem = realRemove;
       }
     });
   });

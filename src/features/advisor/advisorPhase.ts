@@ -64,3 +64,16 @@ export function markAdvisorDone(profile: string): void {
     /* private mode / storage unavailable — non-fatal */
   }
 }
+
+/** The inverse of markAdvisorDone — clears this profile's flag. This is
+ *  Discover rail's "Run the advisor" affordance: re-enter the first-run
+ *  flow on demand without a second source of truth for what "done" means.
+ *  Same error tolerance as markAdvisorDone: a storage failure here must not
+ *  block the Link's navigation to /discover/advisor. */
+export function resetAdvisorDone(profile: string): void {
+  try {
+    localStorage.removeItem(advisorDoneKey(profile));
+  } catch {
+    /* private mode / storage unavailable — non-fatal */
+  }
+}

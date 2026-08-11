@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { applyEstateProfile, resolveProfile } from './estateProfile';
+import { afterEach, describe, expect, it } from 'vitest';
+import { applyEstateProfile, resolveProfile, seedAcmeAdvisorDone } from './estateProfile';
 import { CC } from './index';
 
 describe('estateProfile', () => {
@@ -92,5 +92,33 @@ describe('estateProfile', () => {
     applyEstateProfile(CC as never, 'acme');
     const after = Object.keys(CC.vpcs as Record<string, unknown[]>).sort();
     expect(after).toEqual(before);
+  });
+
+  describe('seedAcmeAdvisorDone', () => {
+    afterEach(() => {
+      localStorage.removeItem('advisor:acme:done');
+    });
+
+    it('seeds advisor:acme:done for acme', () => {
+      seedAcmeAdvisorDone('acme');
+      expect(localStorage.getItem('advisor:acme:done')).toBe('1');
+    });
+
+    it('leaves the flag untouched for meridian - meridian first-runs the advisor', () => {
+      seedAcmeAdvisorDone('meridian');
+      expect(localStorage.getItem('advisor:acme:done')).toBeNull();
+    });
+
+    it('tolerates a localStorage that throws', () => {
+      const realSet = localStorage.setItem;
+      localStorage.setItem = () => {
+        throw new Error('quota exceeded');
+      };
+      try {
+        expect(() => seedAcmeAdvisorDone('acme')).not.toThrow();
+      } finally {
+        localStorage.setItem = realSet;
+      }
+    });
   });
 });

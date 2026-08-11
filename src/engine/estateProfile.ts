@@ -153,6 +153,40 @@ export function applyEstateProfile(cc: EngineSeeds, profile: EstateProfile): voi
   swap(cc.onramps, profile === 'meridian' ? [...withoutMtNb1, MERIDIAN_ONRAMP] : withoutMtNb1);
 }
 
+/* Task 5 (discover-advisor) — the ACME-exempt boot seed. `/discover` gates
+ * on advisorPhase.ts's per-profile done-flag (`advisor:<profile>:done` in
+ * localStorage): a profile that hasn't been through the advisor yet gets
+ * redirected to `/discover/advisor` instead of the tree. Every acme flow
+ * (every existing spec, every bookmark, the default boot with no `?estate=`
+ * flag at all) must read as "already done" from the very first render, so
+ * this seeds acme's flag right here - the one place that already knows
+ * which profile just booted, before the router gets a chance to redirect.
+ *
+ * This can't call advisorPhase.ts's own markAdvisorDone()/advisorDoneKey()
+ * - see this file's top-of-file comment: engine files (src/engine/**) don't
+ * import from src/features/**, and advisorPhase.ts lives under
+ * src/features/advisor/. The key string below is a deliberate duplicate,
+ * not a shared import; advisorPhase.test.ts's "persists under the
+ * documented key" test is what keeps that shape honest on the other side.
+ *
+ * Meridian is deliberately NOT seeded - the roadmap's intent is that
+ * meridian's first visit sees the advisor.
+ *
+ * Extracted into its own function (rather than inlined at the bottom) so a
+ * test can invoke it directly under a chosen profile - the module-level
+ * boot call below only ever runs once per test file, at import time, under
+ * whatever `location.search`/localStorage the jsdom environment starts
+ * with. */
+export function seedAcmeAdvisorDone(profile: EstateProfile): void {
+  if (profile !== 'acme') return;
+  try {
+    localStorage.setItem('advisor:acme:done', '1');
+  } catch {
+    /* private mode / storage unavailable — non-fatal, same tolerance as
+       advisorPhase.ts's markAdvisorDone */
+  }
+}
+
 // Boot side effect - must run immediately after ./state creates window.CC,
 // before any other state-* module loads (see src/engine/index.ts), because
 // those modules freeze derivations from the seed arrays at import time
@@ -160,9 +194,11 @@ export function applyEstateProfile(cc: EngineSeeds, profile: EstateProfile): voi
 // environment `location.search` is always '' and localStorage starts empty,
 // so resolveProfile defaults to 'acme' and this call only takes the acme
 // snapshot and swaps acme's own content back onto itself - a no-op beyond
-// that snapshot capture. Importing this module in a test therefore never
-// requires a flag to stay inert.
+// that snapshot capture (plus the advisor done-flag seed above). Importing
+// this module in a test therefore never requires a flag to stay inert.
 const cc = (window as unknown as { CC: EngineSeeds }).CC;
 if (cc && typeof location !== 'undefined') {
-  applyEstateProfile(cc, resolveProfile(location.search, localStorage));
+  const profile = resolveProfile(location.search, localStorage);
+  applyEstateProfile(cc, profile);
+  seedAcmeAdvisorDone(profile);
 }

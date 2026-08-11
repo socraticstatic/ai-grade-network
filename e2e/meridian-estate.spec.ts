@@ -11,12 +11,30 @@ import { seedAuth } from '../tests/e2e/helpers';
  * seedAuth() is required first: the dev server runs VITE_AUTH_MODE=gate (see
  * playwright.config.ts), and every existing Discover spec seeds the
  * att_nb_user localStorage key before navigating for the same reason.
+ *
+ * Task 5 (discover-advisor) — test drift, not weakening: `/discover` now
+ * gates on advisorPhase.ts's per-profile done-flag and meridian is NOT
+ * seeded at boot the way acme is (estateProfile.ts's seedAcmeAdvisorDone
+ * only seeds acme; meridian's first run is meant to land on the advisor,
+ * not the tree — that's the whole point of Task 5). These specs are about
+ * the meridian ESTATE (rollups, chip scoping, tenant-switch latency), not
+ * the advisor first-run flow, so they seed `advisor:meridian:done=1`
+ * up front — same idiom as seedAuth() below, an addInitScript that runs
+ * before the app's own boot code, so the flag is already set by the time
+ * estateProfile.ts's boot swap and App.tsx's DiscoverEntry gate run.
  */
 const MERIDIAN_URL = '/?estate=meridian#/discover';
 const ACME_URL = '/?estate=acme#/discover';
 
+async function seedMeridianAdvisorDone(page: import('@playwright/test').Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('advisor:meridian:done', '1');
+  });
+}
+
 test('meridian: Discover leads with rollups and the class chips scope them', async ({ page }) => {
   await seedAuth(page);
+  await seedMeridianAdvisorDone(page);
   await page.goto(MERIDIAN_URL, { waitUntil: 'domcontentloaded' });
 
   const rollups = page.getByTestId('site-rollup-row');
@@ -39,6 +57,7 @@ test('meridian: Discover leads with rollups and the class chips scope them', asy
 
 test('meridian: tenant switch is interactive quickly', async ({ page }) => {
   await seedAuth(page);
+  await seedMeridianAdvisorDone(page);
   const t0 = Date.now();
   await page.goto(MERIDIAN_URL, { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('site-rollup-row').first()).toBeVisible();
