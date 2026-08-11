@@ -110,14 +110,14 @@ describe('offerCatalog', () => {
       expect(best.name).toMatch(/private ai transport/i);
     });
 
-    it('unattached-regions ladder: steer on the fabric, NetBond attach, NetBond Advanced', () => {
+    it('unattached-regions ladder: steer on the fabric, NetBond attach, NetBond Adv', () => {
       const [good, better, best] = ladderFor('unattached-regions');
       expect(good.route).toBe('/naas/observe');
       expect(good.name).toMatch(/steer/i);
       expect(better.route).toBe('/naas/connect');
       expect(better.name).toMatch(/netbond attach/i);
       expect(best.route).toBe('/naas/connect');
-      expect(best.name).toMatch(/netbond advanced/i);
+      expect(best.name).toMatch(/netbond adv/i);
     });
 
     it('egress-bleed ladder: same three destinations as unattached-regions, steer-first taglines', () => {

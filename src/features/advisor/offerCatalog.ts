@@ -58,8 +58,8 @@ const LADDERS: Record<FindingKind, [OfferTier, OfferTier, OfferTier]> = {
       route: '/naas/connect',
     },
     {
-      key: 'unattached-regions-netbond-advanced',
-      name: 'NetBond Advanced',
+      key: 'unattached-regions-netbond-adv',
+      name: 'NetBond Adv',
       tagline: 'Dual-attach every region on the fabric with the redundancy the estate is missing today.',
       framing: 'best',
       route: '/naas/connect',
@@ -81,8 +81,8 @@ const LADDERS: Record<FindingKind, [OfferTier, OfferTier, OfferTier]> = {
       route: '/naas/connect',
     },
     {
-      key: 'egress-bleed-netbond-advanced',
-      name: 'NetBond Advanced',
+      key: 'egress-bleed-netbond-adv',
+      name: 'NetBond Adv',
       tagline: 'Dual-attach for a private path that holds even when the primary link goes down.',
       framing: 'best',
       route: '/naas/connect',
