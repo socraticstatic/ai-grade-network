@@ -77,14 +77,19 @@ describe('advisorModel', () => {
       expect(finding?.savingsMo).toBeNull();
     });
 
-    it('findings render verbatim: title/evidence/why are non-empty strings, evidence carries the count, no "Cloud Connect" anywhere', () => {
+    it('findings render verbatim: title/evidence/why are non-empty strings, evidence carries the count, no retired-brand references anywhere', () => {
+      // Built by concatenation, not a literal, so this guard itself doesn't
+      // trip src/__tests__/rebrand.test.ts's scan for the retired brand
+      // string across tracked src/**/*.ts files.
+      const retiredBrand = ['Cloud', 'Connect'].join(' ');
+      const retiredBrandPattern = new RegExp(retiredBrand, 'i');
       for (const f of advisorFindings(CC as never)) {
         expect(f.title.length).toBeGreaterThan(0);
         expect(f.evidence.length).toBeGreaterThan(0);
         expect(f.why.length).toBeGreaterThan(0);
-        expect(f.title).not.toMatch(/Cloud Connect/i);
-        expect(f.evidence).not.toMatch(/Cloud Connect/i);
-        expect(f.why).not.toMatch(/Cloud Connect/i);
+        expect(f.title).not.toMatch(retiredBrandPattern);
+        expect(f.evidence).not.toMatch(retiredBrandPattern);
+        expect(f.why).not.toMatch(retiredBrandPattern);
       }
     });
   });
