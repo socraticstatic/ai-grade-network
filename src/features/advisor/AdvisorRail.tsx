@@ -1,9 +1,31 @@
 import { Check, MessageCircle, Search } from 'lucide-react';
 import type { ScanStep } from '../discover/wizardModel';
-import type { Finding } from './advisorModel';
+import type { Finding, FindingKind } from './advisorModel';
 import type { AdvisorPhase } from './advisorPhase';
 
 const SEEDED_QUESTIONS = ['Why this finding?', 'How much do I save?', 'What is NetBond Adv?'];
+
+const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
+const plural = (n: number, word: string, pluralWord = `${word}s`) => (n === 1 ? word : pluralWord);
+
+/** Count phrasing per finding kind, used only when the finding carries no
+ *  price (savingsMo null or 0) — see chipLabel below. */
+const CHIP_COUNT_LABEL: Record<FindingKind, (n: number) => string> = {
+  'untracked-ai': n => `${n} untagged AI ${plural(n, 'workload')}`,
+  'unattached-regions': n => `${n} unattached ${plural(n, 'region')}`,
+  'egress-bleed': n => `${n} ${plural(n, 'flow')} off the fabric`,
+  'exposed-spof': n => `${n} exposed or single-path`,
+};
+
+/** A chip is a label, not a paragraph: one number, never two that could
+ *  read as disagreeing. A priced finding states the money ("$36,400/mo
+ *  attachable"); an unpriced one states the count against a short noun
+ *  ("4 untagged AI workloads") — never `finding.title`/`finding.evidence`,
+ *  which are full sentences meant for the card, not a pill. */
+function chipLabel(f: Finding): string {
+  if (f.savingsMo !== null && f.savingsMo > 0) return `${money(f.savingsMo)}/mo attachable`;
+  return CHIP_COUNT_LABEL[f.kind](f.count);
+}
 
 export interface AdvisorRailProps {
   phase: AdvisorPhase;
@@ -66,9 +88,9 @@ export function AdvisorRail({ phase, steps, scanIdx, findings }: AdvisorRailProp
             {findings.map(f => (
               <span
                 key={f.kind}
-                className="inline-flex items-center rounded-full border border-fw-secondary bg-fw-wash px-2.5 py-1 text-[11px] font-medium text-fw-body"
+                className="inline-flex items-center rounded-full border border-fw-secondary bg-fw-wash px-2.5 py-1 text-[11px] font-medium text-fw-body whitespace-nowrap"
               >
-                {f.count} · {f.title}
+                {chipLabel(f)}
               </span>
             ))}
           </div>
@@ -83,6 +105,7 @@ export function AdvisorRail({ phase, steps, scanIdx, findings }: AdvisorRailProp
         <input
           type="text"
           disabled={!ready}
+          aria-label={ready ? 'Ask about your recommendation' : 'Building your recommendation'}
           placeholder={ready ? 'Ask about your recommendation…' : 'Building your recommendation…'}
           className="w-full rounded-lg border border-fw-secondary bg-fw-wash px-3 py-2 text-figma-sm text-fw-heading outline-none transition-colors focus:ring-2 focus:ring-fw-link/40 disabled:cursor-not-allowed disabled:opacity-60"
         />

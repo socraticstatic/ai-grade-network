@@ -63,6 +63,11 @@ export default function AdvisorPage() {
     };
   }, [phase, provider, cc]);
 
+  // steps.length > 0 guard mirrors DiscoveryWizard.tsx:76 — unreachable
+  // with today's WIZARD_PROVIDERS (every provider names at least one
+  // region), kept for the same reason DiscoveryWizard keeps it: a
+  // zero-region provider must never read as "done" before it has scanned
+  // anything.
   const scanDone = phase === 'scanning' && steps.length > 0 && scanIdx >= steps.length;
   useEffect(() => {
     if (scanDone) setPhase(p => advance(p, { type: 'scan-complete' }));
@@ -97,6 +102,7 @@ export default function AdvisorPage() {
           {statusChip && (
             <span
               data-testid="advisor-status-chip"
+              aria-live="polite"
               className="inline-flex items-center rounded-full bg-fw-accent px-2.5 py-1 text-figma-xs font-medium text-fw-link"
             >
               {statusChip}
@@ -117,7 +123,7 @@ export default function AdvisorPage() {
         <aside
           aria-label="Advisor narration and chat"
           data-testid="advisor-rail"
-          className="w-full shrink-0 space-y-4 lg:order-first lg:w-[360px] xl:w-[400px]"
+          className="w-full shrink-0 space-y-4 order-last lg:order-first lg:w-[360px] xl:w-[400px]"
         >
           <AdvisorRail phase={phase} steps={steps} scanIdx={scanIdx} findings={findings} />
         </aside>

@@ -34,6 +34,7 @@ export function FindingCard({ finding, onAcceptTier }: { finding: Finding; onAcc
         <button
           type="button"
           aria-expanded={whyOpen}
+          aria-controls={`finding-why-${finding.kind}`}
           onClick={() => setWhyOpen(o => !o)}
           className="inline-flex items-center gap-1.5 text-figma-xs font-medium text-fw-link hover:underline"
         >
@@ -41,7 +42,10 @@ export function FindingCard({ finding, onAcceptTier }: { finding: Finding; onAcc
           Why we recommend this
         </button>
         {whyOpen && (
-          <p className="mt-2 rounded-lg border border-fw-secondary bg-fw-wash px-3 py-2 text-figma-xs text-fw-bodyLight">
+          <p
+            id={`finding-why-${finding.kind}`}
+            className="mt-2 rounded-lg border border-fw-secondary bg-fw-wash px-3 py-2 text-figma-xs text-fw-bodyLight"
+          >
             {finding.why}
           </p>
         )}

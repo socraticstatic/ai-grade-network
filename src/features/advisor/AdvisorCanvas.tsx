@@ -140,10 +140,18 @@ export function AdvisorCanvas({
                 onChange={e => onCredentialChange(e.target.value)}
                 placeholder={provider.credPlaceholder}
                 aria-invalid={credential.length > 0 && !credValid}
+                aria-describedby={credential.length > 0 && !credValid ? 'advisor-credential-error' : undefined}
                 className={`w-full rounded-lg border bg-fw-base px-3 py-2 font-mono text-figma-xs text-fw-heading outline-none transition-colors focus:ring-2 focus:ring-fw-link/40 ${
                   credential.length > 0 && !credValid ? 'border-fw-error' : 'border-fw-secondary'
                 }`}
               />
+              {credential.length > 0 && !credValid && (
+                <p id="advisor-credential-error" className="text-[11px] text-fw-error">
+                  {provider.credKind === 'arn'
+                    ? 'Expected an IAM role ARN (arn:aws:iam::…:role/…).'
+                    : 'Enter a valid key or service principal.'}
+                </p>
+              )}
               <div className="flex items-start gap-2 rounded-lg border border-fw-secondary bg-fw-wash px-3 py-2 text-[11px] text-fw-bodyLight">
                 <ShieldCheck size={14} className="mt-px shrink-0 text-fw-success" aria-hidden="true" />
                 <span>Credentials stay in your browser — demo. Nothing is stored or transmitted.</span>
@@ -185,7 +193,7 @@ export function AdvisorCanvas({
         <div className="space-y-4">
           <div
             data-testid="advisor-headline"
-            className="sticky top-4 z-10 rounded-2xl border border-fw-active/30 bg-fw-accent p-4"
+            className="sticky top-24 z-10 rounded-2xl border border-fw-active/30 bg-fw-accent p-4"
           >
             <p className="flex items-center gap-2 text-figma-lg font-bold text-fw-heading">
               <Sparkles size={18} className="text-fw-link" aria-hidden="true" />

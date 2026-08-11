@@ -7,7 +7,12 @@ import { advisorFindings, advisorHeadline, headStart } from './advisorModel';
 import { advisorDone, advisorDoneKey } from './advisorPhase';
 import { ladderFor } from './offerCatalog';
 import AdvisorPage from './AdvisorPage';
-import { AdvisorCanvas } from './AdvisorCanvas';
+
+/* AdvisorCanvas's own standalone-rendering test lives in
+ * AdvisorCanvas.test.tsx, deliberately WITHOUT the react-router-dom mock
+ * below — that file is the guard against AdvisorCanvas ever reaching for
+ * useNavigate() itself (this file's module-scoped mock would silently
+ * swallow that regression otherwise, since every test here shares it). */
 
 /* Navigation is asserted by destination, not by router internals — same
  * pattern MoneyOnTheTableWidget.test.tsx and IntentThreads.tsx use. */
@@ -128,20 +133,40 @@ describe('AdvisorPage', () => {
     }
   });
 
-  it('"Skip to the estate" is present at every phase and marks the profile done on click', () => {
-    renderPage();
-    expect(screen.getByTestId('advisor-skip')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('advisor-observe-cta'));
-    expect(screen.getByTestId('advisor-skip')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId('advisor-skip'));
-    expect(advisorDone('acme')).toBe(true);
-    expect(mockNavigate).toHaveBeenCalledWith('/discover');
-  });
-
-  it('accepting a tier marks the profile done and navigates to that tier\'s route', () => {
+  it('"Skip to the estate" is present at every phase (observe, intake, scanning, ready) and marks the profile done on click', () => {
     vi.useFakeTimers();
     applyEstateProfile(CC as never, 'meridian');
+    try {
+      renderPage();
+      expect(screen.getByTestId('advisor-skip')).toBeInTheDocument(); // observe
+
+      fireEvent.click(screen.getByTestId('advisor-observe-cta'));
+      expect(screen.getByTestId('advisor-skip')).toBeInTheDocument(); // intake
+
+      fireEvent.click(screen.getByText('AWS'));
+      fireEvent.change(screen.getByLabelText(/IAM role ARN/i), {
+        target: { value: 'arn:aws:iam::123456789012:role/CloudConnectDiscovery' },
+      });
+      fireEvent.click(screen.getByTestId('advisor-intake-submit'));
+      expect(screen.getByTestId('advisor-skip')).toBeInTheDocument(); // scanning
+
+      act(() => {
+        vi.advanceTimersByTime(620 * 20);
+      });
+      expect(screen.getByTestId('advisor-skip')).toBeInTheDocument(); // ready
+
+      fireEvent.click(screen.getByTestId('advisor-skip'));
+      expect(advisorDone('acme')).toBe(true);
+      expect(mockNavigate).toHaveBeenCalledWith('/discover');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('accepting a tier marks the profile done under the ACTIVE profile and navigates to that tier\'s route', () => {
+    vi.useFakeTimers();
+    applyEstateProfile(CC as never, 'meridian');
+    localStorage.setItem('estateProfile', 'meridian'); // resolveProfile reads this, not applyEstateProfile's CC swap
     try {
       renderPage();
       driveToReady();
@@ -154,8 +179,9 @@ describe('AdvisorPage', () => {
       fireEvent.click(within(card).getByTestId(`finding-tier-${tier.key}`));
 
       expect(mockNavigate).toHaveBeenCalledWith(tier.route);
-      expect(advisorDone('acme')).toBe(true);
-      expect(localStorage.getItem(advisorDoneKey('acme'))).toBe('1');
+      expect(advisorDone('meridian')).toBe(true);
+      expect(advisorDone('acme')).toBe(false);
+      expect(localStorage.getItem(advisorDoneKey('meridian'))).toBe('1');
     } finally {
       vi.useRealTimers();
     }
@@ -173,56 +199,57 @@ describe('AdvisorPage', () => {
       expect(within(card).queryByText(f.why)).not.toBeInTheDocument();
       fireEvent.click(within(card).getByRole('button', { name: /why we recommend this/i }));
       expect(within(card).getByText(f.why)).toBeInTheDocument();
+
+      // aria wiring: the toggle controls the id the revealed text carries.
+      const toggle = within(card).getByRole('button', { name: /why we recommend this/i });
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      const controlsId = toggle.getAttribute('aria-controls');
+      expect(controlsId).toBeTruthy();
+      expect(document.getElementById(controlsId!)).toHaveTextContent(f.why);
     } finally {
       vi.useRealTimers();
     }
   });
-});
 
-describe('AdvisorCanvas standalone', () => {
-  const noop = () => {};
-
-  it('canvas-stands-alone: with no rail, the ready phase renders the headline, one card per finding, and each card\'s complete 3-tier ladder', () => {
+  it('rail evidence chips are short labels — one number, never the full title/evidence sentence', () => {
+    vi.useFakeTimers();
     applyEstateProfile(CC as never, 'meridian');
     try {
+      renderPage();
+      driveToReady();
       const findings = advisorFindings(CC as never);
-      const headline = advisorHeadline(CC as never);
-      const hs = headStart(CC as never);
-      const onAcceptTier = vi.fn();
-
-      render(
-        <AdvisorCanvas
-          phase="ready"
-          headStart={hs}
-          onStartIntake={noop}
-          providers={[]}
-          providerId=""
-          onSelectProvider={noop}
-          provider={undefined}
-          credential=""
-          onCredentialChange={noop}
-          credValid={false}
-          onSubmitCredential={noop}
-          steps={[]}
-          scanIdx={0}
-          headline={headline}
-          findings={findings}
-          onAcceptTier={onAcceptTier}
-        />,
-      );
-
-      expect(screen.getByTestId('advisor-headline')).toBeInTheDocument();
-      expect(findings.length).toBe(4);
+      const chips = screen.getByTestId('advisor-evidence-chips');
       for (const f of findings) {
-        const card = screen.getByTestId(`finding-card-${f.kind}`);
-        fireEvent.click(within(card).getByTestId(`finding-ladder-toggle-${f.kind}`));
-        for (const tier of ladderFor(f.kind)) {
-          const btn = within(card).getByTestId(`finding-tier-${tier.key}`);
-          expect(btn).toBeInTheDocument();
-          fireEvent.click(btn);
-          expect(onAcceptTier).toHaveBeenCalledWith(tier.route);
-        }
+        // The chip never repeats the card's full sentence...
+        expect(within(chips).queryByText(f.title)).not.toBeInTheDocument();
+        expect(within(chips).queryByText(f.evidence)).not.toBeInTheDocument();
       }
+      // ...and a priced finding's chip states money, not a bare count.
+      const priced = findings.find(f => f.savingsMo !== null && f.savingsMo > 0);
+      if (priced) {
+        expect(within(chips).getByText(new RegExp(`\\$${Math.round(priced.savingsMo!).toLocaleString()}/mo`))).toBeInTheDocument();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('an invalid credential shows the inline expected-format error, wired via aria-describedby', () => {
+    applyEstateProfile(CC as never, 'meridian');
+    try {
+      renderPage();
+      fireEvent.click(screen.getByTestId('advisor-observe-cta'));
+      fireEvent.click(screen.getByText('AWS'));
+
+      const input = screen.getByLabelText(/IAM role ARN/i);
+      fireEvent.change(input, { target: { value: 'not-an-arn' } });
+
+      expect(screen.getByText(/Expected an IAM role ARN/i)).toBeInTheDocument();
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      const describedBy = input.getAttribute('aria-describedby');
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy!)).toHaveTextContent(/Expected an IAM role ARN/i);
+      expect(screen.getByTestId('advisor-intake-submit')).toBeDisabled();
     } finally {
       applyEstateProfile(CC as never, 'acme');
     }
