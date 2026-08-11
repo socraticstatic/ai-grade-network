@@ -169,8 +169,13 @@ export function applyEstateProfile(cc: EngineSeeds, profile: EstateProfile): voi
  * not a shared import; advisorPhase.test.ts's "persists under the
  * documented key" test is what keeps that shape honest on the other side.
  *
- * Meridian is deliberately NOT seeded - the roadmap's intent is that
- * meridian's first visit sees the advisor.
+ * EVERY profile is seeded done - the advisor is opt-in only ("Run the
+ * advisor" on Discover's rail, or the direct /discover/advisor URL). The
+ * first-run takeover shipped on Aug 11 and was reverted the same morning:
+ * hijacking /discover hid the estate rollups behind an unfinished page at
+ * exactly the moment a stakeholder went looking for them. Auto-entry can
+ * return once the advisor page earns it; the redirect plumbing in App.tsx
+ * still honors an unset flag, so flipping this back is a one-line change.
  *
  * Extracted into its own function (rather than inlined at the bottom) so a
  * test can invoke it directly under a chosen profile - the module-level
@@ -178,9 +183,8 @@ export function applyEstateProfile(cc: EngineSeeds, profile: EstateProfile): voi
  * whatever `location.search`/localStorage the jsdom environment starts
  * with. */
 export function seedAcmeAdvisorDone(profile: EstateProfile): void {
-  if (profile !== 'acme') return;
   try {
-    localStorage.setItem('advisor:acme:done', '1');
+    localStorage.setItem(`advisor:${profile}:done`, '1');
   } catch {
     /* private mode / storage unavailable — non-fatal, same tolerance as
        advisorPhase.ts's markAdvisorDone */

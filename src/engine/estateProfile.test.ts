@@ -104,6 +104,7 @@ describe('estateProfile', () => {
   describe('seedAcmeAdvisorDone', () => {
     afterEach(() => {
       localStorage.removeItem('advisor:acme:done');
+      localStorage.removeItem('advisor:meridian:done');
     });
 
     it('seeds advisor:acme:done for acme', () => {
@@ -111,8 +112,11 @@ describe('estateProfile', () => {
       expect(localStorage.getItem('advisor:acme:done')).toBe('1');
     });
 
-    it('leaves the flag untouched for meridian - meridian first-runs the advisor', () => {
+    /* Aug 11 revert of the first-run takeover: every profile boots
+       advisor-done; the advisor is opt-in (rail card / direct URL). */
+    it('seeds meridian done too - the advisor never hijacks /discover', () => {
       seedAcmeAdvisorDone('meridian');
+      expect(localStorage.getItem('advisor:meridian:done')).toBe('1');
       expect(localStorage.getItem('advisor:acme:done')).toBeNull();
     });
 

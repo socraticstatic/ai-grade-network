@@ -23,7 +23,11 @@ const CHIP_COUNT_LABEL: Record<FindingKind, (n: number) => string> = {
  *  ("4 untagged AI workloads") — never `finding.title`/`finding.evidence`,
  *  which are full sentences meant for the card, not a pill. */
 function chipLabel(f: Finding): string {
-  if (f.savingsMo !== null && f.savingsMo > 0) return `${money(f.savingsMo)}/mo attachable`;
+  if (f.savingsMo !== null && f.savingsMo > 0) {
+    // The verb must match the move: attach money attaches, steer money steers.
+    const verb = f.kind === 'egress-bleed' ? 'steerable' : 'attachable';
+    return `${money(f.savingsMo)}/mo ${verb}`;
+  }
   return CHIP_COUNT_LABEL[f.kind](f.count);
 }
 

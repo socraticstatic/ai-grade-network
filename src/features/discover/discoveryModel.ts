@@ -388,6 +388,16 @@ export const SITE_CLASS_PLURAL: Record<SiteClass, string> = {
   dc: 'data centers', office: 'offices', branch: 'branches', atm: 'ATMs',
 };
 
+/** Count-aware noun: "1 data center" but "3 data centers". The rollup rows
+ *  never render at count 1 today (they sit behind the 50-row threshold),
+ *  but the advisor's head-start chips do - ACME has exactly one dc. */
+export const siteClassNoun = (siteClass: SiteClass, count: number): string => {
+  if (count === 1) {
+    return { dc: 'data center', office: 'office', branch: 'branch', atm: 'ATM' }[siteClass];
+  }
+  return SITE_CLASS_PLURAL[siteClass];
+};
+
 /** One row per site class actually present, in fixed dc→office→branch→atm
  *  order (absent classes omitted rather than zero-filled — a customer with
  *  no ATMs sees no ATM row, not a row that reads 0). `onNet` counts branches
