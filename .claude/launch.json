@@ -6,6 +6,12 @@
       "runtimeExecutable": "/bin/bash",
       "runtimeArgs": ["-c", "export PATH=/Users/micahbos/.nvm/versions/node/v20.20.2/bin:$PATH && npm run dev -- --port ${PORT:-5173} --strictPort"],
       "autoPort": true
+    },
+    {
+      "name": "advisor-phase-2",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "export PATH=/Users/micahbos/.nvm/versions/node/v20.20.2/bin:$PATH && VITE_AUTH_MODE=gate npm run dev -- --port 5210 --strictPort"],
+      "port": 5210
     }
   ]
 }
