@@ -21,11 +21,26 @@ describe('buildSankey', () => {
     }
   });
 
-  it('totals match routeFlows gbps', () => {
+  it('totals match routeFlows gbps plus the site band', () => {
     const s = buildSankey(CC);
     const total = (CC.routeFlows() as { gbps: number }[]).reduce((x, r) => x + r.gbps, 0);
-    const sourceOut = s.links.filter(l => s.nodes[l.source].band === 'source').reduce((x, l) => x + l.value, 0);
-    expect(Math.abs(sourceOut - total)).toBeLessThan(0.5);
+    // Site-origin rollup links add the branch flows the sankey used to
+    // ignore; the route-flow half of the source band still reconciles.
+    const routeOut = s.links
+      .filter(l => s.nodes[l.source].band === 'source' && !s.nodes[l.source].rollup)
+      .reduce((x, l) => x + l.value, 0);
+    expect(Math.abs(routeOut - total)).toBeLessThan(0.5);
+  });
+
+  it('rolls the site estate into class nodes - never one node per site', () => {
+    const s = buildSankey(CC);
+    const rollups = s.nodes.filter(n => n.rollup);
+    expect(rollups.length).toBeGreaterThan(0);
+    expect(rollups.length).toBeLessThanOrEqual(4); // dc/office/branch/atm at most
+    // ACME: 1 dc + 5 offices, every site rolled up, none rendered singly
+    const office = rollups.find(n => n.rollup?.siteClass === 'office');
+    expect(office?.name).toBe('5 offices');
+    expect(office?.rollup?.count).toBe(5);
   });
 
   it('every link is directional: source→path or path→dest only', () => {
