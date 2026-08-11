@@ -6,6 +6,7 @@ import { applyEstateProfile } from '../../engine/estateProfile';
 import { advisorFindings, advisorHeadline, headStart } from './advisorModel';
 import { advisorDone, advisorDoneKey } from './advisorPhase';
 import { ladderFor } from './offerCatalog';
+import { advisorSuggestions } from '../andi/andiBrain';
 import AdvisorPage from './AdvisorPage';
 
 /* AdvisorCanvas's own standalone-rendering test lives in
@@ -118,7 +119,7 @@ describe('AdvisorPage', () => {
 
       const inputAfter = screen.getByPlaceholderText(/Ask about your recommendation/i);
       expect(inputAfter).not.toBeDisabled();
-      for (const q of ['Why this finding?', 'How much do I save?', 'What is NetBond Adv?']) {
+      for (const q of advisorSuggestions()) {
         expect(screen.getByText(q)).toBeInTheDocument();
       }
       // "disabled-until-ready": gated on phase the same as the input above,
@@ -253,5 +254,81 @@ describe('AdvisorPage', () => {
     } finally {
       applyEstateProfile(CC as never, 'acme');
     }
+  });
+
+  describe('rail wiring — seeded chips and free text route through andiBrain', () => {
+    it('clicking a seeded chip renders the grounded answer as a bubble in the rail', () => {
+      vi.useFakeTimers();
+      applyEstateProfile(CC as never, 'meridian');
+      try {
+        renderPage();
+        driveToReady();
+
+        const headline = advisorHeadline(CC as never);
+        fireEvent.click(screen.getByText('How much do I save?'));
+
+        const log = screen.getByTestId('advisor-answer-log');
+        expect(
+          within(log).getByText(new RegExp(`\\$${Math.round(headline.savingsMo).toLocaleString()}`)),
+        ).toBeInTheDocument();
+        expect(within(log).getByText('How much do I save?')).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('submitting a close phrasing through the input answers from the same brain and clears the field', () => {
+      vi.useFakeTimers();
+      applyEstateProfile(CC as never, 'meridian');
+      try {
+        renderPage();
+        driveToReady();
+
+        const input = screen.getByPlaceholderText(/Ask about your recommendation/i) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'what does netbond adv do' } });
+        fireEvent.submit(input.closest('form')!);
+
+        expect(within(screen.getByTestId('advisor-answer-log')).getByTestId('advisor-answer')).toBeInTheDocument();
+        expect(input.value).toBe('');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('a navigate action inside a rendered answer routes through the app router', () => {
+      vi.useFakeTimers();
+      applyEstateProfile(CC as never, 'meridian');
+      try {
+        renderPage();
+        driveToReady();
+        mockNavigate.mockClear();
+
+        fireEvent.click(screen.getByText('What is NetBond Adv?'));
+        const actionBtn = within(screen.getByTestId('advisor-answer-log')).getByTestId('advisor-answer-action');
+        fireEvent.click(actionBtn);
+
+        expect(mockNavigate).toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('the disabled-until-ready gate still holds: no answer log renders and chips stay inert before ready', () => {
+      vi.useFakeTimers();
+      applyEstateProfile(CC as never, 'meridian');
+      try {
+        renderPage();
+        expect(screen.queryByTestId('advisor-answer-log')).not.toBeInTheDocument();
+        // Disabled buttons don't fire click handlers in jsdom either way, but
+        // this pins the same gate the earlier "disabled placeholder" test
+        // checks, from the wiring side.
+        for (const btn of screen.getAllByTestId('advisor-seeded-question')) {
+          fireEvent.click(btn);
+        }
+        expect(screen.queryByTestId('advisor-answer-log')).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

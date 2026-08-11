@@ -4,6 +4,7 @@ import { useCloudControl } from '../../engine/react/useCloudControl';
 import { resolveProfile } from '../../engine/estateProfile';
 import { WIZARD_PROVIDERS, validateCredential, scanSteps, type ScanStep } from '../discover/wizardModel';
 import { advisorFindings, advisorHeadline, headStart } from './advisorModel';
+import { andiAnswer } from '../andi/andiBrain';
 import { advance, markAdvisorDone, type AdvisorPhase } from './advisorPhase';
 import { AdvisorCanvas } from './AdvisorCanvas';
 import { AdvisorRail } from './AdvisorRail';
@@ -90,6 +91,10 @@ export default function AdvisorPage() {
   const hs = headStart(cc);
   const findings = advisorFindings(cc);
   const headline = advisorHeadline(cc);
+  // /discover/advisor sits outside the naas/ai layer paths, so andiAnswer's
+  // layerKey is null — same as the app-wide Andi panel when no layer
+  // matches the current route (AndiPanel.tsx's layerForPath fallback).
+  const askAdvisor = (q: string) => andiAnswer(cc, q, null);
 
   const statusChip =
     phase === 'scanning' ? 'Analyzing your estate…' : phase === 'ready' ? 'Recommendations ready' : null;
@@ -125,7 +130,14 @@ export default function AdvisorPage() {
           data-testid="advisor-rail"
           className="w-full shrink-0 space-y-4 order-last lg:order-first lg:w-[360px] xl:w-[400px]"
         >
-          <AdvisorRail phase={phase} steps={steps} scanIdx={scanIdx} findings={findings} />
+          <AdvisorRail
+            phase={phase}
+            steps={steps}
+            scanIdx={scanIdx}
+            findings={findings}
+            ask={askAdvisor}
+            onNavigate={to => navigate(to)}
+          />
         </aside>
 
         <div className="min-w-0 flex-1">

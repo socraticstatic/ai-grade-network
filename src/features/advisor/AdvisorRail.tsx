@@ -1,9 +1,9 @@
+import { useState } from 'react';
 import { Check, MessageCircle, Search } from 'lucide-react';
 import type { ScanStep } from '../discover/wizardModel';
 import type { Finding, FindingKind } from './advisorModel';
 import type { AdvisorPhase } from './advisorPhase';
-
-const SEEDED_QUESTIONS = ['Why this finding?', 'How much do I save?', 'What is NetBond Adv?'];
+import { advisorSuggestions, type AndiAction, type AndiAnswer } from '../andi/andiBrain';
 
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 const plural = (n: number, word: string, pluralWord = `${word}s`) => (n === 1 ? word : pluralWord);
@@ -32,19 +32,49 @@ export interface AdvisorRailProps {
   steps: ScanStep[];
   scanIdx: number;
   findings: Finding[];
+  /** Routes a question through andiBrain — the same `andiAnswer(cc, q, …)`
+   *  the app-wide Andi panel calls, with `cc` closed over by the caller
+   *  (AdvisorPage owns the engine handle; this component stays a pure view
+   *  layer over it). Synchronous: every answer is computed at ask time. */
+  ask: (question: string) => AndiAnswer;
+  /** Runs a 'navigate' action's destination — AdvisorPage owns the router
+   *  handle, same split as `ask` above. */
+  onNavigate: (to: string) => void;
+}
+
+interface RailEntry {
+  question: string;
+  answer: AndiAnswer;
 }
 
 /**
  * The narration pane: the scan theater's checklist while it runs, the
  * evidence chips the instant the estate is ready (they land here before
  * FindingCard's own stagger in the canvas finishes — this list carries no
- * stagger of its own), and the chat input — presentational only in this
- * task. `data-testid="advisor-seeded-question"` marks the three seeded
- * chips Task 6 wires to `andiBrain`; here they are disabled placeholders,
- * same as the input itself before the estate is ready.
+ * stagger of its own), and the chat input. `data-testid="advisor-seeded-
+ * question"` marks the three seeded chips (sourced from `andiBrain`'s
+ * `advisorSuggestions()` — single source of truth with the brain that
+ * answers them); clicking one, or submitting free text, routes through
+ * `ask` and renders the answer below as a bubble in the same narration-
+ * list idiom the scan checklist above uses.
  */
-export function AdvisorRail({ phase, steps, scanIdx, findings }: AdvisorRailProps) {
+export function AdvisorRail({ phase, steps, scanIdx, findings, ask, onNavigate }: AdvisorRailProps) {
   const ready = phase === 'ready';
+  const [inputValue, setInputValue] = useState('');
+  const [entries, setEntries] = useState<RailEntry[]>([]);
+
+  const submit = (raw: string) => {
+    if (!ready) return;
+    const question = raw.trim();
+    if (!question) return;
+    setEntries(prev => [...prev, { question, answer: ask(question) }]);
+  };
+
+  const runAction = (action: AndiAction) => {
+    if (action.kind === 'navigate' && action.to) onNavigate(action.to);
+    else if (action.kind === 'ask' && action.prompt) submit(action.prompt);
+    else if (action.kind === 'run' && action.run) action.run();
+  };
 
   return (
     <div className="space-y-4">
@@ -102,26 +132,76 @@ export function AdvisorRail({ phase, steps, scanIdx, findings }: AdvisorRailProp
       </div>
 
       <div className="rounded-2xl border border-fw-secondary bg-fw-base p-3 space-y-2">
-        <input
-          type="text"
-          disabled={!ready}
-          aria-label={ready ? 'Ask about your recommendation' : 'Building your recommendation'}
-          placeholder={ready ? 'Ask about your recommendation…' : 'Building your recommendation…'}
-          className="w-full rounded-lg border border-fw-secondary bg-fw-wash px-3 py-2 text-figma-sm text-fw-heading outline-none transition-colors focus:ring-2 focus:ring-fw-link/40 disabled:cursor-not-allowed disabled:opacity-60"
-        />
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            submit(inputValue);
+            setInputValue('');
+          }}
+        >
+          <input
+            type="text"
+            disabled={!ready}
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+            aria-label={ready ? 'Ask about your recommendation' : 'Building your recommendation'}
+            placeholder={ready ? 'Ask about your recommendation…' : 'Building your recommendation…'}
+            className="w-full rounded-lg border border-fw-secondary bg-fw-wash px-3 py-2 text-figma-sm text-fw-heading outline-none transition-colors focus:ring-2 focus:ring-fw-link/40 disabled:cursor-not-allowed disabled:opacity-60"
+          />
+        </form>
         <div className="flex flex-wrap gap-1.5">
-          {SEEDED_QUESTIONS.map(q => (
+          {advisorSuggestions().map(q => (
             <button
               key={q}
               type="button"
               disabled={!ready}
               data-testid="advisor-seeded-question"
+              onClick={() => submit(q)}
               className="rounded-full border border-fw-secondary bg-fw-wash px-2.5 py-1 text-[11px] font-medium text-fw-body disabled:cursor-not-allowed disabled:opacity-50"
             >
               {q}
             </button>
           ))}
         </div>
+
+        {entries.length > 0 && (
+          <ul className="space-y-2 pt-1" aria-live="polite" data-testid="advisor-answer-log">
+            {entries.map((entry, i) => (
+              <li
+                key={i}
+                data-testid="advisor-answer"
+                className="space-y-1.5 rounded-lg border border-fw-secondary bg-fw-wash p-2"
+              >
+                <p className="text-[11px] font-semibold text-fw-heading">{entry.question}</p>
+                {entry.answer.html ? (
+                  // Engine-authored HTML only (CC.answerFor) — user input is
+                  // matched against known questions, never interpolated.
+                  <div
+                    className="text-figma-xs text-fw-bodyLight leading-relaxed [&_b]:text-fw-heading"
+                    dangerouslySetInnerHTML={{ __html: entry.answer.html }}
+                  />
+                ) : (
+                  <p className="text-figma-xs text-fw-bodyLight leading-relaxed">{entry.answer.text}</p>
+                )}
+                {entry.answer.actions.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {entry.answer.actions.map(a => (
+                      <button
+                        key={a.label}
+                        type="button"
+                        data-testid="advisor-answer-action"
+                        onClick={() => runAction(a)}
+                        className="rounded-lg border border-fw-secondary bg-fw-base px-2 py-1 text-[11px] font-medium text-fw-heading hover:border-fw-active"
+                      >
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
