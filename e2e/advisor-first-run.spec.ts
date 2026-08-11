@@ -8,13 +8,11 @@ import { seedAuth } from '../tests/e2e/helpers';
  * otherwise swallow `?estate=meridian` into the fragment and
  * estateProfile.ts's boot-time `resolveProfile` would never see it.
  *
- * Meridian is NOT boot-seeded advisor-done (only acme is —
- * estateProfile.ts's `seedAcmeAdvisorDone`), so a fresh meridian context is
- * exactly what exercises the first-run redirect. No `advisor:meridian:done`
- * init script here on purpose, unlike meridian-estate.spec.ts's tests,
- * which seed it precisely to skip past this flow.
+ * Aug 11: every profile is boot-seeded advisor-done (the first-run takeover
+ * was reverted — the advisor is opt-in). The walk now enters via the direct
+ * advisor URL, which always renders regardless of flags.
  */
-const MERIDIAN_URL = '/?estate=meridian#/discover';
+const MERIDIAN_URL = '/?estate=meridian#/discover/advisor';
 const ACME_URL = '/?estate=acme#/discover';
 
 // arn:aws:iam::<12 digits>:role/<name> — the one shape wizardModel's
@@ -26,9 +24,6 @@ test('meridian first-run: observe -> intake -> scan -> ready -> accept tier 1 ->
 }) => {
   await seedAuth(page);
   await page.goto(MERIDIAN_URL, { waitUntil: 'domcontentloaded' });
-
-  // The done-flag gate redirects an undiscovered meridian tenant straight
-  // to the advisor — never the tree — on first load.
   await expect(page).toHaveURL(/#\/discover\/advisor$/);
 
   // observe: the head-start card states AT&T's pre-scan view of the estate.
@@ -75,9 +70,8 @@ test('meridian first-run: observe -> intake -> scan -> ready -> accept tier 1 ->
   await expect(page).toHaveURL(/#\/assessment$/);
   await expect(page.getByTestId('assessment-page')).toBeVisible();
 
-  // Back to /discover: the done flag accepting a tier just set means this
-  // time the tree renders — no re-trap into the advisor.
-  await page.goto(MERIDIAN_URL, { waitUntil: 'domcontentloaded' });
+  // Back to /discover: the tree renders - the advisor never hijacks it.
+  await page.goto('/?estate=meridian#/discover', { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveURL(/#\/discover$/);
   await expect(page.getByTestId('discover-sites')).toBeVisible();
 });
@@ -92,9 +86,8 @@ test('meridian skip path: "Skip to the estate" reaches the tree, and a direct re
   await expect(page).toHaveURL(/#\/discover$/);
   await expect(page.getByTestId('discover-sites')).toBeVisible();
 
-  // Direct revisit — the done flag skip just set means /discover never
-  // re-traps into the advisor a second time.
-  await page.goto(MERIDIAN_URL, { waitUntil: 'domcontentloaded' });
+  // /discover itself renders the tree - the advisor never hijacks it.
+  await page.goto('/?estate=meridian#/discover', { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveURL(/#\/discover$/);
   await expect(page.getByTestId('discover-sites')).toBeVisible();
 });

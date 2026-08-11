@@ -179,7 +179,7 @@ function advisorAnswer(cc: CloudControl, q: string): AndiAnswer | null {
       actions: [{ label: 'See the findings', kind: 'navigate', to: '/discover/advisor' }],
     };
   }
-  if (/save/i.test(q)) {
+  if (/sav(e|ing)/i.test(q)) {
     const headline = advisorHeadline(cc);
     const word = headline.findings === 1 ? 'finding' : 'findings';
     return {

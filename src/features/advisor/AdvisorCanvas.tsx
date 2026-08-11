@@ -1,6 +1,6 @@
 import { ArrowRight, Search, ShieldCheck, Sparkles } from 'lucide-react';
 import { ProviderLogo } from '../../components/brand/ProviderLogo';
-import { SITE_CLASS_PLURAL, type SiteClass } from '../discover/discoveryModel';
+import { siteClassNoun, type SiteClass } from '../discover/discoveryModel';
 import { useRevealStagger } from '../discover/useRevealStagger';
 import type { WizardProvider, ScanStep } from '../discover/wizardModel';
 import type { Finding } from './advisorModel';
@@ -82,7 +82,7 @@ export function AdvisorCanvas({
                 key={row.siteClass}
                 className="inline-flex items-center rounded-full border border-fw-secondary bg-fw-base px-3 py-1 text-figma-xs font-medium text-fw-body"
               >
-                {nf.format(row.count)} {SITE_CLASS_PLURAL[row.siteClass]}
+                {nf.format(row.count)} {siteClassNoun(row.siteClass, row.count)}
               </span>
             ))}
             {headStart.cloudsVisible && (

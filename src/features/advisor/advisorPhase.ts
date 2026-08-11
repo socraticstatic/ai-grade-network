@@ -46,7 +46,15 @@ export const advisorDoneKey = (profile: string) => `advisor:${profile}:done`;
  * localStorage errors (private browsing, quota) read as "not done" rather
  * than throwing, matching AuthContext's try/catch idiom.
  */
+/* In-memory fallback for contexts where localStorage throws (private mode,
+ * quota, partitioned iframes). Without it, a failed write means advisorDone
+ * stays false forever and /discover's gate re-enters the advisor on every
+ * navigation — a soft-lock the final review reproduced. Session-scoped by
+ * nature; that's fine, the flag only has to hold until storage recovers. */
+const doneFallback = new Set<string>();
+
 export function advisorDone(profile: string): boolean {
+  if (doneFallback.has(profile)) return true;
   try {
     return localStorage.getItem(advisorDoneKey(profile)) === '1';
   } catch {
@@ -54,14 +62,14 @@ export function advisorDone(profile: string): boolean {
   }
 }
 
-/** Marks this profile done. Storage errors are swallowed — the button that
- *  called this still navigates; a flag that fails to persist just means the
- *  next visit sees the advisor again, not a broken click. */
+/** Marks this profile done. Storage errors fall back to the in-memory set —
+ *  the button that called this still navigates, and the gate still honors
+ *  the flag for the rest of the session. */
 export function markAdvisorDone(profile: string): void {
   try {
     localStorage.setItem(advisorDoneKey(profile), '1');
   } catch {
-    /* private mode / storage unavailable — non-fatal */
+    doneFallback.add(profile);
   }
 }
 
@@ -71,6 +79,7 @@ export function markAdvisorDone(profile: string): void {
  *  Same error tolerance as markAdvisorDone: a storage failure here must not
  *  block the Link's navigation to /discover/advisor. */
 export function resetAdvisorDone(profile: string): void {
+  doneFallback.delete(profile);
   try {
     localStorage.removeItem(advisorDoneKey(profile));
   } catch {

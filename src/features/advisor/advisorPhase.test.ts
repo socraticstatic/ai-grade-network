@@ -52,7 +52,8 @@ describe('advisorPhase', () => {
       expect(localStorage.getItem('advisor:acme:done')).toBe('1');
     });
 
-    it('tolerates a localStorage that throws (private mode / quota)', () => {
+    it('holds the flag in memory when localStorage throws - a failed write must not soft-lock the gate', () => {
+      resetAdvisorDone('acme'); // clear the fallback set from any earlier test
       const realSet = localStorage.setItem;
       localStorage.setItem = () => {
         throw new Error('quota exceeded');
@@ -63,15 +64,19 @@ describe('advisorPhase', () => {
         localStorage.setItem = realSet;
       }
 
+      // Final-review fix: the in-memory fallback answers true even while
+      // reads throw too - otherwise /discover's gate re-enters the advisor
+      // on every navigation for the whole private-mode session.
       const realGet = localStorage.getItem;
       localStorage.getItem = () => {
         throw new Error('blocked');
       };
       try {
-        expect(advisorDone('acme')).toBe(false);
+        expect(advisorDone('acme')).toBe(true);
       } finally {
         localStorage.getItem = realGet;
       }
+      resetAdvisorDone('acme'); // leave no fallback state for later tests
     });
 
     it('resetAdvisorDone clears this profile only, the affordance behind "Run the advisor"', () => {

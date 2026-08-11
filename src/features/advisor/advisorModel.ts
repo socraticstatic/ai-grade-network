@@ -123,7 +123,7 @@ function unattachedRegionsFinding(cc: CloudControl): Finding | null {
         : `${count} unattached ${plural(count, 'region')} still ride public transit`,
     evidence: `${count} ${plural(count, 'region')} across ${cloudCount} ${plural(cloudCount, 'cloud')} sit off the fabric today${
       priced.length > 0
-        ? `; attaching the ${priced.length} the arbitrage table prices keeps ${money(savingsMo)}/mo off hyperscaler egress`
+        ? `; attaching the ${priced.length} that the arbitrage table prices keeps ${money(savingsMo)}/mo off hyperscaler egress`
         : ''
     }.`,
     why: `Every unattached region pays the public transit rate and the public transit latency on traffic a private on-ramp already reaches cheaper and faster. The arbitrage table prices what each attach is worth before you commit to it — nothing here stages itself; a human reviews the tray.`,
