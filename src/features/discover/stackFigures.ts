@@ -347,9 +347,19 @@ export function advisorDraft(cc: CloudControl): { moves: StagedMove[]; deltas: S
 export function moneyOnTheTable(cc: CloudControl): {
   savingsMo: number;
   moves: number;
+  attachMoves: number;
+  steerMoves: number;
+  /** Named regions/flows behind the total, for the evidence popover. */
+  unpriced: string[];
 } {
   const draft = advisorDraft(cc);
-  return { savingsMo: draft.deltas.egressSavingMo, moves: draft.moves.length };
+  return {
+    savingsMo: draft.deltas.egressSavingMo,
+    moves: draft.moves.length,
+    attachMoves: draft.moves.filter(m => m.kind === 'attach').length,
+    steerMoves: draft.moves.filter(m => m.kind === 'steer').length,
+    unpriced: draft.deltas.unpricedMoves,
+  };
 }
 
 /* Whether committing a move of this KIND pushes an undo entry - established

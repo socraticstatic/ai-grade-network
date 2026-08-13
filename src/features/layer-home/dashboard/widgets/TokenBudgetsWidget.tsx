@@ -53,7 +53,13 @@ export function TokenBudgetsWidget(_props: LayerWidgetProps) {
                         trailing after a " · ". Reorder, not a new
                         derivation — the same meter pct and budget, pct
                         leading. */}
-                    {p.meter ? `${pct}% of a ${fmtTokens(p.budget)}/day budget` : `${fmtTokens(p.budget)} budget`}
+                    {/* Row 13: a budget with no meter used to render as a
+                        bare ceiling, changing the row's shape mid-list and
+                        reading as a different KIND of figure. It is absent
+                        data, and now says so. */}
+                    {p.meter
+                      ? `${pct}% of a ${fmtTokens(p.budget)}/day budget`
+                      : `no traffic metered yet · ${fmtTokens(p.budget)}/day budget`}
                   </span>
                 </span>
                 {p.enforced ? (

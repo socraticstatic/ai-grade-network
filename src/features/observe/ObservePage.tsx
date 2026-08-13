@@ -6,7 +6,12 @@ import { networkBinding } from './networkBinding';
 import { EventStream } from './EventStream';
 import { PathTable } from '../connect/PathTable';
 import { VerdictLine } from '../_shared/VerdictLine';
+import { useNavigate } from 'react-router-dom';
 import { EstateFilterChips } from '../discover/EstateFilterChips';
+import { advisorFindings } from '../advisor/advisorModel';
+import { FindingCard } from '../advisor/FindingCard';
+import { markAdvisorDone } from '../advisor/advisorPhase';
+import { resolveProfile } from '../../engine/estateProfile';
 import { EMPTY_ESTATE_FILTERS, type EstateFilters } from '../discover/estateFilters';
 import type { SiteClass } from '../discover/discoveryModel';
 import type { FabricModel } from '../connect/FabricHero';
@@ -24,6 +29,22 @@ export function ObservePage() {
      re-renders this page on every engine change. */
   const cc = useCloudControl(c => c);
   const binding = networkBinding(cc, filters, drill);
+  const navigate = useNavigate();
+  /* Phase 3, the connective tissue: the advisor's money findings render
+     HERE as the same cards, with the same offer ladders, that the advisor
+     conversation shows. One recommendation surface, wherever the question
+     gets asked - Observe is where a FinOps reader asks it. */
+  const moneyFindings = advisorFindings(cc).filter(
+    f => f.kind === 'egress-bleed' || f.kind === 'unattached-regions',
+  );
+  const acceptTier = (route: string) => {
+    try {
+      markAdvisorDone(resolveProfile(window.location.search, window.localStorage));
+    } catch {
+      /* storage unavailable - the navigation still stands */
+    }
+    navigate(route);
+  };
   const fabricModel = useCloudControl(c => c.fabricModel()) as FabricModel;
 
   // The shell provides its own "Network Observability" header; the FlowBar sits
@@ -40,6 +61,16 @@ export function ObservePage() {
       {/* Paths — the steerable flow table (routeFlows / steerFlow / routingFailover),
           relocated here from Connect. Governing individual paths is an observability
           concern; Connect stays focused on fabric attach. */}
+      {moneyFindings.length > 0 && (
+        <section className="px-6 space-y-3" aria-labelledby="observe-advisor-heading">
+          <h2 id="observe-advisor-heading" className="text-figma-lg font-semibold text-fw-heading">
+            What your advisor would do with this
+          </h2>
+          {moneyFindings.map(f => (
+            <FindingCard key={f.kind} finding={f} onAcceptTier={acceptTier} />
+          ))}
+        </section>
+      )}
       <section className="px-6 space-y-2" aria-labelledby="observe-paths-heading">
         <h2 id="observe-paths-heading" className="text-figma-lg font-semibold text-fw-heading">Paths</h2>
         <PathTable />

@@ -4,6 +4,7 @@ import { WidgetFrame } from '../WidgetFrame';
 import type { LayerWidgetProps } from '../registry';
 import { useCloudControlLive } from '../../../../engine/react/useCloudControl';
 import { moneyOnTheTable } from '../../../discover/stackFigures';
+import { WhyFigure } from '../../../../components/viz/WhyFigure';
 
 export function MoneyOnTheTableWidget(_props: LayerWidgetProps) {
   const navigate = useNavigate();
@@ -11,12 +12,14 @@ export function MoneyOnTheTableWidget(_props: LayerWidgetProps) {
      used to be spliced: the money from arbitrage's attach-only ceiling, the
      count from the advisor's draft - so this tile read "$19,900/mo · Review
      10 moves" while Discover priced those same 10 moves at $52,961/mo. */
-  const { available, buckets, moveCount } = useCloudControlLive(c => {
+  const { available, buckets, moveCount, attachMoves, steerMoves } = useCloudControlLive(c => {
     const table = moneyOnTheTable(c);
     return {
       available: table.savingsMo,
       buckets: c.arbitrage().buckets.filter(b => !b.attached).slice(0, 3),
       moveCount: table.moves,
+      attachMoves: table.attachMoves,
+      steerMoves: table.steerMoves,
     };
   });
 
@@ -36,11 +39,19 @@ export function MoneyOnTheTableWidget(_props: LayerWidgetProps) {
 
   return (
     <WidgetFrame title="Money on the table" icon={PiggyBank} action={review}>
-      <div className="text-figma-2xl font-bold tabular-nums tracking-[-0.02em] text-fw-heading">
-        {`$${Math.round(available).toLocaleString()}/mo`}
-      </div>
-      <div className="text-figma-sm text-fw-bodyLight mt-0.5 mb-3">
-        across {moveCount} {moveCount === 1 ? 'move' : 'moves'} the advisor can act on now
+      {/* Value on top, evidence below - the deck's rule, as the shared
+          WhyFigure affordance rather than a bare number. */}
+      <div className="mb-3">
+        <WhyFigure
+          testid="money-figure"
+          value={`$${Math.round(available).toLocaleString()}/mo`}
+          label={`across ${moveCount} ${moveCount === 1 ? 'move' : 'moves'} the advisor can act on now`}
+          evidence={[
+            { label: 'Regions to attach', value: String(attachMoves) },
+            { label: 'Flows to steer onto the fabric', value: String(steerMoves) },
+          ]}
+          source="Priced from this estate's own egress and path data - the same figures the advisor quotes on Discover."
+        />
       </div>
       <ul className="flex flex-col divide-y divide-fw-secondary">
         {buckets.map(b => (

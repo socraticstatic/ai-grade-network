@@ -23,7 +23,10 @@ describe('computeFabricLayout expanded mode', () => {
     expect(l.internals!.sites).toHaveLength(2);
     expect(l.internals!.paths).toHaveLength(4);
     expect(l.internals!.paths.map(p => p.siteIdx)).toEqual([0, 0, 1, 1]);
-    expect(l.internals!.caption).toBe('4 paths · 2 diverse sites · failover detect in 900ms (BFD)');
+    // A product specification, framed as one - not this estate's telemetry.
+    expect(l.internals!.caption).toBe(
+      'How the fabric is built: 4 paths · 2 diverse sites · BFD failover detect in 900ms',
+    );
     // paths of a site sit between the band's top and bottom
     for (const p of l.internals!.paths) {
       expect(p.y).toBeGreaterThan(l.fabric.y);
