@@ -9,7 +9,7 @@ import { VpcMap } from './VpcMap';
 import { AttachmentMap } from './AttachmentMap';
 import { DiscoveryWizard } from './DiscoveryWizard';
 import { EstateFilterChips } from './EstateFilterChips';
-import { EMPTY_ESTATE_FILTERS, regionMatches, branchMatches } from './estateFilters';
+import { EMPTY_ESTATE_FILTERS, regionMatches, branchMatches, connectionOf, regionOf } from './estateFilters';
 import { cloudConnection, regionConnection, connMeta } from './connectionState';
 import {
   allKeys,
@@ -37,6 +37,9 @@ import {
   SITE_CLASS_PLURAL,
   siteClassKey,
   isSiteClassKey,
+  siteBreakdown,
+  BREAKDOWN_LABEL,
+  type BreakdownDim,
   type Branch,
   type Cloud,
   type Region,
@@ -187,14 +190,16 @@ function SiteRow({
  *  renders directly. `onNet` reads AT&T reach the same way `siteRollup`
  *  does elsewhere (discoveryModel.ts) — an `onrampId` on the branch. */
 function SiteRollupRow({
-  siteClass,
+  rowKey,
+  label,
   group,
   open,
   onToggleOpen,
   selected,
   onToggle,
 }: {
-  siteClass: Branch['siteClass'];
+  rowKey: string;
+  label: string;
   group: Branch[];
   open: boolean;
   onToggleOpen: () => void;
@@ -214,7 +219,7 @@ function SiteRollupRow({
       >
         <Chevron open={open} />
         <span className="text-figma-sm font-medium text-fw-heading">
-          {nf.format(group.length)} {SITE_CLASS_PLURAL[siteClass]} · {nf.format(onNet)} on AT&amp;T
+          {nf.format(group.length)} {label} · {nf.format(onNet)} on AT&amp;T
         </span>
       </button>
       {open && (
@@ -256,14 +261,27 @@ function SitesPanel({
   onToggle,
   open,
   onToggleOpen,
+  cc,
+  dim,
+  onDim,
 }: {
   branches: Branch[];
   selected: ReadonlySet<string>;
   onToggle: (key: string) => void;
   open: ReadonlySet<string>;
   onToggleOpen: (key: string) => void;
+  cc: CloudControl;
+  dim: BreakdownDim;
+  onDim: (d: BreakdownDim) => void;
 }) {
   const rollup = needsRollup(branches.length);
+  /* Filtering decides WHICH sites are here; the breakdown decides how the
+     survivors stack. Keeping them separate is what lets a viewer ask "the
+     ATMs, by region" without either control knowing about the other. */
+  const groups = siteBreakdown(branches, dim, {
+    region: regionOf,
+    connection: b => connectionOf(cc, b),
+  });
   return (
     <div
       data-testid="discover-sites"
@@ -276,22 +294,38 @@ function SitesPanel({
         <span className="text-figma-xs text-fw-bodyLight">
           {nf.format(branches.length)} premises · your own buildings, not a cloud
         </span>
+        {rollup && (
+          <label className="ml-auto flex items-center gap-1.5 text-figma-xs text-fw-bodyLight">
+            Break down by
+            <select
+              data-testid="site-breakdown"
+              value={dim}
+              onChange={e => onDim(e.target.value as BreakdownDim)}
+              className="rounded-lg border border-fw-secondary bg-fw-base px-2 py-1 text-figma-xs font-medium text-fw-body"
+            >
+              {(Object.keys(BREAKDOWN_LABEL) as BreakdownDim[]).map(d => (
+                <option key={d} value={d}>
+                  {BREAKDOWN_LABEL[d]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       <ul className="grid grid-cols-1 gap-1 p-2 sm:grid-cols-2 lg:grid-cols-3">
         {rollup
-          ? CLASS_ORDER.map(cls => branches.filter(b => b.siteClass === cls))
-              .filter(group => group.length > 0)
-              .map(group => (
-                <SiteRollupRow
-                  key={group[0].siteClass}
-                  siteClass={group[0].siteClass}
-                  group={group}
-                  open={open.has(siteClassKey(group[0].siteClass))}
-                  onToggleOpen={() => onToggleOpen(siteClassKey(group[0].siteClass))}
-                  selected={selected}
-                  onToggle={onToggle}
-                />
-              ))
+          ? groups.map(g => (
+              <SiteRollupRow
+                key={g.key}
+                rowKey={g.key}
+                label={g.label}
+                group={g.members}
+                open={open.has(siteClassKey(g.key as Branch['siteClass']))}
+                onToggleOpen={() => onToggleOpen(siteClassKey(g.key as Branch['siteClass']))}
+                selected={selected}
+                onToggle={onToggle}
+              />
+            ))
           : branches.map(b => <SiteRow key={b.id} b={b} selected={selected} onToggle={onToggle} />)}
       </ul>
     </div>
@@ -546,7 +580,10 @@ export function UnifiedDiscovery() {
   // (`branchMatches`, estateFilters.ts) — scopes the sites panel the same
   // way `cloudMatches` above scopes the tree, so the chips actually filter
   // both surfaces from one control instead of only the cloud tree.
-  const filteredBranches = branches.filter(b => branchMatches(b, estateFilters));
+  const filteredBranches = branches.filter(b => branchMatches(b, estateFilters, cc));
+  /* Which dimension the site rollups stack by. Page state, not filter
+     state: it changes how the same set is READ, never which set it is. */
+  const [breakdown, setBreakdown] = useState<BreakdownDim>('class');
 
   // "+ Connect a cloud" wizard + the "discovered just now" flash it triggers.
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -924,6 +961,9 @@ export function UnifiedDiscovery() {
         onToggle={toggleSelect}
         open={open}
         onToggleOpen={toggle}
+        cc={cc}
+        dim={breakdown}
+        onDim={setBreakdown}
       />
 
       {selected.size > 0 && (

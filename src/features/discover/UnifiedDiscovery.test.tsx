@@ -447,7 +447,8 @@ describe('UnifiedDiscovery site rollups', () => {
     applyEstateProfile(CC as never, 'meridian');
     render(<MemoryRouter initialEntries={['/discover']}><UnifiedDiscovery /></MemoryRouter>);
     const chips = screen.getByTestId('estate-filter-chips');
-    fireEvent.click(within(chips).getByRole('button', { name: 'Data centers' }));
+    fireEvent.click(within(chips).getByTestId('facet-site-type'));
+    fireEvent.click(within(chips).getByRole('option', { name: 'Data centers' }));
     expect(screen.getAllByTestId('site-row')).toHaveLength(3);
     expect(screen.queryByTestId('site-rollup-row')).not.toBeInTheDocument();
   });

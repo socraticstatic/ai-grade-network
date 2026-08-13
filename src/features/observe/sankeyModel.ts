@@ -90,7 +90,7 @@ export function siteOriginSummary(
   cc: CloudControl,
   filters: EstateFilters = EMPTY_ESTATE_FILTERS,
 ): { siteFlows: number; cloudFlows: number } {
-  const keep = new Set(branchesOf(cc).filter(b => branchMatches(b, filters)).map(b => b.id));
+  const keep = new Set(branchesOf(cc).filter(b => branchMatches(b, filters, cc)).map(b => b.id));
   const ccFlows = (cc as unknown as { flows?: () => BranchFlowRow[] }).flows;
   const branchRows = (ccFlows ? ccFlows() : []).filter(r => r.srcBranch && keep.has(r.srcBranch));
   return { siteFlows: branchRows.length, cloudFlows: (cc.routeFlows() as RouteFlowRow[]).length };
@@ -125,7 +125,7 @@ export function buildSankey(cc: CloudControl, opts: BuildOpts = {}): SankeyModel
   const classCount = new Map<SiteClass, number>();
   const metroSites = new Map<string, Set<string>>(); // `${class}/${city}` -> branch ids
   for (const b of branchesOf(cc)) {
-    if (!branchMatches(b, filters)) continue; // the chips scope this band
+    if (!branchMatches(b, filters, cc)) continue; // the chips scope this band
     branchClass.set(b.id, b.siteClass);
     branchCity.set(b.id, b.city);
     classCount.set(b.siteClass, (classCount.get(b.siteClass) ?? 0) + 1);

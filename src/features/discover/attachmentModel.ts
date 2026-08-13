@@ -204,7 +204,7 @@ export interface AttachmentMapModel {
  * every branch, unfiltered.
  */
 export function buildAttachmentMapModel(cc: CloudControl, filters: EstateFilters = EMPTY_ESTATE_FILTERS): AttachmentMapModel {
-  const branches = (branchesOf(cc) as Branch[]).filter(b => branchMatches(b, filters));
+  const branches = (branchesOf(cc) as Branch[]).filter(b => branchMatches(b, filters, cc));
   const clouds = (cc.clouds as Cloud[]).filter(c => (MAP_CLOUDS as readonly string[]).includes(c.id));
   return {
     sites: branches.map(b => ({ id: b.id, name: b.name, city: b.city, onrampId: b.onrampId, siteClass: b.siteClass })),
