@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { useCloudControlLive } from '../../engine/react/useCloudControl';
-import { ShareRing } from '../../components/viz/kit';
+import { Chart } from '../../components/charts/Chart';
+import { bulletOption, sparkOption, stageProgress, stageSeries } from './stageCharts';
+import { useCloudControl } from '../../engine/react/useCloudControl';
 import { stageRollup } from './stageRollup';
 import type { Surface } from './dashboard/registry';
 
@@ -16,6 +18,14 @@ import type { Surface } from './dashboard/registry';
  */
 export function StageRollupBand({ surface }: { surface: Surface }) {
   const stages = useCloudControlLive(cc => stageRollup(cc, surface));
+  /* One grammar per card: a bullet bar reading "how far along is this
+     stage", plus a sparkline ONLY where the engine actually has 60 days of
+     history. See stageCharts.ts for why the asymmetry is deliberate. */
+  const viz = useCloudControl(cc =>
+    Object.fromEntries(
+      stages.map(s => [s.key, { progress: stageProgress(cc, s.key), series: stageSeries(cc, s.key) }]),
+    ),
+  );
 
   return (
     <section aria-label="The lifecycle at a glance" data-testid="stage-rollup">
@@ -48,14 +58,32 @@ export function StageRollupBand({ surface }: { surface: Surface }) {
                   </span>
                   <span className="mt-1 block text-figma-xs leading-snug text-fw-body">{s.caption}</span>
                 </span>
-                {s.progress !== null && (
-                  <ShareRing
-                    share={s.progress}
-                    label={`${Math.round(s.progress * 100)}%`}
-                    tone={s.alarm ? 'warn' : 'good'}
-                  />
-                )}
               </span>
+
+              {/* The measure against the whole job, then its direction. */}
+              {viz[s.key]?.progress !== null && viz[s.key]?.progress !== undefined && (
+                <span className="mt-3 block">
+                  <Chart
+                    testid={`stage-bullet-${s.key}`}
+                    ariaLabel={`${Math.round((viz[s.key].progress ?? 0) * 100)} percent of ${s.label} complete`}
+                    option={bulletOption(viz[s.key].progress as number, !!s.alarm)}
+                    height={12}
+                  />
+                  <span className="mt-1 block text-[10px] tabular-nums text-fw-bodyLight">
+                    {Math.round((viz[s.key].progress as number) * 100)}% of the way
+                  </span>
+                </span>
+              )}
+              {viz[s.key]?.series && (
+                <span className="mt-1 block">
+                  <Chart
+                    testid={`stage-spark-${s.key}`}
+                    ariaLabel={`${s.label}: trailing 60 days`}
+                    option={sparkOption(viz[s.key].series as number[], !!s.alarm)}
+                    height={28}
+                  />
+                </span>
+              )}
 
               {s.detail && (
                 <span className="mt-auto pt-2.5 text-[11px] leading-snug text-fw-bodyLight">{s.detail}</span>
