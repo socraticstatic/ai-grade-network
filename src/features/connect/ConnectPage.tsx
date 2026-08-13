@@ -11,6 +11,20 @@ import type { FabricModel, FabricSelection } from './FabricHero';
 import { connectVerdict } from './verdict';
 import { RegionPanel } from './RegionPanel';
 import { SitePanel } from './SitePanel';
+import { EdgeGroupPanel } from './EdgeGroupPanel';
+import { EdgeTrail } from './EdgeTrail';
+import {
+  edgeNodes,
+  edgeTrail,
+  edgeCaption,
+  scopeNode,
+  descend,
+  NO_EDGE_DRILL,
+  type EdgeDrill,
+  type EdgeNode,
+} from './edgeDrill';
+import { branchesOf } from '../discover/discoveryModel';
+import { CC } from '../../engine';
 import { ConnectionsList } from './ConnectionsList';
 import { ProvisionWizard } from './ProvisionWizard';
 
@@ -47,8 +61,15 @@ function FabricPanel({ model }: { model: FabricModel }) {
   );
 }
 
+/** Once per page load, not once per mount. */
+let trailHintShown = false;
+
 export function ConnectPage() {
   const model = useCloudControl(cc => cc.fabricModel()) as FabricModel;
+  /* The ingress column reads the real estate, not `fabricModel().sites` — see
+     `edgeDrill`. Held separately from `model` so a drill never re-runs the
+     engine, and spliced into the hero's model below. */
+  const branches = useCloudControl(cc => branchesOf(cc));
   const { search } = useLocation();
   const params = new URLSearchParams(search);
   const fromDiscover = params.get('from') === 'discover';
@@ -59,6 +80,39 @@ export function ConnectPage() {
   const [wizardRegionId, setWizardRegionId] = useState<string | null>(null);
   const [justProvisioned, setJustProvisioned] = useState<string | null>(null);
   const [fabricExpanded, setFabricExpanded] = useState(false);
+  const [edgeDrill, setEdgeDrill] = useState<EdgeDrill>(NO_EDGE_DRILL);
+  /* The breadcrumb announces itself on the first descent only — see
+     `EdgeTrail`. Module-scoped so it is once per session, not once per mount:
+     bouncing to Observe and back is not a first drill. */
+  const [trailHint, setTrailHint] = useState(false);
+
+  /* The ingress column, one level at a time. `heroModel` splices it into the
+     fabric model so the diagram, the edges and the panels all read the same
+     rows — there is no second source of sites on this page. */
+  const edgeRows: EdgeNode[] = edgeNodes(CC, branches, edgeDrill);
+  const heroModel: FabricModel = {
+    ...model,
+    sites: edgeRows.map(n => ({ id: n.id, label: n.label, firstMile: n.firstMile, sub: n.sub, drillable: n.drillable })),
+  };
+  const selectedEdge = selected?.kind === 'site' ? edgeRows.find(n => n.id === selected.id) ?? null : null;
+  const scope = scopeNode(CC, branches, edgeDrill);
+
+  const drillInto = (siteId: string) => {
+    const node = edgeRows.find(n => n.id === siteId);
+    if (!node) return;
+    const next = descend(edgeDrill, node);
+    if (next) {
+      setEdgeDrill(next);
+      if (!trailHintShown) {
+        trailHintShown = true;
+        setTrailHint(true);
+        window.setTimeout(() => setTrailHint(false), 5200);
+      }
+      // A descent replaces the selection with the level you just opened, so
+      // the panel below never states a group you can no longer see.
+      setSelected({ kind: 'fabric' });
+    }
+  };
 
   // "connect <region>" from ANDI lands here as ?provision=<regionId>&dual=<0|1> -
   // open the wizard on that region already selected. Only a real, still-public
@@ -101,13 +155,21 @@ export function ConnectPage() {
           </div>
         )}
 
+        <EdgeTrail
+          trail={edgeTrail(edgeDrill)}
+          caption={edgeCaption(edgeRows, branches.length)}
+          onGo={d => { setEdgeDrill(d); setSelected({ kind: 'fabric' }); setTrailHint(false); }}
+          highlight={trailHint}
+        />
+
         <FabricHero
-          model={model}
+          model={heroModel}
           selected={selected}
           onSelect={setSelected}
           justProvisioned={justProvisioned}
           expanded={fabricExpanded}
           onToggleExpand={() => setFabricExpanded(v => !v)}
+          onDrillSite={drillInto}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -118,14 +180,18 @@ export function ConnectPage() {
               onProvision={() => setWizardRegionId(selectedRegion.regionId)}
               onProvisioned={handleProvisioned}
             />
-          ) : selected?.kind === 'site' ? (
-            <SitePanel siteId={selected.id} model={model} />
+          ) : selectedEdge && selectedEdge.count === 1 ? (
+            <SitePanel siteId={selectedEdge.id} model={heroModel} />
+          ) : selectedEdge ? (
+            <EdgeGroupPanel node={selectedEdge} />
+          ) : scope ? (
+            <EdgeGroupPanel node={scope} />
           ) : (
             <FabricPanel model={model} />
           )}
 
           <ConnectionsList
-            model={model}
+            model={heroModel}
             selected={selected}
             onSelect={setSelected}
             onProvisioned={handleProvisioned}

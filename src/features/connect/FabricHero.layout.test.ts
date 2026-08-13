@@ -18,20 +18,34 @@ describe('computeFabricLayout expanded mode', () => {
     expect(l.fabric.x + l.fabric.w).toBe(collapsed.fabric.x + collapsed.fabric.w);
     expect(l.regions.map(r => r.edge.to.x)).toEqual(collapsed.regions.map(r => r.edge.to.x));
   });
-  it('expanded: two site rows and four ordered paths inside the band, left to right facts', () => {
+  it('expanded: the inside is the real on-ramp inventory, grouped by facility', () => {
     const l = computeFabricLayout(model, { expanded: true });
-    expect(l.internals!.sites).toHaveLength(2);
-    expect(l.internals!.paths).toHaveLength(4);
-    expect(l.internals!.paths.map(p => p.siteIdx)).toEqual([0, 0, 1, 1]);
-    // A product specification, framed as one - not this estate's telemetry.
-    expect(l.internals!.caption).toBe(
-      'How the fabric is built: 4 paths · 2 diverse sites · BFD failover detect in 900ms',
-    );
-    // paths of a site sit between the band's top and bottom
+    const facilities = new Set(model.onramps.map(o => o.site));
+
+    // Never more than the three biggest facilities, and never more than there
+    // are - the band has to hold what it draws.
+    expect(l.internals!.sites.length).toBe(Math.min(3, facilities.size));
+    expect(l.internals!.sites.map(s => s.label).every(f => facilities.has(f))).toBe(true);
+
+    // Every drawn path is a real on-ramp of a drawn facility, stated lit/dark.
+    const drawnFacilities = new Set(l.internals!.sites.map(s => s.label));
+    const eligible = model.onramps.filter(o => drawnFacilities.has(o.site));
+    expect(l.internals!.paths.length).toBeGreaterThan(0);
+    expect(l.internals!.paths.length).toBeLessThanOrEqual(eligible.length);
     for (const p of l.internals!.paths) {
+      expect(p.label).toMatch(/ · (lit|dark)$/);
+      expect(eligible.some(o => p.id === `fab-path-${o.id}`)).toBe(true);
+      // and sits between the band's top and bottom
       expect(p.y).toBeGreaterThan(l.fabric.y);
       expect(p.y).toBeLessThan(l.fabric.y + l.fabric.h);
     }
+
+    // The caption states this estate's counts, then names the one figure that
+    // is a product specification rather than a reading.
+    const lit = model.onramps.filter(o => o.active).length;
+    expect(l.internals!.caption).toContain(`${model.onramps.length} on-ramps in ${facilities.size} AT&T facilities`);
+    expect(l.internals!.caption).toContain(`${lit} lit`);
+    expect(l.internals!.caption).toContain('BFD failover detect in 900ms');
   });
   it('deterministic in both modes', () => {
     expect(computeFabricLayout(model, { expanded: true })).toEqual(computeFabricLayout(model, { expanded: true }));

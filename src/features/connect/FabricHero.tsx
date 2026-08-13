@@ -33,7 +33,9 @@ export type FabricSelection =
   | { kind: 'internet' };
 
 export interface FabricModel {
-  sites: { id: string; label: string; firstMile: string | null }[];
+  /** The ingress column. `sub`/`drillable` arrive from `edgeDrill` when the
+   *  column is standing on a real estate rather than the seed archetypes. */
+  sites: { id: string; label: string; firstMile: string | null; sub?: string; drillable?: boolean }[];
   onramps: { id: string; name: string; type: string; site: string; active: boolean; targets: [string, string][] }[];
   regions: FabricRegion[];
   c2c: { id: string; label: string; gbps: number; viaPublic: boolean; controlled: boolean }[];
@@ -51,7 +53,7 @@ const ROW_H = 52;
 const TOP_PAD = 40;
 
 const SITE_X = 40;
-const SITE_W = 156;
+const SITE_W = 168;
 const NODE_H = 44;
 
 const FABRIC_X = 404;
@@ -109,7 +111,7 @@ export interface FabricLayout {
   viewW: number;
   viewH: number;
   fabric: { x: number; y: number; w: number; h: number; cx: number; cy: number };
-  sites: { id: string; label: string; firstMile: string | null; x: number; y: number }[];
+  sites: { id: string; label: string; firstMile: string | null; sub?: string; drillable?: boolean; x: number; y: number }[];
   regions: {
     region: FabricRegion; x: number; y: number;
     edge: { from: Pt; to: Pt; onrampLabel: string; mid: Pt };
@@ -136,11 +138,15 @@ export function computeFabricLayout(model: FabricModel, opts?: { expanded?: bool
   const fabric = { x: fx, y: bandTop, w: FABRIC_RIGHT - fx, h: bandBottom - bandTop, cx: fx + (FABRIC_RIGHT - fx) / 2, cy: viewH / 2 };
 
   // Sites: vertically centered stack.
-  const siteGap = 92;
-  const siteSpan = (model.sites.length - 1) * siteGap;
+  /* The column used to be a fixed five, so a fixed 92px gap always fit.
+     Drilling can put seven rows here, so the gap shrinks to whatever the
+     band holds rather than running the last node off the bottom. */
+  const rows = Math.max(1, model.sites.length);
+  const siteGap = Math.min(92, (bandBottom - bandTop - NODE_H) / Math.max(1, rows - 1));
+  const siteSpan = (rows - 1) * siteGap;
   const siteStart = viewH / 2 - siteSpan / 2;
   const sites = model.sites.map((s, i) => ({
-    id: s.id, label: s.label, firstMile: s.firstMile,
+    id: s.id, label: s.label, firstMile: s.firstMile, sub: s.sub, drillable: s.drillable,
     x: SITE_X, y: siteStart + i * siteGap,
   }));
 
@@ -181,38 +187,55 @@ export function computeFabricLayout(model: FabricModel, opts?: { expanded?: bool
     return { id: f.id, label: f.label, controlled: f.controlled, a, b, ctrl, regionIds: ends };
   }).filter(Boolean) as FabricLayout['arcs'];
 
-  /* Drill-down internals: two diverse sites, two IPE paths each, on the
-     same axis. Site labels come from the model's first two sites when
-     present; the architecture facts are the product's (4 paths, 2 sites,
-     900ms BFD detection). */
+  /* Drill-down internals: the fabric's own on-ramps, grouped by the AT&T
+     facility they live in.
+
+     This used to draw a fixed cartoon — two unnamed sites, four "MX-304"
+     paths — regardless of what the estate actually had. It taught the
+     architecture and answered nothing. The inside of the fabric is the
+     on-ramp inventory: which PoPs carry this estate, what each one is
+     (NetBond / Direct Connect / ExpressRoute), and which are lit. Those are
+     in the model already; the picture just was not reading them. */
   let internals: FabricLayout['internals'];
   if (expanded) {
-    const siteLabels = [
-      model.sites[0]?.label.split(' · ')[0] ?? 'Site A',
-      model.sites[1]?.label.split(' · ')[0] ?? 'Site B',
-    ];
+    const byFacility = new Map<string, typeof model.onramps>();
+    for (const o of model.onramps) {
+      const row = byFacility.get(o.site);
+      if (row) row.push(o);
+      else byFacility.set(o.site, [o]);
+    }
+    /* The inside has to fit the same band as the outside, so the biggest
+       facilities are drawn and the tail is stated in the caption rather
+       than silently dropped. */
+    const FACILITY_MAX = 3;
+    const facilities = [...byFacility.entries()].sort((a, b) => b[1].length - a[1].length);
+    const shown = facilities.slice(0, FACILITY_MAX);
     const innerTop = fabric.y + 34;
     const innerBottom = fabric.y + fabric.h - 26;
-    const half = (innerBottom - innerTop) / 2;
-    const siteY = (i: number) => innerTop + i * half + 10;
-    const pathY = (i: number) => {
-      const siteIdx = i < 2 ? 0 : 1;
-      return siteY(siteIdx) + 18 + (i % 2) * 16;
-    };
+    const slot = (innerBottom - innerTop) / Math.max(1, shown.length);
+    const siteY = (i: number) => innerTop + i * slot + 10;
+
+    const paths: FabricLayout['internals'] extends undefined ? never : NonNullable<FabricLayout['internals']>['paths'] = [];
+    shown.forEach(([, ramps], i) => {
+      ramps.slice(0, 3).forEach((o, j) => {
+        paths.push({
+          id: `fab-path-${o.id}`,
+          label: `${o.name} · ${o.active ? 'lit' : 'dark'}`,
+          y: siteY(i) + 18 + j * 15,
+          siteIdx: (i % 2) as 0 | 1,
+        });
+      });
+    });
+
+    const lit = model.onramps.filter(o => o.active).length;
+    const hiddenFacilities = facilities.length - shown.length;
     internals = {
-      sites: siteLabels.map((label, i) => ({ id: `fab-site-${i}`, label, y: siteY(i) })),
-      paths: [0, 1, 2, 3].map(i => ({
-        id: `fab-path-${i}`,
-        label: `MX-304 · path ${i + 1}`,
-        y: pathY(i),
-        siteIdx: (i < 2 ? 0 : 1) as 0 | 1,
-      })),
-      /* Row 44 of the metric audit: these are how the fabric is BUILT -
-         a product specification, not this estate's live telemetry. Every
-         other number on this screen is engine-derived, so the caption now
-         says which kind it is rather than sitting among readings that
-         move. */
-      caption: 'How the fabric is built: 4 paths · 2 diverse sites · BFD failover detect in 900ms',
+      sites: shown.map(([facility], i) => ({ id: `fab-site-${i}`, label: facility, y: siteY(i) })),
+      paths,
+      /* Row 44 of the metric audit: the 900ms BFD figure is how the fabric
+         is BUILT — a product specification. The counts either side of it are
+         this estate's, engine-derived, so the caption names both kinds. */
+      caption: `${model.onramps.length} on-ramps in ${facilities.length} AT&T facilities · ${lit} lit${hiddenFacilities > 0 ? ` · ${hiddenFacilities} more ${hiddenFacilities === 1 ? 'facility' : 'facilities'} not shown` : ''} · BFD failover detect in 900ms`,
     };
   }
 
@@ -259,9 +282,11 @@ interface FabricHeroProps {
   justProvisioned?: string | null;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  /** Descend a rollup node in the ingress column. Absent ⇒ nodes only select. */
+  onDrillSite?: (siteId: string) => void;
 }
 
-export function FabricHero({ model, selected = null, onSelect, justProvisioned = null, expanded = false, onToggleExpand }: FabricHeroProps) {
+export function FabricHero({ model, selected = null, onSelect, justProvisioned = null, expanded = false, onToggleExpand, onDrillSite }: FabricHeroProps) {
   const layout = useMemo(() => computeFabricLayout(model, { expanded }), [model, expanded]);
   const [hover, setHover] = useState<string | null>(null);
   const [hoverInfo, setHoverInfo] = useState<{ x: number; y: number; region: FabricRegion } | null>(null);
@@ -457,16 +482,19 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
                 <button
                   type="button" aria-pressed={isSel}
                   data-fabric-node data-testid={`fabric-node-site-${s.id}`}
-                  onClick={() => select({ kind: 'site', id: s.id })}
+                  onClick={() => (s.drillable && onDrillSite ? onDrillSite(s.id) : select({ kind: 'site', id: s.id }))}
                   onMouseEnter={() => setHover(s.id)} onMouseLeave={() => setHover(null)}
                   onFocus={() => setHover(s.id)} onBlur={() => setHover(null)}
                   className={`w-full h-full flex flex-col justify-center rounded-lg border px-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-fw-link/50 ${
                     isSel ? 'border-fw-active bg-fw-ctaPrimary/[0.05] ring-1 ring-fw-link' : 'border-fw-secondary bg-fw-base hover:bg-fw-wash'
                   }`}
                 >
-                  <span className="truncate text-[11px] font-semibold text-fw-heading leading-tight">{s.label.split(' · ')[0]}</span>
+                  <span className="flex items-center gap-1 text-[11px] font-semibold text-fw-heading leading-tight">
+                    <span className="truncate">{s.label.split(' · ')[0]}</span>
+                    {s.drillable && <span aria-hidden="true" className="shrink-0 text-fw-bodyLight">▸</span>}
+                  </span>
                   <span className="truncate text-[10px] text-fw-bodyLight leading-tight">
-                    {s.firstMile ? `first-mile · ${s.firstMile}` : 'public internet'}
+                    {s.sub ?? (s.firstMile ? `first-mile · ${s.firstMile}` : 'public internet')}
                   </span>
                 </button>
               </foreignObject>
