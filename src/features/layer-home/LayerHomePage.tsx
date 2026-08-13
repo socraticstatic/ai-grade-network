@@ -4,6 +4,7 @@ import { AttIcon } from '../../components/icons/AttIcon';
 import { NAV_LAYERS, type NavLayer } from '../../components/navigation/navItems';
 import { LayerDashboard } from './dashboard/LayerDashboard';
 import { LayerHero } from './LayerHero';
+import { StageRollupBand } from './StageRollupBand';
 import { StageIntent } from '../_shared/StageIntent';
 
 /**
@@ -38,12 +39,18 @@ export function LayerHomePage({ layerKey }: { layerKey: NavLayer['key'] }) {
         <LayerHero surface={layerKey} />
       </div>
 
-      {/* 2. The promise: what this estate has been told to hold. */}
+      {/* 2. The lifecycle rolled up - where this estate stands at every
+             stage, each card a door into the stage that owns it. */}
+      <div className="mb-8">
+        <StageRollupBand surface={layerKey} />
+      </div>
+
+      {/* 3. The promise: what this estate has been told to hold. */}
       <div className="mb-8">
         <LayerDashboard surface={layerKey} />
       </div>
 
-      {/* 3. The work. */}
+      {/* 4. The work. */}
       <h2 className="text-figma-base font-bold text-fw-heading tracking-[-0.02em] mb-3">Work this layer</h2>
       <div className="grid sm:grid-cols-2 gap-3">
         {layer.items.map(item => (
