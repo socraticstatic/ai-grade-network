@@ -5,6 +5,7 @@ import { PageSection } from '../../components/common/layouts';
 import { useCloudControl } from '../../engine/react/useCloudControl';
 import { FlowBar } from '../../components/flow/FlowBar';
 import { VerdictLine } from '../_shared/VerdictLine';
+import { StageIntent } from '../_shared/StageIntent';
 import { FabricHero } from './FabricHero';
 import type { FabricModel, FabricSelection } from './FabricHero';
 import { connectVerdict } from './verdict';
@@ -90,6 +91,7 @@ export function ConnectPage() {
         description="Your cloud estate as one AT&T fabric — sites, the fabric, and cloud regions you can click and provision. On-ramps (NetBond / Direct Connect / ExpressRoute) ride the edges."
       >
         <VerdictLine>{connectVerdict(model)}</VerdictLine>
+        <StageIntent stage="connect" />
         <FlowBar cta={{ label: 'Govern these paths', to: '/naas/govern' }} />
 
         {fromDiscover && (

@@ -6,6 +6,7 @@ import { networkBinding } from './networkBinding';
 import { EventStream } from './EventStream';
 import { PathTable } from '../connect/PathTable';
 import { VerdictLine } from '../_shared/VerdictLine';
+import { StageIntent } from '../_shared/StageIntent';
 import { useNavigate } from 'react-router-dom';
 import { EstateFilterChips } from '../discover/EstateFilterChips';
 import { advisorFindings } from '../advisor/advisorModel';
@@ -54,6 +55,7 @@ export function ObservePage() {
     <div className="max-w-7xl mx-auto pb-8 space-y-4">
       <div className="px-6 pt-6 space-y-3">
         {binding.verdict && <VerdictLine>{binding.verdict}</VerdictLine>}
+        <StageIntent stage="observe" />
         <FlowBar cta={{ label: 'See the savings', to: '/naas/cost' }} />
         <EstateFilterChips model={fabricModel} cc={cc} filters={filters} onChange={setFilters} />
       </div>

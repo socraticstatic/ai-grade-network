@@ -8,6 +8,7 @@ import { RulesPanel } from './RulesPanel';
 import { PosturePanel } from './PosturePanel';
 import { GroupsPanel } from './GroupsPanel';
 import { ServiceInsertion } from './ServiceInsertion';
+import { StageIntent } from '../_shared/StageIntent';
 
 type GovernTab = 'policies' | 'groups' | 'posture';
 
@@ -63,6 +64,8 @@ export function GovernPage() {
         title="Govern"
         description="Govern · policy & segmentation — rules, enforcement, violations, and impact on the live engine."
       >
+        <StageIntent stage="govern" />
+
         <FlowBar cta={{ label: 'Observe the impact', to: '/naas/observe' }} />
 
         <TabGroup tabs={tabs} activeTab={activeTab} onChange={id => setActiveTab(id as GovernTab)} />
