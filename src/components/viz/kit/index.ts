@@ -7,3 +7,4 @@ export { computeTrendGeometry } from './trend';
 export { ShareRing } from './ShareRing';
 export { SplitBar } from './SplitBar';
 export { arcPath, layoutSegments, type Segment } from './gauge';
+export { EstateRiver, type RiverBand } from './EstateRiver';
