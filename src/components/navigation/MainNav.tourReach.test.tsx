@@ -56,7 +56,21 @@ function renderNav() {
   );
 }
 
-const launcher = () => screen.queryByRole('button', { name: /start guided tour/i });
+/* The launcher moved into the utility bar's overflow - a control started
+   once per session should not hold permanent space beside the ones a
+   viewer uses constantly. "Reachable at every width" is still the
+   guarantee under test; it is now one click behind the overflow, so these
+   helpers open it first. */
+const openOverflow = () => {
+  const more = screen.queryByTestId('utility-overflow');
+  if (more) fireEvent.click(more);
+};
+const launcher = () => {
+  const direct = screen.queryByRole('button', { name: /start guided tour/i });
+  if (direct) return direct;
+  openOverflow();
+  return screen.queryByRole('button', { name: /start guided tour/i });
+};
 
 describe('the guided tour is reachable at every width', () => {
   beforeEach(() => {

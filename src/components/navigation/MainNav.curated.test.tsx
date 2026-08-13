@@ -21,7 +21,11 @@ describe('MainNav curated AI-grade network nav — layers on top', () => {
     // Tasks lives beside the bell with the queue's live count - state that
     // follows you, never a tab.
     expect(screen.getByTestId('tasks-badge')).toBeInTheDocument();
-    expect(Number(screen.getByTestId('tasks-badge-count').textContent)).toBeGreaterThan(0);
+    /* The badge is a DOT now, not a numeral: "10" crammed into a 16px
+       circle beside a second badged circle was clutter, and at that size
+       whether the estate wants attention is the signal, not how many. The
+       count rides data-count and the accessible name. */
+    expect(Number(screen.getByTestId('tasks-badge-count').dataset.count)).toBeGreaterThan(0);
     // Verbs never appear in the top bar — they live in the left rail.
     for (const verb of ['Connect', 'Govern', 'Observe', 'Cost']) {
       expect(screen.queryByRole('tab', { name: verb })).toBeNull();

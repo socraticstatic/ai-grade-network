@@ -86,13 +86,17 @@ export function NotificationsButton() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center h-9 w-9 text-fw-heading hover:text-fw-body transition-colors duration-200 relative"
+        aria-label={`Notifications: ${notifications.length}`}
+        className="relative flex h-9 w-9 items-center justify-center rounded-full text-fw-body transition-colors hover:bg-fw-wash hover:text-fw-heading"
       >
-        <AttIcon name="bell" className="h-5 w-5" />
+        <AttIcon name="bell" className="h-[18px] w-[18px]" />
+        {/* Matches TasksButton: a dot, not a crammed numeral. The count is
+            in the accessible name and in the panel this opens. */}
         {notifications.length > 0 && (
-          <span className="absolute -top-1 -right-1 h-4 w-4 text-figma-sm flex items-center justify-center bg-fw-error text-white rounded-full">
-            {notifications.length}
-          </span>
+          <span
+            aria-hidden="true"
+            className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-fw-error ring-2 ring-fw-base"
+          />
         )}
       </button>
 

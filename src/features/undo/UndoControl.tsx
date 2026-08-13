@@ -53,27 +53,35 @@ export function UndoControl() {
     }
   }, [actions]);
 
+  /* Menu rows, not icon buttons: both of these moved into the utility
+     bar's overflow, where a label can say what the icon only hinted at.
+     Undo still states WHAT it would undo - that sentence was the control's
+     whole value and it was previously only reachable as a tooltip. */
   return (
-    <div className="flex items-center gap-0.5">
+    <>
       <button
         type="button"
         onClick={undo}
         disabled={!canUndo}
         aria-label={canUndo ? `Undo ${canUndo}` : 'Nothing to undo'}
-        title={canUndo ? `Undo ${canUndo}` : 'Nothing to undo'}
-        className="inline-flex items-center justify-center h-9 w-9 rounded-full text-fw-bodyLight hover:text-fw-body hover:bg-fw-wash transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-figma-sm text-fw-body transition-colors hover:bg-fw-wash disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       >
-        <Undo2 className="h-[18px] w-[18px]" />
+        <Undo2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span className="min-w-0 truncate">{canUndo ? `Undo ${canUndo}` : 'Nothing to undo'}</span>
       </button>
       <button
         type="button"
         onClick={share}
         aria-label="Share a replay link"
-        title={copied ? 'Copied!' : 'Copy a replay link to the clipboard'}
-        className="inline-flex items-center justify-center h-9 w-9 rounded-full text-fw-bodyLight hover:text-fw-body hover:bg-fw-wash transition-colors"
+        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-figma-sm text-fw-body transition-colors hover:bg-fw-wash"
       >
-        {copied ? <Check className="h-[18px] w-[18px] text-[#2d7e24]" /> : <Share2 className="h-[18px] w-[18px]" />}
+        {copied ? (
+          <Check className="h-4 w-4 shrink-0 text-fw-success" aria-hidden="true" />
+        ) : (
+          <Share2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+        )}
+        <span>{copied ? 'Replay link copied' : 'Share a replay link'}</span>
       </button>
-    </div>
+    </>
   );
 }
