@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import { useCloudControlLive } from '../../engine/react/useCloudControl';
 import { WhyFigure } from '../../components/viz/WhyFigure';
-import { SplitBar, EstateRiver } from '../../components/viz/kit';
+import { SplitBar } from '../../components/viz/kit';
 import { layerHero } from './heroModel';
 import type { Surface } from './dashboard/registry';
 
@@ -22,21 +22,6 @@ export function LayerHero({ surface }: { surface: Surface }) {
       <p data-testid="layer-verdict" className="text-[19px] font-semibold leading-snug tracking-[-0.02em] text-fw-heading">
         {hero.verdict}
       </p>
-
-      {/* The product's own picture, leading: what you own, the two paths it
-          can take, where it lands - with the traffic moving. */}
-      {hero.river.sources.length > 0 && hero.river.dests.length > 0 && (
-        <div
-          data-testid="hero-river"
-          className="overflow-hidden rounded-2xl border border-fw-secondary bg-gradient-to-br from-fw-wash to-fw-base p-4"
-        >
-          <EstateRiver
-            sources={hero.river.sources}
-            dests={hero.river.dests}
-            privateShare={hero.river.privateShare}
-          />
-        </div>
-      )}
 
       <div className="grid gap-3 lg:grid-cols-3">
         {/* The number, and the one thing to do with it. */}

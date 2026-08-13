@@ -1,4 +1,6 @@
-import type { SankeyModel, SankeyNode } from './sankeyModel';
+import type { SankeyModel, SankeyNode, SankeyDrill } from './sankeyModel';
+import { PATH_NODES } from './sankeyModel';
+import { SankeyChart } from './SankeyChart';
 import type { SiteClass } from '../discover/discoveryModel';
 import { VIZ_HEX, ribbonPath } from '../../components/viz/kit';
 
@@ -227,12 +229,17 @@ export function SankeyPanel({
   scope,
   drill = null,
   onDrill,
+  drills,
+  onDrills,
 }: {
   model: SankeyModel;
   /** "All flows - N site-originated, M cloud-originated" under the chart. */
   scope?: { siteFlows: number; cloudFlows: number };
   drill?: SiteClass | null;
   onDrill?: (cls: SiteClass | null) => void;
+  /** Per-band drill state and its setter - sites, paths, clouds. */
+  drills?: SankeyDrill;
+  onDrills?: (d: SankeyDrill) => void;
 }) {
   const g = computeSankeyGeometry(model);
   const total = r1(g.privateGbps + g.publicGbps);
@@ -261,48 +268,72 @@ export function SankeyPanel({
         </span>
       </div>
 
-      {rollupByName.size > 0 && onDrill && (
-        <div className="mb-2 flex flex-wrap items-center gap-2" data-testid="sankey-drill">
-          {[...rollupByName.entries()].map(([name, r]) => {
-            const on = drill === r.siteClass;
-            return (
-              <button
-                key={name}
-                type="button"
-                data-testid="sankey-rollup-node"
-                aria-pressed={on}
-                onClick={() => onDrill(on ? null : r.siteClass)}
-                className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-                  on
-                    ? 'border-fw-active bg-fw-accent text-fw-link'
-                    : 'border-fw-secondary bg-fw-wash text-fw-body hover:border-fw-active hover:text-fw-link'
-                }`}
-              >
-                {on ? `${name} — by metro` : `Split ${name} by metro`}
-              </button>
-            );
-          })}
+      {/* Drilling is a click on the node itself now, so this row is a
+          breadcrumb rather than a wall of chips: it says where you are and
+          how to get back, and says nothing at all when you are at the top. */}
+      {drill && onDrill && (
+        <div className="mb-2 flex items-center gap-2 text-figma-xs" data-testid="sankey-drill">
+          <span className="text-fw-bodyLight">Showing</span>
+          <span className="font-semibold text-fw-heading">
+            {[...rollupByName.entries()].find(([, r]) => r.siteClass === drill)?.[0] ?? drill} by metro
+          </span>
+          <button
+            type="button"
+            data-testid="sankey-drill-clear"
+            onClick={() => onDrill(null)}
+            className="rounded-full border border-fw-secondary px-2.5 py-0.5 font-medium text-fw-body transition-colors hover:border-fw-active hover:text-fw-link"
+          >
+            Back to all sites
+          </button>
         </div>
       )}
+      {drills?.path && onDrills && (
+        <div className="mb-2 flex items-center gap-2 text-figma-xs" data-testid="sankey-path-drill">
+          <span className="text-fw-bodyLight">Showing</span>
+          <span className="font-semibold text-fw-heading">
+            {drills.path === 'private' ? 'the AT&T fabric by circuit' : 'the public path by exit'}
+          </span>
+          <button
+            type="button"
+            onClick={() => onDrills({ ...drills, path: null })}
+            className="rounded-full border border-fw-secondary px-2.5 py-0.5 font-medium text-fw-body transition-colors hover:border-fw-active hover:text-fw-link"
+          >
+            Collapse
+          </button>
+        </div>
+      )}
+      {!drill && !drills?.path && rollupByName.size > 0 && onDrill && (
+        <p className="mb-2 text-figma-xs text-fw-bodyLight" data-testid="sankey-drill-hint">
+          Click a site group to split it by metro, or a path to split it by circuit.
+        </p>
+      )}
 
-      <svg
-        viewBox={`0 0 ${g.w} ${g.h}`}
-        className="w-full"
-        role="img"
-        aria-label="Traffic flow: sources, the path each flow rides, and its destination"
-      >
-        {g.ribbons.map(r => (
-          <path key={r.key} d={r.d} fill={r.fill} className="opacity-30 transition-opacity hover:opacity-60">
-            <title>{r.label}</title>
-          </path>
-        ))}
-        {g.nodes.map(n => (
-          <g key={`${n.band}-${n.name}`}>
-            <rect x={n.x} y={n.y} width={BAR_W} height={n.h} rx={3} fill={n.fill} />
-            <NodeLabel n={n} />
-          </g>
-        ))}
-      </svg>
+      {/* The chart itself, on ECharts' sankey layout: it assigns depth,
+          orders nodes to minimise crossings and relaxes them iteratively -
+          none of which the hand-rolled version did, which is why bank-scale
+          data crossed its own ribbons. Hovering isolates a path's whole
+          trajectory; clicking a rollup node drills it. */}
+      <SankeyChart
+        model={model}
+        activeName={drill ? model.nodes.find(n => n.rollup?.siteClass === drill)?.name ?? null : null}
+        onNodeClick={node => {
+          /* Any band can open. Sites split by metro, and the fabric (or the
+             public path) splits into the circuits underneath it - "which of
+             my on-ramps actually carries the branches" is the question a
+             bank asks the moment it sees how little is on-net. */
+          if (node.rollup && onDrill) {
+            onDrill(drill === node.rollup.siteClass ? null : node.rollup.siteClass);
+            return;
+          }
+          if (node.band === 'path' && onDrills) {
+            const isPrivate = node.name === PATH_NODES.private;
+            const isPublic = node.name === PATH_NODES.public;
+            if (!isPrivate && !isPublic) return; // already drilled; click the breadcrumb to go back
+            const next = isPrivate ? 'private' : 'public';
+            onDrills({ ...drills, path: drills?.path === next ? null : next });
+          }
+        }}
+      />
 
       {scope && (
         <p data-testid="sankey-scope-caption" className="mt-2 text-[11px] text-fw-bodyLight">

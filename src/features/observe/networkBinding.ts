@@ -8,7 +8,7 @@ import type {
   Briefing,
   BriefingBlock,
 } from './ObservabilityBinding';
-import { buildSankey, siteOriginSummary } from './sankeyModel';
+import { buildSankey, siteOriginSummary, type SankeyDrill } from './sankeyModel';
 import { EMPTY_ESTATE_FILTERS, type EstateFilters } from '../discover/estateFilters';
 import type { SiteClass } from '../discover/discoveryModel';
 import { flowLogs, BUCKETS, type FlowLogRecord } from './flowLogs';
@@ -350,6 +350,7 @@ export function networkBinding(
   cc: CloudControl,
   filters: EstateFilters = EMPTY_ESTATE_FILTERS,
   drill: SiteClass | null = null,
+  drills: SankeyDrill = {},
 ): ObservabilityBinding {
   return {
     layer: 'network',
@@ -363,7 +364,7 @@ export function networkBinding(
     briefing: () => buildBriefing(cc),
     verdict: buildVerdict(cc),
     moments: () => cc.windowMoments(),
-    sankey: () => buildSankey(cc, { filters, drill }),
+    sankey: () => buildSankey(cc, { filters, drill, drills: { ...drills, siteClass: drill } }),
     sankeyScope: () => siteOriginSummary(cc, filters),
   };
 }

@@ -15,6 +15,7 @@ import { markAdvisorDone } from '../advisor/advisorPhase';
 import { resolveProfile } from '../../engine/estateProfile';
 import { EMPTY_ESTATE_FILTERS, type EstateFilters } from '../discover/estateFilters';
 import type { SiteClass } from '../discover/discoveryModel';
+import type { SankeyDrill } from './sankeyModel';
 import type { FabricModel } from '../connect/FabricHero';
 
 export function ObservePage() {
@@ -23,13 +24,14 @@ export function ObservePage() {
      the same thing on both. Drill opens one class into its metros. */
   const [filters, setFilters] = useState<EstateFilters>(EMPTY_ESTATE_FILTERS);
   const [drill, setDrill] = useState<SiteClass | null>(null);
+  const [drills, setDrills] = useState<SankeyDrill>({});
   /* Built per render, NOT inside useCloudControl's selector: that hook
      memoizes on the engine version alone, so a selector closing over React
      state would keep serving the filters it was first called with - the
      chips would render and do nothing. The `cc` subscription below still
      re-renders this page on every engine change. */
   const cc = useCloudControl(c => c);
-  const binding = networkBinding(cc, filters, drill);
+  const binding = networkBinding(cc, filters, drill, drills);
   const navigate = useNavigate();
   /* Phase 3, the connective tissue: the advisor's money findings render
      HERE as the same cards, with the same offer ladders, that the advisor
@@ -59,7 +61,13 @@ export function ObservePage() {
         <FlowBar cta={{ label: 'See the savings', to: '/naas/cost' }} />
         <EstateFilterChips model={fabricModel} cc={cc} filters={filters} onChange={setFilters} />
       </div>
-      <ObservabilityShell binding={binding} sankeyDrill={drill} onSankeyDrill={setDrill} />
+      <ObservabilityShell
+        binding={binding}
+        sankeyDrill={drill}
+        onSankeyDrill={setDrill}
+        sankeyDrills={drills}
+        onSankeyDrills={setDrills}
+      />
       {/* Paths — the steerable flow table (routeFlows / steerFlow / routingFailover),
           relocated here from Connect. Governing individual paths is an observability
           concern; Connect stays focused on fabric attach. */}

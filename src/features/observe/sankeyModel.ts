@@ -56,6 +56,8 @@ function rowEndpoints(row: RouteFlowRow): { source: string; dest: string; pathKi
 export interface SankeyNode {
   name: string;
   band: 'source' | 'path' | 'dest';
+  /** On a path node: which side of the estate it belongs to. */
+  pathKind?: 'private' | 'public';
   /** Present on site-origin rollup nodes ("2,840 branches") - the class
    *  and how many sites it aggregates. Never one node per site. */
   rollup?: { siteClass: SiteClass; count: number };
@@ -78,11 +80,35 @@ export const PATH_NODES = {
   public: 'Public internet',
 };
 
+/** Circuits carrying a branch, for the fabric's own drill. */
+interface OnrampSeed { id: string; name?: string; type?: string; active?: boolean }
+
+/**
+ * Where the viewer has drilled in, per band.
+ *
+ * A bank-scale estate cannot be drawn entity-by-entity in ANY band: 4,183
+ * sites, the circuits carrying them, and the regions they land in all
+ * exceed what a flow diagram can say at once. So every band starts rolled
+ * up and opens independently - split the branches by metro WHILE the
+ * fabric is split by on-ramp, if that is the question. Each axis is
+ * nullable and they compose.
+ */
+export interface SankeyDrill {
+  /** A site class opened into its top metros. */
+  siteClass?: SiteClass | null;
+  /** A path opened into the circuits (fabric) or exits (public) beneath it. */
+  path?: 'private' | 'public' | null;
+  /** A cloud opened into its regions. */
+  cloud?: string | null;
+}
+
 export interface BuildOpts {
   /** Same filter vocabulary Discover uses - the site band narrows by class. */
   filters?: EstateFilters;
-  /** Expand one class into its top metros instead of a single rollup node. */
+  /** Legacy single-axis drill, kept so existing callers compile. */
   drill?: SiteClass | null;
+  /** Per-band drill state; supersedes `drill` when present. */
+  drills?: SankeyDrill;
 }
 
 /** Site rows the chart is currently counting, for the scope caption. */
@@ -102,7 +128,10 @@ const TOP_METROS = 8;
 
 export function buildSankey(cc: CloudControl, opts: BuildOpts = {}): SankeyModel {
   const filters = opts.filters ?? EMPTY_ESTATE_FILTERS;
-  const drill = opts.drill ?? null;
+  const drills: SankeyDrill = opts.drills ?? { siteClass: opts.drill ?? null };
+  const drill = drills.siteClass ?? null;
+  const pathDrill = drills.path ?? null;
+  const cloudDrill = drills.cloud ?? null;
   const rows = cc.routeFlows() as RouteFlowRow[];
 
   // Collect all sources and destinations
@@ -132,6 +161,29 @@ export function buildSankey(cc: CloudControl, opts: BuildOpts = {}): SankeyModel
     const mk = `${b.siteClass}/${b.city}`;
     (metroSites.get(mk) ?? metroSites.set(mk, new Set()).get(mk)!).add(b.id);
   }
+  /* When the fabric is drilled, the private path stops being one bar and
+     becomes the circuits underneath it - "which of my on-ramps actually
+     carries the branches" is the question a bank asks the moment it sees
+     33% on-net. Public splits the same way into the exits it uses. A
+     branch names its own circuit (`onrampId`), so this attribution is read
+     from the estate, never apportioned. */
+  const onrampById = new Map<string, OnrampSeed>(
+    ((cc.onramps ?? []) as OnrampSeed[]).map(o => [o.id, o]),
+  );
+  const branchOnramp = new Map<string, string>();
+  for (const b of branchesOf(cc)) {
+    if (b.onrampId) branchOnramp.set(b.id, b.onrampId);
+  }
+  const pathNodeFor = (kind: 'private' | 'public', branchId?: string): string => {
+    if (kind === 'private') {
+      if (pathDrill !== 'private') return PATH_NODES.private;
+      const o = branchId ? onrampById.get(branchOnramp.get(branchId) ?? '') : undefined;
+      return o ? `${o.name ?? o.id}` : 'AT&T core';
+    }
+    if (pathDrill !== 'public') return PATH_NODES.public;
+    return 'Hyperscaler egress';
+  };
+
   const cloudName = new Map<string, string>();
   for (const c of (cc.clouds ?? []) as { id: string; name: string }[]) cloudName.set(c.id, c.name);
   /* A drilled class splits into its top metros; every other class stays a
@@ -153,8 +205,11 @@ export function buildSankey(cc: CloudControl, opts: BuildOpts = {}): SankeyModel
     if (n !== undefined) return `${city} · ${nfSite.format(n)}`;
     return `Other · ${nfSite.format(drilledMetros?.restN ?? 0)}`;
   };
-  // source node name -> pathKind -> dest cloud name -> gbps
-  const siteAgg = new Map<string, Map<'private' | 'public', Map<string, number>>>();
+  /* source node -> path NODE NAME -> dest -> gbps. Keyed by the resolved
+     path node so a drilled fabric splits into circuits without the rest of
+     the pipeline knowing it happened. */
+  const siteAgg = new Map<string, Map<string, Map<string, number>>>();
+  const pathKindOf = new Map<string, 'private' | 'public'>();
   const nodeClass = new Map<string, SiteClass>();
   const nodeCount = new Map<string, number>();
   const ccFlows = (cc as unknown as { flows?: () => BranchFlowRow[] }).flows;
@@ -173,10 +228,12 @@ export function buildSankey(cc: CloudControl, opts: BuildOpts = {}): SankeyModel
         : (classCount.get(cls) ?? 0),
     );
     const kind: 'private' | 'public' = r.viaPublic ? 'public' : 'private';
+    const pathName = pathNodeFor(kind, id);
+    pathKindOf.set(pathName, kind);
     const byKind = siteAgg.get(name) ?? new Map();
-    const byDest = byKind.get(kind) ?? new Map<string, number>();
+    const byDest = byKind.get(pathName) ?? new Map<string, number>();
     byDest.set(dest, (byDest.get(dest) ?? 0) + r.gbps);
-    byKind.set(kind, byDest);
+    byKind.set(pathName, byDest);
     siteAgg.set(name, byKind);
     destsSet.add(dest);
   }
@@ -197,10 +254,27 @@ export function buildSankey(cc: CloudControl, opts: BuildOpts = {}): SankeyModel
     })),
   ];
 
-  const pathNodes: SankeyNode[] = [
-    { name: PATH_NODES.private, band: 'path' },
-    { name: PATH_NODES.public, band: 'path' },
-  ];
+  /* The path band: the two paths, or - where one is drilled - the circuits
+     underneath it. `drillable` marks the ones a click can still open, so
+     the chart can advertise them without guessing. */
+  const pathNames = new Set<string>([PATH_NODES.private, PATH_NODES.public]);
+  for (const name of pathKindOf.keys()) pathNames.add(name);
+  if (pathDrill === 'private') {
+    pathNames.delete(PATH_NODES.private);
+    pathNames.add('AT&T core'); // where cloud-originated private traffic lands
+  }
+  if (pathDrill === 'public') {
+    pathNames.delete(PATH_NODES.public);
+    pathNames.add('Hyperscaler egress');
+  }
+  const pathNodes: SankeyNode[] = [...pathNames].map(name => ({
+    name,
+    band: 'path' as const,
+    pathKind:
+      name === PATH_NODES.public || pathKindOf.get(name) === 'public'
+        ? ('public' as const)
+        : ('private' as const),
+  }));
 
   const destNodes: SankeyNode[] = Array.from(destsSet).sort().map(name => ({
     name,
@@ -224,8 +298,14 @@ export function buildSankey(cc: CloudControl, opts: BuildOpts = {}): SankeyModel
 
     const sourceIdx = nodeIndex.get(`source:${source}`)!;
 
-    const pathName = pathKind === 'private' ? PATH_NODES.private : PATH_NODES.public;
-    const pathIdx = nodeIndex.get(`path:${pathName}`)!;
+    /* When a path is drilled its umbrella node is gone, so cloud-originated
+       traffic lands on the honest stand-in: the core for the fabric, the
+       named exit for public. Never silently dropped - a flow that vanishes
+       from the picture is a flow the totals still count. */
+    let pathName = pathKind === 'private' ? PATH_NODES.private : PATH_NODES.public;
+    if (pathDrill === pathKind) pathName = pathKind === 'private' ? 'AT&T core' : 'Hyperscaler egress';
+    const pathIdx = nodeIndex.get(`path:${pathName}`);
+    if (pathIdx === undefined) continue;
 
     const destIdx = nodeIndex.get(`dest:${dest}`)!;
 
@@ -272,8 +352,10 @@ export function buildSankey(cc: CloudControl, opts: BuildOpts = {}): SankeyModel
   // of real branch flows, rounded to keep the labels readable.
   for (const [name, byKind] of siteAgg) {
     const clsIdx = nodeIndex.get(`source:${name}`)!;
-    for (const [kind, byDest] of byKind) {
-      const pathIdx = nodeIndex.get(`path:${kind === 'private' ? PATH_NODES.private : PATH_NODES.public}`)!;
+    for (const [pathName, byDest] of byKind) {
+      const kind = pathKindOf.get(pathName) ?? 'private';
+      const pathIdx = nodeIndex.get(`path:${pathName}`);
+      if (pathIdx === undefined) continue;
       let total = 0;
       for (const [dest, gbps] of byDest) {
         const destIdx = nodeIndex.get(`dest:${dest}`)!;

@@ -1,6 +1,5 @@
 import type { CloudControl } from '../../engine/types';
 import { moneyOnTheTable } from '../discover/stackFigures';
-import { siteRollup, cloudRollup, SITE_CLASS_PLURAL } from '../discover/discoveryModel';
 import { aiSpendTotals, fmtTokens, fmtUsd } from '../ai-fabric/aiSpend';
 import type { Surface } from './dashboard/registry';
 
@@ -38,22 +37,12 @@ export interface HeroSplit {
   hex: string;
 }
 
-/** The river's three bands - what you own, the paths, where it lands. */
-export interface HeroRiver {
-  sources: { key: string; label: string; value: number; sub?: string }[];
-  dests: { key: string; label: string; value: number }[];
-  /** 0..1 already on the AT&T fabric. */
-  privateShare: number;
-}
-
 export interface LayerHero {
   /** The layer's argument, in one sentence. */
   verdict: string;
   headline: { value: string; label: string; to: string; cta: string };
   /** What the headline is made of - drawn as a SplitBar under it. */
   split: HeroSplit[];
-  /** The estate as a flowing picture - the product's own diagram. */
-  river: HeroRiver;
   evidence: { label: string; value: string }[];
   source: string;
   risks: HeroStat[];
@@ -81,18 +70,6 @@ export function layerHero(cc: CloudControl, surface: Surface): LayerHero {
         label: 'spent on tokens today',
         to: '/ai/cost',
         cta: 'See the spend',
-      },
-      river: {
-        sources: t.rows.slice(0, 4).map(r => ({
-          key: r.tag,
-          label: r.tag,
-          value: Math.max(r.tokensToday, 1),
-          sub: `${fmtTokens(r.tokensToday)} today`,
-        })),
-        dests: [
-          { key: 'models', label: 'Model endpoints', value: Math.max(t.tokensToday, 1) },
-        ],
-        privateShare: t.tokensToday > 0 ? t.governedTokensToday / t.tokensToday : 0,
       },
       split: [
         { key: 'ungoverned', label: 'No policy holding it', value: t.ungovernedTokensToday, hex: '#b3541e' },
@@ -142,23 +119,6 @@ export function layerHero(cc: CloudControl, surface: Surface): LayerHero {
       label: `on the table across ${table.moves} ${table.moves === 1 ? 'move' : 'moves'} the advisor can act on now`,
       to: '/discover?draft=andi',
       cta: `Review ${table.moves} ${table.moves === 1 ? 'move' : 'moves'}`,
-    },
-    river: {
-      sources: siteRollup(cc).map(r => ({
-        key: r.siteClass,
-        label: `${nf.format(r.count)} ${SITE_CLASS_PLURAL[r.siteClass]}`,
-        value: Math.max(r.count, 1),
-        sub: `${nf.format(r.onNet)} on AT&T`,
-      })),
-      dests: cloudRollup(cc)
-        .filter(c => c.workloads > 0)
-        .sort((a, b) => b.workloads - a.workloads)
-        .slice(0, 4)
-        .map(c => ({ key: c.cloudId, label: c.name, value: c.workloads })),
-      privateShare: (() => {
-        const e = cc.egress() as { pub: number; priv: number; total: number };
-        return e.total > 0 ? e.priv / e.total : 0;
-      })(),
     },
     split: [
       { key: 'public', label: 'Public internet', value: egressPub, hex: '#94a3b8' },
