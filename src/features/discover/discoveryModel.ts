@@ -414,6 +414,80 @@ export function siteRollup(cc: CloudControl): { siteClass: SiteClass; count: num
   return CLASS_ORDER.filter(c => acc.has(c)).map(c => ({ siteClass: c, ...acc.get(c)! }));
 }
 
+/* ------------------------- estate breakdowns ------------------------- */
+
+/**
+ * The dimensions a bank-scale site estate can be broken down by.
+ *
+ * The brainstorm asked for the customer's own mental models, not ours:
+ * "carve the estate down by region, site type, business unit, connection
+ * type, whatever the customer's mental model is". Site type answers "what
+ * kind of place is this", region answers "where", connection answers "how
+ * does it reach us", metro answers "which city" - and a viewer switches
+ * between them without the page reloading a different screen.
+ */
+export type BreakdownDim = 'class' | 'region' | 'connection' | 'metro';
+
+export const BREAKDOWN_LABEL: Record<BreakdownDim, string> = {
+  class: 'Site type',
+  region: 'Region',
+  connection: 'Connection',
+  metro: 'Metro',
+};
+
+export interface BreakdownRow {
+  /** Stable key for open-state and React keys. */
+  key: string;
+  /** What the group is called, in the customer's words. */
+  label: string;
+  count: number;
+  /** How many of them reach AT&T over a circuit today. */
+  onNet: number;
+  members: Branch[];
+}
+
+/**
+ * Group premises by any dimension, largest group first (except site class,
+ * which keeps its fixed dc-office-branch-atm order so the taxonomy reads the
+ * same everywhere it appears).
+ *
+ * Callers pass an already-filtered branch list: filtering decides WHICH
+ * sites are in scope, this decides how the survivors are stacked. Keeping
+ * the two separate is what lets the chips and the breakdown control compose
+ * without either knowing about the other.
+ */
+export function siteBreakdown(
+  branches: Branch[],
+  dim: BreakdownDim,
+  keyOf: { region: (b: Branch) => string; connection: (b: Branch) => string },
+): BreakdownRow[] {
+  const acc = new Map<string, BreakdownRow>();
+  const add = (key: string, label: string, b: Branch) => {
+    const row = acc.get(key) ?? { key, label, count: 0, onNet: 0, members: [] as Branch[] };
+    row.count += 1;
+    if (b.onrampId) row.onNet += 1;
+    row.members.push(b);
+    acc.set(key, row);
+  };
+
+  for (const b of branches) {
+    if (dim === 'class') add(b.siteClass, SITE_CLASS_PLURAL[b.siteClass], b);
+    else if (dim === 'region') {
+      const r = keyOf.region(b);
+      add(r, r === 'unknown' ? 'Region not tagged' : `${r.charAt(0).toUpperCase()}${r.slice(1)}`, b);
+    } else if (dim === 'connection') {
+      const c = keyOf.connection(b);
+      add(c, c === 'off-net' ? 'Not on AT&T yet' : c, b);
+    } else add(b.city, b.city, b);
+  }
+
+  const rows = [...acc.values()];
+  if (dim === 'class') {
+    return CLASS_ORDER.filter(c => acc.has(c)).map(c => acc.get(c)!);
+  }
+  return rows.sort((a, b) => b.count - a.count);
+}
+
 /**
  * One row per cloud with its region and workload counts.
  *

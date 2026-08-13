@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  siteBreakdown,
+  branchesOf,
+  type Branch,
   allKeys,
   cloudVpcCount,
   cloudRegionCount,
@@ -518,5 +521,46 @@ describe('rollups', () => {
   it('needsRollup trips strictly above the threshold', () => {
     expect(needsRollup(ROLLUP_THRESHOLD)).toBe(false);
     expect(needsRollup(ROLLUP_THRESHOLD + 1)).toBe(true);
+  });
+});
+
+/* The brainstorm asked for the customer's own mental models, not ours:
+   "carve the estate down by region, site type, business unit, connection
+   type". These pin the grouping half of that - filtering decides which
+   sites are in scope, siteBreakdown decides how the survivors stack. */
+describe('siteBreakdown', () => {
+  const keyOf = {
+    region: (b: Branch) => b.cloudTags?.Region ?? 'unknown',
+    connection: (b: Branch) => (b.onrampId ? 'NetBond' : 'off-net'),
+  };
+
+  it('groups by site class in the fixed taxonomy order, not by size', () => {
+    const rows = siteBreakdown(branchesOf(CC as never), 'class', keyOf);
+    expect(rows.map(r => r.key)).toEqual(['dc', 'office']); // ACME: 1 dc, 5 offices
+    expect(rows[0].count).toBe(1);
+    expect(rows[1].count).toBe(5);
+  });
+
+  it('groups by region, largest group first, and counts AT&T reach per group', () => {
+    const rows = siteBreakdown(branchesOf(CC as never), 'region', keyOf);
+    expect(rows.length).toBeGreaterThan(1);
+    for (let i = 1; i < rows.length; i++) expect(rows[i - 1].count).toBeGreaterThanOrEqual(rows[i].count);
+    const total = rows.reduce((s, r) => s + r.count, 0);
+    expect(total).toBe(branchesOf(CC as never).length); // every site lands in exactly one group
+    for (const r of rows) expect(r.onNet).toBeLessThanOrEqual(r.count);
+  });
+
+  it('groups by metro and by connection without losing a site', () => {
+    for (const dim of ['metro', 'connection'] as const) {
+      const rows = siteBreakdown(branchesOf(CC as never), dim, keyOf);
+      expect(rows.reduce((s, r) => s + r.count, 0)).toBe(branchesOf(CC as never).length);
+      expect(rows.every(r => r.members.length === r.count)).toBe(true);
+    }
+  });
+
+  it('names an untagged region and an off-net site in the customer\'s words', () => {
+    const orphan = [{ id: 'x', name: 'x', city: 'Nowhere', cidrs: [], siteClass: 'branch' }] as Branch[];
+    expect(siteBreakdown(orphan, 'region', keyOf)[0].label).toBe('Region not tagged');
+    expect(siteBreakdown(orphan, 'connection', keyOf)[0].label).toBe('Not on AT&T yet');
   });
 });

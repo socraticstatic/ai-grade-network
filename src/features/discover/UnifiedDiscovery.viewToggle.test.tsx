@@ -49,9 +49,11 @@ describe('UnifiedDiscovery estate filter chips', () => {
   it('Public internet narrows the tree to groups holding a public region, and marks the chip pressed', () => {
     renderUD();
     const chips = screen.getByTestId('estate-filter-chips');
-    const publicChip = within(chips).getByRole('button', { name: 'Public internet' });
-    fireEvent.click(publicChip);
-    expect(publicChip).toHaveAttribute('aria-pressed', 'true');
+    // Path is a facet menu now; the narrowing behaviour it drives is the
+    // same one this test has always asserted.
+    fireEvent.click(within(chips).getByTestId('facet-path'));
+    fireEvent.click(within(chips).getByRole('option', { name: 'Public internet' }));
+    expect(within(chips).getByTestId('facet-path')).toHaveTextContent('Path: Public internet');
 
     const fabricModel = CC.fabricModel();
     for (const c of CC.clouds as { id: string; name: string }[]) {
@@ -71,10 +73,11 @@ describe('UnifiedDiscovery estate filter chips', () => {
   it('Clear filters restores every group after Public internet narrowed the tree', () => {
     renderUD();
     const chips = screen.getByTestId('estate-filter-chips');
-    fireEvent.click(within(chips).getByRole('button', { name: 'Public internet' }));
+    fireEvent.click(within(chips).getByTestId('facet-path'));
+    fireEvent.click(within(chips).getByRole('option', { name: 'Public internet' }));
     fireEvent.click(within(chips).getByRole('button', { name: /clear filters/i }));
 
-    expect(within(chips).getByRole('button', { name: 'Public internet' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(chips).getByTestId('facet-path')).toHaveTextContent('Path');
     expect(within(chips).queryByRole('button', { name: /clear filters/i })).not.toBeInTheDocument();
     for (const c of CC.clouds as { id: string; name: string }[]) {
       expect(screen.getByRole('button', { name: c.name })).toBeInTheDocument();
@@ -82,47 +85,59 @@ describe('UnifiedDiscovery estate filter chips', () => {
   });
 });
 
-/* Task 5 — the site-class facet's chip group. ACME's default seed carries
-   only dc + office branches (2 of the 4 classes), which is enough to clear
-   the group's `siteRollup(cc).length > 1` gate — so the group is visible
-   under the default demo tenant, not just Meridian, and all four fixed
-   labels render regardless of which classes ACME actually has (the same
-   fixed-set idiom `path`/`domain` already use, not the presence-filtered
-   idiom `cloud` uses). */
-describe('UnifiedDiscovery estate filter chips — site class', () => {
-  it('renders all four site-class chips under ACME (dc+office clears the >1 gate)', () => {
+/* The estate facets. ACME's default seed carries dc + office branches, two
+   distinct values, which is what makes the Site type facet render at all -
+   a facet with one value cannot narrow anything and is not shown. */
+describe('UnifiedDiscovery estate filters — facet menus', () => {
+  /* Seven facets (cloud, path, domain, site type, region, business unit,
+     connection) would be twenty-plus chips as a flat row - the "too busy"
+     failure this program keeps being told about. Each facet is one menu
+     that states its own choice when set. The BEHAVIOUR under test is
+     unchanged: pick a value, it narrows; clear it, it stops. */
+  it('offers a Site type facet whose options are the classes this estate holds', () => {
     renderUD();
     const chips = screen.getByTestId('estate-filter-chips');
-    for (const label of ['Data centers', 'Offices', 'Branches', 'ATMs']) {
-      expect(within(chips).getByRole('button', { name: label })).toBeInTheDocument();
-    }
+    fireEvent.click(within(chips).getByTestId('facet-site-type'));
+    // ACME seeds one dc + five offices; a facet never offers an empty choice.
+    expect(within(chips).getByRole('option', { name: 'Data centers' })).toBeInTheDocument();
+    expect(within(chips).getByRole('option', { name: 'Offices' })).toBeInTheDocument();
+    expect(within(chips).queryByRole('option', { name: 'ATMs' })).not.toBeInTheDocument();
   });
 
-  it('clicking a site-class chip presses it; clicking again returns to all', () => {
+  it('picking a value narrows and names it; All returns to unfiltered', () => {
     renderUD();
     const chips = screen.getByTestId('estate-filter-chips');
-    const dcChip = within(chips).getByRole('button', { name: 'Data centers' });
-    expect(dcChip).toHaveAttribute('aria-pressed', 'false');
+    const facet = within(chips).getByTestId('facet-site-type');
+    expect(facet).toHaveTextContent('Site type');
 
-    fireEvent.click(dcChip);
-    expect(dcChip).toHaveAttribute('aria-pressed', 'true');
-    // toggling one class off never presses a sibling class
-    expect(within(chips).getByRole('button', { name: 'Offices' })).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(facet);
+    fireEvent.click(within(chips).getByRole('option', { name: 'Data centers' }));
+    expect(within(chips).getByTestId('facet-site-type')).toHaveTextContent('Site type: Data centers');
 
-    fireEvent.click(dcChip);
-    expect(dcChip).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(within(chips).getByTestId('facet-site-type'));
+    fireEvent.click(within(chips).getByRole('option', { name: 'All' }));
+    expect(within(chips).getByTestId('facet-site-type')).toHaveTextContent('Site type');
   });
 
-  it('a pressed site-class chip surfaces Clear filters, same as the other facets', () => {
+  it('the brainstorm\'s four mental models are all offered: site type, region, connection, business unit', () => {
+    renderUD();
+    const chips = screen.getByTestId('estate-filter-chips');
+    expect(within(chips).getByTestId('facet-site-type')).toBeInTheDocument();
+    expect(within(chips).getByTestId('facet-region')).toBeInTheDocument();
+    expect(within(chips).getByTestId('facet-connection')).toBeInTheDocument();
+    expect(within(chips).getByTestId('facet-business-unit')).toBeInTheDocument();
+  });
+
+  it('an active facet surfaces Clear filters, which resets every facet', () => {
     renderUD();
     const chips = screen.getByTestId('estate-filter-chips');
     expect(within(chips).queryByRole('button', { name: /clear filters/i })).not.toBeInTheDocument();
 
-    fireEvent.click(within(chips).getByRole('button', { name: 'Offices' }));
-    expect(within(chips).getByRole('button', { name: /clear filters/i })).toBeInTheDocument();
-
+    fireEvent.click(within(chips).getByTestId('facet-site-type'));
+    fireEvent.click(within(chips).getByRole('option', { name: 'Offices' }));
     fireEvent.click(within(chips).getByRole('button', { name: /clear filters/i }));
-    expect(within(chips).getByRole('button', { name: 'Offices' })).toHaveAttribute('aria-pressed', 'false');
+
+    expect(within(chips).getByTestId('facet-site-type')).toHaveTextContent('Site type');
     expect(within(chips).queryByRole('button', { name: /clear filters/i })).not.toBeInTheDocument();
   });
 });
