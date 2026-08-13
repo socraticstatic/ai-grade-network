@@ -28,19 +28,25 @@ export function TasksButton() {
       aria-label={`Tasks: ${count} pending${violated ? ', promises violated' : ''}`}
       title="Every task by lifecycle stage, every standing intent"
       onClick={() => navigate('/tasks')}
-      className="flex items-center justify-center h-9 w-9 text-fw-heading hover:text-fw-body transition-colors duration-200 relative"
+      className="relative flex h-9 w-9 items-center justify-center rounded-full text-fw-body transition-colors hover:bg-fw-wash hover:text-fw-heading"
     >
-      <AttIcon name="checklist" className="h-5 w-5" />
+      <AttIcon name="checklist" className="h-[18px] w-[18px]" />
+      {/* A dot, not a number. "10" crammed into a 16px circle beside a
+          second badged circle read as clutter, and the exact figure was
+          never the point at this size - whether the estate wants attention
+          is. The count stays in the accessible name and on /tasks, where
+          there is room to say what the tasks actually are. Red only when a
+          promise is genuinely violated; otherwise the quiet cobalt. */}
       {count > 0 && (
         <span
           data-testid="tasks-badge-count"
+          data-count={count}
           data-violated={violated ? 'true' : 'false'}
-          className={`absolute -top-1 -right-1 h-4 min-w-4 px-0.5 text-figma-sm flex items-center justify-center text-white rounded-full ${
+          aria-hidden="true"
+          className={`absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2 ring-fw-base ${
             violated ? 'bg-fw-error' : 'bg-fw-cobalt-600'
           }`}
-        >
-          {count > 99 ? '99+' : count}
-        </span>
+        />
       )}
     </button>
   );

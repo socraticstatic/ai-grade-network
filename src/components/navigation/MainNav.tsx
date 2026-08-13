@@ -8,13 +8,14 @@ import { TasksButton } from './TasksButton';
 import { UserMenu } from './UserMenu';
 import { MobileMenu } from './MobileMenu';
 import { TenantSelector } from './TenantSelector';
-import { TourLauncher } from '../../features/tour/TourLauncher';
+import { UtilityOverflow } from './UtilityOverflow';
+import { TourLauncher, START_TOUR_EVENT } from '../../features/tour/TourLauncher';
 import { CommandPalette } from '../../features/command/CommandPalette';
 import { UndoControl } from '../../features/undo/UndoControl';
 import { NAV_DISCOVER, NAV_LAYERS, NAV_ITEMS, isNavRouteActive, layerForPath } from './navItems';
 import { CreateMenu } from './CreateMenu';
 import { toggleAndi } from '../../features/andi/AndiPanel';
-import { Sparkles } from 'lucide-react';
+import { Play, Sparkles } from 'lucide-react';
 import { Button } from '../common/Button';
 import { useStore } from '../../store/useStore';
 import { usePermissions } from '../../hooks/usePermission';
@@ -286,17 +287,29 @@ export function MainNav({ items = [], onSearch }: MainNavProps) {
               Keeping it mounted at every width fixes both. The button is 36px
               and it is the only thing in this cluster below 1024px, so it
               costs nothing the narrow header was using. */}
-          <div className="flex items-center gap-1 xl:gap-1.5 flex-shrink-0 pr-2">
+          {/* The utility cluster.
+
+              This was eight identical 36px circles in a row - Create, Andi,
+              search, undo, share, tour, tasks, notifications, tenant - split
+              by two hairline rules, three of them badged red. Everything
+              looked equally urgent, which means nothing did, and the row was
+              also what pushed a phone into a horizontal scroll.
+
+              Now: the primary action, the assistant, and search hold their
+              own space; the two controls that carry LIVE STATE (tasks,
+              notifications) sit together as a quiet pair; everything reached
+              occasionally (undo, replay link, guided tour) is one click away
+              behind the overflow, where each gets a label instead of a
+              tooltip. `min-w-0` lets the cluster shrink rather than force
+              the page wider than the viewport. */}
+          <div className="flex min-w-0 flex-shrink items-center gap-1 pr-1 sm:gap-1.5 sm:pr-2">
             {!isMenuOpen && !isMobile && (
               <>
-                {/* Create is the one verb that outranks the layers — as a
-                    global action, never an address. Each entry names its
-                    layer and lands on that layer's Connect page. */}
+                {/* Create is the one verb that outranks the layers - as a
+                    global action, never an address. */}
                 <CreateMenu />
-                {/* Andi — the assistant, per the AI Gateway header. The badge
-                    is what makes proposal-card advice findable from any
-                    page: the panel stays closed by default, so this count is
-                    the only signal that Andi is holding something. */}
+                {/* Andi - the assistant. The badge is what makes
+                    proposal-card advice findable from any page. */}
                 <button
                   type="button"
                   data-testid="andi-toggle"
@@ -307,43 +320,55 @@ export function MainNav({ items = [], onSearch }: MainNavProps) {
                   }
                   title="Ask Andi"
                   onClick={toggleAndi}
-                  /* Cobalt, like every other filled control in this bar. This
-                     was a hardcoded #009fdb — the legacy AT&T cyan — and the
-                     only escape from the token palette in the utility cluster.
-                     It sat beside a #0057b8 Create button and, worse, its own
-                     hover was already fw-ctaPrimary, so the button changed
-                     blue when you pointed at it. */
-                  className="relative flex items-center justify-center h-9 w-9 rounded-full bg-fw-ctaPrimary text-white hover:bg-fw-ctaPrimaryHover transition-colors"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-fw-ctaPrimary text-white transition-colors hover:bg-fw-ctaPrimaryHover"
                 >
                   <Sparkles className="h-4 w-4" />
                   {proposalCount > 0 && (
                     <span
                       data-testid="andi-proposal-badge"
-                      className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 text-figma-sm flex items-center justify-center text-white bg-fw-error rounded-full"
+                      className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fw-error px-0.5 text-figma-sm text-white"
                     >
                       {proposalCount > 99 ? '99+' : proposalCount}
                     </span>
                   )}
                 </button>
                 <SearchBar onSearch={onSearch} />
-                <div className="h-5 w-px bg-fw-secondary hidden xl:block mx-0.5" />
-                <UndoControl />
+
+                {/* State that follows you, as one pair rather than two
+                    unrelated circles with a rule between them. */}
+                <span className="ml-1 flex items-center gap-0.5">
+                  <TasksButton />
+                  <NotificationsButton count={notifications} />
+                </span>
               </>
             )}
 
-            <TourLauncher />
+            {/* Outside the width gate: the guided tour is the one artifact
+                built to demo this product and must be startable at every
+                width, and keeping this mounted across the isMobile flip is
+                what stops a mid-tour resize from unmounting ProductTour and
+                losing its place. */}
+            <UtilityOverflow>
+              {!isMobile && <UndoControl />}
+              {/* Fires START_TOUR_EVENT; the launcher itself stays mounted
+                  below so closing this menu cannot unmount a running tour. */}
+              <button
+                type="button"
+                aria-label="Start guided tour"
+                onClick={() => window.dispatchEvent(new Event(START_TOUR_EVENT))}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-figma-sm text-fw-body transition-colors hover:bg-fw-wash"
+              >
+                <Play className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>Start guided tour</span>
+              </button>
+            </UtilityOverflow>
 
-            {!isMenuOpen && !isMobile && (
-              <>
-                <div className="h-5 w-px bg-fw-secondary hidden xl:block mx-0.5" />
-                {/* Tasks: state that follows you, not a place - so it lives
-                    here with the bell, not in the tab strip. The badge is the
-                    queue's live count; red when any promise is violated. */}
-                <TasksButton />
-                <NotificationsButton count={notifications} />
-                <TenantSelector />
-              </>
-            )}
+            {/* Mounted at bar level at EVERY width: it owns the running
+                tour's state, and the tour is the one artifact built to demo
+                this product. */}
+            <TourLauncher trigger="none" />
+
+            {!isMenuOpen && !isMobile && <TenantSelector />}
           </div>
         </div>
       </div>

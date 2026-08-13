@@ -23,7 +23,15 @@ import './state-assessment';
 import './state-findings';
 import './state-share';
 import './state-actions';
+import { applyTokenScale, resolveProfile } from './estateProfile';
 import type { CloudControl } from './types';
+
+/* The AI layer's scale, applied once every state-* module above has
+   loaded - state-billing owns the token meters and does not exist when
+   estateProfile's own boot swap runs. */
+if (typeof location !== 'undefined') {
+  applyTokenScale(resolveProfile(location.search, localStorage));
+}
 
 export const CC = (window as unknown as { CC: CloudControl }).CC;
 export type { CloudControl } from './types';
