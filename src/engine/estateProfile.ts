@@ -169,13 +169,14 @@ export function applyEstateProfile(cc: EngineSeeds, profile: EstateProfile): voi
  * not a shared import; advisorPhase.test.ts's "persists under the
  * documented key" test is what keeps that shape honest on the other side.
  *
- * EVERY profile is seeded done - the advisor is opt-in only ("Run the
- * advisor" on Discover's rail, or the direct /discover/advisor URL). The
- * first-run takeover shipped on Aug 11 and was reverted the same morning:
- * hijacking /discover hid the estate rollups behind an unfinished page at
- * exactly the moment a stakeholder went looking for them. Auto-entry can
- * return once the advisor page earns it; the redirect plumbing in App.tsx
- * still honors an unset flag, so flipping this back is a one-line change.
+ * ACME only. Its familiar flows (every existing spec, every bookmark, the
+ * default boot with no `?estate=` flag) must never meet the advisor
+ * uninvited, so acme boots already-done.
+ *
+ * Meridian is deliberately NOT seeded: the bank demo opens on the advisor
+ * every single load. advisorPhase.ts keeps meridian's done-flag in memory
+ * only, so "Skip to the estate" un-gates the tree for this page session
+ * and a reload starts the pitch over.
  *
  * Extracted into its own function (rather than inlined at the bottom) so a
  * test can invoke it directly under a chosen profile - the module-level
@@ -184,7 +185,13 @@ export function applyEstateProfile(cc: EngineSeeds, profile: EstateProfile): voi
  * with. */
 export function seedAcmeAdvisorDone(profile: EstateProfile): void {
   try {
-    localStorage.setItem(`advisor:${profile}:done`, '1');
+    if (profile === 'acme') {
+      localStorage.setItem('advisor:acme:done', '1');
+      return;
+    }
+    /* Scrub any meridian flag an older build persisted, so a demo laptop
+       that visited before this change isn't carrying dead state. */
+    localStorage.removeItem('advisor:meridian:done');
   } catch {
     /* private mode / storage unavailable — non-fatal, same tolerance as
        advisorPhase.ts's markAdvisorDone */

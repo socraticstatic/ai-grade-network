@@ -26,14 +26,18 @@ export function FlowStepper() {
 
   return (
     <nav aria-label="Flow progress" className="w-full">
-      <ol className="flex items-center">
+      <ol className="flex flex-wrap items-center gap-y-2">
         {stages.map((s, i) => {
           const last = i === stages.length - 1;
           return (
             <li
               key={s.stage}
               aria-current={s.status === 'current' ? 'step' : undefined}
-              className={`flex items-center ${last ? '' : 'flex-1'} min-w-0`}
+              /* min-w-fit, never min-w-0: the link inside is shrink-0, so a
+                 li allowed to shrink below its own content slides the next
+                 stage's label on top of this one (seen at ~1100px, where the
+                 rail narrows this column). Only the connector line flexes. */
+              className={`flex items-center ${last ? '' : 'flex-1'} min-w-fit`}
             >
               <Link
                 to={s.route}
@@ -45,12 +49,12 @@ export function FlowStepper() {
                   {s.status === 'done' && <Check size={12} aria-hidden="true" />}
                   {s.status === 'current' && <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden="true" />}
                 </span>
-                <span className={`text-[13px] leading-none ${LABEL[s.status]}`}>{s.label}</span>
+                <span className={`whitespace-nowrap text-[13px] leading-none ${LABEL[s.status]}`}>{s.label}</span>
               </Link>
               {!last && (
                 <span
                   aria-hidden="true"
-                  className={`mx-2 h-px flex-1 ${s.status === 'done' ? 'bg-[#00a862]/40' : 'bg-[#e2e8f0]'}`}
+                  className={`mx-2 h-px min-w-[8px] flex-1 ${s.status === 'done' ? 'bg-[#00a862]/40' : 'bg-[#e2e8f0]'}`}
                 />
               )}
             </li>

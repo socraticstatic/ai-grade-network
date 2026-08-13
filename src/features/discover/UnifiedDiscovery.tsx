@@ -3,7 +3,6 @@ import { ChevronRight, Globe, Link2, MapPin, Plus, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCloudControl, useCloudControlActions } from '../../engine/react/useCloudControl';
 import { useRevealStagger } from './useRevealStagger';
-import { FlowBar } from '../../components/flow/FlowBar';
 import { AttentionTag } from '../../components/viz/AttentionTag';
 import { ProviderLogo } from '../../components/brand/ProviderLogo';
 import { VpcMap } from './VpcMap';
@@ -514,7 +513,6 @@ export function UnifiedDiscovery() {
      /naas/observe's "92ms · Public internet" for that region. */
   const latencyOf = regionLatencyMap(cc);
   const latencyPathOf = regionLatencyPathMap(cc);
-  const publicWorkloads = clouds.filter(c => !c.attached).reduce((s, c) => s + c.workloads, 0);
 
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const toggle = (key: string) => setOpen(o => toggleKey(o, key));
@@ -586,14 +584,6 @@ export function UnifiedDiscovery() {
           <Plus size={16} aria-hidden="true" /> Connect a cloud
         </button>
       </div>
-
-      <FlowBar
-        cta={
-          publicWorkloads > 0
-            ? { label: `Attach the ${publicWorkloads} workloads still on the public internet`, to: '/naas/connect?from=discover' }
-            : undefined
-        }
-      />
 
       <div className="space-y-3">
         {/* Tree controls */}
@@ -834,7 +824,7 @@ export function UnifiedDiscovery() {
         )}
         {/* Row 33 of the phase-0 metric audit: this alert cut — the third
             rendering of the public-workloads count on this screen (the
-            FlowBar CTA above states it with an action attached; a row in
+            page-level FlowBar CTA states it with an action attached; a row in
             the AWS cloud coincidentally states the same number too). The
             CTA is the stronger rendering and stays. */}
       </div>
