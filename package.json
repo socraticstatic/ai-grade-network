@@ -32,6 +32,7 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@supabase/supabase-js": "^2.111.0",
     "chart.js": "^4.4.2",
+    "echarts": "^6.1.0",
     "framer-motion": "^10.16.16",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",

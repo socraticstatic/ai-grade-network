@@ -25,13 +25,19 @@ describe('ObservabilityShell', () => {
     expect(screen.getByText('Throughput')).toBeInTheDocument();
     expect(screen.getAllByTestId('kpi-tile')).toHaveLength(5);
     expect(screen.getByRole('button', { name: 'Flow' })).toBeInTheDocument();
-    expect(screen.getAllByTestId('record-row')).toHaveLength(2);      // default group 'none'
+    /* Opens ROLLED UP, not flat: the fake binding returns one grouped row
+       for 'path' and two ungrouped rows for 'none'. A records table that
+       defaults to one row per flow is the rule this product breaks
+       nowhere else. */
+    expect(screen.getAllByTestId('record-row')).toHaveLength(1);
     expect(screen.getByText(/78% flows private/)).toBeInTheDocument(); // briefing
     expect(screen.getByText('Show public flows')).toBeInTheDocument();
   });
 
   it('changing group-by re-groups the records table', () => {
     render(<ObservabilityShell binding={fake} />);
+    fireEvent.change(screen.getByTestId('groupby-select'), { target: { value: 'none' } });
+    expect(screen.getAllByTestId('record-row')).toHaveLength(2); // the flat view, on request
     fireEvent.change(screen.getByTestId('groupby-select'), { target: { value: 'path' } });
     expect(screen.getAllByTestId('record-row')).toHaveLength(1);
     expect(screen.getByText('Private')).toBeInTheDocument();

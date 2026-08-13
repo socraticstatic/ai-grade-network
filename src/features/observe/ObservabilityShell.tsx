@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ObservabilityBinding, RecordRow } from './ObservabilityBinding';
 import { SankeyPanel } from './SankeyPanel';
 import type { SiteClass } from '../discover/discoveryModel';
+import type { SankeyDrill } from './sankeyModel';
 import { TrendBand } from '../../components/viz/kit';
 
 // Left-border tone indicator per record row. `ok` resolves against
@@ -20,27 +21,46 @@ function toneClass(tone: RecordRow['tone']): string {
   }
 }
 
+const RECORD_LIMIT = 50;
+
 export function ObservabilityShell({
   binding,
   sankeyDrill = null,
   onSankeyDrill,
+  sankeyDrills,
+  onSankeyDrills,
 }: {
   binding: ObservabilityBinding;
   /** Sankey site-band drill state, owned by the page (it also owns the
    *  estate filters the same band reads). */
   sankeyDrill?: SiteClass | null;
   onSankeyDrill?: (cls: SiteClass | null) => void;
+  sankeyDrills?: SankeyDrill;
+  onSankeyDrills?: (d: SankeyDrill) => void;
 }) {
   const tabs = binding.flowTabs();
   const groups = binding.groupByOptions();
   const [tab, setTab] = useState(tabs[0]?.id ?? '');
-  const [groupBy, setGroupBy] = useState(groups[0]?.id ?? 'none');
+  /* Opens ROLLED UP, never flat. The brainstorm's rule for this product is
+     the same on every surface - "aggregate first, never thousands of
+     individual nodes... rollup-then-filter has to come before rendering
+     entities" - and a records table defaulting to one row per flow is the
+     one place that rule was still being broken. 'Path' is the grouping this
+     screen's own argument is about. */
+  const [groupBy, setGroupBy] = useState(
+    groups.find(g => g.id === 'path')?.id ?? groups.find(g => g.id !== 'none')?.id ?? 'none',
+  );
   // The time machine: null = live; an index reviews that instant of the
   // window. The readout restates the drawn series value verbatim — the
   // scrubber never re-derives a figure (see the spec's honesty invariants).
   const [cursor, setCursor] = useState<number | null>(null);
   const kpis = binding.kpis();
-  const rows = binding.records(groupBy);
+  const allRows = binding.records(groupBy);
+  /* The same 50-row contract the estate tree honours: past it, say how many
+     are hidden and how to reach them rather than printing a wall nobody
+     scrolls. */
+  const rows = allRows.slice(0, RECORD_LIMIT);
+  const hiddenRecords = allRows.length - rows.length;
   const series = binding.flowSeries(tab);
   const brief = binding.briefing();
   const moments = binding.moments?.() ?? [];
@@ -115,6 +135,8 @@ export function ObservabilityShell({
                   scope={binding.sankeyScope?.()}
                   drill={sankeyDrill}
                   onDrill={onSankeyDrill}
+                  drills={sankeyDrills}
+                  onDrills={onSankeyDrills}
                 />
               ) : series.length === 0 || series.every(p => p.v === 0) ? (
                 <div data-testid="flow-empty" className="h-24 flex items-center justify-center text-figma-sm text-fw-bodyLight text-center px-4">
@@ -172,7 +194,10 @@ export function ObservabilityShell({
           {/* records table */}
           <div className="rounded-2xl border border-fw-secondary bg-fw-base overflow-hidden">
             <div className="flex items-center gap-3 px-5 py-3 border-b border-fw-secondary bg-fw-wash">
-              <span className="font-medium text-fw-heading flex-1">Records</span>
+              <span className="font-medium text-fw-heading">Records</span>
+              <span className="flex-1 text-figma-xs text-fw-bodyLight">
+                {allRows.length.toLocaleString()} {groupBy === 'none' ? 'flows' : 'groups'}
+              </span>
               <label htmlFor="groupby-select" className="text-figma-xs text-fw-bodyLight">Group by</label>
               <select id="groupby-select" data-testid="groupby-select" value={groupBy} onChange={e => setGroupBy(e.target.value)}
                 className="h-8 px-2 rounded-md border border-fw-secondary bg-fw-base text-figma-xs text-fw-body">
@@ -191,6 +216,13 @@ export function ObservabilityShell({
                     {r.cells.map((cell, i) => <td key={i} className="px-5 py-2.5 text-fw-body">{cell}</td>)}
                   </tr>
                 ))}
+                {hiddenRecords > 0 && (
+                  <tr data-testid="record-overflow">
+                    <td colSpan={binding.columns.length} className="px-5 py-2.5 text-figma-xs text-fw-bodyLight">
+                      + {hiddenRecords.toLocaleString()} more — group or filter above to narrow them
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
