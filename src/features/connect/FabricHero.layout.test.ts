@@ -45,7 +45,15 @@ describe('computeFabricLayout expanded mode', () => {
     const lit = model.onramps.filter(o => o.active).length;
     expect(l.internals!.caption).toContain(`${model.onramps.length} on-ramps in ${facilities.size} AT&T facilities`);
     expect(l.internals!.caption).toContain(`${lit} lit`);
-    expect(l.internals!.caption).toContain('BFD failover detect in 900ms');
+    expect(l.internals!.caption).toContain('BFD detect 900ms');
+
+    // A facility the band had no room for is named next to the list, not
+    // buried in a caption that then overflows the band.
+    if (facilities.size > l.internals!.sites.length) {
+      expect(l.internals!.more?.label).toContain(`${facilities.size - l.internals!.sites.length} more`);
+    } else {
+      expect(l.internals!.more).toBeUndefined();
+    }
   });
   it('deterministic in both modes', () => {
     expect(computeFabricLayout(model, { expanded: true })).toEqual(computeFabricLayout(model, { expanded: true }));

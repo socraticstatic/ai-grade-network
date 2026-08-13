@@ -1,4 +1,4 @@
-import { Building2, Cable, TrendingUp } from 'lucide-react';
+import { Building2, Cable, TrendingUp, Server, Store, Landmark, MapPin, Globe } from 'lucide-react';
 import type { EdgeNode } from './edgeDrill';
 import { CC } from '../../engine';
 import { connectionOf, OFF_NET } from '../discover/estateFilters';
@@ -14,8 +14,13 @@ import { connectionOf, OFF_NET } from '../discover/estateFilters';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
 
+/** Same vocabulary as the column above it — an ATM group and a data-centre
+ *  group must not open into the same picture. */
+const PANEL_ICON = { dc: Server, office: Building2, branch: Store, atm: Landmark, metro: MapPin, site: Globe } as const;
+
 export function EdgeGroupPanel({ node }: { node: EdgeNode }) {
   const offNet = node.count - node.onFabric;
+  const Icon = PANEL_ICON[node.icon] ?? Building2;
 
   // What the off-fabric members ride today, largest first. This is the
   // sentence a network lead actually asks for: not "312 are public" but
@@ -39,11 +44,14 @@ export function EdgeGroupPanel({ node }: { node: EdgeNode }) {
     <section aria-label={node.label} className="rounded-2xl border border-fw-secondary bg-fw-base p-5 space-y-4">
       <header className="flex items-center gap-3">
         <span className="flex items-center justify-center h-10 w-10 rounded-full bg-fw-ctaPrimary/[0.08] text-fw-link shrink-0">
-          <Building2 size={18} />
+          <Icon size={18} />
         </span>
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-fw-heading leading-tight">{node.label}</div>
           <div className="text-figma-xs text-fw-bodyLight leading-tight">{fmt(node.count)} sites in this group</div>
+          <div aria-hidden="true" className="mt-1.5 flex h-1.5 w-full max-w-[200px] overflow-hidden rounded-full bg-fw-secondary">
+            <div className="h-full rounded-full bg-fw-ctaPrimary transition-[width] duration-500" style={{ width: `${Math.round(node.share * 100)}%` }} />
+          </div>
         </div>
       </header>
 

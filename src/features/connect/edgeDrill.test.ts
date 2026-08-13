@@ -50,6 +50,18 @@ describe('edgeNodes', () => {
     }
   });
 
+  it('share agrees with the count it draws, and every class gets its own icon', () => {
+    const rows = edgeNodes(cc, branches, NO_EDGE_DRILL);
+    for (const r of rows) {
+      expect(r.share).toBeCloseTo(r.onFabric / r.count, 10);
+      expect(r.share).toBeGreaterThanOrEqual(0);
+      expect(r.share).toBeLessThanOrEqual(1);
+    }
+    // The class rows must not collapse onto one icon - an ATM group and a
+    // data-centre group are not the same picture.
+    expect(new Set(rows.map(r => r.icon)).size).toBe(rows.length);
+  });
+
   it('a group larger than the rollup threshold is never a leaf', () => {
     for (const r of edgeNodes(cc, branches, NO_EDGE_DRILL)) {
       if (r.count > ROLLUP_THRESHOLD) expect(r.drillable).toBe(true);

@@ -3,6 +3,13 @@ import { Link } from 'react-router-dom';
 import { ProviderLogo } from '../../components/brand/ProviderLogo';
 import type { FabricRegion } from '../../engine/types';
 import { VIZ_HEX } from '../../components/viz/kit';
+import { ChevronRight, Server, Building2, Store, Landmark, MapPin, Globe } from 'lucide-react';
+
+/** The ingress column's icon vocabulary — one per site class, so a group of
+ *  ATMs and a group of data centres are never the same picture. */
+export type SiteIcon = 'dc' | 'office' | 'branch' | 'atm' | 'metro' | 'site';
+
+const SITE_ICON = { dc: Server, office: Building2, branch: Store, atm: Landmark, metro: MapPin, site: Globe } as const;
 
 /* ------------------------------------------------------------------ *
  * Cloud Fabric hero — the manipulable centerpiece of Connect.
@@ -35,7 +42,7 @@ export type FabricSelection =
 export interface FabricModel {
   /** The ingress column. `sub`/`drillable` arrive from `edgeDrill` when the
    *  column is standing on a real estate rather than the seed archetypes. */
-  sites: { id: string; label: string; firstMile: string | null; sub?: string; drillable?: boolean }[];
+  sites: { id: string; label: string; firstMile: string | null; sub?: string; drillable?: boolean; share?: number; icon?: SiteIcon }[];
   onramps: { id: string; name: string; type: string; site: string; active: boolean; targets: [string, string][] }[];
   regions: FabricRegion[];
   c2c: { id: string; label: string; gbps: number; viaPublic: boolean; controlled: boolean }[];
@@ -64,7 +71,7 @@ const FABRIC_RIGHT = FABRIC_X + FABRIC_W;
  *  FABRIC_RIGHT is fixed so no region edge moves. Wide enough (282 units)
  *  that the two-line caption (~150–160 units at 10px) clears the on-ramp
  *  label column starting at REGION_X's left neighbor. */
-const FABRIC_X_EXPANDED = 214;
+const FABRIC_X_EXPANDED = 252;
 
 const REGION_X = 596;
 const REGION_W = 320;
@@ -111,7 +118,7 @@ export interface FabricLayout {
   viewW: number;
   viewH: number;
   fabric: { x: number; y: number; w: number; h: number; cx: number; cy: number };
-  sites: { id: string; label: string; firstMile: string | null; sub?: string; drillable?: boolean; x: number; y: number }[];
+  sites: { id: string; label: string; firstMile: string | null; sub?: string; drillable?: boolean; share?: number; icon?: SiteIcon; x: number; y: number }[];
   regions: {
     region: FabricRegion; x: number; y: number;
     edge: { from: Pt; to: Pt; onrampLabel: string; mid: Pt };
@@ -121,6 +128,10 @@ export interface FabricLayout {
   internals?: {
     sites: { id: string; label: string; y: number }[];
     paths: { id: string; label: string; y: number; siteIdx: 0 | 1 }[];
+    /** The facilities the band had no room for. Stated in the list rather
+     *  than the caption: a caption long enough to carry it overflowed the
+     *  band, and a cut belongs next to what was cut. */
+    more?: { label: string; y: number };
     caption: string;
   };
 }
@@ -146,7 +157,7 @@ export function computeFabricLayout(model: FabricModel, opts?: { expanded?: bool
   const siteSpan = (rows - 1) * siteGap;
   const siteStart = viewH / 2 - siteSpan / 2;
   const sites = model.sites.map((s, i) => ({
-    id: s.id, label: s.label, firstMile: s.firstMile, sub: s.sub, drillable: s.drillable,
+    id: s.id, label: s.label, firstMile: s.firstMile, sub: s.sub, drillable: s.drillable, share: s.share, icon: s.icon,
     x: SITE_X, y: siteStart + i * siteGap,
   }));
 
@@ -232,24 +243,48 @@ export function computeFabricLayout(model: FabricModel, opts?: { expanded?: bool
     internals = {
       sites: shown.map(([facility], i) => ({ id: `fab-site-${i}`, label: facility, y: siteY(i) })),
       paths,
+      more:
+        hiddenFacilities > 0
+          ? {
+              label: `+ ${hiddenFacilities} more ${hiddenFacilities === 1 ? 'facility' : 'facilities'}`,
+              y: Math.min(innerBottom - 4, siteY(shown.length - 1) + 18 + 3 * 15),
+            }
+          : undefined,
       /* Row 44 of the metric audit: the 900ms BFD figure is how the fabric
          is BUILT — a product specification. The counts either side of it are
          this estate's, engine-derived, so the caption names both kinds. */
-      caption: `${model.onramps.length} on-ramps in ${facilities.length} AT&T facilities · ${lit} lit${hiddenFacilities > 0 ? ` · ${hiddenFacilities} more ${hiddenFacilities === 1 ? 'facility' : 'facilities'} not shown` : ''} · BFD failover detect in 900ms`,
+      caption: `${model.onramps.length} on-ramps in ${facilities.length} AT&T facilities · ${lit} lit · BFD detect 900ms`,
     };
   }
 
   return { viewW: VIEW_W, viewH, fabric, sites, regions, internet, arcs, internals };
 }
 
-/** Splits a ' · '-joined caption into two display lines: the first two
- *  segments on line 1, everything else on line 2. The data (caption string
- *  in FabricLayout['internals']) stays a single line — this is presentation
- *  only, generic over the segment count/content, not a hardcoded copy. */
+/** Splits a ' · '-joined caption into two BALANCED display lines.
+ *
+ *  It used to take the first two segments and dump the rest on line 2, which
+ *  worked only while the caption was a fixed four-segment string. Now that
+ *  the caption states this estate's real on-ramp counts, segment count and
+ *  length both vary, and the fixed split ran line 2 off the edge of the
+ *  band. Splitting at the midpoint of the total length keeps both lines
+ *  inside it however the counts read. The data stays one line — this is
+ *  presentation only. */
 function splitCaptionLines(caption: string): [string, string] {
   const segments = caption.split(' · ');
-  const line1 = segments.slice(0, 2).join(' · ');
-  const line2 = segments.slice(2).join(' · ');
+  if (segments.length < 2) return [caption, ''];
+  const half = caption.length / 2;
+  let best = 1;
+  let bestGap = Infinity;
+  for (let cut = 1; cut < segments.length; cut++) {
+    const len = segments.slice(0, cut).join(' · ').length;
+    const gap = Math.abs(len - half);
+    if (gap < bestGap) {
+      bestGap = gap;
+      best = cut;
+    }
+  }
+  const line1 = segments.slice(0, best).join(' · ');
+  const line2 = segments.slice(best).join(' · ');
   return [line1, line2];
 }
 
@@ -335,13 +370,35 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
             const from = { x: s.x + SITE_W, y: s.y };
             const to = { x: layout.fabric.x, y: Math.min(layout.fabric.y + layout.fabric.h - 10, Math.max(layout.fabric.y + 10, s.y)) };
             const lit = siteEdgeLit(s.id);
+            const d = `M ${from.x} ${from.y} C ${from.x + 60} ${from.y}, ${to.x - 60} ${to.y}, ${to.x} ${to.y}`;
+            /* Every edge on this diagram means the same thing: cobalt rides
+               the AT&T fabric, slate dashed rides the public internet. The
+               ingress edges were a uniform cobalt-soft regardless, so a group
+               that is 40% attached drew the same line as one that is 100% —
+               the number said one thing and the picture said another. A
+               partly-attached group now draws BOTH: the public baseline
+               underneath, the attached share painted over it. */
+            const share = s.share ?? 1;
+            const dim = focusId && !lit ? 0.3 : 0.92;
+            const w = lit ? 2.5 : 1.5;
             return (
-              <path
-                key={`se-${s.id}`} data-fabric-edge data-kind="site"
-                d={`M ${from.x} ${from.y} C ${from.x + 60} ${from.y}, ${to.x - 60} ${to.y}, ${to.x} ${to.y}`}
-                fill="none" stroke={VIZ_HEX.cobaltSoft} strokeWidth={lit ? 2.5 : 1.5}
-                strokeOpacity={focusId && !lit ? 0.35 : 0.9} strokeLinecap="round"
-              />
+              <g key={`se-${s.id}`}>
+                {share < 1 && (
+                  <path
+                    data-fabric-edge data-kind="site-public" d={d} fill="none"
+                    stroke={VIZ_HEX.slate} strokeWidth={w} strokeDasharray="5 4"
+                    strokeOpacity={dim} strokeLinecap="round"
+                  />
+                )}
+                {share > 0 && (
+                  <path
+                    data-fabric-edge data-kind="site" d={d} fill="none"
+                    stroke={VIZ_HEX.cobalt} strokeWidth={w}
+                    strokeOpacity={dim} strokeLinecap="round"
+                    pathLength={1} strokeDasharray={share < 1 ? `${share} ${1 - share}` : undefined}
+                  />
+                )}
+              </g>
             );
           })}
         </g>
@@ -456,6 +513,14 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
                 </text>
               </g>
             ))}
+            {layout.internals.more && (
+              <text
+                x={layout.fabric.x + 14} y={layout.internals.more.y}
+                fill={VIZ_HEX.slateInk} className="text-[9px]" opacity={0.85}
+              >
+                {layout.internals.more.label}
+              </text>
+            )}
             {(() => {
               const [line1, line2] = splitCaptionLines(layout.internals.caption);
               const bandBottomY = layout.fabric.y + layout.fabric.h;
@@ -489,13 +554,33 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
                     isSel ? 'border-fw-active bg-fw-ctaPrimary/[0.05] ring-1 ring-fw-link' : 'border-fw-secondary bg-fw-base hover:bg-fw-wash'
                   }`}
                 >
-                  <span className="flex items-center gap-1 text-[11px] font-semibold text-fw-heading leading-tight">
-                    <span className="truncate">{s.label.split(' · ')[0]}</span>
-                    {s.drillable && <span aria-hidden="true" className="shrink-0 text-fw-bodyLight">▸</span>}
-                  </span>
-                  <span className="truncate text-[10px] text-fw-bodyLight leading-tight">
-                    {s.sub ?? (s.firstMile ? `first-mile · ${s.firstMile}` : 'public internet')}
-                  </span>
+                  {(() => {
+                    const Icon = SITE_ICON[s.icon ?? 'site'];
+                    const share = s.share ?? 1;
+                    return (
+                      <>
+                        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-fw-heading leading-tight">
+                          <Icon size={12} className="shrink-0 text-fw-bodyLight" aria-hidden="true" />
+                          <span className="min-w-0 flex-1 truncate">{s.label.split(' · ')[0]}</span>
+                          {s.drillable && (
+                            <ChevronRight size={13} className="-mr-0.5 shrink-0 text-fw-link" aria-hidden="true" />
+                          )}
+                        </span>
+                        <span className="truncate text-[10px] text-fw-bodyLight leading-tight">
+                          {s.sub ?? (s.firstMile ? `first-mile · ${s.firstMile}` : 'public internet')}
+                        </span>
+                        {/* The share, as a picture. A group reading "40% on
+                            fabric" should look 40% attached, not identical to
+                            one that is fully attached. Hidden for a single
+                            site, where the sub-line already says it plainly. */}
+                        {s.share !== undefined && share > 0 && share < 1 && (
+                          <span aria-hidden="true" className="mt-1 flex h-[3px] w-full overflow-hidden rounded-full bg-fw-secondary">
+                            <span className="h-full rounded-full bg-fw-ctaPrimary" style={{ width: `${Math.round(share * 100)}%` }} />
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </button>
               </foreignObject>
             );

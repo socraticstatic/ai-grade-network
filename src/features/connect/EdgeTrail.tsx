@@ -29,9 +29,9 @@ export function EdgeTrail({
   return (
     <div
       data-trail-highlight={highlight ? 'on' : undefined}
-      className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg text-figma-xs transition-all duration-500 ${
+      className={`-mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg text-figma-xs transition-all duration-500 ${
         highlight
-          ? 'bg-fw-ctaPrimary/[0.07] px-2.5 py-1.5 ring-2 ring-fw-link/45'
+          ? 'bg-fw-ctaPrimary/[0.07] px-2.5 py-2 ring-2 ring-fw-link/45'
           : 'px-0 py-0 ring-0'
       }`}
     >

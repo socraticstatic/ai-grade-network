@@ -34,6 +34,9 @@ export interface EdgeDrill {
 
 export const NO_EDGE_DRILL: EdgeDrill = { siteClass: null, metro: null };
 
+/** Mirrors `FabricHero`'s icon vocabulary without importing the component. */
+export type EdgeIcon = 'dc' | 'office' | 'branch' | 'atm' | 'metro' | 'site';
+
 export interface EdgeNode {
   /** Namespaced so a class key can never collide with a branch id. */
   id: string;
@@ -46,6 +49,9 @@ export interface EdgeNode {
   firstMile: string | null;
   /** True when clicking descends a level rather than just selecting. */
   drillable: boolean;
+  /** 0..1 on the AT&T fabric — the figure the node's share bar draws. */
+  share: number;
+  icon: EdgeIcon;
   members: Branch[];
 }
 
@@ -100,6 +106,7 @@ function toNode(
   label: string,
   members: Branch[],
   drillable: boolean,
+  icon: EdgeIcon,
 ): EdgeNode {
   const onFabric = members.filter(b => b.onrampId).length;
   return {
@@ -110,6 +117,8 @@ function toNode(
     onFabric,
     firstMile: dominantFirstMile(cc, members),
     drillable,
+    share: members.length ? onFabric / members.length : 0,
+    icon,
     members,
   };
 }
@@ -144,6 +153,8 @@ function withTail(rows: EdgeNode[], tailNoun: string): EdgeNode[] {
     onFabric,
     firstMile: null,
     drillable: false,
+    share: members.length ? onFabric / members.length : 0,
+    icon: 'site',
     members,
   });
   return kept;
@@ -168,6 +179,7 @@ export function edgeNodes(cc: CloudControl, branches: Branch[], drill: EdgeDrill
         capitalize(siteClassNoun(c, members.length)),
         members,
         members.length > 1,
+        c,
       );
     });
   }
@@ -179,14 +191,14 @@ export function edgeNodes(cc: CloudControl, branches: Branch[], drill: EdgeDrill
     const rows = [...byMetro.entries()]
       .sort((a, b) => b[1].length - a[1].length)
       .map(([m, members]) =>
-        toNode(cc, `edge:metro:${m}`, m, members, members.length > 1),
+        toNode(cc, `edge:metro:${m}`, m, members, members.length > 1, 'metro'),
       );
     return withTail(rows, 'metros');
   }
 
   const inMetro = inClass.filter(b => metroOf(b) === metro);
   const rows = inMetro.map(b =>
-    toNode(cc, `edge:site:${b.id}`, b.name, [b], false),
+    toNode(cc, `edge:site:${b.id}`, b.name, [b], false, b.siteClass),
   );
   return withTail(rows, 'sites');
 }
@@ -209,10 +221,11 @@ export function scopeNode(cc: CloudControl, branches: Branch[], drill: EdgeDrill
       capitalize(siteClassNoun(drill.siteClass, inClass.length)),
       inClass,
       false,
+      drill.siteClass,
     );
   }
   const inMetro = inClass.filter(b => metroOf(b) === drill.metro);
-  return toNode(cc, `edge:metro:${drill.metro}`, `${drill.metro} · ${capitalize(siteClassNoun(drill.siteClass, inMetro.length))}`, inMetro, false);
+  return toNode(cc, `edge:metro:${drill.metro}`, `${drill.metro} · ${capitalize(siteClassNoun(drill.siteClass, inMetro.length))}`, inMetro, false, 'metro');
 }
 
 /** Breadcrumb for the column — each hop is a drill you can step back to. */

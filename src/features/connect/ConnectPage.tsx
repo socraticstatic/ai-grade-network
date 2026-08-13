@@ -92,7 +92,7 @@ export function ConnectPage() {
   const edgeRows: EdgeNode[] = edgeNodes(CC, branches, edgeDrill);
   const heroModel: FabricModel = {
     ...model,
-    sites: edgeRows.map(n => ({ id: n.id, label: n.label, firstMile: n.firstMile, sub: n.sub, drillable: n.drillable })),
+    sites: edgeRows.map(n => ({ id: n.id, label: n.label, firstMile: n.firstMile, sub: n.sub, drillable: n.drillable, share: n.share, icon: n.icon })),
   };
   const selectedEdge = selected?.kind === 'site' ? edgeRows.find(n => n.id === selected.id) ?? null : null;
   const scope = scopeNode(CC, branches, edgeDrill);
