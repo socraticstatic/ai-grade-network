@@ -99,4 +99,32 @@ describe('advisorPhase', () => {
       }
     });
   });
+
+  /* The demo contract: a presenter reloads Meridian and the advisor is
+     there again. Skipping un-gates the estate for THIS page session only -
+     nothing about meridian is ever written to storage. */
+  describe('meridian is never cached across loads', () => {
+    afterEach(() => {
+      resetAdvisorDone('meridian');
+      localStorage.removeItem('advisor:meridian:done');
+    });
+
+    it('skipping holds for this session but persists nothing', () => {
+      markAdvisorDone('meridian');
+      expect(advisorDone('meridian')).toBe(true); // estate stays reachable now
+      expect(localStorage.getItem('advisor:meridian:done')).toBeNull(); // but nothing cached
+    });
+
+    it('a fresh load greets with the advisor again', () => {
+      markAdvisorDone('meridian');
+      resetAdvisorDone('meridian'); // stands in for the page reload
+      expect(advisorDone('meridian')).toBe(false);
+    });
+
+    it('acme still persists, so its familiar flows never meet the advisor', () => {
+      markAdvisorDone('acme');
+      expect(localStorage.getItem('advisor:acme:done')).toBe('1');
+      resetAdvisorDone('acme');
+    });
+  });
 });

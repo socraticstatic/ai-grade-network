@@ -46,15 +46,26 @@ export const advisorDoneKey = (profile: string) => `advisor:${profile}:done`;
  * localStorage errors (private browsing, quota) read as "not done" rather
  * than throwing, matching AuthContext's try/catch idiom.
  */
-/* In-memory fallback for contexts where localStorage throws (private mode,
- * quota, partitioned iframes). Without it, a failed write means advisorDone
- * stays false forever and /discover's gate re-enters the advisor on every
- * navigation — a soft-lock the final review reproduced. Session-scoped by
- * nature; that's fine, the flag only has to hold until storage recovers. */
-const doneFallback = new Set<string>();
+/* In-memory only, never persisted. Two jobs:
+ *   1. The demo contract: Meridian must offer the advisor on EVERY page
+ *      load. Remembering "you already saw it" across reloads would make the
+ *      pitch a one-shot - the presenter reloads and the conversation is
+ *      gone. Skipping still un-gates /discover for the rest of THIS page
+ *      session (no soft-lock, the estate is one click away), and a reload
+ *      brings the advisor back.
+ *   2. Storage-failure tolerance: in private mode / quota-exceeded
+ *      contexts where localStorage throws, this is the only store, so a
+ *      failed write can't strand a user inside the gate.
+ * ACME keeps the persisted flag (seeded at boot) so its familiar flows
+ * never see the advisor uninvited. */
+const doneThisSession = new Set<string>();
+
+/** Profiles whose done-flag is deliberately never persisted - see above. */
+const EPHEMERAL_PROFILES = new Set(['meridian']);
 
 export function advisorDone(profile: string): boolean {
-  if (doneFallback.has(profile)) return true;
+  if (doneThisSession.has(profile)) return true;
+  if (EPHEMERAL_PROFILES.has(profile)) return false; // always fresh on load
   try {
     return localStorage.getItem(advisorDoneKey(profile)) === '1';
   } catch {
@@ -62,14 +73,15 @@ export function advisorDone(profile: string): boolean {
   }
 }
 
-/** Marks this profile done. Storage errors fall back to the in-memory set —
- *  the button that called this still navigates, and the gate still honors
- *  the flag for the rest of the session. */
+/** Marks this profile done for this page session. Ephemeral profiles stop
+ *  there - nothing is written, so the next load starts over. */
 export function markAdvisorDone(profile: string): void {
+  doneThisSession.add(profile);
+  if (EPHEMERAL_PROFILES.has(profile)) return;
   try {
     localStorage.setItem(advisorDoneKey(profile), '1');
   } catch {
-    doneFallback.add(profile);
+    /* in-memory set above already holds it for this session */
   }
 }
 
@@ -79,7 +91,7 @@ export function markAdvisorDone(profile: string): void {
  *  Same error tolerance as markAdvisorDone: a storage failure here must not
  *  block the Link's navigation to /discover/advisor. */
 export function resetAdvisorDone(profile: string): void {
-  doneFallback.delete(profile);
+  doneThisSession.delete(profile);
   try {
     localStorage.removeItem(advisorDoneKey(profile));
   } catch {

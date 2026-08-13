@@ -5,6 +5,7 @@ import type { FabricModel } from '../connect/FabricHero';
 import { VerdictLine } from '../_shared/VerdictLine';
 import { discoverVerdict } from './verdict';
 import { UnifiedDiscovery } from './UnifiedDiscovery';
+import { FlowBar } from '../../components/flow/FlowBar';
 import { advisorHeadline } from '../advisor/advisorModel';
 import { resolveProfile } from '../../engine/estateProfile';
 import { resetAdvisorDone } from '../advisor/advisorPhase';
@@ -57,9 +58,28 @@ function AdvisorCard() {
  */
 export function DiscoverPage() {
   const model = useCloudControl(cc => cc.fabricModel()) as FabricModel;
+  /* Same derivation UnifiedDiscovery used when it owned this bar. */
+  const publicWorkloads = useCloudControl(cc =>
+    ((cc.clouds ?? []) as { attached: boolean; workloads: number }[])
+      .filter(c => !c.attached)
+      .reduce((s, c) => s + c.workloads, 0),
+  );
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 space-y-4">
       <VerdictLine>{discoverVerdict(model)}</VerdictLine>
+      {/* Page level, full width, ABOVE the columns: the five stage labels
+          need the whole page. Inside the left column the 320px rail
+          squeezed them until "Discover" sat on top of "Connect". */}
+      <FlowBar
+        cta={
+          publicWorkloads > 0
+            ? {
+                label: `Attach the ${publicWorkloads} workloads still on the public internet`,
+                to: '/naas/connect?from=discover',
+              }
+            : undefined
+        }
+      />
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         {/* A div, not a <main>: App.tsx already owns the one main landmark
             (#main-content), and this column renders inside it. */}

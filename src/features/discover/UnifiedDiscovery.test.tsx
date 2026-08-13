@@ -28,14 +28,13 @@ describe('UnifiedDiscovery drill-down tree', () => {
      "Attach {n} public workloads", which collides with AWS's own workload
      count rendered one row below it. Naming what "public" means (still on
      the public internet) removes the ambiguity — copy only, same count. */
-  it('the flow-bar CTA names the workloads as still on the public internet', () => {
+  /* The CTA moved with its FlowBar to DiscoverPage (page level, full
+     width - inside this column the rail squeezed the stepper labels into
+     each other). Its assertion moved to DiscoverPage.test.tsx; what this
+     component owes is only that it no longer renders a second copy. */
+  it('does not render the flow bar - it lives at page level now', () => {
     renderUD();
-    const clouds = CC.clouds as Cloud[];
-    const publicWorkloads = clouds.filter(c => !c.attached).reduce((s, c) => s + c.workloads, 0);
-    expect(publicWorkloads, 'fixture must have an unattached cloud for this CTA to render').toBeGreaterThan(0);
-    expect(
-      screen.getByRole('link', { name: `Attach the ${publicWorkloads} workloads still on the public internet` }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Flow progress' })).not.toBeInTheDocument();
   });
 
   it('renders a heading and a blurb for each of the three domains', () => {

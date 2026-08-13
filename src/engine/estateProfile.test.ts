@@ -112,11 +112,12 @@ describe('estateProfile', () => {
       expect(localStorage.getItem('advisor:acme:done')).toBe('1');
     });
 
-    /* Aug 11 revert of the first-run takeover: every profile boots
-       advisor-done; the advisor is opt-in (rail card / direct URL). */
-    it('seeds meridian done too - the advisor never hijacks /discover', () => {
+    /* The bank demo opens on the advisor every load, so meridian is never
+       seeded and never persisted (advisorPhase keeps its flag in memory
+       only). A presenter reloading must get the conversation back. */
+    it('never seeds meridian - the advisor greets the bank demo on every load', () => {
       seedAcmeAdvisorDone('meridian');
-      expect(localStorage.getItem('advisor:meridian:done')).toBe('1');
+      expect(localStorage.getItem('advisor:meridian:done')).toBeNull();
       expect(localStorage.getItem('advisor:acme:done')).toBeNull();
     });
 
