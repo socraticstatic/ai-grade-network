@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { useCloudControlLive } from '../../engine/react/useCloudControl';
+import { ShareRing } from '../../components/viz/kit';
 import { stageRollup } from './stageRollup';
 import type { Surface } from './dashboard/registry';
 
@@ -34,24 +35,27 @@ export function StageRollupBand({ surface }: { surface: Surface }) {
                   aria-hidden="true"
                 />
               </span>
-              <span
-                className={`mt-2 text-[26px] font-bold leading-none tabular-nums tracking-[-0.02em] ${
-                  s.alarm ? 'text-fw-warn' : 'text-fw-heading'
-                }`}
-              >
-                {s.value}
-              </span>
-              <span className="mt-1 text-figma-xs leading-snug text-fw-body">{s.caption}</span>
-
-              {/* A denominator the stage can honestly claim, drawn once. */}
-              {s.progress !== null && (
-                <span className="mt-2.5 block h-1.5 overflow-hidden rounded-full bg-fw-neutral" aria-hidden="true">
+              {/* The figure and, where the stage has an honest
+                  denominator, the ring that saves a viewer the division. */}
+              <span className="mt-2 flex items-center gap-3">
+                <span className="min-w-0 flex-1">
                   <span
-                    className={`block h-full rounded-full ${s.alarm ? 'bg-fw-warn' : 'bg-fw-cobalt-600'}`}
-                    style={{ width: `${Math.max(2, Math.min(100, s.progress * 100))}%` }}
-                  />
+                    className={`block text-[26px] font-bold leading-none tabular-nums tracking-[-0.02em] ${
+                      s.alarm ? 'text-fw-warn' : 'text-fw-heading'
+                    }`}
+                  >
+                    {s.value}
+                  </span>
+                  <span className="mt-1 block text-figma-xs leading-snug text-fw-body">{s.caption}</span>
                 </span>
-              )}
+                {s.progress !== null && (
+                  <ShareRing
+                    share={s.progress}
+                    label={`${Math.round(s.progress * 100)}%`}
+                    tone={s.alarm ? 'warn' : 'good'}
+                  />
+                )}
+              </span>
 
               {s.detail && (
                 <span className="mt-auto pt-2.5 text-[11px] leading-snug text-fw-bodyLight">{s.detail}</span>

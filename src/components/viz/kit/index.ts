@@ -4,3 +4,6 @@ export { ribbonPath } from './ribbon';
 export { StationTrack, type Station } from './StationTrack';
 export { TrendBand } from './TrendBand';
 export { computeTrendGeometry } from './trend';
+export { ShareRing } from './ShareRing';
+export { SplitBar } from './SplitBar';
+export { arcPath, layoutSegments, type Segment } from './gauge';

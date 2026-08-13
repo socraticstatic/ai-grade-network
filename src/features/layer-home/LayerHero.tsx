@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import { useCloudControlLive } from '../../engine/react/useCloudControl';
 import { WhyFigure } from '../../components/viz/WhyFigure';
+import { SplitBar } from '../../components/viz/kit';
 import { layerHero } from './heroModel';
 import type { Surface } from './dashboard/registry';
 
@@ -32,6 +33,15 @@ export function LayerHero({ surface }: { surface: Surface }) {
             evidence={hero.evidence}
             source={hero.source}
           />
+          {/* What the figure is made of. The split is the argument the
+              number alone cannot make: an exec sees the shape of the
+              estate's spend before reading a single label. */}
+          {hero.split.length > 0 && (
+            <div className="mt-4">
+              <SplitBar segments={hero.split} />
+            </div>
+          )}
+
           <Link
             to={hero.headline.to}
             data-testid="hero-cta"
