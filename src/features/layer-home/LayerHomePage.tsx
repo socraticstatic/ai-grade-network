@@ -3,6 +3,8 @@ import { ArrowRight } from 'lucide-react';
 import { AttIcon } from '../../components/icons/AttIcon';
 import { NAV_LAYERS, type NavLayer } from '../../components/navigation/navItems';
 import { LayerDashboard } from './dashboard/LayerDashboard';
+import { LayerHero } from './LayerHero';
+import { StageIntent } from '../_shared/StageIntent';
 
 /**
  * A layer's Home — the landing when you pick the layer up top, first in the
@@ -16,18 +18,32 @@ export function LayerHomePage({ layerKey }: { layerKey: NavLayer['key'] }) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10">
-      <header className="mb-6">
-        <p className="text-figma-sm font-semibold uppercase tracking-[0.1em] text-fw-bodyLight">{layer.tagline}</p>
-        <h1 className="text-figma-2xl font-bold text-fw-heading tracking-[-0.03em] mt-1">{layer.label}</h1>
-        <p className="text-figma-base text-fw-body mt-1 max-w-2xl">{layer.blurb}</p>
+      {/* The title earns one line, not four: an exec opening this screen
+          came for the estate's state, not for a definition of the product
+          they already bought. The blurb moved into the layer switcher's
+          own description, where someone choosing BETWEEN layers needs it. */}
+      <header className="mb-4">
+        <p className="text-figma-xs font-semibold uppercase tracking-[0.1em] text-fw-bodyLight">{layer.tagline}</p>
+        <h1 className="mt-0.5 text-figma-2xl font-bold tracking-[-0.03em] text-fw-heading">{layer.label}</h1>
       </header>
 
-      {/* The live board - replaces the flat stat grid. */}
+      {/* Who this screen serves, and what they came to decide. */}
+      <div className="mb-5">
+        <StageIntent stage="home" />
+      </div>
+
+      {/* 1. The answer: one figure, its evidence, its action - and the
+             three exposures worth acting on, each a door. */}
+      <div className="mb-8">
+        <LayerHero surface={layerKey} />
+      </div>
+
+      {/* 2. The promise: what this estate has been told to hold. */}
       <div className="mb-8">
         <LayerDashboard surface={layerKey} />
       </div>
 
-      {/* Into the lifecycle. */}
+      {/* 3. The work. */}
       <h2 className="text-figma-base font-bold text-fw-heading tracking-[-0.02em] mb-3">Work this layer</h2>
       <div className="grid sm:grid-cols-2 gap-3">
         {layer.items.map(item => (

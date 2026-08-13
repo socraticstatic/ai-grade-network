@@ -89,9 +89,17 @@ export function widgetsForSurface(
  * and is deliberately not done: a pre-declared standing intent is a promise the
  * user never made, and this product's whole posture is that a human commits.
  */
+/* The board now sits UNDER the hero (LayerHero.tsx), which states the
+   layer's headline figure, its evidence, its action and its three
+   exposures. Money on the table, Estate at a glance and What the assessment
+   found all rendered figures the hero now leads with - keeping them here
+   would state the same numbers twice on one screen, which is the exact
+   duplication the phase-0 metric audit spent 89 rows removing. What is left
+   is what the hero cannot say: the promises this estate has been asked to
+   hold, and (on AI) the budgets holding them. */
 export const DEFAULT_LAYOUT: Record<Surface, string[]> = {
-  naas: ['money-on-the-table', 'standing-intents', 'estate-figures', 'assessment-findings'],
-  ai:   ['token-budgets', 'standing-intents', 'estate-figures', 'assessment-findings'],
+  naas: ['standing-intents'],
+  ai:   ['standing-intents', 'token-budgets'],
 };
 
 // The active layer, provided by LayerDashboard so surface-aware widgets can read
