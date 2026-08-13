@@ -183,6 +183,48 @@ export function applyEstateProfile(cc: EngineSeeds, profile: EstateProfile): voi
  * boot call below only ever runs once per test file, at import time, under
  * whatever `location.search`/localStorage the jsdom environment starts
  * with. */
+/* The AI layer at estate scale.
+ *
+ * Meridian is the bank: its token ceilings scale up and its day is seeded
+ * already in progress, so the AI layer opens on an institution's numbers
+ * rather than on whatever accrued since page load. ACME keeps the unscaled
+ * ceilings and an unmetered day - a genuinely-zero estate is a real state
+ * this product teaches against ("no identity has metered a token yet"), and
+ * it must stay reachable.
+ *
+ * The governed/ungoverned split is NOT set here: `seedTokenDay` reads it
+ * from endpoint readiness, so seeding can never claim AT&T is carrying
+ * traffic it does not carry. On a fresh bank estate that means the whole
+ * day is ungoverned - which is exactly the finding the advisor opens on. */
+/* Sized so the bank's AI layer reads as an institution's programme:
+ * ~12B tokens and ~$26k of model spend on the day so far - roughly
+ * $780k/month, the scale a bank with 4,183 sites and four AI-bearing
+ * business units would actually run. Deliberately not larger: a figure
+ * nobody believes argues against itself. The ceilings scale with it, so a
+ * budget still reads as a budget rather than as already blown. */
+const MERIDIAN_TOKEN_SCALE = 4;
+/* Mid-afternoon: enough of the day burned to be worth talking about, not so
+ * much that the ceilings read as already blown. */
+const DAY_IN_PROGRESS = 0.62;
+
+interface TokenSeedApi {
+  scaleTokenBudgets?(factor: number): void;
+  seedTokenDay?(fraction: number): void;
+  resetTokenMeters?(): void;
+}
+
+export function applyTokenScale(profile: EstateProfile): void {
+  const api = (window as unknown as { CC?: { _?: TokenSeedApi } }).CC?._;
+  if (!api?.scaleTokenBudgets || !api.seedTokenDay || !api.resetTokenMeters) return;
+  api.resetTokenMeters();
+  if (profile === 'meridian') {
+    api.scaleTokenBudgets(MERIDIAN_TOKEN_SCALE);
+    api.seedTokenDay(DAY_IN_PROGRESS);
+  } else {
+    api.scaleTokenBudgets(1);
+  }
+}
+
 export function seedAcmeAdvisorDone(profile: EstateProfile): void {
   try {
     if (profile === 'acme') {
@@ -212,4 +254,8 @@ if (cc && typeof location !== 'undefined') {
   const profile = resolveProfile(location.search, localStorage);
   applyEstateProfile(cc, profile);
   seedAcmeAdvisorDone(profile);
+  /* NOT applyTokenScale here: this module loads immediately after ./state
+     so its swap lands before state-billing freezes derivations, which means
+     state-billing's token API does not exist yet. index.ts calls it once
+     every state-* module has loaded. */
 }

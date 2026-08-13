@@ -35,6 +35,9 @@ const {onramps,regions,fixes}=CC;
    public internet" on /ai/cost over a total accrued entirely public. */
 const tokenMeters={}; // appTag -> {governed,ungoverned,budget}
 const TOKEN_BUDGETS={'rd-helion':2400000000,'classified-helion':900000000,'shared-services':1600000000};
+/* The unscaled ceilings, kept so a profile switch scales from the original
+   rather than compounding on whatever the last profile left behind. */
+const BASE_TOKEN_BUDGETS={...TOKEN_BUDGETS};
 // budgets become editable once the console module loads - read lazily
 const budgetOf=tag=>CC.tokenBudgetOf?CC.tokenBudgetOf(tag):TOKEN_BUDGETS[tag];
 function meterFor(tag,seedGoverned){
@@ -85,6 +88,39 @@ function tickTokens(rng){
 }
 /* the rule engine's tickHits drives this on its own cadence */
 _.tickTokens=tickTokens;
+/* Estate-scale token seeding, driven by estateProfile.ts.
+   The bank demo has to read like a bank: an enterprise runs billions of
+   tokens a day whether or not AT&T governs them, and it is precisely the
+   UNgoverned volume that is the argument. Meters that start at zero and
+   accrue only once an endpoint is attached made the flagship AI layer open
+   on "$62.83 spent today", which reads as a hobby project rather than a
+   institution. Scale the ceilings, then seed the day already in progress;
+   the governed/ungoverned split still comes from readiness, so nothing here
+   claims AT&T is carrying traffic it is not. */
+_.scaleTokenBudgets=function(factor){
+  Object.keys(TOKEN_BUDGETS).forEach(tag=>{TOKEN_BUDGETS[tag]=Math.round(BASE_TOKEN_BUDGETS[tag]*factor);});
+  /* budgetOf() defers to CC.tokenBudgetOf once state-console loads, and
+     that reads state-console's OWN editable tokenPolicies store - so
+     scaling only this module's constant would be silently ignored by every
+     figure on screen. Scale the policy budgets too, from their own
+     captured baseline, so the ceiling a viewer edits and the ceiling the
+     meters measure against stay the same number. */
+  const pol=_.tokenPolicies;
+  if(!pol)return;
+  if(!_.baseTokenPolicyBudgets){
+    _.baseTokenPolicyBudgets={};
+    Object.keys(pol).forEach(t=>{_.baseTokenPolicyBudgets[t]=pol[t].budget;});
+  }
+  Object.keys(pol).forEach(t=>{pol[t].budget=Math.round(_.baseTokenPolicyBudgets[t]*factor);});
+};
+_.seedTokenDay=function(fraction){
+  Object.keys(TOKEN_BUDGETS).forEach(tag=>{
+    const today=Math.round(budgetOf(tag)*fraction);
+    const governed=endpointReadyFor(tag)?today:0;
+    tokenMeters[tag]={governed,ungoverned:today-governed,budget:budgetOf(tag)};
+  });
+};
+_.resetTokenMeters=function(){Object.keys(tokenMeters).forEach(t=>delete tokenMeters[t]);};
 /* The raw store rides `_` for the same reason tickTokens does: a test that
    freezes the estate needs to drain what a 3s tick metered BEFORE the freeze
    ran - module loading is async under vite-node, so under a loaded runner the
