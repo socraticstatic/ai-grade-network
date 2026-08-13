@@ -13,7 +13,7 @@
  * it reads as the visitor's sentence, not as a description of them.
  */
 
-export type Stage = 'discover' | 'connect' | 'observe' | 'govern';
+export type Stage = 'home' | 'discover' | 'connect' | 'observe' | 'govern';
 
 export interface StagePersona {
   /** Who this screen is for, in their own title. */
@@ -23,6 +23,13 @@ export interface StagePersona {
 }
 
 export const STAGE_PERSONA: Record<Stage, StagePersona> = {
+  /* The layer board is the sponsor's screen - the one person who reads it
+     to decide, not to operate. The deck's value map covers the four verbs;
+     this row is the board that sits above them. */
+  home: {
+    persona: 'the exec sponsor',
+    job: 'Know what this estate is costing me, what is exposed, and what to do about it next.',
+  },
   discover: {
     persona: 'Cloud & Platform Architect',
     job: 'See what I actually have across every cloud - one inventory, no console hopping.',
