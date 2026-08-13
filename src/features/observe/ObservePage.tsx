@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useCloudControl } from '../../engine/react/useCloudControl';
 import { FlowBar } from '../../components/flow/FlowBar';
 import { ObservabilityShell } from './ObservabilityShell';
@@ -5,9 +6,25 @@ import { networkBinding } from './networkBinding';
 import { EventStream } from './EventStream';
 import { PathTable } from '../connect/PathTable';
 import { VerdictLine } from '../_shared/VerdictLine';
+import { EstateFilterChips } from '../discover/EstateFilterChips';
+import { EMPTY_ESTATE_FILTERS, type EstateFilters } from '../discover/estateFilters';
+import type { SiteClass } from '../discover/discoveryModel';
+import type { FabricModel } from '../connect/FabricHero';
 
 export function ObservePage() {
-  const binding = useCloudControl(networkBinding);
+  /* One filter vocabulary, two screens: the same chips Discover ships now
+     scope the money screen's site band, so "show me just the ATMs" means
+     the same thing on both. Drill opens one class into its metros. */
+  const [filters, setFilters] = useState<EstateFilters>(EMPTY_ESTATE_FILTERS);
+  const [drill, setDrill] = useState<SiteClass | null>(null);
+  /* Built per render, NOT inside useCloudControl's selector: that hook
+     memoizes on the engine version alone, so a selector closing over React
+     state would keep serving the filters it was first called with - the
+     chips would render and do nothing. The `cc` subscription below still
+     re-renders this page on every engine change. */
+  const cc = useCloudControl(c => c);
+  const binding = networkBinding(cc, filters, drill);
+  const fabricModel = useCloudControl(c => c.fabricModel()) as FabricModel;
 
   // The shell provides its own "Network Observability" header; the FlowBar sits
   // as the top band (aligned to the shell's px-6 padding), then EventStream
@@ -17,8 +34,9 @@ export function ObservePage() {
       <div className="px-6 pt-6 space-y-3">
         {binding.verdict && <VerdictLine>{binding.verdict}</VerdictLine>}
         <FlowBar cta={{ label: 'See the savings', to: '/naas/cost' }} />
+        <EstateFilterChips model={fabricModel} cc={cc} filters={filters} onChange={setFilters} />
       </div>
-      <ObservabilityShell binding={binding} />
+      <ObservabilityShell binding={binding} sankeyDrill={drill} onSankeyDrill={setDrill} />
       {/* Paths — the steerable flow table (routeFlows / steerFlow / routingFailover),
           relocated here from Connect. Governing individual paths is an observability
           concern; Connect stays focused on fabric attach. */}

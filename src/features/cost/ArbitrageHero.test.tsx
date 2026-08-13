@@ -26,12 +26,18 @@ describe('ArbitrageHero', () => {
     expect(screen.getByText(new RegExp(`\\$${arb.portFeesMo.toLocaleString()}/mo AT&T fabric ports`))).toBeInTheDocument();
   });
 
-  it('shows the still-available savings as a forward call-to-action', () => {
+  /* The figure is the BILL FLOOR (what egress costs once every bucket
+     attaches), not the advisor-actionable "money on the table" the exec
+     board and Discover quote from moneyOnTheTable(). Two true numbers that
+     used to wear the same words and disagreed on screen; this one now names
+     the bill it belongs to. */
+  it('shows the bill floor as a forward call-to-action, in its own words', () => {
     const arb = CC.arbitrage();
     render(<ArbitrageHero />);
     if (arb.availableSavings > 0) {
       expect(screen.getByText(`${k(arb.availableSavings)}/mo`)).toBeInTheDocument();
-      expect(screen.getByText(/more on the table/i)).toBeInTheDocument();
+      expect(screen.getByText(/off this bill once every path attaches/i)).toBeInTheDocument();
+      expect(screen.queryByText(/more on the table/i)).not.toBeInTheDocument();
     }
   });
 

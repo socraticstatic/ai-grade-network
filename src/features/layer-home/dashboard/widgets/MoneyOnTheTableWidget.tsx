@@ -3,16 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { WidgetFrame } from '../WidgetFrame';
 import type { LayerWidgetProps } from '../registry';
 import { useCloudControlLive } from '../../../../engine/react/useCloudControl';
-import { advisorDraft } from '../../../discover/stackFigures';
+import { moneyOnTheTable } from '../../../discover/stackFigures';
 
 export function MoneyOnTheTableWidget(_props: LayerWidgetProps) {
   const navigate = useNavigate();
+  /* Headline and move count come from ONE source (moneyOnTheTable). They
+     used to be spliced: the money from arbitrage's attach-only ceiling, the
+     count from the advisor's draft - so this tile read "$19,900/mo · Review
+     10 moves" while Discover priced those same 10 moves at $52,961/mo. */
   const { available, buckets, moveCount } = useCloudControlLive(c => {
-    const arb = c.arbitrage();
+    const table = moneyOnTheTable(c);
     return {
-      available: arb.availableSavings,
-      buckets: arb.buckets.filter(b => !b.attached).slice(0, 3),
-      moveCount: advisorDraft(c).moves.length,
+      available: table.savingsMo,
+      buckets: c.arbitrage().buckets.filter(b => !b.attached).slice(0, 3),
+      moveCount: table.moves,
     };
   });
 
@@ -35,7 +39,9 @@ export function MoneyOnTheTableWidget(_props: LayerWidgetProps) {
       <div className="text-figma-2xl font-bold tabular-nums tracking-[-0.02em] text-fw-heading">
         {`$${Math.round(available).toLocaleString()}/mo`}
       </div>
-      <div className="text-figma-sm text-fw-bodyLight mt-0.5 mb-3">still on the table if every on-ramp attached</div>
+      <div className="text-figma-sm text-fw-bodyLight mt-0.5 mb-3">
+        across {moveCount} {moveCount === 1 ? 'move' : 'moves'} the advisor can act on now
+      </div>
       <ul className="flex flex-col divide-y divide-fw-secondary">
         {buckets.map(b => (
           <li key={b.key} data-testid="arb-bucket" className="flex items-center justify-between py-2 first:pt-0 last:pb-0">

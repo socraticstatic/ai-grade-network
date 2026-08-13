@@ -1,6 +1,7 @@
 import type { CloudControl } from '../../engine/types';
 import { DST_LABELS } from './flowLogs';
 import { branchesOf, SITE_CLASS_PLURAL, type SiteClass } from '../discover/discoveryModel';
+import { branchMatches, EMPTY_ESTATE_FILTERS, type EstateFilters } from '../discover/estateFilters';
 
 /* Branch-originated flow rows (state-rules.ts flows()) - mirrored the same
  * way flowLogs.ts mirrors them: only the fields this band reads. */
@@ -77,7 +78,31 @@ export const PATH_NODES = {
   public: 'Public internet',
 };
 
-export function buildSankey(cc: CloudControl): SankeyModel {
+export interface BuildOpts {
+  /** Same filter vocabulary Discover uses - the site band narrows by class. */
+  filters?: EstateFilters;
+  /** Expand one class into its top metros instead of a single rollup node. */
+  drill?: SiteClass | null;
+}
+
+/** Site rows the chart is currently counting, for the scope caption. */
+export function siteOriginSummary(
+  cc: CloudControl,
+  filters: EstateFilters = EMPTY_ESTATE_FILTERS,
+): { siteFlows: number; cloudFlows: number } {
+  const keep = new Set(branchesOf(cc).filter(b => branchMatches(b, filters)).map(b => b.id));
+  const ccFlows = (cc as unknown as { flows?: () => BranchFlowRow[] }).flows;
+  const branchRows = (ccFlows ? ccFlows() : []).filter(r => r.srcBranch && keep.has(r.srcBranch));
+  return { siteFlows: branchRows.length, cloudFlows: (cc.routeFlows() as RouteFlowRow[]).length };
+}
+
+/** Metros shown by name when a class is drilled; the rest fold into one
+ *  "Other" node, so a drilled class can never out-node the whole chart. */
+const TOP_METROS = 8;
+
+export function buildSankey(cc: CloudControl, opts: BuildOpts = {}): SankeyModel {
+  const filters = opts.filters ?? EMPTY_ESTATE_FILTERS;
+  const drill = opts.drill ?? null;
   const rows = cc.routeFlows() as RouteFlowRow[];
 
   // Collect all sources and destinations
@@ -96,35 +121,71 @@ export function buildSankey(cc: CloudControl): SankeyModel {
    * most four source nodes ("2,840 branches"), each linking through the
    * path band to the cloud it reaches. Never one node per site. */
   const branchClass = new Map<string, SiteClass>();
+  const branchCity = new Map<string, string>();
   const classCount = new Map<SiteClass, number>();
+  const metroSites = new Map<string, Set<string>>(); // `${class}/${city}` -> branch ids
   for (const b of branchesOf(cc)) {
+    if (!branchMatches(b, filters)) continue; // the chips scope this band
     branchClass.set(b.id, b.siteClass);
+    branchCity.set(b.id, b.city);
     classCount.set(b.siteClass, (classCount.get(b.siteClass) ?? 0) + 1);
+    const mk = `${b.siteClass}/${b.city}`;
+    (metroSites.get(mk) ?? metroSites.set(mk, new Set()).get(mk)!).add(b.id);
   }
   const cloudName = new Map<string, string>();
   for (const c of (cc.clouds ?? []) as { id: string; name: string }[]) cloudName.set(c.id, c.name);
-  // class -> pathKind -> dest cloud name -> gbps
-  const siteAgg = new Map<SiteClass, Map<'private' | 'public', Map<string, number>>>();
+  /* A drilled class splits into its top metros; every other class stays a
+     single rollup. Both shapes are just "a source node with a class", so
+     the aggregation keys on the NODE the row belongs to, not the class. */
+  const drilledMetros = (() => {
+    if (!drill) return null;
+    const mine = [...metroSites.entries()]
+      .filter(([k]) => k.startsWith(`${drill}/`))
+      .map(([k, ids]) => ({ city: k.slice(drill.length + 1), n: ids.size }))
+      .sort((a, b) => b.n - a.n);
+    const top = mine.slice(0, TOP_METROS);
+    const restN = mine.slice(TOP_METROS).reduce((s2, m) => s2 + m.n, 0);
+    return { top: new Map(top.map(m => [m.city, m.n])), restN };
+  })();
+  const nodeNameFor = (cls: SiteClass, city: string): string => {
+    if (drill !== cls) return `${nfSite.format(classCount.get(cls) ?? 0)} ${SITE_CLASS_PLURAL[cls]}`;
+    const n = drilledMetros?.top.get(city);
+    if (n !== undefined) return `${city} · ${nfSite.format(n)}`;
+    return `Other · ${nfSite.format(drilledMetros?.restN ?? 0)}`;
+  };
+  // source node name -> pathKind -> dest cloud name -> gbps
+  const siteAgg = new Map<string, Map<'private' | 'public', Map<string, number>>>();
+  const nodeClass = new Map<string, SiteClass>();
+  const nodeCount = new Map<string, number>();
   const ccFlows = (cc as unknown as { flows?: () => BranchFlowRow[] }).flows;
   const branchRows = (ccFlows ? ccFlows() : []).filter(r => r.srcBranch);
   for (const r of branchRows) {
-    const cls = branchClass.get(r.srcBranch as string);
+    const id = r.srcBranch as string;
+    const cls = branchClass.get(id);
     const dest = cloudName.get(r.dstCloud ?? '');
-    if (!cls || !dest) continue;
+    if (!cls || !dest) continue; // filtered out, or a cloud this estate lacks
+    const name = nodeNameFor(cls, branchCity.get(id) ?? '');
+    nodeClass.set(name, cls);
+    nodeCount.set(
+      name,
+      drill === cls
+        ? (drilledMetros?.top.get(branchCity.get(id) ?? '') ?? drilledMetros?.restN ?? 0)
+        : (classCount.get(cls) ?? 0),
+    );
     const kind: 'private' | 'public' = r.viaPublic ? 'public' : 'private';
-    const byKind = siteAgg.get(cls) ?? new Map();
+    const byKind = siteAgg.get(name) ?? new Map();
     const byDest = byKind.get(kind) ?? new Map<string, number>();
     byDest.set(dest, (byDest.get(dest) ?? 0) + r.gbps);
     byKind.set(kind, byDest);
-    siteAgg.set(cls, byKind);
+    siteAgg.set(name, byKind);
     destsSet.add(dest);
   }
   const siteNodes: SankeyNode[] = [...siteAgg.keys()]
-    .sort((a, b) => (classCount.get(b) ?? 0) - (classCount.get(a) ?? 0))
-    .map(cls => ({
-      name: `${nfSite.format(classCount.get(cls) ?? 0)} ${SITE_CLASS_PLURAL[cls]}`,
+    .sort((a, b) => (nodeCount.get(b) ?? 0) - (nodeCount.get(a) ?? 0))
+    .map(name => ({
+      name,
       band: 'source' as const,
-      rollup: { siteClass: cls, count: classCount.get(cls) ?? 0 },
+      rollup: { siteClass: nodeClass.get(name)!, count: nodeCount.get(name) ?? 0 },
     }));
 
   // Build node arrays - site rollups lead the source band.
@@ -209,8 +270,8 @@ export function buildSankey(cc: CloudControl): SankeyModel {
   // Site-band links: class rollup -> path, path -> dest cloud. Same
   // two-hop shape as the route-flow links above; values are summed gbps
   // of real branch flows, rounded to keep the labels readable.
-  for (const [cls, byKind] of siteAgg) {
-    const clsIdx = nodes.findIndex(n => n.rollup?.siteClass === cls);
+  for (const [name, byKind] of siteAgg) {
+    const clsIdx = nodeIndex.get(`source:${name}`)!;
     for (const [kind, byDest] of byKind) {
       const pathIdx = nodeIndex.get(`path:${kind === 'private' ? PATH_NODES.private : PATH_NODES.public}`)!;
       let total = 0;

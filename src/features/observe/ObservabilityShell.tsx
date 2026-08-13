@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ObservabilityBinding, RecordRow } from './ObservabilityBinding';
 import { SankeyPanel } from './SankeyPanel';
+import type { SiteClass } from '../discover/discoveryModel';
 import { TrendBand } from '../../components/viz/kit';
 
 // Left-border tone indicator per record row. `ok` resolves against
@@ -19,7 +20,17 @@ function toneClass(tone: RecordRow['tone']): string {
   }
 }
 
-export function ObservabilityShell({ binding }: { binding: ObservabilityBinding }) {
+export function ObservabilityShell({
+  binding,
+  sankeyDrill = null,
+  onSankeyDrill,
+}: {
+  binding: ObservabilityBinding;
+  /** Sankey site-band drill state, owned by the page (it also owns the
+   *  estate filters the same band reads). */
+  sankeyDrill?: SiteClass | null;
+  onSankeyDrill?: (cls: SiteClass | null) => void;
+}) {
   const tabs = binding.flowTabs();
   const groups = binding.groupByOptions();
   const [tab, setTab] = useState(tabs[0]?.id ?? '');
@@ -99,7 +110,12 @@ export function ObservabilityShell({ binding }: { binding: ObservabilityBinding 
             </div>
             <div data-testid="flow-panel" data-tab={tab} className="p-4">
               {isSankey ? (
-                <SankeyPanel model={binding.sankey!()} />
+                <SankeyPanel
+                  model={binding.sankey!()}
+                  scope={binding.sankeyScope?.()}
+                  drill={sankeyDrill}
+                  onDrill={onSankeyDrill}
+                />
               ) : series.length === 0 || series.every(p => p.v === 0) ? (
                 <div data-testid="flow-empty" className="h-24 flex items-center justify-center text-figma-sm text-fw-bodyLight text-center px-4">
                   {binding.emptyHint ?? 'No flow in this window yet.'}

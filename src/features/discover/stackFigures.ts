@@ -328,6 +328,30 @@ export function advisorDraft(cc: CloudControl): { moves: StagedMove[]; deltas: S
   return { moves, deltas: stagedDeltas(cc, moves) };
 }
 
+/**
+ * THE money-on-the-table figure. One derivation, every surface.
+ *
+ * Two numbers used to compete for the same sentence, and a viewer reading
+ * two screens in one sitting caught them disagreeing:
+ *   - `arbitrage().availableSavings` = the egress BILL CEILING (what the
+ *     invoice drops to if every bucket attaches). Attach-only; it cannot
+ *     see a steer, because steering doesn't change which buckets exist.
+ *   - `advisorDraft().deltas.egressSavingMo` = what the advisor can ACT on
+ *     right now: every priced attach plus every recommended steer.
+ * Both are true; only one answers "how much is on the table", because only
+ * one is backed by moves a human can review and commit. That one wins, and
+ * every "on the table" rendering reads it from here. The bill ceiling keeps
+ * its own sentence on Cost, where the three-bill comparison needs it - but
+ * it never again claims the same words.
+ */
+export function moneyOnTheTable(cc: CloudControl): {
+  savingsMo: number;
+  moves: number;
+} {
+  const draft = advisorDraft(cc);
+  return { savingsMo: draft.deltas.egressSavingMo, moves: draft.moves.length };
+}
+
 /* Whether committing a move of this KIND pushes an undo entry - established
  * by reading, for each kind, the exact engine mutation `commitMoves` below
  * calls, and checking THAT function for a `pushUndo`/`_.pushUndo` call:
