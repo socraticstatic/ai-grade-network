@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, BrainCircuit, Cloud, Info, Shield, Zap } from 'lucide-react';
 import type { Finding, FindingKind } from './advisorModel';
 import { ladderFor, type OfferTier } from './offerCatalog';
+import { FINDING_PERSONA } from '../_shared/personas';
 
 const FRAMING_LABEL: Record<OfferTier['framing'], string> = {
   good: 'Start here',
@@ -37,7 +38,12 @@ export function FindingCard({ finding, onAcceptTier }: { finding: Finding; onAcc
           <Icon className="h-5 w-5 text-fw-cobalt-600" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <p className="text-[17px] font-bold tracking-[-0.02em] text-fw-heading">{finding.title}</p>
+          {/* Whose problem this is - the deck's persona column, on the
+              artifact a reader would forward to that colleague. */}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-fw-bodyLight">
+            For {FINDING_PERSONA[finding.kind] ?? 'your team'}
+          </p>
+          <p className="mt-0.5 text-[17px] font-bold tracking-[-0.02em] text-fw-heading">{finding.title}</p>
           <p className="mt-0.5 text-figma-sm text-fw-body">{finding.evidence}</p>
           <button
             type="button"

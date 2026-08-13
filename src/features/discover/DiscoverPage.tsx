@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react';
 import { useCloudControl } from '../../engine/react/useCloudControl';
 import type { FabricModel } from '../connect/FabricHero';
 import { VerdictLine } from '../_shared/VerdictLine';
+import { StageIntent } from '../_shared/StageIntent';
 import { discoverVerdict } from './verdict';
 import { UnifiedDiscovery } from './UnifiedDiscovery';
 import { FlowBar } from '../../components/flow/FlowBar';
@@ -67,6 +68,7 @@ export function DiscoverPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 space-y-4">
       <VerdictLine>{discoverVerdict(model)}</VerdictLine>
+      <StageIntent stage="discover" />
       {/* Page level, full width, ABOVE the columns: the five stage labels
           need the whole page. Inside the left column the 320px rail
           squeezed them until "Discover" sat on top of "Connect". */}
