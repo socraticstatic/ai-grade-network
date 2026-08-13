@@ -29,10 +29,20 @@ export interface HeroStat {
   alarm?: boolean;
 }
 
+/** The headline figure broken into the parts that sum to it. */
+export interface HeroSplit {
+  key: string;
+  label: string;
+  value: number;
+  hex: string;
+}
+
 export interface LayerHero {
   /** The layer's argument, in one sentence. */
   verdict: string;
   headline: { value: string; label: string; to: string; cta: string };
+  /** What the headline is made of - drawn as a SplitBar under it. */
+  split: HeroSplit[];
   evidence: { label: string; value: string }[];
   source: string;
   risks: HeroStat[];
@@ -60,6 +70,10 @@ export function layerHero(cc: CloudControl, surface: Surface): LayerHero {
         to: '/ai/cost',
         cta: 'See the spend',
       },
+      split: [
+        { key: 'ungoverned', label: 'No policy holding it', value: t.ungovernedTokensToday, hex: '#b3541e' },
+        { key: 'governed', label: 'Under a policy', value: t.governedTokensToday, hex: '#0057b8' },
+      ],
       evidence: [
         { label: 'Identities spending', value: String(t.identityCount) },
         { label: 'Metered by a policy', value: `${t.meteringCount} of ${t.identityCount}` },
@@ -105,6 +119,10 @@ export function layerHero(cc: CloudControl, surface: Surface): LayerHero {
       to: '/discover?draft=andi',
       cta: `Review ${table.moves} ${table.moves === 1 ? 'move' : 'moves'}`,
     },
+    split: [
+      { key: 'public', label: 'Public internet', value: egressPub, hex: '#94a3b8' },
+      { key: 'private', label: 'AT&T fabric', value: (cc.egress() as { priv: number }).priv, hex: '#0057b8' },
+    ],
     evidence: [
       { label: 'Regions to attach', value: String(table.attachMoves) },
       { label: 'Flows to steer onto the fabric', value: String(table.steerMoves) },
