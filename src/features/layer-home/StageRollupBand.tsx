@@ -1,7 +1,15 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { useCloudControlLive } from '../../engine/react/useCloudControl';
-import { ShareRing } from '../../components/viz/kit';
+import { Chart } from '../../components/charts/Chart';
+import {
+  connectGaugeOption,
+  costTrendOption,
+  discoverTreemapOption,
+  governFunnelOption,
+  observeTrendOption,
+} from './stageCharts';
+import { useCloudControl } from '../../engine/react/useCloudControl';
 import { stageRollup } from './stageRollup';
 import type { Surface } from './dashboard/registry';
 
@@ -16,11 +24,27 @@ import type { Surface } from './dashboard/registry';
  */
 export function StageRollupBand({ surface }: { surface: Surface }) {
   const stages = useCloudControlLive(cc => stageRollup(cc, surface));
+  /* A chart per stage, each answering that stage's own question: an estate
+     is a treemap, a share is a gauge, a policy pipeline is a funnel, and
+     anything with a history is a trend. Only NaaS has all five today - the
+     AI layer keeps its figure-and-caption card until its own series exist,
+     rather than borrowing a shape that would misdescribe it. */
+  const charts = useCloudControl(cc =>
+    surface === 'naas'
+      ? {
+          discover: discoverTreemapOption(cc),
+          connect: connectGaugeOption(cc),
+          govern: governFunnelOption(cc),
+          observe: observeTrendOption(cc),
+          cost: costTrendOption(cc),
+        }
+      : null,
+  );
 
   return (
     <section aria-label="The lifecycle at a glance" data-testid="stage-rollup">
       <h2 className="mb-3 text-figma-base font-bold tracking-[-0.02em] text-fw-heading">Across the lifecycle</h2>
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         {stages.map(s => (
           <li key={s.key}>
             <Link
@@ -48,14 +72,17 @@ export function StageRollupBand({ surface }: { surface: Surface }) {
                   </span>
                   <span className="mt-1 block text-figma-xs leading-snug text-fw-body">{s.caption}</span>
                 </span>
-                {s.progress !== null && (
-                  <ShareRing
-                    share={s.progress}
-                    label={`${Math.round(s.progress * 100)}%`}
-                    tone={s.alarm ? 'warn' : 'good'}
-                  />
-                )}
               </span>
+
+              {charts?.[s.key as keyof typeof charts] && (
+                <span className="mt-2 block">
+                  <Chart
+                    testid={`stage-chart-${s.key}`}
+                    option={charts[s.key as keyof typeof charts]}
+                    height={s.key === 'connect' ? 96 : 86}
+                  />
+                </span>
+              )}
 
               {s.detail && (
                 <span className="mt-auto pt-2.5 text-[11px] leading-snug text-fw-bodyLight">{s.detail}</span>
