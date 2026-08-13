@@ -13,15 +13,19 @@ import { RegionPanel } from './RegionPanel';
 import { SitePanel } from './SitePanel';
 import { EdgeGroupPanel } from './EdgeGroupPanel';
 import { EdgeTrail } from './EdgeTrail';
+import { EstateLevelMap } from './EstateLevelMap';
 import {
-  edgeNodes,
+  levelNodes,
   edgeTrail,
   edgeCaption,
   scopeNode,
   descend,
+  currentDim,
+  COLUMN_MAX,
   NO_EDGE_DRILL,
   type EdgeDrill,
   type EdgeNode,
+  type EdgeSort,
 } from './edgeDrill';
 import { branchesOf } from '../discover/discoveryModel';
 import { CC } from '../../engine';
@@ -81,37 +85,59 @@ export function ConnectPage() {
   const [justProvisioned, setJustProvisioned] = useState<string | null>(null);
   const [fabricExpanded, setFabricExpanded] = useState(false);
   const [edgeDrill, setEdgeDrill] = useState<EdgeDrill>(NO_EDGE_DRILL);
+  const [levelSort, setLevelSort] = useState<EdgeSort>('largest');
+  const [levelQuery, setLevelQuery] = useState('');
   /* The breadcrumb announces itself on the first descent only — see
      `EdgeTrail`. Module-scoped so it is once per session, not once per mount:
      bouncing to Observe and back is not a first drill. */
   const [trailHint, setTrailHint] = useState(false);
 
-  /* The ingress column, one level at a time. `heroModel` splices it into the
-     fabric model so the diagram, the edges and the panels all read the same
-     rows — there is no second source of sites on this page. */
-  const edgeRows: EdgeNode[] = edgeNodes(CC, branches, edgeDrill);
+  /* One descent of the estate, read twice: the diagram column draws the head
+     of it, the level map draws ALL of it. There is no second source and no
+     lump — whatever the column cannot fit, the map below is already showing. */
+  const dim = currentDim(edgeDrill);
+  const allRows: EdgeNode[] = dim ? levelNodes(CC, branches, edgeDrill, { sort: levelSort }) : [];
+  const searched: EdgeNode[] = dim ? levelNodes(CC, branches, edgeDrill, { sort: levelSort, query: levelQuery }) : [];
+  const edgeRows = allRows.slice(0, COLUMN_MAX);
+
   const heroModel: FabricModel = {
     ...model,
     sites: edgeRows.map(n => ({ id: n.id, label: n.label, firstMile: n.firstMile, sub: n.sub, drillable: n.drillable, share: n.share, icon: n.icon })),
   };
-  const selectedEdge = selected?.kind === 'site' ? edgeRows.find(n => n.id === selected.id) ?? null : null;
+  /* The panels look a node up across the WHOLE level, not the seven rows the
+     diagram column happened to draw — a site opened from the level map must
+     still find itself. */
+  const panelModel: FabricModel = {
+    ...model,
+    sites: allRows.map(n => ({ id: n.id, label: n.label, firstMile: n.firstMile, sub: n.sub, share: n.share, icon: n.icon })),
+  };
   const scope = scopeNode(CC, branches, edgeDrill);
+  const selectedEdge =
+    selected?.kind === 'site' ? allRows.find(n => n.id === selected.id) ?? null : null;
+
+  const goTo = (d: EdgeDrill) => {
+    setEdgeDrill(d);
+    setSelected({ kind: 'fabric' });
+    setLevelQuery('');
+  };
+
+  const openNode = (node: EdgeNode) => {
+    const next = descend(edgeDrill, node);
+    if (!next) {
+      setSelected({ kind: 'site', id: node.id });
+      return;
+    }
+    goTo(next);
+    if (!trailHintShown) {
+      trailHintShown = true;
+      setTrailHint(true);
+      window.setTimeout(() => setTrailHint(false), 5200);
+    }
+  };
 
   const drillInto = (siteId: string) => {
-    const node = edgeRows.find(n => n.id === siteId);
-    if (!node) return;
-    const next = descend(edgeDrill, node);
-    if (next) {
-      setEdgeDrill(next);
-      if (!trailHintShown) {
-        trailHintShown = true;
-        setTrailHint(true);
-        window.setTimeout(() => setTrailHint(false), 5200);
-      }
-      // A descent replaces the selection with the level you just opened, so
-      // the panel below never states a group you can no longer see.
-      setSelected({ kind: 'fabric' });
-    }
+    const node = allRows.find(n => n.id === siteId);
+    if (node) openNode(node);
   };
 
   // "connect <region>" from ANDI lands here as ?provision=<regionId>&dual=<0|1> -
@@ -156,9 +182,9 @@ export function ConnectPage() {
         )}
 
         <EdgeTrail
-          trail={edgeTrail(edgeDrill)}
-          caption={edgeCaption(edgeRows, branches.length)}
-          onGo={d => { setEdgeDrill(d); setSelected({ kind: 'fabric' }); setTrailHint(false); }}
+          trail={edgeTrail(branches, edgeDrill)}
+          caption={edgeCaption(edgeRows, branches.length, allRows.length, dim)}
+          onGo={d => { goTo(d); setTrailHint(false); }}
           highlight={trailHint}
         />
 
@@ -172,6 +198,20 @@ export function ConnectPage() {
           onDrillSite={drillInto}
         />
 
+        {dim && (
+          <EstateLevelMap
+            nodes={searched}
+            dim={dim}
+            sort={levelSort}
+            onSort={setLevelSort}
+            query={levelQuery}
+            onQuery={setLevelQuery}
+            onOpen={openNode}
+            onSelect={n => setSelected({ kind: 'site', id: n.id })}
+            selectedId={selected?.kind === 'site' ? selected.id : null}
+          />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           {selectedRegion ? (
             <RegionPanel
@@ -181,7 +221,7 @@ export function ConnectPage() {
               onProvisioned={handleProvisioned}
             />
           ) : selectedEdge && selectedEdge.count === 1 ? (
-            <SitePanel siteId={selectedEdge.id} model={heroModel} />
+            <SitePanel siteId={selectedEdge.id} model={panelModel} />
           ) : selectedEdge ? (
             <EdgeGroupPanel node={selectedEdge} />
           ) : scope ? (

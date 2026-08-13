@@ -34,10 +34,19 @@ const HEX = {
  *  per-site marker every existing map test already covers. */
 function clusterSites(sites: AttachmentMapModel['sites']): AttachmentMapModel['sites'] {
   if (!needsRollup(sites.length)) return sites;
+
+  /* Cluster at the coarsest level the estate can name, then fall back.
+     Clustering by class + metro was right when the estate had twelve cities;
+     with thirty-five it draws a hundred-plus markers on a national map,
+     which is the same unreadable pile the clustering exists to prevent. A
+     region has a handful of values by construction, so the top-level map
+     stays legible however many metros the bank opens. */
+  const keyOf = (s: AttachmentMapModel['sites'][number]) => s.region ?? s.state ?? s.city;
   const groups = new Map<string, { siteClass: SiteClass; city: string; count: number }>();
   for (const s of sites) {
-    const key = `${s.siteClass}/${s.city}`;
-    const g = groups.get(key) ?? { siteClass: s.siteClass, city: s.city, count: 0 };
+    const place = keyOf(s);
+    const key = `${s.siteClass}/${place}`;
+    const g = groups.get(key) ?? { siteClass: s.siteClass, city: place, count: 0 };
     g.count += 1;
     groups.set(key, g);
   }

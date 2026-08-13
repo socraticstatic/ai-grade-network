@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom';
 import { ProviderLogo } from '../../components/brand/ProviderLogo';
 import type { FabricRegion } from '../../engine/types';
 import { VIZ_HEX } from '../../components/viz/kit';
-import { ChevronRight, Server, Building2, Store, Landmark, MapPin, Globe } from 'lucide-react';
+import { ChevronRight, Server, Building2, Store, Landmark, MapPin, Globe, Map as MapIcon, Compass } from 'lucide-react';
 
 /** The ingress column's icon vocabulary — one per site class, so a group of
  *  ATMs and a group of data centres are never the same picture. */
-export type SiteIcon = 'dc' | 'office' | 'branch' | 'atm' | 'metro' | 'site';
+export type SiteIcon = 'dc' | 'office' | 'branch' | 'atm' | 'region' | 'state' | 'metro' | 'district' | 'site';
 
-const SITE_ICON = { dc: Server, office: Building2, branch: Store, atm: Landmark, metro: MapPin, site: Globe } as const;
+const SITE_ICON = { dc: Server, office: Building2, branch: Store, atm: Landmark, region: Globe, state: MapIcon, metro: MapPin, district: Compass, site: Building2 } as const;
 
 /* ------------------------------------------------------------------ *
  * Cloud Fabric hero — the manipulable centerpiece of Connect.

@@ -61,6 +61,11 @@ export interface Branch {
   onrampId?: string;
   cloudTags?: Record<string, string>;
   siteClass: SiteClass;
+  /** Geography, present on estates that carry it (meridian). The teaching
+   *  estate has nine sites and needs no region/state/district spine. */
+  state?: string;
+  region?: string;
+  district?: string;
 }
 
 /** Tree node keys are path-joined: `aws`, `aws/use1`, `aws/use1/vpcprod`. */

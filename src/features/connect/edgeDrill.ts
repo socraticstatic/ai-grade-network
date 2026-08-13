@@ -1,45 +1,87 @@
 import type { CloudControl } from '../../engine/types';
 import type { Branch, SiteClass } from '../discover/discoveryModel';
-import { branchesOf, CLASS_ORDER, siteClassNoun, ROLLUP_THRESHOLD } from '../discover/discoveryModel';
-import { connectionOf, regionOf, OFF_NET } from '../discover/estateFilters';
+import { CLASS_ORDER, siteClassNoun, ROLLUP_THRESHOLD } from '../discover/discoveryModel';
+import { connectionOf, OFF_NET } from '../discover/estateFilters';
 
 /**
- * The ingress column of the fabric diagram, made real and drillable.
+ * The ingress column of the fabric diagram: a meta view of the whole estate
+ * that descends, without a gap, to one building.
  *
- * It used to be five hardcoded archetypes — HQ, DC, Branch, Mobility,
- * Internet — which is a fine teaching picture for a nine-site estate and a
- * lie for a bank with 4,183 premises: every branch in the country collapsed
- * into one anonymous box labelled "Branch", with no count, no on-fabric
- * share, and nothing to click. The right column had eight real cloud regions
- * you could interrogate; the left had cartoons.
+ * Two things were wrong with the first cut.
  *
- * So the column now descends the estate the same way Discover's tree and the
- * Observe sankey do — rollup first, one level at a time:
+ * The hierarchy was `class → metro → site`. A bank does not think that way
+ * and neither does its estate: a single city can hold hundreds of branches,
+ * those cities sit inside states that carry their own compliance and org
+ * lines, and states roll up into the bank's operating regions. Asking "how
+ * exposed is Texas?" or "what does the Southeast look like?" had no level to
+ * land on, and the last hop dropped from a metro straight onto an
+ * unnavigable list of individual sites.
  *
- *   class  →  Branches (2,840 sites)
- *   metro  →  Dallas (312 sites)
- *   site   →  Branch · Dallas 04
+ * And the level was TRUNCATED - seven rows and a "+ 6 more metros" lump.
+ * That is the one thing a fleet view must never do, because the lump is
+ * exactly where the exposure hides. The column is a fixed-height part of a
+ * diagram and can only carry so many rows, so it now carries the largest few
+ * and says so, while `EstateLevelMap` renders EVERY group at the level as a
+ * tile - the way a host map does. Nothing is summarised away.
  *
- * Each level answers "how many, and how many of them are already on the
- * fabric" before it offers anything to click, which is the whole rollup-first
- * contract: never render 2,840 rows, always say 2,840.
+ * The chain is data, not control flow, so a level can be inserted or the
+ * order changed without touching a component:
+ *
+ *   class → region → state → metro → district → site
  */
 
-export type EdgeLevel = 'class' | 'metro' | 'site';
+export type EdgeDim = 'class' | 'region' | 'state' | 'metro' | 'district' | 'site';
 
+/** The default descent. Class first: it is the estate's own top-level split
+ *  (a data centre and an ATM are different machines, not different places),
+ *  and geography orders itself underneath. */
+export const DEFAULT_CHAIN: EdgeDim[] = ['class', 'region', 'state', 'metro', 'district', 'site'];
+
+/** Geography-first, for the exec who thinks in territories rather than kit. */
+export const GEO_CHAIN: EdgeDim[] = ['region', 'state', 'metro', 'class', 'district', 'site'];
+
+export const CHAINS: { id: string; label: string; chain: EdgeDim[] }[] = [
+  { id: 'class', label: 'Type → Region → State → Metro', chain: DEFAULT_CHAIN },
+  { id: 'geo', label: 'Region → State → Metro → Type', chain: GEO_CHAIN },
+];
+
+export const DIM_LABEL: Record<EdgeDim, string> = {
+  class: 'type',
+  region: 'region',
+  state: 'state',
+  metro: 'metro',
+  district: 'district',
+  site: 'site',
+};
+
+/** Plural nouns for the level's own prose ("all 35 metros"). */
+export const DIM_PLURAL: Record<EdgeDim, string> = {
+  class: 'types',
+  region: 'regions',
+  state: 'states',
+  metro: 'metros',
+  district: 'districts',
+  site: 'sites',
+};
+
+/**
+ * Where the viewer is standing: one value per level already descended, in
+ * chain order. An empty path is the top of the estate.
+ */
 export interface EdgeDrill {
-  siteClass?: SiteClass | null;
-  metro?: string | null;
+  path: string[];
+  chain: EdgeDim[];
 }
 
-export const NO_EDGE_DRILL: EdgeDrill = { siteClass: null, metro: null };
+export const NO_EDGE_DRILL: EdgeDrill = { path: [], chain: DEFAULT_CHAIN };
 
-/** Mirrors `FabricHero`'s icon vocabulary without importing the component. */
-export type EdgeIcon = 'dc' | 'office' | 'branch' | 'atm' | 'metro' | 'site';
+export type EdgeIcon = 'dc' | 'office' | 'branch' | 'atm' | 'region' | 'state' | 'metro' | 'district' | 'site';
 
 export interface EdgeNode {
-  /** Namespaced so a class key can never collide with a branch id. */
+  /** Namespaced by level, so a state key can never collide with a metro. */
   id: string;
+  /** The raw value this node stands for — what gets pushed onto the path. */
+  value: string;
   label: string;
   /** The count line — always present, always the honest denominator. */
   sub: string;
@@ -47,7 +89,7 @@ export interface EdgeNode {
   onFabric: number;
   /** Dominant first-mile transport across the members, or null for off-net. */
   firstMile: string | null;
-  /** True when clicking descends a level rather than just selecting. */
+  /** True when there is another level below this one. */
   drillable: boolean;
   /** 0..1 on the AT&T fabric — the figure the node's share bar draws. */
   share: number;
@@ -55,29 +97,74 @@ export interface EdgeNode {
   members: Branch[];
 }
 
-/** The column never grows past this — beyond it, the tail becomes one row. */
-const COLUMN_MAX = 7;
+export type EdgeSort = 'largest' | 'exposed' | 'name';
+
+export const SORTS: { id: EdgeSort; label: string }[] = [
+  { id: 'largest', label: 'Largest' },
+  { id: 'exposed', label: 'Most exposed' },
+  { id: 'name', label: 'A–Z' },
+];
+
+/** The diagram column is a fixed height. The level map carries the rest. */
+export const COLUMN_MAX = 7;
 
 const fmt = (n: number) => n.toLocaleString('en-US');
 
-/** The metro a site sits in. Branch names carry their city already. */
-const metroOf = (b: Branch): string => b.city || regionOf(b) || 'unknown';
+/* ------------------------------ dimensions ----------------------------- */
+
+const UNKNOWN = 'Unassigned';
+
+/** How each level reads a value off a site. */
+export function dimValue(dim: EdgeDim, b: Branch): string {
+  switch (dim) {
+    case 'class': return b.siteClass;
+    case 'region': return b.region ?? UNKNOWN;
+    case 'state': return b.state ?? UNKNOWN;
+    case 'metro': return b.city || UNKNOWN;
+    case 'district': return b.district ?? 'All sites';
+    case 'site': return b.id;
+  }
+}
+
+function dimLabel(dim: EdgeDim, value: string, members: Branch[]): string {
+  if (dim === 'class') return capitalize(siteClassNoun(value as SiteClass, members.length));
+  if (dim === 'site') return members[0]?.name ?? value;
+  if (dim === 'district') return `${value} district`;
+  return value;
+}
+
+function dimIcon(dim: EdgeDim, value: string): EdgeIcon {
+  if (dim === 'class') return value as EdgeIcon;
+  return dim as EdgeIcon;
+}
+
+/**
+ * The levels still below the viewer, given where they are.
+ *
+ * A level that cannot split its members is skipped rather than drawn: an
+ * office has no district, and a "district" level holding one group called
+ * "All sites" is a step that costs a click and says nothing.
+ */
+function levelsBelow(drill: EdgeDrill, members: Branch[]): EdgeDim[] {
+  const rest = drill.chain.slice(drill.path.length + 1);
+  return rest.filter(dim => {
+    if (dim === 'site') return members.length > 1;
+    const distinct = new Set(members.map(b => dimValue(dim, b)));
+    return distinct.size > 1;
+  });
+}
+
+/* -------------------------------- nodes -------------------------------- */
 
 /**
  * The transport a group rides, when the group agrees on one. A mixed group
- * gets "mixed" rather than a plurality dressed as a fact — the whole point of
- * this column is that a viewer can trust the label without opening it.
+ * gets "mixed" rather than a plurality dressed as a fact.
  */
 function dominantFirstMile(cc: CloudControl, members: Branch[]): string | null {
   const seen = new Set<string>();
   for (const b of members) {
     const conn = connectionOf(cc, b);
-    if (conn === OFF_NET) {
-      seen.add(OFF_NET);
-      continue;
-    }
     seen.add(conn);
-    // Three distinct transports is already "mixed"; no need to walk 2,840.
     if (seen.size > 2) break;
   }
   if (seen.size === 0) return null;
@@ -90,9 +177,7 @@ function dominantFirstMile(cc: CloudControl, members: Branch[]): string | null {
 
 /**
  * A group's one-line summary, sized to fit the node box: the count, then the
- * on-fabric share as a percentage rather than a second raw number. "2,840 ·
- * 99% on fabric" reads at 10px; "2,840 branches · 2,812 on fabric" does not,
- * and the exact second figure is one click away in the panel below.
+ * on-fabric share as a percentage rather than a second raw number.
  */
 function groupSub(count: number, onFabric: number): string {
   if (onFabric === 0) return `${fmt(count)} · none on fabric`;
@@ -102,174 +187,152 @@ function groupSub(count: number, onFabric: number): string {
 
 function toNode(
   cc: CloudControl,
-  id: string,
-  label: string,
+  dim: EdgeDim,
+  value: string,
   members: Branch[],
   drillable: boolean,
-  icon: EdgeIcon,
 ): EdgeNode {
   const onFabric = members.filter(b => b.onrampId).length;
   return {
-    id,
-    label,
+    id: `edge:${dim}:${value}`,
+    value,
+    label: dimLabel(dim, value, members),
     sub: members.length === 1 ? (onFabric === 1 ? 'on the fabric' : 'public internet') : groupSub(members.length, onFabric),
     count: members.length,
     onFabric,
     firstMile: dominantFirstMile(cc, members),
     drillable,
     share: members.length ? onFabric / members.length : 0,
-    icon,
+    icon: dimIcon(dim, value),
     members,
   };
 }
 
-/** Group members by a key, preserving first-seen order. */
-function groupBy(members: Branch[], keyOf: (b: Branch) => string): Map<string, Branch[]> {
-  const acc = new Map<string, Branch[]>();
-  for (const b of members) {
-    const k = keyOf(b);
-    const row = acc.get(k);
-    if (row) row.push(b);
-    else acc.set(k, [b]);
-  }
-  return acc;
-}
+/* ------------------------------ traversal ------------------------------ */
 
-/**
- * Trim a grouped level to the column budget: the biggest groups by count,
- * then one honest tail row naming what was left out. Never a silent cut.
- */
-function withTail(rows: EdgeNode[], tailNoun: string): EdgeNode[] {
-  if (rows.length <= COLUMN_MAX) return rows;
-  const kept = rows.slice(0, COLUMN_MAX - 1);
-  const rest = rows.slice(COLUMN_MAX - 1);
-  const members = rest.flatMap(r => r.members);
-  const onFabric = members.filter(b => b.onrampId).length;
-  kept.push({
-    id: 'edge:rest',
-    label: `+ ${fmt(rest.length)} more ${tailNoun}`,
-    sub: groupSub(members.length, onFabric),
-    count: members.length,
-    onFabric,
-    firstMile: null,
-    drillable: false,
-    share: members.length ? onFabric / members.length : 0,
-    icon: 'site',
-    members,
+/** The sites in scope at the viewer's current position. */
+export function membersAt(branches: Branch[], drill: EdgeDrill): Branch[] {
+  let scope = branches;
+  drill.path.forEach((value, i) => {
+    const dim = drill.chain[i];
+    scope = scope.filter(b => dimValue(dim, b) === value);
   });
-  return kept;
+  return scope;
+}
+
+/** The dimension the current level is grouped by, or null past the leaf. */
+export function currentDim(drill: EdgeDrill): EdgeDim | null {
+  return drill.chain[drill.path.length] ?? null;
+}
+
+function sortNodes(rows: EdgeNode[], sort: EdgeSort): EdgeNode[] {
+  const by = [...rows];
+  if (sort === 'name') by.sort((a, b) => a.label.localeCompare(b.label));
+  else if (sort === 'exposed') by.sort((a, b) => (b.count - b.onFabric) - (a.count - a.onFabric) || b.count - a.count);
+  else by.sort((a, b) => b.count - a.count);
+  return by;
 }
 
 /**
- * The column's rows for the current drill, over a caller-supplied set of
- * branches (already filtered by the estate facets, so a filter narrows the
- * left column exactly as it narrows every other surface).
+ * EVERY group at the current level — never a truncated set. Callers that can
+ * only draw a few take the head; the level map draws all of them.
  */
-export function edgeNodes(cc: CloudControl, branches: Branch[], drill: EdgeDrill): EdgeNode[] {
-  const cls = drill.siteClass ?? null;
-  const metro = drill.metro ?? null;
+export function levelNodes(
+  cc: CloudControl,
+  branches: Branch[],
+  drill: EdgeDrill,
+  opts?: { sort?: EdgeSort; query?: string },
+): EdgeNode[] {
+  const dim = currentDim(drill);
+  if (!dim) return [];
+  const scope = membersAt(branches, drill);
 
-  if (!cls) {
-    const byClass = groupBy(branches, b => b.siteClass);
-    return CLASS_ORDER.filter(c => byClass.has(c)).map(c => {
-      const members = byClass.get(c)!;
-      return toNode(
-        cc,
-        `edge:class:${c}`,
-        capitalize(siteClassNoun(c, members.length)),
-        members,
-        members.length > 1,
-        c,
-      );
-    });
+  const acc = new Map<string, Branch[]>();
+  for (const b of scope) {
+    const v = dimValue(dim, b);
+    const row = acc.get(v);
+    if (row) row.push(b);
+    else acc.set(v, [b]);
   }
 
-  const inClass = branches.filter(b => b.siteClass === cls);
-
-  if (!metro) {
-    const byMetro = groupBy(inClass, metroOf);
-    const rows = [...byMetro.entries()]
-      .sort((a, b) => b[1].length - a[1].length)
-      .map(([m, members]) =>
-        toNode(cc, `edge:metro:${m}`, m, members, members.length > 1, 'metro'),
-      );
-    return withTail(rows, 'metros');
-  }
-
-  const inMetro = inClass.filter(b => metroOf(b) === metro);
-  const rows = inMetro.map(b =>
-    toNode(cc, `edge:site:${b.id}`, b.name, [b], false, b.siteClass),
+  let rows = [...acc.entries()].map(([value, members]) =>
+    toNode(cc, dim, value, members, levelsBelow(drill, members).length > 0),
   );
-  return withTail(rows, 'sites');
+
+  // Site classes have a fixed, meaningful order; everything else is ranked.
+  if (dim === 'class') {
+    rows.sort((a, b) => CLASS_ORDER.indexOf(a.value as SiteClass) - CLASS_ORDER.indexOf(b.value as SiteClass));
+  } else {
+    rows = sortNodes(rows, opts?.sort ?? 'largest');
+  }
+
+  const q = opts?.query?.trim().toLowerCase();
+  return q ? rows.filter(r => r.label.toLowerCase().includes(q)) : rows;
 }
 
 /**
- * The group the column is currently standing inside, or null at the root.
+ * Descend into a node, or null when it is an individual site.
  *
- * Without this the group panel was unreachable: every rollup node descends
- * rather than selects, so "2,840 branches, 40% of the ATMs still public" —
- * the whole reason to look at this column — had nowhere to be said. Drilling
- * into a level now puts that level's summary in the panel below.
+ * Levels that cannot split this particular node are dropped from the chain
+ * on the way down rather than drawn: offices have no district, and Georgia
+ * has one metro. A click that produces a single group identical to the one
+ * you just left is a click that wasted the viewer's time.
  */
-export function scopeNode(cc: CloudControl, branches: Branch[], drill: EdgeDrill): EdgeNode | null {
-  if (!drill.siteClass) return null;
-  const inClass = branches.filter(b => b.siteClass === drill.siteClass);
-  if (!drill.metro) {
-    return toNode(
-      cc,
-      `edge:class:${drill.siteClass}`,
-      capitalize(siteClassNoun(drill.siteClass, inClass.length)),
-      inClass,
-      false,
-      drill.siteClass,
-    );
-  }
-  const inMetro = inClass.filter(b => metroOf(b) === drill.metro);
-  return toNode(cc, `edge:metro:${drill.metro}`, `${drill.metro} · ${capitalize(siteClassNoun(drill.siteClass, inMetro.length))}`, inMetro, false, 'metro');
-}
-
-/** Breadcrumb for the column — each hop is a drill you can step back to. */
-export function edgeTrail(drill: EdgeDrill): { label: string; drill: EdgeDrill }[] {
-  const trail: { label: string; drill: EdgeDrill }[] = [
-    { label: 'All sites', drill: NO_EDGE_DRILL },
-  ];
-  if (drill.siteClass) {
-    trail.push({
-      label: capitalize(siteClassNoun(drill.siteClass, 2)),
-      drill: { siteClass: drill.siteClass, metro: null },
-    });
-  }
-  if (drill.siteClass && drill.metro) {
-    trail.push({ label: drill.metro, drill: { ...drill } });
-  }
-  return trail;
-}
-
-/** What a click on a node descends to, or null when the node is a leaf. */
 export function descend(drill: EdgeDrill, node: EdgeNode): EdgeDrill | null {
   if (!node.drillable) return null;
-  if (node.id.startsWith('edge:class:')) {
-    return { siteClass: node.id.slice('edge:class:'.length) as SiteClass, metro: null };
-  }
-  if (node.id.startsWith('edge:metro:')) {
-    return { siteClass: drill.siteClass ?? null, metro: node.id.slice('edge:metro:'.length) };
+  const path = [...drill.path, node.value];
+  let chain = drill.chain;
+  while (path.length < chain.length) {
+    const dim = chain[path.length];
+    const splits = dim === 'site'
+      ? node.members.length > 1
+      : new Set(node.members.map(b => dimValue(dim, b))).size > 1;
+    if (splits) return { path, chain };
+    chain = [...chain.slice(0, path.length), ...chain.slice(path.length + 1)];
   }
   return null;
 }
 
+/** Breadcrumb — each hop is a level you can step back to. */
+export function edgeTrail(branches: Branch[], drill: EdgeDrill): { label: string; drill: EdgeDrill }[] {
+  const trail: { label: string; drill: EdgeDrill }[] = [
+    { label: 'Whole estate', drill: { path: [], chain: drill.chain } },
+  ];
+  drill.path.forEach((value, i) => {
+    const dim = drill.chain[i];
+    const path = drill.path.slice(0, i + 1);
+    const members = membersAt(branches, { path, chain: drill.chain });
+    trail.push({ label: dimLabel(dim, value, members), drill: { path, chain: drill.chain } });
+  });
+  return trail;
+}
+
+/** The group the viewer is standing inside, or null at the top. */
+export function scopeNode(cc: CloudControl, branches: Branch[], drill: EdgeDrill): EdgeNode | null {
+  if (drill.path.length === 0) return null;
+  const dim = drill.chain[drill.path.length - 1];
+  const value = drill.path[drill.path.length - 1];
+  const members = membersAt(branches, drill);
+  if (members.length === 0) return null;
+  const node = toNode(cc, dim, value, members, levelsBelow(drill, members).length > 0);
+  // Name it in full, so "North district" reads as "Dallas · North district".
+  const context = drill.path.slice(0, -1).filter((_, i) => drill.chain[i] !== 'class');
+  return context.length ? { ...node, label: `${context[context.length - 1]} · ${node.label}` } : node;
+}
+
 /**
- * The caption under the column: how much of the estate this view is standing
- * on. Stated in full so a drilled column never reads as the whole estate.
+ * The caption under the level: what the viewer is standing on, and how much
+ * of the level the column could draw. Never implies the column is complete.
  */
-export function edgeCaption(shown: EdgeNode[], total: number): string {
+export function edgeCaption(shown: EdgeNode[], total: number, all: number, dim: EdgeDim | null): string {
   const sites = shown.reduce((n, r) => n + r.count, 0);
   const onFabric = shown.reduce((n, r) => n + r.onFabric, 0);
   if (sites === 0) return 'No sites match the current filters.';
-  const scope = sites === total ? 'the estate' : `${fmt(sites)} of ${fmt(total)} sites`;
-  return `${fmt(onFabric)} of ${fmt(sites)} on the AT&T fabric — ${scope}.`;
+  const scope = sites === total ? 'the whole estate' : `${fmt(sites)} of ${fmt(total)} sites`;
+  const level = dim && all > shown.length ? ` · ${fmt(shown.length)} of ${fmt(all)} ${DIM_PLURAL[dim]} drawn` : '';
+  return `${fmt(onFabric)} of ${fmt(sites)} on the AT&T fabric — ${scope}${level}.`;
 }
 
-/** True when the estate is big enough that the column must roll up at all. */
 export const edgeNeedsRollup = (total: number): boolean => total > ROLLUP_THRESHOLD;
 
 function capitalize(s: string): string {

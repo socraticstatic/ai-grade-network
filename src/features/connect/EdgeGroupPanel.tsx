@@ -1,4 +1,4 @@
-import { Building2, Cable, TrendingUp, Server, Store, Landmark, MapPin, Globe } from 'lucide-react';
+import { Building2, Cable, TrendingUp, Server, Store, Landmark, MapPin, Globe, Map as MapIcon, Compass } from 'lucide-react';
 import type { EdgeNode } from './edgeDrill';
 import { CC } from '../../engine';
 import { connectionOf, OFF_NET } from '../discover/estateFilters';
@@ -16,7 +16,7 @@ const fmt = (n: number) => n.toLocaleString('en-US');
 
 /** Same vocabulary as the column above it — an ATM group and a data-centre
  *  group must not open into the same picture. */
-const PANEL_ICON = { dc: Server, office: Building2, branch: Store, atm: Landmark, metro: MapPin, site: Globe } as const;
+const PANEL_ICON = { dc: Server, office: Building2, branch: Store, atm: Landmark, region: Globe, state: MapIcon, metro: MapPin, district: Compass, site: Building2 } as const;
 
 export function EdgeGroupPanel({ node }: { node: EdgeNode }) {
   const offNet = node.count - node.onFabric;

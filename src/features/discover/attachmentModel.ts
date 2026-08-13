@@ -186,7 +186,7 @@ export interface AttachmentMapModel {
   /** `count` is present only on a clustered marker (AttachmentMap.tsx,
    *  past `ROLLUP_THRESHOLD`) — a stand-in "site" representing every branch
    *  of one class in one metro, never emitted by this pure builder. */
-  sites: { id: string; name: string; city: string; onrampId?: string; siteClass: SiteClass; count?: number }[];
+  sites: { id: string; name: string; city: string; state?: string; region?: string; onrampId?: string; siteClass: SiteClass; count?: number }[];
   onramps: { id: string; name: string; type: string; short: string; site: string; active: boolean }[];
   groups: {
     cloudId: string; cloudName: string; color: string;
@@ -207,7 +207,7 @@ export function buildAttachmentMapModel(cc: CloudControl, filters: EstateFilters
   const branches = (branchesOf(cc) as Branch[]).filter(b => branchMatches(b, filters, cc));
   const clouds = (cc.clouds as Cloud[]).filter(c => (MAP_CLOUDS as readonly string[]).includes(c.id));
   return {
-    sites: branches.map(b => ({ id: b.id, name: b.name, city: b.city, onrampId: b.onrampId, siteClass: b.siteClass })),
+    sites: branches.map(b => ({ id: b.id, name: b.name, city: b.city, state: b.state, region: b.region, onrampId: b.onrampId, siteClass: b.siteClass })),
     onramps: rampsOf(cc).map(o => ({
       id: o.id, name: o.name, type: o.type, short: rampShort(o.type),
       site: o.site.name, active: !!o.active,
