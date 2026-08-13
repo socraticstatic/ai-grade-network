@@ -207,7 +207,12 @@ export function computeFabricLayout(model: FabricModel, opts?: { expanded?: bool
         y: pathY(i),
         siteIdx: (i < 2 ? 0 : 1) as 0 | 1,
       })),
-      caption: '4 paths · 2 diverse sites · failover detect in 900ms (BFD)',
+      /* Row 44 of the metric audit: these are how the fabric is BUILT -
+         a product specification, not this estate's live telemetry. Every
+         other number on this screen is engine-derived, so the caption now
+         says which kind it is rather than sitting among readings that
+         move. */
+      caption: 'How the fabric is built: 4 paths · 2 diverse sites · BFD failover detect in 900ms',
     };
   }
 

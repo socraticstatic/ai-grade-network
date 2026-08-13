@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, test, expect, afterEach, vi } from 'vitest';
 import { MoneyOnTheTableWidget } from './MoneyOnTheTableWidget';
 import { CC } from '../../../../engine';
-import { advisorDraft } from '../../../discover/stackFigures';
+import { advisorDraft, moneyOnTheTable } from '../../../discover/stackFigures';
 
 /* Navigation is asserted by destination, not by router internals — same
    pattern IntentThreads.tsx's own tests use. */
@@ -21,7 +21,8 @@ describe('MoneyOnTheTableWidget', () => {
   test('states available savings and lists the top unattached bucket', () => {
     renderWidget();
     const arb = CC.arbitrage();
-    expect(screen.getByText(`$${Math.round(arb.availableSavings).toLocaleString()}/mo`)).toBeInTheDocument();
+    // One source for headline and count - see moneyOnTheTable's doc comment.
+    expect(screen.getByText(`$${Math.round(moneyOnTheTable(CC).savingsMo).toLocaleString()}/mo`)).toBeInTheDocument();
     const topUnattached = arb.buckets.find(b => !b.attached);
     if (topUnattached) expect(screen.getByText(topUnattached.label)).toBeInTheDocument();
   });

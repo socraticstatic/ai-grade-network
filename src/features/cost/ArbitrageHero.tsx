@@ -92,10 +92,15 @@ export function ArbitrageHero() {
         </div>
       </div>
 
+      {/* Deliberately NOT "on the table" - that sentence belongs to
+          moneyOnTheTable(), the advisor-actionable figure the exec board
+          and Discover both quote. This is the bill floor: what the egress
+          invoice reads if every bucket attaches. Two true numbers, two
+          different claims, no longer wearing the same words. */}
       {avail > 0 && (
         <p className="mt-4 flex items-center gap-1.5 text-sm text-fw-link">
           <span className="font-semibold tabular-nums">{k(avail)}/mo</span>
-          <span className="text-fw-body">more on the table — attach the paths below.</span>
+          <span className="text-fw-body">off this bill once every path attaches.</span>
         </p>
       )}
 

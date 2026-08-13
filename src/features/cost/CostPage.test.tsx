@@ -100,8 +100,11 @@ it('uses "on the table" only for unattached headroom, never for steering', () =>
     /nothing left on the table/i,
   );
 
+  /* "on the table" now belongs solely to moneyOnTheTable() - the
+     advisor-actionable total quoted on the exec board and Discover. Cost
+     states the bill floor instead, so this screen no longer competes for
+     the phrase with a different derivation. */
   if (arb.availableSavings > 0) {
-    // The idiom's one job on this screen, naming a derived figure.
-    expect(screen.getByText(/more on the table/i)).toBeInTheDocument();
+    expect(screen.getByText(/off this bill once every path attaches/i)).toBeInTheDocument();
   }
 });

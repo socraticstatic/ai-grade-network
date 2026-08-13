@@ -29,4 +29,6 @@ export interface ObservabilityBinding {
   /** Builds the Sankey model for a `view: 'sankey'` flow tab. Optional: a
    *  binding with no sankey-view tabs simply omits it. */
   sankey?(): SankeyModel;
+  /** Flow-row counts behind the chart, for its scope caption. */
+  sankeyScope?(): { siteFlows: number; cloudFlows: number };
 }

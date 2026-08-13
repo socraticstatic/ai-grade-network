@@ -8,7 +8,9 @@ import type {
   Briefing,
   BriefingBlock,
 } from './ObservabilityBinding';
-import { buildSankey } from './sankeyModel';
+import { buildSankey, siteOriginSummary } from './sankeyModel';
+import { EMPTY_ESTATE_FILTERS, type EstateFilters } from '../discover/estateFilters';
+import type { SiteClass } from '../discover/discoveryModel';
 import { flowLogs, BUCKETS, type FlowLogRecord } from './flowLogs';
 
 // Shape of a routeFlows() row (src/engine/state-routing.ts) — untyped at the
@@ -341,7 +343,14 @@ export function buildVerdict(cc: CloudControl): string {
   return `${rk.pctUnderControl}% of your traffic rides the AT&T-controlled path, saving ${saved}. ${publicPct}% still crosses the public internet.`;
 }
 
-export function networkBinding(cc: CloudControl): ObservabilityBinding {
+/* The estate filters and the site-band drill are page state, so the page
+   passes them in; defaulting both keeps every existing caller (and the
+   binding tests) working unchanged. */
+export function networkBinding(
+  cc: CloudControl,
+  filters: EstateFilters = EMPTY_ESTATE_FILTERS,
+  drill: SiteClass | null = null,
+): ObservabilityBinding {
   return {
     layer: 'network',
     title: 'Network Observability',
@@ -354,6 +363,7 @@ export function networkBinding(cc: CloudControl): ObservabilityBinding {
     briefing: () => buildBriefing(cc),
     verdict: buildVerdict(cc),
     moments: () => cc.windowMoments(),
-    sankey: () => buildSankey(cc),
+    sankey: () => buildSankey(cc, { filters, drill }),
+    sankeyScope: () => siteOriginSummary(cc, filters),
   };
 }

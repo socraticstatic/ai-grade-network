@@ -13,6 +13,7 @@ import {
   commitMoves,
   isUndoCovered,
   advisorDraft,
+  moneyOnTheTable,
   takePendingRuleSpec,
   takePendingPolicySpec,
   type StagedMove,
@@ -453,7 +454,11 @@ export function StackPanel({ rail = false }: { rail?: boolean } = {}) {
             // and stays.
             <>
               <Fig value={`${money(naasFig.egressPubMo)}/mo`} label="egress on public transit" tone={naasFig.egressPubMo > 0 ? 'warn' : 'plain'} />
-              <Fig value={`${money(naasFig.availableSavingsMo)}/mo`} label="still on the table" />
+              {/* One figure, one source: the advisor-actionable total the
+                  exec board and the advisor itself both quote. This used to
+                  render arbitrage's attach-only ceiling under the same words
+                  the advisor chip below priced differently. */}
+              <Fig value={`${money(moneyOnTheTable(cc).savingsMo)}/mo`} label="on the table" />
             </>
           }
         >

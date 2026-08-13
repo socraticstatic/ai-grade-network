@@ -1,4 +1,5 @@
-import type { SankeyModel } from './sankeyModel';
+import type { SankeyModel, SankeyNode } from './sankeyModel';
+import type { SiteClass } from '../discover/discoveryModel';
 import { VIZ_HEX, ribbonPath } from '../../components/viz/kit';
 
 /* ------------------------------------------------------------------ *
@@ -221,9 +222,26 @@ function NodeLabel({ n }: { n: GNode }) {
   );
 }
 
-export function SankeyPanel({ model }: { model: SankeyModel }) {
+export function SankeyPanel({
+  model,
+  scope,
+  drill = null,
+  onDrill,
+}: {
+  model: SankeyModel;
+  /** "All flows - N site-originated, M cloud-originated" under the chart. */
+  scope?: { siteFlows: number; cloudFlows: number };
+  drill?: SiteClass | null;
+  onDrill?: (cls: SiteClass | null) => void;
+}) {
   const g = computeSankeyGeometry(model);
   const total = r1(g.privateGbps + g.publicGbps);
+  const nf = new Intl.NumberFormat('en-US');
+  /* Rollup nodes are the drillable ones - a class opens into its metros.
+     Keyed by node NAME because geometry nodes carry no model index. */
+  const rollupByName = new Map<string, NonNullable<SankeyNode['rollup']>>(
+    model.nodes.filter(n => n.rollup).map(n => [n.name, n.rollup!]),
+  );
   return (
     <div data-testid="sankey-panel">
       {/* The takeaway, stated before it is drawn. */}
@@ -243,6 +261,30 @@ export function SankeyPanel({ model }: { model: SankeyModel }) {
         </span>
       </div>
 
+      {rollupByName.size > 0 && onDrill && (
+        <div className="mb-2 flex flex-wrap items-center gap-2" data-testid="sankey-drill">
+          {[...rollupByName.entries()].map(([name, r]) => {
+            const on = drill === r.siteClass;
+            return (
+              <button
+                key={name}
+                type="button"
+                data-testid="sankey-rollup-node"
+                aria-pressed={on}
+                onClick={() => onDrill(on ? null : r.siteClass)}
+                className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
+                  on
+                    ? 'border-fw-active bg-fw-accent text-fw-link'
+                    : 'border-fw-secondary bg-fw-wash text-fw-body hover:border-fw-active hover:text-fw-link'
+                }`}
+              >
+                {on ? `${name} — by metro` : `Split ${name} by metro`}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <svg
         viewBox={`0 0 ${g.w} ${g.h}`}
         className="w-full"
@@ -261,6 +303,13 @@ export function SankeyPanel({ model }: { model: SankeyModel }) {
           </g>
         ))}
       </svg>
+
+      {scope && (
+        <p data-testid="sankey-scope-caption" className="mt-2 text-[11px] text-fw-bodyLight">
+          All flows — {nf.format(scope.siteFlows)} site-originated, {nf.format(scope.cloudFlows)}{' '}
+          cloud-originated. Sites roll up by class; the records table below lists cloud flows only.
+        </p>
+      )}
 
       {/* Screen-reader restatement of every ribbon; the records table below
           is the full data view. */}
