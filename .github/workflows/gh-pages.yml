@@ -48,7 +48,7 @@ jobs:
       - name: Build
         run: |
           echo "🚀 Building for GitHub Pages deployment..."
-          echo "Base path: /cloud-connect/"
+          echo "Base path: /ai-grade-network/"
           npm run build:gh-pages
         env:
           NODE_ENV: production
