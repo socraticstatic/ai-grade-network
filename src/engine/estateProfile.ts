@@ -23,10 +23,22 @@ export interface EngineSeeds {
   onramps: OnrampSeed[];
 }
 
+/* Which estate a visitor gets when neither the URL nor localStorage has
+ * chosen one. Build-time, not runtime: the published gh-pages build sets
+ * VITE_DEFAULT_ESTATE=meridian so the public site opens on the meridian
+ * advisor, while dev servers and every test environment leave the var
+ * unset and keep the historical acme default (the vitest boot-swap
+ * inertness below and the e2e suite's unparameterized gotos both rely on
+ * acme staying the unconfigured fallback). */
+const DEFAULT_ESTATE: EstateProfile =
+  import.meta.env.VITE_DEFAULT_ESTATE === 'meridian' ? 'meridian' : 'acme';
+
 export function resolveProfile(search: string, ls: Pick<Storage, 'getItem' | 'setItem'>): EstateProfile {
   const url = new URLSearchParams(search).get('estate');
   if (url === 'meridian' || url === 'acme') { ls.setItem('estateProfile', url); return url; }
-  return ls.getItem('estateProfile') === 'meridian' ? 'meridian' : 'acme';
+  const stored = ls.getItem('estateProfile');
+  if (stored === 'meridian' || stored === 'acme') return stored;
+  return DEFAULT_ESTATE;
 }
 
 const swap = <T>(target: T[], next: T[]) => { target.length = 0; target.push(...next); };

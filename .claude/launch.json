@@ -8,6 +8,12 @@
       "autoPort": true
     },
     {
+      "name": "meridian-default",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "export PATH=/Users/micahbos/.nvm/versions/node/v20.20.2/bin:$PATH && VITE_AUTH_MODE=gate VITE_DEFAULT_ESTATE=meridian npm run dev -- --port ${PORT:-5173} --strictPort"],
+      "autoPort": true
+    },
+    {
       "name": "product-demo-editor",
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-lc", "cd /Users/micahbos/Developer/video-production-template/apps/editor && npx vite --port 3124 --strictPort"],

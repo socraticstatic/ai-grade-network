@@ -57,6 +57,9 @@ jobs:
           # "gate" = visual-only localStorage gate, no Supabase dependency.
           # Drill-timed 2026-08-01: push-to-live ≈ 3 minutes.
           VITE_AUTH_MODE: supabase
+          # The public site opens on the meridian advisor; dev/test default
+          # to acme (see resolveProfile in src/engine/estateProfile.ts).
+          VITE_DEFAULT_ESTATE: meridian
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
