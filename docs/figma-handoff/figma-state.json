@@ -26,7 +26,7 @@
     "cover": "v4 \u2014 gradient, Aleck, 14-row TOC, all 14 links live, set as file thumbnail",
     "components": "12 components on board 13, in Assets; screens carry faithful copies \u2014 manual paste-to-replace documented in 13-components.md",
     "font": "native ATT Aleck Sans throughout (FigmaAgent + local-fonts permission)",
-    "thumbnail": "cover frame (1440\u00d71080) at 100% opacity set as file thumbnail \u2014 verified on the drafts card"
+    "thumbnail": "dedicated 16:9 board (00a \u2014 Thumbnail, 1920\u00d71080, wordmark-only) set as file thumbnail \u2014 fills the drafts card edge-to-edge; 00 \u2014 Cover keeps the linked TOC in-file"
   },
   "mcp": {
     "figma": "added via claude mcp add (https://mcp.figma.com/mcp) \u2014 available from next session; code-to-canvas write",
