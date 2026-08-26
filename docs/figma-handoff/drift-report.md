@@ -14,6 +14,8 @@ Every artboard gets a section. "Fixed" lists what was corrected and where;
 
 ## 01 — Discover entry
 
+No drift found — chrome/primitive fixes carried through.
+
 ### Fixed
 
 ### Skipped (logged)
@@ -21,6 +23,9 @@ Every artboard gets a section. "Fixed" lists what was corrected and where;
 ## 02 — Meridian advisor (first screen)
 
 ### Fixed
+
+- Advisor copy `text-[17px]` → `text-figma-lg` (18px rendered ramp step):
+  `AdvisorConversation.tsx`, `FindingCard.tsx`.
 
 ### Skipped (logged)
 

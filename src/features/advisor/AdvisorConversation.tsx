@@ -105,7 +105,7 @@ export function AdvisorConversation({ cc, beats, onLeave, onAcceptTier, pace = 1
             );
           }
           return it.who === 'advisor' ? (
-            <p key={i} className="max-w-[46rem] text-[17px] leading-relaxed text-fw-heading">
+            <p key={i} className="max-w-[46rem] text-figma-lg leading-relaxed text-fw-heading">
               {it.text}
             </p>
           ) : (

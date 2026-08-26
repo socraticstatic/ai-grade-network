@@ -43,7 +43,7 @@ export function FindingCard({ finding, onAcceptTier }: { finding: Finding; onAcc
           <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-fw-bodyLight">
             For {FINDING_PERSONA[finding.kind] ?? 'your team'}
           </p>
-          <p className="mt-0.5 text-[17px] font-bold tracking-[-0.02em] text-fw-heading">{finding.title}</p>
+          <p className="mt-0.5 text-figma-lg font-bold tracking-[-0.02em] text-fw-heading">{finding.title}</p>
           <p className="mt-0.5 text-figma-sm text-fw-body">{finding.evidence}</p>
           <button
             type="button"
