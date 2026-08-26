@@ -101,18 +101,29 @@ Mono: JetBrains Mono stack.
 | tagS | 12 / 16 | 500 | +4% |
 | tagXS | 10 / 16 | 500 | +4% |
 
-Figma-era Tailwind aliases still in the code: `text-figma-xs` 10px,
-`text-figma-sm` 12px, `text-figma-base` 14px, `text-figma-lg` 16px,
-`text-figma-xl` **26px/34** (the config deliberately sits 2px above the
-ramp's h5 24px/32 — divergence logged in the drift report, kept as-is). Common combinations (from DESIGN_SPECS.md, still
-canonical):
+**The rendered scale is the token ramp +2px on every step** — a deliberate
+demo-legibility bump baked into tailwind.config.js's `figma-*` sizes. The
+artboards mirror the app, so redlines measure the RENDERED (+2) values:
+
+| Alias | Renders | Ramp role |
+|---|---|---|
+| `text-figma-xs` | 12 / 18 | bodyXS |
+| `text-figma-sm` | 14 / 20 | bodyS |
+| `text-figma-base` | 16 / 24 | bodyBase |
+| `text-figma-lg` | 18 / 26 | h6 |
+| `text-figma-xl` | 26 / 34 | h5 |
+| `text-figma-2xl` | 34 / 42 | h4 |
+| `text-tag-sm` | 14 / 20, +4% | tagS |
+| `text-tag-xs` | 12 / 18, +4% | tagXS |
+
+Common combinations at rendered sizes:
 
 - Page title: 26px / 700 / `#1d2329` (`text-figma-xl`)
-- Section heading: 16px / 700 / `#1d2329`
-- Body: 14px / 500 / `#454b52`
-- Labels/captions: 12px / 500 / `#686e74`
+- Section heading: 18px / 700 / `#1d2329` (`text-figma-lg`)
+- Body: 16px / 500 / `#454b52` (`text-figma-base`)
+- Labels/captions: 14px / 500 (`text-figma-sm`)
 - Stat values: 26px / 700 / `#1d2329` (`text-figma-xl`)
-- Tiny/hint: 10px / 500 / `#878c94`
+- Tiny/hint: 12px / 500 (`text-figma-xs`)
 
 ---
 

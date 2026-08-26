@@ -37,7 +37,7 @@ function LayerSwitcher({ layer }: { layer: NavLayer }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1 pl-3 pr-1 h-7 rounded-lg text-figma-sm font-semibold uppercase tracking-[0.1em] text-fw-bodyLight hover:bg-fw-wash hover:text-fw-body transition-colors max-w-full"
+        className="flex items-center gap-1 pl-3 pr-1 h-7 rounded-lg text-figma-xs font-semibold uppercase tracking-[0.1em] text-fw-bodyLight hover:bg-fw-wash hover:text-fw-body transition-colors max-w-full"
       >
         <span className="truncate">{layer.label}</span>
         <ChevronDown className={`h-3 w-3 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
@@ -61,7 +61,7 @@ function LayerSwitcher({ layer }: { layer: NavLayer }) {
                 <span className={`block text-figma-sm font-medium tracking-[-0.02em] ${l.key === layer.key ? 'text-fw-link' : 'text-fw-heading'}`}>
                   {l.label}
                 </span>
-                <span className="block text-figma-sm text-fw-bodyLight">{l.tagline}</span>
+                <span className="block text-figma-xs text-fw-bodyLight">{l.tagline}</span>
               </span>
               {l.key === layer.key && <Check className="h-4 w-4 flex-shrink-0 mt-0.5 text-fw-link" aria-hidden="true" />}
             </Link>
@@ -128,7 +128,7 @@ export function LeftRail() {
       {railSectionsFor(layer).map((section, si) => (
         <div key={section.title ?? si} className="w-full">
           {section.title && !collapsed && (
-            <p className="px-3 pt-4 pb-1 text-figma-sm font-semibold uppercase tracking-[0.1em] text-fw-bodyLight">
+            <p className="px-3 pt-4 pb-1 text-figma-xs font-semibold uppercase tracking-[0.1em] text-fw-bodyLight">
               {section.title}
             </p>
           )}

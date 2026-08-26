@@ -94,16 +94,19 @@ Every artboard gets a section. "Fixed" lists what was corrected and where;
 ### Fixed
 
 - LeftRail: `text-[11px]` (layer-switcher label, taglines, section headers)
-  → `text-figma-sm` (12px, tagS ramp step). 3 occurrences.
+  → `text-figma-xs` (12px rendered, the tiny-label step). 3 occurrences.
 - CreateMenu (MainNav Create pill): `px-3.5` (14px, off-grid) → `px-4` (16px).
+- QuickStatCard value: stock `text-lg` (18/28, no tracking) →
+  `text-figma-lg` (18/26, -3%) — same size, on-system leading/tracking.
+- tailwind ringColor: added `fw-base: #ffffff` — `ring-fw-base` on the nav
+  notification/tasks dots compiled to nothing and fell back to Tailwind's
+  stock translucent blue; the dots now get their intended white cutout.
 
 ### Skipped (logged)
 
-- `text-figma-xl` is 26px/34 in tailwind.config.js while tokens.json h5 and
-  the SDCI-era DESIGN_SPECS say 24px/32. Global type-scale divergence — every
-  page title and stat uses it, so flipping it is an app-wide visual change,
-  not a per-screen cleanup. Needs Micah's call; foundation doc records 26px
-  as current reality.
+- The entire `figma-*` scale renders +2px over the token ramp — a deliberate
+  demo-legibility bump documented in tailwind.config.js. Not drift; the
+  foundation spec documents the rendered scale and redlines measure it.
 - `#5c6167` / `#1e6b17` / `#9a4708` text colors are NOT drift: deliberate
   WCAG AA darkenings in the fw theme (documented in tailwind.config.js).
   Foundation doc updated with an accessibility-overrides table.

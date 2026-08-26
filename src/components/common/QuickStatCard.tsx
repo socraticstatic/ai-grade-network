@@ -22,7 +22,7 @@ export function QuickStatCard({ title, value, icon: Icon, variant = 'default' }:
         <h3 className="text-figma-base font-medium text-fw-bodyLight">{title}</h3>
         <Icon className={`h-5 w-5 ${variantColors[variant]}`} />
       </div>
-      <p className="text-lg font-medium text-fw-heading">{value}</p>
+      <p className="text-figma-lg font-medium text-fw-heading">{value}</p>
     </div>
   );
 }

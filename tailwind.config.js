@@ -176,6 +176,7 @@ export default {
          say. */
       ringColor: {
         'fw-active': '#0074b3',    // Functional Blue — the focus ring
+        'fw-base': '#ffffff',      // white cutout ring (nav dots) — was silently stock blue
         'fw-link': '#0057b8',      // Cobalt 600
         'fw-ctaPrimary': '#0057b8',
         'fw-error': '#c70032',
