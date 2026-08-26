@@ -33,9 +33,14 @@ No drift found — chrome/primitive fixes carried through.
 
 ### Fixed
 
+- LayerHero verdict `text-[19px]` → `text-figma-lg` (18px ramp step).
+- LayerHomePage verb cards `gap-3.5` (14px, off-grid) → `gap-4` (16px).
+
 ### Skipped (logged)
 
 ## 04 — Connect · Fabric overview
+
+No drift found.
 
 ### Fixed
 
@@ -43,11 +48,15 @@ No drift found — chrome/primitive fixes carried through.
 
 ## 05 — Connect · Fabric drill
 
+No drift found.
+
 ### Fixed
 
 ### Skipped (logged)
 
 ## 06 — Connect · Estate map
+
+No drift found.
 
 ### Fixed
 
@@ -55,11 +64,15 @@ No drift found — chrome/primitive fixes carried through.
 
 ## 07 — Connect · Path choice
 
+No drift found.
+
 ### Fixed
 
 ### Skipped (logged)
 
 ## 08 — Connect · Provision wizard
+
+No drift found.
 
 ### Fixed
 
@@ -67,11 +80,15 @@ No drift found — chrome/primitive fixes carried through.
 
 ## 09 — Govern
 
+No drift found.
+
 ### Fixed
 
 ### Skipped (logged)
 
 ## 10 — Observe · Sankey
+
+No drift found.
 
 ### Fixed
 
@@ -80,6 +97,10 @@ No drift found — chrome/primitive fixes carried through.
 ## 11 — Cost
 
 ### Fixed
+
+- Page title stock `text-xl font-semibold` (20px/600) → `text-figma-lg
+  font-bold` (18px/700 ramp step). Savings-vocabulary audit: labels
+  already lead with savings — no copy drift.
 
 ### Skipped (logged)
 

@@ -19,7 +19,7 @@ export function LayerHero({ surface }: { surface: Surface }) {
 
   return (
     <section data-testid="layer-hero" className="space-y-4">
-      <p data-testid="layer-verdict" className="text-[19px] font-semibold leading-snug tracking-[-0.02em] text-fw-heading">
+      <p data-testid="layer-verdict" className="text-figma-lg font-semibold leading-snug tracking-[-0.02em] text-fw-heading">
         {hero.verdict}
       </p>
 

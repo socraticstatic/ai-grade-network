@@ -58,7 +58,7 @@ export function LayerHomePage({ layerKey }: { layerKey: NavLayer['key'] }) {
             key={item.to}
             to={item.to}
             data-testid={`home-verb-${item.to.split('/').pop()}`}
-            className="group flex items-start gap-3.5 rounded-2xl border border-fw-secondary bg-fw-base p-4 hover:border-fw-active transition-colors"
+            className="group flex items-start gap-4 rounded-2xl border border-fw-secondary bg-fw-base p-4 hover:border-fw-active transition-colors"
           >
             <span className="flex items-center justify-center h-10 w-10 rounded-xl bg-fw-accent flex-shrink-0">
               <AttIcon name={item.icon} className="h-5 w-5 text-fw-link" />
