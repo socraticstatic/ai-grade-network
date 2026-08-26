@@ -109,7 +109,7 @@ export function AdvisorConversation({ cc, beats, onLeave, onAcceptTier, pace = 1
               {it.text}
             </p>
           ) : (
-            <p key={i} className="ml-auto w-fit max-w-[70%] rounded-full bg-fw-cobalt-100 px-4 py-2 text-[15px] font-medium text-fw-cobalt-700">
+            <p key={i} className="ml-auto w-fit max-w-[70%] rounded-full bg-fw-cobalt-100 px-4 py-2 text-figma-base font-medium text-fw-cobalt-700">
               {it.text}
             </p>
           );
@@ -128,7 +128,7 @@ export function AdvisorConversation({ cc, beats, onLeave, onAcceptTier, pace = 1
                 key={r.label}
                 type="button"
                 onClick={() => tapReply(r)}
-                className="rounded-full bg-fw-cobalt-600 px-5 py-2.5 text-[15px] font-medium text-white shadow-sm hover:bg-fw-cobalt-700"
+                className="rounded-full bg-fw-cobalt-600 px-5 py-2.5 text-figma-base font-medium text-white shadow-sm hover:bg-fw-cobalt-700"
               >
                 {r.label}
               </button>
@@ -151,7 +151,7 @@ export function AdvisorConversation({ cc, beats, onLeave, onAcceptTier, pace = 1
             onChange={e => setInput(e.target.value)}
             aria-label="Ask the advisor"
             placeholder="Ask anything about what I found…"
-            className="min-w-0 flex-1 rounded-full border border-fw-secondary bg-fw-base px-4 py-2.5 text-[15px] text-fw-body placeholder:text-fw-disabled focus:border-fw-cobalt-600 focus:outline-none"
+            className="min-w-0 flex-1 rounded-full border border-fw-secondary bg-fw-base px-4 py-2.5 text-figma-base text-fw-body placeholder:text-fw-disabled focus:border-fw-cobalt-600 focus:outline-none"
           />
           <button
             type="submit"
