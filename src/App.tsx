@@ -198,6 +198,14 @@ const LazyMaintenancePage = lazy(() =>
   }))
 );
 
+// Figma-handoff gallery - dev builds only; the route below is gated on
+// import.meta.env.DEV so this chunk is never reachable (or built) in prod.
+const LazyHandoffGallery = lazy(() =>
+  import('./features/handoff/HandoffGallery').then(module => ({
+    default: module.HandoffGallery
+  }))
+);
+
 // Optimized loading fallback
 const LoadingFallback = memo(() => (
   <div className="min-h-[400px] flex items-center justify-center">
@@ -384,6 +392,17 @@ function App() {
                 <LazyMaintenancePage />
               </Suspense>
             } />
+
+            {/* Figma-handoff components gallery - dev builds only, standalone,
+                no layout (it renders its own chrome). A /naas path on purpose:
+                LeftRail only renders under a layer route. */}
+            {import.meta.env.DEV && (
+              <Route path="/naas/__gallery" element={
+                <Suspense fallback={<LoadingFallback />}>
+                  <LazyHandoffGallery />
+                </Suspense>
+              } />
+            )}
 
             {/* Legacy standalone pages - redirected to the curated flow */}
             <Route path="/demo" element={<Navigate to="/discover" replace />} />

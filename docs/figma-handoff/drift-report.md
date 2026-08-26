@@ -86,6 +86,11 @@ Every artboard gets a section. "Fixed" lists what was corrected and where;
 
 ## 13 — Components
 
+- `Footer.tsx` returns `null` — the portal has no footer chrome by design.
+  The Components board and the per-screen instance swaps cover header
+  (`MainNav`) and rail (`LeftRail`) only; the spec's "footer" mentions are
+  vacuous for this app and are recorded here rather than silently dropped.
+
 ### Fixed
 
 ### Skipped (logged)
