@@ -25,6 +25,17 @@
     "page": "NaaS \u2014 1440 Mockups: 00 \u2014 Cover ... 14 \u2014 Advisor \u00b7 Tiered offers, single ordered row",
     "cover": "v4 \u2014 gradient, Aleck, 14-row TOC, all 14 links live, set as file thumbnail",
     "components": "12 components on board 13, in Assets; screens carry faithful copies \u2014 manual paste-to-replace documented in 13-components.md",
-    "font": "native ATT Aleck Sans throughout (FigmaAgent + local-fonts permission)"
+    "font": "native ATT Aleck Sans throughout (FigmaAgent + local-fonts permission)",
+    "thumbnail": "cover frame (1440\u00d71080) at 100% opacity set as file thumbnail \u2014 verified on the drafts card"
+  },
+  "mcp": {
+    "figma": "added via claude mcp add (https://mcp.figma.com/mcp) \u2014 available from next session; code-to-canvas write",
+    "html-to-design": "added via claude mcp add (https://mcp.to.design) \u2014 import-html/import-url tools",
+    "nextSession": [
+      "validate both on scratch section",
+      "instance swaps via API",
+      "variant sets",
+      "one-command screen pipeline"
+    ]
   }
 }
