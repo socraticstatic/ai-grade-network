@@ -23,10 +23,10 @@
   },
   "final": {
     "page": "NaaS \u2014 1440 Mockups: 00 \u2014 Cover ... 14 \u2014 Advisor \u00b7 Tiered offers, single ordered row",
-    "cover": "v4 \u2014 gradient, Aleck, 14-row TOC, all 14 links live, set as file thumbnail",
+    "cover": "Sankey-art cover: no em dashes, no board count, no internal jargon; 14 linked TOC rows",
     "components": "12 components on board 13, in Assets; screens carry faithful copies \u2014 manual paste-to-replace documented in 13-components.md",
     "font": "native ATT Aleck Sans throughout (FigmaAgent + local-fonts permission)",
-    "thumbnail": "dedicated 16:9 board (00a \u2014 Thumbnail, 1920\u00d71080, wordmark-only) set as file thumbnail \u2014 fills the drafts card edge-to-edge; 00 \u2014 Cover keeps the linked TOC in-file"
+    "thumbnail": "16:9 Sankey-art board set as file thumbnail; verified on drafts card"
   },
   "mcp": {
     "figma": "added via claude mcp add (https://mcp.figma.com/mcp) \u2014 available from next session; code-to-canvas write",
