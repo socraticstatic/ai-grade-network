@@ -15,5 +15,9 @@
     "componentIds": {},
     "componentizeStatus": "complete \u2014 12 components: Header/MainNav, Nav/LeftRail, Nav/SubNav, Button, Card, MetricCard, QuickStatCard, Badge/Status, Badge, Toggle, SearchFilterBar, Table",
     "variantsNote": "state variants (Button/StatusBadge/Toggle) live inside each component as rows, not as Figma variant properties \u2014 split further by hand if wanted"
+  },
+  "screens": {
+    "status": "all 12 artboards frozen and batch-fed to html.to.design (Autolayout on, 1440 viewport)",
+    "import": "in progress"
   }
 }
