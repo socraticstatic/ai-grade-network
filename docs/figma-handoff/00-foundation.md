@@ -174,7 +174,19 @@ Component constants: button height 36px (pill, icon 20px), input height 40px
 
 ---
 
-## 5. How to read the screen specs
+## 5. Iconography
+
+Primary glyphs are the **official AT&T icon package** (751 SVGs, viewBox
+`0 0 96 96`), served from the app's own registry
+(`src/components/icons/att-icons.ts` + `AttIcon.tsx`) — used across nav,
+rail, and feature surfaces (63 files). Lucide icons appear only as generic
+utility glyphs (chevrons, menu, close) exactly as shipped. Imported frames
+carry both as editable vectors. `docs/icon-inventory.csv` maps every term →
+icon → usage.
+
+---
+
+## 6. How to read the screen specs
 
 Each `NN-<screen>.md` carries a redline table generated from live-DOM
 measurement (`scripts/figma-handoff/measure.mjs` → `captures/<slug>/measure.json`):
