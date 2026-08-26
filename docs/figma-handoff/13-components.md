@@ -52,3 +52,19 @@ and `Nav/LeftRail`.
 
 Exact per-element boxes: `captures/13-components/measure.json`; visual
 ground truth: `captures/13-components/13-components@2x.png`.
+
+
+## Swapping imported chrome for instances (manual, ~10 min)
+
+The imported screens carry pixel-identical copies of the header/rail, not
+instances — Figma's clipboard cannot be driven programmatically. To convert:
+
+1. On the 13 — Components board, select the `Header/MainNav` component and
+   copy it (⌘C).
+2. In each screen section, select the `Main navigation` frame (first child
+   under the screen's root) and run **Edit → Paste to replace** (⇧⌘R).
+   Autolayout keeps the slot; geometry is identical.
+3. Repeat with `Nav/LeftRail` for the rail frame where present.
+
+Until swapped, edits to the components do not propagate to screens — the
+copies are faithful but static.
