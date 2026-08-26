@@ -13,6 +13,7 @@
     "importsUsed": 2,
     "importCapNote": "h2d FREE tier \u2014 cap ~10/month; PRO/API removes cap and enables code.to.design API imports",
     "componentIds": {},
-    "componentizeStatus": "pending \u2014 Object menu > Create component works; Cmd+Opt+K via CDP does not"
+    "componentizeStatus": "complete \u2014 12 components: Header/MainNav, Nav/LeftRail, Nav/SubNav, Button, Card, MetricCard, QuickStatCard, Badge/Status, Badge, Toggle, SearchFilterBar, Table",
+    "variantsNote": "state variants (Button/StatusBadge/Toggle) live inside each component as rows, not as Figma variant properties \u2014 split further by hand if wanted"
   }
 }

@@ -98,6 +98,10 @@ Every artboard gets a section. "Fixed" lists what was corrected and where;
 - CreateMenu (MainNav Create pill): `px-3.5` (14px, off-grid) → `px-4` (16px).
 - QuickStatCard value: stock `text-lg` (18/28, no tracking) →
   `text-figma-lg` (18/26, -3%) — same size, on-system leading/tracking.
+- Componentization: all 12 shared elements converted to Figma components
+  on the board. State variants (Button, StatusBadge, Toggle) remain rows
+  inside their components rather than Figma variant properties — noted for
+  optional manual refinement.
 - tailwind ringColor: added `fw-base: #ffffff` — `ring-fw-base` on the nav
   notification/tasks dots compiled to nothing and fell back to Tailwind's
   stock translucent blue; the dots now get their intended white cutout.
