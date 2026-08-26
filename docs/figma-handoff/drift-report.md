@@ -124,6 +124,9 @@ No drift found.
 - CreateMenu (MainNav Create pill): `px-3.5` (14px, off-grid) → `px-4` (16px).
 - QuickStatCard value: stock `text-lg` (18/28, no tracking) →
   `text-figma-lg` (18/26, -3%) — same size, on-system leading/tracking.
+- Instance swaps: imported screens keep pixel-identical chrome copies;
+  Figma's clipboard rejects synthetic input, so the 10-minute
+  paste-to-replace pass is documented in 13-components.md for a human hand.
 - Componentization: all 12 shared elements converted to Figma components
   on the board. State variants (Button, StatusBadge, Toggle) remain rows
   inside their components rather than Figma variant properties — noted for
