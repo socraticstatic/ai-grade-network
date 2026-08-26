@@ -17,7 +17,8 @@
     "variantsNote": "state variants (Button/StatusBadge/Toggle) live inside each component as rows, not as Figma variant properties \u2014 split further by hand if wanted"
   },
   "screens": {
-    "status": "all 12 artboards frozen and batch-fed to html.to.design (Autolayout on, 1440 viewport)",
-    "import": "in progress"
+    "status": "14 boards + cover imported, named, arranged in one row (x = -1700 cover, 0..20400 boards 01-13, 22100 board 14)",
+    "cover": "00 \u2014 Cover: gradient, Aleck, 13-row TOC with live node links (verified via hover chip)",
+    "importsUsed": "~17 (PRO unlimited)"
   }
 }

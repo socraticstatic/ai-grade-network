@@ -140,3 +140,12 @@ No drift found.
 - `#5c6167` / `#1e6b17` / `#9a4708` text colors are NOT drift: deliberate
   WCAG AA darkenings in the fw theme (documented in tailwind.config.js).
   Foundation doc updated with an accessibility-overrides table.
+
+## 14 — Advisor · Tiered offers
+
+### Fixed
+
+- AdvisorConversation `text-[15px]` (user pills, reply buttons, prompt
+  input) → `text-figma-base` (16px rendered ramp step). 3 occurrences.
+
+### Skipped (logged)
