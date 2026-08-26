@@ -67,6 +67,17 @@ Target viewport: **1440px** (Tailwind `xl`). Captures at deviceScaleFactor 2.
 | `color.accent.teal` | `#00a3a6` | Complementary teal |
 | `color.accent.orange` | `#ea712f` | Flywheel orange |
 
+### Accessibility text overrides (Tailwind fw theme, deliberate)
+
+Darkened for WCAG AA (4.5:1) on tinted chips; these are canonical for TEXT
+even though tokens.json carries the lighter values:
+
+| fw token | Hex | Replaces |
+|---|---|---|
+| `fw-bodyLight` / `fw-legal` | `#5c6167` | `#686e74` (gray.600) as text on wash/neutral |
+| `fw-success` (text) | `#1e6b17` | `#2d7e24` on success tint |
+| `fw-warn` (text) | `#9a4708` | `#ea712f` on warning tint |
+
 ---
 
 ## 2. Type ramp
@@ -92,14 +103,15 @@ Mono: JetBrains Mono stack.
 
 Figma-era Tailwind aliases still in the code: `text-figma-xs` 10px,
 `text-figma-sm` 12px, `text-figma-base` 14px, `text-figma-lg` 16px,
-`text-figma-xl` 24px. Common combinations (from DESIGN_SPECS.md, still
+`text-figma-xl` **26px/34** (the config deliberately sits 2px above the
+ramp's h5 24px/32 — divergence logged in the drift report, kept as-is). Common combinations (from DESIGN_SPECS.md, still
 canonical):
 
-- Page title: 24px / 700 / `#1d2329`
+- Page title: 26px / 700 / `#1d2329` (`text-figma-xl`)
 - Section heading: 16px / 700 / `#1d2329`
 - Body: 14px / 500 / `#454b52`
 - Labels/captions: 12px / 500 / `#686e74`
-- Stat values: 24px / 700 / `#1d2329`
+- Stat values: 26px / 700 / `#1d2329` (`text-figma-xl`)
 - Tiny/hint: 10px / 500 / `#878c94`
 
 ---

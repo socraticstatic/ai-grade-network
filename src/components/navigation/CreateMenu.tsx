@@ -48,7 +48,7 @@ export function CreateMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(o => !o)}
-        className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-figma-sm font-medium bg-fw-ctaPrimary text-white hover:bg-fw-ctaPrimaryHover transition-colors whitespace-nowrap"
+        className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-figma-sm font-medium bg-fw-ctaPrimary text-white hover:bg-fw-ctaPrimaryHover transition-colors whitespace-nowrap"
       >
         <PlusCircle className="h-4 w-4" aria-hidden="true" />
         Create
