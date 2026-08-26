@@ -1,9 +1,18 @@
 {
   "fileKey": "GMSruRYGS5uyQLRBk2ADMB",
   "fileUrl": "https://www.figma.com/design/GMSruRYGS5uyQLRBk2ADMB/AI-grade-Network-NaaS-Mockups",
-  "fileName": "AI-grade Network — NaaS Mockups",
+  "fileName": "AI-grade Network \u2014 NaaS Mockups",
   "location": "Drafts",
-  "pageName": "NaaS — 1440 Mockups",
-  "plugin": "html.to.design (div RIOTS) — found via Actions search > Plugins & widgets, not yet run",
-  "componentIds": {}
+  "pageName": "NaaS \u2014 1440 Mockups",
+  "plugin": "html.to.design (div RIOTS) \u2014 runs from Actions search; reopen via right-panel Tools row",
+  "componentIds": {},
+  "componentsBoard": {
+    "status": "imported",
+    "sectionName": "13 \u2014 Components",
+    "font": "ATT Aleck Sans (native import after local-fonts permission + FigmaAgent)",
+    "importsUsed": 2,
+    "importCapNote": "h2d FREE tier \u2014 cap ~10/month; PRO/API removes cap and enables code.to.design API imports",
+    "componentIds": {},
+    "componentizeStatus": "pending \u2014 Object menu > Create component works; Cmd+Opt+K via CDP does not"
+  }
 }
