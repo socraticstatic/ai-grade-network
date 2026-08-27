@@ -57,14 +57,91 @@ await page.screenshot({ path: path.join(capDir, `${slug}@2x.png`), fullPage: tru
 
 if (flag('freeze')) {
   const html = await page.evaluate(() => {
+    /* Layer naming. html.to.design names a Figma layer from the element's
+     * aria-label when present, else falls back to `tag.class` — which is
+     * where `div.flex-1` / `span.truncate` layer soup comes from. Labelling
+     * containers HERE means layers arrive in Figma already readable, instead
+     * of being renamed by the thousand afterwards. aria-label is metadata:
+     * it cannot move a pixel. Leaf text is left alone — h2d already names
+     * those by their own content. */
+    /* Vocabulary and truncation match the names already in the Figma file
+     * (established during the 2026-08-26 rename pass) so the new boards read
+     * as one library, not two conventions. Priority: author's own aria-label
+     * → the element's own text, cut at 44 chars + "…" → a layout-role word. */
+    const CUT = 44;
+    const textOf = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
+    const clip = (t) => (t.length > CUT ? t.slice(0, CUT) + '…' : t);
+    const TAGS = { nav:'Navigation', header:'Header', main:'Main content', footer:'Footer',
+      aside:'Sidebar', table:'Table', thead:'Table header', tbody:'Table body',
+      tr:'Row', th:'Header cell', td:'Cell', form:'Form', ul:'List', ol:'List',
+      li:'List item', dialog:'Dialog', section:'Section' };
+
+    const roleOf = (el, cs) => {                             // the established role words
+      const c = ' ' + el.className + ' ';
+      const has = (k) => typeof el.className === 'string' && c.includes(' ' + k);
+      if (has('group')) return 'Hover group';
+      if (cs.display === 'grid') return 'Grid';
+      if (cs.display === 'flex' || cs.display === 'inline-flex')
+        return cs.flexDirection.startsWith('column') ? 'Stack' : 'Row';
+      if (parseFloat(cs.borderTopLeftRadius) >= 8 &&
+          (cs.borderTopWidth !== '0px' || cs.backgroundColor !== 'rgba(0, 0, 0, 0)')) return 'Card';
+      if (el.getBoundingClientRect().height <= 2) return 'Rule';
+      if (has('flex-1')) return 'Flex item';
+      if (has('w-full')) return 'Full width';
+      return TAGS[el.tagName.toLowerCase()] || '';
+    };
+
+    /* Only a *thin wrapper* — one that owns exactly one run of text — takes
+     * that text as its name. Aggregate containers would otherwise be named
+     * with every descendant string concatenated ("AT&TAI-grade networkDisc…"),
+     * which is worse than the class name it replaces. They get a role word. */
+    const textSources = (el) => {
+      let n = 0;
+      for (const node of [el, ...el.querySelectorAll('*')]) {
+        for (const child of node.childNodes)
+          if (child.nodeType === 3 && child.nodeValue.trim()) { n++; break; }
+        if (n > 1) break;
+      }
+      return n;
+    };
+
+    document.body.querySelectorAll('*').forEach(el => {
+      if (el.getAttribute('aria-label')) return;             // author already named it
+      if (!el.firstElementChild) return;                     // leaf: h2d names it by its text
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'svg' || tag === 'script' || tag === 'style') return;
+      const own = textSources(el) === 1 ? textOf(el) : '';
+      const name = own ? clip(own) : roleOf(el, getComputedStyle(el));
+      if (name) el.setAttribute('aria-label', name);
+    });
+
     // Canvas → img so charts survive the freeze.
     document.querySelectorAll('canvas').forEach(c => {
       try { const img = document.createElement('img'); img.src = c.toDataURL('image/png');
         img.style.cssText = getComputedStyle(c).cssText; c.replaceWith(img); } catch {}
     });
     document.querySelectorAll('script,link[rel="modulepreload"]').forEach(s => s.remove());
-    const inline = (el) => { el.setAttribute('style', getComputedStyle(el).cssText);
-      [...el.children].forEach(inline); };
+
+    /* Chrome serialises getComputedStyle(el).cssText to "" for SVG elements,
+     * so the naive inline pass wrote style="" onto every <text>/<path> and
+     * threw their font away — the artboard then imported those labels in the
+     * converter's fallback face (this is where 61 stray Inter segments came
+     * from). Rebuild the declaration by hand for anything cssText won't
+     * serialise. */
+    const SVG_PROPS = ['font-family','font-size','font-weight','font-style','letter-spacing',
+      'fill','fill-opacity','stroke','stroke-width','stroke-linecap','stroke-dasharray',
+      'text-anchor','dominant-baseline','paint-order','opacity','display'];
+    const inline = (el) => {
+      const cs = getComputedStyle(el);
+      let css = cs.cssText;
+      if (!css) css = SVG_PROPS
+        .map(p => [p, cs.getPropertyValue(p)])
+        .filter(([, v]) => v)
+        .map(([p, v]) => `${p}:${v}`)
+        .join(';');
+      el.setAttribute('style', css);
+      [...el.children].forEach(inline);
+    };
     inline(document.body);
     return '<!doctype html>\n' + document.documentElement.outerHTML;
   });
