@@ -212,12 +212,20 @@ is 100% Aleck without a post-import sweep.
 **Figma ignores programmatically assigned input values.** Setting `.value`
 with the native setter plus an `input` event — which works for Figma's
 position and opacity fields — silently fails for the hyperlink popover. The
-value appears in the field and is never committed. TOC links must be typed
-with real key events: Cmd+click the text, click the hyperlink control, Cmd+A,
-type the URL, Enter. And "Create link" in the properties panel is a static
-button label, not a state indicator: the only reliable check that a link
-exists is hovering the text on canvas and looking for the "Go to <board>"
-chip.
+value appears in the field and is never committed. A link edited *in Figma*
+must be typed with real key events: Cmd+click the text, click the hyperlink
+control, Cmd+A, type the URL, Enter. And "Create link" in the properties
+panel is a static button label, not a state indicator: the only reliable
+check that a link exists is hovering the text on canvas and looking for the
+link chip.
+
+**But do not edit links in Figma at all.** With "Add hyperlinks" on, h2d
+transcribes every `<a href>` into a real Figma hyperlink on import. Bake the
+URLs into the artboard HTML and all 22 TOC links arrive already wired —
+verified 22/22 on 2026-08-27, no typing pass. This is the same principle as
+the rest of the method: fix it in the source, not on the canvas. The typing
+recipe above is only a rescue path for a link that has to change without a
+re-import.
 
 ## Cover TOC mechanics
 
@@ -231,18 +239,33 @@ Rebuilding it after boards change:
 1. Collect every board's `node-id` (select each section, read it off the
    URL). The ids are not stable across a re-import, so re-collect rather than
    trusting a saved map.
-2. Regenerate the cover, replacing only the TOC block — gradient, Sankey art
-   and header copy are untouched.
-3. Import, name, place at x=-1700, and check opacity is 100% (stray
+2. Regenerate the cover with the URLs baked into the `<a href>`s, replacing
+   only the TOC block — gradient, Sankey art and header copy are untouched.
+   Name the containers with `aria-label` here too; the cover is hand-authored
+   but it earns readable layers the same way every other board does.
+3. Import with "Add hyperlinks" on. Delete the old section only *after* the
+   new one has landed, so nothing good is destroyed before its replacement
+   exists. Name it, place at x=-1700, and check opacity is 100% (stray
    keystrokes into panel inputs have set it to 20% more than once).
-4. Link the rows by typing, per the trap above. **Calibrate coordinates
-   first** — read `window.innerWidth/innerHeight` and confirm one Cmd+click
-   actually selects a Text before running the loop. Row pitch and column x
-   shift whenever the copy above the TOC changes length; a stale coordinate
-   table is how half the links silently miss.
-5. Verify by hovering every row. Aim at the *start* of the label — a short
-   one like "Cost" ends well before a long one, and hovering past it reads as
-   a missing link when the link is fine.
+4. Verify by hovering every row for the link chip. Aim at the *start* of the
+   label — a short one like "Cost" ends well before a long one, and hovering
+   past it reads as a missing link when the link is fine. Read the result
+   from `document.body.innerText`, not from 22 screenshots.
+5. Diff the hrefs in the artboard HTML against the *live* node-ids read back
+   off the canvas. A link can be present and still point at a node that no
+   longer exists; only the diff catches that.
+
+**Verify by reading input values, not by looking at panels.** Every field in
+the Design panel is a real `<input>` with an `aria-label` — X-position,
+Y-position, Opacity, Horizontal resizing. Reading them is exact, cheap, and
+immune to the collapsed-panel false negatives that produced the "I now have
+two covers" incident. Screenshots are for judging design; input values are
+for verifying state.
+
+**Tab moves the selection.** In a Figma position field, Tab commits and
+advances — but if focus has drifted to the canvas it selects the next
+sibling instead, and the keystrokes that follow land on a different board.
+After any panel typing, re-select the node and read its values back.
 
 ## Provenance of the cover art
 
