@@ -152,3 +152,76 @@ No drift found.
   input) → `text-figma-base` (16px rendered ramp step). 3 occurrences.
 
 ### Skipped (logged)
+
+
+## 15 — AI Fabric Home
+
+No drift found. Captured after the SVG freeze fix, so all text (including
+SVG `<text>`) carries ATT Aleck Sans in the artboard.
+
+### Fixed
+
+### Skipped (logged)
+
+## 16 — AI · Providers
+
+No drift found. Captured after the SVG freeze fix, so all text (including
+SVG `<text>`) carries ATT Aleck Sans in the artboard.
+
+### Fixed
+
+### Skipped (logged)
+
+## 17 — AI · Teams & limits
+
+No drift found. Captured after the SVG freeze fix, so all text (including
+SVG `<text>`) carries ATT Aleck Sans in the artboard.
+
+### Fixed
+
+### Skipped (logged)
+
+## 18 — AI · Virtual keys
+
+No drift found. Captured after the SVG freeze fix, so all text (including
+SVG `<text>`) carries ATT Aleck Sans in the artboard.
+
+### Fixed
+
+### Skipped (logged)
+
+## 19 — AI · Policies
+
+No drift found. Captured after the SVG freeze fix, so all text (including
+SVG `<text>`) carries ATT Aleck Sans in the artboard.
+
+### Fixed
+
+### Skipped (logged)
+
+## 20 — AI · Insights · Performance
+
+No drift found. Captured after the SVG freeze fix, so all text (including
+SVG `<text>`) carries ATT Aleck Sans in the artboard.
+
+### Fixed
+
+### Skipped (logged)
+
+## 21 — AI · Insights · Savings
+
+No drift found. Captured after the SVG freeze fix, so all text (including
+SVG `<text>`) carries ATT Aleck Sans in the artboard.
+
+### Fixed
+
+### Skipped (logged)
+
+## 22 — AI · Insights · Security
+
+No drift found. Captured after the SVG freeze fix, so all text (including
+SVG `<text>`) carries ATT Aleck Sans in the artboard.
+
+### Fixed
+
+### Skipped (logged)
