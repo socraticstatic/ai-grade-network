@@ -7,6 +7,10 @@ styles against this page.
 
 Target viewport: **1440px** (Tailwind `xl`). Captures at deviceScaleFactor 2.
 
+**How these boards are produced: see [METHOD.md](METHOD.md).** Every board is
+a frozen transcription of the running app, never a generated design. That
+constraint is what makes this spec trustworthy.
+
 ---
 
 ## 1. Color tokens
