@@ -105,14 +105,25 @@ if (flag('freeze')) {
       return n;
     };
 
+    const nameFor = (el) => {
+      if (!el || el.nodeType !== 1 || el === document.body) return '';
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'svg' || tag === 'script' || tag === 'style') return '';
+      if (!el.firstElementChild) return '';                  // leaf: h2d names it by its text
+      const own = textSources(el) === 1 ? textOf(el) : '';
+      return own ? clip(own) : roleOf(el, getComputedStyle(el));
+    };
+
     document.body.querySelectorAll('*').forEach(el => {
       if (el.getAttribute('aria-label')) return;             // author already named it
-      if (!el.firstElementChild) return;                     // leaf: h2d names it by its text
-      const tag = el.tagName.toLowerCase();
-      if (tag === 'svg' || tag === 'script' || tag === 'style') return;
-      const own = textSources(el) === 1 ? textOf(el) : '';
-      const name = own ? clip(own) : roleOf(el, getComputedStyle(el));
-      if (name) el.setAttribute('aria-label', name);
+      const name = nameFor(el);
+      /* Skip when the parent resolves to the same name. h2d collapses
+       * redundant wrappers on import and joins their names with an arrow, so
+       * naming every level of a nested single-text wrapper yields layers
+       * called "AI Fabric → AI Fabric → AI Fabric". Only the outermost of a
+       * run gets the name; the rest stay generic and get absorbed. */
+      if (!name || name === nameFor(el.parentElement)) return;
+      el.setAttribute('aria-label', name);
     });
 
     // Canvas → img so charts survive the freeze.
