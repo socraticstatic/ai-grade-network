@@ -225,3 +225,21 @@ SVG `<text>`) carries ATT Aleck Sans in the artboard.
 ### Fixed
 
 ### Skipped (logged)
+
+## 2026-08-31 — dark-mode pass (drift found while auditing dark imports)
+
+### Fixed (in source — affects light too)
+
+- PathChoice availability badge wrapped mid-phrase ("Provisionable /
+  here") inside the card header row; title now yields (`min-w-0`) and the
+  badge is `whitespace-nowrap shrink-0`: `PathChoice.tsx`. The LIGHT Figma
+  boards 07/08 predate this fix and are one layout fix behind the app.
+
+### Freeze-pipeline fixes (measure.mjs, affect all future freezes)
+
+- Empty-cssText fallback now carries PAINT properties (background, border,
+  radius, padding, shadow…) — the CW/NB provider tile chips had lost their
+  backgrounds in every frozen board, light set included.
+- The same fallback must never carry geometry: writing `width` pinned text
+  to Chrome metrics and Figma's wider Aleck wrapped the header wordmark on
+  import ("AI-grade⏎network").
