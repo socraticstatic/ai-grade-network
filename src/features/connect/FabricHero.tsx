@@ -310,6 +310,32 @@ function ReliabilityDot({ reliability }: { reliability: FabricRegion['reliabilit
   );
 }
 
+/** One traveling traffic comet: a bright short head (AT&T Blue) leading a
+ *  dimmer cobalt tail. Head and tail share duration/delay; the head's dash
+ *  window sits 0.115 path-units ahead, so it reads as a comet, not a dash.
+ *  Base state of both layers is invisible (opacity 0, parked off-path):
+ *  `animation:none` — the board freeze — and reduced-motion collapse to the
+ *  static frame. */
+function TrafficPulse({ d, delay, dur, soft = false }: { d: string; delay: number; dur: number; soft?: boolean }) {
+  const timing = { animationDelay: `${delay}s`, animationDuration: `${dur}s` };
+  return (
+    <g data-fabric-pulse aria-hidden="true">
+      <path
+        d={d} fill="none" stroke={VIZ_HEX.cobalt} strokeWidth={2.2}
+        strokeLinecap="round" pathLength={1}
+        className={soft ? 'fabric-pulse-tail fabric-pulse-soft' : 'fabric-pulse-tail'}
+        style={timing}
+      />
+      <path
+        d={d} fill="none" stroke={VIZ_HEX.skyCursor} strokeWidth={3}
+        strokeLinecap="round" pathLength={1}
+        className={soft ? 'fabric-pulse-head fabric-pulse-soft-head' : 'fabric-pulse-head'}
+        style={timing}
+      />
+    </g>
+  );
+}
+
 interface FabricHeroProps {
   model: FabricModel;
   selected?: FabricSelection | null;
@@ -355,18 +381,42 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
         role="group"
         aria-label="Cloud fabric: sites to the AT&T fabric to cloud regions"
       >
+        {/* Dark-only paint sources. Light never references these ids, so the
+            light frame is untouched; the board freeze rebuilds SVG defs, so
+            the gradients survive into Figma. */}
+        <defs>
+          <linearGradient id="fabric-band-grad-dark" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#0b2340" />
+            <stop offset="1" stopColor="#123054" />
+          </linearGradient>
+          <linearGradient id="fabric-band-hl-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#5ba7f7" stopOpacity="0.16" />
+            <stop offset="1" stopColor="#5ba7f7" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
         {/* ---- the unified AT&T Fabric band (a single shape, clickable) ---- */}
         <g>
           <rect
+            className="fabric-band-breathe"
+            data-focus={fabricFocus || undefined}
             x={layout.fabric.x} y={layout.fabric.y} width={layout.fabric.w} height={layout.fabric.h}
             rx={18} fill={VIZ_HEX.band} stroke={fabricFocus ? VIZ_HEX.cobalt : VIZ_HEX.bandStroke}
             strokeWidth={fabricFocus ? 2.5 : 1.5}
+          />
+          {/* faint inner top highlight — lit infrastructure, not a flat
+              rectangle. display:none outside html.dark. */}
+          <rect
+            className="fabric-band-hl" aria-hidden="true" pointerEvents="none"
+            x={layout.fabric.x + 1.5} y={layout.fabric.y + 1.5}
+            width={Math.max(0, layout.fabric.w - 3)} height={Math.max(0, layout.fabric.h * 0.42)}
+            rx={16} fill="url(#fabric-band-hl-grad)"
           />
         </g>
 
         {/* ---- site → fabric edges (first-mile onto the private fabric) ---- */}
         <g data-edges-site>
-          {layout.sites.map(s => {
+          {layout.sites.map((s, i) => {
             const from = { x: s.x + SITE_W, y: s.y };
             const to = { x: layout.fabric.x, y: Math.min(layout.fabric.y + layout.fabric.h - 10, Math.max(layout.fabric.y + 10, s.y)) };
             const lit = siteEdgeLit(s.id);
@@ -388,6 +438,7 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
                     data-fabric-edge data-kind="site-public" d={d} fill="none"
                     stroke={VIZ_HEX.slate} strokeWidth={w} strokeDasharray="5 4"
                     strokeOpacity={dim} strokeLinecap="round"
+                    className="fabric-dash-drift"
                   />
                 )}
                 {share > 0 && (
@@ -398,6 +449,21 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
                     pathLength={1} strokeDasharray={share < 1 ? `${share} ${1 - share}` : undefined}
                   />
                 )}
+                {/* traffic comets — ingress, riding the private edge. Only a
+                    fully attached edge pulses end-to-end: a partial edge's
+                    cobalt covers just the attached share, and a comet
+                    crossing the slate remainder would claim traffic the
+                    fabric doesn't carry. */}
+                {share >= 1 && (
+                  <TrafficPulse d={d} delay={-(i * 1.15)} dur={2.6 + (i % 3) * 0.25} />
+                )}
+                {/* port — the edge's termination on the band, one deliberate
+                    treatment for every edge (dark-only; see the CSS). */}
+                <circle
+                  className="fabric-port" aria-hidden="true"
+                  data-port-kind={share > 0 ? 'private' : 'public'}
+                  cx={to.x} cy={to.y} r={2.6}
+                />
               </g>
             );
           })}
@@ -405,7 +471,7 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
 
         {/* ---- fabric → region edges (on-ramp is the labeled edge detail) ---- */}
         <g data-edges-region>
-          {layout.regions.map(({ region, edge }) => {
+          {layout.regions.map(({ region, edge }, i) => {
             const { color, dash } = edgeStroke(region.path);
             const lit = regionEdgeLit(region.regionId);
             const dual = region.reliability === 'dual';
@@ -420,20 +486,53 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
                 )}
                 <path
                   data-fabric-edge data-kind="region" data-region-id={region.regionId} data-path={region.path}
-                  className={provisioned ? 'fabric-edge-enter' : undefined}
+                  className={provisioned ? 'fabric-edge-enter' : region.path === 'public' ? 'fabric-dash-drift' : undefined}
                   d={d} fill="none" stroke={color} strokeWidth={lit ? 2.6 : 1.6}
                   strokeOpacity={focusId && !lit ? 0.3 : 0.9}
                   strokeDasharray={dash} strokeLinecap="round"
                 >
                   <title>{region.cloudName} {region.name} · {region.path} · {region.reliability} · {region.latencyMs}ms on the {region.path === 'private' ? 'AT&T fabric' : 'public internet'}</title>
                 </path>
-                {/* on-ramp product label — the edge detail-on-demand */}
+                {/* traffic comets — egress, fabric → region, private paths
+                    only (public rides the dash drift instead). Speed keys to
+                    the path's own figure: a 3ms fabric edge runs visibly
+                    quicker than a 60ms one. Deterministic — no clocks. */}
+                {region.path === 'private' && (
+                  <TrafficPulse
+                    d={d}
+                    delay={-(i * 0.85) - 0.5}
+                    dur={Math.min(3.6, Math.max(2.1, 2.1 + region.latencyMs / 90))}
+                  />
+                )}
+                {/* port — where the on-ramp lands on the band (dark-only) */}
+                <circle
+                  className="fabric-port" aria-hidden="true"
+                  data-port-kind={region.path}
+                  cx={edge.from.x} cy={edge.from.y} r={2.6}
+                />
+                {/* on-ramp product label — the edge detail-on-demand. Two
+                    renderings, one visible per theme: the light frame keeps
+                    the haloed text EXACTLY as frozen; dark swaps it for a
+                    pill chip so the label sits on the edge with intent. */}
                 {region.onrampIds.length > 0 && (
-                  <text x={edge.mid.x} y={edge.mid.y} textAnchor="middle"
-                    fill={VIZ_HEX.slateInk} stroke={VIZ_HEX.wash} strokeWidth={3} paintOrder="stroke"
-                    className="text-[10px] font-medium" style={{ opacity: focusId && !lit ? 0.4 : 1 }}>
-                    {edge.onrampLabel}
-                  </text>
+                  <>
+                    <text data-onramp-text x={edge.mid.x} y={edge.mid.y} textAnchor="middle"
+                      fill={VIZ_HEX.slateInk} stroke={VIZ_HEX.wash} strokeWidth={3} paintOrder="stroke"
+                      className="text-[10px] font-medium" style={{ opacity: focusId && !lit ? 0.4 : 1 }}>
+                      {edge.onrampLabel}
+                    </text>
+                    {(() => {
+                      const chipW = edge.onrampLabel.length * 5.6 + 16;
+                      return (
+                        <g className="fabric-chip" aria-hidden="true" style={{ opacity: focusId && !lit ? 0.4 : 1 }}>
+                          <rect x={edge.mid.x - chipW / 2} y={edge.mid.y - 12} width={chipW} height={16} rx={8} />
+                          <text x={edge.mid.x} y={edge.mid.y} textAnchor="middle" className="text-[10px] font-medium">
+                            {edge.onrampLabel}
+                          </text>
+                        </g>
+                      );
+                    })()}
+                  </>
                 )}
               </g>
             );
@@ -444,27 +543,43 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
             const lit = fabricFocus || focusId === 'e-net';
             const d = `M ${e.from.x} ${e.from.y} C ${e.from.x + 60} ${e.from.y}, ${e.to.x - 60} ${e.to.y}, ${e.to.x} ${e.to.y}`;
             return (
-              <path data-fabric-edge data-kind="internet" d={d} fill="none" stroke={VIZ_HEX.slate}
-                strokeWidth={lit ? 2.4 : 1.5} strokeOpacity={focusId && !lit ? 0.3 : 0.85}
-                strokeDasharray="5 5" strokeLinecap="round" />
+              <g>
+                <path data-fabric-edge data-kind="internet" d={d} fill="none" stroke={VIZ_HEX.slate}
+                  strokeWidth={lit ? 2.4 : 1.5} strokeOpacity={focusId && !lit ? 0.3 : 0.85}
+                  strokeDasharray="5 5" strokeLinecap="round" className="fabric-dash-drift" />
+                <circle
+                  className="fabric-port" aria-hidden="true" data-port-kind="public"
+                  cx={e.from.x} cy={e.from.y} r={2.6}
+                />
+              </g>
             );
           })()}
         </g>
 
         {/* ---- cloud ↔ cloud arcs (first-class east-west) ---- */}
         <g data-edges-c2c>
-          {layout.arcs.map(a => {
+          {layout.arcs.map((a, i) => {
             const lit = arcLit(a.regionIds);
+            const dArc = `M ${a.a.x} ${a.a.y} Q ${a.ctrl.x} ${a.ctrl.y} ${a.b.x} ${a.b.y}`;
             return (
-              <path
-                key={`arc-${a.id}`} data-fabric-arc data-controlled={a.controlled}
-                d={`M ${a.a.x} ${a.a.y} Q ${a.ctrl.x} ${a.ctrl.y} ${a.b.x} ${a.b.y}`}
-                fill="none" stroke={a.controlled ? VIZ_HEX.cobalt : VIZ_HEX.slate}
-                strokeWidth={lit ? 2.2 : 1.4} strokeOpacity={focusId && !lit ? 0.28 : 0.75}
-                strokeDasharray={a.controlled ? undefined : '4 5'} strokeLinecap="round"
-              >
-                <title>{a.label} · {a.controlled ? 'AT&T fabric' : 'public peering'}</title>
-              </path>
+              <g key={`arc-${a.id}`}>
+                <path
+                  data-fabric-arc data-controlled={a.controlled}
+                  d={dArc}
+                  fill="none" stroke={a.controlled ? VIZ_HEX.cobalt : VIZ_HEX.slate}
+                  strokeWidth={lit ? 2.2 : 1.4} strokeOpacity={focusId && !lit ? 0.28 : 0.75}
+                  strokeDasharray={a.controlled ? undefined : '4 5'} strokeLinecap="round"
+                  className={a.controlled ? undefined : 'fabric-dash-drift'}
+                >
+                  <title>{a.label} · {a.controlled ? 'AT&T fabric' : 'public peering'}</title>
+                </path>
+                {/* east-west comets — controlled cloud↔cloud rides the
+                    fabric too; softer and slower than the trunk edges so the
+                    arcs read as secondary flows. */}
+                {a.controlled && (
+                  <TrafficPulse d={dArc} delay={-(i * 1.9) - 1.2} dur={5.2} soft />
+                )}
+              </g>
             );
           })}
         </g>
@@ -486,9 +601,9 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
             onFocus={() => setHover('__fabric__')} onBlur={() => setHover(null)}
             className="w-full h-full flex flex-col items-center justify-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-fw-link/50"
           >
-            <span className="text-[11px] font-semibold leading-tight text-fw-link">AT&amp;T</span>
-            <span className="text-[11px] font-semibold leading-tight text-fw-link">Fabric</span>
-            <span className="text-[10px] leading-tight text-fw-bodyLight">{expanded ? 'collapse' : 'see inside'}</span>
+            <span className="fabric-lockup-att text-[11px] font-semibold leading-tight text-fw-link">AT&amp;T</span>
+            <span className="fabric-lockup-fabric text-[11px] font-semibold leading-tight text-fw-link">Fabric</span>
+            <span className="fabric-lockup-hint text-[10px] leading-tight text-fw-bodyLight">{expanded ? 'collapse' : 'see inside'}</span>
           </button>
         </foreignObject>
 
@@ -700,12 +815,127 @@ export function FabricHero({ model, selected = null, onSelect, justProvisioned =
         )}
       </svg>
 
-      {/* provisioned edge draw-in — CSS only, geometry never touched; off under reduced-motion */}
+      {/* Motion — CSS only, geometry never touched. Every animated element's
+          BASE state is today's static frame (pulses park invisible, drift
+          starts at offset 0, the band carries no filter), so `animation:none`
+          — injected by the Figma board freeze — and reduced-motion both
+          collapse to the exact pre-animation render. */}
       <style>{`
         .fabric-edge-enter { stroke-dasharray: 240; stroke-dashoffset: 240; animation: fabric-edge-draw .7s ease-out forwards; }
         @keyframes fabric-edge-draw { to { stroke-dashoffset: 0; } }
+
+        /* hover focus feels liquid instead of snapping */
+        [data-fabric-edge], [data-fabric-arc] { transition: stroke-opacity .25s ease, stroke-width .25s ease; }
+
+        /* ───── dark-only treatment: lit infrastructure ─────
+           Everything below is html.dark-scoped; the light frame stays
+           hash-identical. The static dark frame (animation:none) carries the
+           full look — steady band glow, gradient, chips, ports — because
+           that frame is what the Figma freeze captures. */
+
+        /* the slate public baseline under a partially-attached group sank
+           into the dark card — lift just that stroke a step */
+        html.dark [data-fabric-edge][data-kind="site-public"] { stroke: #7f90a6; }
+
+        /* the band: deep cobalt gradient, steady AT&T-blue aura, breathing
+           oscillates AROUND the steady glow (0%/100% = base ⇒ animation:none
+           IS the static frame) */
+        html.dark .fabric-band-breathe {
+          fill: url(#fabric-band-grad-dark);
+          stroke: #3374cc;
+          stroke-width: 1.5;
+          filter: drop-shadow(0 0 22px rgb(0 159 219 / .28));
+          animation: fabric-band-breathe-dark 6s ease-in-out infinite;
+        }
+        html.dark .fabric-band-breathe[data-focus] { stroke: #58baff; stroke-width: 2.5; }
+        @keyframes fabric-band-breathe-dark {
+          0%, 100% { filter: drop-shadow(0 0 22px rgb(0 159 219 / .28)); }
+          50%      { filter: drop-shadow(0 0 30px rgb(0 159 219 / .44)); }
+        }
+        .fabric-band-hl { display: none; }
+        html.dark .fabric-band-hl { display: block; }
+
+        /* edges the fabric carries lift to lit cobalt with a whisper of glow;
+           public stays clearly visible but muted — the hierarchy IS the
+           argument */
+        html.dark [data-fabric-edge][data-kind="site"],
+        html.dark [data-fabric-edge][data-kind="region"][data-path="private"],
+        html.dark [data-fabric-arc][data-controlled="true"] {
+          stroke: var(--viz-cobalt-lit, #58a6f0);
+          filter: drop-shadow(0 0 3px rgb(0 159 219 / .4));
+        }
+
+        /* one deliberate termination for every edge: a port on the band */
+        .fabric-port { display: none; }
+        html.dark .fabric-port { display: block; }
+        html.dark .fabric-port[data-port-kind="private"] { fill: var(--viz-cobalt-lit, #58a6f0); }
+        html.dark .fabric-port[data-port-kind="public"] { fill: #7f90a6; }
+
+        /* on-ramp labels become pill chips in dark; the light haloed text is
+           frozen pixels and hides only under html.dark */
+        .fabric-chip { display: none; }
+        html.dark .fabric-chip { display: block; }
+        html.dark [data-onramp-text] { display: none; }
+        html.dark .fabric-chip rect { fill: #222e3c; stroke: #2f3d4d; stroke-width: 1; }
+        html.dark .fabric-chip text { fill: #c5cfd9; }
+
+        /* the lockup brightens; "Fabric" takes the AT&T Blue accent */
+        html.dark .fabric-lockup-att { color: #f2f6fa; }
+        html.dark .fabric-lockup-fabric { color: #33b5eb; }
+        html.dark .fabric-lockup-hint { color: #97a3b0; letter-spacing: .08em; }
+
+        /* traffic comets — bright head, dimmer tail, same clock. pathLength=1
+           makes the dash math unit-scaled: the tail is a 16%-of-path window,
+           the head the leading 4.5% of it (its offset ramp runs 0.115 ahead).
+           Offsets park each layer entirely before the path and opacity lives
+           ONLY inside the keyframes — the base state is invisible. */
+        .fabric-pulse-tail { stroke-dasharray: .16 .84; stroke-dashoffset: 1.16; stroke-opacity: 0; animation: fabric-comet-tail 2.9s linear infinite; }
+        .fabric-pulse-head { stroke-dasharray: .045 .955; stroke-dashoffset: 1.045; stroke-opacity: 0; animation: fabric-comet-head 2.9s linear infinite; }
+        @keyframes fabric-comet-tail {
+          0%   { stroke-dashoffset: 1.16; stroke-opacity: 0; }
+          12%  { stroke-opacity: .35; }
+          82%  { stroke-opacity: .35; }
+          100% { stroke-dashoffset: .16; stroke-opacity: 0; }
+        }
+        @keyframes fabric-comet-head {
+          0%   { stroke-dashoffset: 1.045; stroke-opacity: 0; }
+          12%  { stroke-opacity: .95; }
+          82%  { stroke-opacity: .95; }
+          100% { stroke-dashoffset: .045; stroke-opacity: 0; }
+        }
+        .fabric-pulse-soft { animation-name: fabric-comet-tail-soft; }
+        .fabric-pulse-soft-head { animation-name: fabric-comet-head-soft; }
+        @keyframes fabric-comet-tail-soft {
+          0%   { stroke-dashoffset: 1.16; stroke-opacity: 0; }
+          15%  { stroke-opacity: .2; }
+          80%  { stroke-opacity: .2; }
+          100% { stroke-dashoffset: .16; stroke-opacity: 0; }
+        }
+        @keyframes fabric-comet-head-soft {
+          0%   { stroke-dashoffset: 1.045; stroke-opacity: 0; }
+          15%  { stroke-opacity: .55; }
+          80%  { stroke-opacity: .55; }
+          100% { stroke-dashoffset: .045; stroke-opacity: 0; }
+        }
+        html.dark .fabric-pulse-head { filter: drop-shadow(0 0 4px rgb(0 159 219 / .75)); }
+
+        /* public internet — the dashes crawl. Dash periods here are 9 or 10
+           units; -90 divides both, so the loop is seamless for every edge. */
+        .fabric-dash-drift { animation: fabric-dash-crawl 70s linear infinite; }
+        @keyframes fabric-dash-crawl { to { stroke-dashoffset: -90; } }
+
+        /* the fabric breathes — a slow AT&T-blue aura on the band */
+        .fabric-band-breathe { animation: fabric-band-breathe 5.4s ease-in-out infinite; }
+        @keyframes fabric-band-breathe {
+          0%, 100% { filter: drop-shadow(0 0 0px rgba(0,159,219,0)); }
+          50%      { filter: drop-shadow(0 0 9px rgba(0,159,219,.32)); }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .fabric-edge-enter { animation: none; stroke-dasharray: none; stroke-dashoffset: 0; }
+          .fabric-pulse-tail, .fabric-pulse-head, .fabric-dash-drift, .fabric-band-breathe,
+          html.dark .fabric-band-breathe { animation: none; }
+          [data-fabric-edge], [data-fabric-arc] { transition: none; }
         }
       `}</style>
     </div>
