@@ -16,13 +16,19 @@ fs.mkdirSync(capDir, { recursive: true });
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
-await page.addInitScript((seedAdvisor) => {
+await page.addInitScript(({ seedAdvisor, dark }) => {
   localStorage.setItem('att_nb_user', JSON.stringify({ email: 'handoff@att.com' }));
   localStorage.setItem('tour-main-app-completed', 'true');
   localStorage.setItem('product-tour-completed', 'true');
   localStorage.setItem('e2e-skip-demo-modal', 'true');
   if (seedAdvisor) localStorage.setItem('advisor:meridian:done', '1');
-}, !flag('no-advisor-done'));
+  if (dark) {
+    // Same two hooks the app itself uses: class before first paint,
+    // localStorage so ThemeProvider keeps (not strips) the class.
+    localStorage.setItem('theme-mode', 'dark');
+    document.documentElement.classList.add('dark');
+  }
+}, { seedAdvisor: !flag('no-advisor-done'), dark: flag('dark') });
 // HashRouter app (main.tsx): the route lives in the hash; resolveProfile reads
 // window.location.search, which sits BEFORE the hash.
 await page.goto(`${base}/?estate=meridian#${route}`, { waitUntil: 'networkidle' });
@@ -139,9 +145,20 @@ if (flag('freeze')) {
      * converter's fallback face (this is where 61 stray Inter segments came
      * from). Rebuild the declaration by hand for anything cssText won't
      * serialise. */
+    /* HTML inside <foreignObject> hits the same empty-cssText path (found
+       2026-08-31: the CW/NB provider tiles lost their chip backgrounds in
+       every frozen board, light set included). The rebuild list therefore
+       carries the HTML box properties too — harmless on SVG elements, which
+       ignore them. */
+    /* PAINT properties only — never geometry. Writing width/height here
+       pinned text boxes to Chrome's metrics and Figma's slightly-wider Aleck
+       wrapped "AI-grade network" onto two lines on import (2026-08-31).
+       Layout geometry is the converter's job; paint is what cssText loses. */
     const SVG_PROPS = ['font-family','font-size','font-weight','font-style','letter-spacing',
       'fill','fill-opacity','stroke','stroke-width','stroke-linecap','stroke-dasharray',
-      'text-anchor','dominant-baseline','paint-order','opacity','display'];
+      'text-anchor','dominant-baseline','paint-order','opacity','display',
+      'color','background-color','background-image','border','border-radius','box-shadow',
+      'padding','line-height','text-align','overflow','text-overflow','white-space','filter'];
     const inline = (el) => {
       const cs = getComputedStyle(el);
       let css = cs.cssText;
@@ -164,8 +181,9 @@ if (flag('freeze')) {
     if (!fs.existsSync(file)) { console.warn('font missing, left as-is:', p); return m; }
     return `url(data:font/woff2;base64,${fs.readFileSync(file).toString('base64')})`;
   });
-  fs.mkdirSync('docs/figma-handoff/artboards', { recursive: true });
-  fs.writeFileSync(path.join('docs/figma-handoff/artboards', `${slug}.html`), inlined);
+  const artPath = path.join('docs/figma-handoff/artboards', `${slug}.html`);
+  fs.mkdirSync(path.dirname(artPath), { recursive: true }); // slug may carry a subdir (dark/)
+  fs.writeFileSync(artPath, inlined);
 }
 await browser.close();
 console.log('wrote', capDir);
