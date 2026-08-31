@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { EgressTrend } from './EgressTrend';
+import { VIZ_HEX } from '../../components/viz/kit';
 
 /** Parses the trailing y-coordinate out of an SVG path's `d` (an
  *  `M x y L x y ...` line, per computeTrendGeometry). */
@@ -20,8 +21,9 @@ describe('EgressTrend', () => {
     const paths = [...container.querySelectorAll('path')];
 
     // The hyper line: stroke cobalt, no fill (the filled area path is a
-    // separate <path> with fill and no stroke).
-    const hyperLine = paths.find(p => p.getAttribute('stroke') === '#0057b8');
+    // separate <path> with fill and no stroke). VIZ_HEX entries are
+    // `var(--viz-…, #hex)` strings now, so compare against the constant.
+    const hyperLine = paths.find(p => p.getAttribute('stroke') === VIZ_HEX.cobalt);
     const actualLine = paths.find(p => p.getAttribute('stroke') === '#00a862');
     expect(hyperLine).toBeTruthy();
     expect(actualLine).toBeTruthy();

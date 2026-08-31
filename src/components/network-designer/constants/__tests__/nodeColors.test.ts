@@ -5,7 +5,7 @@ describe('getNodeColors', () => {
   it('returns pink/magenta for hub', () => {
     const colors = getNodeColors('function', 'router');
     expect(colors.border).toBe('#d946ef');
-    expect(colors.bg).toBe('#fdf4ff');
+    expect(colors.bg).toBe('var(--nd-bg-fuchsia, #fdf4ff)');
   });
 
   it('returns purple for AT&T Core (ipe)', () => {
@@ -16,7 +16,7 @@ describe('getNodeColors', () => {
   it('returns blue for cloud destinations', () => {
     const colors = getNodeColors('destination', 'aws');
     expect(colors.border).toBe('#3b82f6');
-    expect(colors.bg).toBe('#eff6ff');
+    expect(colors.bg).toBe('var(--nd-bg-blue, #eff6ff)');
   });
 
   it('returns gray for datacenter', () => {
@@ -37,7 +37,7 @@ describe('getNodeColors', () => {
   it('returns defaults for unknown type', () => {
     const colors = getNodeColors('unknown', 'whatever');
     expect(colors.border).toBe('#9ca3af');
-    expect(colors.bg).toBe('#ffffff');
+    expect(colors.bg).toBe('var(--nd-bg-default, #ffffff)');
   });
 
   it('returns defaults for unknown function type', () => {
@@ -48,11 +48,11 @@ describe('getNodeColors', () => {
 
 describe('STATUS_DOT_COLORS', () => {
   it('maps unconfigured to gray', () => {
-    expect(STATUS_DOT_COLORS['unconfigured']).toBe('#d1d5db');
+    expect(STATUS_DOT_COLORS['unconfigured']).toBe('var(--nd-dot-unconfigured, #d1d5db)');
   });
 
   it('maps configured-inactive to darker gray', () => {
-    expect(STATUS_DOT_COLORS['configured-inactive']).toBe('#9ca3af');
+    expect(STATUS_DOT_COLORS['configured-inactive']).toBe('var(--nd-dot-inactive, #9ca3af)');
   });
 
   it('maps active to green', () => {

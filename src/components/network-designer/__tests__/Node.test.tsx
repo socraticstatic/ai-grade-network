@@ -48,11 +48,11 @@ describe('Node', () => {
       const wrapper = hub.firstElementChild as HTMLElement;
       expect(wrapper).toHaveStyle({ borderStyle: 'dashed' });
       expect(wrapper).toHaveStyle({ borderColor: '#d1d5db' });
-      expect(wrapper).toHaveStyle({ backgroundColor: '#ffffff' });
+      expect(wrapper).toHaveStyle({ backgroundColor: 'var(--nd-bg-default, #ffffff)' });
       expect(wrapper.dataset.status).toBe('unconfigured');
 
       const dot = screen.getByTestId('status-dot');
-      expect(dot).toHaveStyle({ backgroundColor: '#d1d5db' });
+      expect(dot).toHaveStyle({ backgroundColor: 'var(--nd-dot-unconfigured, #d1d5db)' });
     });
 
     it('renders configured-inactive node with solid type-colored border and gray dot', () => {
@@ -62,10 +62,10 @@ describe('Node', () => {
       const wrapper = hub.firstElementChild as HTMLElement;
       expect(wrapper).toHaveStyle({ borderStyle: 'solid' });
       expect(wrapper).toHaveStyle({ borderColor: '#d946ef' });
-      expect(wrapper).toHaveStyle({ backgroundColor: '#ffffff' });
+      expect(wrapper).toHaveStyle({ backgroundColor: 'var(--nd-bg-default, #ffffff)' });
 
       const dot = screen.getByTestId('status-dot');
-      expect(dot).toHaveStyle({ backgroundColor: '#9ca3af' });
+      expect(dot).toHaveStyle({ backgroundColor: 'var(--nd-dot-inactive, #9ca3af)' });
     });
 
     it('renders active node with colored background and green dot', () => {
@@ -75,7 +75,7 @@ describe('Node', () => {
       const wrapper = hub.firstElementChild as HTMLElement;
       expect(wrapper).toHaveStyle({ borderStyle: 'solid' });
       expect(wrapper).toHaveStyle({ borderColor: '#d946ef' });
-      expect(wrapper).toHaveStyle({ backgroundColor: '#fdf4ff' });
+      expect(wrapper).toHaveStyle({ backgroundColor: 'var(--nd-bg-fuchsia, #fdf4ff)' });
 
       const dot = screen.getByTestId('status-dot');
       expect(dot).toHaveStyle({ backgroundColor: '#22c55e' });
@@ -86,7 +86,7 @@ describe('Node', () => {
       const { container: hub } = render(<Node node={node} {...defaultProps} />);
 
       const wrapper = hub.firstElementChild as HTMLElement;
-      expect(wrapper).toHaveStyle({ backgroundColor: '#fdf4ff' });
+      expect(wrapper).toHaveStyle({ backgroundColor: 'var(--nd-bg-fuchsia, #fdf4ff)' });
 
       const dot = screen.getByTestId('status-dot');
       expect(dot).toHaveStyle({ backgroundColor: '#ef4444' });

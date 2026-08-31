@@ -45,7 +45,7 @@
 
 .btn-primary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--button-primary-focus-ring);
+  box-shadow: 0 0 0 2px var(--fw-bg-base), 0 0 0 4px var(--button-primary-focus-ring);
 }
 
 .btn-secondary {
@@ -104,7 +104,7 @@
   line-height: 1.25rem;
   letter-spacing: -0.03em;
   color: var(--color-gray-800); /* #1d2329 */
-  background-color: white;
+  background-color: var(--fw-bg-base);
   transition-property: border-color, box-shadow;
   transition-duration: 200ms;
 }
@@ -150,7 +150,7 @@
    Figma: r:16px (rounded-2xl), 1px #dcdfe3 border, white bg
    ------------------------------------------------------------ */
 .card {
-  background-color: white;
+  background-color: var(--fw-bg-base);
   border-radius: 1rem; /* 16px - rounded-2xl */
   border: 1px solid var(--color-gray-300); /* #dcdfe3 */
   box-shadow: var(--shadow-sm);
@@ -420,7 +420,7 @@ button.border-l-2 {
   padding-left: 2.5rem;
   border-radius: 9999px; /* rounded-full - pill shape */
   border: 1px solid var(--color-gray-300); /* border-fw-secondary */
-  background-color: white; /* bg-fw-base */
+  background-color: var(--fw-bg-base); /* bg-fw-base */
   font-size: 0.875rem;
   font-weight: 500;
   letter-spacing: -0.03em;
@@ -462,7 +462,7 @@ button.border-l-2 {
 }
 
 .modal-content {
-  background-color: white;
+  background-color: var(--fw-bg-base);
   border-radius: 1.5rem; /* 24px - rounded-3xl */
   max-width: 45rem; /* 720px */
   box-shadow: var(--shadow-xl);
@@ -488,7 +488,7 @@ button.border-l-2 {
 
 /* Side drawer variant */
 .side-drawer {
-  background-color: white;
+  background-color: var(--fw-bg-base);
   border-left: 1px solid var(--color-gray-300);
   box-shadow: var(--shadow-xl);
   z-index: var(--z-40, 40);

@@ -2,6 +2,7 @@
 @import './styles/tokens.css';
 @import './styles/buttons.css';
 @import './styles/forms.css';
+@import './styles/dark.css';
 
 @tailwind base;
 @tailwind components;

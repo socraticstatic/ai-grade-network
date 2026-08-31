@@ -72,8 +72,8 @@ export function layerHero(cc: CloudControl, surface: Surface): LayerHero {
         cta: 'See the spend',
       },
       split: [
-        { key: 'ungoverned', label: 'No policy holding it', value: t.ungovernedTokensToday, hex: '#b3541e' },
-        { key: 'governed', label: 'Under a policy', value: t.governedTokensToday, hex: '#0057b8' },
+        { key: 'ungoverned', label: 'No policy holding it', value: t.ungovernedTokensToday, hex: 'var(--viz-ember, #b3541e)' },
+        { key: 'governed', label: 'Under a policy', value: t.governedTokensToday, hex: 'var(--viz-cobalt, #0057b8)' },
       ],
       evidence: [
         { label: 'Identities spending', value: String(t.identityCount) },
@@ -121,8 +121,11 @@ export function layerHero(cc: CloudControl, surface: Surface): LayerHero {
       cta: `Review ${table.moves} ${table.moves === 1 ? 'move' : 'moves'}`,
     },
     split: [
-      { key: 'public', label: 'Public internet', value: egressPub, hex: '#94a3b8' },
-      { key: 'private', label: 'AT&T fabric', value: (cc.egress() as { priv: number }).priv, hex: '#0057b8' },
+      /* var-based so dark keeps the argument: the AT&T fabric segment must
+         out-shine the public one on BOTH themes (light slate-400 is muted
+         next to cobalt; dark flips those luminances if left literal). */
+      { key: 'public', label: 'Public internet', value: egressPub, hex: 'var(--viz-slate, #94a3b8)' },
+      { key: 'private', label: 'AT&T fabric', value: (cc.egress() as { priv: number }).priv, hex: 'var(--viz-cobalt, #0057b8)' },
     ],
     evidence: [
       { label: 'Regions to attach', value: String(table.attachMoves) },

@@ -319,7 +319,128 @@
   --status-error-text: var(--color-error-700);
 }
 
-/* Dark mode removed - light only */
+/* ── JS-driven visualization colors ──────────────────────────────────────
+   SVG fill/stroke and Recharts props take literal values from three TS
+   palettes (viz kit VIZ_HEX, features/_shared FW/SERIES/COMPARE, and the
+   network-designer nodeColors). Those constants now emit `var(--…, #light)`
+   so the same component renders both themes with zero JS branching. Light
+   values are byte-identical to the old literals — light mode cannot move.
+   Dark values are the palette agreed with the Figma-boards session
+   (tasks/dark-mode-and-fabric-animation-plan.md). */
+:root {
+  /* viz kit (VIZ_HEX) */
+  --viz-cobalt: #0057b8;
+  --viz-cobalt-soft: #7aa6d6;
+  --viz-green: #2d7e24;
+  --viz-slate: #94a3b8;
+  --viz-slate-ink: #475569;
+  --viz-slate-muted: #64748b;
+  --viz-ink: #1d2329;
+  --viz-ink-soft: #475569;
+  --viz-wash: #f8fafb;
+  --viz-line: #dcdfe3;
+  --viz-band: #eef4fb;
+  --viz-band-stroke: #c7ddf5;
+  --viz-sky-cursor: #009FDB;
+  --viz-ember: #b3541e; /* ungoverned/attention split — layer-home hero */
+  --viz-tooltip-bg: #ffffff; /* chart tooltip surface (ECharts) */
+  --viz-halo: #ffffff; /* text halo over ribbons — must match the card surface */
+
+  /* _shared chart palette (FW / SERIES / COMPARE) */
+  --chart-cobalt: #0057b8;
+  --chart-cobalt300: #3374cc;
+  --chart-cobalt-wash: #e6f0fa;
+  --chart-ink: #1d2329;
+  --chart-body: #454b52;
+  --chart-muted: #686e74;
+  --chart-line: #dcdfe3;
+  --chart-grid: #f3f4f6;
+  --chart-wash: #f8fafb;
+  --chart-success: #2d7e24;
+  --chart-success-wash: #e9f5e7;
+  --chart-warn: #475569;
+  --chart-warn-wash: #f8fafc;
+  --chart-danger: #b42318;
+  --chart-series-1: #0057b8;
+  --chart-series-2: #009e8e;
+  --chart-series-3: #7b61ff;
+  --chart-series-4: #c2426b;
+  --chart-series-5: #2aa0d8;
+  --chart-series-6: #3f8f3a;
+  --chart-series-7: #8a5bd6;
+  --chart-series-8: #5b6b7b;
+  --chart-series-9: #0e7490;
+  --chart-compare-controlled-wash: rgba(0, 87, 184, 0.10);
+  --chart-compare-public-wash: rgba(104, 110, 116, 0.10);
+
+  /* network-designer node tint backgrounds */
+  --nd-bg-default: #ffffff;
+  --nd-bg-fuchsia: #fdf4ff;
+  --nd-bg-amber: #fffbeb;
+  --nd-bg-cyan: #ecfeff;
+  --nd-bg-gray: #f9fafb;
+  --nd-bg-purple: #f5f3ff;
+  --nd-bg-blue: #eff6ff;
+  --nd-bg-teal: #f0fdfa;
+  --nd-dot-unconfigured: #d1d5db;
+  --nd-dot-inactive: #9ca3af;
+}
+
+html.dark {
+  --viz-cobalt: #3d8de0;
+  --viz-cobalt-soft: #5d87b8;
+  --viz-green: #4aaf42;
+  --viz-slate: #64748b;
+  --viz-slate-ink: #a8b5c4;
+  --viz-slate-muted: #7b8898;
+  --viz-ink: #f2f6fa;
+  --viz-ink-soft: #a8b5c4;
+  --viz-wash: #1a2431; /* text-halo color — must match the card surface (fw-base dark) */
+  --viz-line: #2f3d4d;
+  --viz-band: #14304e;
+  --viz-band-stroke: #2a5480;
+  --viz-ember: #e0793f;
+  --viz-tooltip-bg: #2e3d4e; /* overlay surface (matches dark.css tooltips) */
+  --viz-halo: #1a2431;
+  --viz-cobalt-lit: #58a6f0; /* dark-only: edges the fabric visibly carries */
+
+  --chart-cobalt: #3d8de0;
+  --chart-cobalt300: #6ea3e8;
+  --chart-cobalt-wash: #16324e;
+  --chart-ink: #f2f6fa;
+  --chart-body: #c5cfd9;
+  --chart-muted: #97a3b0;
+  --chart-line: #2f3d4d;
+  --chart-grid: #222e3c;
+  --chart-wash: #111821;
+  --chart-success: #6ecf63;
+  --chart-success-wash: #16351c;
+  --chart-warn: #a8b5c4;
+  --chart-warn-wash: #222e3c;
+  --chart-danger: #ff7a8f;
+  --chart-series-1: #58a6f0;
+  --chart-series-2: #2fc4b2;
+  --chart-series-3: #9d8bff;
+  --chart-series-4: #e06a8e;
+  --chart-series-5: #4fc0f0;
+  --chart-series-6: #5cb856;
+  --chart-series-7: #a97fe8;
+  --chart-series-8: #8b9bab;
+  --chart-series-9: #2fa8c8;
+  --chart-compare-controlled-wash: rgba(61, 141, 224, 0.16);
+  --chart-compare-public-wash: rgba(151, 163, 176, 0.12);
+
+  --nd-bg-default: #1a2431;
+  --nd-bg-fuchsia: #38173c;
+  --nd-bg-amber: #382a12;
+  --nd-bg-cyan: #123338;
+  --nd-bg-gray: #222e3c;
+  --nd-bg-purple: #281c48;
+  --nd-bg-blue: #162e46;
+  --nd-bg-teal: #12332e;
+  --nd-dot-unconfigured: #4e5e6f;
+  --nd-dot-inactive: #67737f;
+}
 
 /* Reduced-motion handling lives in src/index.css — the single authoritative
    block. The variable-zeroing that used to sit here was folded into it. */

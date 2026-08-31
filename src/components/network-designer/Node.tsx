@@ -130,7 +130,7 @@ export const Node = memo(function Node({
   // Border and background based on status
   const borderStyle = isUnconfigured ? 'dashed' : 'solid';
   const borderColor = isUnconfigured ? '#d1d5db' : colors.border;
-  const bgColor = isActiveState ? colors.bg : '#ffffff';
+  const bgColor = isActiveState ? colors.bg : 'var(--nd-bg-default, #ffffff)';
 
   // Interaction state overrides
   let ringClass = '';

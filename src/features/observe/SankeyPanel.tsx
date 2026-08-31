@@ -215,7 +215,7 @@ function NodeLabel({ n }: { n: GNode }) {
       fontSize={13.5}
       fontWeight={700}
       fill={n.pathKind === 'private' ? VIZ_HEX.cobalt : VIZ_HEX.inkSoft}
-      stroke="#ffffff"
+      stroke="var(--viz-halo, #ffffff)"
       strokeWidth={4}
       paintOrder="stroke"
     >

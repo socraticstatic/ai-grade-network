@@ -3,7 +3,7 @@ import * as echarts from 'echarts/core';
 import { SankeyChart as EChartsSankey } from 'echarts/charts';
 import { TooltipComponent, TitleComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
-import { VIZ_HEX } from '../../components/viz/kit';
+import { useVizHex } from '../../components/viz/kit';
 import type { SankeyModel, SankeyNode } from './sankeyModel';
 
 /**
@@ -41,6 +41,10 @@ export interface SankeyChartProps {
 export function SankeyChart({ model, onNodeClick, activeName = null, height = 380 }: SankeyChartProps) {
   const ref = useRef<HTMLDivElement>(null);
   const chart = useRef<echarts.ECharts | null>(null);
+  /* ECharts parses colors itself (it blends its own opacities), so it gets
+     the RESOLVED theme hexes, not the var() strings — and re-renders on
+     themechange via this hook. */
+  const { viz, isDark } = useVizHex();
 
   useEffect(() => {
     if (!ref.current) return;
@@ -62,19 +66,25 @@ export function SankeyChart({ model, onNodeClick, activeName = null, height = 38
        AT&T fabric, slate is the public internet. A node inherits the story
        of the band it sits in. */
     const nodeColor = (n: SankeyNode) => {
-      if (n.band === 'path') return n.name.includes('fabric') ? VIZ_HEX.cobalt : VIZ_HEX.slate;
-      if (n.rollup) return VIZ_HEX.ink;
-      return VIZ_HEX.inkSoft;
+      if (n.band === 'path') return n.name.includes('fabric') ? viz.cobalt : viz.slate;
+      if (n.rollup) return viz.ink;
+      return viz.inkSoft;
     };
+
+    /* Dark needs the ribbons lifted: the same 0.28 that reads as a wash on
+       white disappears into a dark card — and cobalt must stay clearly
+       brighter than slate (the fabric out-shines the public internet). */
+    const ribbonOpacity = (privatePath: boolean) =>
+      isDark ? (privatePath ? 0.52 : 0.34) : 0.28;
 
     c.setOption(
       {
         tooltip: {
           trigger: 'item',
           triggerOn: 'mousemove',
-          backgroundColor: '#ffffff',
-          borderColor: VIZ_HEX.line,
-          textStyle: { color: VIZ_HEX.ink, fontSize: 12 },
+          backgroundColor: viz.tooltipBg,
+          borderColor: viz.line,
+          textStyle: { color: viz.ink, fontSize: 12 },
           formatter: (p: { dataType: string; name?: string; data?: { source?: string; target?: string }; value?: number }) => {
             if (p.dataType === 'edge') {
               return `${p.data?.source} → ${p.data?.target}<br/><b>${r1(Number(p.value))} Gbps</b>`;
@@ -106,10 +116,10 @@ export function SankeyChart({ model, onNodeClick, activeName = null, height = 38
               itemStyle: {
                 color: nodeColor(n),
                 borderWidth: n.name === activeName ? 2 : 0,
-                borderColor: VIZ_HEX.skyCursor,
+                borderColor: viz.skyCursor,
               },
               label: {
-                color: VIZ_HEX.ink,
+                color: viz.ink,
                 fontSize: 11,
                 fontWeight: n.rollup ? 700 : 500,
                 /* A rollup node is clickable; say so. */
@@ -121,8 +131,8 @@ export function SankeyChart({ model, onNodeClick, activeName = null, height = 38
               target: model.nodes[l.target]?.name ?? '',
               value: l.value,
               lineStyle: {
-                color: l.pathKind === 'private' ? VIZ_HEX.cobalt : VIZ_HEX.slate,
-                opacity: 0.28,
+                color: l.pathKind === 'private' ? viz.cobalt : viz.slate,
+                opacity: ribbonOpacity(l.pathKind === 'private'),
                 curveness: 0.5,
               },
             })),
@@ -140,7 +150,7 @@ export function SankeyChart({ model, onNodeClick, activeName = null, height = 38
     c.off('click');
     c.on('click', handler);
     c.resize();
-  }, [model, activeName, onNodeClick]);
+  }, [model, activeName, onNodeClick, viz, isDark]);
 
   return <div ref={ref} data-testid="sankey-chart" style={{ height }} className="w-full" />;
 }

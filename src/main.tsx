@@ -77,6 +77,25 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 });
 
+/* Theme activation — before first paint, so dark loads dark with no flash.
+   The URL param wins (?theme=dark|light — the Figma board capture pipeline
+   drives this; HashRouter keeps `search` ahead of the '#'), then the
+   persisted choice from the in-app toggle. The param is never persisted:
+   a capture run must not rewrite the user's preference. */
+(() => {
+  try {
+    const param = new URLSearchParams(window.location.search).get('theme');
+    const stored = localStorage.getItem('theme-mode');
+    const systemDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+    const dark = param
+      ? param === 'dark'
+      : stored === 'dark' || (stored === 'system' && systemDark);
+    document.documentElement.classList.toggle('dark', dark);
+  } catch {
+    /* storage unavailable (private mode) — stay light */
+  }
+})();
+
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {

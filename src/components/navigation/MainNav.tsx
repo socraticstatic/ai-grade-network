@@ -9,6 +9,7 @@ import { UserMenu } from './UserMenu';
 import { MobileMenu } from './MobileMenu';
 import { TenantSelector } from './TenantSelector';
 import { UtilityOverflow } from './UtilityOverflow';
+import { ThemeToggle } from './ThemeToggle';
 import { TourLauncher, START_TOUR_EVENT } from '../../features/tour/TourLauncher';
 import { CommandPalette } from '../../features/command/CommandPalette';
 import { UndoControl } from '../../features/undo/UndoControl';
@@ -361,6 +362,7 @@ export function MainNav({ items = [], onSearch }: MainNavProps) {
                 <Play className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>Start guided tour</span>
               </button>
+              <ThemeToggle />
             </UtilityOverflow>
 
             {/* Mounted at bar level at EVERY width: it owns the running
