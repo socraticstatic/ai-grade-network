@@ -53,3 +53,17 @@ New customer: Connect asks for one credential, scans, and the picture draws itse
 ## What to keep from today
 
 The lane outside the fabric, the in-place drills, the Sankey split, the two confidence levels on impact, the four words, the honest data rules (resource names for private, unresolved for public, no Shadow SaaS).
+
+## Reframe (Micah, 13:46): it is a dashboard, not a presentation
+
+The assessment above still reasons like a pitch: a story with a start, next stops, verdict sentences, a sequence of clicks. A dashboard has none of that. It is one screen the customer returns to every day, dense, glanceable, everything visible at once, state not steps. Corrections to the model:
+
+- **One screen, not five pages.** The picture is the canvas. Connect, Observe, Govern and Cost are lenses on that canvas and the panel beside it, switched in place. No page loads, no copies of the picture, no breadcrumb leaks because there is only one picture.
+- **Numbers, states, deltas. No narration.** The verdict sentences, the "Start here" eyebrows, the "Next stop" rows and the pattern-card prose are presentation artifacts. They go. A tile shows a number, a change against the window, and a state color. An alert row shows what, where, how long, and one action.
+- **The KPI strip belongs.** I removed the health tiles as "not focused on." On a dashboard they are the top row: throughput, utilization against purchased, P95, loss, on-fabric share, dollars on the table, dollars saved. Each tile is a filter on the canvas.
+- **Alerts are the queue.** Degraded, saturating, blind, violating, overpaying, in one list with a state, an age and one action each. That is the operator's morning.
+- **The panel is the detail.** Select anything on the canvas or in a tile and the panel shows its detail under the current lens: for a connection under Observe, the utilization graph and the impacted workloads; under Cost, its rate and what attaching saves; under Govern, the policies that touch it. Records are a tab in that panel, not a section of the page.
+- **Time is a control, not a story.** The window selector and refresh already exist; the canvas, tiles and alerts all obey them.
+- **Actions are buttons on the thing.** Attach on a public edge, Add a port on a saturating connection, Author on a violation, Steer on a public flow. No catalog, no compose wizard in the frame.
+
+What stays from today under this frame: the picture with the lane, the in-place drills, the Sankey (as the Observe lens's second chart), the two confidence levels on impact, the honest data rules, the four words, the shell.
