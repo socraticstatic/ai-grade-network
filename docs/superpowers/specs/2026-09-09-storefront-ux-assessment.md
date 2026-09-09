@@ -67,3 +67,7 @@ The assessment above still reasons like a pitch: a story with a start, next stop
 - **Actions are buttons on the thing.** Attach on a public edge, Add a port on a saturating connection, Author on a violation, Steer on a public flow. No catalog, no compose wizard in the frame.
 
 What stays from today under this frame: the picture with the lane, the in-place drills, the Sankey (as the Observe lens's second chart), the two confidence levels on impact, the honest data rules, the four words, the shell.
+
+### Correction (Micah, 13:47): not one screen
+
+Five dashboards, not one canvas with lenses. Home is the fabric picture. Connect, Observe, Govern and Cost are each their own dashboard with their own primary visual, tiles, alert queue, detail panel and actions. What carries over from the reframe: no narration, tiles as filters, alerts as the queue, detail in a panel on selection, drills in place inside each page's own visuals, actions on the thing. What does not carry over: the same picture repeated on every page with a different overlay. Each page owns a visual that answers its word; the fabric picture appears where it answers the question (Home, Connect), scoped and drillable, and does not leak state between pages.
