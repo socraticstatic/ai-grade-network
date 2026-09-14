@@ -13,7 +13,7 @@ export default defineConfig({
     // import @playwright/test, not vitest, and are run via `npm run test:e2e`).
     exclude: [
       // The storefront is a separate static site with its own node:test suite.
-      'ATT-NaaS-Storefront/**',
+      'storefront/**',
       'node_modules/**',
       'dist/**',
       'src_old/**',
