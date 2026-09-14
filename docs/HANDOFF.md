@@ -1,6 +1,6 @@
 # NaaS storefront: handoff for the port (2026-09-11)
 
-This is the static prototype behind https://socraticstatic.github.io/naas-design-scope/. It is what Ramesh reviewed on 2026-09-09 and what he asked for, reduced to the shape he named: one picture, four words, one loop. The shell (header, rail, title row, Andi dock) is the AI Fabric UI shell from the shared Figma file, so the port is content, not chrome.
+This is the static prototype behind https://socraticstatic.github.io/ai-grade-network/. It is what Ramesh reviewed on 2026-09-09 and what he asked for, reduced to the shape he named: one picture, four words, one loop. The shell (header, rail, title row, Andi dock) is the AI Fabric UI shell from the shared Figma file, so the port is content, not chrome.
 
 ## The shape
 

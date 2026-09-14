@@ -30,7 +30,7 @@ fi
 
 rm -rf "$out"
 mkdir -p "$out"
-rsync -a --exclude .git --exclude .github --exclude scripts --exclude "$out" "$root/" "$out/"
+rsync -a --exclude .git --exclude .github --exclude scripts --exclude node_modules --exclude "$out" "$root/" "$out/"
 
 # Cache-bust every script the page pulls. GitHub Pages sends
 # `cache-control: max-age=600` on these files, so without a per-build URL a
