@@ -48,6 +48,10 @@ jobs:
       - name: Build the storefront with its version stamp
         run: bash ATT-NaaS-Storefront/scripts/stamp-version.sh _site
 
+      - name: Carry the drop package into the site
+        run: cp ATT-NaaS-Storefront-*.zip _site/
+
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
