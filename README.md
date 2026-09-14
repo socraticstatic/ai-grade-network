@@ -1,378 +1,202 @@
-> # This repository is archived
->
-> **The current work is in [socraticstatic/naas-design-scope](https://github.com/socraticstatic/naas-design-scope).** Clone that:
->
-> ```bash
-> git clone https://github.com/socraticstatic/naas-design-scope.git
-> ```
->
-> Live: https://socraticstatic.github.io/naas-design-scope/
->
-> This repo is the older React prototype. It is read-only and kept for history. Its Pages URL forwards to the storefront.
+# AT&T AI-grade Network — NaaS storefront prototype
 
-# AT&T NetBond SDCI - Cloud Connectivity Management Platform
+Copyright (c) 2026 AT&T Intellectual Property. All rights reserved.
+AT&T proprietary and confidential. See `NOTICE`.
 
-[![CI/CD Pipeline](https://github.com/your-username/att-netbond-sdci/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/att-netbond-sdci/actions/workflows/ci.yml)
-[![Deploy to GitHub Pages](https://github.com/your-username/att-netbond-sdci/actions/workflows/auto-deploy.yml/badge.svg)](https://github.com/your-username/att-netbond-sdci/actions/workflows/auto-deploy.yml)
-[![Lighthouse Performance](https://github.com/your-username/att-netbond-sdci/actions/workflows/lighthouse.yml/badge.svg)](https://github.com/your-username/att-netbond-sdci/actions/workflows/lighthouse.yml)
+A working prototype of the NaaS storefront: five screens over one estate of
+synthetic-but-consistent network data. No build step, no server-side code, no
+package manager. Every file is served exactly as it sits on disk.
 
-## Overview
-
-AT&T NetBond SDCI (Software-Defined Cloud Interconnect) is a comprehensive cloud connectivity management platform that enables enterprises to establish secure, high-performance connections between their networks and major cloud service providers. This application provides a unified interface for managing, monitoring, and configuring network connections across multiple cloud environments.
-
-**✨ Now available as a Progressive Web App (PWA)** - Install on any device and run independently like a native application. Works offline, auto-updates, and provides a seamless native-like experience.
+If you only want to lift screens or components into your own application,
+read **[INTEGRATING.md](INTEGRATING.md)** — it is written for that job.
 
 ---
 
-## ⚡ Important: Functional Ideation Prototype
+## Stand it up
 
-**This repository contains a React/TypeScript prototype for functional ideation and UX validation. This is NOT production code.**
-
-- **Purpose**: Rapid prototyping and concept validation
-- **Production**: All production features are implemented in Angular
-- **Process**: See [FUNCTIONAL_IDEATION_PROCESS.md](./FUNCTIONAL_IDEATION_PROCESS.md) for complete workflow
-
-**Quick Reference**: [PROCESS_FLOW_QUICK_REFERENCE.md](./PROCESS_FLOW_QUICK_REFERENCE.md)
-
----
-
-## NetBond Advanced Max — LMCC
-
-**AT&T NetBond Advanced Max** is the high-resiliency tier of NetBond, built on the AWS LMCC (Locally Managed Cross-Connect) interconnect architecture. It provisions four independent hosted connections across two diverse datacenter sites within a metro, delivering 99.99%+ uptime through path-level failover rather than connection-level redundancy.
-
-### Architecture
-
-- **4 paths** per connection — 4 separate Juniper MX-304 IPEs, 100G physical ports
-- **2 diverse sites** per metro — Site A + Site B, never the same facility
-- **BFD failover** — 300ms interval × 3 multiplier = **900ms detection**
-- **BGP/BFD sessions** enable route exchange; billing triggers on BGP Established (GA)
-
-### Phase Status
-
-| Phase | Date | Metros | Bandwidth | Billing |
-|-------|------|--------|-----------|---------|
-| Preview | June 30, 2026 | San Jose, CA only | 1 Gbps (fixed) | Manual |
-| GA | November 16, 2026 | San Jose, CA + Ashburn, VA | 1 / 2 / 5 / 10 / 25 / 50 / 100 Gbps | Auto (BGP trigger) |
-
-LA Metro is infrastructure-pending (fiber installation in progress) and is not available in Preview.
-
-### Two Flows
-
-**Flow 03 — AT&T Initiates:** Customer creates connection in NetBond → wizard generates ActivationKey → customer carries key to AWS Direct Connect Console → AWS validates and drives negotiation as Active Provider.
-
-**Flow 04 — AWS Initiates:** Customer starts in AWS Direct Connect Console with `deferConnectionProvisioning=true` → receives ActivationKey → pastes into NetBond → AT&T validates and provisions.
-
-Status progression: **Key Generated** (Flow 03 only) → Key Accepted → Negotiating Parameters → BGP Forming → **Live**
-
-### Demo vs Product
-
-| Component | Purpose | Ships to customers? |
-|-----------|---------|-------------------|
-| `NetBondMaxBanner.tsx` | Customer-facing product — handles full journey (choice → key → live) | **Yes** |
-| `AWSWorkflowPage.tsx` + `SecondaryAssets.tsx` | Requirements page at `/demo` — stakeholder reference only | No |
-| `LMCCKickoffModal.tsx` + `LMCCOnboardingDrawer.tsx` | Demo orchestration components used inside requirements page | No |
-
-The requirements page (`/demo`) opens with a "Design Proof of Concept" disclaimer. Everything behind it is requirements content, not product UI.
-
-### Authoritative Source
-
-All copy, flows, constraints, and data come from the **LMCC Bible** (`project_lmcc_bible.md` in session memory). The Design Brief (04/21/2026) is design authority; the PRD (04/09/2026) is engineering authority. When they conflict, the Design Brief wins. External sources (AWS docs, etc.) are subordinate to both.
-
-See [LMCC.md](./LMCC.md) for session-to-session context and dev rules.
-
----
-
-## Key Features
-
-### Connection Management
-- **Multi-Cloud Support**: Connect to AWS, Azure, Google Cloud, and other providers
-- **Connection Types**: Support for Internet to Cloud, Container, Direct Connect, and more
-- **Visual Network Designer**: Interactive canvas for designing network topologies
-- **Connection Wizard**: Step-by-step guided connection creation
-- **API Integration**: Create connections programmatically via API
-
-### Monitoring & Analytics
-- **Real-time Metrics**: Monitor latency, packet loss, jitter, and bandwidth utilization
-- **Performance Dashboard**: Comprehensive view of network health and performance
-- **Alerts & Notifications**: Proactive notifications for performance issues
-- **Historical Data**: Track performance trends over time
-- **Custom Reports**: Generate tailored reports for specific metrics
-
-### Control Center
-- **Customizable Dashboard**: Drag-and-drop widgets for personalized monitoring
-- **Widget Library**: Extensive collection of widgets for different metrics and functions
-- **Layout Persistence**: Save and restore dashboard configurations
-
-### Configuration & Administration
-- **User Management**: Role-based access control for different user types
-- **Pool Management**: Organize connections into logical pools
-- **Billing Management**: Track costs and usage across connections
-- **Policy Configuration**: Define and manage network policies
-- **System Settings**: Configure global system preferences
-
-### Security Features
-- **End-to-End Encryption**: Secure data transmission
-- **DDoS Protection**: Built-in protection against distributed denial-of-service attacks
-- **Compliance Reporting**: Generate reports for security compliance
-- **Access Control**: Fine-grained permissions for connection management
-
-### Visualization Options
-- **Grid View**: Card-based visualization of connections
-- **List View**: Detailed tabular view with customizable columns
-- **Topology View**: Network diagram visualization of connections
-- **Detached Tables**: Open tables in separate windows for multi-monitor workflows
-
-### Progressive Web App (PWA)
-- **Installable**: Add to home screen on desktop and mobile devices
-- **Offline Capable**: Works without internet connection (cached content)
-- **Auto-Updates**: Automatically checks for new versions every hour
-- **Native Feel**: Runs in standalone window without browser UI
-- **Fast Loading**: Service worker caching for instant repeat loads
-- **App Shortcuts**: Quick access to Create, Monitor, and Manage pages
-
-## Technical Architecture
-
-### Frontend
-- **Framework**: React 18 with TypeScript
-- **Routing**: React Router v6 with HashRouter (file:// protocol support)
-- **State Management**: Zustand for global state
-- **UI Components**: Custom component library with Tailwind CSS
-- **Charts & Visualization**: Chart.js with React-ChartJS-2
-- **Icons**: Lucide React
-- **Drag & Drop**: DND Kit for drag-and-drop functionality
-- **PWA**: Vite PWA plugin with Workbox service worker
-
-### Data & State
-- **State management**: Zustand
-- **Persistence**: Browser localStorage (no backend service)
-- **Sample data**: In-memory fixtures driving the demo scenarios
-
-### Accessibility
-- **WCAG 2.1 AA Compliance**: 98% conformance
-- **Section 508 Compliance**: 97% conformance
-- **Keyboard Navigation**: Full keyboard support for all interactions
-- **Screen Reader Support**: ARIA attributes and semantic HTML
-- **Focus Management**: Proper focus trapping in modals and drawers
-
-### Performance Optimizations
-- **Code Splitting**: Lazy loading of components
-- **Bundle Optimization**: Manual chunk splitting for vendor libraries
-- **Service Worker**: Workbox caching strategies for instant repeat loads
-- **Precaching**: 59 static resources (2.2 MB) cached on install
-- **Responsive Design**: Optimized for all device sizes
-- **Reduced Motion**: Respects user preferences for reduced motion
-- **Tree Shaking**: Automatic removal of unused code
-
-## Getting Started
-
-### Prerequisites
-- Node.js 18 or higher
-- npm 9 or higher
-
-### Installation
+Any static file server will do. It must be served over HTTP, not opened from
+`file://`, because the app loads ES modules.
 
 ```bash
-# Clone the repository
-git clone https://github.com/att/netbond.git
-
-# Navigate to the project directory
-cd netbond
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
+python3 -m http.server 8080
 ```
 
-### Available Scripts
+Then open <http://localhost:8080/> — `index.html` forwards to the storefront.
 
-- `npm run dev` - Start the development server (with PWA enabled)
-- `npm run build` - Build for production (includes PWA)
-- `npm run build:pwa` - Explicit PWA production build
-- `npm run build:gh-pages` - Build for GitHub Pages deployment
-- `npm run preview` - Preview production build locally
-- `npm run test` - Run tests
-- `npm run test:coverage` - Run tests with coverage
-- `npm run test:a11y` - Run accessibility tests
-- `npm run lint` - Lint the codebase
-- `npm run deploy` - Deploy to GitHub Pages (manual)
-
-## Deployment
-
-### 🚀 Automatic Deployment (Recommended)
-
-**The application automatically deploys to GitHub Pages when you push to `main`.**
-
-**Quick Start:**
-1. Enable GitHub Pages: Settings → Pages → Source: "GitHub Actions"
-2. Push changes: `git push origin main`
-3. Wait 1-3 minutes
-4. Your site is live!
-
-**Your deployment URL:**
-```
-https://your-username.github.io/NetBond_Advanced/
-```
-
-**📖 Complete Guides:**
-- **Quick Start**: [DEPLOY_QUICK_START.md](./DEPLOY_QUICK_START.md) - Get started in 2 minutes
-- **Full Guide**: [GITHUB_PAGES_SETUP.md](./GITHUB_PAGES_SETUP.md) - Complete documentation with troubleshooting
-
-**Monitor deployments:** Check the Actions tab in your repository to see build and deployment status.
-
-### Manual Deployment (Optional)
-
-To manually deploy to GitHub Pages:
+Node, if you prefer:
 
 ```bash
-npm run deploy
+npx serve -l 8080 .
 ```
 
-### PWA Installation
+There is nothing to install and nothing to compile. If the page comes up
+blank, look at the top left: the app prints its own render errors into a red
+banner, so a broken binding is visible without opening a debugger.
 
-Once deployed, users can install the app on their devices:
+---
 
-- **Desktop (Chrome/Edge)**: Click install icon (⊕) in address bar
-- **iOS**: Safari → Share → "Add to Home Screen"
-- **Android**: Chrome → Menu → "Install app"
+## What you get
 
-See [PWA_INSTALLATION.md](./PWA_INSTALLATION.md) for detailed installation instructions.
+![Discover](docs/screenshots/01-discover.png)
 
-### Deployment Requirements
+| Screen | What it answers |
+|---|---|
+| **Discover** | What is connected, where it came from, what is still off the fabric, and how to connect more |
+| **Observe** | What the network is carrying right now, drilled from first mile to application |
+| **Govern** | What policy is in force and what is violating it |
+| **Cost** | What is being spent and what the fabric would save |
+| **Explore 360** | The whole estate as a tree: cloud → region → VPC → subnet → workload |
 
-- **HTTPS Required**: PWA features require HTTPS (GitHub Pages provides this automatically)
-- **Base Path**: Configure `base` in `vite.config.ts` for subdirectory deployments
-- **Icons**: Replace placeholder icons in `public/` with production assets before deploying
+Two supporting pages ship alongside: `IA Map.dc.html` (the information
+architecture) and `Elevator Boards.dc.html` (the layer-elevator boards).
 
-## CI/CD Pipeline
+### Discover
 
-### Workflows
-- **CI Pipeline** (`.github/workflows/ci.yml`): Runs tests, linting, and builds
-- **GitHub Pages Deploy** (`.github/workflows/gh-pages.yml`): Automated deployment on push to main
-- **Code Quality** (`.github/workflows/code-quality.yml`): Advanced quality checks
-- **Lighthouse Audit** (`.github/workflows/lighthouse.yml`): Performance monitoring
-- **Sync** (`.github/workflows/sync.yml`): Syncs changes from external environments
+The graph at the top is the answer to "what did you find with my
+credentials". Under it, in the order a customer reads them: the accounts it
+was drawn from, what is still on the public internet with the AT&T option and
+tradeoff for each, and the ways to connect.
 
-### Quality Gates
-- ✅ All tests must pass
-- ✅ ESLint validation with zero errors
-- ✅ TypeScript compilation without errors
-- ✅ Accessibility compliance (WCAG 2.1 AA)
-- ✅ Bundle size under 5MB
-- ✅ Performance score above 80
-- ✅ Security audit passing
+### Observe
 
-## Project Structure
+![Observe](docs/screenshots/02-observe.png)
+
+The live flow map is the centre of the screen, in three columns: **network
+sites → AT&T fabric / outside the fabric → clouds and the public internet**.
+The left column is the sites and nothing else; cloud-born traffic never
+appears as a source.
+
+Under it, a readout answers what the picture alone does not: where the whole
+estate's traffic goes (share and Gbps per destination class, with the fabric
+share of each) and how much of everything that crosses a mid mile rides
+AT&T. Traffic that starts and ends inside one region crosses no mid mile, so
+it appears in the readout as its own class instead of being drawn as a
+ribbon. The first-mile distribution from sites sits beside it.
+
+A persona line under the map header hands whoever is looking — executive,
+architect, network engineering, security, FinOps — one sentence with the
+number that matters to them and the door that opens its records. The same
+persona switch (behind the avatar) reorders the Insights cards, so each
+audience's cards lead.
+
+![Flow readout](docs/screenshots/08-flow-readout.png)
+
+Every node opens in place — site class → metro → site, and tag → region →
+VPC → subnet → workload — and the tiles above re-count for whatever is
+selected.
+
+**Insights** sit under the map: events that happened, with a time and a
+cause, and standing findings that are simply true. Each names its evidence,
+what AT&T did about it, and one thing to do next.
+
+![Insights](docs/screenshots/07-insights.png)
+
+**Logs** sit underneath in two tabs: flow records (what the network carried)
+and user activity (who changed it, from where, and whether it applied).
+
+### Cost
+
+![Cost](docs/screenshots/04-cost.png)
+
+---
+
+## Layout of the code
 
 ```
-src/
-├── components/         # UI components
-│   ├── common/         # Reusable UI components
-│   ├── connection/     # Connection-specific components
-│   ├── control-center/ # Control center dashboard components
-│   ├── pool/           # Pool management components
-│   ├── pool-detail/    # Pool detail components
-│   ├── monitoring/     # Monitoring and analytics components
-│   ├── network-designer/ # Network topology designer
-│   ├── navigation/     # Navigation components
-│   ├── wizard/         # Connection creation wizard
-│   └── ...
-├── hooks/              # Custom React hooks
-├── store/              # Zustand store and slices
-│   └── slices/         # Store slices for different features
-├── styles/             # Global styles and design tokens
-├── types/              # TypeScript type definitions
-├── utils/              # Utility functions
-└── ...
+NaaS Storefront.dc.html   the app: markup, styles, the runtime, the React root
+naas-app.js               the values layer — everything the markup binds to
+naas-data.js              the estate: clouds, regions, sites, policies, products
+naas-addendum.js          workloads, applications, endpoints
+naas-logic.js             money, percentages, layout maths, the sankey solver
+naas-flowmap.js           the live flow map model
+naas-observe-dash.js      the Observe detail panels
+naas-connections.js       connections, impact, flow records
+naas-sites.js             site classes and first-mile access
+naas-volume.js            the volume drawer (thousands of assets, sampled)
+naas-round2.js            paths, lenses, scopes, anomalies
+naas-paths.js             path pricing and comparison
+naas-fabric.js            the fabric picture on Discover
+support.js                the dc-runtime: template directives and bindings
+brand/                    AT&T functional icons and marks
+docs/screenshots/         the images in this README
+scripts/stamp-version.sh  deploy-time build stamp and cache-busting
 ```
 
-## Connection Creation Methods
+### How the templating works
 
-The platform offers three different ways to create network connections:
+The markup is plain HTML with three additions, resolved by `support.js`:
 
-1. **Step-by-Step Wizard**: A guided, user-friendly approach with detailed configuration options
-2. **Visual Designer**: Interactive canvas for designing complex network topologies
-3. **API Toolbox**: Advanced option for creating connections using JSON configuration and API endpoints
+```html
+<sc-if value="{{ someFlag }}" hint-placeholder-val="{{ true }}"> … </sc-if>
+<sc-for list="{{ someRows }}" as="row" hint-placeholder-count="4"> … </sc-for>
+<span>{{ row.label }}</span>
+```
 
-## Pool Management
+Bindings resolve against the object returned by `renderVals()` in
+`NaaS Storefront.dc.html`, which spreads the values built in `naas-app.js`.
+There is no framework of ours to learn: React 18 (UMD, from a CDN) renders,
+and everything you touch is a plain object.
 
-Pools allow you to organize connections and users for easier management:
+One trap worth knowing: **`sc-for` never renders inside a `<table>`.** The
+browser's table parser hoists the custom element out of the row before the
+runtime sees it. Use the `.dt` / `.dt-h` / `.dt-b` / `.dt-r` / `.dt-c`
+CSS-table classes instead — every table in the app already does.
 
-- **Pool Types**: Business, Department, Project, Team, and Custom
-- **Pool Features**: Addresses, Contacts, Permissions, Billing, Performance metrics
-- **Connection Management**: Associate connections with specific pools
-- **Member Management**: Add users with different permission levels
+---
 
-## Monitoring Dashboard
+## Fonts
 
-The monitoring dashboard provides comprehensive visibility into your network:
+The design is set in **AT&T Aleck Sans**. The typeface is licensed and is
+**not included in this package**. Every page declares it first and falls back
+to `"Helvetica Neue", Helvetica, Arial, sans-serif`, so the app renders and
+lays out correctly without it — the letterforms are simply not AT&T's.
 
-- **Overview**: Summary of all connection metrics
-- **Detailed Metrics**: In-depth performance analysis
-- **Alerts**: Real-time notification of issues
-- **Logs**: Comprehensive logging of events and activities
-- **Network Analyzer**: Advanced tools for troubleshooting
-- **Reports**: Generate and schedule detailed reports
+Until the files are in place, the browser console shows six 404s for them on
+first load. That is expected, not a defect - the page has already fallen back.
 
-## Customization
+To restore the intended type, drop the font files into `fonts/` beside the
+HTML. The `@font-face` rules at the top of each page already point there:
 
-### Theme Customization
-The application uses a design token system that can be customized in `src/styles/tokens.css`. This allows for consistent styling across the application while enabling easy theme changes.
+```
+fonts/ATTAleckSans_Regular.woff2
+fonts/ATTAleckSans_Medium.woff2
+fonts/ATTAleckSans_Bold.woff2
+```
 
-### Widget Customization
-The Control Center dashboard supports custom widgets that can be added to the `src/components/control-center/widgets/` directory.
+Get them from AT&T's brand asset library. Do not source them elsewhere.
 
-## Accessibility
+---
 
-AT&T NetBond SDCI is designed with accessibility in mind, following WCAG 2.1 AA guidelines. Key features include:
+## Deploying
 
-- Semantic HTML structure
-- ARIA attributes for interactive elements
-- Keyboard navigation support
-- Focus management for modals and drawers
-- Color contrast compliance
-- Screen reader announcements for dynamic content
+`scripts/stamp-version.sh` builds a deployable copy into `_site`: it writes a
+version footer from git metadata and rewrites every script reference to carry
+`?v=<sha>`.
 
-## Browser Support
+That cache-busting matters. GitHub Pages serves these files with
+`cache-control: max-age=600`, so without a per-build URL a browser that opened
+the site in the last ten minutes keeps running the previous build's JavaScript
+against the new markup — and a fixed bug still looks broken to whoever you
+sent the link to.
 
-### Full Support (PWA + All Features)
-- Chrome 90+ (Desktop & Mobile)
-- Edge 90+ (Desktop & Mobile)
-- Samsung Internet 14+
-- Opera 76+
+```bash
+bash scripts/stamp-version.sh _site
+```
 
-### Partial PWA Support
-- Safari 15.4+ (iOS - Add to Home Screen only)
-- Firefox (Latest 2 versions - Offline caching, no install)
+The source tree is never modified, so a fresh design export drops in clean.
 
-### Minimum Requirements
-- Modern browser with ES2020+ support
-- JavaScript enabled
-- Cookies/LocalStorage enabled
-- 2.4 MB available storage for cached assets
+---
 
-## Documentation
+## Data
 
-### Process & Workflow
-- [Functional Ideation Process](./FUNCTIONAL_IDEATION_PROCESS.md) - Complete workflow from idea to production (includes quick reference, visual diagrams, and detailed process documentation)
+Every number on screen derives from one estate defined in `naas-data.js` and
+`naas-addendum.js`. Nothing is hard-coded into the markup, and the figures are
+internally consistent: workload counts roll up into region counts, egress
+prices multiply out from the same GB-per-workload constant the flow map uses,
+and the savings figure on Discover is the same arithmetic Cost shows.
 
-### Technical Documentation
-- [PWA Installation Guide](./PWA_INSTALLATION.md) - User guide for installing the app
-- [PWA Technical Summary](./PWA_SUMMARY.md) - Implementation details and features
-- [Contributing Guide](./CONTRIBUTING.md) - How to contribute to the project
-- [Deployment Guide](./DEPLOYMENT.md) - Detailed deployment instructions
-- [Site Map](./SITE_MAP.md) - Complete application structure and routes
-
-## Auth
-
-There is none. The app opens straight onto the product.
-
-This is a static GitHub Pages prototype: the JS bundle is public regardless,
-so a login screen gated nothing while costing every visitor a wall. The
-previous email gate, its OTP flow, and the third-party auth dependency were
-removed on 2026-09-14.
-
-## License
-
-Copyright © 2025 AT&T Intellectual Property. All rights reserved.
+The prototype holds one line strictly, and you should hold it too if you
+extend the data: **private endpoints resolve to resource names, public
+destinations stay unresolved, and nothing is inferred above layer 4.** A flow
+record into a private VPC names the resource; one to the internet shows an IP.
+That honesty is the point of the screen, not a limitation of it.
