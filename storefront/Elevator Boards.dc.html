@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>
+<script data-build="__BUILD_SHA__">
   // Load React, ReactDOM and Babel from this folder, never from unpkg: on
   // networks that block or rewrite the CDN the integrity check fails and the
   // page never renders. support.js reads this map before it builds the tags.
@@ -12,6 +12,27 @@
     "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js": "./vendor/react-dom.production.min.js",
     "https://unpkg.com/@babel/standalone@7.29.0/babel.min.js": "./vendor/babel.min.js"
   };
+</script>
+<script data-build="__BUILD_SHA__">
+  // Cache kill: GitHub Pages caches documents for ten minutes. On load, ask
+  // the server which build is live (never from cache); if it is not the
+  // build this page was stamped with, reload once so nobody has to know
+  // about hard refresh.
+  (function () {
+    try {
+      if (sessionStorage.getItem('naas-reloaded') === '1') return;
+      var mine = (document.currentScript && document.currentScript.getAttribute('data-build')) || '';
+      fetch('./version.js?nocache=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.text() : ''; })
+        .then(function (t) {
+          var m = /sha:\s*"([0-9a-f]+)"/.exec(t);
+          if (m && mine && m[1] !== mine) {
+            sessionStorage.setItem('naas-reloaded', '1');
+            location.reload();
+          }
+        }).catch(function () {});
+    } catch (e) {}
+  })();
 </script>
 <script src="./support.js"></script>
 </head>

@@ -43,6 +43,7 @@ rsync -a --exclude .git --exclude .github --exclude scripts --exclude "$out" "$r
 find "$out" -maxdepth 1 \( -name '*.js' -o -name '*.html' \) -print0 |
   while IFS= read -r -d '' f; do
     perl -pi -e "s#(\./(?:naas-[a-z0-9-]+|support)\.js)(?!\?)#\$1?v=${sha}#g" "$f"
+    perl -pi -e "s#__BUILD_SHA__#${sha}#g" "$f"
   done
 
 cat > "$out/version.js" <<EOF
