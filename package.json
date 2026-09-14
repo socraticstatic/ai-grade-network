@@ -5,6 +5,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "start": "npx --yes http-server ATT-NaaS-Storefront -p 8787 -c-1",
+    "storefront": "npx --yes http-server ATT-NaaS-Storefront -p 8787 -c-1",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:gh-pages": "vite build --base=/ai-grade-network/ --mode production",

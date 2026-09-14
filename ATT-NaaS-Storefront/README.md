@@ -17,16 +17,6 @@ read **[INTEGRATING.md](INTEGRATING.md)** — it is written for that job.
 Any static file server will do. It must be served over HTTP, not opened from
 `file://`, because the app loads ES modules.
 
-With npm (Node 20 or newer):
-
-```bash
-npm install
-npm start
-```
-
-`npm install` fetches one dev tool, `serve`. There is still no build step:
-`npm start` serves the folder as it sits on disk. Or, with no install at all:
-
 ```bash
 python3 -m http.server 8080
 ```
@@ -39,7 +29,7 @@ Node, if you prefer:
 npx serve -l 8080 .
 ```
 
-Nothing compiles. If the page comes up
+There is nothing to install and nothing to compile. If the page comes up
 blank, look at the top left: the app prints its own render errors into a red
 banner, so a broken binding is visible without opening a debugger.
 

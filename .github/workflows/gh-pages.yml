@@ -45,22 +45,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Build
-        run: |
-          echo "🚀 Building for GitHub Pages deployment..."
-          echo "Base path: /ai-grade-network/"
-          npm run build:gh-pages
-        env:
-          NODE_ENV: production
-          CI: false
-          # The public site opens on the meridian advisor; dev/test default
-          # to acme (see resolveProfile in src/engine/estateProfile.ts).
-          VITE_DEFAULT_ESTATE: meridian
+      - name: Build the storefront with its version stamp
+        run: bash ATT-NaaS-Storefront/scripts/stamp-version.sh _site
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: './_site'
 
       - name: Build summary
         run: |
