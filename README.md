@@ -1,3 +1,15 @@
+> # This repository is archived
+>
+> **The current work is in [socraticstatic/naas-design-scope](https://github.com/socraticstatic/naas-design-scope).** Clone that:
+>
+> ```bash
+> git clone https://github.com/socraticstatic/naas-design-scope.git
+> ```
+>
+> Live: https://socraticstatic.github.io/naas-design-scope/
+>
+> This repo is the older React prototype. It is read-only and kept for history. Its Pages URL forwards to the storefront.
+
 # AT&T NetBond SDCI - Cloud Connectivity Management Platform
 
 [![CI/CD Pipeline](https://github.com/your-username/att-netbond-sdci/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/att-netbond-sdci/actions/workflows/ci.yml)
