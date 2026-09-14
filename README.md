@@ -8,7 +8,7 @@ synthetic-but-consistent network data. No build step, no server-side code.
 Every file is served exactly as it sits on disk; `npm start` serves it.
 
 If you only want to lift screens or components into your own application,
-read **[INTEGRATING.md](INTEGRATING.md)** — it is written for that job.
+read **[docs/INTEGRATING.md](docs/INTEGRATING.md)** — it is written for that job.
 
 ---
 
