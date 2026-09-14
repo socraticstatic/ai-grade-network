@@ -3,7 +3,7 @@
 > The current storefront (the static `.dc.html` prototype, same content as
 > [socraticstatic/naas-design-scope](https://github.com/socraticstatic/naas-design-scope))
 > lives in **`ATT-NaaS-Storefront/`** at the root of this repo, and as
-> `ATT-NaaS-Storefront-20260914-0654.zip`. Serve that folder over HTTP to run it;
+> `ATT-NaaS-Storefront-20260914-0752.zip`. Serve that folder over HTTP to run it;
 > see `ATT-NaaS-Storefront/README.md`. The React application below is unchanged.
 
 # AT&T NetBond SDCI - Cloud Connectivity Management Platform
