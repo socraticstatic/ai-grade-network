@@ -8,14 +8,8 @@ import { Button } from '../../common/Button';
 import { diffVersions, nextVersionNumber } from '../../../utils/versionDiff';
 
 /** Title-cased display name derived from a sign-in email, e.g. j.smith@att.com -> "J Smith". */
-function authorFromEmail(email?: string | null): string {
-  if (!email) return 'You';
-  const local = email.split('@')[0];
-  const name = local.replace(/[._-]+/g, ' ').trim();
-  return name
-    ? name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-    : 'You';
-}
+// No signed-in identity: the operator authors every new version.
+const AUTHOR = 'You';
 
 /** Trigger a client-side JSON download (mock config export). */
 function downloadJSON(filename: string, data: unknown) {
@@ -101,7 +95,7 @@ interface VersioningConfigurationProps {
 }
 
 export function VersioningConfiguration({ connectionId, currentVersion }: VersioningConfigurationProps) {
-  const author = authorFromEmail();
+  const author = AUTHOR;
   const [versions, setVersions] = useState<Version[]>([
     {
       id: 'v1.0.0',

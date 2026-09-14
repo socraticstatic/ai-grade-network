@@ -45,7 +45,8 @@ function renderMobileMenu(props: Partial<React.ComponentProps<typeof MobileMenu>
 
   return render(
     <BrowserRouter>
-              <MobileMenu {...defaultProps} {...props} />    </BrowserRouter>
+      <MobileMenu {...defaultProps} {...props} />
+    </BrowserRouter>
   );
 }
 

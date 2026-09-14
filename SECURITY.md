@@ -34,7 +34,7 @@ codebase and reads as evasive to heuristics. It is the demo state engine.
 | npm install hooks (`preinstall`/`install`/`postinstall`) in this package | None |
 | `eval`, `new Function`, `document.write` | None in shipped code |
 | `child_process` / shell execution | Test files only, all running `git ls-files` or `cat package.json` |
-| Hardcoded outbound hosts in `src/` | Zero. The app makes no network calls. |
+| Hardcoded outbound hosts in `src/` | Zero. The only `fetch` is same-origin (`./build-id.json`); nothing leaves the page's host. |
 | Obfuscation (char-code assembly, hex-escape density, packed code) | None |
 | `atob()` / `btoa()` usage | 4 files, all `JSON.parse(atob(x))` in a try/catch. Data decode, never decode-then-execute. |
 | Tracked minified or bundled JS | None |
@@ -43,7 +43,7 @@ codebase and reads as evasive to heuristics. It is the demo state engine.
 | Committed secrets | None. No JWT, no service-role key, no private key, no `.env` in any commit in history. |
 | GitHub secret scanning | 0 alerts |
 | CI workflow | `push` to `main` and `workflow_dispatch` only. No `pull_request_target`, no `workflow_run`, no pipe-to-shell, no secrets consumed. `permissions` scoped to `contents: read`, `pages: write`, `id-token: write`. |
-| XSS sinks | 5 `dangerouslySetInnerHTML` / `innerHTML` sites, all fed by engine-generated strings. The share-link hash is charset-constrained to `[A-Za-z0-9_-]+` and decodes to JSON; it never reaches an HTML sink. |
+| XSS sinks | 8 `dangerouslySetInnerHTML` / `innerHTML` lines across 5 files, all fed by engine-generated strings. The share-link hash is charset-constrained to `[A-Za-z0-9_-]+` and decodes to JSON; it never reaches an HTML sink. |
 
 ## Fixed in this pass
 

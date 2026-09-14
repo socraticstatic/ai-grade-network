@@ -21,7 +21,8 @@ vi.mock('framer-motion', () => ({
 const renderGallery = () =>
   render(
     <MemoryRouter initialEntries={['/naas/__gallery']}>
-              <HandoffGallery />    </MemoryRouter>
+      <HandoffGallery />
+    </MemoryRouter>
   );
 
 describe('HandoffGallery', () => {

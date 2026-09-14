@@ -352,9 +352,6 @@ AT&T NetBond SDCI is designed with accessibility in mind, following WCAG 2.1 AA 
 - [Deployment Guide](./DEPLOYMENT.md) - Detailed deployment instructions
 - [Site Map](./SITE_MAP.md) - Complete application structure and routes
 
-## License
-
-Copyright © 2025 AT&T Intellectual Property. All rights reserved.
 ## Auth
 
 There is none. The app opens straight onto the product.
@@ -363,3 +360,7 @@ This is a static GitHub Pages prototype: the JS bundle is public regardless,
 so a login screen gated nothing while costing every visitor a wall. The
 previous email gate, its OTP flow, and the third-party auth dependency were
 removed on 2026-09-14.
+
+## License
+
+Copyright © 2025 AT&T Intellectual Property. All rights reserved.

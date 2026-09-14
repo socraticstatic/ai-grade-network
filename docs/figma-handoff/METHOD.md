@@ -30,7 +30,7 @@ re-derive?*
 `scripts/figma-handoff/measure.mjs` drives Playwright against the actual
 dev server:
 
-- Dev server on **5177**, `VITE_AUTH_MODE=gate` (never 5173, never 5199 —
+- Dev server on **5177** (never 5173, never 5199 —
   those belong to other checkouts and the e2e suite).
 - Viewport **exactly 1440×900, deviceScaleFactor 2**.
 - HashRouter: `http://localhost:5177/?estate=meridian#/naas/home` — the
@@ -149,8 +149,8 @@ all produce plausible design, and plausible is the enemy:
 ## Runbook: add or refresh a screen
 
 ```bash
-# 1. dev server (gate mode, port 5177)
-VITE_AUTH_MODE=gate npm run dev -- --port 5177 --strictPort
+# 1. dev server (port 5177)
+npm run dev -- --port 5177 --strictPort
 
 # 2. audit — writes captures/<slug>/measure.json + <slug>@2x.png
 node scripts/figma-handoff/measure.mjs --route /naas/home --slug 03-naas-home

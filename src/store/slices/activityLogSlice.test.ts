@@ -7,11 +7,11 @@ const makeStore = () => create<ActivityLogSlice>((set, get, api) => createActivi
 beforeEach(() => localStorage.clear());
 
 describe('activityLogSlice', () => {
-  it('stamps timestamp and admin on every event', () => {
+  it('stamps timestamp and a constant actor on every event', () => {
     const store = makeStore();
     store.getState().logActivity({ type: 'key-generated', connectionId: 'c1', message: 'ActivationKey generated' });
     const [e] = store.getState().activityEvents;
-    expect(e.admin).toBe('dana@meridian.example');
+    expect(e.admin).toBe('admin');
     expect(Date.parse(e.at)).toBeGreaterThan(0);
     expect(e.type).toBe('key-generated');
   });

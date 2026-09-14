@@ -24,7 +24,8 @@ describe('MainNav', () => {
   it('renders the logo', () => {
     render(
       <BrowserRouter>
-                  <MainNav />      </BrowserRouter>
+        <MainNav />
+      </BrowserRouter>
     );
 
     // Rebrand: default tenant branding is "AI-grade network" (previously the old portal brand, and "NetBond" before that).
@@ -41,7 +42,8 @@ describe('MainNav', () => {
   it('hamburger opens the mobile drawer, and it contains every curated nav destination', () => {
     render(
       <BrowserRouter>
-                  <MainNav />      </BrowserRouter>
+        <MainNav />
+      </BrowserRouter>
     );
 
     // The drawer is mounted but closed until the hamburger is clicked.
@@ -91,7 +93,8 @@ describe('MainNav', () => {
 
     render(
       <BrowserRouter>
-                  <MainNav items={customItems} />      </BrowserRouter>
+        <MainNav items={customItems} />
+      </BrowserRouter>
     );
 
     expect(screen.getByText('Custom')).toBeInTheDocument();

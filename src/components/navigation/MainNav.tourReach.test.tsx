@@ -48,7 +48,8 @@ function resizeTo(width: number) {
 function renderNav() {
   return render(
     <MemoryRouter>
-              <MainNav />    </MemoryRouter>
+      <MainNav />
+    </MemoryRouter>
   );
 }
 

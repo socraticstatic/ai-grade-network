@@ -8,7 +8,8 @@ import { attIcons } from '../icons/att-icons';
 const renderNav = (path = '/discover') =>
   render(
     <MemoryRouter initialEntries={[path]}>
-      <MainNav />    </MemoryRouter>,
+      <MainNav />
+    </MemoryRouter>,
   );
 
 describe('MainNav curated AI-grade network nav — layers on top', () => {

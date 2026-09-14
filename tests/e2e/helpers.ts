@@ -1,11 +1,8 @@
 import type { Page } from '@playwright/test';
 
-const AUTH_VALUE = JSON.stringify({ email: 'test@att.com' });
-
 export async function seedAuth(page: Page) {
   await page.addInitScript(() => {
-    // Auth
-    // Dismiss product tour
+    // No auth to seed. Dismiss product tour
     localStorage.setItem('tour-main-app-completed', 'true');
     localStorage.setItem('product-tour-completed', 'true');
     // Skip NetBond Max demo modal
