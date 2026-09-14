@@ -1,0 +1,376 @@
+Event Category,Event Name,Event Description,Trigger/When,User Properties,Event Properties,Funnel,Priority,Implementation Notes
+General Navigation,Page View,User views a page,On page load,user_id|user_role|account_type|assigned_scopes,page_name|page_url|referrer|session_id|viewport_width|viewport_height,General Usage,High,Track all page navigation
+General Navigation,Tab Changed,User switches tabs,On tab click,user_id|user_role,tab_from|tab_to|page_context|session_id,General Usage,Medium,Track tab navigation within pages
+General Navigation,Menu Opened,User opens navigation menu,On menu click,user_id|user_role,menu_type|menu_location|session_id,General Usage,Low,Mobile and desktop menus
+General Navigation,Search Performed,User performs search,On search submit,user_id|user_role,search_query|search_results_count|search_category|filter_applied|session_id,Search Funnel,High,Track all search interactions
+General Navigation,Search Result Clicked,User clicks search result,On result click,user_id|user_role,search_query|result_position|result_type|result_id|session_id,Search Funnel,High,Measure search effectiveness
+General Navigation,Filter Applied,User applies filter,On filter change,user_id|user_role,filter_category|filter_value|results_before|results_after|page_context|session_id,General Usage,Medium,Track filtering behavior
+General Navigation,Sort Applied,User sorts data,On sort change,user_id|user_role,sort_field|sort_direction|page_context|session_id,General Usage,Low,Track sorting preferences
+General Navigation,Breadcrumb Clicked,User navigates via breadcrumb,On breadcrumb click,user_id|user_role,breadcrumb_level|destination_page|session_id,General Usage,Low,Track navigation patterns
+
+CREATE - Wizard,Wizard Entry Point,User initiates connection creation,On Create Connection button click,user_id|user_role|account_type,entry_location|session_id|time_of_day,Connection Creation Wizard,Critical,Track where users start creation
+CREATE - Wizard,Wizard Started,User begins connection wizard,On wizard modal open,user_id|user_role|account_type,wizard_version|entry_point|session_id|timestamp,Connection Creation Wizard,Critical,Start of wizard funnel
+CREATE - Wizard,Wizard Step 1 Viewed,User views connection type selection,On step 1 display,user_id|user_role,step_name|step_number|session_id|time_in_previous_step,Connection Creation Wizard,Critical,First wizard step
+CREATE - Wizard,Connection Type Selected,User selects connection type,On connection type button click,user_id|user_role,connection_type|connection_category|session_id,Connection Creation Wizard,Critical,Key decision point
+CREATE - Wizard,Wizard Step 2 Viewed,User views provider selection,On step 2 display,user_id|user_role,step_name|step_number|connection_type|session_id|time_in_previous_step,Connection Creation Wizard,Critical,Second wizard step
+CREATE - Wizard,Provider A Selected,User selects first provider,On provider dropdown selection,user_id|user_role,provider_name|provider_type|connection_type|session_id,Connection Creation Wizard,Critical,Provider selection
+CREATE - Wizard,Provider B Selected,User selects second provider,On provider dropdown selection,user_id|user_role,provider_name|provider_type|connection_type|session_id,Connection Creation Wizard,Critical,Provider selection
+CREATE - Wizard,Provider Location Selected,User selects provider location,On location dropdown selection,user_id|user_role,provider|location|region|availability_zone|session_id,Connection Creation Wizard,High,Location selection
+CREATE - Wizard,Wizard Step 3 Viewed,User views configuration,On step 3 display,user_id|user_role,step_name|step_number|providers_selected|session_id|time_in_previous_step,Connection Creation Wizard,Critical,Third wizard step
+CREATE - Wizard,Bandwidth Selected,User selects bandwidth,On bandwidth input/slider change,user_id|user_role,bandwidth_mbps|bandwidth_tier|pricing_visible|session_id,Connection Creation Wizard,Critical,Capacity selection
+CREATE - Wizard,Redundancy Option Selected,User selects redundancy,On redundancy toggle/dropdown,user_id|user_role,redundancy_type|redundancy_level|cost_impact|session_id,Connection Creation Wizard,High,HA selection
+CREATE - Wizard,Advanced Settings Opened,User expands advanced options,On advanced section expand,user_id|user_role,settings_category|session_id,Connection Creation Wizard,Medium,Optional configuration
+CREATE - Wizard,Advanced Setting Changed,User modifies advanced setting,On setting change,user_id|user_role,setting_name|setting_value|setting_category|session_id,Connection Creation Wizard,Medium,Detailed configuration
+CREATE - Wizard,VLAN ID Entered,User specifies VLAN ID,On VLAN input change,user_id|user_role,vlan_id|vlan_range|auto_assigned|session_id,Connection Creation Wizard,Medium,Network segmentation
+CREATE - Wizard,QoS Policy Selected,User selects QoS policy,On QoS dropdown selection,user_id|user_role,qos_policy|qos_class|session_id,Connection Creation Wizard,Medium,Traffic management
+CREATE - Wizard,Routing Policy Selected,User selects routing policy,On routing dropdown selection,user_id|user_role,routing_policy|routing_protocol|session_id,Connection Creation Wizard,High,Routing configuration
+CREATE - Wizard,Wizard Step 4 Viewed,User views review screen,On step 4 display,user_id|user_role,step_name|step_number|configuration_complete|session_id|time_in_previous_step,Connection Creation Wizard,Critical,Review step
+CREATE - Wizard,Pricing Preview Viewed,User views cost estimate,On pricing display,user_id|user_role,estimated_monthly_cost|estimated_setup_cost|billing_model|session_id,Connection Creation Wizard,Critical,Cost transparency
+CREATE - Wizard,Configuration Edited from Review,User returns to edit configuration,On edit button click from review,user_id|user_role,step_returned_to|field_to_edit|session_id,Connection Creation Wizard,High,Configuration refinement
+CREATE - Wizard,Connection Name Entered,User names the connection,On connection name input,user_id|user_role,name_length|has_special_chars|session_id,Connection Creation Wizard,Medium,Identification
+CREATE - Wizard,Connection Description Entered,User adds description,On description input,user_id|user_role,description_length|session_id,Connection Creation Wizard,Low,Documentation
+CREATE - Wizard,Tags Added,User adds tags to connection,On tag input,user_id|user_role,tag_count|tag_values|session_id,Connection Creation Wizard,Low,Organization
+CREATE - Wizard,Group Assignment Selected,User assigns to group,On group dropdown selection,user_id|user_role,group_id|group_name|session_id,Connection Creation Wizard,Medium,Grouping
+CREATE - Wizard,Terms Accepted,User accepts terms,On checkbox toggle,user_id|user_role,terms_version|session_id,Connection Creation Wizard,Critical,Legal compliance
+CREATE - Wizard,Connection Created - Success,Connection successfully created,On API success response,user_id|user_role|account_type,connection_id|connection_type|bandwidth|provider_a|provider_b|total_cost|wizard_duration|session_id,Connection Creation Wizard,Critical,Successful funnel completion
+CREATE - Wizard,Connection Creation Failed,Connection creation failed,On API error response,user_id|user_role,error_code|error_message|failure_reason|configuration_attempted|session_id,Connection Creation Wizard,Critical,Track failures for improvement
+CREATE - Wizard,Wizard Step Validation Error,Validation error on step,On validation failure,user_id|user_role,step_number|field_name|error_type|error_message|session_id,Connection Creation Wizard,High,Track UX friction points
+CREATE - Wizard,Wizard Back Button Clicked,User navigates backward in wizard,On back button click,user_id|user_role,from_step|to_step|session_id,Connection Creation Wizard,Medium,Navigation patterns
+CREATE - Wizard,Wizard Abandoned,User exits without completing,On wizard close/navigation away,user_id|user_role,last_step_completed|last_step_name|time_in_wizard|abandonment_trigger|session_id,Connection Creation Wizard,Critical,Identify drop-off points
+CREATE - Wizard,Help Icon Clicked in Wizard,User seeks help during wizard,On help icon click,user_id|user_role,step_number|help_topic|session_id,Connection Creation Wizard,High,Identify confusing steps
+CREATE - Wizard,Tooltip Viewed in Wizard,User hovers over tooltip,On tooltip trigger,user_id|user_role,tooltip_field|tooltip_content|step_number|session_id,Connection Creation Wizard,Low,Track information needs
+CREATE - Wizard,Wizard Saved as Draft,User saves incomplete wizard,On save draft button,user_id|user_role,step_completed_to|draft_id|session_id,Connection Creation Wizard,Medium,Track delayed completions
+CREATE - Wizard,Wizard Draft Resumed,User resumes saved draft,On draft selection,user_id|user_role,draft_id|draft_age|step_resume_from|session_id,Connection Creation Wizard,Medium,Track completion patterns
+
+CREATE - Designer,Designer Opened,User opens network designer,On designer entry,user_id|user_role|account_type,entry_point|canvas_empty|session_id,Network Designer Funnel,Critical,Track designer usage
+CREATE - Designer,Designer Canvas Loaded,Canvas ready for interaction,On canvas initialization complete,user_id|user_role,load_time_ms|existing_elements|session_id,Network Designer Funnel,High,Performance tracking
+CREATE - Designer,Template Library Opened,User opens template selection,On template button click,user_id|user_role,session_id,Network Designer Funnel,High,Template usage
+CREATE - Designer,Template Previewed,User previews template,On template hover/click,user_id|user_role,template_id|template_name|template_category|preview_duration|session_id,Network Designer Funnel,High,Template exploration
+CREATE - Designer,Template Selected,User applies template to canvas,On template apply button,user_id|user_role,template_id|template_name|template_category|node_count|session_id,Network Designer Funnel,Critical,Template adoption
+CREATE - Designer,Node Palette Opened,User opens node selection,On node palette toggle,user_id|user_role,session_id,Network Designer,Medium,Component selection
+CREATE - Designer,Node Dragged to Canvas,User drags node from palette,On drag start,user_id|user_role,node_type|session_id,Network Designer,Medium,Design interaction
+CREATE - Designer,Node Added to Canvas,User places node on canvas,On drag drop/click,user_id|user_role,node_type|node_id|position_x|position_y|canvas_node_count|session_id,Network Designer,Critical,Topology creation
+CREATE - Designer,Node Selected,User selects node for editing,On node click,user_id|user_role,node_id|node_type|session_id,Network Designer,Medium,Node interaction
+CREATE - Designer,Node Properties Opened,User opens node config panel,On properties panel open,user_id|user_role,node_id|node_type|session_id,Network Designer,High,Configuration access
+CREATE - Designer,Node Property Changed,User modifies node property,On property field change,user_id|user_role,node_id|node_type|property_name|property_value|session_id,Network Designer,High,Node configuration
+CREATE - Designer,Node Deleted,User removes node from canvas,On delete button/key press,user_id|user_role,node_id|node_type|node_age_seconds|session_id,Network Designer,Medium,Design refinement
+CREATE - Designer,Node Duplicated,User copies node,On duplicate action,user_id|user_role,source_node_id|node_type|session_id,Network Designer,Low,Design efficiency
+CREATE - Designer,Node Moved,User repositions node on canvas,On drag end,user_id|user_role,node_id|node_type|old_position|new_position|session_id,Network Designer,Low,Layout adjustment
+CREATE - Designer,Connection Initiated,User starts connecting nodes,On connection handle drag start,user_id|user_role,source_node_id|source_node_type|session_id,Network Designer,High,Link creation
+CREATE - Designer,Connection Created,User connects two nodes,On connection handle drag end,user_id|user_role,source_node_id|target_node_id|connection_type|session_id,Network Designer,Critical,Topology linking
+CREATE - Designer,Connection Deleted,User removes connection,On connection delete,user_id|user_role,source_node_id|target_node_id|connection_age_seconds|session_id,Network Designer,Medium,Design refinement
+CREATE - Designer,Connection Properties Opened,User configures connection,On connection click,user_id|user_role,connection_id|source_node|target_node|session_id,Network Designer,High,Link configuration
+CREATE - Designer,Connection Property Changed,User modifies connection property,On property change,user_id|user_role,connection_id|property_name|property_value|session_id,Network Designer,High,Link configuration
+CREATE - Designer,Canvas Zoomed,User changes zoom level,On zoom control interaction,user_id|user_role,zoom_level|zoom_direction|session_id,Network Designer,Low,Navigation
+CREATE - Designer,Canvas Panned,User moves viewport,On canvas drag,user_id|user_role,pan_distance|session_id,Network Designer,Low,Navigation
+CREATE - Designer,Canvas Reset View,User resets to default view,On reset button click,user_id|user_role,session_id,Network Designer,Low,Navigation
+CREATE - Designer,Design Validated,User validates design,On validate button click,user_id|user_role,node_count|connection_count|validation_errors|validation_warnings|session_id,Network Designer Funnel,High,Design quality check
+CREATE - Designer,Validation Error Found,Design has validation errors,On validation run,user_id|user_role,error_type|error_count|affected_nodes|session_id,Network Designer Funnel,High,Design quality issues
+CREATE - Designer,Validation Error Fixed,User resolves validation error,After error resolution,user_id|user_role,error_type|resolution_method|session_id,Network Designer Funnel,Medium,Error resolution
+CREATE - Designer,AI Recommendation Engine Opened,User requests AI suggestions,On AI button click,user_id|user_role,current_design_state|node_count|session_id,AI Features,Critical,AI engagement
+CREATE - Designer,AI Analyzing Design,AI is processing design,On AI analysis start,user_id|user_role,analysis_type|node_count|connection_count|session_id,AI Features,High,AI processing
+CREATE - Designer,AI Recommendations Displayed,AI shows suggestions,On AI analysis complete,user_id|user_role,recommendation_count|recommendation_categories|analysis_duration|session_id,AI Features,Critical,AI results
+CREATE - Designer,AI Recommendation Viewed,User reviews AI suggestion,On recommendation expand/hover,user_id|user_role,recommendation_id|recommendation_type|recommendation_priority|session_id,AI Features,High,AI engagement
+CREATE - Designer,AI Recommendation Accepted,User applies AI suggestion,On recommendation apply button,user_id|user_role,recommendation_id|recommendation_type|impact_node_count|session_id,AI Features,Critical,AI adoption
+CREATE - Designer,AI Recommendation Rejected,User dismisses AI suggestion,On recommendation dismiss,user_id|user_role,recommendation_id|recommendation_type|rejection_reason|session_id,AI Features,Critical,AI accuracy feedback
+CREATE - Designer,AI Recommendation Modified,User adjusts AI suggestion before applying,On recommendation edit,user_id|user_role,recommendation_id|modification_type|session_id,AI Features,High,AI suggestion refinement
+CREATE - Designer,Design Saved,User saves network design,On save button click,user_id|user_role|account_type,design_id|design_name|node_count|connection_count|template_used|ai_recommendations_used|session_id,Network Designer Funnel,Critical,Design persistence
+CREATE - Designer,Design Saved as Template,User creates reusable template,On save as template button,user_id|user_role,template_name|node_count|connection_count|template_category|session_id,Network Designer Funnel,High,Template creation
+CREATE - Designer,Design Exported,User exports design,On export button click,user_id|user_role,export_format|node_count|connection_count|session_id,Network Designer,Medium,Design sharing
+CREATE - Designer,Design Import Started,User imports design,On import button click,user_id|user_role,import_format|session_id,Network Designer,Medium,Design import
+CREATE - Designer,Design Imported Successfully,Import completed,On import success,user_id|user_role,import_format|node_count|connection_count|session_id,Network Designer,High,Import success
+CREATE - Designer,Design Import Failed,Import failed,On import error,user_id|user_role,import_format|error_message|session_id,Network Designer,High,Import failure
+CREATE - Designer,Design Shared,User shares design with others,On share button click,user_id|user_role,share_method|shared_with_count|permission_level|session_id,Network Designer,Medium,Collaboration
+CREATE - Designer,Design Commented,User adds comment to design,On comment submit,user_id|user_role,comment_location|comment_length|session_id,Network Designer,Low,Collaboration
+CREATE - Designer,Design Version Created,User creates design version,On version button click,user_id|user_role,version_number|version_notes|changes_from_previous|session_id,Network Designer,Medium,Version control
+CREATE - Designer,Design Version Restored,User reverts to previous version,On restore button click,user_id|user_role,version_restored|current_version|session_id,Network Designer,Medium,Version control
+CREATE - Designer,Designer Closed,User exits designer,On designer exit,user_id|user_role,design_saved|time_in_designer|changes_made|session_id,Network Designer Funnel,High,Session completion
+CREATE - Designer,Undo Action,User undoes change,On undo button/keyboard,user_id|user_role,action_undone|session_id,Network Designer,Low,Error recovery
+CREATE - Designer,Redo Action,User redoes change,On redo button/keyboard,user_id|user_role,action_redone|session_id,Network Designer,Low,Error recovery
+CREATE - Designer,Scenario Testing Opened,User opens scenario console,On scenario button click,user_id|user_role,design_id|session_id,Network Designer,High,Testing features
+CREATE - Designer,Scenario Created,User creates test scenario,On scenario create,user_id|user_role,scenario_name|scenario_type|session_id,Network Designer,High,Scenario planning
+CREATE - Designer,Scenario Executed,User runs scenario simulation,On scenario run button,user_id|user_role,scenario_id|scenario_type|design_complexity|session_id,Network Designer,High,Testing execution
+CREATE - Designer,Scenario Results Viewed,User reviews scenario results,On results display,user_id|user_role,scenario_id|passed|failed|warnings|session_id,Network Designer,High,Results analysis
+
+CREATE - API Toolbox,API Toolbox Opened,User opens API integration tool,On API toolbox entry,user_id|user_role|account_type,entry_point|session_id,API Integration Funnel,Critical,API toolbox usage
+CREATE - API Toolbox,API Import Method Selected,User selects import method,On method selection,user_id|user_role,import_method|session_id,API Integration Funnel,Critical,Method selection
+CREATE - API Toolbox,API File Uploaded,User uploads API spec file,On file upload,user_id|user_role,file_name|file_size|file_format|session_id,API Integration Funnel,High,Spec upload
+CREATE - API Toolbox,API URL Entered,User enters API spec URL,On URL input,user_id|user_role,url_domain|spec_format|session_id,API Integration Funnel,High,URL import
+CREATE - API Toolbox,API Spec Parsed,System parses API specification,On parse completion,user_id|user_role,spec_format|endpoint_count|model_count|session_id,API Integration Funnel,Critical,Parsing success
+CREATE - API Toolbox,API Spec Parse Error,Parsing failed,On parse error,user_id|user_role,spec_format|error_type|error_message|session_id,API Integration Funnel,Critical,Parsing failure
+CREATE - API Toolbox,API Endpoints Listed,Endpoints displayed for selection,On endpoints display,user_id|user_role,endpoint_count|methods_available|session_id,API Integration Funnel,High,Endpoint discovery
+CREATE - API Toolbox,API Endpoint Selected,User selects endpoint,On endpoint checkbox/click,user_id|user_role,endpoint_path|http_method|session_id,API Integration Funnel,High,Endpoint selection
+CREATE - API Toolbox,API Endpoint Deselected,User deselects endpoint,On endpoint uncheck,user_id|user_role,endpoint_path|http_method|session_id,API Integration Funnel,Medium,Selection refinement
+CREATE - API Toolbox,API Authentication Configured,User configures API auth,On auth config save,user_id|user_role,auth_type|auth_method|session_id,API Integration Funnel,Critical,Security configuration
+CREATE - API Toolbox,API Field Mapped,User maps API field to connection field,On field mapping,user_id|user_role,source_field|target_field|mapping_type|session_id,API Integration Funnel,High,Field mapping
+CREATE - API Toolbox,API Field Mapping Auto-suggested,System suggests field mapping,On auto-mapping,user_id|user_role,suggested_mappings_count|confidence_score|session_id,API Integration Funnel,High,Auto-mapping feature
+CREATE - API Toolbox,API Mapping Template Applied,User applies mapping template,On template selection,user_id|user_role,template_id|template_name|fields_mapped|session_id,API Integration Funnel,Medium,Template usage
+CREATE - API Toolbox,API Transform Rule Added,User adds data transformation rule,On rule creation,user_id|user_role,rule_type|source_field|target_field|session_id,API Integration Funnel,Medium,Data transformation
+CREATE - API Toolbox,API Test Connection Started,User tests API connection,On test button click,user_id|user_role,endpoints_to_test|session_id,API Integration Funnel,Critical,Connection testing
+CREATE - API Toolbox,API Test Connection Success,Test connection succeeded,On test success,user_id|user_role,response_time|status_code|session_id,API Integration Funnel,Critical,Test success
+CREATE - API Toolbox,API Test Connection Failed,Test connection failed,On test failure,user_id|user_role,error_code|error_message|failure_reason|session_id,API Integration Funnel,Critical,Test failure
+CREATE - API Toolbox,API Mock Data Generated,System generates test data,On mock generation,user_id|user_role,record_count|fields_generated|session_id,API Integration Funnel,Medium,Testing data
+CREATE - API Toolbox,API Sync Schedule Configured,User sets sync frequency,On schedule config,user_id|user_role,sync_frequency|sync_time|session_id,API Integration Funnel,High,Automation config
+CREATE - API Toolbox,API Error Handling Configured,User configures error behavior,On error config save,user_id|user_role,retry_policy|error_notification|session_id,API Integration Funnel,High,Error handling
+CREATE - API Toolbox,API Integration Saved,User saves API configuration,On save button click,user_id|user_role,integration_name|endpoints_count|mappings_count|session_id,API Integration Funnel,Critical,Configuration saved
+CREATE - API Toolbox,API Integration Activated,User enables API integration,On activate toggle,user_id|user_role,integration_id|integration_name|session_id,API Integration Funnel,Critical,Integration enabled
+CREATE - API Toolbox,API Integration Deactivated,User disables API integration,On deactivate toggle,user_id|user_role,integration_id|integration_name|deactivation_reason|session_id,API Integration Funnel,High,Integration disabled
+CREATE - API Toolbox,API Integration Deleted,User removes API integration,On delete confirmation,user_id|user_role,integration_id|integration_age|session_id,API Integration Funnel,High,Integration removed
+CREATE - API Toolbox,API Documentation Viewed,User views API docs,On docs button click,user_id|user_role,doc_section|session_id,API Integration,Medium,Documentation access
+CREATE - API Toolbox,API Integration Cloned,User duplicates integration,On clone button,user_id|user_role,source_integration_id|new_integration_name|session_id,API Integration,Medium,Configuration reuse
+
+MANAGE - Connections,Connection List Viewed,User views connections list,On connections page load,user_id|user_role|assigned_scopes,connection_count|view_mode|session_id,General Usage,High,List access
+MANAGE - Connections,Connection Details Viewed,User views connection details,On connection detail page load,user_id|user_role,connection_id|connection_type|connection_status|session_id,General Usage,Critical,Detail access
+MANAGE - Connections,Connection Detail Tab Changed,User switches detail tabs,On tab click,user_id|user_role,connection_id|tab_from|tab_to|session_id,General Usage,Medium,Tab navigation
+MANAGE - Connections,Connection Modified - Bandwidth,User changes bandwidth,On bandwidth update,user_id|user_role,connection_id|old_bandwidth|new_bandwidth|cost_delta|session_id,Connection Management,Critical,Bandwidth adjustment
+MANAGE - Connections,Connection Modified - Name,User renames connection,On name save,user_id|user_role,connection_id|old_name|new_name|session_id,Connection Management,Medium,Naming update
+MANAGE - Connections,Connection Modified - Description,User updates description,On description save,user_id|user_role,connection_id|session_id,Connection Management,Low,Documentation update
+MANAGE - Connections,Connection Modified - Tags,User modifies tags,On tags save,user_id|user_role,connection_id|tags_added|tags_removed|session_id,Connection Management,Low,Tag management
+MANAGE - Connections,Connection Modified - Group,User changes group assignment,On group change,user_id|user_role,connection_id|old_group|new_group|session_id,Connection Management,Medium,Group reassignment
+MANAGE - Connections,Connection Status Changed - Provisioning,Connection enters provisioning state,On status change,user_id|system,connection_id|old_status|new_status|session_id,Connection Lifecycle,Critical,Status transition
+MANAGE - Connections,Connection Status Changed - Active,Connection becomes active,On status change,user_id|system,connection_id|old_status|new_status|provisioning_duration|session_id,Connection Lifecycle,Critical,Activation
+MANAGE - Connections,Connection Status Changed - Suspended,Connection suspended,On status change,user_id|system,connection_id|old_status|new_status|suspension_reason|session_id,Connection Lifecycle,Critical,Suspension
+MANAGE - Connections,Connection Status Changed - Failed,Connection failed,On status change,user_id|system,connection_id|old_status|new_status|failure_reason|session_id,Connection Lifecycle,Critical,Failure tracking
+MANAGE - Connections,Connection Deleted,User deletes connection,On delete confirmation,user_id|user_role,connection_id|connection_type|connection_age_days|deletion_reason|has_active_traffic|session_id,Connection Management,Critical,Connection removal
+MANAGE - Connections,Connection Deletion Cancelled,User cancels delete action,On cancel button,user_id|user_role,connection_id|session_id,Connection Management,Medium,Deletion abort
+MANAGE - Connections,Connection Duplicated,User copies connection config,On duplicate button,user_id|user_role,source_connection_id|new_connection_name|session_id,Connection Management,Medium,Configuration reuse
+MANAGE - Connections,Connection Exported,User exports connection data,On export button,user_id|user_role,connection_id|export_format|session_id,Connection Management,Medium,Data export
+MANAGE - Connections,Connection View Mode Changed,User changes list/grid view,On view toggle,user_id|user_role,view_from|view_to|session_id,General Usage,Low,View preference
+MANAGE - Connections,Connection Bulk Action Initiated,User selects multiple connections,On bulk select,user_id|user_role,connection_count|session_id,Connection Management,High,Bulk operations
+MANAGE - Connections,Connection Bulk Action Executed,User performs bulk action,On bulk action confirm,user_id|user_role,action_type|connection_count|session_id,Connection Management,High,Bulk operations
+MANAGE - Connections,Connection Filter Applied,User filters connections,On filter change,user_id|user_role,filter_type|filter_value|results_count|session_id,General Usage,High,List filtering
+MANAGE - Connections,Connection Sort Applied,User sorts connections,On sort change,user_id|user_role,sort_field|sort_direction|session_id,General Usage,Medium,List sorting
+MANAGE - Connections,Connection Search Performed,User searches connections,On search input,user_id|user_role,search_query|results_count|session_id,General Usage,High,Connection search
+MANAGE - Connections,Connection Quick Actions Menu Opened,User opens overflow menu,On three-dot menu click,user_id|user_role,connection_id|session_id,General Usage,Medium,Quick actions
+MANAGE - Connections,Connection Quick Action Selected,User selects quick action,On menu item click,user_id|user_role,connection_id|action_type|session_id,General Usage,Medium,Quick action usage
+
+MANAGE - VLANs,VLAN Section Viewed,User views VLAN tab,On VLAN tab click,user_id|user_role,connection_id|vlan_count|session_id,VLAN Management,High,VLAN list access
+MANAGE - VLANs,VLAN Modal Opened - Create,User opens create VLAN modal,On Add VLAN button,user_id|user_role,connection_id|session_id,VLAN Management,High,VLAN creation start
+MANAGE - VLANs,VLAN ID Entered,User enters VLAN ID,On VLAN ID input,user_id|user_role,vlan_id|auto_generated|session_id,VLAN Management,High,VLAN identification
+MANAGE - VLANs,VLAN Name Entered,User enters VLAN name,On name input,user_id|user_role,vlan_name|session_id,VLAN Management,Medium,VLAN naming
+MANAGE - VLANs,VLAN Created,VLAN successfully created,On create confirm,user_id|user_role,connection_id|vlan_id|vlan_name|session_id,VLAN Management,Critical,VLAN creation
+MANAGE - VLANs,VLAN Creation Failed,VLAN creation failed,On API error,user_id|user_role,connection_id|vlan_id|error_message|session_id,VLAN Management,Critical,Creation failure
+MANAGE - VLANs,VLAN Modified,User updates VLAN,On edit save,user_id|user_role,connection_id|vlan_id|modification_type|session_id,VLAN Management,Medium,VLAN update
+MANAGE - VLANs,VLAN Deleted,User removes VLAN,On delete confirm,user_id|user_role,connection_id|vlan_id|session_id,VLAN Management,High,VLAN removal
+
+MANAGE - VNFs,VNF Section Viewed,User views VNF tab,On VNF tab click,user_id|user_role,connection_id|vnf_count|session_id,VNF Management,High,VNF list access
+MANAGE - VNFs,VNF Modal Opened - Create,User opens create VNF modal,On Add VNF button,user_id|user_role,connection_id|session_id,VNF Management,High,VNF creation start
+MANAGE - VNFs,VNF Type Selected,User selects VNF type,On VNF type dropdown,user_id|user_role,vnf_type|vnf_category|session_id,VNF Management,Critical,VNF type selection
+MANAGE - VNFs,VNF Provider Selected,User selects VNF provider,On provider dropdown,user_id|user_role,vnf_type|provider_name|session_id,VNF Management,High,Provider selection
+MANAGE - VNFs,VNF Configuration Entered,User configures VNF settings,On config input,user_id|user_role,vnf_type|config_parameter|session_id,VNF Management,High,VNF configuration
+MANAGE - VNFs,VNF Created,VNF successfully created,On create confirm,user_id|user_role,connection_id|vnf_type|vnf_name|cost_impact|session_id,VNF Management,Critical,VNF creation
+MANAGE - VNFs,VNF Creation Failed,VNF creation failed,On API error,user_id|user_role,vnf_type|error_message|session_id,VNF Management,Critical,Creation failure
+MANAGE - VNFs,VNF Modified,User updates VNF,On edit save,user_id|user_role,connection_id|vnf_id|modification_type|session_id,VNF Management,Medium,VNF update
+MANAGE - VNFs,VNF Status Changed,VNF status updates,On status change,user_id|system,connection_id|vnf_id|old_status|new_status|session_id,VNF Lifecycle,High,Status tracking
+MANAGE - VNFs,VNF Deleted,User removes VNF,On delete confirm,user_id|user_role,connection_id|vnf_id|vnf_type|session_id,VNF Management,High,VNF removal
+MANAGE - VNFs,VNF Detached from Connection,User detaches VNF,On detach action,user_id|user_role,connection_id|vnf_id|session_id,VNF Management,High,VNF detachment
+MANAGE - VNFs,VNF Attached to Connection,User attaches VNF,On attach action,user_id|user_role,connection_id|vnf_id|session_id,VNF Management,High,VNF attachment
+
+MANAGE - Containers,Container Section Viewed,User views routers tab,On router tab click,user_id|user_role,connection_id|router_count|session_id,Router Management,High,Router list access
+MANAGE - Containers,Container Modal Opened - Create,User opens create router modal,On Add Router button,user_id|user_role,connection_id|session_id,Router Management,High,Router creation start
+MANAGE - Containers,Container Name Entered,User enters router name,On name input,user_id|user_role,router_name|session_id,Router Management,Medium,Router naming
+MANAGE - Containers,Container Type Selected,User selects router type,On type dropdown,user_id|user_role,router_type|session_id,Router Management,Critical,Router type selection
+MANAGE - Containers,Container BGP Configured,User configures BGP settings,On BGP config save,user_id|user_role,asn|bgp_peers_count|session_id,Router Management,High,BGP configuration
+MANAGE - Containers,Container Created,Router successfully created,On create confirm,user_id|user_role,connection_id|router_id|router_name|session_id,Router Management,Critical,Router creation
+MANAGE - Containers,Container Creation Failed,Router creation failed,On API error,user_id|user_role,error_message|session_id,Router Management,Critical,Creation failure
+MANAGE - Containers,Container Modified,User updates router,On edit save,user_id|user_role,router_id|modification_type|session_id,Router Management,Medium,Router update
+MANAGE - Containers,Container Deleted,User removes router,On delete confirm,user_id|user_role,connection_id|router_id|session_id,Router Management,High,Router removal
+MANAGE - Containers,Container Details Viewed,User views router details page,On router detail navigation,user_id|user_role,router_id|session_id,Router Management,High,Router detail access
+
+MANAGE - Groups,Group List Viewed,User views groups page,On groups page load,user_id|user_role,group_count|session_id,General Usage,High,Group list access
+MANAGE - Groups,Group Created,New group created,On group creation,user_id|user_role|account_type,group_name|group_type|member_count|session_id,Group Management,Critical,Group creation
+MANAGE - Groups,Group Details Viewed,User views group details,On group detail page load,user_id|user_role,group_id|group_type|member_count|session_id,General Usage,High,Group detail access
+MANAGE - Groups,Group Modified - Name,User renames group,On name save,user_id|user_role,group_id|old_name|new_name|session_id,Group Management,Medium,Name update
+MANAGE - Groups,Group Modified - Description,User updates group description,On description save,user_id|user_role,group_id|session_id,Group Management,Low,Description update
+MANAGE - Groups,Group Modified - Settings,User changes group settings,On settings save,user_id|user_role,group_id|setting_changed|old_value|new_value|session_id,Group Management,Medium,Settings update
+MANAGE - Groups,Member Added to Group,User adds member to group,On member add,user_id|user_role,group_id|member_id|member_role|invitation_method|session_id,Group Management,High,Member addition
+MANAGE - Groups,Member Removed from Group,User removes member,On member remove,user_id|user_role,group_id|member_id|removal_reason|session_id,Group Management,High,Member removal
+MANAGE - Groups,Member Role Changed in Group,User changes member role,On role change,user_id|user_role,group_id|member_id|old_role|new_role|session_id,Group Management,High,Role modification
+MANAGE - Groups,Connection Added to Group,Connection assigned to group,On assignment,user_id|user_role,group_id|connection_id|session_id,Group Management,High,Connection assignment
+MANAGE - Groups,Connection Removed from Group,Connection unassigned from group,On removal,user_id|user_role,group_id|connection_id|session_id,Group Management,High,Connection unassignment
+MANAGE - Groups,Group Deleted,Group removed,On delete confirm,user_id|user_role,group_id|group_age_days|member_count|deletion_reason|session_id,Group Management,Critical,Group deletion
+
+MANAGE - Policies,Policies Tab Viewed,User views policies configuration,On policies tab click,user_id|user_role,connection_id|policy_count|session_id,Policy Management,High,Policy access
+MANAGE - Policies,Policy Type Selected,User selects policy category,On policy type tab click,user_id|user_role,policy_type|session_id,Policy Management,High,Policy category
+MANAGE - Policies,Routing Policy Created,User creates routing policy,On policy save,user_id|user_role,connection_id|policy_name|routing_protocol|session_id,Policy Management,Critical,Routing policy
+MANAGE - Policies,Routing Policy Modified,User updates routing policy,On policy update,user_id|user_role,connection_id|policy_id|modification_type|session_id,Policy Management,High,Policy update
+MANAGE - Policies,Routing Policy Deleted,User removes routing policy,On policy delete,user_id|user_role,connection_id|policy_id|session_id,Policy Management,High,Policy removal
+MANAGE - Policies,Access Control Policy Created,User creates ACL,On ACL save,user_id|user_role,connection_id|acl_name|rule_count|session_id,Policy Management,Critical,ACL creation
+MANAGE - Policies,Access Control Rule Added,User adds ACL rule,On rule add,user_id|user_role,connection_id|policy_id|rule_action|session_id,Policy Management,High,ACL rule
+MANAGE - Policies,Bandwidth Policy Created,User creates bandwidth policy,On policy save,user_id|user_role,connection_id|policy_name|bandwidth_limits|session_id,Policy Management,High,Bandwidth policy
+MANAGE - Policies,QoS Policy Applied,User applies QoS policy,On policy apply,user_id|user_role,connection_id|qos_class|session_id,Policy Management,High,QoS configuration
+
+MONITOR - Dashboard,Monitoring Dashboard Viewed,User views monitoring dashboard,On dashboard page load,user_id|user_role,dashboard_type|time_range|session_id,General Usage,Critical,Dashboard access
+MONITOR - Dashboard,Dashboard Time Range Changed,User changes time range,On time range selector change,user_id|user_role,dashboard_type|old_range|new_range|session_id,General Usage,High,Time range adjustment
+MONITOR - Dashboard,Dashboard Auto-Refresh Toggled,User enables/disables auto-refresh,On refresh toggle,user_id|user_role,enabled|refresh_interval|session_id,General Usage,Medium,Auto-refresh setting
+MONITOR - Dashboard,Dashboard Refreshed,User manually refreshes dashboard,On refresh button click,user_id|user_role,dashboard_type|session_id,General Usage,Medium,Manual refresh
+MONITOR - Dashboard,Dashboard Filter Applied,User filters dashboard data,On filter change,user_id|user_role,filter_type|filter_value|session_id,General Usage,High,Dashboard filtering
+MONITOR - Dashboard,Dashboard Exported,User exports dashboard data,On export button,user_id|user_role,dashboard_type|export_format|time_range|session_id,General Usage,Medium,Data export
+
+MONITOR - Metrics,Metrics Tab Viewed,User views metrics tab,On metrics tab click,user_id|user_role,resource_id|resource_type|session_id,Metrics,Critical,Metrics access
+MONITOR - Metrics,Metric Chart Viewed,User views specific metric chart,On chart display,user_id|user_role,metric_name|metric_category|time_range|session_id,Metrics,High,Chart viewing
+MONITOR - Metrics,Metric Chart Interacted,User interacts with chart,On chart click/hover,user_id|user_role,metric_name|interaction_type|data_point|session_id,Metrics,Medium,Chart interaction
+MONITOR - Metrics,Metric Chart Zoomed,User zooms into time range,On zoom interaction,user_id|user_role,metric_name|zoom_start|zoom_end|session_id,Metrics,Medium,Chart zoom
+MONITOR - Metrics,Metric Threshold Configured,User sets metric threshold,On threshold save,user_id|user_role,metric_name|threshold_value|threshold_type|session_id,Metrics,High,Threshold configuration
+MONITOR - Metrics,Custom Metric Created,User creates custom metric,On metric definition save,user_id|user_role,metric_name|metric_formula|session_id,Metrics,Medium,Custom metrics
+MONITOR - Metrics,Metric Comparison Enabled,User compares multiple metrics,On comparison toggle,user_id|user_role,metrics_compared|session_id,Metrics,Medium,Metric comparison
+
+MONITOR - Alerts,Alerts Tab Viewed,User views alerts tab,On alerts tab click,user_id|user_role,active_alert_count|session_id,Alerts,Critical,Alert list access
+MONITOR - Alerts,Alert Rule Created,User creates alert rule,On alert rule save,user_id|user_role,alert_name|alert_type|metric|threshold|notification_method|session_id,Alerts,Critical,Alert creation
+MONITOR - Alerts,Alert Rule Modified,User updates alert rule,On alert rule update,user_id|user_role,alert_id|modification_type|session_id,Alerts,High,Alert modification
+MONITOR - Alerts,Alert Rule Deleted,User removes alert rule,On alert rule delete,user_id|user_role,alert_id|alert_name|session_id,Alerts,High,Alert removal
+MONITOR - Alerts,Alert Rule Enabled,User activates alert rule,On enable toggle,user_id|user_role,alert_id|session_id,Alerts,High,Alert activation
+MONITOR - Alerts,Alert Rule Disabled,User deactivates alert rule,On disable toggle,user_id|user_role,alert_id|disable_reason|session_id,Alerts,High,Alert deactivation
+MONITOR - Alerts,Alert Triggered,Alert condition met,On threshold breach,system|affected_user_ids,alert_id|alert_name|metric_value|threshold|resource_id|severity|session_id,Alerts,Critical,Alert firing
+MONITOR - Alerts,Alert Viewed,User views alert details,On alert click,user_id|user_role,alert_id|alert_status|time_since_trigger|session_id,Alerts,High,Alert review
+MONITOR - Alerts,Alert Acknowledged,User acknowledges alert,On acknowledge button,user_id|user_role,alert_id|acknowledgment_note|time_to_acknowledge|session_id,Alerts,Critical,Alert acknowledgment
+MONITOR - Alerts,Alert Resolved,User marks alert as resolved,On resolve button,user_id|user_role,alert_id|resolution_note|time_to_resolve|session_id,Alerts,Critical,Alert resolution
+MONITOR - Alerts,Alert Dismissed,User dismisses alert,On dismiss button,user_id|user_role,alert_id|dismissal_reason|session_id,Alerts,High,Alert dismissal
+MONITOR - Alerts,Alert Notification Sent,System sends alert notification,On notification trigger,system,alert_id|notification_method|recipient_count|session_id,Alerts,Critical,Notification delivery
+MONITOR - Alerts,Alert Filter Applied,User filters alert list,On filter change,user_id|user_role,filter_type|filter_value|results_count|session_id,Alerts,Medium,Alert filtering
+MONITOR - Alerts,Alert History Viewed,User views alert history,On history tab click,user_id|user_role,time_range|session_id,Alerts,Medium,Historical alerts
+
+MONITOR - Logs,Logs Tab Viewed,User views logs tab,On logs tab click,user_id|user_role,resource_id|resource_type|session_id,Logs,High,Log access
+MONITOR - Logs,Log Entry Viewed,User views log details,On log entry click,user_id|user_role,log_id|log_level|session_id,Logs,Medium,Log detail
+MONITOR - Logs,Log Filter Applied,User filters logs,On filter change,user_id|user_role,filter_type|filter_value|results_count|session_id,Logs,High,Log filtering
+MONITOR - Logs,Log Search Performed,User searches logs,On search submit,user_id|user_role,search_query|results_count|session_id,Logs,High,Log search
+MONITOR - Logs,Log Level Filter Changed,User filters by log level,On level filter,user_id|user_role,log_level|session_id,Logs,Medium,Level filtering
+MONITOR - Logs,Log Time Range Changed,User changes log time range,On time range change,user_id|user_role,time_range|session_id,Logs,Medium,Time range
+MONITOR - Logs,Log Exported,User exports logs,On export button,user_id|user_role,export_format|log_count|time_range|session_id,Logs,Medium,Log export
+MONITOR - Logs,Log Rule Created,User creates log processing rule,On rule save,user_id|user_role,rule_name|rule_type|session_id,Logs,Medium,Log rule creation
+
+MONITOR - Reports,Reports Tab Viewed,User views reports tab,On reports tab click,user_id|user_role,session_id,Reports,High,Report access
+MONITOR - Reports,Report Generated,User generates report,On generate button,user_id|user_role,report_type|report_name|time_range|session_id,Reports,Critical,Report generation
+MONITOR - Reports,Report Scheduled,User schedules recurring report,On schedule save,user_id|user_role,report_type|schedule_frequency|recipients|session_id,Reports,High,Report scheduling
+MONITOR - Reports,Report Downloaded,User downloads report,On download button,user_id|user_role,report_id|report_format|session_id,Reports,High,Report download
+MONITOR - Reports,Report Shared,User shares report,On share button,user_id|user_role,report_id|share_method|recipient_count|session_id,Reports,Medium,Report sharing
+MONITOR - Reports,Report Template Created,User creates report template,On template save,user_id|user_role,template_name|included_metrics|session_id,Reports,Medium,Template creation
+MONITOR - Reports,Report Template Applied,User uses report template,On template selection,user_id|user_role,template_id|template_name|session_id,Reports,Medium,Template usage
+
+CONFIGURE - User Management,User Management Viewed,User views user management page,On user management page load,user_id|user_role,user_count|session_id,User Management,High,User list access
+CONFIGURE - User Management,User Created,New user added,On user creation,user_id|user_role,new_user_id|new_user_role|invitation_method|session_id,User Management,Critical,User provisioning
+CONFIGURE - User Management,User Modified,User details updated,On user update,user_id|user_role,target_user_id|modification_type|session_id,User Management,High,User modification
+CONFIGURE - User Management,User Deleted,User removed,On user deletion,user_id|user_role,target_user_id|deletion_reason|session_id,User Management,Critical,User removal
+CONFIGURE - User Management,User Suspended,User account suspended,On suspension,user_id|user_role,target_user_id|suspension_reason|suspension_duration|session_id,User Management,Critical,Account suspension
+CONFIGURE - User Management,User Reactivated,Suspended user reactivated,On reactivation,user_id|user_role,target_user_id|session_id,User Management,High,Account reactivation
+CONFIGURE - User Management,User Password Reset,Password reset initiated,On reset trigger,user_id|user_role,target_user_id|reset_method|session_id,User Management,High,Password reset
+CONFIGURE - User Management,User Invitation Sent,Invitation sent to new user,On invite send,user_id|user_role,invited_email|invited_role|session_id,User Management,High,User invitation
+CONFIGURE - User Management,User Invitation Accepted,New user accepts invitation,On invitation acceptance,new_user_id,invitation_age_hours|session_id,User Management,High,Invitation acceptance
+CONFIGURE - User Management,User Invitation Resent,Invitation resent,On resend button,user_id|user_role,invitation_id|session_id,User Management,Medium,Invitation resend
+CONFIGURE - User Management,User Bulk Import Started,Bulk user import initiated,On import file upload,user_id|user_role,file_name|user_count|session_id,User Management,High,Bulk import
+CONFIGURE - User Management,User Bulk Import Completed,Bulk import finished,On import completion,user_id|user_role,users_imported|users_failed|session_id,User Management,High,Import completion
+
+CONFIGURE - RBAC,Role Management Viewed,User views role management,On RBAC page load,user_id|user_role,role_count|session_id,RBAC,Critical,RBAC access
+CONFIGURE - RBAC,Role Assigned,User role assigned,On role assignment,user_id|user_role,target_user_id|role_assigned|scope_type|scope_id|session_id,RBAC,Critical,Role assignment
+CONFIGURE - RBAC,Role Changed,User role changed,On role change,user_id|user_role,target_user_id|old_role|new_role|scope_type|scope_id|session_id,RBAC,Critical,Role change
+CONFIGURE - RBAC,Role Removed,User role removed,On role removal,user_id|user_role,target_user_id|role_removed|scope_type|scope_id|session_id,RBAC,Critical,Role removal
+CONFIGURE - RBAC,Permission Requested,User requests permission,On permission request,user_id|user_role,permission_requested|resource_type|resource_id|request_reason|session_id,RBAC,Critical,Permission request
+CONFIGURE - RBAC,Permission Granted,Permission request approved,On approval,user_id|user_role,requester_user_id|permission_granted|resource_type|resource_id|session_id,RBAC,Critical,Permission approval
+CONFIGURE - RBAC,Permission Denied,Permission request denied,On denial,user_id|user_role,requester_user_id|permission_denied|resource_type|resource_id|denial_reason|session_id,RBAC,Critical,Permission denial
+CONFIGURE - RBAC,Access Denied - Unauthorized,User attempts unauthorized action,On permission check failure,user_id|user_role,action_attempted|resource_type|resource_id|required_permission|session_id,Security,Critical,Unauthorized access
+CONFIGURE - RBAC,Scope Filter Applied,User filters by scope,On scope filter change,user_id|user_role,scope_type|scope_value|results_count|session_id,RBAC,High,Scope filtering
+CONFIGURE - RBAC,Impersonation Started,Admin impersonates user,On impersonation start,user_id|user_role,target_user_id|impersonation_reason|session_id,Security,Critical,Impersonation start
+CONFIGURE - RBAC,Impersonation Ended,Admin stops impersonating,On impersonation end,user_id|user_role,target_user_id|impersonation_duration|actions_performed|session_id,Security,Critical,Impersonation end
+CONFIGURE - RBAC,Role Definition Created,Custom role created,On role creation,user_id|user_role,role_name|permissions_count|session_id,RBAC,High,Custom role
+CONFIGURE - RBAC,Role Definition Modified,Custom role updated,On role update,user_id|user_role,role_id|modification_type|session_id,RBAC,High,Role modification
+CONFIGURE - RBAC,Role Definition Deleted,Custom role removed,On role deletion,user_id|user_role,role_id|users_affected|session_id,RBAC,High,Role removal
+CONFIGURE - RBAC,Permission Matrix Viewed,User views permission matrix,On matrix page load,user_id|user_role,session_id,RBAC,Medium,Permission visibility
+
+CONFIGURE - Billing,Billing Page Viewed,User views billing page,On billing page load,user_id|user_role|account_type,current_plan|session_id,Billing,High,Billing access
+CONFIGURE - Billing,Billing Plan Changed,User changes subscription plan,On plan change,user_id|user_role|account_id,old_plan|new_plan|price_delta|session_id,Billing,Critical,Plan change
+CONFIGURE - Billing,Payment Method Added,User adds payment method,On payment method save,user_id|account_id,payment_method_type|session_id,Billing,Critical,Payment addition
+CONFIGURE - Billing,Payment Method Deleted,User removes payment method,On payment method delete,user_id|account_id,payment_method_type|session_id,Billing,High,Payment removal
+CONFIGURE - Billing,Payment Method Set as Default,User changes default payment,On default change,user_id|account_id,payment_method_type|session_id,Billing,Medium,Default payment
+CONFIGURE - Billing,Invoice Viewed,User views invoice,On invoice click,user_id|account_id,invoice_id|invoice_date|invoice_amount|session_id,Billing,High,Invoice viewing
+CONFIGURE - Billing,Invoice Downloaded,User downloads invoice,On download button,user_id|account_id,invoice_id|invoice_format|session_id,Billing,Medium,Invoice download
+CONFIGURE - Billing,Usage Metrics Viewed,User views usage metrics,On usage tab click,user_id|account_id,time_range|session_id,Billing,High,Usage visibility
+CONFIGURE - Billing,Billing Alert Created,User sets billing alert,On alert save,user_id|account_id,alert_threshold|alert_type|session_id,Billing,Medium,Billing alert
+CONFIGURE - Billing,Billing Cycle Changed,User changes billing cycle,On cycle change,user_id|account_id,old_cycle|new_cycle|session_id,Billing,Medium,Cycle change
+
+CONFIGURE - System Settings,Settings Page Viewed,User views settings page,On settings page load,user_id|user_role,settings_category|session_id,Configuration,High,Settings access
+CONFIGURE - System Settings,Setting Changed,User modifies setting,On setting save,user_id|user_role,setting_category|setting_name|old_value|new_value|session_id,Configuration,High,Setting modification
+CONFIGURE - System Settings,Settings Exported,User exports settings,On export button,user_id|user_role,export_format|settings_count|session_id,Configuration,Medium,Settings export
+CONFIGURE - System Settings,Settings Imported,User imports settings,On import completion,user_id|user_role,import_format|settings_imported|session_id,Configuration,Medium,Settings import
+CONFIGURE - System Settings,Notification Preferences Changed,User updates notifications,On preference save,user_id|user_role,notification_type|enabled|session_id,Configuration,Medium,Notification settings
+CONFIGURE - System Settings,Email Notifications Toggled,User enables/disables email,On email toggle,user_id|user_role,enabled|session_id,Configuration,Medium,Email settings
+CONFIGURE - System Settings,SMS Notifications Toggled,User enables/disables SMS,On SMS toggle,user_id|user_role,enabled|session_id,Configuration,Medium,SMS settings
+CONFIGURE - System Settings,Webhook Configured,User sets up webhook,On webhook save,user_id|user_role,webhook_url|webhook_events|session_id,Configuration,High,Webhook setup
+CONFIGURE - System Settings,API Key Generated,User creates API key,On generate button,user_id|user_role,key_name|permissions|session_id,Configuration,Critical,API key creation
+CONFIGURE - System Settings,API Key Revoked,User deletes API key,On revoke button,user_id|user_role,key_name|key_age|session_id,Configuration,Critical,API key revocation
+CONFIGURE - System Settings,Timezone Changed,User changes timezone,On timezone save,user_id|user_role,old_timezone|new_timezone|session_id,Configuration,Low,Timezone setting
+CONFIGURE - System Settings,Language Changed,User changes language,On language save,user_id|user_role,old_language|new_language|session_id,Configuration,Low,Language setting
+CONFIGURE - System Settings,Theme Changed,User changes UI theme,On theme toggle,user_id|user_role,old_theme|new_theme|session_id,Configuration,Low,Theme setting
+
+CONFIGURE - Marketplace,Marketplace Viewed,User views marketplace,On marketplace page load,user_id|user_role,solution_count|category_filter|session_id,Marketplace,Critical,Marketplace access
+CONFIGURE - Marketplace,Marketplace Category Selected,User filters by category,On category click,user_id|user_role,category|solutions_in_category|session_id,Marketplace,High,Category filtering
+CONFIGURE - Marketplace,Solution Viewed,User views solution details,On solution card click,user_id|user_role,solution_id|solution_name|solution_category|session_id,Marketplace,Critical,Solution interest
+CONFIGURE - Marketplace,Solution Deployed,User deploys solution,On deploy button,user_id|user_role|account_type,solution_id|solution_name|solution_category|cost|session_id,Marketplace,Critical,Solution deployment
+CONFIGURE - Marketplace,Solution Deployment Failed,Deployment failed,On deployment error,user_id|user_role,solution_id|error_message|session_id,Marketplace,Critical,Deployment failure
+CONFIGURE - Marketplace,Solution Configured,User configures solution settings,On config save,user_id|user_role,solution_id|configuration_parameters|session_id,Marketplace,High,Solution configuration
+CONFIGURE - Marketplace,Solution Removed,User uninstalls solution,On removal confirmation,user_id|user_role,solution_id|solution_name|time_deployed_days|removal_reason|session_id,Marketplace,High,Solution removal
+CONFIGURE - Marketplace,Solution Rated,User rates solution,On rating submit,user_id|user_role,solution_id|rating|session_id,Marketplace,Medium,Solution feedback
+CONFIGURE - Marketplace,Solution Reviewed,User writes solution review,On review submit,user_id|user_role,solution_id|review_rating|review_length|session_id,Marketplace,Medium,Solution review
+
+Authentication,Login Success,User successfully logs in,On successful authentication,user_id|user_role|account_type,login_method|device_type|browser|os|location|mfa_used|session_id,Authentication,Critical,Login tracking
+Authentication,Login Failed,Login attempt fails,On authentication failure,attempted_username,failure_reason|device_type|browser|location|attempt_count|session_id,Security,Critical,Failed login tracking
+Authentication,Logout,User logs out,On logout action,user_id,logout_method|session_duration|session_id,Authentication,High,Logout tracking
+Authentication,Session Timeout,Session expires,On timeout,user_id,session_duration|last_activity|timeout_reason|session_id,Authentication,High,Session expiry
+Authentication,Password Changed,User changes password,On password change success,user_id,change_method|password_strength|session_id,Security,Critical,Password change
+Authentication,Password Reset Requested,User requests password reset,On reset request submit,attempted_email,request_method|session_id,Authentication,High,Reset request
+Authentication,Password Reset Completed,User completes password reset,On reset completion,user_id,reset_method|time_to_complete|session_id,Authentication,High,Reset completion
+Authentication,MFA Enabled,User enables MFA,On MFA setup completion,user_id,mfa_method|session_id,Security,Critical,MFA adoption
+Authentication,MFA Disabled,User disables MFA,On MFA removal,user_id,mfa_method|disable_reason|session_id,Security,Critical,MFA removal
+Authentication,MFA Challenge Passed,User passes MFA verification,On MFA success,user_id,mfa_method|session_id,Security,High,MFA success
+Authentication,MFA Challenge Failed,User fails MFA verification,On MFA failure,user_id,mfa_method|attempt_count|session_id,Security,Critical,MFA failure
+
+Help & Support,Help Panel Opened,User opens help panel,On help button click,user_id|user_role,help_entry_point|page_context|session_id,Support,High,Help access
+Help & Support,Help Article Viewed,User views help article,On article click,user_id|user_role,article_id|article_title|article_category|search_query|session_id,Support,High,Article viewing
+Help & Support,Help Article Rated Helpful,User marks article helpful,On thumbs up,user_id|user_role,article_id|session_id,Support,Medium,Article feedback
+Help & Support,Help Article Rated Unhelpful,User marks article unhelpful,On thumbs down,user_id|user_role,article_id|session_id,Support,Medium,Article feedback
+Help & Support,Help Search Performed,User searches help,On help search submit,user_id|user_role,search_query|results_count|session_id,Support,High,Help search
+Help & Support,Glossary Opened,User opens glossary,On glossary button click,user_id|user_role,entry_point|session_id,Support,Medium,Glossary access
+Help & Support,Glossary Term Viewed,User views term definition,On term click,user_id|user_role,term|term_category|page_context|session_id,Support,Medium,Term lookup
+Help & Support,Tour Started,User starts product tour,On tour start button,user_id|user_role,tour_type|tour_id|entry_point|session_id,Onboarding,Critical,Tour start
+Help & Support,Tour Step Completed,User completes tour step,On step completion,user_id|user_role,tour_id|step_number|step_name|time_on_step|session_id,Onboarding,Critical,Tour progress
+Help & Support,Tour Completed,User finishes product tour,On tour completion,user_id|user_role,tour_id|tour_duration|steps_completed|session_id,Onboarding,Critical,Tour completion
+Help & Support,Tour Skipped,User exits tour early,On tour skip/close,user_id|user_role,tour_id|step_at_skip|skip_reason|session_id,Onboarding,Critical,Tour abandonment
+Help & Support,Feedback Form Opened,User opens feedback form,On feedback button,user_id|user_role,form_type|page_context|session_id,Feedback,High,Feedback access
+Help & Support,Feedback Submitted,User submits feedback,On feedback submit,user_id|user_role,feedback_type|feedback_rating|feedback_length|page_context|session_id,Feedback,Critical,Feedback submission
+Help & Support,Support Ticket Created,User creates support ticket,On ticket submit,user_id|user_role,ticket_category|priority|page_context|session_id,Support,Critical,Ticket creation
+Help & Support,Chat Support Opened,User opens chat widget,On chat button click,user_id|user_role,page_context|session_id,Support,High,Chat access
+Help & Support,Chat Message Sent,User sends chat message,On message send,user_id|user_role,message_number|conversation_id|session_id,Support,Medium,Chat interaction
+
+Errors & Performance,Error Occurred,Application error happens,On error catch,user_id|user_role,error_type|error_message|error_stack|page_context|component_name|session_id,Error Monitoring,Critical,Error tracking
+Errors & Performance,API Error,API call fails,On API error response,user_id|user_role,api_endpoint|http_status|error_code|error_message|session_id,Error Monitoring,Critical,API failure
+Errors & Performance,Network Error,Network request fails,On network failure,user_id|user_role,request_url|error_type|session_id,Error Monitoring,High,Network issues
+Errors & Performance,Performance Issue - Page Load,Slow page load detected,On load time threshold exceeded,user_id|user_role,page_name|load_time_ms|threshold_ms|session_id,Performance,High,Page performance
+Errors & Performance,Performance Issue - API Response,Slow API response detected,On API time threshold exceeded,user_id|user_role,api_endpoint|response_time_ms|threshold_ms|session_id,Performance,High,API performance
+Errors & Performance,Memory Warning,High memory usage detected,On memory threshold exceeded,user_id|user_role,memory_used_mb|page_context|session_id,Performance,Medium,Memory issues
+Errors & Performance,Browser Compatibility Issue,Browser-specific error,On compatibility error,user_id|user_role,browser|browser_version|error_type|session_id,Error Monitoring,High,Compatibility tracking
+
+PWA & Mobile,PWA Install Prompt Shown,Browser shows PWA install prompt,On prompt display,user_id,device_type|browser|os|session_id,PWA,High,Install prompt
+PWA & Mobile,PWA Installed,User installs PWA,On install confirmation,user_id,device_type|browser|os|install_source|session_id,PWA,Critical,PWA installation
+PWA & Mobile,PWA Install Dismissed,User dismisses install prompt,On prompt dismiss,user_id,device_type|session_id,PWA,High,Install dismissal
+PWA & Mobile,PWA Launched,User launches PWA,On PWA app start,user_id,device_type|launch_source|session_id,PWA,High,PWA usage
+PWA & Mobile,PWA Updated,Service worker updated,On SW update,user_id,version_from|version_to|session_id,PWA,Medium,PWA update
+PWA & Mobile,Offline Mode Activated,User goes offline,On offline detection,user_id,page_context|session_id,PWA,High,Offline detection
+PWA & Mobile,Offline Mode Deactivated,User comes back online,On online detection,user_id,offline_duration|session_id,PWA,High,Online detection
+PWA & Mobile,Offline Action Queued,User performs action offline,On offline action,user_id,action_type|session_id,PWA,High,Offline actions
+PWA & Mobile,Offline Action Synced,Queued action synced when online,On action sync,user_id,action_type|queue_time|session_id,PWA,High,Action sync
+PWA & Mobile,Mobile Menu Opened,User opens mobile menu,On mobile menu toggle,user_id|user_role,page_context|session_id,Mobile,Medium,Mobile navigation
+PWA & Mobile,Mobile Gesture Used,User performs mobile gesture,On gesture detection,user_id,gesture_type|page_context|session_id,Mobile,Low,Mobile interaction
+
+Sandbox Testing,Sandbox Access Granted,Stakeholder logs into sandbox,On sandbox authentication success,stakeholder_id|stakeholder_role|stakeholder_company,sandbox_environment|feature_being_tested|prototype_version|session_id,Sandbox Testing,Critical,Sandbox login
+Sandbox Testing,Sandbox Access Denied,Stakeholder login fails,On sandbox auth failure,attempted_stakeholder_email,failure_reason|session_id,Sandbox Testing,Critical,Access failure
+Sandbox Testing,Sandbox Feature Accessed,Stakeholder navigates to feature,On feature page load,stakeholder_id|stakeholder_role,feature_name|feature_category|session_id,Sandbox Testing,Critical,Feature access
+Sandbox Testing,Sandbox Feature Interacted,Stakeholder interacts with feature,On feature interaction,stakeholder_id|stakeholder_role,feature_name|interaction_type|element_interacted|session_id,Sandbox Testing,Critical,Feature interaction
+Sandbox Testing,Sandbox Test Scenario Started,Stakeholder begins test scenario,On scenario start,stakeholder_id|stakeholder_role,test_scenario_id|test_scenario_name|session_id,Sandbox Testing,High,Scenario start
+Sandbox Testing,Sandbox Test Scenario Completed,Stakeholder finishes test scenario,On scenario completion,stakeholder_id|stakeholder_role,test_scenario_id|completion_time|success|session_id,Sandbox Testing,High,Scenario completion
+Sandbox Testing,Sandbox Feedback Form Opened,Stakeholder opens feedback form,On feedback button click,stakeholder_id|stakeholder_role,feature_name|page_context|session_id,Sandbox Testing,Critical,Feedback access
+Sandbox Testing,Sandbox Feedback Submitted,Stakeholder submits feedback,On feedback submit,stakeholder_id|stakeholder_role,feature_name|feedback_type|rating|comment_length|severity|session_id,Sandbox Testing,Critical,Feedback submission
+Sandbox Testing,Sandbox Issue Reported,Stakeholder reports issue,On issue report submit,stakeholder_id|stakeholder_role,feature_name|issue_type|severity|session_id,Sandbox Testing,Critical,Issue reporting
+Sandbox Testing,Sandbox Session Ended,Stakeholder logs out of sandbox,On sandbox logout,stakeholder_id|stakeholder_role,session_duration|pages_visited|features_tested|feedback_submitted_count|session_id,Sandbox Testing,Critical,Session end
+Sandbox Testing,Sandbox Recording Started,Screen recording initiated,On recording start,stakeholder_id|stakeholder_role,feature_being_recorded|session_id,Sandbox Testing,Medium,Recording start
+Sandbox Testing,Sandbox Recording Stopped,Screen recording ended,On recording stop,stakeholder_id|stakeholder_role,recording_duration|session_id,Sandbox Testing,Medium,Recording end
+Sandbox Testing,Sandbox Annotation Added,Stakeholder adds annotation,On annotation create,stakeholder_id|stakeholder_role,annotation_type|feature_context|session_id,Sandbox Testing,Medium,Annotation
+Sandbox Testing,Sandbox Help Requested,Stakeholder requests assistance,On help button click,stakeholder_id|stakeholder_role,help_topic|feature_context|session_id,Sandbox Testing,High,Help request

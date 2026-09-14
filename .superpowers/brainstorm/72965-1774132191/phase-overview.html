@@ -1,0 +1,192 @@
+<h2>Visual Designer Rebuild - Phased Architecture</h2>
+<p class="subtitle">Cloud_Designer functionality, Flywheel design system, built for NetBond</p>
+
+<div style="margin: 2rem 0;">
+  <!-- Phase diagram -->
+  <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; max-width: 900px; margin: 0 auto;">
+
+    <!-- Phase 1 -->
+    <div style="background: #1a1a2e; border: 2px solid #3b82f6; border-radius: 12px; padding: 1.5rem; position: relative;">
+      <div style="position: absolute; top: -12px; left: 20px; background: #3b82f6; color: white; padding: 2px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">PHASE 1 - Foundation</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #3b82f6; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Zustand Store</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            nodes[] &bull; edges[]<br>
+            selectedNode &bull; selectedEdge<br>
+            history (undo/redo)
+          </div>
+        </div>
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #3b82f6; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Canvas Rebuild</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            Pan + Zoom<br>
+            Grid snap (20px)<br>
+            SVG edges + HTML nodes<br>
+            Safe area bounds
+          </div>
+        </div>
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #3b82f6; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Custom Hooks</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            useNetworkManager<br>
+            useSelectionManager<br>
+            useEdgeCreator<br>
+            useNetworkHistory
+          </div>
+        </div>
+      </div>
+      <div style="color: #58a6ff; font-size: 12px; margin-top: 1rem; text-align: right;">Delivers: draggable nodes, pan/zoom canvas, undo/redo, edge creation</div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div style="background: #1a1a2e; border: 2px solid #8b5cf6; border-radius: 12px; padding: 1.5rem; position: relative;">
+      <div style="position: absolute; top: -12px; left: 20px; background: #8b5cf6; color: white; padding: 2px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">PHASE 2 - Node Taxonomy & Toolbar</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #8b5cf6; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Node Types</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            Function: Router, FW, VNF,<br>
+            SDWAN, FlexWare<br>
+            Network: Internet, AVPN,<br>
+            ASE, ADI, IPE<br>
+            Cloud: AWS/Azure/GCP/OCI<br>
+            DC: Equinix, Digital Realty...
+          </div>
+        </div>
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #8b5cf6; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Toolbar Rebuild</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            Categorized add menu<br>
+            (dropdown with groups)<br>
+            Connect toggle<br>
+            Undo &bull; Save &bull; Export<br>
+            Clear &bull; Create
+          </div>
+        </div>
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #8b5cf6; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Edge Types</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            MPLS &bull; Direct Connect<br>
+            ExpressRoute &bull; Interconnect<br>
+            Ethernet &bull; Dark Fiber<br>
+            Wavelength<br>
+            Service-aware colors
+          </div>
+        </div>
+      </div>
+      <div style="color: #a78bfa; font-size: 12px; margin-top: 1rem; text-align: right;">Delivers: full node palette, categorized toolbar, typed edges with colors</div>
+    </div>
+
+    <!-- Phase 3 -->
+    <div style="background: #1a1a2e; border: 2px solid #10b981; border-radius: 12px; padding: 1.5rem; position: relative;">
+      <div style="position: absolute; top: -12px; left: 20px; background: #10b981; color: white; padding: 2px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">PHASE 3 - Config Panels & Validation</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #10b981; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Floating Panels</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            NodeConfigPanel<br>
+            (tabs: Overview, Routing,<br>
+            Security, Performance)<br>
+            EdgeConfigPanel<br>
+            (bandwidth, type, resilience)
+          </div>
+        </div>
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #10b981; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Validation Engine</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            Orphan detection<br>
+            Cloud-to-IPE routing rules<br>
+            Redundancy warnings<br>
+            Security advisories<br>
+            StatusBar integration
+          </div>
+        </div>
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #10b981; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Templates</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            Templates drawer<br>
+            (toolbar-triggered)<br>
+            Pre-built topologies<br>
+            Save custom templates<br>
+            Template preview cards
+          </div>
+        </div>
+      </div>
+      <div style="color: #6ee7b7; font-size: 12px; margin-top: 1rem; text-align: right;">Delivers: select-to-configure, real-time validation, template library</div>
+    </div>
+
+    <!-- Phase 4 -->
+    <div style="background: #1a1a2e; border: 2px solid #f59e0b; border-radius: 12px; padding: 1.5rem; position: relative;">
+      <div style="position: absolute; top: -12px; left: 20px; background: #f59e0b; color: white; padding: 2px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">PHASE 4 - Maximize & Polish</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #f59e0b; font-size: 13px; font-weight: 600; margin-bottom: 6px;">App Takeover</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            Maximize hides app shell<br>
+            (nav, sidebar, header)<br>
+            Canvas fills viewport<br>
+            Floating exit button<br>
+            Minimize restores shell
+          </div>
+        </div>
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #f59e0b; font-size: 13px; font-weight: 600; margin-bottom: 6px;">PDF Export</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            jsPDF + html2canvas<br>
+            Diagram-only mode<br>
+            With-metadata mode<br>
+            Timestamped filenames
+          </div>
+        </div>
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;">
+          <div style="color: #f59e0b; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Keyboard & UX</div>
+          <div style="color: #8b949e; font-size: 12px; line-height: 1.5;">
+            Delete key<br>
+            Ctrl+Z undo<br>
+            Escape deselect<br>
+            Node double-click rename<br>
+            Animated transitions
+          </div>
+        </div>
+      </div>
+      <div style="color: #fcd34d; font-size: 12px; margin-top: 1rem; text-align: right;">Delivers: fullscreen mode, export, keyboard shortcuts, production polish</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- File structure -->
+<h3 style="margin-top: 2rem;">Target File Structure</h3>
+<div style="background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1.5rem; font-family: monospace; font-size: 13px; color: #c9d1d9; line-height: 1.8; max-width: 600px;">
+  <span style="color: #8b949e;">src/components/network-designer/</span><br>
+  ├── NetworkDesigner.tsx <span style="color: #8b949e;"># orchestrator</span><br>
+  ├── Canvas.tsx <span style="color: #8b949e;"># pan/zoom/grid SVG+HTML</span><br>
+  ├── Node.tsx <span style="color: #8b949e;"># draggable node</span><br>
+  ├── Edge.tsx <span style="color: #8b949e;"># bezier edge + labels</span><br>
+  ├── Toolbar.tsx <span style="color: #8b949e;"># bottom floating bar</span><br>
+  ├── StatusBar.tsx <span style="color: #8b949e;"># top validation + stats</span><br>
+  ├── ZoomControls.tsx <span style="color: #8b949e;"># +/- zoom buttons</span><br>
+  ├── panels/<br>
+  │   ├── FloatingPanel.tsx <span style="color: #8b949e;"># panel container</span><br>
+  │   ├── NodeConfigPanel.tsx <span style="color: #8b949e;"># node properties</span><br>
+  │   └── EdgeConfigPanel.tsx <span style="color: #8b949e;"># edge properties</span><br>
+  ├── templates/<br>
+  │   ├── TemplatesDrawer.tsx<br>
+  │   └── [template definitions]<br>
+  ├── store/<br>
+  │   └── useDesignerStore.ts <span style="color: #8b949e;"># Zustand</span><br>
+  ├── hooks/<br>
+  │   ├── useNetworkManager.ts<br>
+  │   ├── useSelectionManager.ts<br>
+  │   ├── useEdgeCreator.ts<br>
+  │   └── useNetworkHistory.ts<br>
+  ├── engine/<br>
+  │   └── validationEngine.ts<br>
+  ├── constants/<br>
+  │   ├── nodeTypes.ts <span style="color: #8b949e;"># full taxonomy</span><br>
+  │   ├── edgeTypes.ts <span style="color: #8b949e;"># service-aware colors</span><br>
+  │   └── canvasBounds.ts<br>
+  └── types/<br>
+      └── designer.ts <span style="color: #8b949e;"># NetworkNode, NetworkEdge</span><br>
+</div>

@@ -1,0 +1,252 @@
+Category,Term/Word,Current Icon,Usage Context,Priority,Notes,File Location
+Navigation,Create,PlusCircle,Main navigation,High,Primary action button,src/components/navigation/MainNav.tsx
+Navigation,Manage,Settings,Main navigation,High,Primary navigation item,src/components/navigation/MainNav.tsx
+Navigation,Monitor,BarChart2,Main navigation,High,Primary navigation item,src/components/navigation/MainNav.tsx
+Navigation,Configure,SlidersHorizontal,Main navigation,High,Primary navigation item,src/components/navigation/MainNav.tsx
+Navigation,Search,Search,Search functionality,High,Used throughout app,src/components/navigation/SearchBar.tsx
+Navigation,Menu,Menu,Mobile menu toggle,High,Mobile navigation,src/components/navigation/MainNav.tsx
+Navigation,Back,ArrowLeft,Navigation back button,High,Used in details pages,src/components/navigation/SubNav.tsx
+Navigation,Notifications,Bell,Notification button,High,Header notifications,src/components/navigation/NotificationsButton.tsx
+Navigation,Help,HelpCircle,Help and support,High,Help resources,src/components/navigation/HelpButton.tsx
+Navigation,User Profile,User,User menu,High,User account access,src/components/navigation/UserMenu.tsx
+
+Connection Types,Internet to Cloud,Globe,Connection type selection,High,Primary connection type,src/components/wizard/screens/ConnectionTypeSelection.tsx
+Connection Types,Cloud to Cloud,Lock,Connection type selection,Medium,Future connection type,src/components/wizard/screens/ConnectionTypeSelection.tsx
+Connection Types,VPN to Cloud,Lock,Connection type selection,Medium,Future connection type,src/components/wizard/screens/ConnectionTypeSelection.tsx
+Connection Types,DataCenter to Cloud,Network,Connection type selection,Medium,Future connection type,src/components/wizard/screens/ConnectionTypeSelection.tsx
+Connection Types,Site to Cloud,Network,Connection type selection,Medium,Future connection type,src/components/wizard/screens/ConnectionTypeSelection.tsx
+Connection Types,Direct Connect,Network,Connection visualization,High,Connection edge type,src/components/network-designer/Edge.tsx
+Connection Types,Cloud Router,Router,Connection visualization,High,Connection edge type,src/components/network-designer/Edge.tsx
+Connection Types,Ultra-Low Latency,Zap,Connection visualization,Medium,Premium connection type,src/components/network-designer/Edge.tsx
+Connection Types,Quantum Secure,Shield,Connection visualization,Medium,Secure connection type,src/components/network-designer/Edge.tsx
+Connection Types,Backbone,Network,Connection visualization,Medium,Infrastructure connection,src/components/network-designer/Edge.tsx
+Connection Types,AVPN,Network,Connection visualization,Medium,VPN connection type,src/components/network-designer/Edge.tsx
+
+Cloud Providers,AWS,Cloud,Provider selection,High,Major cloud provider,src/components/wizard/screens/ProviderSelection.tsx
+Cloud Providers,Azure,Cloud,Provider selection,High,Major cloud provider,src/components/wizard/screens/ProviderSelection.tsx
+Cloud Providers,Google Cloud,Cloud,Provider selection,High,Major cloud provider,src/components/wizard/screens/ProviderSelection.tsx
+Cloud Providers,Oracle Cloud,Cloud,Provider selection,Medium,Future cloud provider,src/components/wizard/screens/ProviderSelection.tsx
+Cloud Providers,IBM Cloud,Cloud,Provider selection,Medium,Future cloud provider,src/components/wizard/screens/ProviderSelection.tsx
+Cloud Providers,Equinix,Server,Colocation provider,Medium,Infrastructure provider,src/components/wizard/screens/ProviderSelection.tsx
+Cloud Providers,Digital Realty,Building,Data center provider,Medium,Infrastructure provider,src/components/wizard/screens/ProviderSelection.tsx
+
+Status Indicators,Active,CheckCircle,Status display,High,Connection status,src/components/connection/ConnectionCard.tsx
+Status Indicators,Inactive,XCircle,Status display,High,Connection status,src/components/connection/ConnectionCard.tsx
+Status Indicators,Pending,Clock,Status display,High,Processing status,src/components/connection/ConnectionCard.tsx
+Status Indicators,Provisioning,Settings,Status display,Medium,Setup status,src/components/connection/vnf/VNFCard.tsx
+Status Indicators,Error,AlertTriangle,Error states,High,Error indication,src/components/connection/vnf/VNFCard.tsx
+Status Indicators,Healthy,CheckCircle,Health status,High,System health,src/components/group/card/GroupCardMetrics.tsx
+Status Indicators,Warning,AlertTriangle,Warning status,High,Warning indication,src/components/group/card/GroupCardMetrics.tsx
+Status Indicators,Critical,AlertCircle,Critical status,High,Critical alerts,src/components/group/card/GroupCardMetrics.tsx
+
+Actions,Edit,Edit2,Edit functionality,High,Edit actions throughout,src/components/common/OverflowMenu.tsx
+Actions,Delete,Trash2,Delete functionality,High,Delete actions throughout,src/components/common/OverflowMenu.tsx
+Actions,Download,Download,Export functionality,High,Data export,src/components/ConnectionGrid.tsx
+Actions,Upload,Upload,Import functionality,Medium,Data import,src/components/wizard/screens/AdvancedSettings.tsx
+Actions,Save,Save,Save functionality,High,Save operations,src/components/network-designer/Toolbar.tsx
+Actions,Cancel,X,Cancel operations,High,Cancel dialogs,src/components/common/Modal.tsx
+Actions,Refresh,RefreshCw,Data refresh,High,Refresh data,src/components/monitoring/tabs/RefreshControls.tsx
+Actions,Filter,Filter,Filter controls,High,Data filtering,src/components/common/FilterButton.tsx
+Actions,Export,Download,Data export,High,Export functionality,src/components/GroupGrid.tsx
+Actions,Import,Upload,Data import,Medium,Import functionality,src/components/wizard/screens/AdvancedSettings.tsx
+
+Network Components,Router,Router,Network equipment,High,Network infrastructure,src/components/network-designer/Node.tsx
+Network Components,Switch,Network,Network equipment,Medium,Network switching,Not implemented
+Network Components,Gateway,Globe,Network gateway,Medium,Network access point,Not implemented
+Network Components,Firewall,Shield,Security appliance,High,Network security,src/components/connection/vnf/VNFCard.tsx
+Network Components,Load Balancer,ArrowUpDown,Traffic distribution,Medium,Traffic management,Not implemented
+Network Components,VPN Gateway,Lock,VPN endpoint,Medium,Secure connectivity,Not implemented
+Network Components,NAT Gateway,Network,Address translation,Medium,Network translation,src/components/connection/vnf/VNFCard.tsx
+
+VNF Types,Firewall,Shield,Virtual firewall,High,Security function,src/components/connection/vnf/VNFCard.tsx
+VNF Types,SD-WAN,Globe,Software-defined WAN,High,Network function,src/components/connection/vnf/VNFCard.tsx
+VNF Types,Router,Router,Virtual router,High,Routing function,src/components/connection/vnf/VNFCard.tsx
+VNF Types,Virtual NAT,Network,Virtual NAT,High,Translation function,src/components/connection/vnf/VNFCard.tsx
+VNF Types,Custom VNF,ServerCog,Custom function,Medium,User-defined function,src/components/connection/vnf/VNFCard.tsx
+
+Performance Metrics,Latency,Activity,Network delay,High,Performance measurement,src/components/monitoring/metrics/NetworkMetrics.tsx
+Performance Metrics,Bandwidth,ArrowUpDown,Data throughput,High,Capacity measurement,src/components/monitoring/metrics/NetworkMetrics.tsx
+Performance Metrics,Packet Loss,Signal,Data loss rate,High,Reliability measurement,src/components/monitoring/metrics/PacketLossAnalysis.tsx
+Performance Metrics,Jitter,Radio,Delay variation,High,Quality measurement,src/components/monitoring/metrics/JitterAnalysis.tsx
+Performance Metrics,Uptime,Clock,Availability,High,Service availability,src/components/monitoring/metrics/NetworkMetrics.tsx
+Performance Metrics,Throughput,TrendingUp,Data rate,High,Performance indicator,src/components/monitoring/metrics/NetworkMetrics.tsx
+Performance Metrics,Utilization,BarChart2,Resource usage,High,Capacity usage,src/components/monitoring/metrics/BandwidthUtilization.tsx
+Performance Metrics,Error Rate,AlertTriangle,Failure rate,Medium,Error measurement,src/components/monitoring/metrics/ErrorRateChart.tsx
+
+Security Features,Encryption,Lock,Data protection,High,Security measure,src/components/connection/tabs/ConnectionOverview.tsx
+Security Features,DDoS Protection,Shield,Attack protection,High,Security service,src/components/connection/tabs/ConnectionOverview.tsx
+Security Features,IPSec,Lock,VPN security,Medium,Protocol security,src/components/network-designer/panels/configuration/tabs/SecurityTab.tsx
+Security Features,Access Control,Key,Permission management,High,Security control,src/components/connection/tabs/AccessConfiguration.tsx
+Security Features,Compliance,ShieldCheck,Regulatory compliance,Medium,Compliance status,src/components/monitoring/reporting/reports/ComplianceReports.tsx
+Security Features,Audit,FileText,Security audit,Medium,Audit logging,src/components/monitoring/reporting/reports/ComplianceReports.tsx
+
+Locations,US East,MapPin,Geographic region,High,Data center location,src/components/wizard/screens/ProviderSelection.tsx
+Locations,US West,MapPin,Geographic region,High,Data center location,src/components/wizard/screens/ProviderSelection.tsx
+Locations,EU West,MapPin,Geographic region,High,Data center location,src/components/wizard/screens/ProviderSelection.tsx
+Locations,Asia Pacific,MapPin,Geographic region,High,Data center location,src/components/wizard/screens/ProviderSelection.tsx
+
+User Management,Users,Users,User management,High,User administration,src/components/configure/users/UserList.tsx
+User Management,Roles,UserCheck,Role management,High,Permission roles,src/components/configure/users/RoleManagement.tsx
+User Management,Permissions,Key,Access permissions,High,Security permissions,src/components/connection/tabs/AccessConfiguration.tsx
+User Management,Groups,Layers,User groups,High,Group organization,src/components/GroupGrid.tsx
+User Management,Profile,User,User profile,High,User account,src/components/profile/UserProfile.tsx
+
+Billing,Cost,DollarSign,Financial data,High,Billing information,src/components/monitoring/BillingMetrics.tsx
+Billing,Invoice,Receipt,Billing document,High,Invoice management,src/components/monitoring/reporting/reports/billing/InvoiceTable.tsx
+Billing,Payment,CreditCard,Payment method,High,Payment processing,src/components/connection/tabs/BillingConfiguration.tsx
+Billing,Subscription,Calendar,Service subscription,Medium,Subscription management,src/components/configure/billing/SubscriptionDetails.tsx
+Billing,Usage,BarChart2,Resource usage,High,Usage tracking,src/components/configure/billing/UsageMetrics.tsx
+
+Monitoring,Alerts,Bell,System alerts,High,Alert notifications,src/components/monitoring/tabs/AlertsTab.tsx
+Monitoring,Logs,History,System logs,High,Log management,src/components/monitoring/tabs/LogsTab.tsx
+Monitoring,Reports,FileText,Report generation,High,Reporting system,src/components/monitoring/reporting/ReportingSection.tsx
+Monitoring,Analytics,BarChart2,Data analysis,High,Performance analysis,src/components/monitoring/metrics/NetworkMetrics.tsx
+Monitoring,Metrics,TrendingUp,Performance metrics,High,Metric tracking,src/components/monitoring/tabs/MetricsTab.tsx
+
+Data Types,CSV,FileText,Data format,Medium,Export format,src/components/ConnectionGrid.tsx
+Data Types,JSON,Code,Data format,Medium,API format,Not implemented
+Data Types,XML,Code,Data format,Low,Legacy format,Not implemented
+Data Types,PDF,FileText,Document format,Medium,Report format,Not implemented
+
+Time Ranges,Real-time,Clock,Time indicator,High,Live data,src/components/monitoring/components/TimeRangeSelector.tsx
+Time Ranges,Hourly,Clock,Time period,High,Time range option,src/hooks/useTimeRange.ts
+Time Ranges,Daily,Calendar,Time period,High,Time range option,src/hooks/useTimeRange.ts
+Time Ranges,Weekly,Calendar,Time period,High,Time range option,src/hooks/useTimeRange.ts
+Time Ranges,Monthly,Calendar,Time period,High,Time range option,src/hooks/useTimeRange.ts
+
+Network Types,Internet,Globe,Network type,High,Public internet,src/components/network-designer/Node.tsx
+Network Types,VPN,Lock,Secure network,High,Private network,src/components/network-designer/templates/vpn-to-cloud.ts
+Network Types,LAN,Network,Local network,Medium,Local area network,Not implemented
+Network Types,WAN,Globe,Wide area network,Medium,Wide area network,Not implemented
+Network Types,DMZ,Shield,Demilitarized zone,Low,Security zone,Not implemented
+
+Quality Metrics,SLA,CheckCircle,Service agreement,Medium,Service level,src/components/Marketplace.tsx
+Quality Metrics,Uptime,Clock,Service availability,High,Availability metric,src/components/monitoring/metrics/NetworkMetrics.tsx
+Quality Metrics,Downtime,XCircle,Service unavailability,Medium,Downtime tracking,Not implemented
+Quality Metrics,Performance,Activity,System performance,High,Performance indicator,src/components/monitoring/tabs/MetricsTab.tsx
+Quality Metrics,Reliability,Shield,System reliability,Medium,Reliability measure,Not implemented
+
+UI Elements,Expand,Maximize2,UI control,High,Expand interface,src/components/ConnectionGrid.tsx
+UI Elements,Minimize,Minimize2,UI control,High,Minimize interface,src/components/ConnectionGrid.tsx
+UI Elements,Collapse,ChevronUp,UI control,Medium,Collapse content,src/components/group/GroupCard.tsx
+UI Elements,Show More,ChevronDown,UI control,Medium,Expand content,src/components/group/GroupCard.tsx
+UI Elements,Grid View,LayoutGrid,View mode,High,Display mode,src/components/ConnectionGrid.tsx
+UI Elements,List View,List,View mode,High,Display mode,src/components/ConnectionGrid.tsx
+UI Elements,Topology View,Network,View mode,High,Network visualization,src/components/ConnectionGrid.tsx
+
+Protocols,BGP,Router,Routing protocol,Medium,Border Gateway Protocol,src/components/network-designer/panels/configuration/tabs/RoutingTab.tsx
+Protocols,OSPF,Network,Routing protocol,Medium,Open Shortest Path First,src/components/network-designer/panels/configuration/tabs/RoutingTab.tsx
+Protocols,EIGRP,Router,Routing protocol,Low,Enhanced IGRP,src/components/network-designer/panels/configuration/tabs/RoutingTab.tsx
+Protocols,Static,Settings,Routing type,Medium,Static routing,src/components/network-designer/panels/configuration/tabs/RoutingTab.tsx
+Protocols,TCP,Network,Network protocol,Medium,Transmission Control Protocol,src/components/monitoring/mobile/MobileNetworkAnalyzerTab.tsx
+Protocols,UDP,Network,Network protocol,Medium,User Datagram Protocol,src/components/monitoring/mobile/MobileNetworkAnalyzerTab.tsx
+Protocols,ICMP,Network,Network protocol,Low,Internet Control Message Protocol,src/components/monitoring/mobile/MobileNetworkAnalyzerTab.tsx
+Protocols,HTTP,Globe,Web protocol,Medium,Hypertext Transfer Protocol,Not implemented
+Protocols,HTTPS,Lock,Secure web protocol,Medium,Secure HTTP,Not implemented
+
+Alert Types,Critical,AlertCircle,Alert severity,High,Critical alerts,src/components/monitoring/shared/AlertCard.tsx
+Alert Types,Warning,AlertTriangle,Alert severity,High,Warning alerts,src/components/monitoring/shared/AlertCard.tsx
+Alert Types,Info,Info,Alert severity,High,Information alerts,src/components/monitoring/shared/AlertCard.tsx
+Alert Types,Success,CheckCircle,Success state,High,Success notifications,Not implemented
+Alert Types,Error,XCircle,Error state,High,Error notifications,src/components/common/ErrorBoundary.tsx
+
+Group Types,Business,Building,Group category,High,Business unit,src/components/GroupGrid.tsx
+Group Types,Department,Layers,Group category,High,Department group,src/components/GroupGrid.tsx
+Group Types,Project,FolderOpen,Group category,High,Project group,Not implemented
+Group Types,Team,Users,Group category,High,Team group,src/components/GroupGrid.tsx
+Group Types,Custom,Settings,Group category,Medium,Custom group type,src/components/GroupGrid.tsx
+
+Bandwidth Options,100 Mbps,ArrowUpDown,Bandwidth tier,High,Bandwidth option,src/components/wizard/screens/ConnectionConfiguration.tsx
+Bandwidth Options,500 Mbps,ArrowUpDown,Bandwidth tier,High,Bandwidth option,src/components/wizard/screens/ConnectionConfiguration.tsx
+Bandwidth Options,1 Gbps,ArrowUpDown,Bandwidth tier,High,Bandwidth option,src/components/wizard/screens/ConnectionConfiguration.tsx
+Bandwidth Options,10 Gbps,ArrowUpDown,Bandwidth tier,High,Bandwidth option,src/components/wizard/screens/ConnectionConfiguration.tsx
+Bandwidth Options,100 Gbps,ArrowUpDown,Bandwidth tier,Medium,High-end option,src/components/wizard/screens/ConnectionConfiguration.tsx
+
+Network Designer,Source Node,Server,Node type,High,Network source,src/components/network-designer/Node.tsx
+Network Designer,Destination Node,Cloud,Node type,High,Network destination,src/components/network-designer/Node.tsx
+Network Designer,Router Node,Router,Node type,High,Network router,src/components/network-designer/Node.tsx
+Network Designer,Network Node,Network,Node type,High,Network device,src/components/network-designer/Node.tsx
+Network Designer,Connection,Plus,Edge creation,High,Create connection,src/components/network-designer/Toolbar.tsx
+Network Designer,Template,Layers,Design template,Medium,Network template,src/components/network-designer/TemplatesDrawer.tsx
+Network Designer,Scenario,Play,Network test,Medium,Test scenario,src/components/network-designer/Toolbar.tsx
+
+AI Features,AI Assistant,Zap,AI functionality,High,AI assistance,src/components/wizard/NetworkAI.tsx
+AI Features,Recommendation,Sparkles,AI suggestions,High,AI recommendations,src/components/network-designer/panels/AIRecommendationEngine.tsx
+AI Features,Automation,Settings,Automated tasks,Medium,Process automation,Not implemented
+AI Features,Machine Learning,Cpu,ML capabilities,Low,ML features,Not implemented
+
+Configuration,Advanced Settings,Settings,Configuration,High,Advanced config,src/components/wizard/screens/AdvancedSettings.tsx
+Configuration,Basic Settings,Settings,Configuration,High,Basic config,Not implemented
+Configuration,Network Config,Network,Network setup,High,Network configuration,src/components/wizard/screens/AdvancedSettings.tsx
+Configuration,Security Config,Shield,Security setup,High,Security configuration,src/components/network-designer/panels/configuration/tabs/SecurityTab.tsx
+Configuration,Performance Config,Zap,Performance setup,High,Performance tuning,src/components/network-designer/panels/configuration/tabs/PerformanceTab.tsx
+
+System Operations,Backup,Download,Data backup,Medium,System backup,src/components/configure/BillingConfiguration.tsx
+System Operations,Restore,Upload,Data restore,Medium,System restore,src/components/configure/BillingConfiguration.tsx
+System Operations,Sync,RefreshCw,Data synchronization,Medium,Data sync,Not implemented
+System Operations,Deploy,Upload,System deployment,Medium,Deployment process,Not implemented
+System Operations,Rollback,Undo,Version control,Medium,Version rollback,src/components/connection/tabs/VersioningConfiguration.tsx
+
+Data Flow,Input,ArrowRight,Data flow direction,Medium,Data input,Not implemented
+Data Flow,Output,ArrowLeft,Data flow direction,Medium,Data output,Not implemented
+Data Flow,Bidirectional,ArrowUpDown,Data flow type,Medium,Two-way flow,src/components/connection/card/ConnectionCardMetrics.tsx
+Data Flow,Upstream,TrendingUp,Data direction,Medium,Outbound flow,Not implemented
+Data Flow,Downstream,TrendingDown,Data direction,Medium,Inbound flow,Not implemented
+
+Testing,Test Connection,Play,Connection testing,High,Connectivity test,src/components/connection/tabs/ConnectionDetails.tsx
+Testing,Ping Test,Activity,Network test,Medium,Ping connectivity,Not implemented
+Testing,Speed Test,Zap,Performance test,Medium,Speed testing,Not implemented
+Testing,Load Test,BarChart2,Stress testing,Low,Load testing,Not implemented
+
+Templates,Enterprise,Building,Template type,Medium,Business template,src/components/network-designer/TemplatesDrawer.tsx
+Templates,Security,Shield,Template type,Medium,Security template,src/components/network-designer/TemplatesDrawer.tsx
+Templates,Basic,Settings,Template type,Medium,Basic template,src/components/network-designer/TemplatesDrawer.tsx
+Templates,Custom,Cog,Template type,Medium,Custom template,src/components/network-designer/TemplatesDrawer.tsx
+
+Marketplace,Plans,ShoppingBag,Service plans,Medium,Service marketplace,src/components/Marketplace.tsx
+Marketplace,Services,Server,Available services,Medium,Service catalog,src/components/Marketplace.tsx
+Marketplace,Providers,Users,Service providers,Medium,Provider directory,Not implemented
+Marketplace,Pricing,DollarSign,Cost information,High,Price display,src/components/Marketplace.tsx
+
+Documentation,Guide,Book,Documentation type,Medium,User guide,src/components/pages/HelpResourcesPage.tsx
+Documentation,Tutorial,PlayCircle,Learning content,Medium,Video tutorial,src/components/pages/HelpResourcesPage.tsx
+Documentation,FAQ,FileText,Support content,Medium,Frequently asked questions,src/components/pages/HelpResourcesPage.tsx
+Documentation,API Docs,Code,Technical docs,Medium,API documentation,Not implemented
+
+Compliance,SOC 2,ShieldCheck,Compliance standard,Medium,Security compliance,src/components/monitoring/reporting/reports/ComplianceReports.tsx
+Compliance,PCI DSS,CreditCard,Payment compliance,Medium,Payment security,src/components/monitoring/reporting/reports/ComplianceReports.tsx
+Compliance,HIPAA,Shield,Healthcare compliance,Low,Healthcare data,Not implemented
+Compliance,GDPR,Shield,Privacy compliance,Low,Data privacy,Not implemented
+
+Tools,Network Analyzer,Network,Analysis tool,High,Network analysis,src/components/monitoring/mobile/MobileNetworkAnalyzerTab.tsx
+Tools,Configuration Tool,Settings,Config tool,High,Configuration management,Not implemented
+Tools,Monitoring Tool,Activity,Monitoring tool,High,System monitoring,src/components/monitoring/monitoring/MonitoringDashboard.tsx
+Tools,Reporting Tool,FileText,Reporting tool,High,Report generation,src/components/monitoring/reporting/ReportingSection.tsx
+
+Wizard Steps,Step Complete,Check,Wizard progress,High,Completed step,src/components/wizard/WizardStep.tsx
+Wizard Steps,Current Step,Circle,Wizard progress,High,Active step,src/components/wizard/WizardStep.tsx
+Wizard Steps,Future Step,Circle,Wizard progress,High,Upcoming step,src/components/wizard/WizardStep.tsx
+
+Integration,API,Code,Integration method,Medium,API integration,Not implemented
+Integration,Webhook,Globe,Integration method,Medium,Webhook integration,Not implemented
+Integration,SSO,Key,Authentication,Medium,Single sign-on,Not implemented
+Integration,LDAP,Users,Directory service,Low,Directory integration,Not implemented
+
+Quality Assurance,Health Check,Activity,System health,High,Health monitoring,src/components/connection/ConnectionCard.tsx
+Quality Assurance,Diagnostic,Settings,System diagnosis,Medium,System diagnosis,Not implemented
+Quality Assurance,Validation,CheckCircle,Data validation,Medium,Input validation,Not implemented
+Quality Assurance,Verification,Shield,System verification,Medium,System verification,Not implemented
+
+Mobile Features,Mobile Menu,Menu,Mobile navigation,High,Mobile interface,src/components/navigation/MobileMenu.tsx
+Mobile Features,Touch Interface,Smartphone,Mobile UI,Medium,Touch controls,Not implemented
+Mobile Features,Responsive,Monitor,Responsive design,Medium,Device adaptation,Not implemented
+
+Development,Debug,Bug,Development tool,Low,Debug mode,Not implemented
+Development,Console,Terminal,Development interface,Low,Debug console,src/components/network-designer/ScenarioConsole.tsx
+Development,Version,GitBranch,Version control,Medium,Software version,src/components/connection/tabs/VersioningConfiguration.tsx
+Development,Commit,GitCommit,Version control,Medium,Code commit,src/components/connection/tabs/VersioningConfiguration.tsx
+
+Miscellaneous,Loading,RefreshCw,Loading state,High,Loading indicator,src/components/common/LoadingSpinner.tsx
+Miscellaneous,Error,AlertTriangle,Error state,High,Error display,src/components/common/ErrorBoundary.tsx
+Miscellaneous,Empty State,Layers,Empty content,Medium,No data state,src/components/GroupGrid.tsx
+Miscellaneous,Placeholder,Square,Content placeholder,Low,Placeholder content,Not implemented

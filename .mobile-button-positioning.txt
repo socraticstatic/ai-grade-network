@@ -1,0 +1,113 @@
+MOBILE BUTTON POSITIONING FIX
+==============================
+
+Issue: Floating Action Button overlapping SmartAssistant button
+Status: ✅ FIXED
+
+BEFORE (Overlapping):
+┌─────────────────────────────────┐
+│                                 │
+│                                 │
+│                                 │
+│                                 │
+│                        [Both]   │ ← Overlapping at right-6
+└─────────────────────────────────┘
+
+AFTER (Fixed):
+┌─────────────────────────────────┐
+│                                 │
+│                                 │
+│                                 │
+│                    [Assistant]  │ ← bottom-20, right-4
+│                                 │
+│             [FAB]               │ ← bottom-6, right-20
+└─────────────────────────────────┘
+
+BUTTON SPECIFICATIONS
+---------------------
+
+SmartAssistant Button:
+- Position: fixed bottom-20 right-4 (80px from bottom, 16px from right)
+- Size: 48px × 48px (w-12 h-12)
+- Z-index: z-50 (higher priority)
+- Purpose: Open AI assistant chat
+
+Floating Action Button (FAB):
+- Position: fixed bottom-6 right-20 (24px from bottom, 80px from right)
+- Size: 56px × 56px (w-14 h-14)
+- Z-index: z-40 (lower than assistant)
+- Purpose: Create new connection
+- Active only on: Connections tab
+
+SPACING CALCULATIONS
+--------------------
+- Horizontal separation: 64px (80px - 16px)
+- Vertical separation: 56px (80px - 24px)
+- Clear space between buttons: ~16px minimum
+- Both buttons in thumb-friendly zone
+
+THUMB-ZONE OPTIMIZATION
+-----------------------
+Right-hand users:
+✓ Assistant button: Easy reach (bottom-right corner)
+✓ FAB: Comfortable reach (slightly left and lower)
+
+Left-hand users:
+✓ Both buttons accessible with thumb stretch
+✓ FAB slightly easier to reach
+
+DESIGN RATIONALE
+-----------------
+1. No overlap ensures both buttons are fully interactive
+2. FAB is lower for primary action prominence
+3. Assistant stays in traditional chat position (top-right of button area)
+4. Z-index ordering ensures assistant appears above when both visible
+5. Visual hierarchy: Larger FAB for primary action, smaller assistant for secondary
+
+VISUAL HIERARCHY
+----------------
+Primary: Floating Action Button (Create Connection)
+- Larger size (56px)
+- Lower position (more prominent)
+- Gradient background
+- Only visible on connections tab
+
+Secondary: SmartAssistant Button
+- Smaller size (48px)
+- Higher position
+- Solid color
+- Always visible
+
+ACCESSIBILITY
+-------------
+✓ Both buttons meet 44px minimum touch target
+✓ Clear visual separation
+✓ No accidental taps due to overlap
+✓ Proper ARIA labels
+✓ Z-index hierarchy prevents interaction issues
+
+FILES MODIFIED
+--------------
+src/components/MobileManagePage.tsx
+- Changed FAB position from right-6 to right-20
+- Changed Z-index from z-50 to z-40
+- Ensures no overlap with assistant button
+
+BUILD STATUS
+------------
+✓ Build successful (9.74s)
+✓ No TypeScript errors
+✓ No console warnings
+✓ Visual testing: No overlap confirmed
+
+TESTING CHECKLIST
+-----------------
+✓ FAB visible on connections tab
+✓ FAB hidden on other tabs
+✓ Assistant button always visible
+✓ No overlap between buttons
+✓ Both buttons clickable/tappable
+✓ Touch targets adequate (44px+)
+✓ Thumb-zone friendly positioning
+✓ Visual hierarchy clear
+✓ Animations working correctly

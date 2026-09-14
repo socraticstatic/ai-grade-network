@@ -1,0 +1,67 @@
+SUSTAINABILITY WIDGETS ADDED TO INSIGHTS CONTROL PANEL
+========================================================
+
+✓ New Category: "Insights" 
+  - Added to Control Center widget drawer
+  - Contains 4 sustainability-focused widgets
+
+WIDGETS CREATED:
+----------------
+
+1. PUE EFFICIENCY WIDGET (2x2 grid)
+   - Icon: Zap (green)
+   - Displays Power Usage Effectiveness metrics
+   - Shows current PUE score vs industry average
+   - Progress bar showing current vs target
+   - IT Load and Cooling power breakdown
+   - CO₂ savings calculation
+   - "View Trends" and "Set Goals" actions
+
+2. B CORP IMPACT WIDGET (1x2 grid)
+   - Icon: Award (blue)
+   - B Corporation certification progress
+   - Total impact score with certification percentage
+   - 4 impact areas: Governance, Workers, Community, Environment
+   - Progress bars for each impact area
+   - Next milestone indicator
+   - "View Report" and "Improve Score" actions
+
+3. CARBON FOOTPRINT WIDGET (2x2 grid)
+   - Icon: Leaf (green)
+   - Monthly CO₂ emissions tracking
+   - Carbon offset progress (65% neutralized)
+   - Gross vs Net emissions comparison
+   - Trees needed for annual offset
+   - Annual emissions in tonnes
+   - "Offset More" and "View Details" actions
+
+4. RENEWABLE ENERGY WIDGET (1x2 grid)
+   - Icon: Sun (green)
+   - Renewable energy percentage (73%)
+   - Energy mix progress bar
+   - Breakdown by source: Solar, Wind, Hydro
+   - Individual progress bars for each source
+   - Renewable vs Grid energy comparison
+   - "Energy Report" and "Add Sources" actions
+
+DESIGN PATTERNS FOLLOWED:
+--------------------------
+✓ Consistent with existing widget structure
+✓ Proper icon usage from lucide-react
+✓ Color coding (green for sustainability, blue for certification)
+✓ Grid sizing matches existing widgets (1x2, 2x2)
+✓ Proper TypeScript interfaces
+✓ Quick action buttons at bottom
+✓ Progress bars and metrics visualization
+✓ Hover states and transitions
+✓ Responsive layouts with proper spacing
+
+INTEGRATION:
+------------
+✓ Added to /src/components/control-center/widgets/categories/sustainability/
+✓ Exported via index.ts
+✓ Registered in main widgets/index.ts under "Insights" category
+✓ Automatically appears in Widget Drawer
+✓ Fully drag-and-drop compatible
+✓ Build verified successfully (control-center.js: 93.74 kB)
+

@@ -1,0 +1,603 @@
+/* ============================================================
+   AT&T SDCI Component Styles - Figma-matched (SDCI.fig)
+   ============================================================ */
+
+/* Button Styles
+   Figma: pill-shaped (r:800), h:36px, pad:8/16, ATT Aleck Sans 500 14px
+   ------------------------------------------------------------ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.25rem; /* 36px - Figma standard */
+  padding: 0.5rem 1rem; /* 8px 16px */
+  border-radius: 9999px; /* pill shape */
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-medium);
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem; /* 20px */
+  letter-spacing: -0.03em;
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+}
+
+.btn-sm {
+  height: 1.75rem; /* 28px */
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem; /* 12px */
+}
+
+.btn-lg {
+  height: 2.75rem; /* 44px */
+  padding: 0.625rem 1.5rem;
+}
+
+.btn-primary {
+  background-color: var(--button-primary-bg); /* #0057b8 */
+  color: var(--button-primary-text);
+  border: 1px solid transparent;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--button-primary-hover); /* #00388f */
+}
+
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--fw-bg-base), 0 0 0 4px var(--button-primary-focus-ring);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-cobalt-600); /* #0057b8 */
+  border: 1px solid var(--color-cobalt-600);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-cobalt-100); /* #e6f0fa */
+}
+
+.btn-outline {
+  background-color: var(--button-outline-bg);
+  color: var(--color-cobalt-600); /* #0057b8 - Figma: cobalt text, NOT gray */
+  border: 1px solid var(--color-cobalt-600); /* #0057b8 - Figma: cobalt border, NOT gray */
+}
+
+.btn-outline:hover:not(:disabled) {
+  background-color: var(--color-cobalt-100); /* #e6f0fa */
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Icon-only button (FAB)
+   Figma: 36x36, r:800, pad:8 all sides */
+.btn-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0.5rem;
+  border-radius: 9999px;
+}
+
+.btn-icon svg {
+  width: 1.25rem; /* 20px */
+  height: 1.25rem;
+}
+
+/* Form Styles
+   Figma: r:6px, 40px height, 14px text, #dcdfe3 border
+   ------------------------------------------------------------ */
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  height: 2.5rem; /* 40px */
+  border-radius: 0.375rem; /* 6px */
+  border: 1px solid var(--color-gray-300); /* #dcdfe3 */
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-family-base);
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+  line-height: 1.25rem;
+  letter-spacing: -0.03em;
+  color: var(--color-gray-800); /* #1d2329 */
+  background-color: var(--fw-bg-base);
+  transition-property: border-color, box-shadow;
+  transition-duration: 200ms;
+}
+
+.form-textarea {
+  height: auto;
+  min-height: 5rem;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-cobalt-600); /* #0057b8 */
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--color-gray-500); /* #878c94 */
+  font-weight: 500;
+}
+
+.form-input:disabled,
+.form-select:disabled,
+.form-textarea:disabled {
+  background-color: var(--color-gray-200); /* #f3f4f6 */
+  color: var(--color-gray-500);
+  cursor: not-allowed;
+}
+
+/* Form labels */
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-gray-700); /* #454b52 */
+  letter-spacing: -0.03em;
+  margin-bottom: 0.375rem;
+}
+
+/* Card Styles
+   Figma: r:16px (rounded-2xl), 1px #dcdfe3 border, white bg
+   ------------------------------------------------------------ */
+.card {
+  background-color: var(--fw-bg-base);
+  border-radius: 1rem; /* 16px - rounded-2xl */
+  border: 1px solid var(--color-gray-300); /* #dcdfe3 */
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 300ms;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-gray-300);
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.card-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-gray-300);
+}
+
+/* Status Indicators
+   Figma: pill badges with stroke borders, tag letter-spacing
+   ------------------------------------------------------------ */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem; /* 12px */
+  font-weight: 500;
+  letter-spacing: 0.04em; /* tag spacing */
+  border: 1px solid;
+}
+
+.status-active {
+  color: var(--color-success); /* #2d7e24 */
+  border-color: var(--color-success);
+}
+
+.status-inactive {
+  color: var(--color-gray-500); /* #878c94 */
+  border-color: var(--color-gray-500);
+}
+
+.status-warning {
+  color: var(--color-warning); /* #ea712f */
+  border-color: var(--color-warning);
+}
+
+.status-error {
+  color: var(--color-error); /* #c70032 */
+  border-color: var(--color-error);
+}
+
+/* Figma "GOOD" badge: bg #0057b8, r:8, pad 4/8, white text */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem; /* 8px */
+  font-size: 0.625rem; /* 10px */
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.status-tag-good {
+  background-color: var(--color-cobalt-600);
+  color: white;
+}
+
+.status-tag-inactive {
+  background-color: var(--color-gray-500);
+  color: white;
+}
+
+/* Navigation
+   Figma: top nav items 14px medium, active #0057b8
+   ------------------------------------------------------------ */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  color: var(--color-gray-800); /* #1d2329 */
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  border-radius: 0.375rem;
+  transition: color 200ms, background-color 200ms;
+}
+
+.nav-item:hover {
+  color: var(--color-gray-800);
+  background-color: var(--color-gray-100); /* #f8fafb */
+}
+
+.nav-item.active {
+  color: var(--color-cobalt-600); /* #0057b8 */
+}
+
+.nav-item.active .nav-icon {
+  color: var(--color-cobalt-600);
+}
+
+.nav-icon {
+  color: var(--color-gray-600); /* #686e74 */
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Vertical Sidebar Nav (Left-Hand Nav Standard)
+   Figma: 186px wide, border-l-2 active, NO bg fill, left-aligned
+   ------------------------------------------------------------ */
+.vertical-nav {
+  width: 186px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-gray-300); /* border-fw-secondary */
+  padding-right: 1rem;
+}
+
+.vertical-nav-item,
+button.border-l-2 {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1rem; /* px-4 py-3 */
+  font-size: 0.875rem; /* 14px - text-figma-base */
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--color-gray-800); /* #1d2329 - text-fw-heading */
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  text-align: left !important; /* Override button default center */
+  transition: color 200ms, border-color 200ms;
+}
+
+.vertical-nav-item:hover {
+  color: var(--color-cobalt-600);
+  border-left-color: var(--color-gray-300);
+}
+
+.vertical-nav-item.active {
+  color: var(--color-cobalt-600); /* text-fw-link */
+  border-left-color: var(--color-cobalt-600); /* border-fw-active */
+  background-color: transparent; /* NO bg fill */
+}
+
+.vertical-nav-item .nav-icon {
+  margin-right: 0.75rem; /* mr-3 */
+}
+
+.vertical-nav-item.active .nav-icon {
+  color: var(--color-cobalt-600);
+}
+
+.vertical-nav-category {
+  font-size: 0.75rem; /* 12px */
+  font-weight: 500;
+  color: var(--color-gray-600); /* #686e74 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  padding: 0 1rem;
+  text-align: left;
+}
+
+/* Tabs
+   Figma: horizontal, gap 8, active has underline #0057b8
+   ------------------------------------------------------------ */
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--color-gray-800);
+  border-bottom: 2px solid transparent;
+  transition: color 200ms, border-color 200ms;
+}
+
+.tab-item:hover {
+  color: var(--color-cobalt-600);
+}
+
+.tab-item.active {
+  color: var(--color-cobalt-600);
+  border-bottom-color: var(--color-cobalt-600);
+}
+
+/* Tab badge (count) */
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--color-cobalt-600);
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 500;
+}
+
+/* Table Styles
+   Figma: 14px text, #f8fafb header bg, 48px row height
+   Headers: text-figma-base font-medium text-fw-heading bg-fw-wash
+   NOT uppercase, NOT tracking-wider
+   ------------------------------------------------------------ */
+.table-container {
+  border-radius: 1rem; /* 16px - rounded-2xl */
+  border: 1px solid var(--color-gray-300);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th {
+  background-color: var(--color-gray-100); /* #f8fafb - bg-fw-wash */
+  color: var(--color-gray-800); /* #1d2329 - text-fw-heading, NOT muted, NOT uppercase */
+  font-size: 0.875rem; /* 14px - text-figma-base */
+  font-weight: 500; /* font-medium */
+  letter-spacing: -0.03em; /* NOT tracking-wider */
+  text-transform: none; /* NEVER uppercase */
+  padding: 0.75rem 1.5rem;
+  text-align: left;
+  height: 3rem; /* 48px */
+}
+
+.table td {
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid var(--color-gray-300);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--color-gray-800);
+  height: 3rem; /* 48px */
+}
+
+.table tr:hover td {
+  background-color: var(--color-gray-100);
+}
+
+.table tr.selected td {
+  background-color: var(--color-cobalt-100); /* #e6f0fa */
+}
+
+/* Search Input
+   Figma: pill-shaped (rounded-full), white bg, 560px wide, h-10
+   placeholder #686e74
+   ------------------------------------------------------------ */
+.search-input {
+  height: 2.5rem; /* h-10, 40px */
+  max-width: 35rem; /* 560px */
+  padding-left: 2.5rem;
+  border-radius: 9999px; /* rounded-full - pill shape */
+  border: 1px solid var(--color-gray-300); /* border-fw-secondary */
+  background-color: var(--fw-bg-base); /* bg-fw-base */
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--color-gray-800);
+}
+
+.search-input::placeholder {
+  color: var(--color-gray-600); /* #686e74 */
+}
+
+.search-input:focus {
+  border-color: var(--color-cobalt-600);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+  outline: none;
+}
+
+/* Toolbar
+   Figma: horizontal layout, gap between groups, items aligned center
+   ------------------------------------------------------------ */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Modal / Side Panel
+   Figma: r:24px (rounded-3xl), max-width 720px, white bg
+   ------------------------------------------------------------ */
+.modal-overlay {
+  background-color: rgb(0 0 0 / 0.4);
+  z-index: var(--z-40, 40);
+}
+
+.modal-content {
+  background-color: var(--fw-bg-base);
+  border-radius: 1.5rem; /* 24px - rounded-3xl */
+  max-width: 45rem; /* 720px */
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-50, 50);
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--color-gray-300);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-gray-300);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* Side drawer variant */
+.side-drawer {
+  background-color: var(--fw-bg-base);
+  border-left: 1px solid var(--color-gray-300);
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-40, 40);
+}
+
+/* Page Layout
+   Figma: max-w-7xl (1280px), responsive padding
+   ------------------------------------------------------------ */
+.page-container {
+  max-width: 80rem; /* 1280px */
+  margin: 0 auto;
+  padding: 0 1rem; /* px-4 */
+}
+
+@media (min-width: 640px) {
+  .page-container {
+    padding: 0 1.5rem; /* sm:px-6 */
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-container {
+    padding: 0 2rem; /* lg:px-8 */
+  }
+}
+
+/* Page header pattern */
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-title {
+  font-size: 1.5rem; /* 24px - h5 */
+  font-weight: 700;
+  color: var(--color-gray-800);
+  letter-spacing: -0.03em;
+  line-height: 2rem;
+}
+
+.page-subtitle {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+  color: var(--color-gray-700); /* #454b52 */
+  letter-spacing: -0.03em;
+  margin-top: 0.25rem;
+}
+
+/* Coming Soon Badges
+   Two Figma variants:
+   1. Dark (wizard cards): bg-black r=8, text 12px w500 white
+      Frame ref: 5052:121727
+   2. Purple (info center): bg-#f3e8ff r=8, text 12px w500 #af29bb
+      Frame ref: 5098:39625
+   ------------------------------------------------------------ */
+.badge-coming-soon {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem; /* 4px 12px */
+  border-radius: 0.5rem; /* 8px - rounded-lg */
+  font-size: 0.75rem; /* 12px */
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.badge-coming-soon-dark {
+  background-color: var(--color-gray-800);
+  color: white;
+}
+
+.badge-coming-soon-purple {
+  background-color: var(--fw-purple-light);
+  color: var(--fw-purple);
+}
+
+/* Hero Banner Standard
+   NEVER use bg-black for hero/promo banners.
+   Use AT&T brand gradient: from-[#0057b8] via-[#003d82] to-[#009fdb]
+   bg-black is ONLY valid for modal overlays (bg-black/40).
+   ------------------------------------------------------------ */
+.hero-banner {
+  background: linear-gradient(135deg, #0057b8, #003d82, #009fdb);
+  border-radius: 1rem; /* 16px */
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-banner-lg {
+  border-radius: 2rem; /* 32px - marketplace hero */
+}
+
+.promo-strip {
+  background: linear-gradient(90deg, #0057b8, #009fdb);
+  border-radius: 1rem; /* 16px */
+}
+
+/* Bandwidth utilization bar
+   Figma: thin horizontal bar with green fill
+   ------------------------------------------------------------ */
+.progress-bar {
+  height: 0.375rem;
+  background-color: var(--color-gray-300);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background-color: var(--color-success);
+  transition: width 300ms;
+}

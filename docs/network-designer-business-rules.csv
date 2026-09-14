@@ -1,0 +1,140 @@
+Rule Category,Rule ID,Business Rule,Priority,Validation Type,Error Message,Implementation Notes,File Reference
+Node Creation,NC001,Users can add source nodes representing customer networks,High,Required,Source node required for connection,Minimum 1 source node needed,src/components/network-designer/NetworkDesigner.tsx
+Node Creation,NC002,Users can add destination nodes representing cloud providers,High,Required,Destination node required for connection,Minimum 1 destination node needed,src/components/network-designer/NetworkDesigner.tsx
+Node Creation,NC003,Users can add router nodes for traffic routing,Medium,Optional,N/A,Optional for simple topologies,src/components/network-designer/NetworkDesigner.tsx
+Node Creation,NC004,Users can add network nodes for specialized functions,Low,Optional,N/A,For advanced configurations,src/components/network-designer/NetworkDesigner.tsx
+Node Creation,NC005,Node names must be unique within the canvas,High,Validation,Node name already exists,Prevent duplicate naming,src/components/network-designer/Node.tsx
+
+Node Positioning,NP001,Nodes must be placed within canvas boundaries,High,Validation,Node position out of bounds,Enforce canvas limits,src/components/network-designer/Canvas.tsx
+Node Positioning,NP002,Nodes automatically snap to grid when enabled,Medium,Auto-correction,N/A,20px grid alignment,src/components/network-designer/Canvas.tsx
+Node Positioning,NP003,Dragged nodes stay within visible canvas area,High,Constraint,Cannot move node outside canvas,Boundary enforcement,src/components/network-designer/Canvas.tsx
+Node Positioning,NP004,Nodes cannot overlap other nodes,Medium,Validation,Node position conflicts with existing node,Prevent visual overlap,src/components/network-designer/Canvas.tsx
+
+Connection Rules,CR001,Connections require both source and target nodes,High,Validation,Both source and target nodes required,Cannot create incomplete edges,src/components/network-designer/NetworkDesigner.tsx
+Connection Rules,CR002,Users cannot connect a node to itself,High,Validation,Cannot connect node to itself,Prevent self-loops,src/components/network-designer/NetworkDesigner.tsx
+Connection Rules,CR003,Multiple connections between same nodes are allowed,Medium,Business Logic,N/A,Support redundant paths,src/components/network-designer/Edge.tsx
+Connection Rules,CR004,Connection bandwidth must be specified,High,Required,Bandwidth specification required,Default to 1 Gbps if not set,src/components/network-designer/Edge.tsx
+Connection Rules,CR005,Connection type must match node compatibility,High,Validation,Incompatible connection type for selected nodes,Validate source/destination types,src/components/network-designer/NetworkDesigner.tsx
+
+Bandwidth Rules,BR001,Available bandwidth options: 1 Gbps to 1 Tbps,High,Constraint,Invalid bandwidth selection,Predefined options only,src/components/network-designer/panels/ConfigurationPanel.tsx
+Bandwidth Rules,BR002,Total bandwidth cannot exceed connection capacity,High,Validation,Total bandwidth exceeds connection limit,Sum all link bandwidths,src/components/connection/links/LinkSection.tsx
+Bandwidth Rules,BR003,Link bandwidth allocation must be positive,High,Validation,Bandwidth must be greater than 0,Minimum 0.1 Gbps,src/components/connection/modals/VLANModal.tsx
+Bandwidth Rules,BR004,Bandwidth utilization warnings at 80% threshold,Medium,Warning,Approaching bandwidth limit,Visual warning indicators,src/components/connection/ConnectionCard.tsx
+Bandwidth Rules,BR005,Bandwidth utilization errors at 95% threshold,High,Error,Bandwidth limit exceeded,Block new allocations,src/components/connection/ConnectionCard.tsx
+
+Security Rules,SR001,All connections must have encryption enabled,High,Required,Encryption must be enabled,Default AES-256 encryption,src/components/network-designer/panels/configuration/tabs/SecurityTab.tsx
+Security Rules,SR002,Firewall protection is enabled by default,High,Default,N/A,Auto-enable firewall rules,src/components/network-designer/panels/configuration/tabs/SecurityTab.tsx
+Security Rules,SR003,DDoS protection available for premium connections,Medium,Feature,N/A,Optional premium feature,src/components/wizard/screens/AdvancedSettings.tsx
+Security Rules,SR004,IPSec can be enabled for VPN connections,Medium,Optional,N/A,VPN-specific security,src/components/network-designer/panels/configuration/tabs/SecurityTab.tsx
+Security Rules,SR005,Access control lists must be configured for routers,Medium,Required,ACL configuration required for router nodes,Security compliance requirement,src/components/network-designer/panels/configuration/tabs/SecurityTab.tsx
+
+Performance Rules,PR001,Latency targets: <1ms (Ultra) to <50ms (Economy),High,Configuration,Invalid latency target,Predefined performance tiers,src/components/network-designer/panels/configuration/tabs/PerformanceTab.tsx
+Performance Rules,PR002,Packet loss targets: <0.001% to <0.5%,High,Configuration,Invalid packet loss target,Quality service levels,src/components/network-designer/panels/ConfigurationPanel.tsx
+Performance Rules,PR003,QoS profiles can be assigned per connection,Medium,Feature,N/A,Voice/Video/Data priorities,src/components/network-designer/panels/configuration/tabs/PerformanceTab.tsx
+Performance Rules,PR004,Burst capacity can be 100-500% of base throughput,Medium,Range,Burst capacity out of range,Performance optimization,src/components/network-designer/panels/configuration/tabs/PerformanceTab.tsx
+
+Validation Rules,VR001,At least one connection must exist before completion,High,Validation,Network must have at least one connection,Prevent empty designs,src/components/network-designer/NetworkDesigner.tsx
+Validation Rules,VR002,All nodes must be connected (no isolated nodes),Medium,Warning,Isolated nodes detected in topology,Network completeness check,src/components/network-designer/ScenarioConsole.tsx
+Validation Rules,VR003,IP subnets must use valid CIDR notation,High,Validation,Invalid CIDR notation,Validate IP address format,src/components/wizard/screens/AdvancedSettings.tsx
+Validation Rules,VR004,VLAN IDs must be unique within connection,High,Validation,VLAN ID already exists,Range 1-4094 unique values,src/components/connection/modals/VLANModal.tsx
+Validation Rules,VR005,MTU size must be between 1280-9216 bytes,Medium,Range,MTU size out of valid range,Network frame size limits,src/components/connection/modals/VLANModal.tsx
+
+Template Rules,TR001,Templates provide pre-configured network designs,Medium,Feature,N/A,Accelerate design process,src/components/network-designer/TemplatesDrawer.tsx
+Template Rules,TR002,Templates can be customized after application,High,Feature,N/A,Allow post-template modifications,src/components/network-designer/NetworkDesigner.tsx
+Template Rules,TR003,Custom templates can be saved for reuse,Medium,Feature,N/A,User-defined templates,src/components/network-designer/Toolbar.tsx
+Template Rules,TR004,Enterprise templates require specific node types,Medium,Constraint,Template requires additional nodes,Business template compliance,src/components/network-designer/templates/TemplateLoader.ts
+
+Provider Rules,PR001,AWS connections support private/public/transit VIFs,High,Configuration,Invalid VIF type for provider,Provider-specific options,src/components/wizard/screens/AdvancedSettings.tsx
+Provider Rules,PR002,Azure connections use fixed 1500 MTU,High,Constraint,MTU automatically set for Azure,Provider limitation,src/components/wizard/screens/AdvancedSettings.tsx
+Provider Rules,PR003,Google Cloud uses fixed 1500 MTU,High,Constraint,MTU automatically set for Google Cloud,Provider limitation,src/components/wizard/screens/AdvancedSettings.tsx
+Provider Rules,PR004,Provider-specific regions must match availability,High,Validation,Selected region not available for provider,Geographic constraints,src/components/wizard/screens/ProviderSelection.tsx
+
+Routing Rules,RR001,BGP ASN must be valid public or private range,High,Validation,Invalid ASN range,Public: 1-64511 Private: 64512-65534,src/components/wizard/screens/AdvancedSettings.tsx
+Routing Rules,RR002,Route advertisements must use valid CIDR notation,High,Validation,Invalid route advertisement format,Network routing requirement,src/components/network-designer/panels/configuration/tabs/RoutingTab.tsx
+Routing Rules,RR003,Static routes can be configured as backup,Medium,Feature,N/A,Routing redundancy option,src/components/network-designer/panels/configuration/tabs/RoutingTab.tsx
+Routing Rules,RR004,Route filters can be applied for traffic control,Medium,Feature,N/A,Advanced routing control,src/components/connection/cloudrouter/CloudRouterModal.tsx
+
+VNF Rules,VF001,VNFs must be associated with a Cloud Router,High,Required,Cloud Router selection required,VNF dependency requirement,src/components/connection/modals/VNFModal.tsx
+VNF Rules,VF002,VNF names must be unique within connection,High,Validation,VNF name already exists,Prevent naming conflicts,src/components/connection/modals/VNFModal.tsx
+VNF Rules,VF003,VNF interfaces can have multiple types (WAN/LAN/MGMT),Medium,Configuration,N/A,Interface type classification,src/components/connection/modals/VNFModal.tsx
+VNF Rules,VF004,VNF throughput must match or exceed link requirements,Medium,Validation,VNF throughput insufficient for allocated bandwidth,Performance requirement,src/components/connection/vnf/VNFCard.tsx
+VNF Rules,VF005,License expiry dates must be monitored,Medium,Warning,VNF license expires soon,License compliance,src/components/connection/vnf/VNFCard.tsx
+
+Link Rules,LR001,VLAN IDs must be between 1-4094,High,Range,VLAN ID out of valid range,IEEE 802.1Q standard,src/components/connection/modals/VLANModal.tsx
+Link Rules,LR002,Link names must be unique within Cloud Router,High,Validation,Link name already exists in Cloud Router,Naming conflict prevention,src/components/connection/modals/VLANModal.tsx
+Link Rules,LR003,IP subnets must not overlap within connection,High,Validation,IP subnet overlaps with existing subnet,Network addressing conflict,src/components/connection/modals/VLANModal.tsx
+Link Rules,LR004,QoS priority values range from 0-7,Medium,Range,QoS priority out of valid range,Network priority levels,src/components/connection/modals/VLANModal.tsx
+Link Rules,LR005,Link bandwidth cannot exceed available capacity,High,Validation,Insufficient bandwidth available,Resource allocation limit,src/components/connection/links/LinkSection.tsx
+
+Status Rules,ST001,New connections start in Inactive status,High,Default,N/A,Safety default state,src/store/slices/connectionSlice.ts
+Status Rules,ST002,Status changes require 6+ minute processing time,High,Business Logic,Status change in progress,Realistic processing simulation,src/components/connection/ConnectionCard.tsx
+Status Rules,ST003,Active connections can process network traffic,High,State,N/A,Operational status requirement,src/components/connection/ConnectionCard.tsx
+Status Rules,ST004,Inactive connections cannot route traffic,High,Constraint,N/A,Safety constraint,src/components/connection/ConnectionCard.tsx
+
+Configuration Rules,CF001,Advanced settings are optional for basic connections,Medium,Feature,N/A,Simplified user experience,src/components/wizard/screens/AdvancedSettings.tsx
+CF002,BFD enables faster failover detection,Medium,Feature,N/A,Network reliability enhancement,src/components/wizard/screens/AdvancedSettings.tsx
+CF003,Dual-stack supports both IPv4 and IPv6,High,Configuration,N/A,Protocol version support,src/components/wizard/screens/AdvancedSettings.tsx
+CF004,Internet subnets must be specified in CIDR notation,High,Validation,Invalid subnet format,Network addressing requirement,src/components/wizard/screens/AdvancedSettings.tsx
+
+Workflow Rules,WF001,Network design must be completed before creation,High,Workflow,Cannot create without complete design,Process requirement,src/components/network-designer/NetworkDesigner.tsx
+WF002,Users can save designs as templates,Medium,Feature,N/A,Design reusability,src/components/network-designer/Toolbar.tsx
+WF003,Scenario testing validates network functionality,Medium,Feature,N/A,Design verification process,src/components/network-designer/ScenarioConsole.tsx
+WF004,Users can undo recent design changes,High,Feature,N/A,Error recovery capability,src/components/network-designer/NetworkDesigner.tsx
+WF005,Canvas can be cleared to restart design,Medium,Feature,N/A,Design reset capability,src/components/network-designer/NetworkDesigner.tsx
+
+Data Rules,DR001,All configuration data must be serializable,High,Technical,N/A,React state management requirement,src/components/network-designer/NetworkDesigner.tsx
+DR002,Node and edge IDs must be unique globally,High,Validation,Duplicate ID detected,Data integrity requirement,src/components/network-designer/NetworkDesigner.tsx
+DR003,Design data can be exported as connection objects,High,Feature,N/A,Integration with main application,src/components/network-designer/NetworkDesigner.tsx
+DR004,Historical changes are tracked for undo functionality,Medium,Feature,N/A,User experience enhancement,src/components/network-designer/NetworkDesigner.tsx
+
+UI Rules,UR001,Selected nodes are visually highlighted,High,UX,N/A,User interaction feedback,src/components/network-designer/Node.tsx
+UR002,Edge creation requires two-step process (start/end),High,UX,N/A,Prevent accidental connections,src/components/network-designer/NetworkDesigner.tsx
+UR003,Tooltips show node/edge details on hover,Medium,UX,N/A,Information display,src/components/network-designer/Node.tsx
+UR004,Canvas supports zoom and pan operations,Low,Feature,N/A,Large design navigation,Not implemented
+UR005,Grid snap can be toggled on/off,Medium,Feature,N/A,Precision vs flexibility,src/components/network-designer/Canvas.tsx
+
+Business Logic,BL001,Connection creation converts design to network objects,High,Process,N/A,Final output transformation,src/components/network-designer/NetworkDesigner.tsx
+BL002,Templates accelerate common design patterns,Medium,Feature,N/A,Design efficiency,src/components/network-designer/TemplatesDrawer.tsx
+BL003,AI recommendations can generate initial designs,Medium,Feature,N/A,Design assistance,src/components/network-designer/panels/AIRecommendationEngine.tsx
+BL004,Real-time validation prevents invalid configurations,High,UX,N/A,Immediate feedback,src/components/network-designer/NetworkDesigner.tsx
+BL005,Design complexity scales with user requirements,Medium,Feature,N/A,Adaptive interface,src/components/network-designer/panels/AIRecommendationEngine.tsx
+
+Integration Rules,IR001,Visual designer integrates with step-by-step wizard,High,Feature,N/A,Multiple creation paths,src/components/wizard/ConnectionWizard.tsx
+IR002,Existing connections can be edited visually,High,Feature,N/A,Design modification capability,src/components/connection/ConnectionVisualization.tsx
+IR003,Design results integrate with connection management,High,Process,N/A,Seamless workflow integration,src/components/wizard/ConnectionWizard.tsx
+IR004,Changes are saved to application state,High,Data,N/A,Persistence requirement,src/components/wizard/ConnectionWizard.tsx
+
+Template Rules,TR005,Templates include enterprise and basic categories,Medium,Classification,N/A,User skill level accommodation,src/components/network-designer/TemplatesDrawer.tsx
+TR006,Security-focused templates enable additional protections,Medium,Feature,N/A,Security-first design approach,src/components/network-designer/TemplatesDrawer.tsx
+TR007,Templates can be previewed before application,High,UX,N/A,Informed decision making,src/components/network-designer/templates/TemplatePreview.tsx
+TR008,Applied templates can be further customized,High,Feature,N/A,Template flexibility,src/components/network-designer/NetworkDesigner.tsx
+
+Performance Rules,PF001,Network scenarios can be tested before deployment,Medium,Feature,N/A,Design validation process,src/components/network-designer/ScenarioConsole.tsx
+PF002,Performance metrics are simulated during testing,Medium,Feature,N/A,Realistic performance preview,src/components/network-designer/ScenarioConsole.tsx
+PF003,Canvas operations must be responsive (<100ms),High,Performance,N/A,User experience requirement,src/components/network-designer/Canvas.tsx
+PF004,Large designs (>20 nodes) may impact performance,Medium,Limitation,Design complexity may affect performance,Scalability consideration,src/components/network-designer/NetworkDesigner.tsx
+
+Error Handling,EH001,Invalid configurations show immediate feedback,High,UX,N/A,Real-time validation,src/components/network-designer/NetworkDesigner.tsx
+EH002,Network errors are logged for troubleshooting,Medium,Logging,N/A,Debug capability,src/components/network-designer/NetworkDesigner.tsx
+EH003,Failed scenario tests show detailed error info,Medium,UX,N/A,Debugging assistance,src/components/network-designer/ScenarioConsole.tsx
+EH004,Component loading failures show retry options,High,Recovery,N/A,Error recovery capability,src/components/network-designer/LazyNetworkDesigner.tsx
+
+Accessibility Rules,AC001,All interactive elements are keyboard accessible,High,A11Y,N/A,Accessibility compliance,src/components/network-designer/Node.tsx
+AC002,Screen readers can access node and edge information,High,A11Y,N/A,Accessibility compliance,src/components/network-designer/Node.tsx
+AC003,Color coding includes non-color indicators,Medium,A11Y,N/A,Color-blind accessibility,src/components/network-designer/Edge.tsx
+AC004,Focus management works correctly in modals,High,A11Y,N/A,Keyboard navigation,src/hooks/useFocusTrap.ts
+
+Data Persistence,DP001,Design state persists during wizard navigation,High,State,N/A,User experience continuity,src/components/wizard/ConnectionWizard.tsx
+DP002,Unsaved changes warn before navigation,Medium,UX,N/A,Prevent data loss,src/components/network-designer/NetworkDesigner.tsx
+DP003,Design history enables undo operations,Medium,Feature,N/A,Error recovery,src/components/network-designer/NetworkDesigner.tsx
+DP004,Auto-save prevents accidental data loss,Low,Feature,N/A,Data protection,Not implemented
+
+Resource Rules,RES001,Canvas dimensions adapt to content size,Medium,Responsive,N/A,Dynamic sizing,src/components/network-designer/Canvas.tsx
+RES002,Large designs may require scrolling/zooming,Medium,UX,N/A,Scalability accommodation,Not implemented
+RES003,Memory usage optimized for complex designs,Medium,Performance,N/A,Resource management,src/components/network-designer/NetworkDesigner.tsx
+RES004,Concurrent users cannot edit same design,Low,Concurrency,N/A,Data consistency,Not implemented
+
+Export Rules,EX001,Designs export as valid connection configurations,High,Output,Export failed,Integration requirement,src/components/network-designer/NetworkDesigner.tsx
+EX002,Multiple connections can be created from one design,Medium,Feature,N/A,Multi-connection designs,src/components/network-designer/NetworkDesigner.tsx
+EX003,Exported data includes all node and edge properties,High,Data,N/A,Complete configuration transfer,src/components/network-designer/NetworkDesigner.tsx
+EX004,Design metadata is preserved in export,Medium,Data,N/A,Configuration traceability,src/components/network-designer/NetworkDesigner.tsx

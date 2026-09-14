@@ -1,0 +1,132 @@
+<h2>Create Pool Wizard - Current vs Figma</h2>
+<p class="subtitle">The existing AddGroupModal has all 5 steps and the right data model. It needs a Figma-exact restyle, not a rebuild.</p>
+
+<div class="section">
+  <h3>What changes</h3>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="modal-size" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Modal dimensions</h3>
+      <p><strong>Current:</strong> max-w-4xl, rounded-xl, header with icon<br>
+      <strong>Figma:</strong> 1056x636px, rounded-[24px], no header icon, title "Create New Pool" at 24/700</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="stepper" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>Step indicator</h3>
+      <p><strong>Current:</strong> Circles on bg-fw-wash row, vertical layout per step<br>
+      <strong>Figma:</strong> Numbered circles (28x28) connected by 166px lines (2px). Active = #0057b8, completed = #2d7e24, pending = #d9d9d9. Title 16/500, subtitle 14/500 #454b52. No background strip.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="forms" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>Form inputs</h3>
+      <p><strong>Current:</strong> px-4 py-3, rounded-lg<br>
+      <strong>Figma:</strong> 1008x36 inputs, r=8, border #686e74. Labels 14/500 with red * for required fields. Field order: Pool Name, Pool Type (dropdown), Description (textarea)</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="buttons" onclick="toggleSelect(this)">
+    <div class="letter">4</div>
+    <div class="content">
+      <h3>Action buttons</h3>
+      <p><strong>Current:</strong> "Back"/"Next" in bg-fw-wash footer strip<br>
+      <strong>Figma:</strong> "Cancel" (outline, r=800) + "Continue" (filled #0057b8, r=800) at 36px height. Right-aligned, no background strip. Step 2+ shows "Back" instead of "Cancel".</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>Figma Step 1 - Basic Info</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">Figma Frame #1 (1056x636)</div>
+  <div class="mockup-body" style="background: white; padding: 32px; border-radius: 24px; max-width: 700px; margin: 0 auto;">
+    <!-- Title -->
+    <div style="font-size: 24px; font-weight: 700; color: #1d2329; margin-bottom: 24px;">Create New Pool</div>
+
+    <!-- Stepper -->
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 32px; padding: 0 16px;">
+      <div style="display: flex; flex-direction: column; align-items: center; width: 100px;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #0057b8; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500;">1</div>
+        <div style="margin-top: 8px; text-align: center;">
+          <div style="font-size: 16px; font-weight: 500; color: #1d2329;">Basic Info</div>
+          <div style="font-size: 14px; font-weight: 500; color: #454b52;">Name and type</div>
+        </div>
+      </div>
+      <div style="flex: 1; height: 2px; background: #d9d9d9; margin-top: 14px;"></div>
+      <div style="display: flex; flex-direction: column; align-items: center; width: 100px;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #d9d9d9; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500;">2</div>
+        <div style="margin-top: 8px; text-align: center;">
+          <div style="font-size: 16px; font-weight: 500; color: #1d2329;">Members</div>
+          <div style="font-size: 14px; font-weight: 500; color: #454b52;">Add users</div>
+        </div>
+      </div>
+      <div style="flex: 1; height: 2px; background: #d9d9d9; margin-top: 14px;"></div>
+      <div style="display: flex; flex-direction: column; align-items: center; width: 100px;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #d9d9d9; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500;">3</div>
+        <div style="margin-top: 8px; text-align: center;">
+          <div style="font-size: 16px; font-weight: 500; color: #1d2329;">Connections</div>
+          <div style="font-size: 14px; font-weight: 500; color: #454b52;">Add connections</div>
+        </div>
+      </div>
+      <div style="flex: 1; height: 2px; background: #d9d9d9; margin-top: 14px;"></div>
+      <div style="display: flex; flex-direction: column; align-items: center; width: 100px;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #d9d9d9; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500;">4</div>
+        <div style="margin-top: 8px; text-align: center;">
+          <div style="font-size: 16px; font-weight: 500; color: #1d2329;">Details</div>
+          <div style="font-size: 14px; font-weight: 500; color: #454b52;">Address and contact</div>
+        </div>
+      </div>
+      <div style="flex: 1; height: 2px; background: #d9d9d9; margin-top: 14px;"></div>
+      <div style="display: flex; flex-direction: column; align-items: center; width: 100px;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #d9d9d9; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500;">5</div>
+        <div style="margin-top: 8px; text-align: center;">
+          <div style="font-size: 16px; font-weight: 500; color: #1d2329;">Review</div>
+          <div style="font-size: 14px; font-weight: 500; color: #454b52;">Confirm details</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-size: 14px; font-weight: 500; color: #1d2329; margin-bottom: 6px;">Pool Name <span style="color: #c70032;">*</span></label>
+      <div style="width: 100%; height: 36px; border: 1px solid #686e74; border-radius: 8px; padding: 0 12px; display: flex; align-items: center; color: #454b52; font-size: 14px;">Enter pool name</div>
+    </div>
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-size: 14px; font-weight: 500; color: #1d2329; margin-bottom: 6px;">Pool Type <span style="color: #c70032;">*</span></label>
+      <div style="width: 100%; height: 36px; border: 1px solid #686e74; border-radius: 8px; padding: 0 12px; display: flex; align-items: center; color: #454b52; font-size: 14px;">Business</div>
+    </div>
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-size: 14px; font-weight: 500; color: #1d2329; margin-bottom: 6px;">Description</label>
+      <div style="width: 100%; height: 76px; border: 1px solid #686e74; border-radius: 8px; padding: 8px 12px; color: #686e74; font-size: 14px;">Enter pool description</div>
+    </div>
+
+    <!-- Buttons -->
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px;">
+      <div style="height: 36px; padding: 0 20px; border: 1px solid #0057b8; border-radius: 800px; display: flex; align-items: center; color: #0057b8; font-size: 14px; font-weight: 500;">Cancel</div>
+      <div style="height: 36px; padding: 0 20px; background: #0057b8; border-radius: 800px; display: flex; align-items: center; color: white; font-size: 14px; font-weight: 500;">Continue</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>Approach</h3>
+  <p>Restyle the existing <code>AddGroupModal.tsx</code> in place. No new components, no new routes. The data model, step logic, and save handler stay identical. Changes are CSS/layout only:</p>
+  <ul style="color: #ccc; line-height: 1.8;">
+    <li>Modal container: 1056px max-width, 636px height, r=24</li>
+    <li>Dark overlay: rgba(27,27,29,0.56)</li>
+    <li>Stepper: horizontal numbered circles with connecting lines</li>
+    <li>Form inputs: h-9, r=8, border #686e74</li>
+    <li>Buttons: Cancel/Back (outline pill) + Continue/Create (filled pill), right-aligned</li>
+    <li>Remove header border, bg-fw-wash strips, icon</li>
+  </ul>
+</div>

@@ -1,0 +1,207 @@
+@import './styles/buttons.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Improve focus visibility */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-blue ring-offset-2;
+    border-radius: 0.5rem;
+  }
+
+  /* Improve text contrast - use fw-heading token, not Tailwind gray */
+  body {
+    @apply text-fw-heading;
+  }
+
+  /* Ensure sufficient text spacing */
+  p, h1, h2, h3, h4, h5, h6 {
+    @apply leading-relaxed;
+  }
+
+  /* Improve link accessibility */
+  a {
+    @apply underline-offset-2 focus:outline-none focus:ring-2 focus:ring-brand-blue;
+    border-radius: 0.25rem;
+  }
+
+  /* Improve form control accessibility */
+  input, select, textarea {
+    @apply focus:outline-none focus:ring-2 focus:ring-brand-blue;
+    border-radius: 0.5rem !important;
+  }
+
+  /* Ensure sufficient color contrast - remap Tailwind grays to fw tokens */
+  .text-gray-500 {
+    @apply text-fw-bodyLight;
+  }
+
+  /* Wizard form elements - squared appearance */
+  .wizard-card input, 
+  .wizard-card select, 
+  .wizard-card textarea,
+  .wizard-card .form-control {
+    border-radius: 0.5rem !important;
+  }
+  
+  /* Wizard form focus styles */
+  .wizard-card input:focus, 
+  .wizard-card select:focus, 
+  .wizard-card textarea:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(0, 49, 132, 0.3) !important;
+    border-color: #003184 !important;
+    border-radius: 0.5rem !important;
+  }
+}
+
+@layer components {
+  /* Card styles - Figma: bg-fw-base, rounded-2xl (16px), border-fw-secondary */
+  .card {
+    @apply bg-fw-base rounded-2xl border border-fw-secondary;
+  }
+
+  .card-header {
+    @apply p-4 border-b border-fw-secondary;
+  }
+
+  .card-body {
+    @apply p-4;
+  }
+
+  .card-footer {
+    @apply p-4 border-t border-fw-secondary;
+  }
+
+  .card-gradient {
+    @apply bg-fw-base hover:scale-[1.02] transition-all duration-300;
+    box-shadow: 
+      0 1px 2px rgba(0,0,0,0.04),
+      0 2px 4px rgba(0,0,0,0.04),
+      0 4px 8px rgba(0,0,0,0.04),
+      0 8px 16px rgba(0,0,0,0.04);
+  }
+
+  .card-gradient:hover {
+    box-shadow: 
+      0 2px 4px rgba(0,0,0,0.05),
+      0 4px 8px rgba(0,0,0,0.05),
+      0 8px 16px rgba(0,0,0,0.05),
+      0 16px 32px rgba(0,0,0,0.05);
+  }
+
+  /* Form styles */
+  .form-control {
+    @apply border-gray-300 shadow-sm focus:border-brand-blue focus:ring-brand-blue;
+    border-radius: 0.5rem !important;
+  }
+
+  /* Console styling for network scenario */
+  .console-line {
+    @apply font-mono text-sm leading-relaxed;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+  }
+  
+  /* Special class to exempt from rounding */
+  .no-rounded {
+    @apply rounded-none !important;
+    border-radius: 0 !important;
+  }
+  
+  /* Widget cards should be rectangular */
+  .widget-card {
+    border-radius: 0.5rem !important;
+  }
+  
+  /* Mobile tabs should never be rounded */
+  .flex.overflow-x-auto.hide-scrollbar button,
+  div[class*="sticky top-0"] div[class*="flex overflow-x-auto"] button {
+    @apply rounded-none !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* WIDGET DRAWER CARD OVERRIDE - rounded-lg (8px) */
+.p-4.space-y-6.overflow-y-auto button.w-full.p-3,
+div.p-4.space-y-6.overflow-y-auto div.space-y-2 button,
+.widget-card,
+div[class*="p-4 space-y-6 overflow-y-auto"] div[class*="space-y-2"] button[class*="w-full p-3"],
+button.w-full.p-3.bg-white.border.border-gray-200,
+button.w-full.p-3.bg-fw-base.border.border-fw-secondary {
+  border-radius: 0.5rem !important;
+}
+
+/* Matrix-style animation for scenario console */
+@keyframes matrix-rain {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.matrix-character {
+  animation: matrix-rain 2s linear infinite;
+  color: #00ff00;
+  opacity: 0;
+}
+
+/* High contrast mode improvements */
+@media (forced-colors: active) {
+  .btn {
+    @apply border-2;
+  }
+  
+  .card {
+    @apply border-2;
+  }
+}
+
+/* Reduced-motion handling lives in src/index.css — the single authoritative
+   block. The defeated universal-selector copy that sat here is gone. */
+
+/* Custom styles for wizard flow elements */
+.wizard-card {
+  border-radius: 0.75rem !important;
+}
+
+/* Specificity boost for network option buttons */
+button.network-option {
+  border-radius: 0.75rem !important;
+}
+
+/* Override form styles for wizard elements */
+.wizard-form-control,
+.wizard-card input,
+.wizard-card select,
+.wizard-card textarea {
+  border-radius: 0.5rem !important;
+}
+
+.wizard-card input:focus,
+.wizard-card select:focus,
+.wizard-card textarea:focus {
+  border-radius: 0.5rem !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(0, 49, 132, 0.3) !important;
+  border-color: #003184 !important;
+}
+
+@media print {
+  @page { margin: 0.75in 0.6in; size: letter portrait; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  body { background: white !important; }
+  h1, h2, h3 { break-after: avoid; }
+  .print-card { break-inside: avoid; }
+}
