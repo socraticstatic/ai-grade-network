@@ -31,14 +31,8 @@ export interface ActivityLogSlice {
   logActivity: (e: Omit<ActivityEvent, 'at' | 'admin'>) => void;
 }
 
+// There is no auth and no signed-in identity: every action is the operator's.
 function currentAdmin(): string {
-  try {
-    const raw = localStorage.getItem('att_nb_user');
-    if (raw) {
-      const u = JSON.parse(raw);
-      return u?.email || u?.name || 'admin';
-    }
-  } catch { /* fall through */ }
   return 'admin';
 }
 

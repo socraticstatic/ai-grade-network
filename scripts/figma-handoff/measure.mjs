@@ -17,7 +17,6 @@ fs.mkdirSync(capDir, { recursive: true });
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
 await page.addInitScript(({ seedAdvisor, dark }) => {
-  localStorage.setItem('att_nb_user', JSON.stringify({ email: 'handoff@att.com' }));
   localStorage.setItem('tour-main-app-completed', 'true');
   localStorage.setItem('product-tour-completed', 'true');
   localStorage.setItem('e2e-skip-demo-modal', 'true');

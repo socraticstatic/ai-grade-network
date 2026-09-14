@@ -355,19 +355,11 @@ AT&T NetBond SDCI is designed with accessibility in mind, following WCAG 2.1 AA 
 ## License
 
 Copyright © 2025 AT&T Intellectual Property. All rights reserved.
-## Demo emergency rollback (auth gate)
+## Auth
 
-The public site requires an @att.com email + 6-digit emailed code (Supabase
-project att-gate, `vuocjybbrgocmceqctna`). If auth misbehaves during a demo:
+There is none. The app opens straight onto the product.
 
-1. Edit `.github/workflows/gh-pages.yml` → change `VITE_AUTH_MODE: supabase`
-   to `VITE_AUTH_MODE: gate` (search for "DEMO EMERGENCY ROLLBACK").
-2. Commit and push to `main`. Push-to-live measured at ~3 minutes (drilled
-   2026-08-01).
-3. "gate" mode keeps the same login screen but validates locally with no
-   Supabase dependency. Restore by reverting the value to `supabase`.
-
-Honest threat model: this is a static GH Pages site — the JS bundle is public
-regardless of auth. The gate controls *use*, provides an audit trail
-(Supabase auth.users), and blocks non-@att.com sign-ins server-side
-(before-user-created hook; see docs/superpowers/plans/att-gate-hook.sql).
+This is a static GitHub Pages prototype: the JS bundle is public regardless,
+so a login screen gated nothing while costing every visitor a wall. The
+previous email gate, its OTP flow, and the third-party auth dependency were
+removed on 2026-09-14.

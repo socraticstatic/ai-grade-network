@@ -16,7 +16,6 @@ import { AssessmentBanner } from '../assessment/AssessmentBanner';
 import { IntentThreads } from '../discover/IntentThreads';
 import { InsightsPage } from '../ai-fabric/insights/InsightsPage';
 import { MainNav } from '../../components/navigation/MainNav';
-import { AuthProvider } from '../../contexts/AuthContext';
 import { StackPanel } from '../discover/StackPanel';
 import { TasksPage } from '../work/TasksPage';
 import { LayerDashboard } from '../layer-home/dashboard/LayerDashboard';
@@ -44,10 +43,7 @@ const screenFor: Record<string, () => ReactElement> = {
   // reports innerWidth 1024, exactly the desktop breakpoint, so the header's
   // !isMobile branch (innerWidth < 1024) holds here.
   andi: () => (
-    <AuthProvider>
-      <MainNav />
-    </AuthProvider>
-  ),
+          <MainNav />  ),
   // The twin's entry control lives in the stack panel's header and renders
   // unconditionally — unlike the tray, which exists only while moves are
   // staged, and which is why the beat does not point at it.

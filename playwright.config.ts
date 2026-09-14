@@ -33,10 +33,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Gate mode: legacy specs authenticate via seedAuth()'s att_nb_user key,
-    // which only works when the app runs the localStorage gate. The real
-    // Supabase flow is covered by e2e-auth/ (npm run test:e2e:auth).
-    command: 'VITE_AUTH_MODE=gate npm run dev -- --port 5199 --strictPort',
+    // No auth: the app opens straight onto the product.
+    command: 'npm run dev -- --port 5199 --strictPort',
     url: 'http://localhost:5199',
     // Never reuse. The port is fixed, so a dev server left running by ANOTHER
     // checkout of this repo (the main tree on a different branch, a sibling

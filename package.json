@@ -24,13 +24,11 @@
     "find-unused": "npx depcheck",
     "clean": "rm -rf dist node_modules/.vite",
     "optimize": "npm run clean && npm run build:analyze",
-    "deploy": "npm run build:gh-pages && gh-pages -d dist",
-    "test:e2e:auth": "playwright test -c playwright.auth.config.ts"
+    "deploy": "npm run build:gh-pages && gh-pages -d dist"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^8.0.0",
-    "@supabase/supabase-js": "^2.111.0",
     "chart.js": "^4.4.2",
     "echarts": "^6.1.0",
     "framer-motion": "^10.16.16",

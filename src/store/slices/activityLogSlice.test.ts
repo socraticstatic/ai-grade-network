@@ -8,7 +8,6 @@ beforeEach(() => localStorage.clear());
 
 describe('activityLogSlice', () => {
   it('stamps timestamp and admin on every event', () => {
-    localStorage.setItem('att_nb_user', JSON.stringify({ email: 'dana@meridian.example' }));
     const store = makeStore();
     store.getState().logActivity({ type: 'key-generated', connectionId: 'c1', message: 'ActivationKey generated' });
     const [e] = store.getState().activityEvents;

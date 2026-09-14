@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { Button } from '../../common/Button';
 import { diffVersions, nextVersionNumber } from '../../../utils/versionDiff';
-import { useAuth } from '../../../contexts/AuthContext';
 
 /** Title-cased display name derived from a sign-in email, e.g. j.smith@att.com -> "J Smith". */
 function authorFromEmail(email?: string | null): string {
@@ -102,8 +101,7 @@ interface VersioningConfigurationProps {
 }
 
 export function VersioningConfiguration({ connectionId, currentVersion }: VersioningConfigurationProps) {
-  const { user } = useAuth();
-  const author = authorFromEmail(user?.email);
+  const author = authorFromEmail();
   const [versions, setVersions] = useState<Version[]>([
     {
       id: 'v1.0.0',

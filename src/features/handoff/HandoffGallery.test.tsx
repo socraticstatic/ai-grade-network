@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, test, expect, vi } from 'vitest';
-import { AuthProvider } from '../../contexts/AuthContext';
 import { HandoffGallery } from './HandoffGallery';
 
 // Same framer-motion mock as MainNav.test.tsx — MobileMenu's panel list only
@@ -22,10 +21,7 @@ vi.mock('framer-motion', () => ({
 const renderGallery = () =>
   render(
     <MemoryRouter initialEntries={['/naas/__gallery']}>
-      <AuthProvider>
-        <HandoffGallery />
-      </AuthProvider>
-    </MemoryRouter>
+              <HandoffGallery />    </MemoryRouter>
   );
 
 describe('HandoffGallery', () => {

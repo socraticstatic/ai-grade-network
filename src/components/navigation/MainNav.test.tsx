@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '../../contexts/AuthContext';
 import { MainNav } from './MainNav';
 import { NAV_DISCOVER, NAV_LAYERS, layerDestinations } from './navItems';
 
@@ -21,16 +20,11 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>
 }));
 
-// AuthProvider wraps every render for parity with MainNav.curated.test.tsx
-// (kept even though MobileMenu no longer calls useAuth() — see MobileMenu.tsx).
 describe('MainNav', () => {
   it('renders the logo', () => {
     render(
       <BrowserRouter>
-        <AuthProvider>
-          <MainNav />
-        </AuthProvider>
-      </BrowserRouter>
+                  <MainNav />      </BrowserRouter>
     );
 
     // Rebrand: default tenant branding is "AI-grade network" (previously the old portal brand, and "NetBond" before that).
@@ -47,10 +41,7 @@ describe('MainNav', () => {
   it('hamburger opens the mobile drawer, and it contains every curated nav destination', () => {
     render(
       <BrowserRouter>
-        <AuthProvider>
-          <MainNav />
-        </AuthProvider>
-      </BrowserRouter>
+                  <MainNav />      </BrowserRouter>
     );
 
     // The drawer is mounted but closed until the hamburger is clicked.
@@ -100,10 +91,7 @@ describe('MainNav', () => {
 
     render(
       <BrowserRouter>
-        <AuthProvider>
-          <MainNav items={customItems} />
-        </AuthProvider>
-      </BrowserRouter>
+                  <MainNav items={customItems} />      </BrowserRouter>
     );
 
     expect(screen.getByText('Custom')).toBeInTheDocument();

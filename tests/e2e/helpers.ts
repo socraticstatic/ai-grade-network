@@ -1,12 +1,10 @@
 import type { Page } from '@playwright/test';
 
-const AUTH_KEY = 'att_nb_user';
 const AUTH_VALUE = JSON.stringify({ email: 'test@att.com' });
 
 export async function seedAuth(page: Page) {
   await page.addInitScript(() => {
     // Auth
-    localStorage.setItem('att_nb_user', JSON.stringify({ email: 'test@att.com' }));
     // Dismiss product tour
     localStorage.setItem('tour-main-app-completed', 'true');
     localStorage.setItem('product-tour-completed', 'true');

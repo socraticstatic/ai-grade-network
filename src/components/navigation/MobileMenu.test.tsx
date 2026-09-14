@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '../../contexts/AuthContext';
 import { MobileMenu } from './MobileMenu';
 import { NAV_LAYERS, layerDestinations } from './navItems';
 
@@ -46,10 +45,7 @@ function renderMobileMenu(props: Partial<React.ComponentProps<typeof MobileMenu>
 
   return render(
     <BrowserRouter>
-      <AuthProvider>
-        <MobileMenu {...defaultProps} {...props} />
-      </AuthProvider>
-    </BrowserRouter>
+              <MobileMenu {...defaultProps} {...props} />    </BrowserRouter>
   );
 }
 

@@ -85,11 +85,11 @@ Same-verb hops carry the verb. From NetBond `/monitor`, the Network services row
 
 ### 5.4 What crosses on a hop
 
-Both apps deploy under `socraticstatic.github.io`, so localStorage and the Supabase session are already shared in production. Dev runs on two ports, which are two origins. The contract must work on both, so the query string is the contract and localStorage is an enrichment.
+Both apps deploy under `socraticstatic.github.io`, so localStorage is already shared in production. Dev runs on two ports, which are two origins. The contract must work on both, so the query string is the contract and localStorage is an enrichment.
 
 Every cross-app link carries `?from=<netbond|agn>&tenant=<tenantId>`. The receiving app reads them on boot, sets the tenant, and strips the params from the URL. If the tenant is unknown to the receiver, it falls back to TNT-001 and shows the existing "Viewing as" banner with the tenant name it was handed.
 
-Auth is not carried. Both apps already share the default Supabase storage key. A hop in production is a page load with the session in place. In `gate` and `off` auth modes the hop behaves the same.
+Auth is not carried: there is no auth. A hop in production is an ordinary page load.
 
 ### 5.5 The localStorage collision
 
@@ -251,7 +251,7 @@ The wizard's steps and rules, the LMCC flows, Connection Hubs and their auto-gro
 
 ## 13. Out of scope
 
-Pricing engine, checkout, any backend, real telemetry, Angular parity, a unified RBAC, a shared component package, single sign-on work beyond the shared Supabase key that already exists, the Transport and access layer's screens.
+Pricing engine, checkout, any backend, real telemetry, Angular parity, a unified RBAC, a shared component package, single sign-on, the Transport and access layer's screens.
 
 ## 14. Testing
 

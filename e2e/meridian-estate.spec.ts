@@ -8,9 +8,9 @@ import { seedAuth } from '../tests/e2e/helpers';
  * — not `/#/discover?estate=meridian`, which the hash router would swallow into
  * the hash fragment and resolveProfile would never see.
  *
- * seedAuth() is required first: the dev server runs VITE_AUTH_MODE=gate (see
+ * seedAuth() is a no-op now that auth is gone (see
  * playwright.config.ts), and every existing Discover spec seeds the
- * att_nb_user localStorage key before navigating for the same reason.
+ * playwright.config.ts); it is kept so the specs read unchanged.
  *
  * Task 5 (discover-advisor) — test drift, not weakening: `/discover` now
  * gates on advisorPhase.ts's per-profile done-flag and meridian is NOT

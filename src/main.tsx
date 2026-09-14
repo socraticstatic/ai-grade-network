@@ -1,33 +1,10 @@
-import { lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-const MagicLinkLogin = lazy(() => import('./components/pages/MagicLinkLogin'));
-
-// Root gate: the whole app renders only for a signed-in user. Gating here
-// instead of per-route keeps one uniform wrapper across all four AT&T
-// prototypes and avoids route-tree surgery (see docs/superpowers/plans/
-// 2026-08-01-att-email-gate-rollout.md).
-function Gate() {
-  const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="h-8 w-8 border-2 border-[#0057b8] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-  if (!user) {
-    return (
-      <Suspense fallback={null}>
-        <MagicLinkLogin />
-      </Suspense>
-    );
-  }
-  return <App />;
-}
+// No auth. The app opens straight onto the product: this is a static
+// prototype whose bundle is public regardless, so a login screen bought
+// nothing and cost every visitor a wall.
 import './index.css';
 import './styles/fonts.css';
 import { initializePerformanceOptimizations } from './utils/performanceOptimizations';
@@ -107,9 +84,7 @@ if (!rootElement) {
     // Use HashRouter for file:// protocol compatibility (flash drive usage)
     root.render(
       <HashRouter>
-        <AuthProvider>
-          <Gate />
-        </AuthProvider>
+        <App />
       </HashRouter>
     );
     

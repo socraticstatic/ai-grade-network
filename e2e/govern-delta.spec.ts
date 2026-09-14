@@ -18,7 +18,6 @@ async function firstMove(page: Page) {
   await page.addInitScript(() => {
     localStorage.clear();
     sessionStorage.clear();
-    localStorage.setItem('att_nb_user', JSON.stringify({ email: 'test@att.com' }));
     localStorage.setItem('tour-main-app-completed', 'true');
     localStorage.setItem('product-tour-completed', 'true');
     localStorage.setItem('e2e-skip-demo-modal', 'true');

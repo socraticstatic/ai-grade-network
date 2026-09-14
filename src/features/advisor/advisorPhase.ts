@@ -44,7 +44,7 @@ export const advisorDoneKey = (profile: string) => `advisor:${profile}:done`;
  * Whether this profile has already been through the advisor once — either
  * by accepting an offer tier or by using the "Skip to the estate" link.
  * localStorage errors (private browsing, quota) read as "not done" rather
- * than throwing, matching AuthContext's try/catch idiom.
+ * than throwing: storage may be unavailable in private mode.
  */
 /* In-memory only, never persisted. Two jobs:
  *   1. The demo contract: Meridian must offer the advisor on EVERY page

@@ -4,13 +4,11 @@ import { describe, test, expect } from 'vitest';
 import { MainNav } from './MainNav';
 import { NAV_LAYERS, NAV_ITEMS } from './navItems';
 import { attIcons } from '../icons/att-icons';
-import { AuthProvider } from '../../contexts/AuthContext';
 
 const renderNav = (path = '/discover') =>
   render(
     <MemoryRouter initialEntries={[path]}>
-      <AuthProvider><MainNav /></AuthProvider>
-    </MemoryRouter>,
+      <MainNav />    </MemoryRouter>,
   );
 
 describe('MainNav curated AI-grade network nav — layers on top', () => {
