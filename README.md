@@ -12,6 +12,19 @@ read **[docs/INTEGRATING.md](docs/INTEGRATING.md)** — it is written for that j
 
 ---
 
+## Download it
+
+Live: <https://socraticstatic.github.io/ai-grade-network/>
+
+Package: **<https://socraticstatic.github.io/ai-grade-network/storefront-latest.zip>**
+
+That link always serves the current drop, so it is the one to send. Every
+build is also published under its own dated name if you need to pin one. The
+zip unpacks to a single `storefront/` folder; `cd` into it and follow *Stand
+it up* below. The AT&T Aleck Sans font files are **not** in it — see *Fonts*.
+
+---
+
 ## Stand it up
 
 Any static file server will do. It must be served over HTTP, not opened from
@@ -118,8 +131,21 @@ naas-paths.js             path pricing and comparison
 naas-fabric.js            the fabric picture on Discover
 support.js                the dc-runtime: template directives and bindings
 brand/                    AT&T functional icons and marks
+vendor/                   React, ReactDOM, Babel (UMD) — see NOTICE
+fonts/                    where AT&T Aleck Sans goes; not shipped, see below
+tests/                    node --test suite over the data models
 docs/screenshots/         the images in this README
 scripts/stamp-version.sh  deploy-time build stamp and cache-busting
+scripts/make-drop.sh      builds the downloadable package
+NOTICE                    licence, confidentiality, third-party components
+```
+
+Run the tests with `npm test`. They cover the data models rather than the
+markup: the flow map's arithmetic (every level of the drill has to add up to
+the row above it), the site and cloud trees, the cost model, and the panels.
+
+```bash
+npm test
 ```
 
 ### How the templating works
@@ -134,8 +160,11 @@ The markup is plain HTML with three additions, resolved by `support.js`:
 
 Bindings resolve against the object returned by `renderVals()` in
 `NaaS Storefront.dc.html`, which spreads the values built in `naas-app.js`.
-There is no framework of ours to learn: React 18 (UMD, from a CDN) renders,
-and everything you touch is a plain object.
+There is no framework of ours to learn: React 18 (UMD) renders, and
+everything you touch is a plain object. React, ReactDOM and Babel are
+**vendored in `vendor/`**, not pulled from a CDN — AT&T corporate networks
+block the public CDNs behind an SRI check and the page comes up blank. Keep
+them local if you move this anywhere inside AT&T.
 
 One trap worth knowing: **`sc-for` never renders inside a `<table>`.** The
 browser's table parser hoists the custom element out of the row before the

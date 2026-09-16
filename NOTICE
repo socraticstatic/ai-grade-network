@@ -16,9 +16,10 @@ CONTENTS AND THIRD-PARTY COMPONENTS
 -----------------------------------
 All source in this package is AT&T work product.
 
-React and ReactDOM are loaded at runtime from a public CDN and are not
-redistributed here. React is Copyright (c) Meta Platforms, Inc. and
-affiliates, licensed under the MIT License.
+React, ReactDOM and @babel/standalone are redistributed in vendor/, because
+AT&T corporate networks block the public CDNs and the page renders blank
+without them. They are MIT licensed; the copyright notices and licence text
+are in vendor/LICENSE-third-party.txt.
 
 The AT&T Aleck Sans typeface is licensed and is NOT included in this package.
 The pages fall back to a system sans-serif stack in its absence. Obtain the

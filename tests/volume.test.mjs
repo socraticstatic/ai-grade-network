@@ -18,5 +18,5 @@ test('volume list: worst first, searchable, filterable, paged, bulk-countable', 
   const p2 = volumeList(est, { cls: 'Branch', metro: m.name }, { page: 2 }); assert.equal(p2.shownCount, Math.min(120, m.count));
   const sel = volumeList(est, { cls: 'Branch', metro: m.name }, { sel: v.rows.slice(0, 5).map(x => x.id) }); assert.equal(sel.selectedCount, 5); assert.match(sel.bulk.label, /5 selected/);
   assert.equal(volumeList(est, { cls: 'Branch', metro: 'Nowhere' }), null);
-  const atm = S.siteTree(est).find(c => c.cls === 'Edge').children[0]; const va = volumeList(est, { cls: 'Edge', metro: atm.name }); assert.equal(va.counts.total, 48); assert.match(va.title, /ATMs/);
+  const atm = S.siteTree(est).find(c => c.cls === 'Edge').children[0]; const va = volumeList(est, { cls: 'Edge', metro: atm.name }); assert.equal(va.counts.total, 48); assert.match(va.title, /edge devices/);
 });

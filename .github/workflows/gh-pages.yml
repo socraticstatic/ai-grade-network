@@ -32,7 +32,11 @@ jobs:
         run: bash scripts/stamp-version.sh _site
 
       - name: Carry the drop package into the site
-        run: cp storefront-*.zip _site/
+        run: |
+          cp storefront-*.zip _site/
+          # A stable URL as well as the dated one, so the link we hand people
+          # keeps working across drops.
+          cp storefront-*.zip _site/storefront-latest.zip
 
 
       - name: Upload artifact
