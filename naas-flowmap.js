@@ -24,6 +24,18 @@ export const deltaOf = (key) => ((hash(key + ':d') % 70) - 25);
 export const shapeAt = (key, t) => { const a = (hash(key + ':a') % 40) / 100, ph = (hash(key + ':p') % 628) / 100; return 0.75 + a * (1 + Math.sin(t * 6.283 + ph)) / 2 + 0.05 * Math.sin(t * 25 + ph); };
 
 function regionOf(est, name) { return est.regionsList.find(r => r.region === name); }
+/**
+ * Hand a parent's fabric volume to its children without inventing or losing
+ * any. Private children fill first; whatever is left spills onto the public
+ * ones. A Sankey that does not add back up to the row above it is a picture,
+ * not a measurement.
+ */
+function shareFab(rows, fabTotal) {
+  const pv = rows.filter(r => r.priv).reduce((a, r) => a + r.v, 0);
+  const uv = rows.filter(r => !r.priv).reduce((a, r) => a + r.v, 0);
+  const onPriv = Math.min(fabTotal, pv), spill = Math.max(0, fabTotal - pv);
+  return rows.map(r => ({ ...r, fabV: r.priv ? (pv ? onPriv * r.v / pv : 0) : (uv ? spill * r.v / uv : 0) }));
+}
 function invRegion(inv, name) { return inv.flatMap(c => c.regions).find(r => r.region === name); }
 function stateOfRegion(est, name) { const r = regionOf(est, name); if (!r) return 'ok'; if (r.link === 'degraded') return 'degraded'; if (!r.priv && (r.pub || 0) > SLO) return 'slo'; if (r.rel === 'warn') return 'slo'; return 'ok'; }
 
@@ -90,13 +102,19 @@ export function rightRoots(est, flows) {
   // workloads are; each cloud opens into its regions. The share that rides
   // outside the fabric lands where it really goes - the public internet.
   void dm;
+  // Only a region with a private path can take traffic off the fabric, so a
+  // cloud is sized from its private regions alone. Splitting by every region
+  // put fabric volume on clouds we have no on-ramp into, and the drill then
+  // printed "public path" on a ribbon coloured as fabric.
+  const onFab = est.regionsList.filter(r => r.priv);
+  const fabSrc = onFab.length ? onFab : est.regionsList;
   const byCloud = {};
-  est.regionsList.forEach(r => { const c = byCloud[r.cloud] = byCloud[r.cloud] || { cloud: r.cloud, wl: 0 }; c.wl += r.wl || 0; });
+  fabSrc.forEach(r => { const c = byCloud[r.cloud] = byCloud[r.cloud] || { cloud: r.cloud, wl: 0 }; c.wl += r.wl || 0; });
   const wlTot = Object.values(byCloud).reduce((a, c) => a + c.wl, 0) || 1;
   const clouds = Object.values(byCloud).map(c => ({ kind: 'cloud', key: 'cloud:' + c.cloud, name: c.cloud, cloud: c.cloud,
     v: sitesFab * c.wl / wlTot, fabV: sitesFab * c.wl / wlTot, hasChildren: true, state: 'ok' })).filter(c => c.v > 0.001).sort((a, b) => b.v - a.v);
   const pubV = Math.max(0, sitesV - sitesFab);
-  const inet = pubV > 0.001 ? [{ kind: 'dest', key: 'dest:public internet', name: 'Public internet', v: pubV, fabV: 0, hasChildren: false, state: 'slo' }] : [];
+  const inet = pubV > 0.001 ? [{ kind: 'dest', key: 'dest:public internet', name: 'Public internet', v: pubV, fabV: 0, hasChildren: est.regionsList.some(r => !r.priv), state: 'slo' }] : [];
   return [...clouds, ...inet];
 }
 
@@ -114,37 +132,59 @@ export function childrenOf(node, est, inv, flows) {
     // borrow them rather than lumping 212 buildings under "Various".
     const tree = S.siteTree(est);
     const byMetro = {};
+    // A first mile holds whatever buildings happen to sit on it. Acme's ADI
+    // row is a data center and a plant; weighting the plant as a data center
+    // read 12.0 Gbps against a parent that said 7.5. Each site carries its
+    // own class weight, and the volumes are summed rather than multiplied.
     mine.forEach(x => {
       const count = S.countOf(x.name);
       const cls = S.classOf(x);
+      const per = PER_SITE[cls] || 0.5;
       const kids = count > 1 ? ((tree.find(c => c.cls === cls) || {}).children || []).filter(k => k.kind === 'metro') : [];
       if (kids.length) {
         kids.forEach(k => {
-          const g = byMetro[k.name] = byMetro[k.name] || { metro: k.name, count: 0, onFabric: 0, only: null, cls };
+          const g = byMetro[k.name] = byMetro[k.name] || { metro: k.name, count: 0, onFabric: 0, only: null, cls, per, v: 0, fabV: 0 };
           g.count += k.count; g.onFabric += k.onFabric || 0;
+          g.v += per * k.count; g.fabV += x.priv ? per * k.count : per * k.count * 0.1;
         });
         return;
       }
       const m = x.metro || 'Various';
-      const g = byMetro[m] = byMetro[m] || { metro: m, count: 0, onFabric: 0, only: x, cls };
-      g.count += count; g.onFabric += x.priv ? count : 0; if (g.count > count) g.only = null;
+      const g = byMetro[m] = byMetro[m] || { metro: m, count: 0, onFabric: 0, only: x, cls, per, v: 0, fabV: 0 };
+      g.count += count; g.onFabric += x.priv ? count : 0;
+      g.v += per * count; g.fabV += x.priv ? per * count : per * count * 0.1;
+      if (g.count > count) g.only = null;
     });
-    const per = PER_SITE[S.classOf(mine[0])] || 0.5;
     return Object.values(byMetro).map(g => g.only && g.count === 1
-      ? { kind: 'sitename', key: `${node.key}/${g.only.name}`, cls: node.cls, siteName: g.only.name, name: g.only.name, sub: g.only.access, v: per, fabV: g.only.priv ? per : per * 0.1, hasChildren: false, state: g.only.priv ? 'ok' : 'slo', parentKey: node.key }
-      : { kind: 'metro', key: `${node.key}/${g.metro}`, cls: node.cls, siteCls: g.cls || S.classOf(mine[0]), metro: g.metro, count: g.count, name: `${g.metro} · ${n(g.count)}`, v: per * g.count, fabV: per * g.onFabric, hasChildren: true, state: g.onFabric < g.count / 2 ? 'slo' : 'ok', parentKey: node.key }
+      ? { kind: 'sitename', key: `${node.key}/${g.only.name}`, cls: node.cls, siteCls: g.cls, siteName: g.only.name, name: g.only.name, sub: g.only.access, v: g.v, fabV: g.fabV, hasChildren: true, state: g.only.priv ? 'ok' : 'slo', parentKey: node.key }
+      : { kind: 'metro', key: `${node.key}/${g.metro}`, cls: node.cls, siteCls: g.cls, metro: g.metro, count: g.count, name: `${g.metro} · ${n(g.count)}`, v: g.v, fabV: g.fabV, hasChildren: true, state: g.onFabric < g.count / 2 ? 'slo' : 'ok', parentKey: node.key }
     ).sort((a, b) => b.v - a.v);
   }
   if (node.kind === 'metro') {
-    const cls = S.siteTree(est).find(c => c.cls === node.cls); const m = cls && cls.children.find(ch => ch.kind === 'metro' && ch.name === node.metro); if (!m) return [];
-    const per = PER_SITE[node.cls] || 0.5;
-    const rows = m.sites.map(x => ({ kind: 'sitename', key: `${node.key}/${x.id}`, cls: node.cls, siteName: x.id, name: x.id, sub: x.address, v: per, fabV: x.priv ? per : per * 0.1, hasChildren: false, state: x.priv ? 'ok' : 'slo', parentKey: node.key }));
-    if (m.more) rows.push({ kind: 'more', key: `${node.key}/more`, name: `+${n(m.more)} more`, v: per * m.more, fabV: per * Math.max(0, m.onFabric - m.sites.filter(x => x.priv).length), hasChildren: false, state: 'ok', parentKey: node.key });
-    return rows;
+    // node.cls is the first mile (adi, sdwan). siteTree is keyed by building
+    // class (Branch, Plant). Matching one against the other found nothing, so
+    // a metro row never opened at all. siteCls carries the building class.
+    const bcls = node.siteCls || node.cls;
+    const cls = S.siteTree(est).find(c => c.cls === bcls); const m = cls && cls.children.find(ch => ch.kind === 'metro' && ch.name === node.metro); if (!m) return [];
+    const per = node.count ? node.v / node.count : (PER_SITE[bcls] || 0.5);
+    const rows = m.sites.map(x => ({ kind: 'sitename', key: `${node.key}/${x.id}`, cls: node.cls, siteCls: bcls, siteName: x.id, name: x.id, sub: x.address, v: per, priv: !!x.priv, hasChildren: true, state: x.priv ? 'ok' : 'slo', parentKey: node.key }));
+    const more = Math.max(0, node.count - rows.length);
+    if (more) rows.push({ kind: 'more', key: `${node.key}/more`, name: `+${n(more)} more`, v: per * more, priv: m.onFabric >= m.count, hasChildren: false, state: 'ok', parentKey: node.key });
+    return shareFab(rows, node.fabV);
   }
   if (node.kind === 'sitename') {
     const site = P.allSites(est).find(x => x.id === node.siteName || x.name === node.siteName); if (!site) return [];
-    return P.siteRegions(est, site, 6).rows.map(x => ({ kind: 'circuit', key: `${node.key}/${x.region.region}`, name: `→ ${x.region.cloud} ${x.region.region}`, sub: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms`, v: Math.max(0.01, x.gbps), fabV: x.region.priv ? Math.max(0.01, x.gbps) : 0, hasChildren: false, state: x.region.priv ? 'ok' : (P.path(site, x.region).ms > SLO ? 'slo' : 'ok'), parentKey: node.key, region: x.region.region }));
+    // gbps() adds a cross-geography share on top of the class weight, so a
+    // site's regions summed to 124% of the site and the level overshot its
+    // own parent. The shape of the split is right; the scale is the row above.
+    const rows = P.siteRegions(est, site, est.regionsList.length).rows;
+    const tot = rows.reduce((a, x) => a + x.gbps, 0) || 1;
+    return shareFab(rows.map(x => { const ms = P.path(site, x.region).ms; return {
+      kind: 'circuit', key: `${node.key}/${x.region.region}`, name: `→ ${x.region.cloud} ${x.region.region}`,
+      sub: `${site.access || 'Access'} · ${x.region.priv ? 'on the fabric' : 'public path'} · ${ms} ms`,
+      v: node.v * x.gbps / tot, priv: !!x.region.priv, hasChildren: false,
+      state: x.region.priv ? 'ok' : (ms > SLO ? 'slo' : 'ok'), parentKey: node.key, region: x.region.region };
+    }), node.fabV).sort((a, b) => b.v - a.v);
   }
   if (node.kind === 'tag') {
     const m = {}; flows.filter(f => f.kind === 'App' && f.from === node.name).forEach(f => { const rn = f.region; const g = m[rn] = m[rn] || { kind: 'tagregion', key: `${node.key}/${rn}`, tag: node.name, regionName: rn, name: rn, v: 0, fabV: 0 }; g.v += f.gbps; if (f.controlled) g.fabV += f.gbps; });
@@ -171,12 +211,23 @@ export function childrenOf(node, est, inv, flows) {
   }
   if (node.kind === 'onramp') return onrampChildren(est, flows);
   if (node.kind === 'cloud') {
-    const rs = est.regionsList.filter(r => r.cloud === node.cloud);
+    const mine = est.regionsList.filter(r => r.cloud === node.cloud);
+    const rs = mine.some(r => r.priv) ? mine.filter(r => r.priv) : mine;
     const tot = rs.reduce((a, r) => a + (r.wl || 0), 0) || 1;
     return rs.map(r => ({ kind: 'endpoint', key: `${node.key}/${r.region}`, name: `${r.cloud} ${r.region}`,
       sub: `${n(r.wl)} workloads · ${r.priv ? 'on the fabric' : 'public path'}`,
       v: node.v * (r.wl || 0) / tot, fabV: node.fabV * (r.wl || 0) / tot,
       hasChildren: false, state: stateOfRegion(est, r.region), parentKey: node.key })).sort((a, b) => b.v - a.v);
+  }
+  if (node.key === 'dest:public internet') {
+    // The band that misses the fabric used to dead-end. It lands somewhere,
+    // and the somewhere is the regions we have no private path into.
+    const rs = est.regionsList.filter(r => !r.priv);
+    const tot = rs.reduce((a, r) => a + (r.wl || 0), 0) || 1;
+    return rs.map(r => ({ kind: 'endpoint', key: `${node.key}/${r.region}`, name: `${r.cloud} ${r.region}`,
+      sub: `${n(r.wl)} workloads · public path · ${r.pub} ms`,
+      v: node.v * (r.wl || 0) / tot, fabV: 0, hasChildren: false,
+      state: stateOfRegion(est, r.region), parentKey: node.key, region: r.region })).sort((a, b) => b.v - a.v);
   }
   if (node.kind === 'dest') {
     const per = (k) => node.v / k, fper = (k) => node.fabV / k;

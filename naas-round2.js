@@ -147,6 +147,30 @@ export function arbitrage(est, base, targetSave) {
     return { key: 'arb-' + r.region, region: `${r.cloud} ${r.region}`, wl: r.wl, gbF: gb.toLocaleString('en-US'), now: fmt(now.egressMo), nowRate: '$0.09', fabric: fmt(best.egressMo), fabricRate: '$0.02', save: fmt(now.egressMo - best.egressMo), saveN: now.egressMo - best.egressMo, math: `${gb.toLocaleString('en-US')} GB × ($0.09 − $0.02) × 12 = ${fmt((now.egressMo - best.egressMo) * 12)}/yr`, alt: nearby ? `Or move the workload to ${nearby.region}, already attached: same saving, no new circuit, +${Math.abs(nearby.fab - r.fab)} ms.` : 'No attached region in this cloud yet; the attach is the move.', regionId: r.region };
   }).sort((a, b) => b.saveN - a.saveN);
 }
+/**
+ * One donut, as a conic-gradient string plus its legend. Ramesh's room reads
+ * a ring faster than a stacked bar, and a stacked bar in four tints of one
+ * blue asks them to rank opacities. Colours come from the Flywheel viz
+ * tokens so the dark skin can restate them without touching this file.
+ */
+export function donut(rows, opts = {}) {
+  const live = rows.filter(r => r.v > 0);
+  const tot = live.reduce((a, r) => a + r.v, 0) || 1;
+  let acc = 0;
+  const seg = live.map((r, i) => {
+    const from = acc / tot * 100; acc += r.v; const to = acc / tot * 100;
+    return { ...r, color: r.color || `var(--viz-${(i % 6) + 1})`, from, to, pct: r.v / tot * 100 };
+  });
+  return {
+    key: opts.key || 'donut',
+    title: opts.title || '', sub: opts.sub || '',
+    centre: opts.centre || '', centreSub: opts.centreSub || '',
+    ring: seg.length ? `conic-gradient(${seg.map(s => `${s.color} ${s.from.toFixed(2)}% ${s.to.toFixed(2)}%`).join(',')})` : 'var(--bg-neutral)',
+    rows: seg.map(s => ({ ...s, pctF: (s.pct < 1 ? s.pct.toFixed(1) : Math.round(s.pct)) + '%', valF: s.valF || fmt(s.v) })),
+    total: tot,
+  };
+}
+
 export function destClasses(ob, base, targetSave) {
   const today = base || ob.egressMo || 0;
   const ifAll = Math.max(0, today - (targetSave || 0));
