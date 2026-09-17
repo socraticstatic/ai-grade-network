@@ -63,7 +63,9 @@ CLOUDS  L2   All 6 subnets ›
 CLOUDS  L3   All 89 workloads · 83 hidden ›       accent
 ```
 
-Counts measured on `?view=trust`.
+Counts measured on `?view=trust`. The L3 example is `vpc-0-0 › private-a`; the public subnets of the same VPC hold 60, so the door reads `All 60 workloads · 54 hidden ›` there. Every count comes from the measurement, never from this table.
+
+The pixel offsets for the door inside the card edge are not yet measured. Measure them against the ten-pixel rule before committing to a placement.
 
 **The number cannot lie.** It is the same value that fills the drawer. So the right column's root reads `All 6 regions ›`, not 14.
 
