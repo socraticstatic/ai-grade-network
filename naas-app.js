@@ -881,8 +881,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
     logFilterToggleWord: (s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen) ? 'Hide' : 'Show',
     clearLogs: () => set({ logQ: '', logPath: 'all', logAct: 'all', logPattern: 'all' }),
   };
-  const degRow = conns.rows.find(r => r.degraded);
-  const nextStop = degRow ? { title: 'Next stop: Govern', text: `${degRow.wl.toLocaleString('en-US')} workloads behind ${degRow.cloud} ${degRow.region} ${degRow.paths >= 2 ? 'have a second path but no policy that requires one' : 'ride a single path with no policy that requires a second'}. Author the policy, simulate it, then enforce it.`, cta: 'Open Govern', go: go('s3', { layer: 'cloud', tab: 'govern' }) } : { title: 'Next stop: Govern', text: 'Every connection is up. Set a latency SLO for the tags that still cross the public internet, then enforce it.', cta: 'Open Govern', go: go('s3', { layer: 'cloud', tab: 'govern' }) };
+  const nextStop = { ...VD.observeNext(conns), go: go('s3', { layer: 'cloud', tab: 'govern' }) };
   // The gap, itemised. The page could show what you have and what the three
   // paths cost, but never "these eleven things are not connected, here is
   // each one and what it would take". That is the middle rung a customer

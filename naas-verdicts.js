@@ -31,3 +31,16 @@ export function costVerdict(est, ob, totalSave, buckets = []) {
   if (!steerable.length) return 'Every bucket is already on the fabric.';
   return `${fmt(steerable.reduce((a, b) => a + b.today, 0))}/mo leaves through public egress that the fabric would carry for ${fmt(steerable.reduce((a, b) => a + b.fabric, 0))}.`;
 }
+
+// The loop is Connect -> Observe -> Govern -> Cost -> Connect. Observe's stop is Govern,
+// and it points at the one connection that would justify the policy.
+export function observeNext(conns) {
+  const deg = (conns.rows || []).find(r => r.degraded);
+  return {
+    title: 'Next stop: Govern',
+    text: deg
+      ? `${deg.wl.toLocaleString('en-US')} workloads behind ${deg.cloud} ${deg.region} ${deg.paths >= 2 ? 'have a second path but no policy that requires one' : 'ride a single path with no policy that requires a second'}. Author the policy, simulate it, then enforce it.`
+      : 'Every connection is up. Set a latency SLO for the tags that still cross the public internet, then enforce it.',
+    cta: 'Open Govern',
+  };
+}

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from '../naas-data.js';
 import * as A from '../naas-addendum.js';
-import { connectVerdict, governVerdict, costVerdict } from '../naas-verdicts.js';
+import { connectVerdict, governVerdict, costVerdict, observeNext } from '../naas-verdicts.js';
+import { connections } from '../naas-connections.js';
 
 // Measured against commit 04bbb1e. Change one of these only when the copy is meant to change.
 const EXPECT = {
@@ -51,4 +52,28 @@ test('off the cloud layer the connect verdict counts sites, not regions', () => 
     connectVerdict(est, 'net', items),
     '1 of 3 sites reach clouds over the public internet. 2 are on the AT&T fabric.',
   );
+});
+
+const NEXT = {
+  partial: '40 workloads behind Azure eastus ride a single path with no policy that requires a second. Author the policy, simulate it, then enforce it.',
+  mature: '96 workloads behind AWS eu-central-1 ride a single path with no policy that requires a second. Author the policy, simulate it, then enforce it.',
+  trust: '420 workloads behind AWS us-east-2 ride a single path with no policy that requires a second. Author the policy, simulate it, then enforce it.',
+};
+
+test('Observe points at the degraded connection and the policy that would fix it', () => {
+  for (const id of ['partial', 'mature', 'trust']) {
+    const est = D.ESTATES[id];
+    const ob = A.observe(est, [], A.inventory(est));
+    const next = observeNext(connections(est, ob));
+    assert.equal(next.title, 'Next stop: Govern', id);
+    assert.equal(next.text, NEXT[id], id);
+    assert.equal(next.cta, 'Open Govern', id);
+  }
+});
+
+test('with nothing connected, Observe still names a next stop', () => {
+  const est = D.ESTATES.empty;
+  const ob = A.observe(est, [], A.inventory(est));
+  const next = observeNext(connections(est, ob));
+  assert.equal(next.text, 'Every connection is up. Set a latency SLO for the tags that still cross the public internet, then enforce it.');
 });

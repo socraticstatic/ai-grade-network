@@ -28,3 +28,13 @@ test('every container the markup opens, it closes', () => {
   ];
   for (const [name, open, close] of pairs) assert.equal(count(open), count(close), `${name} is unbalanced`);
 });
+
+test('Observe closes the loop with a Next stop row', () => {
+  const start = HTML.indexOf('<sc-if value="{{ tObserve }}"');
+  const end = HTML.indexOf('<sc-if value="{{ tCost }}"');
+  assert.ok(start > 0 && end > start, 'the Observe tab block is gone');
+  const observe = HTML.slice(start, end);
+  for (const b of ['{{ nextStop.title }}', '{{ nextStop.text }}', '{{ nextStop.cta }}', '{{ nextStop.go }}']) {
+    assert.ok(observe.includes(b), `${b} is not bound inside the Observe tab`);
+  }
+});
