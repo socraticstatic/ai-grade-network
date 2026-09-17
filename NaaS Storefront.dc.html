@@ -573,6 +573,17 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <sc-if value="{{ scanning }}" hint-placeholder-val="{{ true }}">
   <div aria-busy="true" aria-label="Reading the estate" style="display:grid;gap:16px">
     <div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:18px;color:var(--text-body)"><span aria-hidden="true" style="width:14px;height:14px;border-radius:9999px;border:2px solid var(--cta);border-top-color:transparent;animation:skSpin .9s linear infinite;flex:none"></span>{{ scanLine }}</div>
+    <div style="display:grid;gap:10px;padding:14px 16px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:12px">
+      <sc-for list="{{ scanSteps }}" as="sst" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:18px minmax(0,1fr);gap:12px;align-items:start;min-width:0">
+          <span aria-hidden="true" style="width:16px;height:16px;margin-top:2px;box-sizing:border-box;border-radius:9999px;border:2px solid {{ sst.color }};background:{{ sst.fillBg }};color:#fff;font-size:10px;line-height:12px;text-align:center">{{ sst.mark }}</span>
+          <div style="display:grid;gap:2px;min-width:0">
+            <div style="font-size:13px;line-height:18px;font-weight:500;color:{{ sst.textColor }};text-wrap:pretty">{{ sst.label }}</div>
+            <div style="font-size:11px;line-height:16px;color:var(--text-light);text-wrap:pretty">{{ sst.src }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
     <div class="sk" style="height:66px;border-radius:12px"></div>
     <div style="display:flex;flex-wrap:wrap;gap:20px"><div class="sk" style="width:150px;height:36px"></div><div class="sk" style="width:140px;height:36px"></div><div class="sk" style="width:130px;height:36px"></div><div class="sk" style="width:150px;height:36px"></div><div class="sk" style="width:180px;height:36px"></div></div>
     <div style="display:grid;gap:10px"><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div></div>

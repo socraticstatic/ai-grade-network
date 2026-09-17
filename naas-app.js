@@ -24,18 +24,29 @@ const TAB_LABEL = { connect: 'Connect', govern: 'Govern', observe: 'Observe', co
 const TIERS = ['Start here', 'Recommended', 'Full control'];
 const PERSONA_PRODUCT = { 'Steer this bucket on the fabric': 'steer', 'Steer every internet bucket': 'steer', 'Hosted VPC with AT&T egress for the region': 'hosted-vpc', 'Cloud to Cloud for the pair': 'c2c', 'Multi-region, multi-cloud routing': 'c2c', 'Neocloud reach via Equinix Fabric': 'neocloud', 'Hosted VPC in us-east-1 with the policy enforced': 'hosted-vpc', 'Hosted VPC in us-west-2 with the policy enforced': 'hosted-vpc', 'Hosted VPC plus inline inspection': 'hosted-vpc', 'NGFW (Palo Alto) in path': 'ngfw', 'Hosted VPC with the vSRX pair and AT&T egress': 'hosted-vpc', 'Advanced Network Monitoring for the estate': 'monitoring', 'Advanced Network Monitoring for APAC': 'monitoring', 'Managed NOC with path telemetry': 'noc', 'AWS Interconnect Last Mile, maximum resiliency': 'lmcc', 'Add a second ADI circuit': 'adi', '14-day AI traffic assessment': 'ai-assess', 'Add the providers to AI Fabric': 'ai-gov', 'Virtual keys with team limits': 'ai-gov', 'Connection Hub in Atlanta': 'hub', 'Connection Hubs in Atlanta and Chicago': 'hub', "Segmentation across the region's hosted VNet": 'hosted-vnet' };
 
+// The hash is the app's only route. Pulled out of the listener so it can be asserted
+// without a browser, and so an s1 landing can start its scan.
+export function hashRoute(hash) {
+  const h = (hash || '').replace('#', '').split('/');
+  const p = {};
+  if (SCREENS[h[0]]) p.screen = h[0];
+  if (h[1] && D.LAYERS.find(l => l.id === h[1])) p.layer = h[1];
+  if (h[2] && TABS.includes(h[2])) p.tab = h[2];
+  return p;
+}
+
 export function init(c) {
   // The hash was read once at boot, so a link to #s3/cloud/cost only worked on
   // a cold load - pasting it into an open tab changed the URL and nothing else.
   if (!window.__naasHashWired) {
     window.__naasHashWired = true;
     window.addEventListener('hashchange', () => {
-      const h = (location.hash || '').replace('#', '').split('/');
-      const p = {};
-      if (SCREENS[h[0]]) p.screen = h[0];
-      if (h[1] && D.LAYERS.find(l => l.id === h[1])) p.layer = h[1];
-      if (h[2] && TABS.includes(h[2])) p.tab = h[2];
-      if (Object.keys(p).length) c.setState(p);
+      const p = hashRoute(location.hash);
+      if (!Object.keys(p).length) return;
+      c.setState(p);
+      // Explore 360 reached by a hash change never ran startScan, so the spinner
+      // spun forever on a scanStep that nothing was advancing.
+      if (p.screen === 's1') startScan(c);
     });
   }
   try { const h = localStorage.getItem('naas.headOpen'); if (h === 'false') c.setState({ headOpen: false }); } catch (e) {}
@@ -334,7 +345,6 @@ export function vals(c) {
     { label: 'Checking on-ramp coverage per metro', src: '41 metros' },
     { label: 'Joining utilization and egress spend', src: 'last 30 days' },
   ].map((st, i) => ({ ...st, key: 'sc' + i, done: s.scanStep > i, active: s.scanStep === i, color: s.scanStep > i ? 'var(--success)' : s.scanStep === i ? 'var(--cta)' : 'var(--border-primary)', textColor: s.scanStep >= i ? 'var(--text-heading)' : 'var(--text-disabled)' }));
-  const scanDone = s.scanStep >= 4 || isEmpty === false && s.scanStep >= 4;
   const discoverVerdict = isEmpty ? 'Add a cloud credential or pick an inventory to start.' : `${est.clouds} clouds, ${est.regions} regions, ${est.workloads.toLocaleString('en-US')} workloads. ${est.privatePct}% already reach AT&T privately.`;
   const discoverKpis = isEmpty ? [] : [{ key: 'a', v: est.workloads.toLocaleString('en-US'), l: 'assets discovered', e: `${est.clouds} clouds, ${est.regions} regions` }, { key: 'b', v: `${est.attachedRegions} of ${est.regions}`, l: 'regions attached', e: 'private path to AT&T' }, { key: 'c', v: `${pct(est.attachedRegions, est.regions)}%`, l: 'cloud attach rate', e: 'regions with a private path' }, { key: 'd', v: est.tags, l: 'tags discovered', e: 'from cloud resource tags' }];
   const chipSets = [{ g: 'Region', v: ['US East', 'US West', 'Europe', 'APAC'] }, { g: 'Site class', v: ['Data center', 'Branch', 'Campus'] }, { g: 'Business unit', v: ['Finance', 'Retail', 'Platform'] }, { g: 'Cloud', v: ['AWS', 'Azure', 'GCP'] }, { g: 'Connection type', v: ['NetBond', 'DX', 'ER', 'Internet'] }];

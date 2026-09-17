@@ -38,3 +38,13 @@ test('Observe closes the loop with a Next stop row', () => {
     assert.ok(observe.includes(b), `${b} is not bound inside the Observe tab`);
   }
 });
+
+test('the scan shows its four beats and what each one reads', () => {
+  const open = '<sc-for list="{{ scanSteps }}" as="sst"';
+  const i = HTML.indexOf(open);
+  assert.ok(i > 0, 'scanSteps is never rendered');
+  const block = HTML.slice(i, HTML.indexOf('</sc-for>', i));
+  assert.ok(block.includes('{{ sst.label }}'), 'the step has no label');
+  assert.ok(block.includes('{{ sst.src }}'), 'the step never says what it is reading');
+  assert.ok(block.includes('{{ sst.mark }}'), 'a finished step is not marked done');
+});
