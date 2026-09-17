@@ -39,6 +39,14 @@ test('Observe closes the loop with a Next stop row', () => {
   }
 });
 
+test('the station CTA stays bound to the markup', () => {
+  // No arithmetic test covers stationCta's attachN count (naas-app.js:745); the
+  // regression that actually bites is the binding itself falling out of the
+  // markup, same failure mode as the stray closing tag this repo has shipped twice.
+  assert.ok(HTML.includes('{{ stationCta.go }}'), 'stationCta.go is not bound anywhere in the markup');
+  assert.ok(HTML.includes('{{ stationCta.label }}'), 'stationCta.label is not bound anywhere in the markup');
+});
+
 test('the scan shows its four beats and what each one reads', () => {
   const open = '<sc-for list="{{ scanSteps }}" as="sst"';
   const i = HTML.indexOf(open);

@@ -34,5 +34,5 @@ test('the four tokens Flywheel has no answer for are left alone until a human ru
   assert.equal(t['--warning'], '#b85f00', 'fw orange-600 #ea712f is markedly louder; deferred');
   assert.equal(t['--viz-4'], '#b85f00', 'same as --warning; deferred');
   assert.equal(t['--error'], '#c23131', 'fw red-600 #c70032 is markedly louder; deferred');
-  assert.equal(t['--viz-5'], '#7d3f98', 'Flywheel has no purple; deferred');
+  assert.equal(t['--viz-5'], '#7d3f98', 'fw purple #af29bb is markedly more saturated; deferred');
 });

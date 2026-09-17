@@ -75,7 +75,7 @@ test('with nothing connected, Observe still names a next stop', () => {
   const est = D.ESTATES.empty;
   const ob = A.observe(est, [], A.inventory(est));
   const next = observeNext(connections(est, ob));
-  assert.equal(next.text, 'Every connection is up. Set a latency SLO for the tags that still cross the public internet, then enforce it.');
+  assert.equal(next.text, 'Attach the first region to give Govern something to enforce.');
 });
 
 test('the five-stop model is gone; the shipped four-word order is the only loop', async () => {

@@ -1,6 +1,8 @@
 // The written verdicts. One sentence per screen, derived from the estate and nothing
 // else, so they can be asserted without a browser. Observe's verdict is `ob.verdict`
-// in naas-addendum.js, which was already pure; it stays where it is.
+// in naas-addendum.js, which was already pure; it stays where it is. observeNext is
+// the "next stop" panel below it, not a sentence: it takes `conns` and returns
+// `{title, text, cta}`.
 import { fmt } from './naas-logic.js';
 
 export function connectVerdict(est, layer = 'cloud', items = []) {
@@ -33,14 +35,19 @@ export function costVerdict(est, ob, totalSave, buckets = []) {
 }
 
 // The loop is Connect -> Observe -> Govern -> Cost -> Connect. Observe's stop is Govern,
-// and it points at the one connection that would justify the policy.
+// and it points at the one connection that would justify the policy. With nothing
+// connected there is no connection to point at, so this gets its own branch, same as
+// its three siblings (connectNext, governNext, costNext in naas-app.js).
 export function observeNext(conns) {
-  const deg = (conns.rows || []).find(r => r.degraded);
+  const rows = conns.rows || [];
+  const deg = rows.find(r => r.degraded);
   return {
     title: 'Next stop: Govern',
-    text: deg
-      ? `${deg.wl.toLocaleString('en-US')} workloads behind ${deg.cloud} ${deg.region} ${deg.paths >= 2 ? 'have a second path but no policy that requires one' : 'ride a single path with no policy that requires a second'}. Author the policy, simulate it, then enforce it.`
-      : 'Every connection is up. Set a latency SLO for the tags that still cross the public internet, then enforce it.',
+    text: !rows.length
+      ? 'Attach the first region to give Govern something to enforce.'
+      : deg
+        ? `${deg.wl.toLocaleString('en-US')} workloads behind ${deg.cloud} ${deg.region} ${deg.paths >= 2 ? 'have a second path but no policy that requires one' : 'ride a single path with no policy that requires a second'}. Author the policy, simulate it, then enforce it.`
+        : 'Every connection is up. Set a latency SLO for the tags that still cross the public internet, then enforce it.',
     cta: 'Open Govern',
   };
 }
