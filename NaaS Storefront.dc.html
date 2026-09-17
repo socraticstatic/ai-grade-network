@@ -60,7 +60,7 @@
 body{margin:0;font-family:'Aleck','Helvetica Neue',Helvetica,Arial,sans-serif;letter-spacing:-0.03em}
 button,input,select,textarea{font-family:inherit;letter-spacing:inherit}
 a{color:#0057b8}a:hover{color:#00388f}
-[data-theme="light"]{--bg-base:#ffffff;--bg-wash:#f8fafb;--bg-neutral:#eef2f5;--bg-accent:#e6f0fa;--text-heading:#13171b;--text-body:#454b52;--text-light:#686e74;--text-disabled:#8a949c;--link:#0057b8;--border-primary:#c2cbd2;--border-secondary:#dfe5ea;--border-active:#0057b8;--cta:#0057b8;--cta-hover:#00388f;--success:#1f7a3d;--warning:#b85f00;--error:#c23131;--band:#e6f0fa;--band-stroke:#99daf5;--sidebar-accent:#dcf3fa;--sidebar-fg:#1d2329;--sidebar-muted:#686e74;--sidebar-border:#dcdfe3;--viz-1:#0057b8;--viz-2:#009fdb;--viz-3:#1f7a3d;--viz-4:#b85f00;--viz-5:#7d3f98;--viz-6:#8a949c}
+[data-theme="light"]{--bg-base:#ffffff;--bg-wash:#f8fafb;--bg-neutral:#f3f4f6;--bg-accent:#e6f0fa;--text-heading:#13171b;--text-body:#454b52;--text-light:#686e74;--text-disabled:#878c94;--link:#0057b8;--border-primary:#bdc2c7;--border-secondary:#dcdfe3;--border-active:#0057b8;--cta:#0057b8;--cta-hover:#00388f;--success:#2d7e24;--warning:#b85f00;--error:#c23131;--band:#e6f0fa;--band-stroke:#99daf5;--sidebar-accent:#e6f0fa;--sidebar-fg:#1d2329;--sidebar-muted:#686e74;--sidebar-border:#dcdfe3;--viz-1:#0057b8;--viz-2:#009fdb;--viz-3:#2d7e24;--viz-4:#b85f00;--viz-5:#7d3f98;--viz-6:#878c94}
 [data-theme="dark"]{--bg-base:#1a2431;--bg-wash:#111821;--bg-neutral:#222e3c;--bg-accent:#16324e;--text-heading:#f2f6fa;--text-body:#c5cfd9;--text-light:#97a3b0;--text-disabled:#67737f;--link:#66c8f0;--border-primary:#4e5e6f;--border-secondary:#2f3d4d;--border-active:#66c8f0;--cta:#0057b8;--cta-hover:#0064d6;--success:#6ecf63;--warning:#ffa25e;--error:#ff7a8f;--band:#16324e;--band-stroke:#3374cc;--sidebar-accent:#16324e;--sidebar-fg:#f2f6fa;--sidebar-muted:#97a3b0;--sidebar-border:#2f3d4d;--viz-1:#3374cc;--viz-2:#66c8f0;--viz-3:#6ecf63;--viz-4:#ffa25e;--viz-5:#b98fd6;--viz-6:#8a949c}
 .fx-filters{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
 .fx-filter{display:inline-flex;align-items:center;gap:8px;position:relative}
@@ -252,7 +252,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <main style="min-width:0;max-width:1392px;margin:0 auto;padding:16px 24px 16px;width:100%;box-sizing:border-box">
 <sc-if value="{{ showPageTitle }}" hint-placeholder-val="{{ true }}">
 <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 16px;margin-bottom:24px;border-bottom:1px solid var(--border-secondary)">
-  <div style="display:grid;gap:2px;min-width:0;flex:1 1 320px"><h1 style="margin:0;font-size:26px;line-height:32px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)">{{ pageTitle }}</h1><sc-if value="{{ hasPageSub }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;line-height:18px;color:var(--text-body);text-wrap:pretty">{{ pageSub }}</div></sc-if></div>
+  <div style="display:grid;gap:2px;min-width:0;flex:1 1 320px"><h1 style="margin:0;font-size:26px;line-height:32px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)">{{ pageTitle }}</h1><sc-if value="{{ hasPageSub }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;line-height:20px;font-weight:500;color:var(--text-heading);text-wrap:pretty">{{ pageVerdict }}</div><div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty">{{ pageStat }}</div></sc-if></div>
   <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-light)">
     <sc-if value="{{ hasBuildLabel }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:var(--text-disabled)">{{ buildLabel }}</span><span aria-hidden="true" style="width:1px;height:16px;background:var(--border-secondary)"></span></sc-if>
     <button onClick="{{ rescan }}" title="Read the estate again" style="border:0;background:transparent;padding:0;font:inherit;color:inherit;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px">Updated {{ updatedAgo }}<span aria-hidden="true" style="font-size:13px">↻</span></button>
@@ -573,6 +573,17 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <sc-if value="{{ scanning }}" hint-placeholder-val="{{ true }}">
   <div aria-busy="true" aria-label="Reading the estate" style="display:grid;gap:16px">
     <div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:18px;color:var(--text-body)"><span aria-hidden="true" style="width:14px;height:14px;border-radius:9999px;border:2px solid var(--cta);border-top-color:transparent;animation:skSpin .9s linear infinite;flex:none"></span>{{ scanLine }}</div>
+    <div style="display:grid;gap:10px;padding:14px 16px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:12px">
+      <sc-for list="{{ scanSteps }}" as="sst" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:18px minmax(0,1fr);gap:12px;align-items:start;min-width:0">
+          <span aria-hidden="true" style="width:16px;height:16px;margin-top:2px;box-sizing:border-box;border-radius:9999px;border:2px solid {{ sst.color }};background:{{ sst.fillBg }};color:#fff;font-size:10px;line-height:12px;text-align:center">{{ sst.mark }}</span>
+          <div style="display:grid;gap:2px;min-width:0">
+            <div style="font-size:13px;line-height:18px;font-weight:500;color:{{ sst.textColor }};text-wrap:pretty">{{ sst.label }}</div>
+            <div style="font-size:11px;line-height:16px;color:var(--text-light);text-wrap:pretty">{{ sst.src }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
     <div class="sk" style="height:66px;border-radius:12px"></div>
     <div style="display:flex;flex-wrap:wrap;gap:20px"><div class="sk" style="width:150px;height:36px"></div><div class="sk" style="width:140px;height:36px"></div><div class="sk" style="width:130px;height:36px"></div><div class="sk" style="width:150px;height:36px"></div><div class="sk" style="width:180px;height:36px"></div></div>
     <div style="display:grid;gap:10px"><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div></div>
@@ -1305,6 +1316,10 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </sc-if>
 </div>
     </sc-if>
+    <div class="fx-alert" role="status" aria-label="Next stop">
+      <div class="fx-alert-body"><span class="fx-alert-icon" aria-hidden="true"></span><div><div class="fx-alert-title">{{ nextStop.title }}</div><div class="fx-alert-text">{{ nextStop.text }}</div></div></div>
+      <button class="fx-btn" onClick="{{ nextStop.go }}">{{ nextStop.cta }}</button>
+    </div>
     <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px;border:1px dashed var(--border-secondary);border-radius:16px;color:var(--text-light);font-size:14px;line-height:20px">No telemetry yet. It starts with the first attach.</div></sc-if>
   </div>
   </sc-if>

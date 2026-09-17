@@ -265,12 +265,26 @@ DRIFT (8)
   --sidebar-accent   #dcf3fa -> #e6f0fa    fw cobalt-100
   --bg-neutral       #eef2f5 -> #f3f4f6    fw gray-200
 
-NOT IN FLYWHEEL (4) — need a ruling
+DEFERRED (4) — need a ruling
   --warning  #b85f00   fw orange-600 #ea712f is markedly louder
   --viz-4    #b85f00   same
   --error    #c23131   fw red-600    #c70032 is markedly louder
-  --viz-5    #7d3f98   Flywheel has no purple
+  --viz-5    #7d3f98   fw purple     #af29bb is markedly louder
 ```
+
+**Correction, 2026-09-17.** An earlier version of this section claimed Flywheel has no purple. That
+was wrong, and it reached the wave 1 plan, its task brief and a commit message before a reviewer
+caught it. Flywheel defines `purple: '#af29bb'` at `att-netbond-sdci/tailwind.config.js:72`,
+commented "Visual Designer, secondary flows", with a `fw-purpleLight` variant and entries across the
+text, background, border and ring scales. The error was in the measuring script, which never had
+purple in its palette, so `--viz-5` resolved to "nearest: gray-500" instead.
+
+The deferral still stands, and for a better reason: all four deferred tokens now share one. Flywheel's
+value is markedly more saturated than the storefront's in every case. `#7d3f98` is a muted plum;
+`#af29bb` is a vivid magenta. The ruling Micah owes is therefore a single question — does this product
+adopt Flywheel's saturation for status and series colour, or keep its quieter set — not four
+unrelated ones. `purple` also sits outside Flywheel's numbered ramps (gray, cobalt, green each have
+one; purple does not), so there is no `purple-600` to slot in even if the answer is yes.
 
 The eight drifted tokens are mechanical. The four outliers are a design decision, not a migration, and are deferred to Micah. The dark theme needs the same diff run against Flywheel's dark ramp, which is not in the extraction.
 

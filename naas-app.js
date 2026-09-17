@@ -16,6 +16,7 @@ import * as F from './naas-flowmap.js';
 import * as OD from './naas-observe-dash.js';
 import * as FB from './naas-fabric.js';
 import * as V from './naas-volume.js';
+import * as VD from './naas-verdicts.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
@@ -23,18 +24,38 @@ const TAB_LABEL = { connect: 'Connect', govern: 'Govern', observe: 'Observe', co
 const TIERS = ['Start here', 'Recommended', 'Full control'];
 const PERSONA_PRODUCT = { 'Steer this bucket on the fabric': 'steer', 'Steer every internet bucket': 'steer', 'Hosted VPC with AT&T egress for the region': 'hosted-vpc', 'Cloud to Cloud for the pair': 'c2c', 'Multi-region, multi-cloud routing': 'c2c', 'Neocloud reach via Equinix Fabric': 'neocloud', 'Hosted VPC in us-east-1 with the policy enforced': 'hosted-vpc', 'Hosted VPC in us-west-2 with the policy enforced': 'hosted-vpc', 'Hosted VPC plus inline inspection': 'hosted-vpc', 'NGFW (Palo Alto) in path': 'ngfw', 'Hosted VPC with the vSRX pair and AT&T egress': 'hosted-vpc', 'Advanced Network Monitoring for the estate': 'monitoring', 'Advanced Network Monitoring for APAC': 'monitoring', 'Managed NOC with path telemetry': 'noc', 'AWS Interconnect Last Mile, maximum resiliency': 'lmcc', 'Add a second ADI circuit': 'adi', '14-day AI traffic assessment': 'ai-assess', 'Add the providers to AI Fabric': 'ai-gov', 'Virtual keys with team limits': 'ai-gov', 'Connection Hub in Atlanta': 'hub', 'Connection Hubs in Atlanta and Chicago': 'hub', "Segmentation across the region's hosted VNet": 'hosted-vnet' };
 
+// The connect tab's stat line counts cloud regions. Off the cloud layer, the verdict
+// above it (naas-verdicts.js connectVerdict) counts sites instead, a different
+// subject, so the region/attached count would contradict it rather than agree.
+// Pulled out so both branches can be asserted without a browser.
+export function connectStat(est, layer) {
+  if (layer !== 'cloud') return '';
+  return `${est.regionsList.filter(r => !r.priv).length} of ${est.regionsList.length} regions public · ${est.attachedRegions} attached · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`;
+}
+
+// The hash is the app's only route. Pulled out of the listener so it can be asserted
+// without a browser, and so an s1 landing can start its scan.
+export function hashRoute(hash) {
+  const h = (hash || '').replace('#', '').split('/');
+  const p = {};
+  if (SCREENS[h[0]]) p.screen = h[0];
+  if (h[1] && D.LAYERS.find(l => l.id === h[1])) p.layer = h[1];
+  if (h[2] && TABS.includes(h[2])) p.tab = h[2];
+  return p;
+}
+
 export function init(c) {
   // The hash was read once at boot, so a link to #s3/cloud/cost only worked on
   // a cold load - pasting it into an open tab changed the URL and nothing else.
   if (!window.__naasHashWired) {
     window.__naasHashWired = true;
     window.addEventListener('hashchange', () => {
-      const h = (location.hash || '').replace('#', '').split('/');
-      const p = {};
-      if (SCREENS[h[0]]) p.screen = h[0];
-      if (h[1] && D.LAYERS.find(l => l.id === h[1])) p.layer = h[1];
-      if (h[2] && TABS.includes(h[2])) p.tab = h[2];
-      if (Object.keys(p).length) c.setState(p);
+      const p = hashRoute(location.hash);
+      if (!Object.keys(p).length) return;
+      c.setState(p);
+      // Explore 360 reached by a hash change never ran startScan, so the spinner
+      // spun forever on a scanStep that nothing was advancing.
+      if (p.screen === 's1') startScan(c);
     });
   }
   try { const h = localStorage.getItem('naas.headOpen'); if (h === 'false') c.setState({ headOpen: false }); } catch (e) {}
@@ -251,16 +272,13 @@ export function vals(c) {
   const mostChosen = layerProducts(s.layer).sort((a, b) => b.popular - a.popular).slice(0, 3).map(p => productCard(c, p, est));
   const levelItems = levelMap(s, est, layer, drillInfo, set).filter(t => !s.levelQuery || t.name.toLowerCase().includes(s.levelQuery.toLowerCase()));
   const sorted = levelItems.sort((a, b) => s.levelSort === 'az' ? a.name.localeCompare(b.name) : s.levelSort === 'exposed' ? b.exposed - a.exposed : b.size - a.size).slice(0, 60);
-  const baseItems = s.layer === 'cloud' ? est.regionsList.map(r => ({ exposed: r.priv ? 0 : 1 })) : levelItems;
-  const exposedN = baseItems.filter(t => t.exposed > 0).length, totalN = baseItems.length;
-  const noun = s.layer === 'cloud' ? ['region', 'regions', 'still ride the public internet'] : ['site', 'sites', 'reach clouds over the public internet'];
-  const connectVerdict = isEmpty ? 'Nothing connected yet. AT&T already sees 41 metros with on-ramps and 12 clouds you could reach.' : exposedN ? `${exposedN} of ${totalN} ${noun[1]} ${noun[2]}. ${totalN - exposedN} ${totalN - exposedN === 1 ? 'is' : 'are'} on the AT&T fabric${s.layer === 'cloud' && est.regionsExtra ? `, plus ${est.regionsExtra} smaller regions rolled up` : ''}.` : `Every ${noun[0]} is on the AT&T fabric.`;
+  const connectVerdict = VD.connectVerdict(est, s.layer, levelItems);
   const connectEmptyHead = isEmpty ? 'Nothing connected yet' : connectVerdict;
   const catalogRow = layerProducts(s.layer).sort((a, b) => (a.id === 'hosted-vpc' ? -1 : b.id === 'hosted-vpc' ? 1 : b.popular - a.popular)).map(p => productCard(c, p, est));
   const visionRow = D.VISION.filter(v => v.layer === s.layer).map(v => ({ key: v.name, name: v.name }));
   const policies = [...layerPolicies(s, est, obScope), ...(s.layer === 'cloud' ? (s.customPolicies || []) : [])].map(p => ({ ...p, key: p.name, dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-body)', matched: p.matched.toLocaleString('en-US'), viol: p.viol.toLocaleString('en-US') }));
   const pciViol = (est.findings.find(f => f.kind === 'pci') || {}).head;
-  const governVerdict = isEmpty ? 'No policies yet. Three starting points below.' : `${est.policiesEnforced} policies enforced. ${pciViol || (est.policiesAuthored - est.policiesEnforced) + ' authored but not enforced.'}`;
+  const governVerdict = VD.governVerdict(est);
   const buckets = layerBuckets(s, est).map(b => ({ ...b, key: b.id, todayF: fmt(b.today), fabricF: fmt(b.fabric),
     explainGo: explainNav(c, { label: b.name || b.id, value: fmt(b.today) + '/mo',
       sub: `${fmt(b.today)}/mo on the hyperscaler against ${fmt(b.fabric)}/mo on the fabric.`,
@@ -268,7 +286,7 @@ export function vals(c) {
       pattern: /internet|saas/i.test(b.name || '') ? 'internet' : /cross-cloud|inter/i.test(b.name || '') ? 'clouds' : /gpu|inference/i.test(b.name || '') ? 'internet' : null, parts: [] }), savedF: b.today > b.fabric ? fmt(b.today - b.fabric) : 'On the fabric', saved: b.today - b.fabric, action: b.today > b.fabric ? 'Steer this bucket' : 'Already steered', canSteer: b.today > b.fabric, steer: () => steerBucket(c, b, est), arb: `${fmt(b.today)}/mo today on ${b.cloud} · ${fmt(b.fabric)}/mo on the fabric · save ${fmt(b.today - b.fabric)}/mo` }));
   const steerable = buckets.filter(b => b.canSteer);
   const bTotal = buckets.reduce((a, b) => a + b.today, 0), bFab = buckets.reduce((a, b) => a + b.fabric, 0);
-  const costVerdict = isEmpty ? 'No egress seen yet.' : totalSave ? `${fmt(totalSave)}/mo on the table across ${est.findings.filter(f => f.priced).length} priced findings. ${fmt(ob.savingsMo)}/mo already saved on the fabric.` : steerable.length ? `${fmt(steerable.reduce((a, b) => a + b.today, 0))}/mo leaves through public egress that the fabric would carry for ${fmt(steerable.reduce((a, b) => a + b.fabric, 0))}.` : 'Every bucket is already on the fabric.';
+  const costVerdict = VD.costVerdict(est, ob, totalSave, buckets);
   const kpis = isEmpty ? [] : kpiTiles(s, est);
   // The fabric picture opens on Home and Fabric; every other screen keeps a one-line strip and a "Show the fabric" door (audit finding 2).
   const heroScreen = ['s0', 's2'].includes(s.screen) || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect');
@@ -336,7 +354,6 @@ export function vals(c) {
     { label: 'Checking on-ramp coverage per metro', src: '41 metros' },
     { label: 'Joining utilization and egress spend', src: 'last 30 days' },
   ].map((st, i) => ({ ...st, key: 'sc' + i, done: s.scanStep > i, active: s.scanStep === i, color: s.scanStep > i ? 'var(--success)' : s.scanStep === i ? 'var(--cta)' : 'var(--border-primary)', textColor: s.scanStep >= i ? 'var(--text-heading)' : 'var(--text-disabled)' }));
-  const scanDone = s.scanStep >= 4 || isEmpty === false && s.scanStep >= 4;
   const discoverVerdict = isEmpty ? 'Add a cloud credential or pick an inventory to start.' : `${est.clouds} clouds, ${est.regions} regions, ${est.workloads.toLocaleString('en-US')} workloads. ${est.privatePct}% already reach AT&T privately.`;
   const discoverKpis = isEmpty ? [] : [{ key: 'a', v: est.workloads.toLocaleString('en-US'), l: 'assets discovered', e: `${est.clouds} clouds, ${est.regions} regions` }, { key: 'b', v: `${est.attachedRegions} of ${est.regions}`, l: 'regions attached', e: 'private path to AT&T' }, { key: 'c', v: `${pct(est.attachedRegions, est.regions)}%`, l: 'cloud attach rate', e: 'regions with a private path' }, { key: 'd', v: est.tags, l: 'tags discovered', e: 'from cloud resource tags' }];
   const chipSets = [{ g: 'Region', v: ['US East', 'US West', 'Europe', 'APAC'] }, { g: 'Site class', v: ['Data center', 'Branch', 'Campus'] }, { g: 'Business unit', v: ['Finance', 'Retail', 'Platform'] }, { g: 'Cloud', v: ['AWS', 'Azure', 'GCP'] }, { g: 'Connection type', v: ['NetBond', 'DX', 'ER', 'Internet'] }];
@@ -387,7 +404,7 @@ export function vals(c) {
     ...shellVals(s, set, go, est, c),
     headOpen: s.headOpen !== false, headClosed: s.headOpen === false, toggleHead: () => { const v = s.headOpen === false; set({ headOpen: v }); try { localStorage.setItem('naas.headOpen', String(v)); } catch (e) {} }, headRot: s.headOpen === false ? 'rotate(-90deg)' : 'rotate(0deg)',
     ...andiVals(s, set, go, est, ob, { conns, floorVerdict, connectVerdict, governVerdict, costVerdict, discoverVerdict, stageKicker, findingCard, sortF, findingsFor, isEmpty, totalSave, persona, personaTab }),
-    deptVerdict: s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? ob.verdict : connectVerdict, pageSub: s.screen === 's3' ? ({ connect: `${est.regionsList.filter(r => !r.priv).length} of ${est.regionsList.length} regions public · ${est.attachedRegions} attached · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`, observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on the fabric · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${est.policiesEnforced} of ${est.policiesAuthored} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || connectVerdict) : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
+    pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? ob.verdict : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on the fabric · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${est.policiesEnforced} of ${est.policiesAuthored} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
     persona: s.persona || 'architect', personaName: persona, setPersona: (e) => set({ persona: e.target.value }), personas: PERSONAS.map(p => ({ key: p, label: p })), moreByTab, hasMoreByTab: moreByTab.length > 0, pendingTitle: (s.order && s.order.title) || 'Hosted VPC order', dismissPending: () => set({ pendingDismissed: true }),
     estateName: est.name, isEmpty, isPartial, isMature, notEmpty: !isEmpty, stageKicker, floorVerdict,
     sS0: s.screen === 's0' || (s.screen === 's2' && isEmpty), sS1: s.screen === 's1', sS2: s.screen === 's2' && !isEmpty, showLaunch: !isEmpty && (s.screen === 's2' || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect')), sS3: s.screen === 's3', sS4: s.screen === 's4', sS5: s.screen === 's5', sS6: s.screen === 's6', sS7: s.screen === 's7', sS8: s.screen === 's8',
@@ -732,14 +749,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
   const selWl = inv.flatMap(cl => cl.regions.flatMap(r => r.vpcs)).filter(v => sel.includes(v.id)).reduce((a, v) => a + v.wl, 0);
   const pubWl = est.regionsList.filter(r => !r.priv).reduce((a, r) => a + r.wl, 0);
   const attachN = selWl || pubWl;
-  // station track
-  const current = s.screen === 's1' ? 'discover' : s.screen === 's3' ? s.tab : s.screen === 's2' ? 'discover' : null;
-  const goStop = (stop) => () => { if (stop === 'discover') { go('s1')(); return; } if (s.screen !== 's3') { go('s3', { layer: s.layer, tab: stop })(); return; } set({ tab: stop }); syncHash('s3', s.layer, stop); scrollToResult('S3 Department'); };
-  const stations = A.STOPS.map((st, i) => { const cur = st === current; const done = !isEmpty && st === 'discover' && !cur; return { key: st, label: A.STOP_LABEL[st], cur, done, go: goStop(st), fill: cur ? 'var(--cta)' : done ? 'var(--success)' : 'transparent', ring: cur ? 'var(--cta)' : done ? 'var(--success)' : 'var(--border-primary)', color: cur ? 'var(--link)' : done ? 'var(--text-heading)' : 'var(--text-light)', weight: cur ? 700 : 500, notLast: i < A.STOPS.length - 1, flex: i < A.STOPS.length - 1 ? '1 1 0' : '0 0 auto', mark: done ? '✓' : cur ? '●' : '' }; });
-  const onTable = (est.buckets || []).reduce((a, b) => a + Math.max(0, b.today - b.fabric), 0);
-  const cta = A.stopCta(current || 'discover', est, ob, onTable);
-  const ctaLabel = current === 'discover' && attachN ? `Attach ${attachN.toLocaleString('en-US')}` : cta.label;
-  const stationCta = { label: ctaLabel, go: cta.next === 'compose' ? go('s4') : goStop(cta.next) };
+  // The loop is Connect -> Observe -> Govern -> Cost. Explore 360 is the way in, so its
+  // one call to action is Connect. (The five-stop model it used to read is deleted.)
+  const stationCta = { label: attachN ? `Attach ${attachN.toLocaleString('en-US')}` : 'Connect', go: go('s3', { layer: s.layer, tab: 'connect' }) };
   // observe
   const OBTABS = ['flow', 'trend', 'throughput', 'latency', 'loss', 'egress', 'control'];
   const obTab = s.obTab || 'flow';
@@ -883,8 +895,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
     logFilterToggleWord: (s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen) ? 'Hide' : 'Show',
     clearLogs: () => set({ logQ: '', logPath: 'all', logAct: 'all', logPattern: 'all' }),
   };
-  const degRow = conns.rows.find(r => r.degraded);
-  const nextStop = degRow ? { title: 'Next stop: Govern', text: `${degRow.wl.toLocaleString('en-US')} workloads behind ${degRow.cloud} ${degRow.region} ${degRow.paths >= 2 ? 'have a second path but no policy that requires one' : 'ride a single path with no policy that requires a second'}. Author the policy, simulate it, then enforce it.`, cta: 'Open Govern', go: go('s3', { layer: 'cloud', tab: 'govern' }) } : { title: 'Next stop: Govern', text: 'Every connection is up. Set a latency SLO for the tags that still cross the public internet, then enforce it.', cta: 'Open Govern', go: go('s3', { layer: 'cloud', tab: 'govern' }) };
+  const nextStop = { ...VD.observeNext(conns), go: go('s3', { layer: 'cloud', tab: 'govern' }) };
   // The gap, itemised. The page could show what you have and what the three
   // paths cost, but never "these eleven things are not connected, here is
   // each one and what it would take". That is the middle rung a customer
@@ -1351,7 +1362,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
     discoverVerdictLine: isEmpty ? 'Nothing discovered yet. Connect an account or pick an inventory.' : `${est.regionsList.length - ob.pathsCovered} of your ${est.regionsList.length} cloud regions still ride the public internet. ${ob.pathsCovered} ${ob.pathsCovered === 1 ? 'is' : 'are'} on the AT&T fabric, across ${inv.length} clouds.`,
     advisorSave: fmt(totalSave || ob.savingsMo || 0) + '/mo', advisorSub: totalSave ? `on the table across ${est.findings.filter(f => f.priced).length} findings` : `already saved on the fabric · ${est.findings.length} open findings`, askAdvisor: go('s3', { layer: 'cloud', tab: 'connect' }), hasAdvisor: !isEmpty && (totalSave > 0 || ob.savingsMo > 0), discoverHeadCols: !isEmpty && (totalSave > 0 || ob.savingsMo > 0) ? 'minmax(0,1fr) 300px' : 'minmax(0,1fr)',
     breakdownOpen: !!s.breakdownOpen, toggleBreakdown: () => set({ breakdownOpen: !s.breakdownOpen }), breakdownCaret: s.breakdownOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-    stations: s.screen === 's2' ? stations.map(st => ({ ...st, cur: false, fill: st.done || st.key === 'discover' ? 'var(--success)' : 'transparent', ring: st.done || st.key === 'discover' ? 'var(--success)' : 'var(--border-primary)', color: 'var(--text-heading)', weight: 500, mark: st.key === 'discover' ? '✓' : '' })) : stations, stationCta, showTrack: !isEmpty, showStationCta: s.screen !== 's4',
+    stationCta,
     obScope, setObScope: (e) => set({ obScope: e.target.value }),
     obScopes: R.scopes(est0).map(sc => ({ ...sc, on: sc.key === obScope, go: () => set({ obScope: sc.key }), ub: sc.key === obScope ? 'var(--cta)' : 'transparent', uc: sc.key === obScope ? 'var(--link)' : 'var(--text-body)', uw: sc.key === obScope ? 700 : 500 })), obScopeLabel: (R.scopes(est0).find(x => x.key === obScope) || {}).label || 'Whole estate',
     obWindows: ['7d', '30d', '90d'].map(w => ({ key: w, label: w, on: (s.obWindow || '30d') === w, go: () => set({ obWindow: w }), ub: (s.obWindow || '30d') === w ? 'var(--cta)' : 'transparent', uc: (s.obWindow || '30d') === w ? 'var(--link)' : 'var(--text-body)', uw: (s.obWindow || '30d') === w ? 700 : 500 })),

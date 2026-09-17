@@ -23,7 +23,7 @@
 7. Type is AT&T Aleck Sans with a documented fallback. Colours come from CSS custom properties in the light and dark theme blocks. Never hardcode a hex inside a component.
 8. Verification is not optional: CLAUDE.md forbids declaring any UI task done without running the dev server and confirming in a browser. Every task ends by verifying in the browser and naming which estates were checked.
 
-**Deferred by the spec, do not touch in this wave:** `--warning` (`#b85f00`), `--error` (`#c23131`), `--viz-4` (`#b85f00`) and `--viz-5` (`#7d3f98`). Flywheel's equivalents are markedly louder and it has no purple at all, so spec section 5 defers those four to a human ruling. Task 6 adds a test that pins them at today's values so nobody "finishes the migration" by accident.
+**Deferred by the spec, do not touch in this wave:** `--warning` (`#b85f00`), `--error` (`#c23131`), `--viz-4` (`#b85f00`) and `--viz-5` (`#7d3f98`). Flywheel's equivalents are markedly more saturated in every case, including its purple, `#af29bb`, so spec section 5 defers those four to a human ruling. Task 6 adds a test that pins them at today's values so nobody "finishes the migration" by accident.
 
 ---
 
@@ -740,7 +740,7 @@ EOF
 
 The storefront is already 17 of 29 tokens exact against the Flywheel 3 extraction at `~/Developer/att-netbond-sdci/tailwind.config.js`. Eight have drifted. All eight are values in the single `[data-theme="light"]` block at `NaaS Storefront.dc.html:63`. No component is touched.
 
-`--warning`, `--error`, `--viz-4` and `--viz-5` are **not** in this task. Flywheel's `orange-600` (`#ea712f`) and `red-600` (`#c70032`) are markedly louder than what ships, and Flywheel has no purple at all. Spec section 5 calls that a design decision rather than a migration and defers it to Micah. The second test below pins the four at today's values so the deferral is enforced rather than remembered.
+`--warning`, `--error`, `--viz-4` and `--viz-5` are **not** in this task. Flywheel's `orange-600` (`#ea712f`), `red-600` (`#c70032`) and `purple` (`#af29bb`) are all markedly more saturated than what ships. Spec section 5 calls that a design decision rather than a migration and defers it to Micah. The second test below pins the four at today's values so the deferral is enforced rather than remembered.
 
 The dark theme is out of scope: Flywheel's dark ramp is not in the extraction on disk.
 
@@ -791,7 +791,7 @@ test('the four tokens Flywheel has no answer for are left alone until a human ru
   assert.equal(t['--warning'], '#b85f00', 'fw orange-600 #ea712f is markedly louder; deferred');
   assert.equal(t['--viz-4'], '#b85f00', 'same as --warning; deferred');
   assert.equal(t['--error'], '#c23131', 'fw red-600 #c70032 is markedly louder; deferred');
-  assert.equal(t['--viz-5'], '#7d3f98', 'Flywheel has no purple; deferred');
+  assert.equal(t['--viz-5'], '#7d3f98', 'fw purple #af29bb is markedly more saturated; deferred');
 });
 ```
 
@@ -832,8 +832,8 @@ design: the eight drifted light-theme tokens conform to Flywheel 3
 
 Values from the Figma-matched extraction in att-netbond-sdci. --warning,
 --error, --viz-4 and --viz-5 are deliberately untouched and now pinned by a
-test: Flywheel's equivalents are markedly louder and it has no purple, so
-those four are a design ruling, not a migration.
+test: Flywheel's equivalents, including its purple #af29bb, are markedly
+more saturated, so those four are a design ruling, not a migration.
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 EOF
