@@ -77,3 +77,11 @@ test('with nothing connected, Observe still names a next stop', () => {
   const next = observeNext(connections(est, ob));
   assert.equal(next.text, 'Every connection is up. Set a latency SLO for the tags that still cross the public internet, then enforce it.');
 });
+
+test('the five-stop model is gone; the shipped four-word order is the only loop', async () => {
+  const addendum = await import('../naas-addendum.js');
+  for (const name of ['STOPS', 'STOP_LABEL', 'stopCta']) {
+    assert.equal(name in addendum, false, `naas-addendum still exports ${name}`);
+  }
+  assert.ok(typeof addendum.observe === 'function', 'observe() must survive the deletion');
+});

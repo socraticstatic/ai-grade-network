@@ -261,19 +261,5 @@ export function observeFindings(est, ob) {
   return out;
 }
 
-// ---------- Station track ----------
-export const STOPS = ['discover', 'connect', 'govern', 'observe', 'cost'];
-export const STOP_LABEL = { discover: 'Discover', connect: 'Connect', govern: 'Govern', observe: 'Observe', cost: 'Cost' };
-export function stopCta(stop, est, ob, onTable) {
-  const pubWl = est.regionsList.filter(r => !r.priv).reduce((a, r) => a + r.wl, 0);
-  return {
-    discover: { label: pubWl ? `Attach ${pubWl.toLocaleString('en-US')}` : 'Connect', next: 'connect' },
-    connect: { label: 'Govern', next: 'govern' },
-    govern: { label: 'Observe', next: 'observe' },
-    observe: { label: onTable ? `Cost · ${short(onTable)}/mo` : 'Cost', next: 'cost' },
-    cost: { label: onTable ? `Compose · ${short(onTable)}/mo` : 'Compose', next: 'compose' },
-    observe_: null,
-  }[stop];
-}
 
 

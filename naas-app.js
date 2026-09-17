@@ -730,14 +730,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
   const selWl = inv.flatMap(cl => cl.regions.flatMap(r => r.vpcs)).filter(v => sel.includes(v.id)).reduce((a, v) => a + v.wl, 0);
   const pubWl = est.regionsList.filter(r => !r.priv).reduce((a, r) => a + r.wl, 0);
   const attachN = selWl || pubWl;
-  // station track
-  const current = s.screen === 's1' ? 'discover' : s.screen === 's3' ? s.tab : s.screen === 's2' ? 'discover' : null;
-  const goStop = (stop) => () => { if (stop === 'discover') { go('s1')(); return; } if (s.screen !== 's3') { go('s3', { layer: s.layer, tab: stop })(); return; } set({ tab: stop }); syncHash('s3', s.layer, stop); scrollToResult('S3 Department'); };
-  const stations = A.STOPS.map((st, i) => { const cur = st === current; const done = !isEmpty && st === 'discover' && !cur; return { key: st, label: A.STOP_LABEL[st], cur, done, go: goStop(st), fill: cur ? 'var(--cta)' : done ? 'var(--success)' : 'transparent', ring: cur ? 'var(--cta)' : done ? 'var(--success)' : 'var(--border-primary)', color: cur ? 'var(--link)' : done ? 'var(--text-heading)' : 'var(--text-light)', weight: cur ? 700 : 500, notLast: i < A.STOPS.length - 1, flex: i < A.STOPS.length - 1 ? '1 1 0' : '0 0 auto', mark: done ? '✓' : cur ? '●' : '' }; });
-  const onTable = (est.buckets || []).reduce((a, b) => a + Math.max(0, b.today - b.fabric), 0);
-  const cta = A.stopCta(current || 'discover', est, ob, onTable);
-  const ctaLabel = current === 'discover' && attachN ? `Attach ${attachN.toLocaleString('en-US')}` : cta.label;
-  const stationCta = { label: ctaLabel, go: cta.next === 'compose' ? go('s4') : goStop(cta.next) };
+  // The loop is Connect -> Observe -> Govern -> Cost. Explore 360 is the way in, so its
+  // one call to action is Connect. (The five-stop model it used to read is deleted.)
+  const stationCta = { label: attachN ? `Attach ${attachN.toLocaleString('en-US')}` : 'Connect', go: go('s3', { layer: s.layer, tab: 'connect' }) };
   // observe
   const OBTABS = ['flow', 'trend', 'throughput', 'latency', 'loss', 'egress', 'control'];
   const obTab = s.obTab || 'flow';
@@ -1348,7 +1343,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
     discoverVerdictLine: isEmpty ? 'Nothing discovered yet. Connect an account or pick an inventory.' : `${est.regionsList.length - ob.pathsCovered} of your ${est.regionsList.length} cloud regions still ride the public internet. ${ob.pathsCovered} ${ob.pathsCovered === 1 ? 'is' : 'are'} on the AT&T fabric, across ${inv.length} clouds.`,
     advisorSave: fmt(totalSave || ob.savingsMo || 0) + '/mo', advisorSub: totalSave ? `on the table across ${est.findings.filter(f => f.priced).length} findings` : `already saved on the fabric · ${est.findings.length} open findings`, askAdvisor: go('s3', { layer: 'cloud', tab: 'connect' }), hasAdvisor: !isEmpty && (totalSave > 0 || ob.savingsMo > 0), discoverHeadCols: !isEmpty && (totalSave > 0 || ob.savingsMo > 0) ? 'minmax(0,1fr) 300px' : 'minmax(0,1fr)',
     breakdownOpen: !!s.breakdownOpen, toggleBreakdown: () => set({ breakdownOpen: !s.breakdownOpen }), breakdownCaret: s.breakdownOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-    stations: s.screen === 's2' ? stations.map(st => ({ ...st, cur: false, fill: st.done || st.key === 'discover' ? 'var(--success)' : 'transparent', ring: st.done || st.key === 'discover' ? 'var(--success)' : 'var(--border-primary)', color: 'var(--text-heading)', weight: 500, mark: st.key === 'discover' ? '✓' : '' })) : stations, stationCta, showTrack: !isEmpty, showStationCta: s.screen !== 's4',
+    stationCta,
     obScope, setObScope: (e) => set({ obScope: e.target.value }),
     obScopes: R.scopes(est0).map(sc => ({ ...sc, on: sc.key === obScope, go: () => set({ obScope: sc.key }), ub: sc.key === obScope ? 'var(--cta)' : 'transparent', uc: sc.key === obScope ? 'var(--link)' : 'var(--text-body)', uw: sc.key === obScope ? 700 : 500 })), obScopeLabel: (R.scopes(est0).find(x => x.key === obScope) || {}).label || 'Whole estate',
     obWindows: ['7d', '30d', '90d'].map(w => ({ key: w, label: w, on: (s.obWindow || '30d') === w, go: () => set({ obWindow: w }), ub: (s.obWindow || '30d') === w ? 'var(--cta)' : 'transparent', uc: (s.obWindow || '30d') === w ? 'var(--link)' : 'var(--text-body)', uw: (s.obWindow || '30d') === w ? 700 : 500 })),
