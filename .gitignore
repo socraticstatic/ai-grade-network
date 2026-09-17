@@ -1,3 +1,5 @@
 _site/
 version.js
 node_modules/
+.superpowers/
+.worktrees/
