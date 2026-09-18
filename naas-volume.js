@@ -263,3 +263,68 @@ function cloudsHead(est, inv, trail, flat = false) {
   const wl = (sn.workloads || []).length;
   return { col: 'clouds', level: 'workload', noun: nounFor('workload', wl), total: wl, title: `${vpc.name} › ${sn.name}`, sub: `${sn.cidr} · ${sn.az}`, trail: tr };
 }
+
+/** Search, page and shape any generic level into the drawer's contract. */
+function frame(head, rows, opts, extra = {}) {
+  const q = (opts.q || '').trim().toLowerCase();
+  const page = opts.page || 1, size = opts.size || 60;
+  const hit = q ? rows.filter(r => `${r.id} ${r.sub}`.toLowerCase().includes(q)) : rows;
+  const shown = hit.slice(0, page * size);
+  return {
+    kind: 'level', col: head.col, level: head.level, noun: head.noun, total: head.total,
+    title: head.title, sub: head.sub, trail: head.trail, searchHint: `Search ${head.noun}`,
+    counts: { total: rows.length }, matching: hit.length, shownCount: shown.length,
+    hasMore: shown.length < hit.length, rows: shown,
+    apps: [], flatDoor: null, selectedCount: 0, matchingIds: [],
+    bulk: { attach: 0, label: '' },
+    ...extra,
+  };
+}
+
+const stateOfPriv = (priv) => (priv ? 'ok' : 'public');
+const labelOfPriv = (priv) => (priv ? 'On the AT&T fabric' : 'Public first mile');
+
+/**
+ * The rows behind a column header's door, at any level of any column.
+ * Delegates where a real volume builder already exists; generic everywhere
+ * else, off the `level` string each row producer returns.
+ */
+export function levelList(est, inv, ob, col, trail = [], opts = {}) {
+  if (col === 'sites') return sitesLevel(est, trail, opts);
+  return null;
+}
+
+function sitesLevel(est, trail, opts) {
+  const head = sitesHead(est, trail);
+  if (!head) return null;
+  if (!trail.length) {
+    const rows = (est.sites || []).map((st) => {
+      const c = S.countOf(st.name);
+      return {
+        id: String(st.name), into: S.rollupKeyOf(est, st) || (c > 1 ? S.classOf(st) : st.name),
+        state: stateOfPriv(st.priv), stateLabel: labelOfPriv(st.priv),
+        sub: `${st.access || 'first mile'} · ${n(c)} ${c === 1 ? 'site' : 'sites'}`, action: '',
+      };
+    });
+    return frame(head, rows, opts);
+  }
+  // The same guard as `sitesHead`. And the delegate KEEPS its own `kind`: the
+  // drawer's chip rows, search hint, pin and row action all branch on
+  // `volList.kind`, so overwriting it here would hand a cloud workload the
+  // site treatment. The scope kind lives on `s.vol`, not on the list.
+  const m = trail.length === 2 ? metroOf(est, trail[0], trail[1]) : null;
+  if (m) {
+    const cls = String(trail[0]).split('#')[0];
+    const v = volumeList(est, { cls, metro: trail[1] }, opts);
+    if (!v) return null;
+    return { ...v, col: 'sites', level: head.level, noun: head.noun, total: head.total, trail: head.trail, rows: v.rows.map(r => ({ ...r, into: null })) };
+  }
+  const info = C.siteDrillRows(est, trail);
+  if (!info) return null;
+  const rows = info.rows.filter(r => !r.more).map(r => ({
+    id: r.name, into: r.leaf ? null : (r.drillKey || null),
+    state: stateOfPriv(r.priv), stateLabel: labelOfPriv(r.priv),
+    sub: r.access || '', action: r.priv ? '' : 'Attach',
+  }));
+  return frame(head, rows, opts);
+}
