@@ -1435,7 +1435,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <div>
     <div style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;color:var(--text-disabled)">Describe the outcome. AT&amp;T composes the connection.</div>
     <h1 style="margin:4px 0 0;font-size:26px;line-height:34px;font-weight:700;color:var(--text-heading)">Compose</h1>
-  <sc-if value="{{ hasParsedNote }}" hint-placeholder-val="{{ false }}"><div class="fx-alert" role="status" style="margin-top:8px"><div class="fx-alert-body"><span class="fx-alert-icon" aria-hidden="true"></span><div><div class="fx-alert-title">From the drawer</div><div class="fx-alert-text">{{ parsedNote }}</div></div></div></div></sc-if>
+  <sc-if value="{{ hasParsedNote }}" hint-placeholder-val="{{ false }}"><div class="fx-alert" role="status" style="margin-top:8px"><div class="fx-alert-body"><span class="fx-alert-icon" aria-hidden="true"></span><div><div class="fx-alert-title">{{ parsedNoteTitle }}</div><div class="fx-alert-text">{{ parsedNote }}</div></div></div></div></sc-if>
   </div>
   <ol aria-label="Steps" style="list-style:none;margin:0;padding:0;display:flex;align-items:center">
     <sc-for list="{{ wizSteps }}" as="st" hint-placeholder-count="6">

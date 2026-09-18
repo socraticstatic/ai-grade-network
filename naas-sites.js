@@ -184,3 +184,8 @@ export function rollupKeyOf(est, st) {
   const ri = peers.findIndex(x => x.name === st.name);
   return ri < 0 ? null : `${cls}#${ri}`;
 }
+
+/** How many sites are still on a public first mile. Rows are rollups; this counts inside them. */
+export function gapSiteCount(est) {
+  return (est && est.sites || []).filter(x => !x.priv).reduce((a, x) => a + countOf(x.name), 0);
+}

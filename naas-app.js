@@ -1059,17 +1059,22 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
     alt: 'or Direct Connect / ExpressRoute · 4 to 8 weeks, you run the routers',
     go: composeFor(go, r),
   }));
-  const gapSites = (est.sites || []).filter(x => !x.priv).map(x => ({
-    key: 'gs-' + x.name, kind: 'site', name: x.name,
-    sub: `${x.access || 'first mile'} · ${x.metro || 'various'} · public first mile`,
-    tags: [], hasTags: false,
-    best: 'Attach the first mile to the fabric', bestWhy: 'AVPN or ASE, same-day on existing access',
-    alt: 'or keep the internet path with inline inspection',
-    go: composeFor(go, x),
-  }));
+  const gapSites = (est.sites || []).filter(x => !x.priv).map(x => {
+    const qty = S.countOf(x.name);
+    const what = `${qty.toLocaleString('en-US')} ${qty === 1 ? 'site' : 'sites'} · ${x.name.replace(/\s*\([\d,]+\)\s*$/, '')}`;
+    return {
+      key: 'gs-' + x.name, kind: 'site', name: x.name, qty,
+      sub: `${qty.toLocaleString('en-US')} ${qty === 1 ? 'site' : 'sites'} · ${x.access || 'first mile'} · ${x.metro || 'various'} · public first mile`,
+      tags: [], hasTags: false,
+      best: 'Attach the first mile to the fabric', bestWhy: 'AVPN or ASE, same-day on existing access',
+      alt: 'or keep the internet path with inline inspection',
+      go: () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: what, qty }, parsedNoteTitle: 'Not connected yet', parsedNote: `Attach ${what}. One order, one policy, ${qty.toLocaleString('en-US')} ${qty === 1 ? 'circuit' : 'circuits'}.` }); syncHash('s4', s.layer, s.tab); },
+    };
+  });
   const gapRows = [...gapRegions, ...gapSites];
+  const gapSiteN = S.gapSiteCount(est);
   const gapSummary = gapRows.length
-    ? `${gapRows.length} ${gapRows.length === 1 ? 'thing is' : 'things are'} still on the public internet — ${gapRegions.length} cloud ${gapRegions.length === 1 ? 'region' : 'regions'}, ${gapSites.length} ${gapSites.length === 1 ? 'site' : 'sites'}.`
+    ? `${gapRegions.length} cloud ${gapRegions.length === 1 ? 'region' : 'regions'} and ${gapSiteN.toLocaleString('en-US')} ${gapSiteN === 1 ? 'site is' : 'sites are'} still on the public internet, in ${gapRows.length} ${gapRows.length === 1 ? 'group' : 'groups'}.`
     : 'Everything discovered is on the AT&T fabric.';
   // Connect, as three decisions in the order a customer makes them:
   // which path, how to buy it, what happens after the order is placed.
@@ -1588,7 +1593,7 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
     stepIs0: step === 0, stepIs1: step === 1, stepIs2: step === 2, stepIs3: step === 3, stepIs4: step === 4, stepIs5: step === 5,
     srcCards: D.COMPOSE_CHIPS.source.map(v => card('source', v, false, CARD_DESC.source[v])), dstCards: D.COMPOSE_CHIPS.dest.map(v => card('dest', v, false, CARD_DESC.dest[v])), resCards: D.COMPOSE_CHIPS.resiliency.map(v => card('resiliency', v, true, CARD_DESC.resiliency[v])), ctlCards: D.COMPOSE_CHIPS.control.map(v => card('control', v, false, CARD_DESC.control[v])),
     metroCards: (D.COMPOSE_CHIPS.regions[cp.regionTab] || []).map(m => ({ ...card('metros', m, false, METRO_RAMPS[m] || 'NetBond'), })),
-    parsedNote: s.parsedNote || '', hasParsedNote: !!s.parsedNote && step === 0, prefilled: !!cp.prefilled && !s.parsedNote, prefillLine: cp.prefilled ? `Started from your estate: ${cp.prefillRegion} has ${cp.prefillWl} workloads on the public internet. Every step is filled; change what you like.` : '',
+    parsedNote: s.parsedNote || '', parsedNoteTitle: s.parsedNoteTitle || 'From the drawer', hasParsedNote: !!s.parsedNote && step === 0, prefilled: !!cp.prefilled && !s.parsedNote, prefillLine: cp.prefilled ? `Started from your estate: ${cp.prefillRegion} has ${cp.prefillWl} workloads on the public internet. Every step is filled; change what you like.` : '',
     slotRows: [['Outcome', outcome ? outcome.name : '', 0, 'Pick an outcome'], ['From', cp.source.join(', '), 1, 'Pick a source'], ['To', cp.dest.join(', '), 2, 'Pick a destination'], ['Via', cp.metros.join(', '), 3, 'Pick a metro'], ['Resiliency', cp.resiliencyChosen ? cp.resiliency : `${cp.resiliency} (default)`, 4, ''], ['Require', cp.control.join(', '), 5, 'Pick a control']].map(([label, v, i, empty]) => ({ key: label, label, text: v || empty, go: goStep(i), cur: step === i, weight: v ? 500 : 400, color: step === i ? 'var(--link)' : v ? 'var(--text-heading)' : 'var(--text-disabled)' })),
     sent: sentence, slotSrc: slot(sentence.src, 1, 'a source'), slotDst: slot(sentence.dst, 2, 'a destination'), slotMetro: slot(sentence.metro, 3, 'a metro'), slotRes: slot(sentence.res, 4, 'resiliency'), slotCtl: slot(sentence.ctl, 5, 'a control'), slotOutcome: slot(outcome ? outcome.name.toLowerCase() : '', 0, 'an outcome'),
     polSent: policySentence, hasConstraintNow: !!constraint && step === 4,
