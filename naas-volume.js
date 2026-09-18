@@ -175,7 +175,7 @@ const NOUN = {
   workload: ['workload', 'workloads'],
 };
 const nounFor = (level, total) => { const pair = NOUN[level] || ['item', 'items']; return total === 1 ? pair[0] : pair[1]; };
-const fabTrail = (trail) => (trail && trail.length ? trail : ['fab']);
+const fabTrail = (trail) => (!trail || !trail.length ? ['fab'] : trail[0] === 'fab' ? trail : ['fab', ...trail]);
 const totalSites = (est) => (est.sites || []).reduce((a, x) => a + S.countOf(x.name), 0);
 
 /**

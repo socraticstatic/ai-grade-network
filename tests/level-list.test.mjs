@@ -107,3 +107,21 @@ test('the header count is the drawer count, on every column', () => {
     assert.equal(list(col, trail).total, levelHead(est, inv, ob, col, trail).total, `${col} ${trail}`);
   }
 });
+
+// A caller that never seeds the literal 'fab' — exactly what a uniform
+// trail-tracker does, building `[...trail, into]` from an empty root — must
+// land on the same node as one that does. Unseeded and seeded trails are
+// pinned side by side so neither drifts from the other.
+test('an unseeded fabric trail reaches the same level as the seeded one', () => {
+  const unseeded = levelHead(est, inv, ob, 'fabric', ['N. Virginia']);
+  assert.equal(unseeded.level, 'port');
+  assert.equal(unseeded.total, 21);
+  const seeded = levelHead(est, inv, ob, 'fabric', ['fab', 'N. Virginia']);
+  assert.deepEqual(unseeded, seeded);
+
+  const unseededList = list('fabric', ['N. Virginia']);
+  assert.equal(unseededList.rows.length, 21);
+  assert.ok(unseededList.rows[0].into.startsWith('port:'));
+  const seededList = list('fabric', ['fab', 'N. Virginia']);
+  assert.deepEqual(unseededList, seededList);
+});
