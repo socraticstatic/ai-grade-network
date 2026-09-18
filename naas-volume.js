@@ -291,6 +291,8 @@ const labelOfPriv = (priv) => (priv ? 'On the AT&T fabric' : 'Public first mile'
  */
 export function levelList(est, inv, ob, col, trail = [], opts = {}) {
   if (col === 'sites') return sitesLevel(est, trail, opts);
+  if (col === 'fabric') return fabricLevel(est, inv, ob, trail, opts);
+  if (col === 'clouds') return cloudsLevel(est, inv, trail, opts);
   return null;
 }
 
@@ -327,4 +329,47 @@ function sitesLevel(est, trail, opts) {
     sub: r.access || '', action: r.priv ? '' : 'Attach',
   }));
   return frame(head, rows, opts);
+}
+
+const FAB_STATE = { degraded: ['degraded', 'Degraded'], saturating: ['public', 'Saturating'], ok: ['ok', 'Healthy'] };
+
+function fabricLevel(est, inv, ob, trail, opts) {
+  const head = fabHead(est, inv, ob, trail);
+  if (!head) return null;
+  const info = FB.fabricRows(est, inv, ob, fabTrail(trail));
+  const rows = info.rows.map(r => {
+    const [state, stateLabel] = FAB_STATE[r.state] || FAB_STATE.ok;
+    return { id: r.name, into: r.leaf ? null : (r.drill || null), state, stateLabel, sub: r.sub || '', action: r.leaf ? 'Add circuit' : '' };
+  });
+  return frame(head, rows, opts);
+}
+
+function cloudsLevel(est, inv, trail, opts) {
+  const head = cloudsHead(est, inv, trail, !!opts.flat);
+  if (!head) return null;
+  if (!trail.length) {
+    const rows = est.regionsList.map(r => ({
+      id: `${r.cloud} ${r.region}`, into: r.region,
+      state: stateOfPriv(r.priv), stateLabel: r.priv ? 'On the AT&T fabric' : 'Public internet',
+      sub: `${n(r.wl || 0)} ${r.wl === 1 ? 'workload' : 'workloads'} · ${r.ramp || 'no on-ramp'}`,
+      action: r.priv ? '' : 'Attach',
+    }));
+    return frame(head, rows, opts);
+  }
+  if (trail.length === 1) {
+    const info = C.regionDrillRows(est, inv, trail);
+    if (!info) return null;
+    const rows = info.rows.filter(r => r.child && !r.seeAll).map(r => ({
+      id: r.region, into: r.drill || null,
+      state: stateOfPriv(r.priv), stateLabel: r.priv ? 'Private' : 'Public',
+      sub: r.sub || '', action: '',
+    }));
+    return frame(head, rows, opts);
+  }
+  const w = workloadList(est, inv, { region: trail[0], vpcId: trail[1], snId: trail[2] || null, flat: !!opts.flat }, opts);
+  if (!w) return null;
+  // `kind: 'workloads'` survives, for the same reason the sites delegation
+  // keeps its own: the drawer's app chips, ip search hint, pin and Isolate
+  // action all read `volList.kind`.
+  return { ...w, col: 'clouds', level: head.level, noun: head.noun, total: head.total, trail: head.trail, rows: w.rows.map(r => ({ ...r, into: r.snId || null })) };
 }

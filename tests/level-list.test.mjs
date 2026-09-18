@@ -59,3 +59,51 @@ test('rows.length before paging equals levelHead.total, at every sites level', (
     assert.equal(unpaged.rows.length, levelHead(est, inv, ob, 'sites', trail).total, JSON.stringify(trail));
   }
 });
+
+test('the fabric column opens facilities, ports and circuits', () => {
+  assert.equal(list('fabric', []).rows.length, 4);
+  assert.equal(list('fabric', ['fab']).rows[0].into, 'N. Virginia');
+  const ports = list('fabric', ['fab', 'N. Virginia']);
+  assert.equal(ports.rows.length, 21, 'all 21 ports, not the band eight');
+  assert.ok(ports.rows.every(r => r.into && r.into.startsWith('port:')));
+  const cx = list('fabric', ['fab', 'N. Virginia', 'port:us-east-1:1']);
+  assert.equal(cx.rows.length, 3);
+  assert.ok(cx.rows.every(r => !r.into), 'a circuit is a leaf');
+});
+
+test('the clouds root lists the regions it actually has', () => {
+  const lv = list('clouds', []);
+  assert.equal(lv.rows.length, 6);
+  assert.equal(lv.total, 6, 'never 14: regionsExtra is not in the drawer');
+  assert.equal(lv.rows[0].into, 'us-east-1');
+});
+
+test('a region lists its VPCs; a VPC delegates to workloadList', () => {
+  const vpcs = list('clouds', ['us-east-1']);
+  assert.equal(vpcs.rows.length, 3);
+  assert.equal(vpcs.rows[0].into, 'vpc-0-0');
+  const subnets = list('clouds', ['us-east-1', 'vpc-0-0']);
+  assert.equal(subnets.rows.length, 6);
+  assert.equal(subnets.rows[0].into, subnets.rows[0].snId);
+  assert.ok(subnets.flatDoor, 'the flat door survives the delegation');
+  const wl = list('clouds', ['us-east-1', 'vpc-0-0', 'vpc-0-0-pub-0']);
+  assert.equal(wl.total, 60);
+  assert.ok(wl.rows.every(r => !r.into));
+  // The crumb row is names, never ids: the trail carries `vpc-0-0`, the
+  // header must read `vpc-prod-01`.
+  assert.deepEqual(wl.trail, ['Clouds', 'AWS us-east-1', 'vpc-prod-01', 'public-a']);
+  assert.deepEqual(list('clouds', []).trail, ['Clouds']);
+});
+
+test('the flat door skips the subnets without moving the column', () => {
+  const flat = list('clouds', ['us-east-1', 'vpc-0-0'], { flat: true });
+  assert.equal(flat.level, 'workload');
+  assert.equal(flat.total, 447);
+});
+
+test('the header count is the drawer count, on every column', () => {
+  const cases = [['fabric', []], ['fabric', ['fab', 'N. Virginia']], ['clouds', []], ['clouds', ['us-east-1']], ['clouds', ['us-east-1', 'vpc-0-0']]];
+  for (const [col, trail] of cases) {
+    assert.equal(list(col, trail).total, levelHead(est, inv, ob, col, trail).total, `${col} ${trail}`);
+  }
+});
