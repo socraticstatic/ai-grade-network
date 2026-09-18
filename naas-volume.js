@@ -20,10 +20,11 @@ export function siteState(site, i) {
   return site.priv ? 'ok' : 'public';
 }
 
-/** Find the metro node for a class and metro name. */
+/** Find the metro node for a class (or rollup-group key) and a metro key or name. */
 export function metroOf(est, cls, metro) {
-  const c = S.siteTree(est).find(x => x.cls === cls || x.label === cls); if (!c) return null;
-  return c.children.find(ch => ch.kind === 'metro' && ch.name === metro) || null;
+  const base = String(cls).split('#')[0];
+  const c = S.siteTree(est).find(x => x.cls === base || x.label === base); if (!c) return null;
+  return c.children.find(ch => ch.kind === 'metro' && (ch.key === metro || ch.name === metro)) || null;
 }
 
 /** The list behind "+N more": all sites of a metro with state, sorted worst first, filtered, paged. */

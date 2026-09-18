@@ -156,7 +156,7 @@ export function siteDrillRows(est, trail, opts = {}) {
   const _unused = (site) => { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T fabric' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; };
   if (trail.length === 1) {
     const rows = cls.children.map(ch => ch.kind === 'metro'
-      ? { key: 'metro:' + ch.name, name: `${ch.name} (${ch.count.toLocaleString('en-US')})`, access: `${ch.onFabric.toLocaleString('en-US')} of ${ch.count.toLocaleString('en-US')} on the fabric · ${ch.access}`, priv: ch.onFabric >= ch.count / 2, drillKey: ch.name, rollup: true, cursor: 'pointer' }
+      ? { key: 'metro:' + ch.key, name: `${ch.name} (${ch.count.toLocaleString('en-US')})`, access: `${ch.onFabric.toLocaleString('en-US')} of ${ch.count.toLocaleString('en-US')} on the fabric · ${ch.access}`, priv: ch.onFabric >= ch.count / 2, drillKey: ch.key, rollup: true, cursor: 'pointer' }
       : { key: 'site:' + ch.name, name: ch.name, access: ch.address || ch.access, priv: !!ch.priv, drillKey: ch.name, rollup: false, cursor: 'pointer' });
     return { level: cls.children[0] && cls.children[0].kind === 'metro' ? 'metro' : 'site', label: cls.label, rows };
   }
