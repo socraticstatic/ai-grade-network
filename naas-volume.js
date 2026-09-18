@@ -40,7 +40,7 @@ export function volumeList(est, parent, opts = {}) {
   if (q) rows = rows.filter(x => `${x.id} ${x.address} ${x.metro}`.toLowerCase().includes(q));
   if (path === 'fabric') rows = rows.filter(x => x.priv); if (path === 'public') rows = rows.filter(x => !x.priv);
   if (state !== 'all') rows = rows.filter(x => x.state === state);
-  rows = rows.slice().sort((a, b) => RANK[a.state] - RANK[b.state] || a.ms - b.ms * 0 || a.id.localeCompare(b.id));
+  rows = rows.slice().sort((a, b) => RANK[a.state] - RANK[b.state] || a.ms - b.ms || a.id.localeCompare(b.id));
   const matching = rows.length; const shown = rows.slice(0, page * size);
   const selected = all.filter(x => sel.has(x.id));
   return { title: `${m.name} · ${n(m.count)} ${m.count === 1 ? cls.unit : cls.plural}`, sub: `${n(counts.fabric)} on the fabric · ${n(counts.public)} public · ${n(counts.degraded)} degraded`, counts, caps: capsFor(counts.total, true), matching, shownCount: shown.length, hasMore: shown.length < matching, rows: shown.map(x => ({ ...x, selected: sel.has(x.id), stateLabel: x.state === 'degraded' ? 'Degraded' : x.state === 'public' ? 'Public first mile' : 'On the fabric', sub: `${x.address} · ${x.access} · ${x.ms} ms`, action: x.priv ? (x.state === 'degraded' ? 'Impact' : '') : 'Attach' })), selectedCount: selected.length, selectedPublic: selected.filter(x => !x.priv).length, matchingIds: rows.map(x => x.id), bulk: { attach: (sel.size ? selected : rows).filter(x => !x.priv).length, label: sel.size ? `${n(selected.length)} selected` : `${n(matching)} matching` } };
