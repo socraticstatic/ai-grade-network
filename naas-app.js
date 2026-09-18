@@ -339,6 +339,37 @@ export function vals(c) {
   const fabUp = () => set({ fabDrill: fabDrill.slice(0, -1) });
   const fabTrail = fabDrill.map((k, i) => ({ key: 'fb' + i, label: i === 0 ? 'AT&T fabric' : (i === 1 ? 'AT&T ' + k : String(k).replace(/^port:[^:]+:/, 'port ')), go: () => set({ fabDrill: fabDrill.slice(0, i + 1) }), last: i === fabDrill.length - 1, notLast: i < fabDrill.length - 1 }));
 
+  // ---- the header door (2026-09-17): the count is the door ----
+  // Unconditional, so the rule survives contact with every level. The number
+  // is the one that fills the drawer, so the cloud root reads "All 6 regions".
+  const nfmt = (x) => Number(x).toLocaleString('en-US');
+  // `shown` is how many of them the canvas is drawing right now, or null when
+  // the canvas is drawing none of them - a closed band is not "4 hidden".
+  const doorFor = (col, shown, gutter) => {
+    const h = V.levelHead(est, inv, obAll, col, colTrail(col));
+    if (!h || !h.total) return { has: false, label: '', title: '', color: 'var(--text-light)', gutter, open: () => {} };
+    const hidden = shown == null ? 0 : Math.max(0, h.total - shown);
+    return {
+      has: true,
+      label: hidden ? `All ${nfmt(h.total)} ${h.noun} · ${nfmt(hidden)} hidden ›` : `All ${nfmt(h.total)} ${h.noun} ›`,
+      title: `Open the list: ${h.title}`,
+      color: hidden ? 'var(--link)' : 'var(--text-light)',
+      gutter,
+      open: () => openLevel(col),
+    };
+  };
+  // `gutter` is the door's right margin inside its header, because the runtime
+  // cannot subtract. It lands every door 12px inside its column's card edge:
+  // SITES header 24..484 over cards ending at 224 -> 484 - 212 = 272; CLOUDS
+  // header 980..1220 (1392 when drilled) over cards ending at 1220 -> 12 (184
+  // drilled); the band header is the band, 380..800 open and 560..800 closed,
+  // so 12 either way.
+  // `seeAll` is a door, not a sampled child: counting it would report one
+  // fewer hidden workload than the drawer holds.
+  const sitesDoor = doorFor('sites', L.sites.filter(x => !x.more && !x.ghost).length, 272);
+  const cloudsDoor = doorFor('clouds', L.regions.filter(x => !x.rollup && !x.other && !x.pinned && !x.ghost && !x.seeAll).length, cloudDrill.length ? 184 : 12);
+  const bandDoor = doorFor('fabric', fabDrill.length ? fabRows.length : null, 12);
+
   // ---- launch cards (Ramesh, 2026-09-09: four launch-off points; new customers start at Connect, everyone else at Observe) ----
   const violationsN = [...(est.policies || []), ...(s.customPolicies || [])].reduce((a, p) => a + (p.viol || 0), 0);
   // Big to tiny (Micah, 14:11): a card lands you inside the picture or the map at the level it names.
@@ -517,7 +548,7 @@ export function vals(c) {
     intakeOrg: s.intakeOrg, setOrg: (e) => set({ intakeOrg: e.target.value }), intakeSource: s.intakeSource, setSource: (v) => () => set({ intakeSource: v }), srcCredential: s.intakeSource === 'credential', srcInventory: s.intakeSource === 'inventory', intakeProvider: s.intakeProvider, setProvider: (e) => set({ intakeProvider: e.target.value }), startScan: () => { set({ view: 'partial', screen: 's1', scanStep: 0 }); startScan(c); syncHash('s1'); }, credBorder: s.intakeSource === 'credential' ? 'var(--border-active)' : 'var(--border-secondary)', invBorder: s.intakeSource === 'inventory' ? 'var(--border-active)' : 'var(--border-secondary)',
     // hero
     drawer, drawerOpen, openLevel, hasDrawer: drawerOpen, noDrawer: !drawerOpen, andiFabRight: drawerOpen ? '396px' : '16px',
-    fabOpen: fabDrill.length > 0, fabClosed: fabDrill.length === 0, fabRows, fabHead, fabUp, fabTrail, hasFabMore: !!(fabHead && fabHead.more), fabMore: fabHead ? fabHead.more : '', fabHeadY: L.bandY + 8, bandX: L.bandX, bandW: L.bandW, bandLabelX: L.bandX, laneX: L.lane.x, laneW: L.lane.w, strataX: L.bandX + 12, strataW: L.bandW - 24,
+    fabOpen: fabDrill.length > 0, fabClosed: fabDrill.length === 0, sitesDoor, bandDoor, cloudsDoor, fabRows, fabHead, fabUp, fabTrail, hasFabMore: !!(fabHead && fabHead.more), fabMore: fabHead ? fabHead.more : '', fabHeadY: L.bandY + 8, bandX: L.bandX, bandW: L.bandW, bandLabelX: L.bandX, laneX: L.lane.x, laneW: L.lane.w, strataX: L.bandX + 12, strataW: L.bandW - 24,
     laneFocus: !!s.laneFocus, toggleLane: () => set({ laneFocus: !s.laneFocus }), laneTitle: s.laneFocus ? 'Show everything' : 'Show only what rides outside the fabric', laneCount: `${est.regionsList.filter(r => !r.priv).length + est.sites.filter(x => !x.priv).length} public`, laneAttach: () => { const r = est.regionsList.find(x => !x.priv); if (r) composeFor(go, r)(); else { c.setState({ screen: 's4', compose: prefillCompose(est) }); } },
     heroSites, heroRegions, heroGroups: L.groups.map(g => ({ ...g, key: 'g' + g.cloud + g.y })), heroWorkloads, heroEdges, heroArcs, strata: strataMeta, showWorkloads: heroWorkloads.length > 0, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T fabric' : 'AT&T fabric  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on the fabric` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
     perfCard: hr ? { region: `${hr.cloud} ${hr.region}`, msLine: `${hr.priv ? hr.fab : hr.pub} ms ${hr.priv ? 'on the fabric' : 'public'}${hr.rel === 'warn' ? ' · degraded' : ''}`, pub: `Public today ${hr.pub} ms`, fab: `on the fabric ${hr.fab} ms`, rel: hr.rel === 'warn' ? 'Reliability: degraded' : 'Reliability: healthy', relFill: hr.rel === 'warn' ? 'var(--warning)' : 'var(--success)', top: Math.max(0, Math.min(340, hrNode.y - 70)) + 'px', left: 'calc(100% - 236px)', go: go('s3', { layer: 'cloud', tab: 'observe' }) } : null, hasPerf: !!hr,
