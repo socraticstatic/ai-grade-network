@@ -27,14 +27,18 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // sc-ifs around search, the chip rows and the Select all bar. Fix round 1
 // splits that last one in two - capSearch over the count, capBulk over Select
 // all alone - for a sixth: sc-if 282 -> 289.
+// Task 10 turns the three column headers (SITES, CLOUDS, band) into flex rows:
+// each gains one wrapping div, its door button under an sc-if (has), and its
+// ruling-1 disabled span under a second sc-if (hasNot). Three headers, so
+// div 856 -> 859, span 635 -> 638, sc-if 289 -> 295, button 246 -> 249.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 856],
-    ['span', /<span\b/g, /<\/span>/g, 635],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 289],
+    ['div', /<div\b/g, /<\/div>/g, 859],
+    ['span', /<span\b/g, /<\/span>/g, 638],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 295],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 173],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 246],
+    ['button', /<button\b/g, /<\/button>/g, 249],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
     ['label', /<label\b/g, /<\/label>/g, 26],
   ];
@@ -160,4 +164,44 @@ test('search, chips and Select all appear only where a level can use them', () =
   for (const line of [lineWith('{{ drawer.q }}'), lineWith('{{ drawer.paths }}'), bar]) {
     assert.equal((line.match(/<sc-if\b/g) || []).length, (line.match(/<\/sc-if>/g) || []).length, 'the control sc-ifs are unbalanced');
   }
+});
+
+// --- Wave 2, Task 10: the three column headers compute their door ---
+
+/**
+ * [from, to) indices bounding the region from `fromMarker` to the first
+ * `toMarker` that follows it — the brief's helper, not present before this
+ * task. `fromMarker` sits on the opening tag (e.g. the hero svg's aria-label
+ * attribute) so `to` lands on the matching close, since this markup never
+ * nests an element inside another of the same kind between the two.
+ */
+function block(fromMarker, toMarker) {
+  const from = HTML.indexOf(fromMarker);
+  assert.ok(from >= 0, `marker not found in the markup: ${fromMarker}`);
+  const to = HTML.indexOf(toMarker, from);
+  assert.ok(to >= 0, `${toMarker} never follows ${fromMarker}`);
+  return [from, to];
+}
+
+/** Every open/close tag pair the census tracks balances within [from, to). */
+function assertBalanced(from, to, what) {
+  const region = HTML.slice(from, to);
+  for (const tag of ['div', 'span', 'sc-if', 'sc-for', 'button', 'foreignObject']) {
+    const open = (region.match(new RegExp(`<${tag}\\b`, 'g')) || []).length;
+    const close = (region.match(new RegExp(`</${tag}>`, 'g')) || []).length;
+    assert.equal(open, close, `${what}: <${tag}> is unbalanced inside the block (open=${open}, close=${close})`);
+  }
+}
+
+test('each of the three column headers carries a door', () => {
+  for (const b of ['{{ sitesDoor.has }}', '{{ sitesDoor.open }}', '{{ sitesDoor.label }}',
+                   '{{ cloudsDoor.has }}', '{{ cloudsDoor.open }}', '{{ cloudsDoor.label }}',
+                   '{{ bandDoor.has }}', '{{ bandDoor.open }}', '{{ bandDoor.label }}']) {
+    assert.ok(HTML.includes(b), `${b} is bound`);
+  }
+});
+
+test('the hero svg still balances after the header edits', () => {
+  const [from, to] = block('aria-label="Fabric picture"', '</svg>');
+  assertBalanced(from, to, 'the hero svg');
 });

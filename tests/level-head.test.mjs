@@ -149,8 +149,12 @@ test('every field a door carries is a plain value the dc-runtime can bind', () =
   const v = vals(mkC({ drill: ['Branch'] }));
   for (const k of ['sitesDoor', 'bandDoor', 'cloudsDoor']) {
     const d = v[k];
-    assert.deepEqual(Object.keys(d).sort(), ['color', 'gutter', 'has', 'label', 'open', 'title'], k);
+    // Task 10, ruling 1: hasNot is has's exact opposite, precomputed because
+    // the dc-runtime has no `!` inside a binding - two polarities, two sc-ifs.
+    assert.deepEqual(Object.keys(d).sort(), ['color', 'gutter', 'has', 'hasNot', 'label', 'open', 'title'], k);
     assert.equal(typeof d.has, 'boolean', k + '.has');
+    assert.equal(typeof d.hasNot, 'boolean', k + '.hasNot');
+    assert.equal(d.hasNot, !d.has, k + '.hasNot must be the exact opposite of .has');
     assert.equal(typeof d.label, 'string', k + '.label');
     assert.equal(typeof d.title, 'string', k + '.title');
     assert.equal(typeof d.color, 'string', k + '.color');
@@ -239,4 +243,14 @@ test('the clouds door never counts the regions with no data behind them', () => 
   assert.equal(est.regionsExtra, 8);
   assert.equal(vals(mkC()).cloudsDoor.label, 'All 6 regions ›');
   assert.ok(!vals(mkC()).cloudsDoor.label.includes('14'));
+});
+
+// ---- Task 10, ruling 2: the trail shows the current level only ----
+// The full path already sits in the breadcrumb above the card and again in
+// the drawer's own crumbs (Task 8); repeating it a third time in the 460px
+// SITES header is what left the door 21px at L2 and 82px at CLOUDS L3.
+
+test('sitesHead shows only the last drill segment, never the whole path', () => {
+  assert.equal(vals(mkC()).sitesHead, 'Sites');
+  assert.equal(vals(mkC({ drill: ['Branch#1', 'Branch:1:Atlanta'] })).sitesHead, '‹ Atlanta');
 });
