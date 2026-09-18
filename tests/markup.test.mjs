@@ -31,14 +31,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // each gains one wrapping div, its door button under an sc-if (has), and its
 // ruling-1 disabled span under a second sc-if (hasNot). Three headers, so
 // div 856 -> 859, span 635 -> 638, sc-if 289 -> 295, button 246 -> 249.
+// Task 11 swaps the band's dead `+N more` div for a `<button>` at the same
+// spot inside its foreignObject: one element, div -1 / button +1, nothing
+// else moves. div 859 -> 858, button 249 -> 250.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 859],
+    ['div', /<div\b/g, /<\/div>/g, 858],
     ['span', /<span\b/g, /<\/span>/g, 638],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 295],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 173],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 249],
+    ['button', /<button\b/g, /<\/button>/g, 250],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
     ['label', /<label\b/g, /<\/label>/g, 26],
   ];
@@ -226,4 +229,12 @@ test('each header carries a hasNot gate, and it wraps a span, never a button', (
     assert.ok(inner.includes('<span'), `${flag} must wrap a span (the disabled label)`);
     assert.ok(!inner.includes('<button'), `${flag} wraps a button - the disabled state must never be a button`);
   }
+});
+
+// --- Wave 2, Task 11: the band overflow row becomes a door ---
+
+test('the band overflow row is a button, not a dead div', () => {
+  const line = LINES.find(l => l.includes('{{ fabMore }}'));
+  assert.ok(/<button/.test(line), 'the +N more ports row must be clickable');
+  assert.ok(line.includes('{{ openBandLevel }}'));
 });

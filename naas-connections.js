@@ -170,7 +170,7 @@ export function siteDrillRows(est, trail, opts = {}) {
     let rows = second.sites.map(siteRowOf);
     // A site pinned from the drawer leads the sample.
     if (opts.pin && !rows.some(r => r.drillKey === opts.pin)) { const pinned = S.metroSites(second).find(x => x.id === opts.pin); if (pinned) rows = [siteRowOf(pinned), ...rows.slice(0, 5)]; }
-    if (second.more) rows.push({ key: 'more', name: `+${second.more.toLocaleString('en-US')} more in ${second.name}`, access: 'open the drawer ›', more: true, rollup: false, cursor: 'pointer' });
+    if (second.more) rows.push({ key: 'more', name: `+${second.more.toLocaleString('en-US')} more in ${second.name}`, access: 'open the list ›', more: true, rollup: false, cursor: 'pointer' });
     return { level: 'site', label: `${clsLabel} · ${second.name}`, rows };
   }
   const site = all.find(x => x.id === trail[2] || x.name === trail[2]) || (second.kind === 'metro' ? S.metroSites(second).find(x => x.id === trail[2]) : null);
@@ -199,7 +199,7 @@ export function regionDrillRows(est, inv, trail) {
     }
   }
   const others = est.regionsList.length - 1 + (est.regionsExtra || 0);
-  const rows = [pinned, ...children, ...(others > 0 ? [{ cloud: '', region: `+${others} other regions`, rollup: true, other: true, wl: 0, priv: false }] : [])];
+  const rows = [pinned, ...children, ...(others > 0 ? [{ cloud: '', region: `Back to ${est.regionsList.length} regions`, rollup: true, other: true, toRoot: true, wl: 0, priv: false }] : [])];
   // Every hop by name, cloud first. The crumb used to be built from `label`,
   // which already carried the region, so it read "Clouds › AWS › us-east-1 ›
   // AWS us-east-1". This is the trail; nothing derives it twice.
