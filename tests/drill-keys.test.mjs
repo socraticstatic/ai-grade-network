@@ -34,3 +34,14 @@ test('labelOfKey never prints a key on screen', () => {
   assert.equal(S.labelOfKey(est, 'Branch'), 'Remote sites');
   assert.equal(S.labelOfKey(est, 'Data center:Dallas DC1'), 'Dallas DC1');
 });
+
+test('the bulk-attach compose note names the metro, not the drill key', () => {
+  // vol.metro is whatever s.drill[1] held when the drawer was opened, which is
+  // now a stable key (naas-app.js openVolume(s.drill[0], s.drill[1])). bulkAttach
+  // (naas-app.js:234) must resolve it through labelOfKey before interpolating,
+  // the same way the drawer pin write-back at :238 resolves it through metroOf.
+  const vol = { cls: 'Branch', metro: 'Branch:1:Chicago' };
+  const what = `343 remote sites in ${S.labelOfKey(est, vol.metro)} on a public first mile`;
+  assert.match(what, /in Chicago on a public first mile/);
+  assert.doesNotMatch(what, /Branch:1:/);
+});
