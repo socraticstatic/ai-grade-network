@@ -10,6 +10,8 @@
 // selectable in bulk. Pure data. Added 2026-09-09.
 import * as S from './naas-sites.js';
 import * as P from './naas-paths.js';
+import * as C from './naas-connections.js';
+import * as FB from './naas-fabric.js';
 
 const n = (x) => Number(x).toLocaleString('en-US');
 const RANK = { degraded: 0, public: 1, ok: 2 };
@@ -153,4 +155,111 @@ export function workloadList(est, inv, scope, opts = {}) {
       label: sel.size ? `${n(selected.length)} selected` : `${n(matching)} matching`,
     },
   };
+}
+
+// ---------- The drawer at any layer (2026-09-17) ----------
+// One trail per column, read live. The count in the header is the door, the
+// picture is the sample, and both are the same node.
+
+const NOUN = {
+  group: ['site group', 'site groups'],
+  metro: ['metro', 'metros'],
+  site: ['site', 'sites'],
+  path: ['path', 'paths'],
+  facility: ['facility', 'facilities'],
+  port: ['port', 'ports'],
+  circuit: ['circuit', 'circuits'],
+  region: ['region', 'regions'],
+  vpc: ['VPC', 'VPCs'],
+  subnet: ['subnet', 'subnets'],
+  workload: ['workload', 'workloads'],
+};
+const nounFor = (level, total) => { const pair = NOUN[level] || ['item', 'items']; return total === 1 ? pair[0] : pair[1]; };
+const fabTrail = (trail) => (trail && trail.length ? trail : ['fab']);
+const totalSites = (est) => (est.sites || []).reduce((a, x) => a + S.countOf(x.name), 0);
+
+/**
+ * The count behind a column's header door, and the words for it. Cheap: it
+ * resolves the node, never the rows, so the three headers can ask on every
+ * render. `levelList` asks the same question, so the number cannot drift.
+ */
+export function levelHead(est, inv, ob, col, trail = [], flat = false) {
+  if (col === 'sites') return sitesHead(est, trail);
+  if (col === 'fabric') return fabHead(est, inv, ob, trail);
+  if (col === 'clouds') return cloudsHead(est, inv, trail, flat);
+  return null;
+}
+
+/**
+ * The crumb row over the drawer. Every hop is a NAME: the trail carries ids
+ * (`Branch:2:Chicago`, `vpc-0-0`, `vpc-0-0-pub-0`) and not one of them may
+ * reach a screen.
+ */
+function labels(est, inv, col, trail) {
+  const root = col === 'sites' ? 'Sites' : col === 'fabric' ? 'AT&T fabric' : 'Clouds';
+  if (col === 'sites') return [root, ...trail.map(k => S.labelOfKey(est, k))];
+  if (col === 'fabric') return [root, ...fabTrail(trail).slice(1).map(k => String(k).replace(/^port:[^:]+:/, 'port '))];
+  const out = [root];
+  if (!trail.length) return out;
+  const top = (est.regionsList || []).find(r => r.region === trail[0]);
+  const reg = (inv || []).flatMap(c => c.regions).find(r => r.region === trail[0]);
+  out.push(top ? `${top.cloud} ${top.region}` : String(trail[0]));
+  const vpc = reg && trail[1] ? reg.vpcs.find(v => v.id === trail[1]) : null;
+  if (trail.length > 1) out.push(vpc ? vpc.name : String(trail[1]));
+  const sn = vpc && trail[2] ? vpc.subnets.find(x => x.id === trail[2]) : null;
+  if (trail.length > 2) out.push(sn ? sn.name : String(trail[2]));
+  return out;
+}
+
+function sitesHead(est, trail) {
+  const tr = labels(est, null, 'sites', trail);
+  if (!trail.length) {
+    const total = (est.sites || []).length;
+    return { col: 'sites', level: 'group', noun: nounFor('group', total), total, title: 'Sites', sub: `${n(total)} groups · ${n(totalSites(est))} sites`, trail: tr };
+  }
+  // Depth is not level: only a trail that STOPS on a metro node is the site
+  // list. One hop deeper is that site's paths, which `siteDrillRows` answers.
+  const m = trail.length === 2 ? metroOf(est, trail[0], trail[1]) : null;
+  if (m) {
+    const cls = S.CLASS[String(trail[0]).split('#')[0]] || S.CLASS.Branch;
+    const noun = m.count === 1 ? cls.unit : cls.plural;
+    return { col: 'sites', level: 'site', noun, total: m.count, title: m.name, sub: `${n(m.onFabric)} on the fabric · ${n(m.count - m.onFabric)} public`, trail: tr };
+  }
+  const info = C.siteDrillRows(est, trail);
+  if (!info) return null;
+  const rows = info.rows.filter(r => !r.more);
+  return { col: 'sites', level: info.level, noun: nounFor(info.level, rows.length), total: rows.length, title: info.label, sub: `${n(rows.length)} ${nounFor(info.level, rows.length)}`, trail: tr };
+}
+
+function fabHead(est, inv, ob, trail) {
+  const info = FB.fabricRows(est, inv, ob, fabTrail(trail));
+  if (!info) return null;
+  const total = info.rows.length;
+  return { col: 'fabric', level: info.level, noun: nounFor(info.level, total), total, title: info.label, sub: info.head, trail: labels(est, inv, 'fabric', trail) };
+}
+
+function cloudsHead(est, inv, trail, flat = false) {
+  const tr = labels(est, inv, 'clouds', trail);
+  if (!trail.length) {
+    const total = est.regionsList.length;
+    const wl = est.regionsList.reduce((a, r) => a + (r.wl || 0), 0);
+    return { col: 'clouds', level: 'region', noun: nounFor('region', total), total, title: 'Clouds', sub: `${n(total)} regions · ${n(wl)} workloads`, trail: tr };
+  }
+  const reg = inv.flatMap(c => c.regions).find(r => r.region === trail[0]);
+  const top = est.regionsList.find(r => r.region === trail[0]);
+  if (!reg || !top) return null;
+  if (trail.length === 1) return { col: 'clouds', level: 'vpc', noun: nounFor('vpc', reg.vpcs.length), total: reg.vpcs.length, title: `${top.cloud} ${top.region}`, sub: `${n(reg.wl || 0)} workloads`, trail: tr };
+  const vpc = reg.vpcs.find(v => v.id === trail[1]);
+  if (!vpc) return null;
+  if (trail.length === 2) {
+    const wl = vpc.subnets.reduce((a, x) => a + (x.workloads || []).length, 0);
+    // The flat door skips the subnets without moving the column, so the head
+    // has to follow it or the drawer would count 6 and list 447.
+    if (flat) return { col: 'clouds', level: 'workload', noun: nounFor('workload', wl), total: wl, title: vpc.name, sub: `every workload in ${vpc.name}`, trail: tr };
+    return { col: 'clouds', level: 'subnet', noun: nounFor('subnet', vpc.subnets.length), total: vpc.subnets.length, title: vpc.name, sub: `${n(wl)} workloads in this VPC`, trail: tr };
+  }
+  const sn = vpc.subnets.find(x => x.id === trail[2]);
+  if (!sn) return null;
+  const wl = (sn.workloads || []).length;
+  return { col: 'clouds', level: 'workload', noun: nounFor('workload', wl), total: wl, title: `${vpc.name} › ${sn.name}`, sub: `${sn.cidr} · ${sn.az}`, trail: tr };
 }
