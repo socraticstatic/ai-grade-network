@@ -34,14 +34,23 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Task 11 swaps the band's dead `+N more` div for a `<button>` at the same
 // spot inside its foreignObject: one element, div -1 / button +1, nothing
 // else moves. div 859 -> 858, button 249 -> 250.
+// Task 12 splits the one `crumbs` row into two trails (site + cloud, joined
+// by `·`) and replaces the dangling `›` with a per-crumb `notLast` gate on
+// both trails, dropping the static `{{ layerLabel }}` span entirely. Net
+// over the old four lines: +1 sc-for (the new cloudCrumbs loop), +2 sc-if
+// (cr.notLast, plus hasCloudCrumbs wrapping a second cc.notLast - the old
+// sS3/layerLabel sc-if it replaces was already counted), +1 button (the
+// cloud trail's own crumb button), +2 span (the cloud trail's wrapping span
+// and its `·` separator span). sc-if 295 -> 297, sc-for 173 -> 174,
+// button 250 -> 251, span 638 -> 640.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 858],
-    ['span', /<span\b/g, /<\/span>/g, 638],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 295],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 173],
+    ['span', /<span\b/g, /<\/span>/g, 640],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 297],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 174],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 250],
+    ['button', /<button\b/g, /<\/button>/g, 251],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
     ['label', /<label\b/g, /<\/label>/g, 26],
   ];
@@ -237,4 +246,15 @@ test('the band overflow row is a button, not a dead div', () => {
   const line = LINES.find(l => l.includes('{{ fabMore }}'));
   assert.ok(/<button/.test(line), 'the +N more ports row must be clickable');
   assert.ok(line.includes('{{ openBandLevel }}'));
+});
+
+// --- Wave 2, Task 12: the breadcrumb above the card splits into two trails ---
+
+test('the breadcrumb keeps the two columns apart', () => {
+  assert.ok(HTML.includes('{{ cloudCrumbs }}'), 'the cloud trail is its own row');
+  assert.ok(HTML.includes('{{ hasCloudCrumbs }}'));
+  assert.ok(HTML.includes('{{ cc.notLast }}') && HTML.includes('{{ cr.notLast }}'), 'no dangling caret on either trail');
+  assert.ok(!HTML.includes('{{ layerLabel }}'), 'the layer label is not a crumb at all');
+  const [from, to] = block('<!-- ===== S3 header: breadcrumb', '<!-- ===== S2 LAUNCH POINTS');
+  assertBalanced(from, to, 'the breadcrumb');
 });

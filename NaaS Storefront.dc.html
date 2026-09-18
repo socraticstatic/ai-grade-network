@@ -297,9 +297,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <sc-if value="{{ showCrumbs }}" hint-placeholder-val="{{ false }}">
 <nav aria-label="Breadcrumb" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:14px">
   <sc-for list="{{ crumbs }}" as="cr" hint-placeholder-count="2">
-    <span style="display:flex;align-items:center;gap:8px"><button onClick="{{ cr.go }}" style="border:0;background:transparent;padding:0;color:var(--link);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">{{ cr.label }}</button><span style="color:var(--text-disabled)">›</span></span>
+    <span style="display:flex;align-items:center;gap:8px"><button onClick="{{ cr.go }}" style="border:0;background:transparent;padding:0;color:var(--link);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">{{ cr.label }}</button><sc-if value="{{ cr.notLast }}" hint-placeholder-val="{{ true }}"><span style="color:var(--text-disabled)">›</span></sc-if></span>
   </sc-for>
-  <sc-if value="{{ sS3 }}" hint-placeholder-val="{{ false }}"><span style="color:var(--text-heading);font-weight:500">{{ layerLabel }}</span></sc-if>
+  <sc-if value="{{ hasCloudCrumbs }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:8px"><span style="color:var(--text-disabled)">·</span><sc-for list="{{ cloudCrumbs }}" as="cc" hint-placeholder-count="2"><button onClick="{{ cc.go }}" style="border:0;background:transparent;padding:0;color:var(--link);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">{{ cc.label }}</button><sc-if value="{{ cc.notLast }}" hint-placeholder-val="{{ false }}"><span style="color:var(--text-disabled)">›</span></sc-if></sc-for></span></sc-if>
   <sc-if value="{{ hasDrill }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-light)">{{ drillLabel }}<button onClick="{{ drillUp }}" style="height:28px;padding:0 12px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--link);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Up one level</button></span></sc-if>
 </nav>
 </sc-if>
