@@ -247,7 +247,6 @@ export function vals(c) {
     : { ...(s.vol || {}), metroLabel: (s.vol && s.vol.metro) ? S.labelOfKey(est, s.vol.metro) : '' };
   const volList = vol ? (vol.kind === 'level' ? V.levelList(est, inv, obAll, vol.col, colTrail(vol.col), { ...volOpts, flat: !!s.volFlat })
     : vol.kind === 'workloads' ? V.workloadList(est0, inv, vol, volOpts) : V.volumeList(est0, vol, volOpts)) : null;
-  const openVolume = (cls, metro) => set({ vol: { kind: 'metro', cls, metro }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [] });
   /** The column's handoff: every workload in a VPC, or in one subnet of it. */
   const openWorkloads = (region, vpcId, snId) => set({ vol: { kind: 'workloads', region, vpcId, snId: snId || null }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [], volSlide: 0 });
   /** Slide in one level. For a level scope the COLUMN trail grows, so the picture drills with the drawer. */
@@ -334,16 +333,17 @@ export function vals(c) {
   const fabDrill = s.fabDrill || [];
   const fabInfo = fabDrill.length ? FB.fabricRows(est0, inv, obAll, fabDrill) : null;
   const FAB_STATE = { ok: 'var(--success)', saturating: 'var(--warning)', degraded: 'var(--error)' };
-  const fabRows = fabInfo ? fabInfo.rows.slice(0, 8).map((r, i) => ({ ...r, key: r.key, x: L.bandX + 12, w: L.bandW - 24, y: L.bandY + 40 + i * 32, dot: FAB_STATE[r.state] || FAB_STATE.ok, caret: r.leaf ? '' : '›', cursor: r.leaf ? 'default' : 'pointer', hasAction: !!r.leaf, action: 'Add circuit', act: () => { c.setState({ screen: 's4', compose: prefillCompose(est) }); syncHash('s4', s.layer, s.tab); }, click: () => { if (r.leaf) return; set({ fabDrill: [...fabDrill, r.drill] }); } })) : [];
   // The door's right margin inside its header, because the runtime cannot
   // subtract. The 10px edge rule is RENDERED pixels, not viewBox units: the
   // hero draws 1087 CSS px wide for a 1392 viewBox at the 1440x900 reference
   // (scale .7809), so 12 units would clear by 9.37px and fail. 16 units clears
   // by 12.49px there, and holds 10px down to an 870px hero (10 * 1392 / 16).
-  // Hoisted above fabHead (Task 11 fix round 1): the band's '‹ Up' row and its
-  // +N more overflow button both need it before fabHead is built.
+  // Hoisted above fabRows and fabHead (Task 11 fix round 2): every row in the
+  // band - the port rows, the '‹ Up' row, the overflow button - shares this
+  // one edge, or their hard edges stagger against each other.
   const EDGE = 16;
-  const fabHead = fabInfo ? { label: fabInfo.label, head: fabInfo.head, more: fabInfo.rows.length > 8 ? `+${fabInfo.rows.length - 8} more · open the list ›` : '', x: L.bandX + EDGE, w: L.bandW - 2 * EDGE, moreX: L.bandX + EDGE, moreW: L.bandW - 2 * EDGE, moreY: L.bandY + 40 + 8 * 32 } : null;
+  const fabRows = fabInfo ? fabInfo.rows.slice(0, 8).map((r, i) => ({ ...r, key: r.key, x: L.bandX + EDGE, w: L.bandW - 2 * EDGE, y: L.bandY + 40 + i * 32, dot: FAB_STATE[r.state] || FAB_STATE.ok, caret: r.leaf ? '' : '›', cursor: r.leaf ? 'default' : 'pointer', hasAction: !!r.leaf, action: 'Add circuit', act: () => { c.setState({ screen: 's4', compose: prefillCompose(est) }); syncHash('s4', s.layer, s.tab); }, click: () => { if (r.leaf) return; set({ fabDrill: [...fabDrill, r.drill] }); } })) : [];
+  const fabHead = fabInfo ? { label: fabInfo.label, head: fabInfo.head, more: fabInfo.rows.length > 8 ? `+${fabInfo.rows.length - 8} more · open the list ›` : '', x: L.bandX + EDGE, w: L.bandW - 2 * EDGE, moreY: L.bandY + 40 + 8 * 32 } : null;
   const fabUp = () => set({ fabDrill: fabDrill.slice(0, -1) });
   const fabTrail = fabDrill.map((k, i) => ({ key: 'fb' + i, label: i === 0 ? 'AT&T fabric' : (i === 1 ? 'AT&T ' + k : String(k).replace(/^port:[^:]+:/, 'port ')), go: () => set({ fabDrill: fabDrill.slice(0, i + 1) }), last: i === fabDrill.length - 1, notLast: i < fabDrill.length - 1 }));
 
@@ -351,8 +351,8 @@ export function vals(c) {
   // Unconditional, so the rule survives contact with every level. The number
   // is the one that fills the drawer, so the cloud root reads "All 6 regions".
   const nfmt = (x) => Number(x).toLocaleString('en-US');
-  // EDGE is declared above, before fabHead, since fabHead's own geometry
-  // needs it too now (Task 11 fix round 1).
+  // EDGE is declared above, before fabRows and fabHead, since the whole band
+  // shares it now (Task 11 fix round 2).
   // One source for the clouds header width: the door's gutter and the header
   // itself must move together or the door drifts off its column.
   const cloudsHeadW = cloudDrill.length ? 412 : 240;
