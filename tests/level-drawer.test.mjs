@@ -185,8 +185,8 @@ test('volCtx never lets a raw key reach bulkAttach\'s compose wording', () => {
   assert.equal(v.drawer.canBulk, true);
   v.drawer.bulkAttach();
   assert.equal(c.state.screen, 's4');
-  assert.match(c.state.parsedNote, /in Atlanta on a public first mile/);
-  assert.doesNotMatch(c.state.parsedNote, /Branch|#|:/, 'never a raw class or rollup key in the compose note');
+  assert.match(c.state.compose.note, /in Atlanta on a public first mile/);
+  assert.doesNotMatch(c.state.compose.note, /Branch|#|:/, 'never a raw class or rollup key in the compose note');
 });
 
 test('regression: the two existing drawer kinds still open and are untouched by the level branch', () => {
@@ -253,8 +253,8 @@ test('fix (Important 2): bulkAttach composes Isolate (not Attach) for any worklo
   assert.equal(v.drawer.canBulk, true);
   v.drawer.bulkAttach();
   assert.equal(c.state.screen, 's4');
-  assert.match(c.state.parsedNote, /^Isolate \d+ exposed workloads? in us-east-1: bring them off the public path\.$/);
-  assert.doesNotMatch(c.state.parsedNote, /Attach|undefined|in {2}|in a public first mile/, 'never the Attach verb, an empty place, or a raw site noun');
+  assert.match(c.state.compose.note, /^Isolate \d+ exposed workloads? in us-east-1: bring them off the public path\.$/);
+  assert.doesNotMatch(c.state.compose.note, /Attach|undefined|in {2}|in a public first mile/, 'never the Attach verb, an empty place, or a raw site noun');
 
   // The pre-existing old 'workloads' kind had the identical bug (read "in
   // undefined" before this fix, per the review) - confirm it too now composes.
@@ -262,7 +262,7 @@ test('fix (Important 2): bulkAttach composes Isolate (not Attach) for any worklo
   const v2 = vals(c2);
   assert.equal(v2.drawer.kind, 'workloads');
   v2.drawer.bulkAttach();
-  assert.match(c2.state.parsedNote, /^Isolate \d+ exposed workloads? in us-east-1: bring them off the public path\.$/);
+  assert.match(c2.state.compose.note, /^Isolate \d+ exposed workloads? in us-east-1: bring them off the public path\.$/);
 });
 
 test('fix (Important 3): a row\'s own Attach action never prints "undefined" when the row carries no address/metro', () => {
@@ -288,11 +288,11 @@ test('fix (Important 3): a row\'s own Attach action never prints "undefined" whe
   assert.equal(attachRow.metro, undefined, 'and no metro either - that is the defect this guards');
   attachRow.act();
   assert.equal(c.state.screen, 's4');
-  assert.doesNotMatch(c.state.parsedNote, /undefined/, 'the compose note never prints the word undefined');
+  assert.doesNotMatch(c.state.compose.note, /undefined/, 'the compose note never prints the word undefined');
   assert.doesNotMatch(c.state.compose.bulk, /undefined/);
   // the trail-derived place is the site's own id/drillKey - never empty here,
   // since the trail is three deep.
-  assert.match(c.state.parsedNote, new RegExp(`^Attach ${attachRow.id} in \\S+: one circuit onto the fabric\\.$`));
+  assert.match(c.state.compose.note, new RegExp(`^Attach ${attachRow.id} in \\S+: one circuit onto the fabric\\.$`));
 
   // Bonus, same defect class: a clouds ROOT row (also frame()-built, also no
   // address/metro) must compose cleanly too - but at the root there is no
@@ -305,8 +305,8 @@ test('fix (Important 3): a row\'s own Attach action never prints "undefined" whe
   const cloudsAttach = v3.drawer.rows.find(r => r.action === 'Attach');
   assert.ok(cloudsAttach);
   cloudsAttach.act();
-  assert.doesNotMatch(c3.state.parsedNote, /undefined/);
-  assert.equal(c3.state.parsedNote, `Attach ${cloudsAttach.id}: one circuit onto the fabric.`);
+  assert.doesNotMatch(c3.state.compose.note, /undefined/);
+  assert.equal(c3.state.compose.note, `Attach ${cloudsAttach.id}: one circuit onto the fabric.`);
 });
 
 test('fix (Important 4): pinning a fabric circuit never writes s.drill, and the sites drawer still opens afterward', () => {
