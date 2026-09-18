@@ -4,6 +4,15 @@ import * as D from '../naas-data.js';
 import * as S from '../naas-sites.js';
 import { vals, defaults } from '../naas-app.js';
 
+// Fix round 2, finding D: the gap route now goes through the real go() (like
+// composeFor does) to pick up its scroll-to-top and hover/drill/andi reset
+// effects, not just its compose object. go() calls window.scrollTo(0, 0)
+// unconditionally; Node has no window. A no-op stub is enough - no test here
+// asserts on the scroll position itself (that is proven live, in the browser).
+if (typeof globalThis.window === 'undefined') {
+  globalThis.window = { scrollTo: () => {}, scrollY: 0 };
+}
+
 const est = D.ESTATES.trust;
 
 test('the gap is 2,898 sites, not 3 rows', () => {
@@ -83,9 +92,32 @@ test('the East site row leads with its own count, strips the parenthetical from 
   );
   assert.equal(c.state.screen, 's4');
 
+  // Fix round 2, finding A: the alert renders on the step it was written for.
+  // The gap route lands at step 5 and writes noteStep: 5, so hasParsedNote
+  // must be true right there - not only computable, but actually shown.
+  assert.equal(c.state.compose.noteStep, 5);
+  const landed = vals(c);
+  assert.equal(landed.hasParsedNote, true, 'the alert must render on the gap route\'s landing step');
+  assert.equal(landed.parsedNoteTitle, 'Not connected yet');
+
   // parsedNoteTitle is derived (`cp.sourceLabel || 'From the drawer'`), read
   // through vals(), not off raw state.
   assert.equal(vals(c).parsedNoteTitle, 'Not connected yet');
+});
+
+// Fix round 2, finding A, the other half: one step away from noteStep, the
+// alert must not render, even though parsedNote is still sitting in state.
+test('the gap route\'s alert is gone one step away from where it landed', () => {
+  const c = mkC();
+  const v0 = vals(c);
+  v0.gapRows.find(r => r.name === 'Remote sites, East').go();
+  assert.equal(c.state.compose.step, 5);
+  assert.equal(vals(c).hasParsedNote, true);
+
+  c.state.compose.step = 4;
+  const v = vals(c);
+  assert.equal(v.hasParsedNote, false, 'one step away from noteStep, the alert must be hidden');
+  assert.ok(c.state.parsedNote, 'parsedNote itself is still set - hasParsedNote is what gates it, not the text going away');
 });
 
 test('every other route into Compose keeps the default alert title', () => {
@@ -182,16 +214,142 @@ test('the S6 Review for the East attach shows Quantity 1,640 and a total that sc
   const netbond = v.orderLines.find(l => l.product === 'NetBond for Cloud');
   assert.ok(netbond, 'the NetBond line is missing from orderLines');
   assert.equal(netbond.qty, 1640);
+  // Fix round 2, finding G: the Quantity column binds qtyF, not the raw
+  // number, so 1,640 renders with its thousands separator.
+  assert.equal(netbond.qtyF, '1,640');
   assert.equal(netbond.monthlyF, '$1,800/mo per site');
   assert.equal(netbond.monthly, 1800 * 1640);
 
   const vpc = v.orderLines.find(l => /AT&T-hosted VPC per region/.test(l.product));
   assert.ok(vpc, 'the hosted VPC line is missing from orderLines');
   assert.equal(vpc.qty, 1, 'the hosted VPC is per-region, not per-site');
+  assert.equal(vpc.qtyF, '1');
   assert.equal(vpc.monthlyF, '$2,400/mo');
 
   assert.equal(v.pricedTotalF, '$2,954,400/mo');
   assert.equal(v.termTotalF, '$1,477,200/mo');
+});
+
+// Fix round 2, finding B: Govern's "Author policy" spreads the live compose
+// (`...cp`), so it is a compose writer the round-1 audit (framed around
+// `parsedNote` writers) missed. After a gap order it must not carry the gap
+// route's label or quantity into a policy order - a policy-authoring order
+// must not be priced or titled as a 1,640-site attach.
+test('authorPolicy clears the gap route\'s label and quantity (a NEW order)', () => {
+  const c = mkC();
+  const v0 = vals(c);
+  v0.gapRows.find(r => r.name === 'Remote sites, East').go();
+  assert.equal(c.state.compose.qty, 1640);
+  assert.equal(c.state.compose.sourceLabel, 'Not connected yet');
+
+  const v1 = vals(c);
+  v1.authorPolicy();
+
+  const v = vals(c);
+  assert.equal(v.parsedNoteTitle, 'From the drawer');
+  assert.equal(c.state.compose.sourceLabel, null);
+  assert.equal(c.state.compose.bulk, null);
+  assert.equal(c.state.compose.qty, 1);
+  assert.equal(v.hasParsedNote, false, 'the stale alert must not resurface even if the wizard is later stepped to noteStep 0');
+
+  const netbond = v.orderLines.find(l => l.product === 'NetBond for Cloud');
+  assert.equal(netbond.qty, 1);
+  assert.equal(netbond.monthlyF, '$1,800/mo');
+  assert.equal(v.pricedTotalF, '$4,200/mo', 'the base\'s total for a plain attach on Ashburn - not the 1,640-site total');
+});
+
+// Fix round 2, finding C: qty is a site count. Isolating exposed workloads is
+// not a site-attach route - it must never set compose.qty, or NetBond prices
+// as if each isolated workload were its own circuit.
+test('a workload bulk Isolate never sets compose.qty (qty is a site count, not a workload count)', () => {
+  const c = mkC();
+  let v = vals(c);
+  v.openLevel('clouds');
+  v = vals(c);
+  v.drawer.rows.find(r => r.isDoor).descend(); // a region
+  v = vals(c);
+  v.drawer.rows.find(r => r.isDoor).descend(); // a VPC (subnet listing)
+  v = vals(c);
+  v.drawer.goFlat();
+  v = vals(c);
+  assert.match(v.drawer.bulkLabel, /^Isolate 6 exposed/, 'this is the reviewer\'s 6-workload reproduction');
+  assert.equal(v.drawer.canBulk, true);
+  v.drawer.bulkAttach();
+
+  assert.equal(c.state.compose.qty, undefined, 'Isolate must leave qty unset so composeOrder defaults to 1');
+  assert.match(c.state.parsedNote, /^Isolate 6 exposed workloads in us-east-1: bring them off the public path\.$/);
+
+  const v2 = vals(c);
+  const netbond = v2.orderLines.find(l => l.product === 'NetBond for Cloud');
+  assert.equal(netbond.qty, 1);
+  assert.equal(netbond.qtyF, '1');
+  assert.equal(netbond.monthlyF, '$1,800/mo', 'no "per site" suffix - six workloads did not buy six circuits');
+  assert.equal(v2.pricedTotalF, '$4,200/mo', 'the base\'s total, unchanged by the workload count');
+});
+
+// Fix round 2, finding D: composeFor and the gap route now share one prefill
+// (prefillAttach) and both go through go(), so a region row and a site row
+// leave identical reset state apart from the fields the gap route adds on
+// top (bulk/qty/sourceLabel/noteStep/parsedNote).
+test('a region row and a site row leave identical state apart from bulk/qty/sourceLabel/noteStep/parsedNote', () => {
+  const dirty = () => ({
+    hoverRegion: 'r', andiScope: { kind: 'region', id: 'r', label: 'r' }, drill: ['a'], cloudDrill: ['b'], fabDrill: ['c'], laneFocus: true,
+  });
+
+  const cRegion = mkC(dirty());
+  const vRegion = vals(cRegion);
+  vRegion.gapRows.find(r => r.kind === 'region').go();
+
+  const cSite = mkC(dirty());
+  const vSite = vals(cSite);
+  vSite.gapRows.find(r => r.name === 'Remote sites, East').go();
+
+  // go()'s effects: both routes clear the same hover/drill/andi/laneFocus
+  // state, region row or site row alike.
+  for (const c of [cRegion, cSite]) {
+    assert.equal(c.state.hoverRegion, null);
+    assert.equal(c.state.andiScope, null);
+    assert.deepEqual(c.state.drill, []);
+    assert.deepEqual(c.state.cloudDrill, []);
+    assert.deepEqual(c.state.fabDrill, []);
+    assert.equal(c.state.laneFocus, false);
+    assert.equal(c.state.screen, 's4');
+  }
+
+  // compose fields apart from the site-route additions must match exactly.
+  const { bulk: rb, qty: rq, sourceLabel: rs, noteStep: rn, prefillRegion: rpr, prefillWl: rpw, ...regionRest } = cRegion.state.compose;
+  const { bulk: sb, qty: sq, sourceLabel: ss, noteStep: sn, prefillRegion: spr, prefillWl: spw, ...siteRest } = cSite.state.compose;
+  assert.deepEqual(regionRest, siteRest, 'composeFor and the gap route must prefill identically apart from bulk/qty/sourceLabel/noteStep/prefillRegion/prefillWl');
+  assert.equal(rb, undefined);
+  assert.equal(rq, undefined);
+  assert.equal(rs, undefined);
+  assert.equal(rn, undefined);
+  assert.equal(sb, '1,640 sites · Remote sites, East');
+  assert.equal(sq, 1640);
+  assert.equal(ss, 'Not connected yet');
+  assert.equal(sn, 5);
+});
+
+// Fix round 2, finding E: switching the outcome on a sourceLabel-bearing
+// compose is a NEW order - u3 never consumes `qty`, so the alert and the
+// price must not keep claiming 1,640 circuits once the outcome no longer is one.
+test('switching the outcome after a gap order clears the label, quantity and stale alert text', () => {
+  const c = mkC();
+  const v0 = vals(c);
+  v0.gapRows.find(r => r.name === 'Remote sites, East').go();
+  assert.equal(c.state.compose.qty, 1640);
+
+  const v1 = vals(c);
+  const u3 = v1.outcomeCards.find(o => o.key === 'u3');
+  u3.click();
+
+  const v = vals(c);
+  assert.equal(c.state.compose.sourceLabel, null);
+  assert.equal(c.state.compose.qty, 1);
+  assert.equal(v.parsedNoteTitle, 'From the drawer');
+  assert.equal(v.hasParsedNote, false, 'no alert at all - not even a correctly-titled one over stale text');
+  assert.equal(c.state.parsedNote, '', 'the 1,640-circuits sentence must not survive to be shown at any step');
+  assert.equal(v.pricedTotalF, '$2,000/mo', 'u3\'s own price, not the 1,640-site total');
 });
 
 // Every wizard-built order (no gap/drawer/panel route behind it) leaves

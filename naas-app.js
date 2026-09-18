@@ -284,7 +284,10 @@ export function vals(c) {
     if (volList.kind === 'workloads') {
       const noun = cnt === 1 ? 'workload' : 'workloads';
       const what = `${cnt.toLocaleString('en-US')} exposed ${noun} in ${volCtx.region}`;
-      c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: what, qty: cnt }, parsedNote: `Isolate ${what}: bring them off the public path.` });
+      // qty is a site count (composeOrder scales NetBond by it); Isolate never
+      // orders a circuit, so it stays unset here - cnt workloads inside one
+      // VPC do not buy cnt NetBond ports.
+      c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: what }, parsedNote: `Isolate ${what}: bring them off the public path.` });
       syncHash('s4', s.layer, s.tab);
       return;
     }
@@ -449,7 +452,12 @@ export function vals(c) {
   // ---- compose ----
   const cp = s.compose;
   const outcome = D.OUTCOMES.find(o => o.id === cp.outcome);
-  const setC = (patch) => set({ compose: { ...cp, ...patch, ...(patch.resiliency !== undefined ? { resiliencyChosen: true } : {}) } });
+  // Picking a metro, a control, a resiliency tier keeps building the SAME
+  // order, so they spread `cp` unchanged. Changing the outcome on a compose
+  // that carries a site count is a NEW order - u2/u3 never consume `qty`, so
+  // the label and count would otherwise survive pointing at a price nothing
+  // still explains (Fix round 2, finding E).
+  const setC = (patch) => set({ compose: { ...(patch.outcome !== undefined && cp.sourceLabel ? cleanCompose(cp) : cp), ...patch, ...(patch.resiliency !== undefined ? { resiliencyChosen: true } : {}) }, ...(patch.outcome !== undefined && cp.sourceLabel ? { parsedNote: '' } : {}) });
   const toggle = (field, v, single) => () => { if (single) return setC({ [field]: v }); const arr = cp[field]; setC({ [field]: arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v] }); };
   const chipRow = (field, list, single) => list.map(v => ({ key: v, label: v, on: single ? cp[field] === v : cp[field].includes(v), click: toggle(field, v, single) }));
   const metroChips = (D.COMPOSE_CHIPS.regions[cp.regionTab] || []).map(m => ({ key: m, label: m, on: cp.metros.includes(m), click: () => setC({ metros: cp.metros.includes(m) ? cp.metros.filter(x => x !== m) : [...cp.metros, m].slice(-2) }) }));
@@ -461,7 +469,7 @@ export function vals(c) {
 
   // ---- review ----
   const ord = s.order || composed;
-  const orderLines = (ord.lines || []).map((l, i) => ({ ...l, key: 'l' + i, monthlyF: l.unpriced ? 'Priced after survey' : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : fmt(l.monthly) + '/mo', color: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
+  const orderLines = (ord.lines || []).map((l, i) => ({ ...l, key: 'l' + i, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? 'Priced after survey' : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : fmt(l.monthly) + '/mo', color: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
   const pricedTotal = (ord.lines || []).filter(l => !l.unpriced).reduce((a, l) => a + l.monthly, 0);
   const termDisc = { 0: 0, 12: 15, 24: 30, 36: 50 }[s.term];
   const termTotal = Math.round(pricedTotal * (1 - termDisc / 100));
@@ -581,7 +589,7 @@ export function vals(c) {
     ...connectVals(s, set, R.applyScope(est, obScope), go, ob),
     connectFindings: deptFindings('connect'), hasConnectFindings: deptFindings('connect').length > 0, tabLabel: TAB_LABEL[s.tab] || 'Connect', noConnectFindings: deptFindings('connect').length === 0, connectOthers: ['govern', 'observe', 'cost'].map(t => ({ key: t, n: findingsFor(s.layer, t).length, label: `${findingsFor(s.layer, t).length} close on ${TAB_LABEL[t]}`, go: () => { set({ tab: t }); syncHash('s3', s.layer, t); scrollToResult('S3 Department'); } })).filter(x => x.n > 0), hasConnectOthers: ['govern', 'observe', 'cost'].some(t => findingsFor(s.layer, t).length > 0), mostChosen, levelTiles: sorted, levelCount: levelItems.length, levelSort: s.levelSort, setLevelSort: (e) => set({ levelSort: e.target.value }), levelQuery: s.levelQuery, setLevelQuery: (e) => set({ levelQuery: e.target.value }), levelTitle: drillInfo ? drillInfo.label : levelMapTitle(layer), levelMore: Math.max(0, levelItems.length - 60), hasLevelMore: levelItems.length > 60, catalogRow, visionRow, hasVision: visionRow.length > 0,
     hasSim: !!s.simulated || (s.customPolicies || []).some(p => p.state === 'simulated'),
-    governVerdict, governFindings: deptFindings('govern'), policies, hasPolicies: policies.length > 0, examplePolicies0: [{ key: 'a', t: 'Tag PCI forces a private path', m: 'tag PCI', r: 'Private path required' }, { key: 'b', t: 'Tag Internet-facing gets NGFW plus AT&T egress', m: 'tag Internet-facing', r: 'Inline security inspection' }, { key: 'c', t: 'Branch Finance reaches only finance-tagged workloads', m: 'branch Finance', r: 'Segment intra-tag only' }], authorPolicy: go('s4', { compose: { ...cp, outcome: 'u1', control: ['Private path required'], source: ['Data center'], dest: ['Clouds'] } }), simulate: () => set({ simulated: true, enforced: false }), enforce: () => set({ enforced: true }), undo: () => set({ simulated: false, enforced: false }), simulated: s.simulated, enforced: s.enforced, canEnforce: s.simulated && !s.enforced, simulateText: s.enforced ? 'Enforced. Paths rerouted onto the fabric.' : s.simulated ? `Simulated: ${pciViol ? pciViol.split(' ')[0] : 0} paths reroute onto the fabric, 2 flows denied. Drawn dashed until enforced.` : 'Simulate shows what changes before enforce is enabled.', enforceBg: s.simulated && !s.enforced ? 'var(--cta)' : 'var(--bg-neutral)', enforceColor: s.simulated && !s.enforced ? '#fff' : 'var(--text-disabled)',
+    governVerdict, governFindings: deptFindings('govern'), policies, hasPolicies: policies.length > 0, examplePolicies0: [{ key: 'a', t: 'Tag PCI forces a private path', m: 'tag PCI', r: 'Private path required' }, { key: 'b', t: 'Tag Internet-facing gets NGFW plus AT&T egress', m: 'tag Internet-facing', r: 'Inline security inspection' }, { key: 'c', t: 'Branch Finance reaches only finance-tagged workloads', m: 'branch Finance', r: 'Segment intra-tag only' }], authorPolicy: go('s4', { compose: { ...cleanCompose(cp), outcome: 'u1', control: ['Private path required'], source: ['Data center'], dest: ['Clouds'] }, parsedNote: '' }), simulate: () => set({ simulated: true, enforced: false }), enforce: () => set({ enforced: true }), undo: () => set({ simulated: false, enforced: false }), simulated: s.simulated, enforced: s.enforced, canEnforce: s.simulated && !s.enforced, simulateText: s.enforced ? 'Enforced. Paths rerouted onto the fabric.' : s.simulated ? `Simulated: ${pciViol ? pciViol.split(' ')[0] : 0} paths reroute onto the fabric, 2 flows denied. Drawn dashed until enforced.` : 'Simulate shows what changes before enforce is enabled.', enforceBg: s.simulated && !s.enforced ? 'var(--cta)' : 'var(--bg-neutral)', enforceColor: s.simulated && !s.enforced ? '#fff' : 'var(--text-disabled)',
     kpis, hasKpis: kpis.length > 0, sankeyNodes, sankeyRibbons, sankeyW: sk ? sk.W : 900, sankeyH: sk ? sk.H : 260, sankeyVB: `0 0 ${sk ? sk.W : 900} ${sk ? sk.H : 260}`, flows, observeFindings: deptFindings('observe'), seeSavings: () => { set({ tab: 'cost' }); syncHash('s3', s.layer, 'cost'); }, observeVerdict: isEmpty ? 'No telemetry yet. It starts with the first attach.' : `${est.observedPct}% of paths send telemetry. ${flows.filter(f => f.deny).length} flows denied in the last minute by the vSRX pair.`, chipScope,
     ...costVals(s, set, R.applyScope(est, obScope), A.inventory(est), ob, go, c),
     costVerdict, buckets, steerRecs: steerable, costFindings: deptFindings('cost'), hasBuckets: buckets.length > 0, bTotalF: fmt(bTotal), bFabF: fmt(bFab), bSaveF: fmt(bTotal - bFab),
@@ -764,11 +772,11 @@ function parseText(c, t) {
   const ctl = control.length ? control : D.OUTCOMES.find(o => o.id === outcome).control.slice();
   const source = outcome === 'u1' ? ['Data center'] : ['A cloud region'];
   // Spreads the live compose rather than rebuilding it through prefillCompose,
-  // so it is the one writer that can inherit a stale sourceLabel/bulk/qty from
-  // whatever route ran before it (a gap-row attach, a drawer bulk attach). The
-  // user just typed this order themselves - it does not come "from" anything
-  // upstream, so the fields that carry provenance and count are wiped here.
-  c.setState(st => ({ compose: { ...st.compose, outcome, control: ctl, dest, source, resiliency, metros: metros.length ? metros : st.compose.metros, prefilled: false, step: 0, sourceLabel: null, bulk: null, qty: 1 }, parsedNote: `Understood: ${D.OUTCOMES.find(o => o.id === outcome).name.toLowerCase()} · from ${source.join(', ').toLowerCase()} · to ${dest.join(', ').toLowerCase()}${metros.length ? ' · via ' + metros.join(', ') : ''} · ${resiliency.toLowerCase()} resiliency · require ${ctl.join(', ').toLowerCase()}. Each step below is filled; correct anything I got wrong.` }));
+  // so it is a NEW-order writer that must go through cleanCompose explicitly:
+  // the user just typed this order themselves - it does not come "from"
+  // anything upstream, so the fields that carry provenance and count are
+  // wiped here, not inherited from whatever route ran before it.
+  c.setState(st => ({ compose: { ...cleanCompose(st.compose), outcome, control: ctl, dest, source, resiliency, metros: metros.length ? metros : st.compose.metros, prefilled: false, step: 0 }, parsedNote: `Understood: ${D.OUTCOMES.find(o => o.id === outcome).name.toLowerCase()} · from ${source.join(', ').toLowerCase()} · to ${dest.join(', ').toLowerCase()}${metros.length ? ' · via ' + metros.join(', ') : ''} · ${resiliency.toLowerCase()} resiliency · require ${ctl.join(', ').toLowerCase()}. Each step below is filled; correct anything I got wrong.` }));
 }
 
 
@@ -827,9 +835,20 @@ function iwVals(iw, s, set, go, winLabel) {
     slo: iw.slo.map(flowRow), hasSlo: iw.slo.length > 0, sloGo: () => set({ obTab: 'latency' }), sloLegend: `Over ${iw.SLO} ms`,
   };
 }
+/**
+ * Compose, prefilled for one region or site: the shape composeFor, the gap
+ * card's site rows, the Cost tab's "Attach" strip and its arbitrage rows all
+ * need. One copy so it can only drift once; the same duplication that let
+ * `go()`'s effects (scroll to top; clear hoverRegion/andiScope/drill/
+ * cloudDrill/fabDrill/laneFocus) go missing from one of the four call sites
+ * produced this wave's Task 1 defect too.
+ */
+function prefillAttach(r) {
+  return { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Private path required'], step: 5, prefilled: true, prefillRegion: r.region, prefillWl: r.wl };
+}
 /** Compose, prefilled for one region: the door the arbitrage table, the utilization card and the strips share. */
 function composeFor(go, r) {
-  return go('s4', { compose: { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Private path required'], step: 5, prefilled: true, prefillRegion: r.region, prefillWl: r.wl } });
+  return go('s4', { compose: prefillAttach(r) });
 }
 function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0) {
   const obScope = s.obScope || 'all';
@@ -1085,11 +1104,14 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
       tags: [], hasTags: false,
       best: 'Attach the first mile to the fabric', bestWhy: 'AVPN or ASE, same-day on existing access',
       alt: 'or keep the internet path with inline inspection',
-      // Same entry as composeFor(go, x) on the base - step 5, Ashburn - so the
-      // two row kinds in this card behave as one card. The source label and
-      // quantity ride inside `compose`, where the next prefillCompose-based
-      // route wipes them; see wizardVals' `cp.sourceLabel` read.
-      go: () => { c.setState({ screen: 's4', compose: { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Private path required'], step: 5, prefilled: true, prefillRegion: x.region, prefillWl: x.wl, bulk: what, qty, sourceLabel: 'Not connected yet' }, parsedNote: `Attach ${what}. One order, one policy, ${qty.toLocaleString('en-US')} ${qty === 1 ? 'circuit' : 'circuits'}.` }); syncHash('s4', s.layer, s.tab); },
+      // Same entry as composeFor(go, x) on the base - prefillAttach, through
+      // go() - so the two row kinds in this card behave as one card, scroll
+      // reset and all. The source label and quantity ride inside `compose`;
+      // noteStep says which step gets to show the alert they explain (fix
+      // round 2, finding A) - the next prefillCompose-based route wipes both,
+      // and cleanCompose wipes them explicitly wherever a NEW order starts
+      // from a live `compose` instead (fix round 2, finding B).
+      go: go('s4', { compose: { ...prefillAttach(x), bulk: what, qty, sourceLabel: 'Not connected yet', noteStep: 5 }, parsedNote: `Attach ${what}. One order, one policy, ${qty.toLocaleString('en-US')} ${qty === 1 ? 'circuit' : 'circuits'}.` }),
     };
   });
   const gapRows = [...gapRegions, ...gapSites];
@@ -1568,6 +1590,19 @@ const METRO_RAMPS = { Ashburn: 'NetBond · DX · ER · IX · 8 ms', Atlanta: 'Ne
 const REGION_OF_METRO = (m) => Object.keys(D.COMPOSE_CHIPS.regions).find(r => D.COMPOSE_CHIPS.regions[r].includes(m)) || 'US East';
 const REGION_GEO = { 'us-east-1': 'Ashburn', 'us-east-2': 'Chicago', 'us-west-2': 'Seattle', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'London', 'ap-southeast-1': 'Singapore', eastus: 'Ashburn', westeurope: 'Amsterdam', centralus: 'Dallas', 'us-central1': 'Chicago', 'us-east-04': 'New York', 'uk-south': 'London' };
 
+/**
+ * Strips a compose of everything that names where it came from or how many
+ * of it there are: `sourceLabel` (the alert's title), `bulk` and `qty` (the
+ * count a site-attach route wrote), `noteStep` (the step that count's alert
+ * belongs on). Every route that starts a genuinely NEW order from a compose
+ * that might carry those - Govern's "Author policy", the free-text parser,
+ * and switching the outcome under a labelled compose - runs it through this
+ * first. A route that is still building the SAME order (picking a metro,
+ * adding a control, resuming the header's "Compose" shortcut) spreads `cp`
+ * unchanged; those fields are exactly what should survive.
+ */
+const cleanCompose = (cp) => ({ ...cp, sourceLabel: null, bulk: null, qty: 1, noteStep: 0 });
+
 function prefillCompose(est) {
   const base = { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [], step: 0, prefilled: false };
   if (!est || est.stage === 'empty') return base;
@@ -1614,7 +1649,7 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
     stepIs0: step === 0, stepIs1: step === 1, stepIs2: step === 2, stepIs3: step === 3, stepIs4: step === 4, stepIs5: step === 5,
     srcCards: D.COMPOSE_CHIPS.source.map(v => card('source', v, false, CARD_DESC.source[v])), dstCards: D.COMPOSE_CHIPS.dest.map(v => card('dest', v, false, CARD_DESC.dest[v])), resCards: D.COMPOSE_CHIPS.resiliency.map(v => card('resiliency', v, true, CARD_DESC.resiliency[v])), ctlCards: D.COMPOSE_CHIPS.control.map(v => card('control', v, false, CARD_DESC.control[v])),
     metroCards: (D.COMPOSE_CHIPS.regions[cp.regionTab] || []).map(m => ({ ...card('metros', m, false, METRO_RAMPS[m] || 'NetBond'), })),
-    parsedNote: s.parsedNote || '', parsedNoteTitle: cp.sourceLabel || 'From the drawer', hasParsedNote: !!s.parsedNote && step === 0, prefilled: !!cp.prefilled && !s.parsedNote, prefillLine: cp.prefilled ? `Started from your estate: ${cp.prefillRegion} has ${cp.prefillWl} workloads on the public internet. Every step is filled; change what you like.` : '',
+    parsedNote: s.parsedNote || '', parsedNoteTitle: cp.sourceLabel || 'From the drawer', hasParsedNote: !!s.parsedNote && step === (cp.noteStep ?? 0), prefilled: !!cp.prefilled && !s.parsedNote, prefillLine: cp.prefilled ? `Started from your estate: ${cp.prefillRegion} has ${cp.prefillWl} workloads on the public internet. Every step is filled; change what you like.` : '',
     slotRows: [['Outcome', outcome ? outcome.name : '', 0, 'Pick an outcome'], ['From', cp.source.join(', '), 1, 'Pick a source'], ['To', cp.dest.join(', '), 2, 'Pick a destination'], ['Via', cp.metros.join(', '), 3, 'Pick a metro'], ['Resiliency', cp.resiliencyChosen ? cp.resiliency : `${cp.resiliency} (default)`, 4, ''], ['Require', cp.control.join(', '), 5, 'Pick a control']].map(([label, v, i, empty]) => ({ key: label, label, text: v || empty, go: goStep(i), cur: step === i, weight: v ? 500 : 400, color: step === i ? 'var(--link)' : v ? 'var(--text-heading)' : 'var(--text-disabled)' })),
     sent: sentence, slotSrc: slot(sentence.src, 1, 'a source'), slotDst: slot(sentence.dst, 2, 'a destination'), slotMetro: slot(sentence.metro, 3, 'a metro'), slotRes: slot(sentence.res, 4, 'resiliency'), slotCtl: slot(sentence.ctl, 5, 'a control'), slotOutcome: slot(outcome ? outcome.name.toLowerCase() : '', 0, 'an outcome'),
     polSent: policySentence, hasConstraintNow: !!constraint && step === 4,
@@ -1923,13 +1958,13 @@ function costVals(s, set, est, invAll, ob, go, c) {
     ], { key: 'move', title: 'What can actually move', sub: 'Every bucket, by whether steering changes the bill', centre: kF(recover), centreSub: 'recoverable' }),
   ].filter(d => d.total > 1).map(d => ({ ...d, rows: d.rows.map(r => ({ ...r, key: d.key + ':' + r.label })) }));
   return { attCharges, hasAttCharges: attCharges.length > 0, attTotalF: fmt(attTotal), attNetF: (attNet >= 0 ? '+' : '−') + fmt(Math.abs(attNet)), attNetLabel: attNet >= 0 ? 'Net saving after charges' : 'Net cost after savings', attNetColor: attNet >= 0 ? 'var(--success)' : 'var(--warning)', attNote: `${fmt(attTotal)}/mo · carries ${fmt(ob.savingsMo || 0)}/mo of savings`, goMarketplace: go('s7'),
-    costStrip: { has: !!(top || pubSite), title: 'Act on it', text: [pubSite ? `${fmt(pubSite.pubPart)}/mo of egress still leaves ${pubSite.label.toLowerCase()} on a public first mile.` : '', top ? `Attaching ${top.region} moves ${top.wl} workloads to $0.02/GB and saves ${fmt(top.saveN)}/mo, the largest single move on the table.` : 'Every region is attached; the remaining lever is the commit table below.'].filter(Boolean).join(' '), cta: top ? `Attach ${top.region}` : 'Drill sites', go: top ? go('s4', { compose: { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Private path required'], step: 5, prefilled: true, prefillRegion: top.region, prefillWl: top.wl } }) : go('s1') },
+    costStrip: { has: !!(top || pubSite), title: 'Act on it', text: [pubSite ? `${fmt(pubSite.pubPart)}/mo of egress still leaves ${pubSite.label.toLowerCase()} on a public first mile.` : '', top ? `Attaching ${top.region} moves ${top.wl} workloads to $0.02/GB and saves ${fmt(top.saveN)}/mo, the largest single move on the table.` : 'Every region is attached; the remaining lever is the commit table below.'].filter(Boolean).join(' '), cta: top ? `Attach ${top.region}` : 'Drill sites', go: top ? go('s4', { compose: prefillAttach(top) }) : go('s1') },
     bySite, hasBySite: bySite.length > 0, bySiteTotalF: fmt(bySiteTotal), bySiteNote: `${fmt(siteRows.reduce((a, r) => a + r.pubPart, 0))}/mo still on a public first mile`, goSites: go('s1'),
     costDonuts, hasCostDonuts: costDonuts.length > 0,
     arbitrage: arb.map(a => ({ ...a, fabW: Math.round(a.saveN / 0.07 * 0.02 / maxNow * 100) + '%', premW: Math.round(a.saveN / maxNow * 100) + '%',
       explainGo: explainNav(c, { label: `${a.cloud || ''} ${a.region || a.label || ''}`.trim() + ' — what it would save', value: a.saveF || fmt(a.saveN) + '/mo',
         sub: 'The premium this region pays for leaving on the public path.',
-        cut: 'The records this region sent on the public path.', path: 'public', parts: [] }), enter: () => set({ hoverNode: 'reg' + a.regionId }), leave: () => set({ hoverNode: null }), attach: go('s4', { compose: { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Private path required'], step: 5, prefilled: true, prefillRegion: a.region, prefillWl: a.wl } }) })), hasArbitrage: arb.length > 0, arbTotal: fmt(arb.reduce((a, r) => a + r.saveN, 0)), arbTotalYr: fmt(arb.reduce((a, r) => a + r.saveN, 0) * 12),
+        cut: 'The records this region sent on the public path.', path: 'public', parts: [] }), enter: () => set({ hoverNode: 'reg' + a.regionId }), leave: () => set({ hoverNode: null }), attach: go('s4', { compose: prefillAttach(a) }) })), hasArbitrage: arb.length > 0, arbTotal: fmt(arb.reduce((a, r) => a + r.saveN, 0)), arbTotalYr: fmt(arb.reduce((a, r) => a + r.saveN, 0) * 12),
     // Cost figures reach the same records. A dollar figure is bytes times a
     // rate, so it explains through the flows that carried the bytes.
     destClasses: R.destClasses(ob, base, targetSave).map((d, i) => ({ ...d, op: [1, 0.75, 0.5, 0.3][i] || 0.3,
