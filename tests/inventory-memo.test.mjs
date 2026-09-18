@@ -3,8 +3,16 @@ import assert from 'node:assert/strict';
 import * as D from '../naas-data.js';
 import { inventory } from '../naas-addendum.js';
 import { applyScope } from '../naas-round2.js';
+import { vals, defaults } from '../naas-app.js';
 
 const est = D.ESTATES.trust;
+
+// Task 7's harness, reused (`tests/level-drawer.test.mjs:11-14`): vals()
+// closes over c/s/set, so it is driven by a fake `c` built from defaults().
+function mkC(extra = {}) {
+  const state = { ...defaults(), view: 'trust', screen: 's3', layer: 'cloud', tab: 'cost', ...extra };
+  return { state, setState: (p) => Object.assign(state, p) };
+}
 
 // R2 — the cache keys on est.id (raw, no fallback — the base always throws
 // on a falsy estate and the memo now matches it, per M3). Two estates
@@ -60,15 +68,23 @@ test('a same-id field the tree never reads shares the cached tree', () => {
 // region-signature filter (`r.priv || i % 2 === 0`) is byte-identical — the
 // only thing that tells them apart is `sites`, which is why the key needs a
 // sites signature and not just the region list.
+//
+// Fix round 1 re-review (M1): a "scoped vs whole estate" test is vacuous —
+// `applyScope('site:…')` on mature also drops a region (the non-priv one),
+// so the region signature already differs and the test passes even with the
+// defect present. The only test that actually exercises the defect is one
+// that compares two *different* site scopes with the *same* region
+// signature against each other, and — critically — has already cached one
+// of them before asking for the other, so a key that omits `sites` would
+// serve the wrong (already-cached) tree.
 const matureEst = D.ESTATES.mature;
 const circuitSites = (tree) => { const names = new Set(); tree.forEach(cl => cl.regions.forEach(r => r.vpcs.forEach(v => (v.gws || []).forEach(g => (g.circuits || []).forEach(cx => names.add(cx.site)))))); return names; };
 
-test('a site scope is a different estate: its tree is not the whole-estate tree', () => {
-  const scoped = applyScope(matureEst, 'site:Ashburn DC');
-  assert.notEqual(inventory(scoped), inventory(matureEst));
-});
-
 test('a site-scoped tree only ever names that one site on its circuits', () => {
+  // Prime the cache with San Jose's build first. Ashburn and San Jose share
+  // a region signature (both priv:true), so a key that omits `sites` would
+  // now serve San Jose's cached tree back for Ashburn's request below.
+  inventory(applyScope(matureEst, 'site:San Jose DC'));
   const scoped = applyScope(matureEst, 'site:Ashburn DC');
   assert.deepEqual([...circuitSites(inventory(scoped))], ['Ashburn DC']);
 });
@@ -79,4 +95,27 @@ test('two different site scopes on one estate id yield two different trees', () 
   assert.notEqual(inventory(ashburn), inventory(sanJose));
   assert.deepEqual([...circuitSites(inventory(ashburn))], ['Ashburn DC']);
   assert.deepEqual([...circuitSites(inventory(sanJose))], ['San Jose DC']);
+});
+
+// Fix round 1 re-review, Important (I1/I2) — C1a made `costVals` take
+// `vals()`'s own `inv`, which is facet-filtered but not scope-filtered;
+// the base built its charge-row tree the other way round (scope-filtered,
+// never facet-filtered). Two live regressions on the Cost card followed:
+// every `cloud:` (and, structurally, any scope that actually drops a
+// region) scope showed the WHOLE estate's VPC counts instead of the scoped
+// ones, and a Discover facet chip moved the card at all, which the base
+// never allowed. Fixed by handing `costVals` the unscoped, unfiltered tree
+// and intersecting it down to the scoped estate's own region list inside
+// the function (`naas-app.js:1814-1836`).
+test('a cloud scope on Cost reads the scoped charge rows, not the whole estate\'s', () => {
+  const v = vals(mkC({ view: 'mature', obScope: 'cloud:AWS' }));
+  assert.equal(v.attTotalF, '$13,800', 'AWS-only VPC counts (3/3/3), not mature\'s whole 7/7/7');
+  assert.equal(v.attNetF, '+$47,600');
+});
+
+test('a Discover facet chip never moves the Cost card', () => {
+  const withChip = vals(mkC({ view: 'mature', obScope: 'all', chips: ['NetBond'] }));
+  const withoutChip = vals(mkC({ view: 'mature', obScope: 'all', chips: [] }));
+  assert.equal(withChip.attTotalF, withoutChip.attTotalF);
+  assert.equal(withChip.attNetF, withoutChip.attNetF);
 });
