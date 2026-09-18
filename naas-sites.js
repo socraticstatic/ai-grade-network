@@ -170,3 +170,17 @@ export function labelOfKey(est, key) {
   if (parts.length === 2) return parts[1];
   return k;
 }
+
+/**
+ * The stable key for a rolled-up row of `est.sites`. The canvas draws East,
+ * Central and West as three rows; `classOf` collapses all three into one
+ * class, so without this a click on "Remote sites, East (1,640)" lands on
+ * 4,054 sites. Null for a single named site, which is already addressable.
+ */
+export function rollupKeyOf(est, st) {
+  if (!st || countOf(st.name) <= 1) return null;
+  const cls = classOf(st);
+  const peers = (est && est.sites || []).filter(x => classOf(x) === cls && countOf(x.name) > 1);
+  const ri = peers.findIndex(x => x.name === st.name);
+  return ri < 0 ? null : `${cls}#${ri}`;
+}
