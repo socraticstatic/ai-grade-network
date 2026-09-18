@@ -43,7 +43,7 @@ export function volumeList(est, parent, opts = {}) {
   rows = rows.slice().sort((a, b) => RANK[a.state] - RANK[b.state] || a.ms - b.ms * 0 || a.id.localeCompare(b.id));
   const matching = rows.length; const shown = rows.slice(0, page * size);
   const selected = all.filter(x => sel.has(x.id));
-  return { title: `${m.name} · ${n(m.count)} ${m.count === 1 ? cls.unit : cls.plural}`, sub: `${n(counts.fabric)} on the fabric · ${n(counts.public)} public · ${n(counts.degraded)} degraded`, counts, matching, shownCount: shown.length, hasMore: shown.length < matching, rows: shown.map(x => ({ ...x, selected: sel.has(x.id), stateLabel: x.state === 'degraded' ? 'Degraded' : x.state === 'public' ? 'Public first mile' : 'On the fabric', sub: `${x.address} · ${x.access} · ${x.ms} ms`, action: x.priv ? (x.state === 'degraded' ? 'Impact' : '') : 'Attach' })), selectedCount: selected.length, selectedPublic: selected.filter(x => !x.priv).length, matchingIds: rows.map(x => x.id), bulk: { attach: (sel.size ? selected : rows).filter(x => !x.priv).length, label: sel.size ? `${n(selected.length)} selected` : `${n(matching)} matching` } };
+  return { title: `${m.name} · ${n(m.count)} ${m.count === 1 ? cls.unit : cls.plural}`, sub: `${n(counts.fabric)} on the fabric · ${n(counts.public)} public · ${n(counts.degraded)} degraded`, counts, caps: capsFor(counts.total, true), matching, shownCount: shown.length, hasMore: shown.length < matching, rows: shown.map(x => ({ ...x, selected: sel.has(x.id), stateLabel: x.state === 'degraded' ? 'Degraded' : x.state === 'public' ? 'Public first mile' : 'On the fabric', sub: `${x.address} · ${x.access} · ${x.ms} ms`, action: x.priv ? (x.state === 'degraded' ? 'Impact' : '') : 'Attach' })), selectedCount: selected.length, selectedPublic: selected.filter(x => !x.priv).length, matchingIds: rows.map(x => x.id), bulk: { attach: (sel.size ? selected : rows).filter(x => !x.priv).length, label: sel.size ? `${n(selected.length)} selected` : `${n(matching)} matching` } };
 }
 
 /**
@@ -87,7 +87,7 @@ export function workloadList(est, inv, scope, opts = {}) {
     // "Exposed · 0" over subnets whose own rows said "4 exposed".
     const totalExp = vpc.subnets.reduce((t, x) => t + (x.workloads || []).filter(y => y.exposed).length, 0);
     const totalApps = new Set(vpc.subnets.flatMap(x => (x.workloads || []).flatMap(w => (w.endpoints || []).map(e => e.app)))).size;
-    const rows = vpc.subnets.map(x => {
+    let rows = vpc.subnets.map(x => {
       const ws = x.workloads || [];
       const exp = ws.filter(y => y.exposed).length;
       return {
@@ -95,15 +95,19 @@ export function workloadList(est, inv, scope, opts = {}) {
         state: x.pub ? 'public' : 'fabric',
         stateLabel: x.pub ? 'Public subnet' : 'Private subnet',
         sub: `${x.cidr} · ${x.az} · ${n(ws.length)} ${ws.length === 1 ? 'workload' : 'workloads'}${exp ? ` · ${exp} exposed` : ''}`,
-        action: '',
+        action: '', exposed: exp,
       };
     });
+    if (q) rows = rows.filter(r => `${r.id} ${r.sub}`.toLowerCase().includes(q));
+    if (app !== 'all') rows = rows.filter(r => (vpc.subnets.find(x => x.id === r.snId).workloads || []).some(w => (w.tag || 'untagged') === app));
+    if (state === 'exposed') rows = rows.filter(r => r.exposed > 0);
     return {
       kind: 'workloads', level: 'subnets', apps: [],
       title: `${vpc.name} · ${n(vpc.subnets.length)} ${vpc.subnets.length === 1 ? 'subnet' : 'subnets'}`,
       sub: `${top.cloud} ${top.region} · ${n(totalWl)} workloads`,
       trail: [top.cloud, top.region, vpc.name],
       counts: { total: totalWl, exposed: totalExp, apps: totalApps },
+      caps: capsFor(vpc.subnets.length, true),
       matching: rows.length, shownCount: rows.length, hasMore: false, rows,
       flatDoor: { label: `All ${n(totalWl)} workloads in this VPC`, sub: 'skip the subnets' },
       selectedCount: 0, matchingIds: [], bulk: { attach: 0, label: '' },
@@ -140,6 +144,7 @@ export function workloadList(est, inv, scope, opts = {}) {
     title: `${where} · ${n(all.length)} ${all.length === 1 ? 'workload' : 'workloads'}`,
     sub: `${top.cloud} ${top.region} · ${n(counts.apps)} ${counts.apps === 1 ? 'app' : 'apps'} · ${n(counts.exposed)} exposed`,
     counts, matching, shownCount: shown.length, hasMore: shown.length < matching,
+    caps: capsFor(counts.total, true),
     rows: shown.map(w => ({
       ...w,
       id: w.name,
@@ -175,6 +180,8 @@ const NOUN = {
   workload: ['workload', 'workloads'],
 };
 const nounFor = (level, total) => { const pair = NOUN[level] || ['item', 'items']; return total === 1 ? pair[0] : pair[1]; };
+/** At a level with two children the drawer is a list of two. Threshold 12. */
+const capsFor = (total, chips) => ({ search: total >= 12, chips: total >= 12 && !!chips, bulk: total >= 12 && !!chips });
 const fabTrail = (trail) => (!trail || !trail.length ? ['fab'] : trail[0] === 'fab' ? trail : ['fab', ...trail]);
 const totalSites = (est) => (est.sites || []).reduce((a, x) => a + S.countOf(x.name), 0);
 
@@ -277,6 +284,7 @@ function frame(head, rows, opts, extra = {}) {
     hasMore: shown.length < hit.length, rows: shown,
     apps: [], flatDoor: null, selectedCount: 0, matchingIds: [],
     bulk: { attach: 0, label: '' },
+    caps: capsFor(rows.length, false),
     ...extra,
   };
 }
@@ -319,7 +327,7 @@ function sitesLevel(est, trail, opts) {
     const cls = String(trail[0]).split('#')[0];
     const v = volumeList(est, { cls, metro: trail[1] }, opts);
     if (!v) return null;
-    return { ...v, col: 'sites', level: head.level, noun: head.noun, total: head.total, trail: head.trail, rows: v.rows.map(r => ({ ...r, into: null })) };
+    return { ...v, col: 'sites', level: head.level, noun: head.noun, total: head.total, trail: head.trail, caps: capsFor(head.total, true), rows: v.rows.map(r => ({ ...r, into: null })) };
   }
   const info = C.siteDrillRows(est, trail);
   if (!info) return null;
@@ -371,5 +379,5 @@ function cloudsLevel(est, inv, trail, opts) {
   // `kind: 'workloads'` survives, for the same reason the sites delegation
   // keeps its own: the drawer's app chips, ip search hint, pin and Isolate
   // action all read `volList.kind`.
-  return { ...w, col: 'clouds', level: head.level, noun: head.noun, total: head.total, trail: head.trail, rows: w.rows.map(r => ({ ...r, into: r.snId || null })) };
+  return { ...w, col: 'clouds', level: head.level, noun: head.noun, total: head.total, trail: head.trail, caps: capsFor(head.total, true), rows: w.rows.map(r => ({ ...r, into: r.snId || null })) };
 }
