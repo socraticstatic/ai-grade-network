@@ -71,3 +71,41 @@ function mkC(extra = {}) {
 test('the retitled +N regions row does not move the clouds header count', () => {
   assert.equal(vals(mkC()).cloudsDoor.label, 'All 6 regions ›');
 });
+
+// ---- Task 11, fix round 1 (review Finding 4): pin the ruling's three visible
+// properties and both new click routes through vals(), not just heroLayout's
+// row shape. The two assertions below on `caret` and the post-click state are
+// what actually goes RED if a later pass restores the brief's Step 5
+// (`if (r.rollup) { openLevel('clouds'); return; }` plus `r.rollup ? '›' : ''`
+// on the caret): restoring that gives the row a `›` caret and makes its click
+// open the clouds drawer, so both assertions fail. `color` alone would not
+// have caught it - Step 5 never touches color.
+test('the muted +N regions row is fully inert: disabled ink, no caret, dead click', () => {
+  const c = mkC();
+  const v = vals(c);
+  const more = v.heroRegions.find(r => r.key === 'more');
+  assert.ok(more, 'the muted rollup row must be present at the clouds root');
+  assert.equal(more.color, 'var(--text-disabled)');
+  assert.equal(more.caret, '', 'a promised door needs a caret; this row promises nothing');
+  const before = JSON.stringify(c.state);
+  more.click();
+  assert.equal(JSON.stringify(c.state), before, 'clicking the muted row must not change state at all');
+});
+
+test('the metro +N more row opens the sites level list, not the old volume shortcut', () => {
+  const c = mkC({ drill: ['Branch'] });
+  const v = vals(c);
+  const more = v.heroSites.find(s => s.more);
+  assert.ok(more, 'the class-level overflow row must be present at drill: ["Branch"]');
+  more.click();
+  assert.deepEqual(c.state.vol, { kind: 'level', col: 'sites' });
+  assert.equal(c.state.drawerOpen, true);
+});
+
+test('openBandLevel opens the drawer at the fabric level', () => {
+  const c = mkC({ fabDrill: ['fab', 'N. Virginia'] });
+  const v = vals(c);
+  v.openBandLevel();
+  assert.deepEqual(c.state.vol, { kind: 'level', col: 'fabric' });
+  assert.equal(c.state.drawerOpen, true);
+});

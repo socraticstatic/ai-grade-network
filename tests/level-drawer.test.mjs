@@ -381,8 +381,12 @@ test('fix (round 2): a sites level scope never rebuilds s.drill - only the old `
   assert.equal(v.drawer.title, 'Sites');
   assert.equal(v.drawer.total, 7);
 
-  // The old `metro` kind's rebuild is load-bearing - it is opened from `+N more`
-  // on the picture, where s.drill may be short - and must stay exactly as it was.
+  // The old `metro` kind's rebuild is load-bearing - Task 11 rerouted the
+  // picture's own `+N more` row to `openLevel('sites')`, but `metro` is still
+  // opened from the flow map's `more` node (naas-app.js, mapNodes' click on
+  // `nd.kind === 'more'`) and from panel `vol:` children (addendumVals' own
+  // openVolume, called where a children row's key starts with `vol:`) - and
+  // must stay exactly as it was.
   const c2 = mkC({ vol: { kind: 'metro', cls: 'Branch#1', metro: 'Branch:1:Atlanta' } });
   const v2 = vals(c2);
   assert.deepEqual(c2.state.drill, [], 'sanity: opened from the picture with a short drill');
