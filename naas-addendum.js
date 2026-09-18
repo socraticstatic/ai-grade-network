@@ -22,7 +22,25 @@ export function tagStyle(t, dark) {
 function lighten(hex) { const n = parseInt(hex.slice(1), 16); const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; const f = (x) => Math.round(x + (255 - x) * 0.45); return `rgb(${f(r)},${f(g)},${f(b)})`; }
 
 // ---------- Inventory tree ----------
+/**
+ * The whole 2,681-workload tree rebuilt on every render cost each Discover
+ * click 60-160ms and degraded drawer paging from 62ms to 131ms by page 10.
+ * The key is the estate id plus the region signature, because `naas-app.js`
+ * hands us a fresh object literal (the landed flip, then the facet filter)
+ * on every pass and a WeakMap would never hit. The signature carries every
+ * region field `region()` reads and the app can change — cloud, region, priv,
+ * ramp, wl, rel, landed. Everything else it reads (`est.sites`,
+ * `est.sitesCount`, `r.fab`, `r.pub`, `r.tags`) is fixed for an estate id.
+ */
+const INV_CACHE = new Map();
+const INV_CAP = 8;
+const invKey = (est) => `${est.id || ''}|${(est.regionsList || []).map(r => `${r.cloud}/${r.region}/${r.priv ? 1 : 0}/${r.ramp || ''}/${r.wl || 0}/${r.rel || ''}/${r.landed ? 1 : 0}`).join(',')}`;
+
 export function inventory(est) {
+  if (!est) return [];
+  const key = invKey(est);
+  const hit = INV_CACHE.get(key);
+  if (hit) return hit;
   const clouds = [];
   est.regionsList.forEach((r, i) => {
     let cl = clouds.find(c => c.name === r.cloud);
@@ -30,6 +48,8 @@ export function inventory(est) {
     cl.regions.push(region(r, i, est));
   });
   clouds.forEach(cl => { cl.vpcs = cl.regions.reduce((a, r) => a + r.vpcs.length, 0); cl.wl = cl.regions.reduce((a, r) => a + r.wl, 0); cl.priv = cl.regions.some(r => r.priv); });
+  if (INV_CACHE.size >= INV_CAP) INV_CACHE.delete(INV_CACHE.keys().next().value);
+  INV_CACHE.set(key, clouds);
   return clouds;
 }
 
