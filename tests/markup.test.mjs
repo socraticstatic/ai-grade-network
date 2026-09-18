@@ -258,3 +258,19 @@ test('the breadcrumb keeps the two columns apart', () => {
   const [from, to] = block('<!-- ===== S3 header: breadcrumb', '<!-- ===== S2 LAUNCH POINTS');
   assertBalanced(from, to, 'the breadcrumb');
 });
+
+// --- Wave 2, Task 15: the compose alert's title becomes a binding ---
+//
+// Mutation-tested (review round 1): reverting the binding to the static
+// string "From the drawer" left the suite green, because nothing pinned it.
+// This closes that hole directly.
+
+test('the compose alert title is bound to parsedNoteTitle, not the static default', () => {
+  // fx-alert-title is reused by several unrelated alerts (newStrip, connectNext,
+  // governNext, nextStop, costStrip, costNext, plus the S6 empty-order banner) -
+  // anchor on hasParsedNote, the one gate this specific alert renders under.
+  const line = LINES.find(l => l.includes('{{ hasParsedNote }}'));
+  assert.ok(line, 'the compose alert (gated on hasParsedNote) is gone');
+  assert.ok(/class="fx-alert-title">\{\{ parsedNoteTitle \}\}</.test(line), 'fx-alert-title must bind {{ parsedNoteTitle }}');
+  assert.equal(HTML.includes('From the drawer'), false, 'the default lives in JS (wizardVals) now, not as static markup');
+});
