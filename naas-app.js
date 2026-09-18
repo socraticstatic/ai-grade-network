@@ -301,11 +301,15 @@ export function vals(c) {
   // e.g. "AWS us-east-2") stands alone rather than forcing an empty "in ".
   const attachTrail = vol && vol.kind === 'level' ? colTrail(vol.col) : [];
   const attachPlace = (x) => x.metro || (attachTrail.length ? S.labelOfKey(est, attachTrail[attachTrail.length - 1]) : '') || volCtx.metroLabel || '';
-  // A level scope's pin may only rebuild `s.drill` (the SITES column's own
-  // trail) when the scope IS the sites column - `volCtx.cls`/`.metro` are
-  // only ever resolved from the sites trail (see volCtx above), so pinning a
-  // clouds or fabric row here must never write drill at all.
-  const pinMayDrill = vol && (vol.kind === 'metro' || (vol.kind === 'level' && vol.col === 'sites'));
+  // Only the old `metro` kind rebuilds `s.drill` on pin. It is opened from the
+  // picture's `+N more` row, where the drill can be shorter than the metro the
+  // drawer is showing, so the pin drills the picture to that metro - load-bearing.
+  // A LEVEL scope has nothing to rebuild: `s.drill` already IS colTrail('sites')
+  // by construction. Rebuilding it from volCtx (whose cls/metro are only ever
+  // read off the sites trail) writes ['<hop>', undefined] at depth 1 and
+  // ['', undefined] on clouds/fabric; siteDrillRows reads either as null, so the
+  // drawer unmounts mid-render and openLevel('sites') stays dead afterward.
+  const pinMayDrill = vol && vol.kind === 'metro';
   const drawer = volList ? { ...volList, key: 'vol', slideKey: 'sl' + volSlide,
     canBack: drawerPath().length > 0, isLevel: vol && vol.kind === 'level',
     capSearch: !!(volList.caps && volList.caps.search), capChips: !!(volList.caps && volList.caps.chips), capBulk: !!(volList.caps && volList.caps.bulk),

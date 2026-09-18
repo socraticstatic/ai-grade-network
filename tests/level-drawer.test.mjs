@@ -337,3 +337,55 @@ test('fix (Important 4): pinning a fabric circuit never writes s.drill, and the 
   assert.equal(v.drawer.title, 'Sites');
   assert.equal(v.drawer.total, 7);
 });
+
+// ---------- Fix round 2 (re-review finding) ----------
+
+test('fix (round 2): a sites level scope never rebuilds s.drill - only the old `metro` kind does', () => {
+  // mature's sites root lists individual sites, so one descend lands on a
+  // one-hop `path` level with six pinnable rows. volCtx.metro is
+  // colTrail('sites')[1] - undefined at depth 1 - so the old rebuild wrote
+  // ['Ashburn DC', undefined], which siteDrillRows reads as null: the drawer
+  // dies on that very render and never reopens.
+  const c = mkC({ view: 'mature' });
+  let v = vals(c);
+  v.openLevel('sites');
+  v = vals(c);
+  v.drawer.rows.find(r => r.id === 'Ashburn DC').descend();
+  v = vals(c);
+  assert.deepEqual(c.state.drill, ['Ashburn DC'], 'sanity: the sites trail is one hop deep');
+  assert.equal(v.drawer.level, 'path');
+  const row = v.drawer.rows.find(r => r.notDoor);
+  assert.ok(row, 'a path level row is a leaf asset, not a door');
+  row.pin();
+  assert.deepEqual(c.state.drill, ['Ashburn DC'], 's.drill IS this scope\'s column trail - a pin must not rewrite it');
+  assert.equal(c.state.mapSel, 'asset:' + row.id, 'the pin itself still works');
+  assert.equal(c.state.volPin, row.id);
+  v = vals(c);
+  assert.ok(v.drawer, 'the drawer must survive its own pin, not unmount under an open s.drawerOpen');
+  assert.equal(v.drawer.title, 'Ashburn DC · paths');
+
+  // The dead-drawer chain the review traced: a later openLevel('sites') returned null.
+  // It reopens at the column's LIVE trail (still one hop, so still the path
+  // level), and climbing out of that lands on a healthy root - proving
+  // siteDrillRows is unpoisoned at both depths.
+  v.drawer.close();
+  v = vals(c);
+  v.openLevel('sites');
+  v = vals(c);
+  assert.ok(v.drawer, 'openLevel("sites") must not return a dead drawer afterward');
+  assert.equal(v.drawer.title, 'Ashburn DC \u00b7 paths');
+  assert.equal(v.drawer.total, 6);
+  v.drawer.back();
+  v = vals(c);
+  assert.deepEqual(c.state.drill, []);
+  assert.equal(v.drawer.title, 'Sites');
+  assert.equal(v.drawer.total, 7);
+
+  // The old `metro` kind's rebuild is load-bearing - it is opened from `+N more`
+  // on the picture, where s.drill may be short - and must stay exactly as it was.
+  const c2 = mkC({ vol: { kind: 'metro', cls: 'Branch#1', metro: 'Branch:1:Atlanta' } });
+  const v2 = vals(c2);
+  assert.deepEqual(c2.state.drill, [], 'sanity: opened from the picture with a short drill');
+  v2.drawer.rows.find(r => r.notDoor).pin();
+  assert.deepEqual(c2.state.drill, ['Branch#1', 'Branch:1:Atlanta'], 'the metro kind still drills the picture to the pinned site\'s metro');
+});
