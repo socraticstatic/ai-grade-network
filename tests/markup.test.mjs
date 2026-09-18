@@ -205,3 +205,25 @@ test('the hero svg still balances after the header edits', () => {
   const [from, to] = block('aria-label="Fabric picture"', '</svg>');
   assertBalanced(from, to, 'the hero svg');
 });
+
+// Fix round 1, Minor 1: the census proves tag counts moved by the right
+// amount, but never proves WHICH gate wraps WHICH element. A typo gating the
+// disabled span on `sitesDoor.has` instead of `.hasNot` keeps every count in
+// the file identical (still one sc-if pair, one span, one button per header)
+// and would pass the census test today. These containment checks are the
+// only thing that catches it: each hasNot gate must exist, and must wrap a
+// span - never a button, since the disabled state is not a button at all.
+test('each header carries a hasNot gate, and it wraps a span, never a button', () => {
+  for (const flag of ['sitesDoor.hasNot', 'cloudsDoor.hasNot', 'bandDoor.hasNot']) {
+    const marker = `{{ ${flag} }}`;
+    assert.ok(HTML.includes(marker), `${marker} is not bound anywhere in the markup`);
+    const line = lineWith(marker);
+    const open = line.indexOf(`<sc-if value="{{ ${flag} }}"`);
+    assert.ok(open >= 0, `${flag} is not gating an sc-if on its own header line`);
+    const close = closeOf(line, open);
+    assert.ok(close >= 0, `${flag}'s sc-if never closes - a self-closed gate wraps nothing`);
+    const inner = line.slice(open, close);
+    assert.ok(inner.includes('<span'), `${flag} must wrap a span (the disabled label)`);
+    assert.ok(!inner.includes('<button'), `${flag} wraps a button - the disabled state must never be a button`);
+  }
+});

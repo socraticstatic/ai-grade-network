@@ -254,3 +254,15 @@ test('sitesHead shows only the last drill segment, never the whole path', () => 
   assert.equal(vals(mkC()).sitesHead, 'Sites');
   assert.equal(vals(mkC({ drill: ['Branch#1', 'Branch:1:Atlanta'] })).sitesHead, '‹ Atlanta');
 });
+
+// Fix round 1: ruling 2 covers both shortened trails, but only sitesHead got
+// a pin. cloudsHead is built from a different source (regionDrill.crumb, not
+// S.labelOfKey on a drill key) and was live-correct but unpinned - exactly
+// the kind of gap that let the full-path form ship silently and clip CLOUDS
+// L3 by 82px in the first place. Literals measured against `trust` with the
+// same mkC() harness, not assumed: node -e vals(mkC({cloudDrill:[...]})).cloudsHead.
+test('cloudsHead shows only the last crumb, never the whole path', () => {
+  assert.equal(vals(mkC()).cloudsHead, 'Clouds');
+  assert.equal(vals(mkC({ cloudDrill: ['us-east-1'] })).cloudsHead, '‹ us-east-1');
+  assert.equal(vals(mkC({ cloudDrill: ['us-east-1', 'vpc-0-0', 'vpc-0-0-pub-0'] })).cloudsHead, '‹ public-a');
+});
