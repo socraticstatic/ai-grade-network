@@ -98,23 +98,6 @@ function pick(h) { return { total: h.total, noun: h.noun }; }
 // every column. If a literal here and the drawer's total ever disagree, one of
 // them is lying to the customer.
 
-test('the door copy matches the design, level by level', () => {
-  const copy = (col, trail, shown) => {
-    const h = levelHead(est, inv, ob, col, trail);
-    const hidden = Math.max(0, h.total - shown);
-    return hidden ? `All ${h.total} ${h.noun} · ${hidden} hidden ›` : `All ${h.total} ${h.noun} ›`;
-  };
-  assert.equal(copy('sites', [], 7), 'All 7 site groups ›');
-  assert.equal(copy('sites', ['Branch'], 6), 'All 19 metros · 13 hidden ›');
-  assert.equal(copy('sites', ['Branch', 'Branch:1:Atlanta'], 6), 'All 588 remote sites · 582 hidden ›');
-  assert.equal(copy('fabric', [], 4), 'All 4 facilities ›');
-  assert.equal(copy('fabric', ['fab', 'N. Virginia'], 8), 'All 21 ports · 13 hidden ›');
-  assert.equal(copy('clouds', [], 6), 'All 6 regions ›');
-  assert.equal(copy('clouds', ['us-east-1'], 3), 'All 3 VPCs ›');
-  assert.equal(copy('clouds', ['us-east-1', 'vpc-0-0'], 6), 'All 6 subnets ›');
-  assert.equal(copy('clouds', ['us-east-1', 'vpc-0-0', 'vpc-0-0-pub-0'], 6), 'All 60 workloads · 54 hidden ›');
-});
-
 const door = (col, extra) => vals(mkC(extra))[col];
 
 test('the three doors read the spec table on trust, level by level', () => {
@@ -151,6 +134,7 @@ test('an accent door means something is hidden; a plain one means nothing is', (
   assert.equal(door('bandDoor', { fabDrill: ['fab', 'N. Virginia'] }).color, 'var(--link)');
   assert.equal(door('bandDoor').color, 'var(--text-light)');
   assert.equal(door('cloudsDoor').color, 'var(--text-light)');
+  assert.equal(vals(mkC({ view: 'empty' })).cloudsDoor.color, 'var(--text-disabled)');
 });
 
 test('a closed band still counts its facilities and hides nothing', () => {
@@ -176,15 +160,20 @@ test('every field a door carries is a plain value the dc-runtime can bind', () =
   }
 });
 
-test('the gutter lands each door 12px inside its column card edge', () => {
+test('the gutter clears each column card edge by 16 viewBox units', () => {
+  // 16 units, not 12: the hero renders 1087 CSS px for a 1392 viewBox at the
+  // 1440x900 reference, so a unit is .781 px and the 10px edge rule bites.
+  const EDGE = 16;
   // SITES header x=24 w=460 -> right 484; the 200-wide card ends at 224.
-  assert.equal(vals(mkC()).sitesDoor.gutter, 484 - (224 - 12));
-  // CLOUDS header x=980; w=240 closed, 412 drilled; the card ends at 1220.
-  assert.equal(vals(mkC()).cloudsDoor.gutter, 980 + 240 - (1220 - 12));
-  assert.equal(vals(mkC({ cloudDrill: ['us-east-1'] })).cloudsDoor.gutter, 980 + 412 - (1220 - 12));
-  // The band door sits 12px inside the band, open (380..800) or closed (560..800).
-  assert.equal(vals(mkC()).bandDoor.gutter, 12);
-  assert.equal(vals(mkC({ fabDrill: ['fab'] })).bandDoor.gutter, 12);
+  assert.equal(vals(mkC()).sitesDoor.gutter, (24 + 460) - 224 + EDGE);
+  // CLOUDS: the gutter is derived from cloudsHeadW, never a second copy of it.
+  for (const extra of [{}, { cloudDrill: ['us-east-1'] }]) {
+    const v = vals(mkC(extra));
+    assert.equal(v.cloudsDoor.gutter, (980 + v.cloudsHeadW) - 1220 + EDGE, JSON.stringify(extra));
+  }
+  // The band header IS the band (x=bandX w=bandW), so its edges are the card's.
+  assert.equal(vals(mkC()).bandDoor.gutter, EDGE);
+  assert.equal(vals(mkC({ fabDrill: ['fab'] })).bandDoor.gutter, EDGE);
 });
 
 test('the door opens the drawer on that column, in place', () => {
@@ -195,15 +184,46 @@ test('the door opens the drawer on that column, in place', () => {
   assert.equal(vals(c).drawer.total, 19, 'the door total is the drawer total');
 });
 
-test('on the empty estate no header is a door at all', () => {
+test('on the empty estate the header prints the zero and opens nothing', () => {
   const v = vals(mkC({ view: 'empty' }));
-  for (const k of ['sitesDoor', 'bandDoor', 'cloudsDoor']) {
-    assert.equal(v[k].has, false, k);
-    assert.equal(v[k].label, '', k);
-    assert.equal(v[k].title, '', k);
-    assert.equal(typeof v[k].open, 'function', k + ' still safe to call');
+  const zeros = { sitesDoor: '0 site groups', bandDoor: '0 facilities', cloudsDoor: '0 regions' };
+  for (const [k, label] of Object.entries(zeros)) {
+    // Not a dead button; not a button at all. The words still print.
+    assert.equal(v[k].label, label, k);
+    assert.equal(v[k].has, false, k + ' is not a button');
+    assert.equal(v[k].color, 'var(--text-disabled)', k + ' is disabled ink');
+    assert.ok(!v[k].label.includes('\u203a'), k + ' has no caret');
+    assert.ok(v[k].title.length > 0, k + ' still says what it is');
     assert.doesNotThrow(() => v[k].open(), k);
   }
+  // and nothing opened
+  const c = mkC({ view: 'empty' });
+  vals(c).sitesDoor.open();
+  assert.ok(!c.state.drawerOpen, 'a zero header has no handler');
+  assert.equal(c.state.vol, undefined);
+});
+
+test('the title names the level the door opens', () => {
+  assert.equal(door('sitesDoor', { drill: ['Branch', 'Branch:1:Atlanta'] }).title, 'Open the list: Atlanta');
+  assert.equal(door('cloudsDoor').title, 'Open the list: Clouds');
+  assert.equal(vals(mkC({ view: 'empty' })).sitesDoor.title, 'Sites: nothing to open yet');
+});
+
+test('the band door opens the band with the drawer, in one frame', () => {
+  const c = mkC();
+  assert.equal(vals(c).fabClosed, true);
+  vals(c).bandDoor.open();
+  assert.deepEqual(c.state.fabDrill, ['fab'], 'the picture follows');
+  assert.deepEqual(c.state.vol, { kind: 'level', col: 'fabric' });
+  assert.equal(c.state.drawerOpen, true);
+  const v = vals(c);
+  assert.equal(v.fabClosed, false, 'the band is open behind the drawer');
+  assert.equal(v.drawer.total, 4);
+  // an already-open band is not re-seeded off its level
+  const c2 = mkC({ fabDrill: ['fab', 'N. Virginia'] });
+  vals(c2).bandDoor.open();
+  assert.deepEqual(c2.state.fabDrill, ['fab', 'N. Virginia']);
+  assert.equal(vals(c2).drawer.total, 21);
 });
 
 test('the roots still read on partial and mature', () => {

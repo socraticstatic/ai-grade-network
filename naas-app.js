@@ -343,11 +343,27 @@ export function vals(c) {
   // Unconditional, so the rule survives contact with every level. The number
   // is the one that fills the drawer, so the cloud root reads "All 6 regions".
   const nfmt = (x) => Number(x).toLocaleString('en-US');
+  // The door's right margin inside its header, because the runtime cannot
+  // subtract. The 10px edge rule is RENDERED pixels, not viewBox units: the
+  // hero draws 1087 CSS px wide for a 1392 viewBox at the 1440x900 reference
+  // (scale .7809), so 12 units would clear by 9.37px and fail. 16 units clears
+  // by 12.49px there, and holds 10px down to an 870px hero (10 * 1392 / 16).
+  const EDGE = 16;
+  // One source for the clouds header width: the door's gutter and the header
+  // itself must move together or the door drifts off its column.
+  const cloudsHeadW = cloudDrill.length ? 412 : 240;
+  const sitesGutter = (24 + 460) - 224 + EDGE;              // header 24..484, cards end at 224
+  const cloudsGutter = (980 + cloudsHeadW) - 1220 + EDGE;   // header 980.., cards end at 1220
+  const bandGutter = EDGE;                                  // the header IS the band: same edges
   // `shown` is how many of them the canvas is drawing right now, or null when
   // the canvas is drawing none of them - a closed band is not "4 hidden".
-  const doorFor = (col, shown, gutter) => {
+  const doorFor = (col, shown, gutter, open) => {
     const h = V.levelHead(est, inv, obAll, col, colTrail(col));
-    if (!h || !h.total) return { has: false, label: '', title: '', color: 'var(--text-light)', gutter, open: () => {} };
+    if (!h) return { has: false, label: '', title: '', color: 'var(--text-disabled)', gutter, open: () => {} };
+    // Zero children still print. A level that holds nothing says so in
+    // disabled ink with no caret and no handler: not a dead button, not a
+    // button at all. `has` gates the handler, never the words.
+    if (!h.total) return { has: false, label: `0 ${h.noun}`, title: `${h.title}: nothing to open yet`, color: 'var(--text-disabled)', gutter, open: () => {} };
     const hidden = shown == null ? 0 : Math.max(0, h.total - shown);
     return {
       has: true,
@@ -355,20 +371,16 @@ export function vals(c) {
       title: `Open the list: ${h.title}`,
       color: hidden ? 'var(--link)' : 'var(--text-light)',
       gutter,
-      open: () => openLevel(col),
+      open,
     };
   };
-  // `gutter` is the door's right margin inside its header, because the runtime
-  // cannot subtract. It lands every door 12px inside its column's card edge:
-  // SITES header 24..484 over cards ending at 224 -> 484 - 212 = 272; CLOUDS
-  // header 980..1220 (1392 when drilled) over cards ending at 1220 -> 12 (184
-  // drilled); the band header is the band, 380..800 open and 560..800 closed,
-  // so 12 either way.
   // `seeAll` is a door, not a sampled child: counting it would report one
   // fewer hidden workload than the drawer holds.
-  const sitesDoor = doorFor('sites', L.sites.filter(x => !x.more && !x.ghost).length, 272);
-  const cloudsDoor = doorFor('clouds', L.regions.filter(x => !x.rollup && !x.other && !x.pinned && !x.ghost && !x.seeAll).length, cloudDrill.length ? 184 : 12);
-  const bandDoor = doorFor('fabric', fabDrill.length ? fabRows.length : null, 12);
+  const sitesDoor = doorFor('sites', L.sites.filter(x => !x.more && !x.ghost).length, sitesGutter, () => openLevel('sites'));
+  const cloudsDoor = doorFor('clouds', L.regions.filter(x => !x.rollup && !x.other && !x.pinned && !x.ghost && !x.seeAll).length, cloudsGutter, () => openLevel('clouds'));
+  // A closed band has to open with its drawer, or the picture sits on the
+  // facility list while the drawer walks off it (see the invariant above).
+  const bandDoor = doorFor('fabric', fabDrill.length ? fabRows.length : null, bandGutter, () => { if (!fabDrill.length) set({ fabDrill: ['fab'] }); openLevel('fabric'); });
 
   // ---- launch cards (Ramesh, 2026-09-09: four launch-off points; new customers start at Connect, everyone else at Observe) ----
   const violationsN = [...(est.policies || []), ...(s.customPolicies || [])].reduce((a, p) => a + (p.viol || 0), 0);
@@ -557,7 +569,7 @@ export function vals(c) {
     // department
     layerBar: D.LAYERS.map(l => ({ key: l.id, label: l.label, on: s.layer === l.id, go: () => { set({ layer: l.id, drill: [], regionDrill: null }); syncHash('s3', l.id, s.tab); scrollToResult('S3 Department'); }, bg: s.layer === l.id ? 'var(--cta)' : 'transparent', color: s.layer === l.id ? '#fff' : 'var(--text-heading)' })),
     backToPicture: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
-    layerLabel: layer.id === 'cloud' ? 'Network services' : layer.label, layerTagline: layer.id === 'cloud' ? 'The services layer' : layer.tagline, crumbs, verbTabs, showCrumbs: s.drill.length > 0 || cloudDrill.length > 0, drillLabel: [drillLabel, regionDrill ? `${regionDrill.label} · ${regionDrill.level}s` : ''].filter(Boolean).join(' · '), hasDrill: s.drill.length > 0 || cloudDrill.length > 0, drillUp: () => set({ drill: s.drill.slice(0, -1), cloudDrill: cloudDrill.slice(0, -1) }), sitesHead: s.drill.length ? '‹ Sites › ' + s.drill.map(k => S.labelOfKey(est, k)).join(' › ') : 'Sites', sitesUp: () => set({ drill: s.drill.slice(0, -1) }), sitesHeadColor: s.drill.length ? 'var(--link)' : 'var(--text-light)', cloudsHead: cloudDrill.length ? '‹ ' + ['Clouds', ...((regionDrill && regionDrill.crumb) || [cloudDrill[0]])].join(' › ') : 'Clouds', cloudsUp: () => set({ cloudDrill: cloudDrill.slice(0, -1) }), cloudsHeadColor: cloudDrill.length ? 'var(--link)' : 'var(--text-light)', cloudsHeadW: cloudDrill.length ? 412 : 240, cloudsHeadSize: cloudDrill.length ? '12px' : '13px', cloudsHeadCase: cloudDrill.length ? 'none' : 'uppercase', cloudsHeadTrack: cloudDrill.length ? '0' : '.04em', showWorkloadsHead: !cloudDrill.length, tConnect: s.tab === 'connect', tGovern: s.tab === 'govern', tObserve: s.tab === 'observe', tCost: s.tab === 'cost',
+    layerLabel: layer.id === 'cloud' ? 'Network services' : layer.label, layerTagline: layer.id === 'cloud' ? 'The services layer' : layer.tagline, crumbs, verbTabs, showCrumbs: s.drill.length > 0 || cloudDrill.length > 0, drillLabel: [drillLabel, regionDrill ? `${regionDrill.label} · ${regionDrill.level}s` : ''].filter(Boolean).join(' · '), hasDrill: s.drill.length > 0 || cloudDrill.length > 0, drillUp: () => set({ drill: s.drill.slice(0, -1), cloudDrill: cloudDrill.slice(0, -1) }), sitesHead: s.drill.length ? '‹ Sites › ' + s.drill.map(k => S.labelOfKey(est, k)).join(' › ') : 'Sites', sitesUp: () => set({ drill: s.drill.slice(0, -1) }), sitesHeadColor: s.drill.length ? 'var(--link)' : 'var(--text-light)', cloudsHead: cloudDrill.length ? '‹ ' + ['Clouds', ...((regionDrill && regionDrill.crumb) || [cloudDrill[0]])].join(' › ') : 'Clouds', cloudsUp: () => set({ cloudDrill: cloudDrill.slice(0, -1) }), cloudsHeadColor: cloudDrill.length ? 'var(--link)' : 'var(--text-light)', cloudsHeadW, cloudsHeadSize: cloudDrill.length ? '12px' : '13px', cloudsHeadCase: cloudDrill.length ? 'none' : 'uppercase', cloudsHeadTrack: cloudDrill.length ? '0' : '.04em', showWorkloadsHead: !cloudDrill.length, tConnect: s.tab === 'connect', tGovern: s.tab === 'govern', tObserve: s.tab === 'observe', tCost: s.tab === 'cost',
     ...connectVals(s, set, R.applyScope(est, obScope), go, ob),
     connectFindings: deptFindings('connect'), hasConnectFindings: deptFindings('connect').length > 0, tabLabel: TAB_LABEL[s.tab] || 'Connect', noConnectFindings: deptFindings('connect').length === 0, connectOthers: ['govern', 'observe', 'cost'].map(t => ({ key: t, n: findingsFor(s.layer, t).length, label: `${findingsFor(s.layer, t).length} close on ${TAB_LABEL[t]}`, go: () => { set({ tab: t }); syncHash('s3', s.layer, t); scrollToResult('S3 Department'); } })).filter(x => x.n > 0), hasConnectOthers: ['govern', 'observe', 'cost'].some(t => findingsFor(s.layer, t).length > 0), mostChosen, levelTiles: sorted, levelCount: levelItems.length, levelSort: s.levelSort, setLevelSort: (e) => set({ levelSort: e.target.value }), levelQuery: s.levelQuery, setLevelQuery: (e) => set({ levelQuery: e.target.value }), levelTitle: drillInfo ? drillInfo.label : levelMapTitle(layer), levelMore: Math.max(0, levelItems.length - 60), hasLevelMore: levelItems.length > 60, catalogRow, visionRow, hasVision: visionRow.length > 0,
     hasSim: !!s.simulated || (s.customPolicies || []).some(p => p.state === 'simulated'),
