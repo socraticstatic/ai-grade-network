@@ -462,7 +462,13 @@ export function vals(c) {
   // carries `bulk`/`qty` with no label and was slipping past a
   // sourceLabel-only guard. `note` now lives inside `compose`, so cleaning
   // it is just part of cleanCompose; no separate parsedNote side effect.
-  const setC = (patch) => { const startsNew = patch.outcome !== undefined && carriesOrder(cp); set({ compose: { ...(startsNew ? cleanCompose(cp) : cp), ...patch, ...(patch.resiliency !== undefined ? { resiliencyChosen: true } : {}) }, ...(startsNew ? { order: null } : {}) }); };
+  // Fix round 4, finding N1: carriesOrder must gate only the cleanCompose
+  // half. An outcome switch is always a new order - a plain wizard compose
+  // (no count, no label, no note; carriesOrder false) still left a stale
+  // Review snapshot behind. `order: null` is now unconditional on any
+  // outcome switch; a SAME-order patch (no `outcome` key) still leaves
+  // `order` untouched either way.
+  const setC = (patch) => { const startsNew = patch.outcome !== undefined; set({ compose: { ...(startsNew && carriesOrder(cp) ? cleanCompose(cp) : cp), ...patch, ...(patch.resiliency !== undefined ? { resiliencyChosen: true } : {}) }, ...(startsNew ? { order: null } : {}) }); };
   const toggle = (field, v, single) => () => { if (single) return setC({ [field]: v }); const arr = cp[field]; setC({ [field]: arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v] }); };
   const chipRow = (field, list, single) => list.map(v => ({ key: v, label: v, on: single ? cp[field] === v : cp[field].includes(v), click: toggle(field, v, single) }));
   const metroChips = (D.COMPOSE_CHIPS.regions[cp.regionTab] || []).map(m => ({ key: m, label: m, on: cp.metros.includes(m), click: () => setC({ metros: cp.metros.includes(m) ? cp.metros.filter(x => x !== m) : [...cp.metros, m].slice(-2) }) }));
@@ -552,7 +558,14 @@ export function vals(c) {
   return {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
     view: s.view, setView: (e) => set({ view: e.target.value, drill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep }),
-    places, goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(cp.outcome ? { compose: { ...cp, step: cp.step || 0 } } : newOrder(prefillCompose(est))) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
+    // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
+    // which nulled s.order even when the live compose had not started an
+    // outcome yet - exactly the state right after a marketplace product
+    // pick (the product path sets s.order but never touches compose). This
+    // shortcut means "start composing," not "discard whatever was just
+    // reviewed," so it writes a fresh compose without resetting order; only
+    // an actual outcome switch (setC) resets a stale order now.
+    places, goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(cp.outcome ? { compose: { ...cp, step: cp.step || 0 } } : { compose: prefillCompose(est) }) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
     hasTasks: s.submitted, taskCount: 1, showPending, pendingStages, landed: landedAll, notLanded: !landedAll, pendingSub: landedAll ? 'Validated · live. First flow logs are in.' : 'Submitted for approval',
     deliverNow: () => { const cand = (s.compose && s.compose.prefillRegion ? s.compose.prefillRegion.split(' ')[1] : null) || (estRaw.regionsList.find(r => !r.priv) || {}).region; if (!cand) return; c.setState({ landed: cand, layer: 'cloud', tab: 'observe', screen: 's3', events: [...(s.events || []), { key: 'e' + Date.now(), t: new Date().toLocaleTimeString('en-US', { hour12: false }), text: `${cand} validated · live. Hosted VPC on the fabric; first flow logs received; coverage up by one region.` }] }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
     ...shellVals(s, set, go, est, c),

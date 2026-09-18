@@ -544,3 +544,68 @@ test('R3: a marketplace product choice does not survive into a later gap order\'
   assert.equal(netbond.qtyF, '1,640');
   assert.equal(v.pricedTotalF, '$2,954,400/mo', 'Review must show the same total S4 promised, not the stale $2,400');
 });
+
+// ---------------------------------------------------------------------------
+// Fix round 4: two non-blocking findings left by the round-3 re-review.
+// ---------------------------------------------------------------------------
+
+// N1: round 3's `startsNew = patch.outcome !== undefined && carriesOrder(cp)`
+// gated BOTH halves (cleanCompose and order:null) on carriesOrder, so a plain
+// wizard order (no count, no label, no note - e.g. a region row) still left
+// a stale Review snapshot behind on an outcome switch. carriesOrder should
+// only gate whether the compose itself needs cleaning; an outcome switch is
+// always a new order, so `order: null` must be unconditional.
+test('N1: an outcome switch always drops the stale Review, even for a plain wizard order (no count, no label, no note)', () => {
+  const c = mkC();
+  let v = vals(c);
+  v.gapRows.find(r => r.kind === 'region').go();
+  v = vals(c);
+  assert.equal(c.state.compose.outcome, 'u1');
+  assert.equal(c.state.compose.sourceLabel, undefined, 'a plain wizard order carries no label');
+  assert.equal(c.state.compose.bulk, undefined, 'a plain wizard order carries no bulk count');
+  v.reviewOrder();
+  assert.ok(c.state.order, 'Review must freeze an order to reproduce the stale-Review bug');
+  assert.equal(c.state.screen, 's6');
+
+  // Back to Compose (implicitly - state.order/compose don't change on their
+  // own), switch the outcome. carriesOrder(cp) is false for this compose, so
+  // round 3 left the stale order behind here; it must be dropped regardless.
+  v = vals(c);
+  const u3 = v.outcomeCards.find(o => o.key === 'u3');
+  u3.click();
+  assert.equal(c.state.order, null, 'switching the outcome must always drop the stale Review, carriesOrder or not');
+  assert.equal(c.state.compose.outcome, 'u3');
+
+  // A SAME-order edit (setC with no outcome key) must still leave a live
+  // order untouched - carriesOrder still gates the cleanCompose half.
+  v = vals(c);
+  v.reviewOrder();
+  assert.ok(c.state.order, 'Review must freeze the u3 order to test the SAME-order path');
+  v = vals(c);
+  const metro = v.metroChips.find(m => !m.on);
+  assert.ok(metro, 'need an unselected metro chip to toggle');
+  metro.click();
+  assert.ok(c.state.order, 'a metro change carries no outcome key and must not touch order');
+});
+
+// N2: `goCompose`'s fresh branch called `newOrder(...)`, which nulls
+// `s.order` even when the live compose has not started an outcome yet - the
+// exact state right after a marketplace product pick. The fresh branch must
+// keep `s.order` alive; only starting an outcome (via setC) should reset it.
+test('N2: the header Compose shortcut keeps a live product order when the compose has no outcome yet', () => {
+  const c = mkC();
+  let v = vals(c);
+  const product = v.mostChosen.find(p => p.id === 'hosted-vpc');
+  assert.ok(product, 'the $2,400 hosted-vpc product card is not in mostChosen');
+  product.choose();
+
+  assert.equal(c.state.screen, 's6');
+  assert.equal(c.state.order.monthly, 2400, 'choosing a product freezes s.order at $2,400');
+  assert.equal(c.state.compose.outcome, null, 'the product path never touches compose');
+
+  v = vals(c);
+  v.goCompose();
+
+  assert.equal(c.state.screen, 's4');
+  assert.equal(c.state.order.monthly, 2400, 'the header Compose shortcut must not discard an order the user has not submitted');
+});
