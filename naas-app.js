@@ -253,13 +253,18 @@ export function vals(c) {
   /** Slide in one level. For a level scope the COLUMN trail grows, so the picture drills with the drawer. */
   const drawerInto = (patch) => set({ vol: { ...(s.vol || {}), ...patch }, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [], volSlide: (s.volSlide || 0) + 1 });
   const levelInto = (col, into) => { setColTrail(col, [...colTrail(col), into]); set({ volFlat: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [], volSlide: (s.volSlide || 0) + 1 }); };
-  /** Climb back out one level: a slice, never a pair of hardcoded pops. */
-  const drawerPath = () => { const v = s.vol || {}; return v.kind === 'level' ? colTrail(v.col) : [v.snId, s.volFlat || v.flat].filter(Boolean); };
+  /** Climb back out one level: a slice, never a pair of hardcoded pops. The
+   *  fabric trail carries its own root ('fab'), so its floor is one hop, not
+   *  zero - `colTrail('fabric')` at rest is `['fab']`, length 1, not `[]`. */
+  const drawerFloor = (col) => col === 'fabric' ? 1 : 0;
+  const drawerPath = () => { const v = s.vol || {}; return v.kind === 'level' ? colTrail(v.col).slice(drawerFloor(v.col)) : [v.snId, s.volFlat || v.flat].filter(Boolean); };
   const drawerBack = () => {
     const v = s.vol || {};
     if (v.kind === 'level') {
       if (s.volFlat) { set({ volFlat: false, volQ: '', volPath: 'all', volPage: 1, volSlide: volSlide + 1 }); return; }
-      setColTrail(v.col, colTrail(v.col).slice(0, -1));
+      const t = colTrail(v.col);
+      if (t.length <= drawerFloor(v.col)) return; // already at the column's root; nothing to climb
+      setColTrail(v.col, t.slice(0, -1));
       set({ volQ: '', volPath: 'all', volPage: 1, volSlide: volSlide + 1 });
       return;
     }
@@ -268,7 +273,39 @@ export function vals(c) {
     closeVolume();
   };
   const closeVolume = () => set({ vol: null, drawerOpen: false, volSel: [], volPin: null, volFlat: false });
-  const bulkAttach = () => { if (!volList) return; const cnt = volList.bulk.attach; const what = `${cnt.toLocaleString('en-US')} ${volList.rows[0] ? (S.CLASS[volCtx.cls] || S.CLASS.Branch).plural : 'sites'} in ${volCtx.metroLabel || volCtx.metro} on a public first mile`; c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: what }, parsedNote: `Attach ${what}. One order, one policy, ${cnt.toLocaleString('en-US')} circuits.` }); syncHash('s4', s.layer, s.tab); };
+  // The footer button's own label already branches on volList.kind (Isolate
+  // for a workloads-shaped list, Attach otherwise, in bulkLabel below) - this
+  // handler must compose the SAME verb, or a clouds level scope drilled to a
+  // VPC/subnet (which delegates to workloadList, so volList.kind==='workloads'
+  // exactly like the old 'workloads' scope) shows "Isolate" and then composes
+  // an Attach order with a site noun and an empty place.
+  const bulkAttach = () => {
+    if (!volList) return;
+    const cnt = volList.bulk.attach;
+    if (volList.kind === 'workloads') {
+      const noun = cnt === 1 ? 'workload' : 'workloads';
+      const what = `${cnt.toLocaleString('en-US')} exposed ${noun} in ${volCtx.region}`;
+      c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: what }, parsedNote: `Isolate ${what}: bring them off the public path.` });
+      syncHash('s4', s.layer, s.tab);
+      return;
+    }
+    const what = `${cnt.toLocaleString('en-US')} ${volList.rows[0] ? (S.CLASS[volCtx.cls] || S.CLASS.Branch).plural : 'sites'} in ${volCtx.metroLabel || volCtx.metro} on a public first mile`;
+    c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: what }, parsedNote: `Attach ${what}. One order, one policy, ${cnt.toLocaleString('en-US')} circuits.` });
+    syncHash('s4', s.layer, s.tab);
+  };
+  // A row's own Attach action (`sitesLevel`/`cloudsLevel` root rows, or a
+  // site's `path` level) has no address/metro of its own - those only exist
+  // on a delegated volumeList row. Resolve a place from the column's trail so
+  // the compose note never prints "undefined"; at a column's root there is no
+  // deeper trail to read, so the row's own id (already self-describing there,
+  // e.g. "AWS us-east-2") stands alone rather than forcing an empty "in ".
+  const attachTrail = vol && vol.kind === 'level' ? colTrail(vol.col) : [];
+  const attachPlace = (x) => x.metro || (attachTrail.length ? S.labelOfKey(est, attachTrail[attachTrail.length - 1]) : '') || volCtx.metroLabel || '';
+  // A level scope's pin may only rebuild `s.drill` (the SITES column's own
+  // trail) when the scope IS the sites column - `volCtx.cls`/`.metro` are
+  // only ever resolved from the sites trail (see volCtx above), so pinning a
+  // clouds or fabric row here must never write drill at all.
+  const pinMayDrill = vol && (vol.kind === 'metro' || (vol.kind === 'level' && vol.col === 'sites'));
   const drawer = volList ? { ...volList, key: 'vol', slideKey: 'sl' + volSlide,
     canBack: drawerPath().length > 0, isLevel: vol && vol.kind === 'level',
     capSearch: !!(volList.caps && volList.caps.search), capChips: !!(volList.caps && volList.caps.chips), capBulk: !!(volList.caps && volList.caps.bulk),
@@ -277,7 +314,14 @@ export function vals(c) {
     back: drawerBack, hasFlatDoor: !!volList.flatDoor, flatDoorLabel: volList.flatDoor ? volList.flatDoor.label : '', flatDoorSub: volList.flatDoor ? volList.flatDoor.sub : '', goFlat: vol && vol.kind === 'level' ? () => set({ volFlat: true, volQ: '', volPath: 'all', volPage: 1, volSlide: volSlide + 1 }) : () => drawerInto({ flat: true, snId: null }), isSubnets: volList.level === 'subnets', searchHint: volList.searchHint || (volList.kind === 'workloads' ? 'Search name, ip, type, app' : 'Search id, street, host'), q: s.volQ || '', setQ: (e) => set({ volQ: e.target.value, volPage: 1 }), close: closeVolume,
     paths: (volList.kind === 'workloads' ? [['all', `All apps · ${volList.counts.apps}`], ...volList.apps.slice(0, 6).map(a => [a.tag, `${a.tag} · ${a.count}`])] : [['all', 'All'], ['fabric', 'On the fabric'], ['public', 'Public']]).map(([k, l]) => ({ key: k, label: l, on: (s.volPath || 'all') === k, go: () => set({ volPath: k, volPage: 1 }), bg: (s.volPath || 'all') === k ? 'var(--cta)' : 'var(--bg-base)', color: (s.volPath || 'all') === k ? '#fff' : 'var(--text-heading)', border: (s.volPath || 'all') === k ? 'var(--cta)' : 'var(--border-secondary)' })),
     states: (volList.kind === 'workloads' ? [['all', 'Any state'], ['exposed', `Exposed · ${volList.counts.exposed}`]] : [['all', 'Any state'], ['degraded', 'Degraded']]).map(([k, l]) => ({ key: k, label: l, on: (s.volState || 'all') === k, go: () => set({ volState: k, volPage: 1 }), bg: (s.volState || 'all') === k ? 'var(--cta)' : 'var(--bg-base)', color: (s.volState || 'all') === k ? '#fff' : 'var(--text-heading)', border: (s.volState || 'all') === k ? 'var(--cta)' : 'var(--border-secondary)' })),
-    rows: volList.rows.map(x => ({ ...x, key: x.id, selected: !!x.selected, dot: x.state === 'degraded' ? 'var(--error)' : x.state === 'public' ? 'var(--warning)' : 'var(--success)', pinned: s.volPin === x.id, bg: s.volPin === x.id ? 'var(--bg-accent)' : 'transparent', toggle: () => set({ volSel: (s.volSel || []).includes(x.id) ? (s.volSel || []).filter(k => k !== x.id) : [...(s.volSel || []), x.id] }), pin: volList.kind === 'workloads' ? () => set({ volPin: x.id, mapSel: `wl:${volCtx.region}|${volCtx.vpcId}|${x.id}`, panelTab: 'overview', andiScope: { kind: 'workload', id: x.id, label: `${x.id} · ${x.tag || 'untagged'}` } }) : () => set({ volPin: x.id, mapSel: 'asset:' + x.id, panelTab: 'overview', drill: s.drill.length >= 2 ? s.drill : [volCtx.cls, (V.metroOf(est, volCtx.cls, volCtx.metro) || {}).key || volCtx.metro] }), isDoor: !!(x.into || x.descend), notDoor: !(x.into || x.descend), descend: x.into ? () => levelInto(vol.col, x.into) : x.descend ? () => drawerInto({ snId: x.snId }) : () => {}, hasAction: !!x.action, act: volList.kind === 'workloads' ? () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: `${x.id} · ${x.tag || 'untagged'} · ${x.ip}` }, parsedNote: `Isolate ${x.id} (${x.ip}, ${x.tag || 'untagged'}) in ${volCtx.region}: bring it off the public path.` }); syncHash('s4', s.layer, s.tab); } : x.action === 'Attach' ? () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: `${x.id} · ${x.address}` }, parsedNote: `Attach ${x.id} (${x.address}) in ${x.metro}: one circuit onto the fabric.` }); syncHash('s4', s.layer, s.tab); } : () => set({ andiScope: { kind: 'region', id: x.id, label: x.id }, andiOpen: true }) })),
+    rows: volList.rows.map(x => ({ ...x, key: x.id, selected: !!x.selected, dot: x.state === 'degraded' ? 'var(--error)' : x.state === 'public' ? 'var(--warning)' : 'var(--success)', pinned: s.volPin === x.id, bg: s.volPin === x.id ? 'var(--bg-accent)' : 'transparent', toggle: () => set({ volSel: (s.volSel || []).includes(x.id) ? (s.volSel || []).filter(k => k !== x.id) : [...(s.volSel || []), x.id] }),
+      pin: volList.kind === 'workloads' ? () => set({ volPin: x.id, mapSel: `wl:${volCtx.region}|${volCtx.vpcId}|${x.id}`, panelTab: 'overview', andiScope: { kind: 'workload', id: x.id, label: `${x.id} · ${x.tag || 'untagged'}` } })
+        : pinMayDrill ? () => set({ volPin: x.id, mapSel: 'asset:' + x.id, panelTab: 'overview', drill: s.drill.length >= 2 ? s.drill : [volCtx.cls, (V.metroOf(est, volCtx.cls, volCtx.metro) || {}).key || volCtx.metro] })
+        : () => set({ volPin: x.id, mapSel: 'asset:' + x.id, panelTab: 'overview' }),
+      isDoor: !!(x.into || x.descend), notDoor: !(x.into || x.descend), descend: x.into ? () => levelInto(vol.col, x.into) : x.descend ? () => drawerInto({ snId: x.snId }) : () => {}, hasAction: !!x.action,
+      act: volList.kind === 'workloads' ? () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: `${x.id} · ${x.tag || 'untagged'} · ${x.ip}` }, parsedNote: `Isolate ${x.id} (${x.ip}, ${x.tag || 'untagged'}) in ${volCtx.region}: bring it off the public path.` }); syncHash('s4', s.layer, s.tab); }
+        : x.action === 'Attach' ? () => { const place = attachPlace(x); const addr = x.address ? ` (${x.address})` : ''; const bulk = x.address ? `${x.id} · ${x.address}` : (place ? `${x.id} · ${place}` : x.id); c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk }, parsedNote: place ? `Attach ${x.id}${addr} in ${place}: one circuit onto the fabric.` : `Attach ${x.id}${addr}: one circuit onto the fabric.` }); syncHash('s4', s.layer, s.tab); }
+        : () => set({ andiScope: { kind: 'region', id: x.id, label: x.id }, andiOpen: true }) })),
     more: () => set({ volPage: (s.volPage || 1) + 1 }), moreLabel: `Show ${Math.min(60, volList.matching - volList.shownCount)} more · ${volList.shownCount.toLocaleString('en-US')} of ${volList.matching.toLocaleString('en-US')}`,
     selectAll: () => set({ volSel: volList.matchingIds }), clearSel: () => set({ volSel: [] }), hasSel: (s.volSel || []).length > 0, bulkLabel: volList.kind === 'workloads' ? `Isolate ${volList.bulk.attach.toLocaleString('en-US')} exposed · ${volList.bulk.label}` : `Attach ${volList.bulk.attach.toLocaleString('en-US')} · ${volList.bulk.label}`, canBulk: !!(volList.caps && volList.caps.bulk) && volList.bulk.attach > 0, bulkAttach, matchingF: volList.matching.toLocaleString('en-US') } : null;
   const drawerOpen = !!(s.drawerOpen && drawer);
