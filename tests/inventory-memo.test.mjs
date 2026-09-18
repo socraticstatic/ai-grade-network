@@ -2,13 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from '../naas-data.js';
 import { inventory } from '../naas-addendum.js';
+import { applyScope } from '../naas-round2.js';
 
 const est = D.ESTATES.trust;
 
-// R2 — the cache keys on est.id with `|| ''` as a fallback for a missing id.
-// Two estates sharing a region signature under an empty/missing id would
-// collide and silently share a tree, so every estate in D.ESTATES must carry
-// a distinct, non-empty id.
+// R2 — the cache keys on est.id (raw, no fallback — the base always throws
+// on a falsy estate and the memo now matches it, per M3). Two estates
+// sharing a region signature under an empty/missing id would collide and
+// silently share a tree, so every estate in D.ESTATES must carry a
+// distinct, non-empty id.
 test('every estate has a distinct, non-empty id', () => {
   const ids = Object.values(D.ESTATES).map(e => e.id);
   for (const id of ids) assert.ok(id, `estate id must be non-empty, got ${JSON.stringify(id)}`);
@@ -49,4 +51,32 @@ test('two estates never share a tree', () => {
 test('a same-id field the tree never reads shares the cached tree', () => {
   const relabeled = { ...est, regionsList: est.regionsList.map(r => r.region === 'us-east-1' ? { ...r, link: 'degraded' } : r) };
   assert.equal(inventory(relabeled), inventory(est));
+});
+
+// Fix round 1, Critical (C1b) — `naas-round2.js`'s `applyScope` rewrites
+// `est.sites` under the same `est.id` for a `site:` scope. Two of mature's
+// first four site scopes (`scopes()` only offers the first four non-rollup
+// sites) are Ashburn DC and San Jose DC, both `priv: true`, so their
+// region-signature filter (`r.priv || i % 2 === 0`) is byte-identical — the
+// only thing that tells them apart is `sites`, which is why the key needs a
+// sites signature and not just the region list.
+const matureEst = D.ESTATES.mature;
+const circuitSites = (tree) => { const names = new Set(); tree.forEach(cl => cl.regions.forEach(r => r.vpcs.forEach(v => (v.gws || []).forEach(g => (g.circuits || []).forEach(cx => names.add(cx.site)))))); return names; };
+
+test('a site scope is a different estate: its tree is not the whole-estate tree', () => {
+  const scoped = applyScope(matureEst, 'site:Ashburn DC');
+  assert.notEqual(inventory(scoped), inventory(matureEst));
+});
+
+test('a site-scoped tree only ever names that one site on its circuits', () => {
+  const scoped = applyScope(matureEst, 'site:Ashburn DC');
+  assert.deepEqual([...circuitSites(inventory(scoped))], ['Ashburn DC']);
+});
+
+test('two different site scopes on one estate id yield two different trees', () => {
+  const ashburn = applyScope(matureEst, 'site:Ashburn DC');
+  const sanJose = applyScope(matureEst, 'site:San Jose DC');
+  assert.notEqual(inventory(ashburn), inventory(sanJose));
+  assert.deepEqual([...circuitSites(inventory(ashburn))], ['Ashburn DC']);
+  assert.deepEqual([...circuitSites(inventory(sanJose))], ['San Jose DC']);
 });

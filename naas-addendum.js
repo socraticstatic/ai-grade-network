@@ -23,24 +23,46 @@ function lighten(hex) { const n = parseInt(hex.slice(1), 16); const r = (n >> 16
 
 // ---------- Inventory tree ----------
 /**
- * The whole 2,681-workload tree rebuilt on every render cost each Discover
+ * The whole 2,680-workload tree rebuilt on every render cost each Discover
  * click 60-160ms and degraded drawer paging from 62ms to 131ms by page 10.
- * The key is the estate id plus the region signature, because `naas-app.js`
- * hands us a fresh object literal (the landed flip, then the facet filter)
- * on every pass and a WeakMap would never hit. The signature carries every
- * region field `region()` reads and the app can change — cloud, region, priv,
- * ramp, wl, rel, landed. Everything else it reads (`est.sites`,
- * `est.sitesCount`, `r.fab`, `r.pub`, `r.tags`) is fixed for an estate id.
+ * The key is the estate id, a sites signature, and the region signature,
+ * because `naas-app.js` hands us a fresh object literal (the landed flip,
+ * the facet filter, and `naas-round2.js`'s `applyScope`) on every pass and a
+ * WeakMap would never hit.
+ *
+ * The region signature carries every region field `region()` reads and the
+ * app can change: cloud, region, priv, ramp, wl, rel, landed. `r.tags`,
+ * `r.fab` and `r.pub` are fixed for an estate id — grepped for every
+ * assignment to them across the app; none exists — so they stay out of it.
+ *
+ * `est.sites` is NOT fixed for an estate id: `applyScope`'s `site:` branch
+ * rewrites it to a filtered (sometimes one-element) array under the same
+ * `est.id`, and `costVals` used to feed that scoped estate straight into
+ * this function, so two different site scopes collided on one cached tree
+ * (a real Discover/Cost bug — fixed by moving `costVals` onto `vals()`'s own
+ * unscoped `inv`, which is all it needed). The key still carries a sites
+ * signature so `inventory()` stays correct for any future caller, not just
+ * the ones known today: `sites.length` plus the first and last site's
+ * `name` (site objects carry no separate id; `.name` is what `applyScope`
+ * and `circuitsFor` both already use as one). O(1) to compute. A collision
+ * needs the same count and the same two end names with a different site in
+ * the middle — every scope in this app either keeps the full list in its
+ * original order or filters it down by one site's name, never reorders or
+ * substitutes an interior site while holding the ends fixed — so this is a
+ * deliberate, documented approximation, not a full hash of the array.
  */
 const INV_CACHE = new Map();
 const INV_CAP = 8;
-const invKey = (est) => `${est.id || ''}|${(est.regionsList || []).map(r => `${r.cloud}/${r.region}/${r.priv ? 1 : 0}/${r.ramp || ''}/${r.wl || 0}/${r.rel || ''}/${r.landed ? 1 : 0}`).join(',')}`;
+const sitesSig = (est) => {
+  const sites = est.sites || [];
+  return [sites.length, sites[0] ? sites[0].name : null, sites.length ? sites[sites.length - 1].name : null];
+};
+const invKey = (est) => JSON.stringify([est.id, sitesSig(est), est.regionsList.map(r => [r.cloud, r.region, r.priv, r.ramp, r.wl, r.rel, r.landed])]);
 
 export function inventory(est) {
-  if (!est) return [];
   const key = invKey(est);
   const hit = INV_CACHE.get(key);
-  if (hit) return hit;
+  if (hit) { INV_CACHE.delete(key); INV_CACHE.set(key, hit); return hit; }
   const clouds = [];
   est.regionsList.forEach((r, i) => {
     let cl = clouds.find(c => c.name === r.cloud);

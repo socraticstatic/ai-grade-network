@@ -583,7 +583,7 @@ export function vals(c) {
     hasSim: !!s.simulated || (s.customPolicies || []).some(p => p.state === 'simulated'),
     governVerdict, governFindings: deptFindings('govern'), policies, hasPolicies: policies.length > 0, examplePolicies0: [{ key: 'a', t: 'Tag PCI forces a private path', m: 'tag PCI', r: 'Private path required' }, { key: 'b', t: 'Tag Internet-facing gets NGFW plus AT&T egress', m: 'tag Internet-facing', r: 'Inline security inspection' }, { key: 'c', t: 'Branch Finance reaches only finance-tagged workloads', m: 'branch Finance', r: 'Segment intra-tag only' }], authorPolicy: go('s4', { compose: { ...cp, outcome: 'u1', control: ['Private path required'], source: ['Data center'], dest: ['Clouds'] } }), simulate: () => set({ simulated: true, enforced: false }), enforce: () => set({ enforced: true }), undo: () => set({ simulated: false, enforced: false }), simulated: s.simulated, enforced: s.enforced, canEnforce: s.simulated && !s.enforced, simulateText: s.enforced ? 'Enforced. Paths rerouted onto the fabric.' : s.simulated ? `Simulated: ${pciViol ? pciViol.split(' ')[0] : 0} paths reroute onto the fabric, 2 flows denied. Drawn dashed until enforced.` : 'Simulate shows what changes before enforce is enabled.', enforceBg: s.simulated && !s.enforced ? 'var(--cta)' : 'var(--bg-neutral)', enforceColor: s.simulated && !s.enforced ? '#fff' : 'var(--text-disabled)',
     kpis, hasKpis: kpis.length > 0, sankeyNodes, sankeyRibbons, sankeyW: sk ? sk.W : 900, sankeyH: sk ? sk.H : 260, sankeyVB: `0 0 ${sk ? sk.W : 900} ${sk ? sk.H : 260}`, flows, observeFindings: deptFindings('observe'), seeSavings: () => { set({ tab: 'cost' }); syncHash('s3', s.layer, 'cost'); }, observeVerdict: isEmpty ? 'No telemetry yet. It starts with the first attach.' : `${est.observedPct}% of paths send telemetry. ${flows.filter(f => f.deny).length} flows denied in the last minute by the vSRX pair.`, chipScope,
-    ...costVals(s, set, R.applyScope(est, obScope), ob, go, c),
+    ...costVals(s, set, R.applyScope(est, obScope), inv, ob, go, c),
     costVerdict, buckets, steerRecs: steerable, costFindings: deptFindings('cost'), hasBuckets: buckets.length > 0, bTotalF: fmt(bTotal), bFabF: fmt(bFab), bSaveF: fmt(bTotal - bFab),
     // compose
     ...wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c),
@@ -1811,7 +1811,7 @@ function connectVals(s, set, est, go, ob) {
   return { lenses, lens, lensQ, lensVerdict: R.lensVerdict(est, lens), matrix, pathsSub, matrixHeads: R.LENSES.map(l => ({ key: l.id, label: l.label, hi: l.id === lens, color: l.id === lens ? 'var(--link)' : 'var(--text-light)' })), lensRegions, hasLensRegions: rs.length > 0, isCloudLayer: s.layer === 'cloud', notCloudLayer: s.layer !== 'cloud' };
 }
 function egressBaseFor(est, ob) { const bucketToday = (est.buckets || []).reduce((a, b) => a + b.today, 0); return bucketToday || ob.egressMo || 0; }
-function costVals(s, set, est, ob, go, c) {
+function costVals(s, set, est, inv, ob, go, c) {
   const base = egressBaseFor(est, ob);
   const bT = (est.buckets || []).reduce((a, b) => a + b.today, 0), bF = (est.buckets || []).reduce((a, b) => a + b.fabric, 0);
   const targetSave = bT > bF ? bT - bF : 0;
@@ -1820,7 +1820,12 @@ function costVals(s, set, est, ob, go, c) {
   const maxNow = Math.max(1, ...arb.map(a => a.saveN / 0.07 * 0.09));
   // AT&T charges (AO-360): catalog prices against what is attached. Fabric egress is the "On the fabric" total from the buckets.
   const attached = est.regionsList.filter(r => r.priv);
-  const vpcsAll = A.inventory(est).flatMap(c => c.regions.flatMap(r => r.vpcs));
+  // vals()'s own inv, not a scoped rebuild: vpcsAll only reads v.managed and
+  // v.priv, both scope-independent, so a scoped estate's tree told us nothing
+  // an unscoped one didn't, at the cost of a stale-tree bug where two site
+  // scopes with the same region signature collided on one cached tree
+  // (naas-round2.js's applyScope rewrites `sites` under the same est.id).
+  const vpcsAll = inv.flatMap(c => c.regions.flatMap(r => r.vpcs));
   const hostedN = vpcsAll.filter(v => v.managed).length, l3N = vpcsAll.filter(v => v.priv && !v.managed).length;
   const chargeRows = [
     { key: 'nb', label: 'NetBond on-ramps', sub: `${attached.length} ${attached.length === 1 ? 'region' : 'regions'} × $1,800`, v: attached.length * 1800 },
