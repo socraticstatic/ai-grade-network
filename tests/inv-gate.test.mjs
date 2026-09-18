@@ -80,6 +80,23 @@ test('expandAll opens every cloud, region and vpc, but no subnet and no gateway'
   assert.ok(v.invTree.every(cl => cl.regions.every(rg => rg.vpcs.every(vp => vp.azGroups.every(az => az.subnets.every(sn => sn.open === false))))), 'subnets stay closed - a subnet\'s workload list opens on its own click');
 });
 
+// M1 (review round 1) - a button labelled "Expand all" must never close
+// anything the user already opened. Before the fix, expandAll replaced
+// `inv` wholesale with `openKeys` (clouds/regions/vpcs only), so a subnet
+// the user had opened by hand - not in openKeys - would be dropped and
+// snap shut on the next Expand all click.
+test('expandAll merges into what is already open - a hand-opened subnet survives, collapseAll still empties it', () => {
+  const openSubnet = 'vpc-0-0-pub-0';
+  const c = mkC({ inv: { [openSubnet]: true } });
+  let v = vals(c);
+  v.expandAll();
+  assert.equal(c.state.inv[openSubnet], true, 'expandAll must not close a subnet the user had open');
+  for (const id of [...CLOUD_IDS, ...REGION_IDS, ...VPC_IDS]) assert.equal(c.state.inv[id], true, `expandAll must still open ${id}`);
+  v = vals(c);
+  v.collapseAll();
+  assert.deepEqual(c.state.inv, {}, 'collapseAll still empties everything, including the hand-opened subnet');
+});
+
 test('tag view lists every tag group with its vpcs live, even fully collapsed', () => {
   const v = vals(mkC({ inv: {}, tagView: true }));
   assert.ok(v.invTree.length > 0, 'tag groups must exist');
