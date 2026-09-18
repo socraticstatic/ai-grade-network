@@ -5,7 +5,8 @@ import * as S from '../naas-sites.js';
 import * as A from '../naas-addendum.js';
 import { siteDrillRows, regionDrillRows } from '../naas-connections.js';
 import { heroLayout } from '../naas-logic.js';
-import { vals, defaults } from '../naas-app.js';
+import { vals } from '../naas-app.js';
+import { mkC } from './harness.mjs';
 
 const est = D.ESTATES.trust;
 const rowNamed = (n) => est.sites.find(x => x.name === n);
@@ -59,11 +60,6 @@ test('the +N regions row reads the app vocabulary, muted, no promise of a door',
   assert.equal(more.muted, true);
   assert.ok(!/\+/.test(more.region), 'no plus sign: it rolls up, it does not overflow');
 });
-
-function mkC(extra = {}) {
-  const state = { ...defaults(), view: 'trust', screen: 's3', layer: 'cloud', tab: 'connect', ...extra };
-  return { state, setState: (p) => Object.assign(state, p) };
-}
 
 // The header door's `hidden` arithmetic (Task 9) already excludes rollup rows
 // from `shown`, so retitling the rollup row's label must not move the count

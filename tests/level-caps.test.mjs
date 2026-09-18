@@ -79,12 +79,12 @@ test('every level under 12 rows is gated off, even the ones a real builder backs
 });
 
 // ---------- Required assertion (c): a frame()-built level over 12 rows has
-// search true but chips and bulk false — frame() never applies chips, and
+// search true but chips and bulk false - frame() never applies chips, and
 // Task 6 does not wire them in (that would be fixing frame(), out of scope).
 
 test('a frame()-built level over 12 rows gets search only, never chips or bulk', () => {
   // sites Branch (19 metros) and fabric N. Virginia (21 ports) are both
-  // frame()-built — neither delegates to volumeList/workloadList.
+  // frame()-built - neither delegates to volumeList/workloadList.
   assert.deepEqual(list('sites', ['Branch']).caps, { search: true, chips: false, bulk: false });
   assert.deepEqual(list('fabric', ['fab', 'N. Virginia']).caps, { search: true, chips: false, bulk: false });
 });

@@ -1,17 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { vals, defaults } from '../naas-app.js';
+import { vals } from '../naas-app.js';
+import { mkC } from './harness.mjs';
 
 // Task 7: wiring the `level` drawer scope into vals(). These primitives are
 // closures over c/s/set, not separately exported, so they are exercised the
 // way the brief's Testing section describes: build a fake `c` with defaults()
-// and call vals(c) directly. Literals are pinned against the `trust` estate,
-// which every other level-* test file in this suite also uses.
-
-function mkC(extra = {}) {
-  const state = { ...defaults(), view: 'trust', screen: 's3', layer: 'cloud', tab: 'connect', ...extra };
-  return { state, setState: (p) => Object.assign(state, p) };
-}
+// and call vals(c) directly (tests/harness.mjs). Literals are pinned against
+// the `trust` estate, which every other level-* test file in this suite also
+// uses.
 
 test('openLevel opens a level scope at the column\'s current trail, root or not', () => {
   const c = mkC();

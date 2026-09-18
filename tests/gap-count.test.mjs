@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from '../naas-data.js';
 import * as S from '../naas-sites.js';
-import { vals, defaults } from '../naas-app.js';
+import { vals } from '../naas-app.js';
+import { mkC } from './harness.mjs';
 
 // Fix round 2, finding D: the gap route now goes through the real go() (like
 // composeFor does) to pick up its scroll-to-top and hover/drill/andi reset
@@ -35,16 +36,10 @@ test('every estate reports a gap it can defend', () => {
 // own count, and the row's `go` carries the quantity all the way into the
 // compose order and the alert that announces where it came from.
 //
-// setState supports the functional-updater form (`c.setState(st => ({...}))`)
-// because parseText (naas-app.js) writes that way - a plain Object.assign
-// merge would silently no-op on a function argument instead of calling it.
-function mkC(extra = {}) {
-  const state = { ...defaults(), view: 'trust', screen: 's3', layer: 'cloud', tab: 'connect', ...extra };
-  return {
-    state,
-    setState: (p) => { const patch = typeof p === 'function' ? p(state) : p; if (patch) Object.assign(state, patch); },
-  };
-}
+// Shared mkC() harness (tests/harness.mjs). Its setState supports the
+// functional-updater form (`c.setState(st => ({...}))`) because parseText
+// (naas-app.js) writes that way - a plain Object.assign merge would silently
+// no-op on a function argument instead of calling it.
 
 test('the gap summary counts sites, not rows', () => {
   const c = mkC();
@@ -608,4 +603,28 @@ test('N2: the header Compose shortcut keeps a live product order when the compos
 
   assert.equal(c.state.screen, 's4');
   assert.equal(c.state.order.monthly, 2400, 'the header Compose shortcut must not discard an order the user has not submitted');
+});
+
+// N3 (Task 17, item 9): go()'s own implicit-fresh branch (screen === 's4',
+// no extra.compose, no live outcome) still called newOrder(...) after N2
+// fixed goCompose - the same habit, one call site over, and unreachable
+// today: goCapacity was unbound (deleted, this same item) and the rec.choose
+// fallback below never fires on trust, because its own tier maps in
+// PERSONA_PRODUCT. It is reachable on the partial estate's transport/connect
+// "single" finding, whose middle tier ("Geodiversity tier with a second
+// metro") has no PERSONA_PRODUCT entry, so rec.choose() falls through to
+// go('s4')() (naas-app.js:404). Same fix as N2: the implicit-fresh branch
+// must keep a live s.order alive too.
+test('N3: go()\'s own implicit-fresh branch keeps a live order when the compose has no outcome yet', () => {
+  const c = mkC({ view: 'partial', layer: 'transport', tab: 'connect', order: { lines: [], monthly: 4200 } });
+  let v = vals(c);
+  const single = v.connectFindings.find(f => f.kind === 'single');
+  assert.ok(single, 'the transport/connect "single" finding is not on the partial estate');
+  assert.equal(single.rec.name, 'Geodiversity tier with a second metro', 'need the PERSONA_PRODUCT-unmapped tier to reproduce the rec.choose() fallback to go(\'s4\')()');
+  assert.equal(c.state.compose.outcome, null, 'the fixture must start with no live outcome');
+
+  single.rec.choose();
+
+  assert.equal(c.state.screen, 's4');
+  assert.equal(c.state.order.monthly, 4200, 'go(\'s4\')()\'s own implicit-fresh branch must not discard an order the user has not submitted');
 });

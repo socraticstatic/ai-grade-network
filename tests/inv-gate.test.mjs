@@ -1,17 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { vals, defaults } from '../naas-app.js';
+import { vals } from '../naas-app.js';
+import { mkC as mkCBase } from './harness.mjs';
 
 // Task 14: gate Explore 360's invTree on open state. The markup only ever
 // renders cl.regions / rg.vpcs / vp.azGroups when the parent is open
 // (NaaS Storefront.dc.html:658, :695, :716), so vals() should not build
-// those arrays until then. Harness copied from tests/level-drawer.test.mjs:11-14,
-// with screen: 's1' (Explore 360's screen: NaaS Storefront.dc.html:562 `sS1`)
-// in place of s3/cloud/connect.
-function mkC(extra = {}) {
-  const state = { ...defaults(), view: 'trust', screen: 's1', ...extra };
-  return { state, setState: (p) => Object.assign(state, p) };
-}
+// those arrays until then. Shared harness (tests/harness.mjs), with
+// screen: 's1' (Explore 360's screen: NaaS Storefront.dc.html:562 `sS1`)
+// in place of the shared default's s3.
+const mkC = (extra = {}) => mkCBase(extra, { screen: 's1' });
 
 // trust: c-AWS (3 regions x 3 vpcs), c-Azure (2 regions x 3 vpcs), c-GCP (1 region x 3 vpcs).
 const CLOUD_IDS = ['c-AWS', 'c-Azure', 'c-GCP'];

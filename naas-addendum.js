@@ -32,23 +32,23 @@ function lighten(hex) { const n = parseInt(hex.slice(1), 16); const r = (n >> 16
  *
  * The region signature carries every region field `region()` reads and the
  * app can change: cloud, region, priv, ramp, wl, rel, landed. `r.tags`,
- * `r.fab` and `r.pub` are fixed for an estate id — grepped for every
- * assignment to them across the app; none exists — so they stay out of it.
+ * `r.fab` and `r.pub` are fixed for an estate id - grepped for every
+ * assignment to them across the app; none exists - so they stay out of it.
  *
  * `est.sites` is NOT fixed for an estate id: `applyScope`'s `site:` branch
  * rewrites it to a filtered (sometimes one-element) array under the same
  * `est.id`, and `costVals` used to feed that scoped estate straight into
  * this function, so two different site scopes collided on one cached tree
- * (a real Discover/Cost bug — fixed by moving `costVals` onto `vals()`'s own
+ * (a real Discover/Cost bug - fixed by moving `costVals` onto `vals()`'s own
  * unscoped `inv`, which is all it needed). The key still carries a sites
  * signature so `inventory()` stays correct for any future caller, not just
  * the ones known today: `sites.length` plus the first and last site's
  * `name` (site objects carry no separate id; `.name` is what `applyScope`
  * and `circuitsFor` both already use as one). O(1) to compute. A collision
  * needs the same count and the same two end names with a different site in
- * the middle — every scope in this app either keeps the full list in its
+ * the middle - every scope in this app either keeps the full list in its
  * original order or filters it down by one site's name, never reorders or
- * substitutes an interior site while holding the ends fixed — so this is a
+ * substitutes an interior site while holding the ends fixed - so this is a
  * deliberate, documented approximation, not a full hash of the array.
  */
 const INV_CACHE = new Map();

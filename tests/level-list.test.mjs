@@ -108,8 +108,8 @@ test('the header count is the drawer count, on every column', () => {
   }
 });
 
-// A caller that never seeds the literal 'fab' — exactly what a uniform
-// trail-tracker does, building `[...trail, into]` from an empty root — must
+// A caller that never seeds the literal 'fab' - exactly what a uniform
+// trail-tracker does, building `[...trail, into]` from an empty root - must
 // land on the same node as one that does. Unseeded and seeded trails are
 // pinned side by side so neither drifts from the other.
 test('an unseeded fabric trail reaches the same level as the seeded one', () => {

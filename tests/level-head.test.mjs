@@ -5,14 +5,11 @@ import * as A from '../naas-addendum.js';
 import * as S from '../naas-sites.js';
 import * as C from '../naas-connections.js';
 import { levelHead } from '../naas-volume.js';
-import { vals, defaults } from '../naas-app.js';
+import { vals } from '../naas-app.js';
+import { mkC } from './harness.mjs';
 
 // Task 7's harness, reused: vals() closes over c/s/set, so it is driven by a
-// fake `c` built from defaults().
-function mkC(extra = {}) {
-  const state = { ...defaults(), view: 'trust', screen: 's3', layer: 'cloud', tab: 'connect', ...extra };
-  return { state, setState: (p) => Object.assign(state, p) };
-}
+// fake `c` built from defaults() (tests/harness.mjs).
 
 const est = D.ESTATES.trust;
 const inv = A.inventory(est);
@@ -54,7 +51,7 @@ test('partial proves depth is not level', () => {
 
 // ---------- Conservation: the door's number is never bigger or smaller than
 // what is actually behind it. Every figure below was measured with a real
-// node run against `trust`, not derived from the function under test — see
+// node run against `trust`, not derived from the function under test - see
 // task-3-report.md for the run that produced them.
 
 /** Drill a rollup group ('<cls>#<ri>') all the way to its individual sites and sum them. */
@@ -64,7 +61,7 @@ function siteCountOfGroup(key) {
   return rows.reduce((sum, r) => sum + head('sites', [key, r.drillKey]).total, 0);
 }
 
-test('sites: the root conserves — every group, drilled to its sites, sums to sitesCount', () => {
+test('sites: the root conserves - every group, drilled to its sites, sums to sitesCount', () => {
   assert.equal(est.sitesCount, 4120);
   const keys = est.sites.map(s => S.rollupKeyOf(est, s));
   assert.deepEqual(keys, ['Data center#0', 'Branch#0', 'Branch#1', 'Branch#2', 'Branch#3', 'Edge#0', 'Campus#0']);

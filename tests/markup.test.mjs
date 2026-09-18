@@ -182,7 +182,7 @@ test('search, chips and Select all appear only where a level can use them', () =
 
 /**
  * [from, to) indices bounding the region from `fromMarker` to the first
- * `toMarker` that follows it — the brief's helper, not present before this
+ * `toMarker` that follows it - the brief's helper, not present before this
  * task. `fromMarker` sits on the opening tag (e.g. the hero svg's aria-label
  * attribute) so `to` lands on the matching close, since this markup never
  * nests an element inside another of the same kind between the two.
@@ -257,6 +257,27 @@ test('the breadcrumb keeps the two columns apart', () => {
   assert.ok(!HTML.includes('{{ layerLabel }}'), 'the layer label is not a crumb at all');
   const [from, to] = block('<!-- ===== S3 header: breadcrumb', '<!-- ===== S2 LAUNCH POINTS');
   assertBalanced(from, to, 'the breadcrumb');
+});
+
+// --- Task 17, item 4: aria-current on the deepest crumb, aria-hidden on separators ---
+
+test('every crumb button binds its own ariaCurrent, on both nav trails and the drawer', () => {
+  const cr = LINES.find(l => l.includes('{{ cr.go }}'));
+  assert.ok(cr && cr.includes('aria-current="{{ cr.ariaCurrent }}"'), 'the site trail crumb button does not bind aria-current');
+  const cc = LINES.find(l => l.includes('{{ cc.go }}'));
+  assert.ok(cc && cc.includes('aria-current="{{ cc.ariaCurrent }}"'), 'the cloud trail crumb button does not bind aria-current');
+  const dc = LINES.find(l => l.includes('{{ dc.go }}'));
+  assert.ok(dc && dc.includes('aria-current="{{ dc.ariaCurrent }}"'), 'the drawer crumb button does not bind aria-current');
+});
+
+test('every crumb separator (›, ·) is hidden from screen readers', () => {
+  const cr = LINES.find(l => l.includes('{{ cr.go }}'));
+  assert.ok(/<sc-if value="\{\{ cr\.notLast \}\}"[^>]*><span aria-hidden="true"[^>]*>›<\/span>/.test(cr), 'the site trail\'s › separator is not aria-hidden');
+  const ccLine = LINES.find(l => l.includes('{{ cc.go }}'));
+  assert.ok(/<span aria-hidden="true" style="color:var\(--text-disabled\)">·<\/span>/.test(ccLine), 'the · separator between the two trails is not aria-hidden');
+  assert.ok(/<sc-if value="\{\{ cc\.notLast \}\}"[^>]*><span aria-hidden="true"[^>]*>›<\/span>/.test(ccLine), 'the cloud trail\'s › separator is not aria-hidden');
+  const dcLine = LINES.find(l => l.includes('{{ dc.go }}'));
+  assert.ok(/<sc-if value="\{\{ dc\.notLast \}\}"[^>]*><span aria-hidden="true"[^>]*>›<\/span>/.test(dcLine), 'the drawer crumb\'s › separator is not aria-hidden');
 });
 
 // --- Wave 2, Task 15: the compose alert's title becomes a binding ---

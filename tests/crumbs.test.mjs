@@ -1,17 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { vals, defaults } from '../naas-app.js';
+import { vals } from '../naas-app.js';
+import { mkC } from './harness.mjs';
 
 // Wave 2, Task 12: the breadcrumb above the card splits into two trails -
 // crumbs (the site path) and cloudCrumbs (the cloud path). The markup test
 // cannot catch the indexing bug (the old `Math.max(1, i)` slice that kept
 // clicking "AWS" from clearing the cloud drill), so these assert on vals()
-// directly. Same mkC() harness as tests/level-drawer.test.mjs.
-
-function mkC(extra = {}) {
-  const state = { ...defaults(), view: 'trust', screen: 's3', layer: 'cloud', tab: 'connect', ...extra };
-  return { state, setState: (p) => Object.assign(state, p) };
-}
+// directly. Shared mkC() harness (tests/harness.mjs).
 
 test('cloudCrumbs is indexed off the drill, not off Math.max(1, i), so AWS clears it', () => {
   const c = mkC({ cloudDrill: ['us-east-1'] });
