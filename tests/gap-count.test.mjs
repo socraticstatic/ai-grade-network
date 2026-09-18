@@ -416,12 +416,11 @@ test('finding H: switching the outcome after the drawer\'s bulk attach (no sourc
   assert.equal(v.pricedTotalF, '$4,200/mo', 'the base\'s plain-attach total, not $637,800');
 });
 
-// Finding I: chooseTier, steerBucket and startOrder build fresh compose
-// literals with no `step` and, before the root fix, no way to clear a
-// top-level `parsedNote` they never touched. Now that the note lives inside
-// `compose`, these routes are clean by construction - no per-writer clear
-// was added to any of them.
-test('finding I: chooseTier (Steer tier), steerBucket and startOrder leave no note after a gap order', () => {
+// Finding I: chooseTier and steerBucket build fresh compose literals with no
+// `step` and, before the root fix, no way to clear a top-level `parsedNote`
+// they never touched. Now that the note lives inside `compose`, these routes
+// are clean by construction - no per-writer clear was added to either.
+test('finding I: chooseTier (Steer tier) and steerBucket leave no note after a gap order', () => {
   // chooseTier via a "Steer this bucket on the fabric" cost-tab tier.
   {
     const c = mkC();
@@ -449,18 +448,6 @@ test('finding I: chooseTier (Steer tier), steerBucket and startOrder leave no no
     assert.equal(v.hasParsedNote, false, 'steerBucket');
     assert.equal(c.state.compose.note, undefined, 'steerBucket');
   }
-  // startOrder, the Connect tab's path/buy picker "start order" button.
-  {
-    const c = mkC();
-    let v = vals(c);
-    v.gapRows.find(r => r.name === 'Remote sites, East').go();
-    v = vals(c);
-    v.startOrder();
-    v = vals(c);
-    assert.equal(c.state.screen, 's4');
-    assert.equal(v.hasParsedNote, false, 'startOrder');
-    assert.equal(c.state.compose.note, undefined, 'startOrder');
-  }
 });
 
 // The invariant, walked across every fresh-compose route this file can
@@ -473,7 +460,6 @@ test('the invariant: no fresh-compose route ever shows a note it did not itself 
     ['composeFor via a region gap row', (v) => v.gapRows.find(r => r.kind === 'region').go()],
     ['chooseTier (Steer tier)', (v) => v.costFindings.flatMap(f => f.tiers || []).find(t => /^Steer/.test(t.name)).choose()],
     ['steerBucket', (v) => v.buckets[0].steer()],
-    ['startOrder', (v) => v.startOrder()],
     ['authorPolicy', (v) => v.authorPolicy()],
   ];
   for (const [label, run] of freshRoutesWithNoNote) {
@@ -485,8 +471,8 @@ test('the invariant: no fresh-compose route ever shows a note it did not itself 
     run(v);
     v = vals(c);
     assert.equal(v.hasParsedNote, false, `${label}: must show no alert`);
-    // Fresh-literal writers (composeFor, chooseTier, steerBucket, startOrder)
-    // never had a `note` key, so it reads undefined; cleanCompose-based
+    // Fresh-literal writers (composeFor, chooseTier, steerBucket) never had
+    // a `note` key, so it reads undefined; cleanCompose-based
     // writers (authorPolicy) explicitly null it. Both are "no note" - the
     // invariant is falsiness, not a specific JS value.
     assert.ok(!c.state.compose.note, `${label}: must carry no note at all, not even a cleared empty one masquerading as set`);
