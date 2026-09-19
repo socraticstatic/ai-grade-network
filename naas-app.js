@@ -1896,16 +1896,18 @@ function shellVals(s, set, go, est, c, sched) {
       bg: on ? 'var(--sidebar-accent)' : 'transparent', color: on ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: on ? '8px' : '4px' };
   });
   const hasSubNav = false;
+  // The rail carries the cadence with no new markup: item() already takes a sub.
+  const railSub = { 'sec-accounts': sched.cadence.empty ? '' : `Next scan ${nextWord}` };
   const railGroups = (() => {
         // Their rail, our destinations. Home on top, then a bold group label
         // per verb over the very rows the sub-nav already carried. Nothing
         // moves, nothing is added, nothing is dropped.
         const TABS = [['connect', 'Discover'], ['observe', 'Observe'], ['govern', 'Govern'], ['cost', 'Cost']];
-        const row = (tab, id, label, ic) => {
+        const row = (tab, id, label, ic, sub) => {
           const isNav = id.startsWith('@');
           const cur = isNav ? s.screen === 's1' : (onS3('cloud', tab) && activeSec === id);
           // A section sits one step in from the category that owns it.
-          return { ...item(label, ic, isNav ? go('s1') : () => { go('s3', { layer: 'cloud', tab })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); }, cur), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
+          return { ...item(label, ic, isNav ? go('s1') : () => { go('s3', { layer: 'cloud', tab })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); }, cur, false, sub), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };
         const goTabRow = (tab) => tab === 'observe'
           ? () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow' }); }
@@ -1924,7 +1926,7 @@ function shellVals(s, set, go, est, c, sched) {
             return {
               key: tab, hasTitle: true, title, titleGo: () => { goTabRow(tab)(); set(close); }, titleCur: here,
               // Every category shows its sections all the time. The rail scrolls.
-              items: (SECTIONS[tab] || []).map(([id, label, ic]) => row(tab, id, label, ic)),
+              items: (SECTIONS[tab] || []).map(([id, label, ic]) => row(tab, id, label, ic, railSub[id] || '')),
             };
           }),
         ];
