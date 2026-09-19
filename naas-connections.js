@@ -92,16 +92,20 @@ const money = (x) => '$' + Math.round(x).toLocaleString('en-US');
 /** The four launch-off points (Ramesh, 23:09). New customers start at Connect; everyone else at Observe. */
 export function launchCards({ est, ob, conns, totalSave, violations, isEmpty }) {
   const rs = est.regionsList, pub = rs.filter(r => !r.priv).length;
+  // "Cold" is an estate with nothing on the fabric, discovered or not. It has
+  // no connections, no telemetry and no savings, so Observe cannot be the
+  // start-here card and must not claim "you are connected".
+  const cold = isEmpty || rs.filter(r => r.priv).length === 0;
   const degRow = conns.rows.find(r => r.degraded);
   return [
     { key: 'connect', label: 'Connect', value: isEmpty ? 'Nothing connected yet' : `${pub} of ${rs.length} regions`, sub: isEmpty ? 'Start here' : pub ? 'still ride the public internet' : 'every region on the fabric', bar: isEmpty ? null : Math.round((rs.length - pub) / (rs.length || 1) * 100) },
-    { key: 'observe', label: 'Observe', value: isEmpty ? 'No telemetry yet' : `${conns.degraded} of ${conns.total} connections`, sub: isEmpty ? 'starts with the first attach' : degRow ? `degraded · ${n(degRow.wl)} workloads impacted` : `healthy · ${(ob.fab || 0).toFixed(1)} Gbps on the fabric`, bar: null },
+    { key: 'observe', label: 'Observe', value: cold ? 'No telemetry yet' : `${conns.degraded} of ${conns.total} connections`, sub: cold ? 'starts with the first attach' : degRow ? `degraded · ${n(degRow.wl)} workloads impacted` : `healthy · ${(ob.fab || 0).toFixed(1)} Gbps on the fabric`, bar: null },
     { key: 'govern', label: 'Govern', value: isEmpty ? 'No policies yet' : n(violations), sub: isEmpty ? 'three starting points' : `policy violations across ${(est.policies || []).length} policies`, bar: null },
-    { key: 'cost', label: 'Cost', value: isEmpty ? 'No egress seen yet' : totalSave ? money(totalSave) + '/mo' : money(ob.savingsMo || 0) + '/mo', sub: isEmpty ? 'priced after the scan' : totalSave ? `on the table across ${est.findings.filter(f => f.priced).length} findings` : 'already saved on the fabric', bar: null },
+    { key: 'cost', label: 'Cost', value: isEmpty ? 'No egress seen yet' : cold ? money(ob.egressMo || 0) + '/mo' : totalSave ? money(totalSave) + '/mo' : money(ob.savingsMo || 0) + '/mo', sub: isEmpty ? 'priced after the scan' : cold ? 'of egress, every byte on public rates' : totalSave ? `on the table across ${est.findings.filter(f => f.priced).length} findings` : 'already saved on the fabric', bar: null },
   ].map(c => {
-    const primary = isEmpty ? c.key === 'connect' : c.key === 'observe';
-    const door = { connect: isEmpty ? 'Connect a cloud' : pub ? `Attach the ${pub === 1 ? 'region' : pub + ' regions'}` : 'See the fabric', observe: isEmpty ? 'Open Observe' : degRow ? 'What is impacted' : 'See the traffic', govern: isEmpty ? 'Start a policy' : violations ? 'Review violations' : 'Review policies', cost: isEmpty ? 'Open Cost' : 'See the savings' }[c.key];
-    return { ...c, primary, door, eyebrow: primary ? (isEmpty ? 'Start here · new to the fabric' : 'Start here · you are connected') : '' };
+    const primary = cold ? c.key === 'connect' : c.key === 'observe';
+    const door = { connect: isEmpty ? 'Connect a cloud' : pub ? `Attach the ${pub === 1 ? 'region' : pub + ' regions'}` : 'See the fabric', observe: cold ? 'Open Observe' : degRow ? 'What is impacted' : 'See the traffic', govern: isEmpty ? 'Start a policy' : violations ? 'Review violations' : 'Review policies', cost: cold ? 'Open Cost' : 'See the savings' }[c.key];
+    return { ...c, primary, door, eyebrow: primary ? (cold ? 'Start here · new to the fabric' : 'Start here · you are connected') : '' };
   });
 }
 

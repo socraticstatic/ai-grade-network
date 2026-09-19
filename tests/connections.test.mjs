@@ -111,3 +111,23 @@ test('sankey split by metro and by region', () => {
 });
 test('a named top-level site drills straight to its paths', () => { const r = siteDrillRows(est, ['Ashburn DC']); assert.equal(r.level, 'path'); assert.ok(r.rows.length >= 1); });
 test('each pattern carries connectivity, security and cost', () => { for (const x of patterns(est, ob, inv)) { assert.match(x.sub, /on the fabric · .* · \$\d\.\d\d\/GB/); assert.ok(x.connectivity && x.security && x.cost); } });
+
+test('nothing attached starts at Connect, whatever else was discovered', () => {
+  const e = D.ESTATES.small, i = A.inventory(e), o = A.observe(e, [], i);
+  const c = connections(e, o);
+  assert.equal(c.total, 0);
+  const cards = launchCards({ est: e, ob: o, conns: c, totalSave: 0, violations: 20, isEmpty: false });
+  const by = (k) => cards.find(x => x.key === k);
+  assert.equal(cards.find(x => x.primary).key, 'connect');
+  assert.equal(by('connect').eyebrow, 'Start here · new to the fabric');
+  assert.match(by('connect').value, /2 of 2 regions/);
+  assert.equal(by('connect').door, 'Attach the 2 regions');
+  assert.equal(by('observe').eyebrow, '');
+  assert.equal(by('observe').value, 'No telemetry yet');
+  assert.equal(by('observe').door, 'Open Observe');
+  assert.equal(by('govern').value, '20');
+  // An attached estate is untouched.
+  const warm = launchCards({ est, ob, conns: connections(est, ob), totalSave: 12000, violations: 52, isEmpty: false });
+  assert.equal(warm.find(x => x.primary).key, 'observe');
+  assert.match(warm.find(x => x.key === 'observe').eyebrow, /you are connected/);
+});
