@@ -3,7 +3,7 @@
 // in naas-addendum.js, which was already pure; it stays where it is. observeNext is
 // the "next stop" panel below it, not a sentence: it takes `conns` and returns
 // `{title, text, cta}`.
-import { fmt } from './naas-logic.js';
+import { fmt, plural } from './naas-logic.js';
 
 export function connectVerdict(est, layer = 'cloud', items = []) {
   if (est.stage === 'empty') return 'Nothing connected yet. AT&T already sees 41 metros with on-ramps and 12 clouds you could reach.';
@@ -28,7 +28,7 @@ export function governVerdict(est) {
 
 export function costVerdict(est, ob, totalSave, buckets = []) {
   if (est.stage === 'empty') return 'No egress seen yet.';
-  if (totalSave) return `${fmt(totalSave)}/mo on the table across ${est.findings.filter(f => f.priced).length} priced findings. ${fmt(ob.savingsMo)}/mo already saved on the fabric.`;
+  if (totalSave) return `${fmt(totalSave)}/mo on the table across ${plural(est.findings.filter(f => f.priced).length, 'priced finding', 'priced findings')}. ${fmt(ob.savingsMo)}/mo already saved on the fabric.`;
   const steerable = buckets.filter(b => b.today > b.fabric);
   if (!steerable.length) return 'Every bucket is already on the fabric.';
   return `${fmt(steerable.reduce((a, b) => a + b.today, 0))}/mo leaves through public egress that the fabric would carry for ${fmt(steerable.reduce((a, b) => a + b.fabric, 0))}.`;

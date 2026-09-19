@@ -8,6 +8,10 @@
 // Layout and derivation helpers for the NaaS storefront. Pure functions, no DOM.
 export const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
 export const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+/** "1 cloud" / "2 clouds" / "4,120 sites". Every count in the copy goes through this. */
+export const plural = (n, one, many) => `${Number(n).toLocaleString('en-US')} ${n === 1 ? one : many}`;
+/** What discovery found, in one phrase. */
+export const estatePhrase = (est) => `${plural(est.clouds, 'cloud', 'clouds')}, ${plural(est.regions, 'region', 'regions')}, ${plural(est.workloads, 'workload', 'workloads')}`;
 
 const CLOUD_ORDER = ['AWS', 'Azure', 'GCP', 'CoreWeave', 'Oracle'];
 

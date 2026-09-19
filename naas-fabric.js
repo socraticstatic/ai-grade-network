@@ -8,6 +8,7 @@
 // naas-fabric.js — inside the AT&T fabric band: facilities → ports → circuits,
 // opened in place on the picture. Pure data. Added 2026-09-09 (Micah, 14:13:
 // "Why does clicking on AT&T fabric take me to a wordy sales page!").
+import { plural } from './naas-logic.js';
 const n = (x) => Number(x).toLocaleString('en-US');
 
 /** Facilities the estate's attached regions land on, from the inventory's city per region. */
@@ -45,10 +46,10 @@ export function fabricRows(est, inv, ob, trail) {
   const facs = facilities(est, inv, ob);
   // Nothing attached means no facility, and the band used to open to a blank
   // blue box. It says what is missing and offers the door instead.
-  if (trail.length === 1) return { level: 'facility', label: 'AT&T fabric', rows: facs.map(f => ({ key: f.key, name: f.name, sub: f.sub, state: f.state, drill: f.city, count: `${f.ports}` })), head: `${facs.length} facilities`, empty: facs.length === 0, emptyHead: 'Nothing on the fabric yet', emptyLine: 'Attach a cloud region and the AT&T facility carrying it appears here, with its ports and the circuits on them.', emptyCta: 'Attach a region' };
+  if (trail.length === 1) return { level: 'facility', label: 'AT&T fabric', rows: facs.map(f => ({ key: f.key, name: f.name, sub: f.sub, state: f.state, drill: f.city, count: `${f.ports}` })), head: plural(facs.length, 'facility', 'facilities'), empty: facs.length === 0, emptyHead: 'Nothing on the fabric yet', emptyLine: 'Attach a cloud region and the AT&T facility carrying it appears here, with its ports and the circuits on them.', emptyCta: 'Attach a region' };
   const fac = facs.find(f => f.city === trail[1]); if (!fac) return null;
-  if (trail.length === 2) { const ps = ports(fac); return { level: 'port', label: fac.name, rows: ps.map(p => ({ key: p.key, name: p.name, sub: p.sub, state: p.state, drill: p.key, count: p.pct + '%' })), head: `${ps.length} ports · ${fac.ramps.join(' · ')}` }; }
+  if (trail.length === 2) { const ps = ports(fac); return { level: 'port', label: fac.name, rows: ps.map(p => ({ key: p.key, name: p.name, sub: p.sub, state: p.state, drill: p.key, count: p.pct + '%' })), head: `${plural(ps.length, 'port', 'ports')} · ${fac.ramps.join(' · ')}` }; }
   const port = ports(fac).find(p => p.key === trail[2]); if (!port) return null;
   const cxs = circuits({ ...port, ports: fac.ports }, inv);
-  return { level: 'circuit', label: port.name, rows: cxs.map(c => ({ key: c.key, name: c.name, sub: c.sub, state: c.state, drill: null, leaf: true, site: c.site, count: c.bw })), head: `${cxs.length} circuits on this port` };
+  return { level: 'circuit', label: port.name, rows: cxs.map(c => ({ key: c.key, name: c.name, sub: c.sub, state: c.state, drill: null, leaf: true, site: c.site, count: c.bw })), head: `${plural(cxs.length, 'circuit', 'circuits')} on this port` };
 }
