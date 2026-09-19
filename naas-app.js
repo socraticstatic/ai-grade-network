@@ -1068,7 +1068,13 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       push(24 + i * 133, WHO[i % 3], r.degraded ? 'Opened an impact view' : 'Ordered a port', `${r.cloud} ${r.region}`, r.degraded ? `${r.wl} workloads behind a degraded link` : `${r.ports} × 10 Gbps in place, ${r.pct}% used`, true);
     });
     (s.steered || []).forEach((f, i) => push(8 + i * 47, WHO[i % 3], 'Steered a flow', String(f), 'moved off the public path', true));
-    push(4, 'svc-terraform', 'Ran re-discovery', 'Whole estate', `${[...new Set((est.regionsList || []).map(r => r.cloud))].length} accounts, ${(est.regionsList || []).length} regions scanned`, true);
+    (sched.runs || []).forEach(r => {
+      const mins = Math.max(0, Math.round((sched.nowMs - r.at) / 60000));
+      const how = r.trigger === 'manual' ? 'on demand' : `on schedule at ${SCH.clockLabel(r.at)}`;
+      push(mins, r.trigger === 'manual' ? WHO[0] : 'svc-terraform', 'Ran re-discovery',
+        r.accounts === 1 ? 'One account' : 'Whole estate',
+        `${r.accounts} ${r.accounts === 1 ? 'account' : 'accounts'}, ${r.regions} regions, ${r.sites.toLocaleString('en-US')} sites · ${how}`, r.ok);
+    });
     push(151, WHO[1], 'Changed a scope', 'AWS account 4102-8837-5510', 'read-only, all regions', true);
     push(207, WHO[2], 'Export denied', 'Flow records, last 30 days', 'no export role on this account', false);
     return out.sort((a, b) => a.mins - b.mins);
