@@ -56,11 +56,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // one +1 label (its own opening <label> is new; the select and its six
 // options are not pinned here). button 251 -> 250, span 640 -> 641,
 // label 26 -> 27.
+// Wave 4 Task 6 gives the Accounts card a Next scan column and a per-row
+// cadence cell: two new header cells (div +2) and, per body row, a Next
+// scan div plus a cadence cell div holding two sc-ifs (canSchedule,
+// noSchedule) - a five-option <select> for the scheduled case and a
+// fallback <span> for the AT&T inventory rows (select and option are not
+// pinned). div 858 -> 862, sc-if 297 -> 299, span 641 -> 642.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 858],
-    ['span', /<span\b/g, /<\/span>/g, 641],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 297],
+    ['div', /<div\b/g, /<\/div>/g, 862],
+    ['span', /<span\b/g, /<\/span>/g, 642],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 299],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 174],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 250],

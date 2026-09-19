@@ -1535,20 +1535,46 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       : 'All flows · coloured by state',
     mapFilterCount: mapFiltersOn ? `${mapFiltersOn} filter${mapFiltersOn === 1 ? '' : 's'}` : 'No filters',
     mapFilterToggleWord: mapFiltersOpen ? 'Hide' : 'Show', mapZoomLabel: map.zoom ? `zoomed ×${map.zf.toFixed(1)}` : '', hasMapZoom: !!map.zoom, mapSub: `${map.total.toFixed(1)} Gbps in the last 24h · what the sites send, ${MIX.crossed > 0.001 ? Math.round(map.total / MIX.crossed * 100) : 0}% of everything that crosses a mid mile · ${Math.round(map.fabV / (map.total || 1) * 100)}% of it on the fabric${mapRegion ? ' · filtered to ' + mapRegion : ''}${mapT != null ? ' · ' + Math.round(24 - mapT * 24) + 'h ago' : ''}`, mapTrail, hasMapTrail: mapTrail.length > 0, mapUp: climb, canClimb: !!mapSel, mapKey, modes, hasMapRegion: !!mapRegion, mapRegion: mapRegion || '', clearMapRegion: () => set({ mapRegion: null }), mapT: mapT == null ? 100 : Math.round(mapT * 100), setMapT: (e) => set({ mapT: +e.target.value / 100 }), mapPlaying: !!s.mapPlay, playLabel: s.mapPlay ? '❚❚' : '▶', playMap, resetMapT: () => set({ mapT: null }), replayOpen: !!s.replayOpen, toggleReplay: () => set({ replayOpen: !s.replayOpen, mapPlay: false, mapT: s.replayOpen ? null : s.mapT }), wholeWindow: () => set({ mapT: null, mapPlay: false }), gaugeRows, hasGauges: gaugeRows.length > 0, panel, hasPanel: !!panel, hasPanelOverlay: !!panel, drawerRight: panel ? '380px' : '0px', noPanel: !panel, dashCols: 'minmax(0,1fr)', mapJumpOpen: !!s.mapJumpOpen, mapJumpQ: s.mapJumpQ || '', setMapJumpQ: (e) => set({ mapJumpQ: e.target.value }), mapJumpKey: (e) => { if (e.key === 'Enter') jumpTo(s.mapJumpQ); if (e.key === 'Escape') set({ mapJumpOpen: false }); }, openJump: () => set({ mapJumpOpen: !s.mapJumpOpen }), pins: (s.mapPins || []).map(k => ({ key: k, name: (map.nodes.find(x => x.key === k) || { name: k }).name, v: ((map.nodes.find(x => x.key === k) || { v: 0 }).v).toFixed(1) + ' Gbps', unpin: () => set({ mapPins: (s.mapPins || []).filter(x => x !== k) }) })), hasPins: (s.mapPins || []).length > 0 };
-  // Sources (Micah, 14:33: "where can I connect to my current ecosystem?"): what feeds the picture, and the door to add more.
-  const byCloud = {}; est0.regionsList.forEach(r => { const c = byCloud[r.cloud] = byCloud[r.cloud] || { regions: 0, acct: null }; c.regions++; if (r.acct && !c.acct) c.acct = r.acct; });
-  const rescanNow = () => { try { window.__naasLoaded = Date.now(); } catch (e) {} set({ scanStep: 0 }); };
-  const scanAgo = (k) => ['4 min ago', '18 min ago', '1 h ago', '3 h ago'][k % 4];
+  // Sources (Micah, 14:33: "where can I connect to my current ecosystem?"): what feeds the
+  // picture, and the door to add more. The cloud rows are a read of est.accounts through
+  // scheduleView; the AT&T rows are inventory AT&T keeps live, not a credential the customer
+  // schedules, so they carry no cadence control.
+  const acctRow = (a) => ({
+    key: 'src:' + a.id, name: a.name, kind: a.cloud, cred: a.cred, scope: a.scope,
+    seen: SCH.agoLabel(a.lastRun, sched.nowMs),
+    nextSeen: SCH.nextLabel(a.schedule, a.nextRun, sched.nowMs),
+    cadenceValue: SCH.scheduleId(a.schedule), cadenceLabel: SCH.scheduleLabel(a.schedule),
+    setCadence: sched.setSchedule([a.id]), canSchedule: true, noSchedule: false,
+    sub: `${a.scope} · ${SCH.scheduleLabel(a.schedule).toLowerCase()}`,
+    state: 'Connected', dot: 'var(--success)', rescan: sched.runNow([a.id], 'manual'),
+  });
+  const attRow = (key, name, scope, sub) => ({
+    key, name, kind: 'AT&T', cred: 'AT&T inventory', scope, seen: 'live', nextSeen: 'continuous',
+    cadenceValue: '', cadenceLabel: 'AT&T inventory', setCadence: () => {},
+    canSchedule: false, noSchedule: true, sub, state: 'Connected', dot: 'var(--success)',
+    rescan: sched.runNow(sched.accounts.map(a => a.id), 'manual'),
+  });
+  const connWord = conns.total === 1 ? 'connection' : 'connections';
+  const siteN = (est0.sitesCount || est0.sites.length).toLocaleString('en-US');
   const rawSources = [
-    ...Object.entries(byCloud).map(([cloud, c], i) => ({ key: 'src:' + cloud, name: `${cloud} ${c.acct ? c.acct : 'account'}`, kind: cloud, cred: cloud === 'Azure' ? 'Service principal' : cloud === 'Google Cloud' ? 'Service account' : 'Cross-account role', scope: `Read-only · ${c.regions} ${c.regions === 1 ? 'region' : 'regions'}`, seen: scanAgo(i), sub: `${c.regions} ${c.regions === 1 ? 'region' : 'regions'} · read-only · daily refresh`, state: 'Connected', dot: 'var(--success)' })),
-    ...(conns.total ? [{ key: 'src:netbond', name: 'NetBond inventory', kind: 'AT&T', cred: 'AT&T inventory', scope: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, seen: 'live', sub: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'} · live`, state: 'Connected', dot: 'var(--success)' }] : []),
-    ...(est0.sites.length ? [{ key: 'src:sites', name: 'AVPN and access sites', kind: 'AT&T', cred: 'AT&T inventory', scope: `${(est0.sitesCount || est0.sites.length).toLocaleString('en-US')} sites`, seen: 'live', sub: `${(est0.sitesCount || est0.sites.length).toLocaleString('en-US')} sites · from AT&T inventory`, state: 'Connected', dot: 'var(--success)' }] : []),
-    ...((s.addedSources || []).map((k, i) => ({ key: 'src:new' + i, name: k, kind: k, cred: 'Pending', scope: 'Read-only, all regions', seen: 'never', sub: 'added · queued for the next scan', state: 'Scanning', dot: 'var(--warning)' }))),
+    ...sched.accounts.map(acctRow),
+    ...(conns.total ? [attRow('src:netbond', 'NetBond inventory', `${conns.total} ${connWord}`, `${conns.total} ${connWord} · live`)] : []),
+    ...(est0.sites.length ? [attRow('src:sites', 'AVPN and access sites', `${siteN} sites`, `${siteN} sites · from AT&T inventory`)] : []),
+    ...((s.addedSources || []).map((k, i) => ({
+      key: 'src:new' + i, name: k, kind: k, cred: 'Pending', scope: 'Read-only, all regions',
+      seen: 'never', nextSeen: 'at the next scan', cadenceValue: '', cadenceLabel: 'Pending',
+      setCadence: () => {}, canSchedule: false, noSchedule: true,
+      sub: 'added · queued for the next scan', state: 'Scanning', dot: 'var(--warning)',
+      rescan: sched.runNow(sched.accounts.map(a => a.id), 'manual'),
+    }))),
   ];
-  const sources = rawSources.map(r => ({ ...r, rescan: rescanNow, edit: () => set({ addSourceOpen: true, addSourceKind: r.kind }), remove: () => set({ addedSources: (s.addedSources || []).filter(x => 'src:new' + (s.addedSources || []).indexOf(x) !== r.key) }), canRemove: r.key.startsWith('src:new') }));
+  const sources = rawSources.map(r => ({ ...r,
+    edit: () => set({ addSourceOpen: true, addSourceKind: r.kind }),
+    remove: () => set({ addedSources: (s.addedSources || []).filter(x => 'src:new' + (s.addedSources || []).indexOf(x) !== r.key) }),
+    canRemove: r.key.startsWith('src:new') }));
   const credScanned = sources.filter(x => x.state === 'Connected').length;
   const gapVals = { gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
-  const obX = { sources, sourcesSub: `${credScanned} of ${sources.length} credentials scanning · everything above is drawn from these`, addSourceOpen: !!s.addSourceOpen, toggleAddSource: () => set({ addSourceOpen: !s.addSourceOpen }), addSourceLabel: s.addSourceOpen ? 'Close' : 'Add a source', addSourceKind: s.addSourceKind || 'AWS account', setAddSourceKind: (e) => set({ addSourceKind: e.target.value }), addSource: () => set({ addedSources: [...(s.addedSources || []), s.addSourceKind || 'AWS account'], addSourceOpen: false }), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage === 'perf', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
+  const obX = { sources, sourcesSub: `${credScanned} of ${sources.length} credentials scanning · ${sched.cadence.empty ? 'nothing on a schedule yet' : sched.cadence.label.toLowerCase()} · everything above is drawn from these`, addSourceOpen: !!s.addSourceOpen, toggleAddSource: () => set({ addSourceOpen: !s.addSourceOpen }), addSourceLabel: s.addSourceOpen ? 'Close' : 'Add a source', addSourceKind: s.addSourceKind || 'AWS account', setAddSourceKind: (e) => set({ addSourceKind: e.target.value }), addSource: () => set({ addedSources: [...(s.addedSources || []), s.addSourceKind || 'AWS account'], addSourceOpen: false }), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage === 'perf', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
   return {
     invTree: s.tagView ? tagTree(inv, tree, chip) : tree, tagView: !!s.tagView, cloudView: !s.tagView, toggleTagView: () => set({ tagView: !s.tagView }), tagViewUb: s.tagView ? 'var(--cta)' : 'transparent', tagViewColor: s.tagView ? 'var(--link)' : 'var(--text-body)', cloudViewUb: !s.tagView ? 'var(--cta)' : 'transparent', cloudViewColor: !s.tagView ? 'var(--link)' : 'var(--text-body)', hasTree: tree.length > 0, invStats: [{ key: 's', v: stats.sites, l: 'sites' }, { key: 'c', v: stats.clouds, l: 'clouds' }, { key: 'r', v: stats.regions, l: 'regions' }, { key: 'w', v: stats.workloads.toLocaleString('en-US'), l: 'workloads' }, { key: 'a', v: stats.attached, l: 'attached' }, { key: 'e', v: stats.exposed, l: 'exposed' }],
     expandAll: () => set({ inv: { ...openMap, ...Object.fromEntries(openKeys.map(k => [k, true])) } }), collapseAll: () => set({ inv: {} }), collapsedLabel: Object.values(openMap).some(Boolean) ? 'Expanded view' : 'Collapsed view',
