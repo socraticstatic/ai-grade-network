@@ -56,7 +56,7 @@ export function init(c) {
       c.setState(p);
       // Explore 360 reached by a hash change never ran startScan, so the spinner
       // spun forever on a scanStep that nothing was advancing.
-      if (p.screen === 's1') startScan(c);
+      if (p.screen === 's1') runScan(c, estateFor({ ...c.state, ...p }));
     });
   }
   try { const h = localStorage.getItem('naas.headOpen'); if (h === 'false') c.setState({ headOpen: false }); } catch (e) {}
@@ -73,7 +73,7 @@ export function init(c) {
   if (hash[1] && D.LAYERS.find(l => l.id === hash[1])) patch.layer = hash[1];
   if (hash[2] && TABS.includes(hash[2])) patch.tab = hash[2];
   c.setState(patch);
-  if ((patch.screen || c.state.screen) === 's1') startScan(c);
+  if ((patch.screen || c.state.screen) === 's1') runScan(c, estateFor({ ...c.state, ...patch }));
 }
 
 export function defaults() {
@@ -162,7 +162,7 @@ export function vals(c) {
   const hp = R.health(est0, obAll, steered);
   const conns = X.connections(est0, obAll);
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, ob), ...est0.findings] };
-  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4 && est.stage !== 'empty') startScan(c); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], fabDrill: [], laneFocus: false, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); if (screen === 's1') startScan(c); };
+  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], fabDrill: [], laneFocus: false, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -706,6 +706,19 @@ function syncHash(screen, layer, tab) {
 }
 
 let scanTimer = null;
+/** There is nothing to discover on an estate with no clouds, so the scan must not run. */
+export function shouldScan(est) { return !!est && est.stage !== 'empty'; }
+/**
+ * The scan is Discover's loading state, not an animation: html:573 holds the
+ * skeleton while `scanning`, html:582 holds the whole body until `scanDone`.
+ * So an estate we do not scan has to arrive at step 4 anyway, or the screen
+ * never renders.
+ */
+export function runScan(c, est) {
+  if (shouldScan(est)) return startScan(c);
+  clearInterval(scanTimer);
+  c.setState({ scanStep: 4, scanBusy: false });
+}
 export function startScan(c) {
   clearInterval(scanTimer);
   c.setState({ scanStep: 0, scanBusy: true });
