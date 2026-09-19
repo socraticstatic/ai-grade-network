@@ -197,3 +197,27 @@ export function estateCadence(accounts) {
   if (ids.length === 1 && ids[0]) return { id: ids[0], label: scheduleLabel(list[0].schedule), mixed: false, empty: false };
   return { id: '', label: 'Mixed', mixed: true, empty: false };
 }
+
+/**
+ * Everything the screens bind, computed once per render. The title row, the
+ * Accounts card, the rail and the activity log all read this object, so they
+ * cannot disagree about when the last scan ran.
+ */
+export function scheduleView(est, now, opts = {}) {
+  const overrides = opts.overrides || {};
+  const seeded = accountsAt(est, now, { overrides });
+  const runs = [
+    ...(opts.runs || []),
+    ...seedRuns(seeded, now, opts.history || 3).map(r => runRecord({ ...r, est })),
+  ].sort((a, b) => b.at - a.at);
+  const accounts = accountsAt(est, now, { overrides, runs });
+  const nextAt = soonestNext(accounts);
+  const nextAcct = accounts.find(a => a.nextRun === nextAt) || null;
+  return {
+    nowMs: now, accounts, runs,
+    lastRun: newestRun(runs),
+    nextAt,
+    nextSchedule: nextAcct ? nextAcct.schedule : null,
+    cadence: estateCadence(accounts),
+  };
+}

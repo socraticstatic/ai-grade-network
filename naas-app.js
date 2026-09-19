@@ -16,6 +16,7 @@ import * as F from './naas-flowmap.js';
 import * as OD from './naas-observe-dash.js';
 import * as FB from './naas-fabric.js';
 import * as V from './naas-volume.js';
+import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product' };
@@ -160,6 +161,30 @@ export function vals(c) {
   const conns = X.connections(est0, obAll);
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, ob), ...est0.findings] };
   const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4 && est.stage !== 'empty') startScan(c); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], fabDrill: [], laneFocus: false, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); if (screen === 's1') startScan(c); };
+  // Scheduled auto-discovery (wave 4). One clock, one account list and one run
+  // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
+  // so the demo picker cannot carry one estate's cadence onto another. Neither
+  // of them is s.obWindow, which already means two things.
+  const nowMs = Date.now();
+  const schedOver = (s.acctSched && s.acctSched.est === est.id) ? s.acctSched.map : {};
+  const myRuns = (s.scanRuns && s.scanRuns.est === est.id) ? s.scanRuns.list : [];
+  const schedView = SCH.scheduleView(est, nowMs, { overrides: schedOver, runs: myRuns });
+  const sched = {
+    ...schedView,
+    setSchedule: (ids) => (e) => {
+      const next = SCH.scheduleById(e.target.value);
+      if (!next) return;                       // the estate-wide select's "Mixed" entry
+      const map = { ...schedOver };
+      ids.forEach(id => { map[id] = next; });
+      c.setState({ acctSched: { est: est.id, map } });
+    },
+    runNow: (ids, trigger) => () => {
+      if (!ids.length) return;
+      const rec = SCH.runRecord({ at: Date.now(), trigger: trigger || 'manual', accountIds: ids, est });
+      c.setState({ scanRuns: { est: est.id, list: [rec, ...myRuns] } });
+      startScan(c);
+    },
+  };
   const isEmpty = est.stage === 'empty', isMature = est.stage === 'mature', isPartial = est.stage === 'partial';
   const layer = D.LAYERS.find(l => l.id === s.layer) || D.LAYERS[1];
   const layerProducts = (id) => D.CATALOG.filter(p => p.layer === id);
@@ -566,7 +591,7 @@ export function vals(c) {
     goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(cp.outcome ? { compose: { ...cp, step: cp.step || 0 } } : { compose: prefillCompose(est) }) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
     hasTasks: s.submitted, taskCount: 1, showPending, pendingStages, landed: landedAll, notLanded: !landedAll, pendingSub: landedAll ? 'Validated · live. First flow logs are in.' : 'Submitted for approval',
     deliverNow: () => { const cand = (s.compose && s.compose.prefillRegion ? s.compose.prefillRegion.split(' ')[1] : null) || (estRaw.regionsList.find(r => !r.priv) || {}).region; if (!cand) return; c.setState({ landed: cand, layer: 'cloud', tab: 'observe', screen: 's3', events: [...(s.events || []), { key: 'e' + Date.now(), t: new Date().toLocaleTimeString('en-US', { hour12: false }), text: `${cand} validated · live. Hosted VPC on the fabric; first flow logs received; coverage up by one region.` }] }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
-    ...shellVals(s, set, go, est, c),
+    ...shellVals(s, set, go, est, c, sched),
     headOpen: s.headOpen !== false, headClosed: s.headOpen === false, toggleHead: () => { const v = s.headOpen === false; set({ headOpen: v }); try { localStorage.setItem('naas.headOpen', String(v)); } catch (e) {} }, headRot: s.headOpen === false ? 'rotate(-90deg)' : 'rotate(0deg)',
     ...andiVals(s, set, go, est, ob, { conns, floorVerdict, connectVerdict, governVerdict, costVerdict, discoverVerdict, stageKicker, findingCard, sortF, findingsFor, isEmpty, totalSave, persona, personaTab }),
     pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? ob.verdict : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on the fabric · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${est.policiesEnforced} of ${est.policiesAuthored} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
@@ -621,7 +646,7 @@ export function vals(c) {
     product: productDetail,
     // discover
     allRegions: est.regionsList, scanSteps, scanLine: s.scanStep < 4 ? `${scanSteps[Math.min(3, s.scanStep)].label} · ${Math.min(4, s.scanStep + 1)} of 4` : '', scanDone: s.scanStep >= 4, scanning: s.scanStep < 4, discoverVerdict, discoverKpis, estateChips, treeOrMap: s.treeOrMap, isTree: s.treeOrMap === 'tree', isMap: s.treeOrMap === 'map', treeBg: s.treeOrMap === 'tree' ? 'var(--bg-accent)' : 'transparent', treeColor: s.treeOrMap === 'tree' ? 'var(--link)' : 'var(--text-body)', mapBg: s.treeOrMap === 'map' ? 'var(--bg-accent)' : 'transparent', mapColor: s.treeOrMap === 'map' ? 'var(--link)' : 'var(--text-body)', showTree: () => set({ treeOrMap: 'tree' }), showMap: () => set({ treeOrMap: 'map' }), tree, mapRows, mapSites, mapH, mapVB: `0 0 1000 ${mapH}`, bigEstate, sitesCountLabel: est.sitesCount ? `${est.sitesCount.toLocaleString('en-US')} sites, grouped` : `${est.sites.length} sites`, chain, chainPolicies, hasChain: !!ow, chainRegion: ow ? `${ow.cloud} ${ow.region}` : '', closeChain: () => set({ openWorkload: null }),
-    ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0),
+    ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched),
   };
 }
 
@@ -656,8 +681,13 @@ function syncHash(screen, layer, tab) {
 let scanTimer = null;
 export function startScan(c) {
   clearInterval(scanTimer);
-  c.setState({ scanStep: 0 });
-  scanTimer = setInterval(() => { c.setState(st => { if (st.scanStep >= 4) { clearInterval(scanTimer); return null; } return { scanStep: st.scanStep + 1 }; }); }, 750);
+  c.setState({ scanStep: 0, scanBusy: true });
+  scanTimer = setInterval(() => {
+    c.setState(st => {
+      if (st.scanStep >= 4) { clearInterval(scanTimer); return { scanBusy: false }; }
+      return { scanStep: st.scanStep + 1 };
+    });
+  }, 750);
 }
 
 function levelMapTitle(layer) { return { ai: 'Providers', cloud: 'Regions', net: 'Services by site', transport: 'Sites' }[layer.id]; }
@@ -866,7 +896,7 @@ function prefillAttach(r) {
 function composeFor(go, r) {
   return go('s4', { ...newOrder(prefillAttach(r)) });
 }
-function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0) {
+function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched) {
   const obScope = s.obScope || 'all';
   const egressBase = egressBaseFor(est0, ob);
   const gpw = R.gbPerWlExport(est0, egressBase);
@@ -1719,7 +1749,7 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
 
 
 // ---------- Shell: elevator, top tabs, rail ----------
-function shellVals(s, set, go, est, c) {
+function shellVals(s, set, go, est, c, sched) {
   const dark = s.theme === 'dark';
   const iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
   const wide = typeof window !== 'undefined' ? window.innerWidth >= 1440 : true;

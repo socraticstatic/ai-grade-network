@@ -220,3 +220,49 @@ test('newest run and soonest next scan pick the right end of the list', () => {
   assert.equal(soonestNext(accountsAt(D.ESTATES.trust, NOW)), T('2026-09-17T12:00:00Z'));
   assert.equal(soonestNext([]), null);
 });
+
+import { scheduleView } from '../naas-schedule.js';
+
+test('the view is one answer the four surfaces share', () => {
+  const v = scheduleView(D.ESTATES.partial, NOW);
+  assert.equal(v.nowMs, NOW);
+  assert.equal(v.accounts.length, 3);
+  assert.equal(v.runs.length, 3);
+  assert.equal(v.lastRun.at, T('2026-09-17T02:00:00Z'));
+  assert.equal(v.nextAt, T('2026-09-18T02:00:00Z'));
+  assert.deepEqual(v.nextSchedule, { kind: 'nightly', at: '02:00' });
+  assert.equal(v.cadence.id, 'nightly');
+  // Every account's last scan agrees with the newest run that covered it.
+  for (const a of v.accounts) assert.equal(a.lastRun, T('2026-09-17T02:00:00Z'));
+});
+
+test('a run on demand becomes the newest run and moves every account it covered', () => {
+  const est = D.ESTATES.partial;
+  const mine = [runRecord({ at: NOW - 30000, trigger: 'manual', accountIds: est.accounts.map(a => a.id), est })];
+  const v = scheduleView(est, NOW, { runs: mine });
+  assert.equal(v.lastRun.trigger, 'manual');
+  assert.equal(v.lastRun.at, NOW - 30000);
+  assert.equal(v.runs.length, 4, 'the seeded history is kept behind it');
+  assert.ok(v.runs.every((r, i) => i === 0 || r.at <= v.runs[i - 1].at), 'newest first');
+  for (const a of v.accounts) assert.equal(a.lastRun, NOW - 30000);
+  assert.equal(v.nextAt, T('2026-09-18T02:00:00Z'), 'running on demand does not move the grid');
+});
+
+test('an override reaches the view, the cadence and the next scan together', () => {
+  const v = scheduleView(D.ESTATES.partial, NOW, { overrides: {
+    'acc-aws': { kind: 'hours', n: 6 }, 'acc-azure': { kind: 'hours', n: 6 }, 'acc-gcp': { kind: 'hours', n: 6 },
+  } });
+  assert.equal(v.cadence.id, 'h6');
+  assert.equal(v.cadence.mixed, false);
+  assert.equal(v.nextAt, T('2026-09-17T12:00:00Z'));
+});
+
+test('the empty estate has a view with nothing in it', () => {
+  const v = scheduleView(D.ESTATES.empty, NOW);
+  assert.deepEqual(v.accounts, []);
+  assert.deepEqual(v.runs, []);
+  assert.equal(v.lastRun, null);
+  assert.equal(v.nextAt, null);
+  assert.equal(v.nextSchedule, null);
+  assert.equal(v.cadence.empty, true);
+});
