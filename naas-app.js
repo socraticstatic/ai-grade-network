@@ -65,7 +65,7 @@ export function init(c) {
   const hash = (location.hash || '').replace('#', '').split('/');
   const patch = {};
   if (q.get('view')) patch.view = q.get('view');
-  if (q.get('estate') === 'meridian') patch.estateParam = 'trust';
+  if (q.get('estate') === 'meridian') { patch.estateParam = 'trust'; if (!q.get('view')) patch.view = 'trust'; }
   if (q.get('mode') === 'browse') patch.screen = 's7';
   if (q.get('category')) { patch.screen = 's7'; patch.browseCat = q.get('category'); }
   if (SCREENS[hash[0]]) patch.screen = hash[0];
@@ -87,8 +87,11 @@ export function defaults() {
   };
 }
 
-function estateFor(s) {
-  if (s.view === 'live') return D.ESTATES[s.estateParam || 'partial'];
+export function estateFor(s) {
+  // ?estate= names an estate outright; it used to be read only when the view
+  // was 'live', so ?estate=meridian on its own silently showed the default.
+  if (s.estateParam && D.ESTATES[s.estateParam]) return D.ESTATES[s.estateParam];
+  if (s.view === 'live') return D.ESTATES.partial;
   return D.ESTATES[s.view] || D.ESTATES.mature;
 }
 
@@ -594,7 +597,7 @@ export function vals(c) {
 
   return {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
-    view: s.view, setView: (e) => set({ view: e.target.value, drill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep }),
+    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, drill: [], cloudDrill: [], fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep }),
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
     // which nulled s.order even when the live compose had not started an
     // outcome yet - exactly the state right after a marketplace product
