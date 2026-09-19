@@ -72,14 +72,18 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // (button +1). The three "refreshed daily" copy swaps add and remove no
 // tags. div 862 -> 867, span 642 -> 644, sc-if 299 -> 300, label 27 -> 28,
 // button 250 -> 251.
+// Wave 3 Task 4: the fabric band's empty state is a new sibling sc-if inside
+// fabOpen, one card - a wrapper div, its head div, its copy div (div +3), a
+// foreignObject (not pinned here), and the "Attach a region" button
+// (button +1). div 867 -> 870, sc-if 300 -> 301, button 251 -> 252.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 867],
+    ['div', /<div\b/g, /<\/div>/g, 870],
     ['span', /<span\b/g, /<\/span>/g, 644],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 300],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 301],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 174],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 251],
+    ['button', /<button\b/g, /<\/button>/g, 252],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
     ['label', /<label\b/g, /<\/label>/g, 28],
   ];

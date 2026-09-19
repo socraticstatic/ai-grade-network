@@ -43,7 +43,9 @@ export function circuits(port, inv) {
 export function fabricRows(est, inv, ob, trail) {
   if (!trail || !trail.length) return null;
   const facs = facilities(est, inv, ob);
-  if (trail.length === 1) return { level: 'facility', label: 'AT&T fabric', rows: facs.map(f => ({ key: f.key, name: f.name, sub: f.sub, state: f.state, drill: f.city, count: `${f.ports}` })), head: `${facs.length} facilities` };
+  // Nothing attached means no facility, and the band used to open to a blank
+  // blue box. It says what is missing and offers the door instead.
+  if (trail.length === 1) return { level: 'facility', label: 'AT&T fabric', rows: facs.map(f => ({ key: f.key, name: f.name, sub: f.sub, state: f.state, drill: f.city, count: `${f.ports}` })), head: `${facs.length} facilities`, empty: facs.length === 0, emptyHead: 'Nothing on the fabric yet', emptyLine: 'Attach a cloud region and the AT&T facility carrying it appears here, with its ports and the circuits on them.', emptyCta: 'Attach a region' };
   const fac = facs.find(f => f.city === trail[1]); if (!fac) return null;
   if (trail.length === 2) { const ps = ports(fac); return { level: 'port', label: fac.name, rows: ps.map(p => ({ key: p.key, name: p.name, sub: p.sub, state: p.state, drill: p.key, count: p.pct + '%' })), head: `${ps.length} ports · ${fac.ramps.join(' · ')}` }; }
   const port = ports(fac).find(p => p.key === trail[2]); if (!port) return null;

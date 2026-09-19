@@ -400,6 +400,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         </g>
       </sc-for>
       <sc-if value="{{ hasFabMore }}" hint-placeholder-val="{{ false }}"><foreignObject x="{{ fabHead.x }}" y="{{ fabHead.moreY }}" width="{{ fabHead.w }}" height="16"><button onClick="{{ openBandLevel }}" style="display:block;width:100%;border:0;background:transparent;padding:0;font:inherit;font-size:10px;line-height:16px;color:var(--link);text-align:center;cursor:pointer">{{ fabMore }}</button></foreignObject></sc-if>
+      <sc-if value="{{ fabEmpty }}" hint-placeholder-val="{{ false }}"><foreignObject x="{{ fabHead.x }}" y="{{ fabEmptyY }}" width="{{ fabHead.w }}" height="132"><div style="box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:10px;background:var(--bg-base);border:1px solid var(--border-secondary)"><div style="font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading)">{{ fabEmptyHead }}</div><div style="font-size:12px;line-height:16px;color:var(--text-light);text-wrap:pretty">{{ fabEmptyLine }}</div><button onClick="{{ fabEmptyGo }}" style="align-self:flex-start;height:28px;padding:0 12px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">{{ fabEmptyCta }}</button></div></foreignObject></sc-if>
     </sc-if>
   </g>
 
