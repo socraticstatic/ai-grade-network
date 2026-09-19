@@ -109,3 +109,40 @@ export function nextLabel(sch, next, now) {
   if (sch.kind === 'weekly') return `${DAY_NAME[sch.day] || 'Sundays'} at ${sch.at}`;
   return `at ${sch.at}`;
 }
+
+/** The newest run in `runs` that covered this account, or null. */
+export function lastRunOf(accountId, runs) {
+  let best = null;
+  (runs || []).forEach(r => {
+    if ((r.accountIds || []).indexOf(accountId) >= 0 && (best == null || r.at > best)) best = r.at;
+  });
+  return best;
+}
+
+/**
+ * The estate's seeded accounts, hydrated against a clock.
+ *
+ * lastRun is a fact from the run history: the newest run that covered this
+ * account. With no history it falls back to the previous fire of the
+ * account's seeded cadence, the runs that happened before this session
+ * started, or, for a manual account, to its own lastRunAgoMin.
+ *
+ * nextRun is a fact about the effective cadence, so changing the cadence
+ * moves the next scan at once without rewriting when the last one ran.
+ */
+export function accountsAt(est, now, opts = {}) {
+  const over = opts.overrides || {}, runs = opts.runs || [];
+  return ((est && est.accounts) || []).map(a => {
+    const schedule = over[a.id] || a.schedule;
+    const fromRuns = lastRunOf(a.id, runs);
+    const lastRun = fromRuns != null ? fromRuns
+      : a.schedule.kind === 'manual' ? now - (a.lastRunAgoMin || 0) * 60000
+      : prevRunAt(a.schedule, now);
+    return {
+      id: a.id, cloud: a.cloud, acct: a.acct || null, cred: a.cred, regions: a.regions,
+      name: `${a.cloud} ${a.acct || 'account'}`,
+      scope: `Read-only · ${a.regions} ${a.regions === 1 ? 'region' : 'regions'}`,
+      schedule, lastRun, nextRun: nextRunAt(schedule, now),
+    };
+  });
+}

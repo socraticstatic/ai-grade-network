@@ -36,10 +36,16 @@ const REG = (cloud, region, wl, priv, ramp, pub, fab, tags, rel, x) => ({ cloud,
 export const ESTATES = {
   empty: {
     id: 'empty', name: 'Meridian Logistics', stage: 'empty', clouds: 0, regions: 0, workloads: 0, sites: [], regionsList: [], regionsExtra: 0, privatePct: 0,
+    accounts: [],
     attachedRegions: 0, policiesEnforced: 0, policiesAuthored: 0, observedPct: 0, savedMo: 0, fabricAttachPct: 0, tags: 0, findings: [], arcs: [], buckets: [], policies: [],
   },
   partial: {
     id: 'partial', name: 'Acme Corp', stage: 'partial', clouds: 3, regions: 12, workloads: 322, privatePct: 40, attachedRegions: 5, policiesEnforced: 4, policiesAuthored: 7, observedPct: 61, savedMo: 36000, fabricAttachPct: 38, tags: 14,
+    accounts: [
+      { id: 'acc-aws', cloud: 'AWS', acct: null, cred: 'Cross-account role', regions: 3, schedule: { kind: 'nightly', at: '02:00' } },
+      { id: 'acc-azure', cloud: 'Azure', acct: 'sub 7f3a-…-21c4', cred: 'Service principal', regions: 2, schedule: { kind: 'nightly', at: '02:00' } },
+      { id: 'acc-gcp', cloud: 'GCP', acct: null, cred: 'Service account', regions: 2, schedule: { kind: 'nightly', at: '02:00' } },
+    ],
     sites: [
       { name: 'Dallas DC1', cls: 'Data center', access: 'AVPN (MPLS VPN)', priv: true, metro: 'Dallas' },
       { name: 'Atlanta DC2', cls: 'Data center', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Atlanta' },
@@ -85,6 +91,12 @@ export const ESTATES = {
   },
   mature: {
     id: 'mature', name: 'DataFlow Systems', stage: 'mature', clouds: 4, regions: 18, workloads: 940, privatePct: 86, attachedRegions: 16, policiesEnforced: 14, policiesAuthored: 16, observedPct: 92, savedMo: 61400, fabricAttachPct: 78, tags: 31,
+    accounts: [
+      { id: 'acc-aws', cloud: 'AWS', acct: 'acct 4102-8837-5510', cred: 'Cross-account role', regions: 4, schedule: { kind: 'nightly', at: '02:00' } },
+      { id: 'acc-azure', cloud: 'Azure', acct: 'sub 7f3a-…-21c4', cred: 'Service principal', regions: 2, schedule: { kind: 'nightly', at: '02:00' } },
+      { id: 'acc-gcp', cloud: 'GCP', acct: null, cred: 'Service account', regions: 1, schedule: { kind: 'hours', n: 6 } },
+      { id: 'acc-coreweave', cloud: 'CoreWeave', acct: null, cred: 'API key', regions: 1, schedule: { kind: 'weekly', day: 0, at: '03:00' } },
+    ],
     sites: [
       { name: 'Ashburn DC', cls: 'Data center', access: 'AVPN (MPLS VPN)', priv: true, metro: 'Ashburn' },
       { name: 'San Jose DC', cls: 'Data center', access: 'AVPN (MPLS VPN)', priv: true, metro: 'San Jose' },
@@ -144,6 +156,11 @@ export const ESTATES = {
   },
   trust: {
     id: 'trust', name: 'Meridian Networks', stage: 'partial', clouds: 3, regions: 14, workloads: 2860, sitesCount: 4120, privatePct: 52, attachedRegions: 8, policiesEnforced: 9, policiesAuthored: 15, observedPct: 58, savedMo: 148000, fabricAttachPct: 61, tags: 42,
+    accounts: [
+      { id: 'acc-aws', cloud: 'AWS', acct: 'acct 6620-1194-3308', cred: 'Cross-account role', regions: 3, schedule: { kind: 'nightly', at: '02:00' } },
+      { id: 'acc-azure', cloud: 'Azure', acct: 'sub 0c9e-…-88b1', cred: 'Service principal', regions: 2, schedule: { kind: 'hours', n: 12 } },
+      { id: 'acc-gcp', cloud: 'GCP', acct: null, cred: 'Service account', regions: 1, schedule: { kind: 'manual' }, lastRunAgoMin: 2760 },
+    ],
     sites: [
       { name: 'Data centers (6)', cls: 'Data center', access: 'AVPN (MPLS VPN)', priv: true, metro: 'Various', rollup: true },
       { name: 'Regional hubs (24)', cls: 'Hub', access: 'AVPN (MPLS VPN)', priv: true, metro: 'Various', rollup: true },

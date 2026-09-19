@@ -100,3 +100,64 @@ test('the labels say the fewest true words', () => {
   assert.equal(nextLabel({ kind: 'weekly', day: 0, at: '03:00' }, T('2026-09-20T03:00:00Z'), NOW), 'Sundays at 03:00');
   assert.equal(nextLabel({ kind: 'hours', n: 6 }, T('2026-09-17T12:00:00Z'), NOW), 'in 3h');
 });
+
+import * as D from '../naas-data.js';
+import { accountsAt } from '../naas-schedule.js';
+
+test('every estate carries accounts, and every seeded cadence is one a select offers', () => {
+  assert.deepEqual(D.ESTATES.empty.accounts, []);
+  for (const id of ['partial', 'mature', 'trust']) {
+    const accts = D.ESTATES[id].accounts;
+    assert.ok(accts.length >= 3, id);
+    assert.equal(new Set(accts.map(a => a.id)).size, accts.length, id + ': ids are unique');
+    for (const a of accts) {
+      assert.notEqual(scheduleId(a.schedule), '', `${id}/${a.id} uses a cadence no select offers`);
+      assert.ok(a.cred && a.cloud, `${id}/${a.id}`);
+    }
+  }
+});
+
+test('an account claims exactly the regions its cloud has', () => {
+  for (const id of ['partial', 'mature', 'trust']) {
+    const est = D.ESTATES[id];
+    for (const a of est.accounts) {
+      const real = est.regionsList.filter(r => r.cloud === a.cloud).length;
+      assert.equal(a.regions, real, `${id}/${a.id}`);
+    }
+  }
+});
+
+test('hydrating an account gives it a last scan behind us and a next scan ahead of us', () => {
+  for (const id of ['partial', 'mature', 'trust']) {
+    const rows = accountsAt(D.ESTATES[id], NOW);
+    assert.equal(rows.length, D.ESTATES[id].accounts.length);
+    for (const a of rows) {
+      assert.ok(a.lastRun <= NOW, `${id}/${a.id} last scan is in the future`);
+      if (a.schedule.kind === 'manual') assert.equal(a.nextRun, null);
+      else assert.ok(a.nextRun > NOW, `${id}/${a.id} next scan is in the past`);
+      assert.match(a.scope, /^Read-only · \d+ regions?$/);
+    }
+  }
+});
+
+test('an override moves the next scan and a run record moves the last scan', () => {
+  const est = D.ESTATES.trust;
+  const id = 'acc-aws';                     // nightly at 02:00
+  const other = 'acc-azure';                // every 12 hours
+  const base = accountsAt(est, NOW);
+  const baseOne = (rows, k) => rows.find(a => a.id === k);
+
+  const over = baseOne(accountsAt(est, NOW, { overrides: { [id]: { kind: 'hours', n: 6 } } }), id);
+  assert.notEqual(over.nextRun, baseOne(base, id).nextRun);
+  assert.equal(over.nextRun, T('2026-09-17T12:00:00Z'));
+  assert.equal(over.lastRun, baseOne(base, id).lastRun, 'changing the cadence does not rewrite history');
+
+  const ran = accountsAt(est, NOW, { runs: [{ at: NOW - 60000, accountIds: [id] }] });
+  assert.equal(baseOne(ran, id).lastRun, NOW - 60000);
+  assert.equal(baseOne(ran, other).lastRun, baseOne(base, other).lastRun, 'a run only touches the accounts it covered');
+});
+
+test('the empty estate hydrates to nothing rather than throwing', () => {
+  assert.deepEqual(accountsAt(D.ESTATES.empty, NOW), []);
+  assert.deepEqual(accountsAt({}, NOW), []);
+});
