@@ -16,6 +16,7 @@ import * as F from './naas-flowmap.js';
 import * as OD from './naas-observe-dash.js';
 import * as FB from './naas-fabric.js';
 import * as V from './naas-volume.js';
+import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product' };
@@ -60,7 +61,6 @@ export function init(c) {
   }
   try { const h = localStorage.getItem('naas.headOpen'); if (h === 'false') c.setState({ headOpen: false }); } catch (e) {}
   try { const h = localStorage.getItem('naas.hero'); if (h) c.setState({ heroOpen: JSON.parse(h) }); } catch (e) {}
-  window.__naasLoaded = window.__naasLoaded || Date.now();
   const q = new URLSearchParams(location.search);
   const hash = (location.hash || '').replace('#', '').split('/');
   const patch = {};
@@ -160,6 +160,30 @@ export function vals(c) {
   const conns = X.connections(est0, obAll);
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, ob), ...est0.findings] };
   const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4 && est.stage !== 'empty') startScan(c); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], fabDrill: [], laneFocus: false, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); if (screen === 's1') startScan(c); };
+  // Scheduled auto-discovery (wave 4). One clock, one account list and one run
+  // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
+  // so the demo picker cannot carry one estate's cadence onto another. Neither
+  // of them is s.obWindow, which already means two things.
+  const nowMs = Date.now();
+  const schedOver = (s.acctSched && s.acctSched.est === est.id) ? s.acctSched.map : {};
+  const myRuns = (s.scanRuns && s.scanRuns.est === est.id) ? s.scanRuns.list : [];
+  const schedView = SCH.scheduleView(est, nowMs, { overrides: schedOver, runs: myRuns });
+  const sched = {
+    ...schedView,
+    setSchedule: (ids) => (e) => {
+      const next = SCH.scheduleById(e.target.value);
+      if (!next) return;                       // the estate-wide select's "Mixed" entry
+      const map = { ...schedOver };
+      ids.forEach(id => { map[id] = next; });
+      c.setState({ acctSched: { est: est.id, map } });
+    },
+    runNow: (ids, trigger) => () => {
+      if (!ids.length) return;
+      const rec = SCH.runRecord({ at: Date.now(), trigger: trigger || 'manual', accountIds: ids, est });
+      c.setState({ scanRuns: { est: est.id, list: [rec, ...myRuns] } });
+      startScan(c);
+    },
+  };
   const isEmpty = est.stage === 'empty', isMature = est.stage === 'mature', isPartial = est.stage === 'partial';
   const layer = D.LAYERS.find(l => l.id === s.layer) || D.LAYERS[1];
   const layerProducts = (id) => D.CATALOG.filter(p => p.layer === id);
@@ -514,6 +538,21 @@ export function vals(c) {
     { label: 'Checking on-ramp coverage per metro', src: '41 metros' },
     { label: 'Joining utilization and egress spend', src: 'last 30 days' },
   ].map((st, i) => ({ ...st, key: 'sc' + i, done: s.scanStep > i, active: s.scanStep === i, color: s.scanStep > i ? 'var(--success)' : s.scanStep === i ? 'var(--cta)' : 'var(--border-primary)', textColor: s.scanStep >= i ? 'var(--text-heading)' : 'var(--text-disabled)' }));
+  // The app promised "refreshed daily" three times during onboarding and then
+  // never mentioned it again. The promise is now a choice, made where the scan
+  // ends, and the three intake strings read it back.
+  const intakeCadence = s.intakeCadence || 'nightly';
+  const intakeSch = SCH.scheduleById(intakeCadence) || SCH.scheduleById('nightly');
+  const intakeCadenceLabel = SCH.scheduleLabel(intakeSch);
+  const intakeCadenceLower = intakeCadenceLabel.toLowerCase();
+  const cadenceAsk = !!s.cadenceAsk && s.scanStep >= 4;
+  const cadenceAskText = `Discovery runs ${intakeCadenceLower} from now on, read-only, with no change to routing. Change it here, or later from the Accounts card.`;
+  const setIntakeCadence = (e) => set({ intakeCadence: e.target.value });
+  const confirmCadence = () => {
+    const map = {};
+    sched.accounts.forEach(a => { map[a.id] = intakeSch; });
+    set({ acctSched: { est: est.id, map }, cadenceAsk: false });
+  };
   const discoverVerdict = isEmpty ? 'Add a cloud credential or pick an inventory to start.' : `${est.clouds} clouds, ${est.regions} regions, ${est.workloads.toLocaleString('en-US')} workloads. ${est.privatePct}% already reach AT&T privately.`;
   const discoverKpis = isEmpty ? [] : [{ key: 'a', v: est.workloads.toLocaleString('en-US'), l: 'assets discovered', e: `${est.clouds} clouds, ${est.regions} regions` }, { key: 'b', v: `${est.attachedRegions} of ${est.regions}`, l: 'regions attached', e: 'private path to AT&T' }, { key: 'c', v: `${pct(est.attachedRegions, est.regions)}%`, l: 'cloud attach rate', e: 'regions with a private path' }, { key: 'd', v: est.tags, l: 'tags discovered', e: 'from cloud resource tags' }];
   const chipSets = [{ g: 'Region', v: ['US East', 'US West', 'Europe', 'APAC'] }, { g: 'Site class', v: ['Data center', 'Branch', 'Campus'] }, { g: 'Business unit', v: ['Finance', 'Retail', 'Platform'] }, { g: 'Cloud', v: ['AWS', 'Azure', 'GCP'] }, { g: 'Connection type', v: ['NetBond', 'DX', 'ER', 'Internet'] }];
@@ -566,7 +605,7 @@ export function vals(c) {
     goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(cp.outcome ? { compose: { ...cp, step: cp.step || 0 } } : { compose: prefillCompose(est) }) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
     hasTasks: s.submitted, taskCount: 1, showPending, pendingStages, landed: landedAll, notLanded: !landedAll, pendingSub: landedAll ? 'Validated · live. First flow logs are in.' : 'Submitted for approval',
     deliverNow: () => { const cand = (s.compose && s.compose.prefillRegion ? s.compose.prefillRegion.split(' ')[1] : null) || (estRaw.regionsList.find(r => !r.priv) || {}).region; if (!cand) return; c.setState({ landed: cand, layer: 'cloud', tab: 'observe', screen: 's3', events: [...(s.events || []), { key: 'e' + Date.now(), t: new Date().toLocaleTimeString('en-US', { hour12: false }), text: `${cand} validated · live. Hosted VPC on the fabric; first flow logs received; coverage up by one region.` }] }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
-    ...shellVals(s, set, go, est, c),
+    ...shellVals(s, set, go, est, c, sched),
     headOpen: s.headOpen !== false, headClosed: s.headOpen === false, toggleHead: () => { const v = s.headOpen === false; set({ headOpen: v }); try { localStorage.setItem('naas.headOpen', String(v)); } catch (e) {} }, headRot: s.headOpen === false ? 'rotate(-90deg)' : 'rotate(0deg)',
     ...andiVals(s, set, go, est, ob, { conns, floorVerdict, connectVerdict, governVerdict, costVerdict, discoverVerdict, stageKicker, findingCard, sortF, findingsFor, isEmpty, totalSave, persona, personaTab }),
     pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? ob.verdict : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on the fabric · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${est.policiesEnforced} of ${est.policiesAuthored} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
@@ -589,7 +628,7 @@ export function vals(c) {
     })(), clearHover: () => set({ hoverNode: null, hoverRegion: null }), laneY: L.lane.y, laneH: L.lane.h, bandY: L.bandY, bandH: L.bandH, facH: L.H - L.bandY * 2, strataCardH: Math.round(L.bandH / 4) - 12, footY: L.H - 54, footY2: L.H - 48, heroVisible: heroScreen && heroOpen, heroStrip: heroScreen && !heroOpen, heroCanHide: heroScreen && heroOpen && !heroDefault, toggleHero, heroStripText: `${est.attachedRegions} of ${est.regions} regions on the fabric · ${est.regions - est.attachedRegions} on the public internet · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`, inDept, overlayLegend: overlayLegend(s, R), hasOverlay: inDept, scrubT: s.scrubT == null ? 100 : s.scrubT, setScrub: (e) => set({ scrubT: +e.target.value }), showScrub: inDept && s.tab === 'observe', showForecast: inDept && s.tab === 'cost', fcT: s.fcT == null ? 0 : s.fcT, setFc: (e) => set({ fcT: +e.target.value }), fcLabel: (s.fcT || 0) === 0 ? 'today' : '+' + Math.round((s.fcT || 0) * 0.9) + ' days', heroRolled: s.screen === 's0', healthStrip: hp.strip, hasHealth: s.screen !== 's3', healthIncidents: hp.incidents.map((x, i) => ({ ...x, key: 'hi' + i, go: go('s3', { layer: 'cloud', tab: 'observe', mapSel: conns.rows.some(r => r.region === x.region) ? 'cx-' + x.region : null, mapRegion: x.region, panelTab: 'impact' }) })), hasIncidents: hp.incidents.length > 0 && s.screen !== 's3',
     headStart: D.HEADSTART.map(h => ({ ...h, key: h.cat, go: go('s7', { browseCat: h.cat }) })), headStartVerdict: isEmpty ? 'AT&T already sees the metros, clouds and paths you could use. Tell us two things and the store composes the rest.' : `${est.name} is recognized. ${est.clouds} clouds, ${est.regions} regions, ${est.workloads.toLocaleString('en-US')} workloads already visible.`,
     modeTabs: [{ key: 'foryou', label: 'For you', active: !['s7', 's8'].includes(s.screen), click: () => { set({ mode: 'foryou' }); go('s3', { layer: 'cloud', tab: 'connect' })(); } }, { key: 'browse', label: 'Browse the marketplace', active: ['s7', 's8'].includes(s.screen), click: () => { set({ mode: 'browse' }); go('s7')(); } }],
-    intakeOrg: s.intakeOrg, setOrg: (e) => set({ intakeOrg: e.target.value }), intakeSource: s.intakeSource, setSource: (v) => () => set({ intakeSource: v }), srcCredential: s.intakeSource === 'credential', srcInventory: s.intakeSource === 'inventory', intakeProvider: s.intakeProvider, setProvider: (e) => set({ intakeProvider: e.target.value }), startScan: () => { set({ view: 'partial', screen: 's1', scanStep: 0 }); startScan(c); syncHash('s1'); }, credBorder: s.intakeSource === 'credential' ? 'var(--border-active)' : 'var(--border-secondary)', invBorder: s.intakeSource === 'inventory' ? 'var(--border-active)' : 'var(--border-secondary)',
+    intakeOrg: s.intakeOrg, setOrg: (e) => set({ intakeOrg: e.target.value }), intakeSource: s.intakeSource, setSource: (v) => () => set({ intakeSource: v }), srcCredential: s.intakeSource === 'credential', srcInventory: s.intakeSource === 'inventory', intakeProvider: s.intakeProvider, setProvider: (e) => set({ intakeProvider: e.target.value }), startScan: () => { set({ view: 'partial', screen: 's1', scanStep: 0, cadenceAsk: true }); startScan(c); syncHash('s1'); }, credBorder: s.intakeSource === 'credential' ? 'var(--border-active)' : 'var(--border-secondary)', invBorder: s.intakeSource === 'inventory' ? 'var(--border-active)' : 'var(--border-secondary)',
     // hero
     drawer, drawerOpen, openLevel, hasDrawer: drawerOpen, noDrawer: !drawerOpen, andiFabRight: drawerOpen ? '396px' : '16px',
     fabOpen: fabDrill.length > 0, fabClosed: fabDrill.length === 0, sitesDoor, bandDoor, cloudsDoor, fabRows, fabHead, fabUp, fabTrail, hasFabMore: !!(fabHead && fabHead.more), fabMore: fabHead ? fabHead.more : '', openBandLevel: () => openLevel('fabric'), fabHeadY: L.bandY + 8, bandX: L.bandX, bandW: L.bandW, bandLabelX: L.bandX, laneX: L.lane.x, laneW: L.lane.w,
@@ -620,8 +659,8 @@ export function vals(c) {
     // product
     product: productDetail,
     // discover
-    allRegions: est.regionsList, scanSteps, scanLine: s.scanStep < 4 ? `${scanSteps[Math.min(3, s.scanStep)].label} · ${Math.min(4, s.scanStep + 1)} of 4` : '', scanDone: s.scanStep >= 4, scanning: s.scanStep < 4, discoverVerdict, discoverKpis, estateChips, treeOrMap: s.treeOrMap, isTree: s.treeOrMap === 'tree', isMap: s.treeOrMap === 'map', treeBg: s.treeOrMap === 'tree' ? 'var(--bg-accent)' : 'transparent', treeColor: s.treeOrMap === 'tree' ? 'var(--link)' : 'var(--text-body)', mapBg: s.treeOrMap === 'map' ? 'var(--bg-accent)' : 'transparent', mapColor: s.treeOrMap === 'map' ? 'var(--link)' : 'var(--text-body)', showTree: () => set({ treeOrMap: 'tree' }), showMap: () => set({ treeOrMap: 'map' }), tree, mapRows, mapSites, mapH, mapVB: `0 0 1000 ${mapH}`, bigEstate, sitesCountLabel: est.sitesCount ? `${est.sitesCount.toLocaleString('en-US')} sites, grouped` : `${est.sites.length} sites`, chain, chainPolicies, hasChain: !!ow, chainRegion: ow ? `${ow.cloud} ${ow.region}` : '', closeChain: () => set({ openWorkload: null }),
-    ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0),
+    allRegions: est.regionsList, scanSteps, scanLine: s.scanStep < 4 ? `${scanSteps[Math.min(3, s.scanStep)].label} · ${Math.min(4, s.scanStep + 1)} of 4` : '', scanDone: s.scanStep >= 4, scanning: s.scanStep < 4, intakeCadence, setIntakeCadence, intakeCadenceLabel, intakeCadenceLower, cadenceAsk, cadenceAskText, confirmCadence, discoverVerdict, discoverKpis, estateChips, treeOrMap: s.treeOrMap, isTree: s.treeOrMap === 'tree', isMap: s.treeOrMap === 'map', treeBg: s.treeOrMap === 'tree' ? 'var(--bg-accent)' : 'transparent', treeColor: s.treeOrMap === 'tree' ? 'var(--link)' : 'var(--text-body)', mapBg: s.treeOrMap === 'map' ? 'var(--bg-accent)' : 'transparent', mapColor: s.treeOrMap === 'map' ? 'var(--link)' : 'var(--text-body)', showTree: () => set({ treeOrMap: 'tree' }), showMap: () => set({ treeOrMap: 'map' }), tree, mapRows, mapSites, mapH, mapVB: `0 0 1000 ${mapH}`, bigEstate, sitesCountLabel: est.sitesCount ? `${est.sitesCount.toLocaleString('en-US')} sites, grouped` : `${est.sites.length} sites`, chain, chainPolicies, hasChain: !!ow, chainRegion: ow ? `${ow.cloud} ${ow.region}` : '', closeChain: () => set({ openWorkload: null }),
+    ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched),
   };
 }
 
@@ -656,8 +695,13 @@ function syncHash(screen, layer, tab) {
 let scanTimer = null;
 export function startScan(c) {
   clearInterval(scanTimer);
-  c.setState({ scanStep: 0 });
-  scanTimer = setInterval(() => { c.setState(st => { if (st.scanStep >= 4) { clearInterval(scanTimer); return null; } return { scanStep: st.scanStep + 1 }; }); }, 750);
+  c.setState({ scanStep: 0, scanBusy: true });
+  scanTimer = setInterval(() => {
+    c.setState(st => {
+      if (st.scanStep >= 4) { clearInterval(scanTimer); return { scanBusy: false }; }
+      return { scanStep: st.scanStep + 1 };
+    });
+  }, 750);
 }
 
 function levelMapTitle(layer) { return { ai: 'Providers', cloud: 'Regions', net: 'Services by site', transport: 'Sites' }[layer.id]; }
@@ -866,7 +910,7 @@ function prefillAttach(r) {
 function composeFor(go, r) {
   return go('s4', { ...newOrder(prefillAttach(r)) });
 }
-function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0) {
+function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched) {
   const obScope = s.obScope || 'all';
   const egressBase = egressBaseFor(est0, ob);
   const gpw = R.gbPerWlExport(est0, egressBase);
@@ -1039,7 +1083,18 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
       push(24 + i * 133, WHO[i % 3], r.degraded ? 'Opened an impact view' : 'Ordered a port', `${r.cloud} ${r.region}`, r.degraded ? `${r.wl} workloads behind a degraded link` : `${r.ports} × 10 Gbps in place, ${r.pct}% used`, true);
     });
     (s.steered || []).forEach((f, i) => push(8 + i * 47, WHO[i % 3], 'Steered a flow', String(f), 'moved off the public path', true));
-    push(4, 'svc-terraform', 'Ran re-discovery', 'Whole estate', `${[...new Set((est.regionsList || []).map(r => r.cloud))].length} accounts, ${(est.regionsList || []).length} regions scanned`, true);
+    (sched.runs || []).forEach(r => {
+      const mins = Math.max(0, Math.round((sched.nowMs - r.at) / 60000));
+      const how = r.trigger === 'manual' ? 'on demand' : `on schedule at ${SCH.clockLabel(r.at)}`;
+      const bits = [
+        `${r.accounts} ${r.accounts === 1 ? 'account' : 'accounts'}`,
+        `${r.regions} ${r.regions === 1 ? 'region' : 'regions'}`,
+      ];
+      if (r.sites) bits.push(`${r.sites.toLocaleString('en-US')} ${r.sites === 1 ? 'site' : 'sites'}`);
+      push(mins, r.trigger === 'manual' ? WHO[0] : 'svc-terraform', 'Ran re-discovery',
+        r.accounts === 1 ? 'One account' : 'Whole estate',
+        `${bits.join(', ')} · ${how}`, r.ok);
+    });
     push(151, WHO[1], 'Changed a scope', 'AWS account 4102-8837-5510', 'read-only, all regions', true);
     push(207, WHO[2], 'Export denied', 'Flow records, last 30 days', 'no export role on this account', false);
     return out.sort((a, b) => a.mins - b.mins);
@@ -1506,20 +1561,46 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
       : 'All flows · coloured by state',
     mapFilterCount: mapFiltersOn ? `${mapFiltersOn} filter${mapFiltersOn === 1 ? '' : 's'}` : 'No filters',
     mapFilterToggleWord: mapFiltersOpen ? 'Hide' : 'Show', mapZoomLabel: map.zoom ? `zoomed ×${map.zf.toFixed(1)}` : '', hasMapZoom: !!map.zoom, mapSub: `${map.total.toFixed(1)} Gbps in the last 24h · what the sites send, ${MIX.crossed > 0.001 ? Math.round(map.total / MIX.crossed * 100) : 0}% of everything that crosses a mid mile · ${Math.round(map.fabV / (map.total || 1) * 100)}% of it on the fabric${mapRegion ? ' · filtered to ' + mapRegion : ''}${mapT != null ? ' · ' + Math.round(24 - mapT * 24) + 'h ago' : ''}`, mapTrail, hasMapTrail: mapTrail.length > 0, mapUp: climb, canClimb: !!mapSel, mapKey, modes, hasMapRegion: !!mapRegion, mapRegion: mapRegion || '', clearMapRegion: () => set({ mapRegion: null }), mapT: mapT == null ? 100 : Math.round(mapT * 100), setMapT: (e) => set({ mapT: +e.target.value / 100 }), mapPlaying: !!s.mapPlay, playLabel: s.mapPlay ? '❚❚' : '▶', playMap, resetMapT: () => set({ mapT: null }), replayOpen: !!s.replayOpen, toggleReplay: () => set({ replayOpen: !s.replayOpen, mapPlay: false, mapT: s.replayOpen ? null : s.mapT }), wholeWindow: () => set({ mapT: null, mapPlay: false }), gaugeRows, hasGauges: gaugeRows.length > 0, panel, hasPanel: !!panel, hasPanelOverlay: !!panel, drawerRight: panel ? '380px' : '0px', noPanel: !panel, dashCols: 'minmax(0,1fr)', mapJumpOpen: !!s.mapJumpOpen, mapJumpQ: s.mapJumpQ || '', setMapJumpQ: (e) => set({ mapJumpQ: e.target.value }), mapJumpKey: (e) => { if (e.key === 'Enter') jumpTo(s.mapJumpQ); if (e.key === 'Escape') set({ mapJumpOpen: false }); }, openJump: () => set({ mapJumpOpen: !s.mapJumpOpen }), pins: (s.mapPins || []).map(k => ({ key: k, name: (map.nodes.find(x => x.key === k) || { name: k }).name, v: ((map.nodes.find(x => x.key === k) || { v: 0 }).v).toFixed(1) + ' Gbps', unpin: () => set({ mapPins: (s.mapPins || []).filter(x => x !== k) }) })), hasPins: (s.mapPins || []).length > 0 };
-  // Sources (Micah, 14:33: "where can I connect to my current ecosystem?"): what feeds the picture, and the door to add more.
-  const byCloud = {}; est0.regionsList.forEach(r => { const c = byCloud[r.cloud] = byCloud[r.cloud] || { regions: 0, acct: null }; c.regions++; if (r.acct && !c.acct) c.acct = r.acct; });
-  const rescanNow = () => { try { window.__naasLoaded = Date.now(); } catch (e) {} set({ scanStep: 0 }); };
-  const scanAgo = (k) => ['4 min ago', '18 min ago', '1 h ago', '3 h ago'][k % 4];
+  // Sources (Micah, 14:33: "where can I connect to my current ecosystem?"): what feeds the
+  // picture, and the door to add more. The cloud rows are a read of est.accounts through
+  // scheduleView; the AT&T rows are inventory AT&T keeps live, not a credential the customer
+  // schedules, so they carry no cadence control.
+  const acctRow = (a) => ({
+    key: 'src:' + a.id, name: a.name, kind: a.cloud, cred: a.cred, scope: a.scope,
+    seen: SCH.agoLabel(a.lastRun, sched.nowMs),
+    nextSeen: SCH.nextLabel(a.schedule, a.nextRun, sched.nowMs),
+    cadenceValue: SCH.scheduleId(a.schedule), cadenceLabel: SCH.scheduleLabel(a.schedule),
+    setCadence: sched.setSchedule([a.id]), canSchedule: true, noSchedule: false,
+    sub: `${a.scope} · ${SCH.scheduleLabel(a.schedule).toLowerCase()}`,
+    state: 'Connected', dot: 'var(--success)', rescan: sched.runNow([a.id], 'manual'),
+  });
+  const attRow = (key, name, scope, sub) => ({
+    key, name, kind: 'AT&T', cred: 'AT&T inventory', scope, seen: 'live', nextSeen: 'continuous',
+    cadenceValue: '', cadenceLabel: 'AT&T inventory', setCadence: () => {},
+    canSchedule: false, noSchedule: true, sub, state: 'Connected', dot: 'var(--success)',
+    rescan: sched.runNow(sched.accounts.map(a => a.id), 'manual'),
+  });
+  const connWord = conns.total === 1 ? 'connection' : 'connections';
+  const siteN = (est0.sitesCount || est0.sites.length).toLocaleString('en-US');
   const rawSources = [
-    ...Object.entries(byCloud).map(([cloud, c], i) => ({ key: 'src:' + cloud, name: `${cloud} ${c.acct ? c.acct : 'account'}`, kind: cloud, cred: cloud === 'Azure' ? 'Service principal' : cloud === 'Google Cloud' ? 'Service account' : 'Cross-account role', scope: `Read-only · ${c.regions} ${c.regions === 1 ? 'region' : 'regions'}`, seen: scanAgo(i), sub: `${c.regions} ${c.regions === 1 ? 'region' : 'regions'} · read-only · daily refresh`, state: 'Connected', dot: 'var(--success)' })),
-    ...(conns.total ? [{ key: 'src:netbond', name: 'NetBond inventory', kind: 'AT&T', cred: 'AT&T inventory', scope: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, seen: 'live', sub: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'} · live`, state: 'Connected', dot: 'var(--success)' }] : []),
-    ...(est0.sites.length ? [{ key: 'src:sites', name: 'AVPN and access sites', kind: 'AT&T', cred: 'AT&T inventory', scope: `${(est0.sitesCount || est0.sites.length).toLocaleString('en-US')} sites`, seen: 'live', sub: `${(est0.sitesCount || est0.sites.length).toLocaleString('en-US')} sites · from AT&T inventory`, state: 'Connected', dot: 'var(--success)' }] : []),
-    ...((s.addedSources || []).map((k, i) => ({ key: 'src:new' + i, name: k, kind: k, cred: 'Pending', scope: 'Read-only, all regions', seen: 'never', sub: 'added · queued for the next scan', state: 'Scanning', dot: 'var(--warning)' }))),
+    ...sched.accounts.map(acctRow),
+    ...(conns.total ? [attRow('src:netbond', 'NetBond inventory', `${conns.total} ${connWord}`, `${conns.total} ${connWord} · live`)] : []),
+    ...(est0.sites.length ? [attRow('src:sites', 'AVPN and access sites', `${siteN} sites`, `${siteN} sites · from AT&T inventory`)] : []),
+    ...((s.addedSources || []).map((k, i) => ({
+      key: 'src:new' + i, name: k, kind: k, cred: 'Pending', scope: 'Read-only, all regions',
+      seen: 'never', nextSeen: 'at the next scan', cadenceValue: '', cadenceLabel: 'Pending',
+      setCadence: () => {}, canSchedule: false, noSchedule: true,
+      sub: 'added · queued for the next scan', state: 'Scanning', dot: 'var(--warning)',
+      rescan: sched.runNow(sched.accounts.map(a => a.id), 'manual'),
+    }))),
   ];
-  const sources = rawSources.map(r => ({ ...r, rescan: rescanNow, edit: () => set({ addSourceOpen: true, addSourceKind: r.kind }), remove: () => set({ addedSources: (s.addedSources || []).filter(x => 'src:new' + (s.addedSources || []).indexOf(x) !== r.key) }), canRemove: r.key.startsWith('src:new') }));
+  const sources = rawSources.map(r => ({ ...r,
+    edit: () => set({ addSourceOpen: true, addSourceKind: r.kind }),
+    remove: () => set({ addedSources: (s.addedSources || []).filter(x => 'src:new' + (s.addedSources || []).indexOf(x) !== r.key) }),
+    canRemove: r.key.startsWith('src:new') }));
   const credScanned = sources.filter(x => x.state === 'Connected').length;
   const gapVals = { gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
-  const obX = { sources, sourcesSub: `${credScanned} of ${sources.length} credentials scanning · everything above is drawn from these`, addSourceOpen: !!s.addSourceOpen, toggleAddSource: () => set({ addSourceOpen: !s.addSourceOpen }), addSourceLabel: s.addSourceOpen ? 'Close' : 'Add a source', addSourceKind: s.addSourceKind || 'AWS account', setAddSourceKind: (e) => set({ addSourceKind: e.target.value }), addSource: () => set({ addedSources: [...(s.addedSources || []), s.addSourceKind || 'AWS account'], addSourceOpen: false }), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage === 'perf', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
+  const obX = { sources, sourcesSub: `${credScanned} of ${sources.length} credentials scanning · ${sched.cadence.empty ? 'nothing on a schedule yet' : sched.cadence.label.toLowerCase()} · everything above is drawn from these`, addSourceOpen: !!s.addSourceOpen, toggleAddSource: () => set({ addSourceOpen: !s.addSourceOpen }), addSourceLabel: s.addSourceOpen ? 'Close' : 'Add a source', addSourceKind: s.addSourceKind || 'AWS account', setAddSourceKind: (e) => set({ addSourceKind: e.target.value }), addSource: () => set({ addedSources: [...(s.addedSources || []), s.addSourceKind || 'AWS account'], addSourceOpen: false }), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage === 'perf', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
   return {
     invTree: s.tagView ? tagTree(inv, tree, chip) : tree, tagView: !!s.tagView, cloudView: !s.tagView, toggleTagView: () => set({ tagView: !s.tagView }), tagViewUb: s.tagView ? 'var(--cta)' : 'transparent', tagViewColor: s.tagView ? 'var(--link)' : 'var(--text-body)', cloudViewUb: !s.tagView ? 'var(--cta)' : 'transparent', cloudViewColor: !s.tagView ? 'var(--link)' : 'var(--text-body)', hasTree: tree.length > 0, invStats: [{ key: 's', v: stats.sites, l: 'sites' }, { key: 'c', v: stats.clouds, l: 'clouds' }, { key: 'r', v: stats.regions, l: 'regions' }, { key: 'w', v: stats.workloads.toLocaleString('en-US'), l: 'workloads' }, { key: 'a', v: stats.attached, l: 'attached' }, { key: 'e', v: stats.exposed, l: 'exposed' }],
     expandAll: () => set({ inv: { ...openMap, ...Object.fromEntries(openKeys.map(k => [k, true])) } }), collapseAll: () => set({ inv: {} }), collapsedLabel: Object.values(openMap).some(Boolean) ? 'Expanded view' : 'Collapsed view',
@@ -1719,9 +1800,21 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
 
 
 // ---------- Shell: elevator, top tabs, rail ----------
-function shellVals(s, set, go, est, c) {
+function shellVals(s, set, go, est, c, sched) {
   const dark = s.theme === 'dark';
   const iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
+  // Scheduled discovery, read once for the title row and the rail.
+  const schedAcctIds = sched.accounts.map(a => a.id);
+  const nextWord = SCH.nextLabel(sched.nextSchedule, sched.nextAt, sched.nowMs);
+  const scannedWord = SCH.agoLabel(sched.lastRun ? sched.lastRun.at : null, sched.nowMs);
+  const schedLine = s.scanBusy ? 'Scanning…'
+    : sched.cadence.empty ? 'No accounts connected yet'
+    : `Scanned ${scannedWord} · next ${nextWord}`;
+  const schedTitle = sched.cadence.empty
+    ? 'Connect a cloud account to put discovery on a schedule'
+    : sched.accounts.map(a => `${a.name}: ${SCH.scheduleLabel(a.schedule)}`).join(' · ');
+  const cadenceValue = sched.cadence.id;
+  const setCadence = sched.setSchedule(schedAcctIds);
   const wide = typeof window !== 'undefined' ? window.innerWidth >= 1440 : true;
   // Closed by default (Micah, 13:30); opens from the header button or any Ask Andi door.
   const andiOpen = !!s.andiOpen;
@@ -1829,16 +1922,18 @@ function shellVals(s, set, go, est, c) {
       bg: on ? 'var(--sidebar-accent)' : 'transparent', color: on ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: on ? '8px' : '4px' };
   });
   const hasSubNav = false;
+  // The rail carries the cadence with no new markup: item() already takes a sub.
+  const railSub = { 'sec-accounts': sched.cadence.empty ? '' : `Next scan ${nextWord}` };
   const railGroups = (() => {
         // Their rail, our destinations. Home on top, then a bold group label
         // per verb over the very rows the sub-nav already carried. Nothing
         // moves, nothing is added, nothing is dropped.
         const TABS = [['connect', 'Discover'], ['observe', 'Observe'], ['govern', 'Govern'], ['cost', 'Cost']];
-        const row = (tab, id, label, ic) => {
+        const row = (tab, id, label, ic, sub) => {
           const isNav = id.startsWith('@');
           const cur = isNav ? s.screen === 's1' : (onS3('cloud', tab) && activeSec === id);
           // A section sits one step in from the category that owns it.
-          return { ...item(label, ic, isNav ? go('s1') : () => { go('s3', { layer: 'cloud', tab })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); }, cur), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
+          return { ...item(label, ic, isNav ? go('s1') : () => { go('s3', { layer: 'cloud', tab })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); }, cur, false, sub), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };
         const goTabRow = (tab) => tab === 'observe'
           ? () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow' }); }
@@ -1857,7 +1952,7 @@ function shellVals(s, set, go, est, c) {
             return {
               key: tab, hasTitle: true, title, titleGo: () => { goTabRow(tab)(); set(close); }, titleCur: here,
               // Every category shows its sections all the time. The rail scrolls.
-              items: (SECTIONS[tab] || []).map(([id, label, ic]) => row(tab, id, label, ic)),
+              items: (SECTIONS[tab] || []).map(([id, label, ic]) => row(tab, id, label, ic, railSub[id] || '')),
             };
           }),
         ];
@@ -1865,14 +1960,21 @@ function shellVals(s, set, go, est, c) {
   const pageTitle = s.screen === 's1' ? 'Explore 360' : s.screen === 's4' ? 'Compose' : s.screen === 's5' ? 'Recommend' : s.screen === 's6' ? 'Review order' : storeCur ? 'Marketplace'
     : s.screen === 's3' ? ({ connect: 'Discover', govern: 'Govern', observe: (obTabNow === logsTab ? 'Observe · Logs' : 'Observe'), cost: 'Cost' }[s.tab] || 'Discover')
     : 'Discover';
-  const loadedAt = (typeof window !== 'undefined' && window.__naasLoaded) || Date.now();
-  const agoMin = Math.max(0, Math.round((Date.now() - loadedAt) / 60000));
-  const updatedAgo = agoMin < 1 ? 'just now' : agoMin < 60 ? `${agoMin}m ago` : `${Math.round(agoMin / 60)}h ago`;
-  const rescan = () => { try { window.__naasLoaded = Date.now(); } catch (e) {} if (s.screen === 's1') { set({ scanStep: 0 }); startScan(c); } else set({ scanStep: s.scanStep }); };
-  const credsN = (est.clouds || []).length;
+  const rescan = sched.runNow(schedAcctIds, 'manual');
+  const credsN = sched.accounts.length;
   const credsLabel = credsN ? `Manage credentials (${credsN})` : 'Manage credentials';
-  const credsTitle = credsN ? `${credsN} connected accounts; this picture is what they can see` : 'Connect a cloud account to scan it';
-  const manageCreds = () => { go('s0')(); set(close); };
+  const credsTitle = credsN
+    ? `${credsN} connected ${credsN === 1 ? 'account' : 'accounts'}; this picture is what they can see`
+    : 'Connect a cloud account to scan it';
+  // Manage credentials went to the empty-estate front door, which is not where
+  // the accounts are. It scrolls to the Accounts card by the same mechanism the
+  // rail already uses (naas-app.js:1576), and only falls back to s0 when there
+  // is genuinely nothing to scroll to.
+  const manageCreds = () => {
+    if (!credsN) { go('s0')(); set(close); return; }
+    go('s3', { layer: 'cloud', tab: 'connect' })();
+    set({ ...close, scrollToSec: 'sec-accounts', scrollNonce: (s.scrollNonce || 0) + 1 });
+  };
   const windowLabel = winLabelOf(s);
   const rangeValue = s.obWindow || '30d';
   const setRange = (e) => set({ obWindow: e.target.value });
@@ -1884,7 +1986,7 @@ function shellVals(s, set, go, est, c) {
     pills, railGroups, subNav, hasSubNav, pageTitle, credsLabel, credsTitle, manageCreds, showPageTitle, rangeValue, setRange, bellLabel, buildLabel: (typeof window !== 'undefined' && window.__naasVersion) ? `v${window.__naasVersion.build} · ${window.__naasVersion.date}` : '', hasBuildLabel: !!(typeof window !== 'undefined' && window.__naasVersion), railCollapsed, railExpanded: !railCollapsed, railToggleTitle: railCollapsed ? 'Expand navigation' : 'Collapse navigation', iconAndi: 'brand/andi-symbol.svg', iconCalendar: iconDir + '/checklist.svg', goBrowseClose: () => { go('s7')(); set({ demoOpen: false }); },
     topTabs, layerSubtitle, elevatorOpen: !!s.elevatorOpen, toggleElevator: () => set({ elevatorOpen: !s.elevatorOpen }), closeElevator: () => set(close), chevronRot: s.elevatorOpen ? 'rotate(180deg)' : 'rotate(0deg)', elevator,
     goDiscoverClose: goTab('s1'), goHomeClose: goTab('s3', { layer: 'cloud', tab: 'connect' }),
-    showRail, showHeader, updatedAgo, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
+    showRail, showHeader, schedLine, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
   };
 }
 

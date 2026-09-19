@@ -43,16 +43,45 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // cloud trail's own crumb button), +2 span (the cloud trail's wrapping span
 // and its `·` separator span). sc-if 295 -> 297, sc-for 173 -> 174,
 // button 250 -> 251, span 638 -> 640.
+// Wave 4 Task 5 replaces the title row's "Updated Xm ago" button with a
+// single label that IS the cadence control (the Re-discover button beside
+// it is untouched, unchanged since before this task): the visible
+// "Scanned … · next …" text and a link-coloured caret sit inside the label
+// as two spans, with a transparent <select> absolutely positioned over the
+// whole label so a click anywhere on the phrase opens the cadence menu
+// (fix round 1 - the brief's first cut drew the phrase and the picker as
+// separate elements, which widened the controls group enough to wrap the
+// verdict line on Observe and Cost). Net -1 button (the "Updated" button
+// is gone, nothing replaces it as a button), +2 span landing inside the
+// one +1 label (its own opening <label> is new; the select and its six
+// options are not pinned here). button 251 -> 250, span 640 -> 641,
+// label 26 -> 27.
+// Wave 4 Task 6 gives the Accounts card a Next scan column and a per-row
+// cadence cell: two new header cells (div +2) and, per body row, a Next
+// scan div plus a cadence cell div holding two sc-ifs (canSchedule,
+// noSchedule) - a five-option <select> for the scheduled case and a
+// fallback <span> for the AT&T inventory rows (select and option are not
+// pinned). div 858 -> 862, sc-if 297 -> 299, span 641 -> 642.
+// Wave 4 Task 9 closes the loop at intake: the end-of-scan "Keep it current"
+// card is a new sc-if wrapping an fx-alert - the wrapper div, the
+// fx-alert-body div, its text-column div, and the fx-alert-title and
+// fx-alert-text divs inside that (div +5); the alert icon span and the
+// cadence field's fx-label span (span +2); the fx-filter label around the
+// cadence field (label +1); a five-option <select> for the cadence picker
+// (select and option are not pinned); and the "Keep this cadence" button
+// (button +1). The three "refreshed daily" copy swaps add and remove no
+// tags. div 862 -> 867, span 642 -> 644, sc-if 299 -> 300, label 27 -> 28,
+// button 250 -> 251.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 858],
-    ['span', /<span\b/g, /<\/span>/g, 640],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 297],
+    ['div', /<div\b/g, /<\/div>/g, 867],
+    ['span', /<span\b/g, /<\/span>/g, 644],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 300],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 174],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 251],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
-    ['label', /<label\b/g, /<\/label>/g, 26],
+    ['label', /<label\b/g, /<\/label>/g, 28],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);
