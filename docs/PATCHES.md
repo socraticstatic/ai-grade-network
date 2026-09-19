@@ -365,3 +365,50 @@ Impact · Records · Actions, with the drill trail). No verdict sentences, no ne
   latency, state, traffic, regions reached, discovered), Paths (every region with the hops,
   latency and fabric or public), Records, Actions (Attach or Add a second path, Run a failover
   test, Author a policy for the class). Overview also lists what the site talks to.
+
+## Wave 3: the small end of the drill (2026-09-17)
+
+A fifth estate, `small` - Trinity Supply Co., one cloud, two AWS regions, two
+sites, twenty workloads, nothing attached. It is in `VIEWS` as **Small business**
+between New customer and Growing. The Estate `<select>` duplicates `VIEWS` as
+literal markup, because `sc-for` cannot live inside a `<select>` any more than
+inside a `<table>`, so a test reads the file and holds the two together.
+
+`?estate=` now names an estate on any view. It used to be read only inside the
+`live` branch of `estateFor`, so `?estate=meridian` alone showed the default.
+Picking an estate by hand clears the override.
+
+**The picture is sized to the estate.** `heroLayout` was a fixed 1392×560 with a
+396px band and the Internet row floored at y=380, so a two-site estate got a
+canvas that was 88% empty. `H`, `bandH` and the internet floor now derive from
+the root row counts: `H = 28 + bandH + 16 + 76 + 44` and the floor is
+`lane.y - 60`, which reproduce 560 and 380 exactly at a full band. The band's
+floor is four strata of 84px, the stratum card's own content height, and below
+that the card closes its padding and gaps rather than clipping its third line.
+The measurement reads the root rows, never the drilled ones, so the canvas never
+resizes under a click. `partial`, `mature` and `trust` all clamp to the full band,
+so every number they produce is byte-identical to the old function's, at root and
+at every drill depth.
+
+**Three cold-start defects.** The fabric band opened to an empty blue box with
+nothing attached; it now opens to what is missing and the Attach door, and the
+stratum stays clickable because the four layers are the offer a cold customer is
+being shown. `launchCards` made Observe the "Start here · you are connected" card
+for any non-empty estate, over "0 of 0 connections · healthy · 0.0 Gbps on the
+fabric"; cold is now "no private region", counted the way `connections()` and
+`facilities()` already count it. Explore 360 ran a fake three-second scan on the
+empty estate; the guard the author intended was written one clause earlier on the
+same line and is now a named `shouldScan`, behind a `runScan` that lands the
+skipped case on step 4, the scan is Discover's loading state, and the body at
+`html:582` is gated on `scanDone`, so not scanning and not finishing would have
+left the screen in its skeleton forever.
+
+**Singular and plural.** "1 clouds" on the small estate, and "1 ports · ER" on the
+Virginia facility of `?view=partial`, which has been shipping. Counts go through
+`plural()`. The live site of that copy was `costVerdict` in `naas-verdicts.js`;
+the `naas-app.js` twin is computed and bound nowhere.
+
+Tests: 235 → 249. New coverage for `heroLayout` on the empty estate, on zero sites,
+on one site and on one region; for `fabricRows` on a zero-facility estate; for
+`estateFor`, `shouldScan` and `runScan`; and for the big estates' canvas, which had
+no pin at all before this wave.
