@@ -161,3 +161,62 @@ test('the empty estate hydrates to nothing rather than throwing', () => {
   assert.deepEqual(accountsAt(D.ESTATES.empty, NOW), []);
   assert.deepEqual(accountsAt({}, NOW), []);
 });
+
+import { runRecord, seedRuns, newestRun, soonestNext, estateCadence } from '../naas-schedule.js';
+
+test('a run record counts what it read and names what it covered', () => {
+  const est = D.ESTATES.trust;
+  const r = runRecord({ at: NOW, trigger: 'manual', accountIds: ['acc-aws', 'acc-gcp'], est });
+  assert.equal(r.id, `run-${NOW}-manual`);
+  assert.equal(r.at, NOW);
+  assert.equal(r.trigger, 'manual');
+  assert.deepEqual(r.accountIds, ['acc-aws', 'acc-gcp']);
+  assert.equal(r.accounts, 2);
+  assert.equal(r.regions, est.regionsList.length);
+  assert.equal(r.sites, est.sitesCount);
+  assert.equal(r.ok, true);
+  assert.equal(runRecord({ at: NOW, trigger: 'intake', accountIds: [], est: {} }).sites, 0);
+});
+
+test('a nightly estate seeds last night and the night before, newest first', () => {
+  const accts = accountsAt(D.ESTATES.partial, NOW);
+  const runs = seedRuns(accts, NOW, 3);
+  assert.equal(runs.length, 3);
+  assert.deepEqual(runs.map(r => r.at), [
+    T('2026-09-17T02:00:00Z'), T('2026-09-16T02:00:00Z'), T('2026-09-15T02:00:00Z'),
+  ]);
+  assert.equal(runs[0].trigger, 'schedule');
+  assert.deepEqual(runs[0].accountIds.slice().sort(), ['acc-aws', 'acc-azure', 'acc-gcp']);
+});
+
+test('mixed cadences share an instant when they land on one, and manual never seeds', () => {
+  const accts = accountsAt(D.ESTATES.trust, NOW);
+  const runs = seedRuns(accts, NOW, 4);
+  // AWS is nightly 02:00, Azure is every 12h (00:00 and 12:00), GCP is manual.
+  assert.deepEqual(runs.map(r => r.at), [
+    T('2026-09-17T02:00:00Z'), T('2026-09-17T00:00:00Z'),
+    T('2026-09-16T12:00:00Z'), T('2026-09-16T02:00:00Z'),
+  ]);
+  assert.deepEqual(runs[0].accountIds, ['acc-aws']);
+  assert.deepEqual(runs[1].accountIds, ['acc-azure']);
+  for (const r of runs) assert.equal(r.accountIds.indexOf('acc-gcp'), -1);
+  assert.deepEqual(seedRuns([], NOW, 3), []);
+});
+
+test('the estate reads one cadence when the accounts agree and mixed when they do not', () => {
+  assert.deepEqual(estateCadence(accountsAt(D.ESTATES.partial, NOW)),
+    { id: 'nightly', label: 'Nightly at 02:00', mixed: false, empty: false });
+  assert.equal(estateCadence(accountsAt(D.ESTATES.trust, NOW)).mixed, true);
+  assert.equal(estateCadence(accountsAt(D.ESTATES.trust, NOW)).label, 'Mixed');
+  assert.equal(estateCadence([]).empty, true);
+});
+
+test('newest run and soonest next scan pick the right end of the list', () => {
+  const runs = seedRuns(accountsAt(D.ESTATES.partial, NOW), NOW, 3)
+    .map(r => runRecord({ ...r, est: D.ESTATES.partial }));
+  assert.equal(newestRun(runs).at, T('2026-09-17T02:00:00Z'));
+  assert.equal(newestRun([]), null);
+  // trust: Azure's every-12h lands at 12:00 today, before AWS's 02:00 tomorrow.
+  assert.equal(soonestNext(accountsAt(D.ESTATES.trust, NOW)), T('2026-09-17T12:00:00Z'));
+  assert.equal(soonestNext([]), null);
+});

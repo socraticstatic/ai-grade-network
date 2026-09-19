@@ -146,3 +146,54 @@ export function accountsAt(est, now, opts = {}) {
     };
   });
 }
+
+/** One discovery run: when it happened, what it covered, what it read. */
+export function runRecord({ at, trigger, accountIds, est }) {
+  const ids = accountIds || [], e = est || {};
+  return {
+    id: `run-${at}-${trigger}`,
+    at, trigger, accountIds: ids,
+    accounts: ids.length,
+    regions: (e.regionsList || []).length,
+    sites: e.sitesCount || (e.sites || []).length || 0,
+    ok: true,
+  };
+}
+
+/**
+ * The runs the accounts' own cadences imply, newest first. Two accounts that
+ * fire at the same instant share one record, which is what a customer sees:
+ * one nightly sweep, not three.
+ */
+export function seedRuns(accounts, now, n = 3) {
+  const byAt = new Map();
+  (accounts || []).forEach(a => {
+    const p = periodOf(a.schedule);
+    if (!p) return;
+    let t = prevRunAt(a.schedule, now);
+    for (let i = 0; i < n && t != null; i++, t -= p) {
+      if (!byAt.has(t)) byAt.set(t, []);
+      byAt.get(t).push(a.id);
+    }
+  });
+  return [...byAt.entries()].sort((x, y) => y[0] - x[0]).slice(0, n)
+    .map(([at, accountIds]) => ({ at, trigger: 'schedule', accountIds }));
+}
+
+export function newestRun(runs) {
+  return (runs || []).reduce((best, r) => (best == null || r.at > best.at) ? r : best, null);
+}
+
+export function soonestNext(accounts) {
+  return (accounts || []).reduce((best, a) =>
+    (a.nextRun != null && (best == null || a.nextRun < best)) ? a.nextRun : best, null);
+}
+
+/** One cadence for the whole estate when every account agrees, else Mixed. */
+export function estateCadence(accounts) {
+  const list = accounts || [];
+  if (!list.length) return { id: '', label: 'No accounts', mixed: false, empty: true };
+  const ids = [...new Set(list.map(a => scheduleId(a.schedule)))];
+  if (ids.length === 1 && ids[0]) return { id: ids[0], label: scheduleLabel(list[0].schedule), mixed: false, empty: false };
+  return { id: '', label: 'Mixed', mixed: true, empty: false };
+}
