@@ -257,6 +257,20 @@ test('an override reaches the view, the cadence and the next scan together', () 
   assert.equal(v.nextAt, T('2026-09-17T12:00:00Z'));
 });
 
+test('an override moves the next scan without rewriting the implied history', () => {
+  const est = D.ESTATES.partial;
+  const base = scheduleView(est, NOW);
+  const over = scheduleView(est, NOW, { overrides: { 'acc-aws': { kind: 'hours', n: 6 } } });
+  // The implied run history is seeded from the account's own cadence, not the
+  // override, so it does not move just because a customer changed the grid.
+  for (let i = 0; i < base.accounts.length; i++) {
+    assert.equal(over.accounts[i].lastRun, base.accounts[i].lastRun);
+  }
+  assert.deepEqual(over.runs.map(r => r.at), base.runs.map(r => r.at));
+  const aws = over.accounts.find(a => a.id === 'acc-aws');
+  assert.equal(aws.nextRun, T('2026-09-17T12:00:00Z'));
+});
+
 test('the empty estate has a view with nothing in it', () => {
   const v = scheduleView(D.ESTATES.empty, NOW);
   assert.deepEqual(v.accounts, []);

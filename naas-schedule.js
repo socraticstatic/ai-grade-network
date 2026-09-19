@@ -205,7 +205,9 @@ export function estateCadence(accounts) {
  */
 export function scheduleView(est, now, opts = {}) {
   const overrides = opts.overrides || {};
-  const seeded = accountsAt(est, now, { overrides });
+  // The implied history is seeded from each account's own cadence, never the
+  // override, so changing the grid cannot rewrite when the last scan ran.
+  const seeded = accountsAt(est, now, {});
   const runs = [
     ...(opts.runs || []),
     ...seedRuns(seeded, now, opts.history || 3).map(r => runRecord({ ...r, est })),
