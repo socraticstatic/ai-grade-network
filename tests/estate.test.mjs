@@ -34,6 +34,14 @@ test('a scan only runs where there is something to find', () => {
   assert.equal(shouldScan(undefined), false);
 });
 
+test('the rail ticks Connect only when something is attached', () => {
+  const tick = (view) => vals(mkC(st({ view }))).rail.find(r => r.label === 'Connect').done;
+  assert.equal(tick('empty'), false);
+  assert.equal(tick('small'), false);
+  assert.equal(tick('partial'), true);
+  assert.equal(tick('trust'), true);
+});
+
 test('an estate with nothing to find lands on the finished state, it does not sit in the skeleton', () => {
   // Discover's whole body is behind <sc-if scanDone> at html:582 and the
   // skeleton is behind <sc-if scanning> at :573, so skipping the scan without

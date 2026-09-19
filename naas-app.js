@@ -65,7 +65,8 @@ export function init(c) {
   const hash = (location.hash || '').replace('#', '').split('/');
   const patch = {};
   if (q.get('view')) patch.view = q.get('view');
-  if (q.get('estate') === 'meridian') { patch.estateParam = 'trust'; if (!q.get('view')) patch.view = 'trust'; }
+  const estateQ = q.get('estate'), estateId = estateQ === 'meridian' ? 'trust' : estateQ;
+  if (estateId && D.ESTATES[estateId]) { patch.estateParam = estateId; if (!q.get('view')) patch.view = estateId; }
   if (q.get('mode') === 'browse') patch.screen = 's7';
   if (q.get('category')) { patch.screen = 's7'; patch.browseCat = q.get('category'); }
   if (SCREENS[hash[0]]) patch.screen = hash[0];
@@ -1858,7 +1859,7 @@ function shellVals(s, set, go, est, c, sched) {
   ].map(t => ({ ...t, border: t.current ? 'var(--cta)' : 'transparent', color: t.current ? 'var(--link)' : 'var(--text-heading)', weight: t.current ? 700 : 500 }));
   const railCur = s.screen === 's2' || s.screen === 's0' ? 'Home' : s.screen === 's3' ? ({ connect: 'Connect', govern: 'Govern', observe: 'Observe', cost: 'Cost' }[s.tab] || 'Home') : ['s4', 's5', 's6'].includes(s.screen) ? 'Connect' : null;
   const dataLayer = 'cloud';
-  const rail = [['Home', 'home', () => go('s3', { layer: 'cloud', tab: 'connect' })()], ['Connect', 'cable', go('s3', { layer: dataLayer, tab: 'connect' })], ['Govern', 'check-shield', go('s3', { layer: dataLayer, tab: 'govern' })], ['Observe', 'high-meter', go('s3', { layer: dataLayer, tab: 'observe' })], ['Cost', 'bill', go('s3', { layer: dataLayer, tab: 'cost' })]].map(([label, ic, fn]) => ({ key: label, label, done: label === 'Home' ? false : label === 'Connect' ? est.stage !== 'empty' : label === 'Govern' ? est.policiesEnforced > 0 : label === 'Observe' ? (est.observedPct || 0) > 0 : label === 'Cost' ? !!(s.steered && s.steered.length) : false, go: () => { fn(); set(close); }, cur: railCur === label, icon: (railCur === label ? iconLink : iconDir) + '/' + ic + '.svg', bg: railCur === label ? 'var(--bg-accent)' : 'transparent', color: railCur === label ? 'var(--link)' : 'var(--text-heading)', weight: railCur === label ? 700 : 500 }));
+  const rail = [['Home', 'home', () => go('s3', { layer: 'cloud', tab: 'connect' })()], ['Connect', 'cable', go('s3', { layer: dataLayer, tab: 'connect' })], ['Govern', 'check-shield', go('s3', { layer: dataLayer, tab: 'govern' })], ['Observe', 'high-meter', go('s3', { layer: dataLayer, tab: 'observe' })], ['Cost', 'bill', go('s3', { layer: dataLayer, tab: 'cost' })]].map(([label, ic, fn]) => ({ key: label, label, done: label === 'Home' ? false : label === 'Connect' ? est.regionsList.some(r => r.priv) : label === 'Govern' ? est.policiesEnforced > 0 : label === 'Observe' ? (est.observedPct || 0) > 0 : label === 'Cost' ? !!(s.steered && s.steered.length) : false, go: () => { fn(); set(close); }, cur: railCur === label, icon: (railCur === label ? iconLink : iconDir) + '/' + ic + '.svg', bg: railCur === label ? 'var(--bg-accent)' : 'transparent', color: railCur === label ? 'var(--link)' : 'var(--text-heading)', weight: railCur === label ? 700 : 500 }));
   // ---- Chrome switches, for dropping these screens into another shell ----
   // ?chrome=off   hide both the top header and the left rail
   // ?chrome=norail   keep the header, drop the rail
