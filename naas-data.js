@@ -18,6 +18,7 @@ export const LAYERS = [
 export const VIEWS = [
   { id: 'live', label: 'Live estate' },
   { id: 'empty', label: 'New customer' },
+  { id: 'small', label: 'Small business' },
   { id: 'partial', label: 'Growing' },
   { id: 'mature', label: 'Established' },
   { id: 'trust', label: 'Bank scale' },
@@ -38,6 +39,36 @@ export const ESTATES = {
     id: 'empty', name: 'Meridian Logistics', stage: 'empty', clouds: 0, regions: 0, workloads: 0, sites: [], regionsList: [], regionsExtra: 0, privatePct: 0,
     accounts: [],
     attachedRegions: 0, policiesEnforced: 0, policiesAuthored: 0, observedPct: 0, savedMo: 0, fabricAttachPct: 0, tags: 0, findings: [], arcs: [], buckets: [], policies: [],
+  },
+  // The customer Ramesh described out loud and no fixture represented: one
+  // cloud, two regions, two buildings, twenty workloads, nothing attached.
+  small: {
+    id: 'small', name: 'Trinity Supply Co.', stage: 'partial', clouds: 1, regions: 2, workloads: 20, privatePct: 0, attachedRegions: 0, policiesEnforced: 0, policiesAuthored: 2, observedPct: 0, savedMo: 0, fabricAttachPct: 0, tags: 4,
+    accounts: [
+      { id: 'acc-aws', cloud: 'AWS', acct: null, cred: 'Cross-account role', regions: 2, schedule: { kind: 'nightly', at: '02:00' } },
+    ],
+    sites: [
+      { name: 'Dallas HQ', cls: 'Campus', access: 'ABF (Business Fiber)', priv: false, metro: 'Dallas' },
+      { name: 'Houston yard', cls: 'Plant', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Houston' },
+    ],
+    regionsList: [
+      REG('AWS', 'us-east-1', 12, false, null, 34, 8, ['Prod']),
+      REG('AWS', 'us-west-2', 8, false, null, 46, 11, ['Internet-facing'], 'warn'),
+    ],
+    regionsExtra: 0,
+    arcs: [{ from: 'us-east-1', to: 'us-west-2', priv: false }],
+    policies: [
+      { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 12, viol: 12, state: 'authored' },
+      { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 8, viol: 8, state: 'authored' },
+    ],
+    buckets: [
+      { id: 'misc', name: 'Misc internet egress', cloud: 'AWS', today: 2400, fabric: 900 },
+      { id: 'base', name: 'Committed base', cloud: 'AWS', today: 1800, fabric: 1800 },
+    ],
+    findings: [
+      { kind: 'avoidable', layer: 'cloud', tab: 'cost', pillar: 'Cost control', persona: 'FinOps', head: '$2,400/mo of internet egress the fabric would carry for $900', ev: 'One misc internet bucket on AWS, last 30 days of egress spend.', priced: true, save: 1500, why: 'Both regions terminate in metros with a NetBond on-ramp. Steering changes the path, not the workload.', ladder: ['Steer this bucket on the fabric', 'Steer every internet bucket', 'Hosted VPC with AT&T egress for the region'] },
+      { kind: 'onecloud', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'Network Engineering', head: 'Both regions ride the public internet', ev: 'us-east-1 and us-west-2 have no private path to AT&T; Dallas and Houston reach them over the internet first mile.', priced: false, why: 'Nothing is attached yet, so there is no telemetry, no inspection point and no fabric rate.', ladder: ['Attach us-east-1', 'Attach both regions', 'Connection Hub in Dallas'] },
+    ],
   },
   partial: {
     id: 'partial', name: 'Acme Corp', stage: 'partial', clouds: 3, regions: 12, workloads: 322, privatePct: 40, attachedRegions: 5, policiesEnforced: 4, policiesAuthored: 7, observedPct: 61, savedMo: 36000, fabricAttachPct: 38, tags: 14,
