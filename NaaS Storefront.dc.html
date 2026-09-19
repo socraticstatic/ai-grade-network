@@ -379,7 +379,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <g onClick="{{ s.open }}" role="button" aria-label="{{ s.label }}" opacity="{{ s.op }}" style="cursor:pointer;transition:opacity .2s"><title>Open the fabric: facilities, ports, circuits</title>
         <rect x="572" y="{{ s.ry }}" width="216" height="{{ strataCardH }}" rx="8" fill="{{ s.fill }}" style="stroke:var(--border-secondary)"></rect>
         <foreignObject x="572" y="{{ s.ry }}" width="216" height="{{ strataCardH }}" style="pointer-events:none">
-          <div style="box-sizing:border-box;height:{{ strataCardH }}px;padding:10px 14px;display:grid;grid-template-rows:auto auto auto;gap:6px;align-content:center">
+          <div style="box-sizing:border-box;height:{{ strataCardH }}px;padding:{{ strataPadY }}px 14px;display:grid;grid-template-rows:auto auto auto;gap:{{ strataRowGap }}px;align-content:center">
             <div style="display:flex;align-items:center;gap:8px;font-size:14px;line-height:18px;font-weight:700;color:{{ s.labelColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ s.iconSrc }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="display:inline-block;width:18px;height:18px;flex:none;background:url('{{ s.iconSrc }}') center / contain no-repeat"></span></sc-if>{{ s.label }}</div>
             <div style="font-size:11px;line-height:14px;color:{{ s.subColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.short }}</div>
             <div style="display:flex;justify-content:space-between;align-items:center;height:20px"><span style="font-size:12px;line-height:20px;color:{{ s.subColor }}">{{ s.live }}</span>

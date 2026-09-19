@@ -12,20 +12,47 @@ export const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 const CLOUD_ORDER = ['AWS', 'Azure', 'GCP', 'CoreWeave', 'Oracle'];
 
 export function heroLayout(est, opts) {
-  // The band widens when the fabric is open (facilities, ports, circuits) so its rows read at full size.
-  const W = 1392, H = 560, bandX = opts.bandX || 560, bandW = opts.bandW || 240, bandY = 28, bandH = 396, strataH = bandH / 4;
+  // The canvas is derived from the estate, not fixed. A full estate fills
+  // every one of these numbers, so they are the maxima; a two-site estate
+  // gets a picture sized to it instead of 88% whitespace.
+  //
+  // BAND_H_MIN is measured, not chosen: the stratum card at html:381 holds
+  // 84px of content (18 + 14 + 20, two gaps, two pads), the card is
+  // bandH/4 - 12, and the compact card closes its pads and gaps to fit 70px
+  // into 72px. Four strata of 84 is the floor.
+  //
+  // The measurement reads the ROOT rows, never opts.siteRows / opts.regionRows,
+  // so the picture never changes height under a click.
+  const W = 1392, H_MAX = 560, BAND_H_MAX = 396, BAND_H_MIN = 336;
+  const LANE_GAP = 16, LANE_H = 76, FOOT = 44, COL_TOP = 30, CARD_H = 36, GAP_MAX = 66, INET_OVER_LANE = 60;
+  const rowH = 34, groupHead = 20, groupGap = 12;
+  const bandX = opts.bandX || 560, bandW = opts.bandW || 240, bandY = 28;
+  const empty = !est || est.stage === 'empty';
+  // Row pitch is measured against the tallest canvas, never the derived one,
+  // so shrinking the picture never re-spaces a full estate's rows.
+  const pitch = (k) => k > 1 ? Math.min(GAP_MAX, (H_MAX - 120) / (k - 1)) : 0;
+
+  const rootN = empty ? 3 : Math.min(7, (est.sites || []).length);
+  const sitesEnd = rootN ? COL_TOP + (rootN - 1) * pitch(rootN) + CARD_H : 0;
+  const rootRegs = empty ? 2 : (est.regionsList || []).length;
+  const rootClouds = empty ? 2 : new Set((est.regionsList || []).map(r => r.cloud)).size;
+  const cloudsEnd = COL_TOP + rootClouds * (groupHead + groupGap) + rootRegs * rowH + (!empty && est.regionsExtra ? rowH : 0);
+  const bandH = Math.max(BAND_H_MIN, Math.min(BAND_H_MAX, Math.max(sitesEnd, cloudsEnd) + 28));
+  const strataH = bandH / 4;
   // Beneath the band: the lane for traffic that never touches the AT&T fabric (third party, internet). Ramesh, 2026-09-09.
-  const lane = { x: bandX, y: bandY + bandH + 16, w: bandW, h: 76 };
+  const lane = { x: bandX, y: bandY + bandH + LANE_GAP, w: bandW, h: LANE_H };
+  const H = lane.y + lane.h + FOOT;
+  const internetFloor = lane.y - INET_OVER_LANE;
+
   const out = { W, H, bandX, bandW, bandY, bandH, lane, sites: [], groups: [], regions: [], workloads: [], edges: [], arcs: [], internet: null, strata: [], ghost: false };
   const clampBand = (y) => Math.round(Math.min(bandY + bandH - 24, Math.max(bandY + 24, y)));
   const clampLane = (y) => Math.round(Math.min(lane.y + lane.h - 14, Math.max(lane.y + 14, y)));
-  const empty = !est || est.stage === 'empty';
   out.ghost = empty;
 
   const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || est.sites);
   const sites = rawSites.length > 7 ? [...rawSites.slice(0, 6), { name: `+${fmtN(rawSites.length - 6)} more`, access: 'open the list ›', more: true, rollup: false }] : rawSites;
   const n = sites.length;
-  const gap = n > 1 ? Math.min(66, (H - 120) / (n - 1)) : 0;
+  const gap = pitch(n);
   const top = 48 + ((H - 96) - (n - 1) * gap) / 2 - 18;
   sites.forEach((s, i) => {
     const y = Math.round(top + i * gap);
@@ -39,8 +66,7 @@ export function heroLayout(est, opts) {
   regs.forEach(r => { (byCloud[r.cloud] = byCloud[r.cloud] || []).push(r); });
   const ord = (c) => { const i = CLOUD_ORDER.indexOf(c); return i < 0 ? 99 : i; };
   const clouds = Object.keys(byCloud).sort((a, b) => ord(a) - ord(b));
-  const rowH = 34, groupHead = 20, groupGap = 12;
-  let y = 30;
+  let y = COL_TOP;
   clouds.forEach(c => {
     out.groups.push({ cloud: c, y, count: byCloud[c].length });
     y += groupHead;
@@ -55,7 +81,7 @@ export function heroLayout(est, opts) {
     y += groupGap;
   });
   if (!empty && est.regionsExtra && !opts.regionRows) { out.regions.push({ cloud: '', region: `${est.regionsExtra} smaller regions rolled up`, rollup: true, muted: true, y, cy: y + 14, key: 'more' }); y += rowH; }
-  out.internet = { y: Math.min(H - 36, Math.max(y + 8, 380)) };
+  out.internet = { y: Math.min(H - 36, Math.max(y + 8, internetFloor)) };
   out.edges.push({ id: 'inet', kind: 'internet', priv: false, ghost: empty, viaLane: true, x1: bandX + bandW, y1: lane.y + lane.h - 14, x2: 980, y2: out.internet.y + 14, internet: true });
   (est && est.arcs || []).forEach((a, i) => {
     const r1 = out.regions.find(r => r.region === a.from), r2 = out.regions.find(r => r.region === a.to);
