@@ -43,16 +43,27 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // cloud trail's own crumb button), +2 span (the cloud trail's wrapping span
 // and its `·` separator span). sc-if 295 -> 297, sc-for 173 -> 174,
 // button 250 -> 251, span 638 -> 640.
+// Wave 4 Task 5 replaces the title row's "Updated Xm ago" button and its
+// twin Re-discover button with one real Re-discover button plus a single
+// label that IS the cadence control: the visible "Scanned … · next …" text
+// and a link-coloured caret sit inside it as two spans, with a transparent
+// <select> absolutely positioned over the whole label so a click anywhere
+// on the phrase opens the cadence menu (fix round 1 - the brief's first cut
+// drew the phrase and the picker as separate elements, which widened the
+// controls group enough to wrap the verdict line on Observe and Cost).
+// Net -1 button (two collapse to one), +2 span both landing inside the one
+// +1 label (its own opening <label> is new; the select and its six options
+// are not pinned here). button 251 -> 250, span 640 -> 641, label 26 -> 27.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 858],
-    ['span', /<span\b/g, /<\/span>/g, 640],
+    ['span', /<span\b/g, /<\/span>/g, 641],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 297],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 174],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 251],
+    ['button', /<button\b/g, /<\/button>/g, 250],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
-    ['label', /<label\b/g, /<\/label>/g, 26],
+    ['label', /<label\b/g, /<\/label>/g, 27],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

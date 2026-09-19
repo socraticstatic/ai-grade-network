@@ -61,7 +61,6 @@ export function init(c) {
   }
   try { const h = localStorage.getItem('naas.headOpen'); if (h === 'false') c.setState({ headOpen: false }); } catch (e) {}
   try { const h = localStorage.getItem('naas.hero'); if (h) c.setState({ heroOpen: JSON.parse(h) }); } catch (e) {}
-  window.__naasLoaded = window.__naasLoaded || Date.now();
   const q = new URLSearchParams(location.search);
   const hash = (location.hash || '').replace('#', '').split('/');
   const patch = {};
@@ -1752,6 +1751,18 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
 function shellVals(s, set, go, est, c, sched) {
   const dark = s.theme === 'dark';
   const iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
+  // Scheduled discovery, read once for the title row and the rail.
+  const schedAcctIds = sched.accounts.map(a => a.id);
+  const nextWord = SCH.nextLabel(sched.nextSchedule, sched.nextAt, sched.nowMs);
+  const scannedWord = SCH.agoLabel(sched.lastRun ? sched.lastRun.at : null, sched.nowMs);
+  const schedLine = s.scanBusy ? 'Scanning…'
+    : sched.cadence.empty ? 'No accounts connected yet'
+    : `Scanned ${scannedWord} · next ${nextWord}`;
+  const schedTitle = sched.cadence.empty
+    ? 'Connect a cloud account to put discovery on a schedule'
+    : sched.accounts.map(a => `${a.name}: ${SCH.scheduleLabel(a.schedule)}`).join(' · ');
+  const cadenceValue = sched.cadence.id;
+  const setCadence = sched.setSchedule(schedAcctIds);
   const wide = typeof window !== 'undefined' ? window.innerWidth >= 1440 : true;
   // Closed by default (Micah, 13:30); opens from the header button or any Ask Andi door.
   const andiOpen = !!s.andiOpen;
@@ -1895,14 +1906,21 @@ function shellVals(s, set, go, est, c, sched) {
   const pageTitle = s.screen === 's1' ? 'Explore 360' : s.screen === 's4' ? 'Compose' : s.screen === 's5' ? 'Recommend' : s.screen === 's6' ? 'Review order' : storeCur ? 'Marketplace'
     : s.screen === 's3' ? ({ connect: 'Discover', govern: 'Govern', observe: (obTabNow === logsTab ? 'Observe · Logs' : 'Observe'), cost: 'Cost' }[s.tab] || 'Discover')
     : 'Discover';
-  const loadedAt = (typeof window !== 'undefined' && window.__naasLoaded) || Date.now();
-  const agoMin = Math.max(0, Math.round((Date.now() - loadedAt) / 60000));
-  const updatedAgo = agoMin < 1 ? 'just now' : agoMin < 60 ? `${agoMin}m ago` : `${Math.round(agoMin / 60)}h ago`;
-  const rescan = () => { try { window.__naasLoaded = Date.now(); } catch (e) {} if (s.screen === 's1') { set({ scanStep: 0 }); startScan(c); } else set({ scanStep: s.scanStep }); };
-  const credsN = (est.clouds || []).length;
+  const rescan = sched.runNow(schedAcctIds, 'manual');
+  const credsN = sched.accounts.length;
   const credsLabel = credsN ? `Manage credentials (${credsN})` : 'Manage credentials';
-  const credsTitle = credsN ? `${credsN} connected accounts; this picture is what they can see` : 'Connect a cloud account to scan it';
-  const manageCreds = () => { go('s0')(); set(close); };
+  const credsTitle = credsN
+    ? `${credsN} connected ${credsN === 1 ? 'account' : 'accounts'}; this picture is what they can see`
+    : 'Connect a cloud account to scan it';
+  // Manage credentials went to the empty-estate front door, which is not where
+  // the accounts are. It scrolls to the Accounts card by the same mechanism the
+  // rail already uses (naas-app.js:1576), and only falls back to s0 when there
+  // is genuinely nothing to scroll to.
+  const manageCreds = () => {
+    if (!credsN) { go('s0')(); set(close); return; }
+    go('s3', { layer: 'cloud', tab: 'connect' })();
+    set({ ...close, scrollToSec: 'sec-accounts', scrollNonce: (s.scrollNonce || 0) + 1 });
+  };
   const windowLabel = winLabelOf(s);
   const rangeValue = s.obWindow || '30d';
   const setRange = (e) => set({ obWindow: e.target.value });
@@ -1914,7 +1932,7 @@ function shellVals(s, set, go, est, c, sched) {
     pills, railGroups, subNav, hasSubNav, pageTitle, credsLabel, credsTitle, manageCreds, showPageTitle, rangeValue, setRange, bellLabel, buildLabel: (typeof window !== 'undefined' && window.__naasVersion) ? `v${window.__naasVersion.build} · ${window.__naasVersion.date}` : '', hasBuildLabel: !!(typeof window !== 'undefined' && window.__naasVersion), railCollapsed, railExpanded: !railCollapsed, railToggleTitle: railCollapsed ? 'Expand navigation' : 'Collapse navigation', iconAndi: 'brand/andi-symbol.svg', iconCalendar: iconDir + '/checklist.svg', goBrowseClose: () => { go('s7')(); set({ demoOpen: false }); },
     topTabs, layerSubtitle, elevatorOpen: !!s.elevatorOpen, toggleElevator: () => set({ elevatorOpen: !s.elevatorOpen }), closeElevator: () => set(close), chevronRot: s.elevatorOpen ? 'rotate(180deg)' : 'rotate(0deg)', elevator,
     goDiscoverClose: goTab('s1'), goHomeClose: goTab('s3', { layer: 'cloud', tab: 'connect' }),
-    showRail, showHeader, updatedAgo, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
+    showRail, showHeader, schedLine, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
   };
 }
 
