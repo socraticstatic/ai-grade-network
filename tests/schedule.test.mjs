@@ -164,18 +164,43 @@ test('the empty estate hydrates to nothing rather than throwing', () => {
 
 import { runRecord, seedRuns, newestRun, soonestNext, estateCadence } from '../naas-schedule.js';
 
-test('a run record counts what it read and names what it covered', () => {
+test('a run record counts only what its own accounts covered', () => {
   const est = D.ESTATES.trust;
+  // acc-aws (3 regions) and acc-gcp (1 region), two of trust's three accounts.
   const r = runRecord({ at: NOW, trigger: 'manual', accountIds: ['acc-aws', 'acc-gcp'], est });
   assert.equal(r.id, `run-${NOW}-manual`);
   assert.equal(r.at, NOW);
   assert.equal(r.trigger, 'manual');
   assert.deepEqual(r.accountIds, ['acc-aws', 'acc-gcp']);
   assert.equal(r.accounts, 2);
-  assert.equal(r.regions, est.regionsList.length);
-  assert.equal(r.sites, est.sitesCount);
+  assert.equal(r.regions, 4, 'a partial run sums only the regions its own accounts cover');
+  assert.equal(r.sites, 0, 'a cloud-account scan reads no AT&T sites');
   assert.equal(r.ok, true);
-  assert.equal(runRecord({ at: NOW, trigger: 'intake', accountIds: [], est: {} }).sites, 0);
+});
+
+test('a run record reads the whole estate when its accounts cover every account', () => {
+  const est = D.ESTATES.trust;
+  const whole = runRecord({ at: NOW, trigger: 'manual', accountIds: est.accounts.map(a => a.id), est });
+  assert.equal(whole.regions, est.regionsList.length);
+  assert.equal(whole.sites, est.sitesCount);
+
+  const intake = runRecord({ at: NOW, trigger: 'intake', accountIds: [], est: {} });
+  assert.equal(intake.regions, 0);
+  assert.equal(intake.sites, 0);
+});
+
+test('a run record reads zero sites when sitesCount is legitimately zero, not sites.length', () => {
+  const est = { ...D.ESTATES.trust, sitesCount: 0 };
+  const whole = runRecord({ at: NOW, trigger: 'manual', accountIds: est.accounts.map(a => a.id), est });
+  assert.equal(whole.sites, 0);
+});
+
+test('seeded runs read the whole estate shape when every account fires together', () => {
+  const accts = accountsAt(D.ESTATES.partial, NOW);
+  const runs = seedRuns(accts, NOW, 1).map(r => runRecord({ ...r, est: D.ESTATES.partial }));
+  assert.deepEqual(runs[0].accountIds.slice().sort(), ['acc-aws', 'acc-azure', 'acc-gcp']);
+  assert.equal(runs[0].regions, 7);
+  assert.equal(runs[0].sites, 5);
 });
 
 test('a nightly estate seeds last night and the night before, newest first', () => {

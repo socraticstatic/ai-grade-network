@@ -1086,9 +1086,14 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     (sched.runs || []).forEach(r => {
       const mins = Math.max(0, Math.round((sched.nowMs - r.at) / 60000));
       const how = r.trigger === 'manual' ? 'on demand' : `on schedule at ${SCH.clockLabel(r.at)}`;
+      const bits = [
+        `${r.accounts} ${r.accounts === 1 ? 'account' : 'accounts'}`,
+        `${r.regions} ${r.regions === 1 ? 'region' : 'regions'}`,
+      ];
+      if (r.sites) bits.push(`${r.sites.toLocaleString('en-US')} ${r.sites === 1 ? 'site' : 'sites'}`);
       push(mins, r.trigger === 'manual' ? WHO[0] : 'svc-terraform', 'Ran re-discovery',
         r.accounts === 1 ? 'One account' : 'Whole estate',
-        `${r.accounts} ${r.accounts === 1 ? 'account' : 'accounts'}, ${r.regions} regions, ${r.sites.toLocaleString('en-US')} sites · ${how}`, r.ok);
+        `${bits.join(', ')} · ${how}`, r.ok);
     });
     push(151, WHO[1], 'Changed a scope', 'AWS account 4102-8837-5510', 'read-only, all regions', true);
     push(207, WHO[2], 'Export denied', 'Flow records, last 30 days', 'no export role on this account', false);

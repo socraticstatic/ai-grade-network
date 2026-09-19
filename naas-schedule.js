@@ -147,15 +147,24 @@ export function accountsAt(est, now, opts = {}) {
   });
 }
 
-/** One discovery run: when it happened, what it covered, what it read. */
+/**
+ * One discovery run: when it happened, what it covered, what it read. A run
+ * whose accounts cover the whole estate reads the estate's regions and its
+ * AT&T sites; a run over some of the accounts counts only the regions those
+ * accounts hold, and reads no sites at all, because a cloud-account scan
+ * never touches AT&T's own inventory.
+ */
 export function runRecord({ at, trigger, accountIds, est }) {
   const ids = accountIds || [], e = est || {};
+  const accts = e.accounts || [];
+  const covered = accts.filter(a => ids.indexOf(a.id) >= 0);
+  const whole = accts.length === 0 || covered.length === accts.length;
   return {
     id: `run-${at}-${trigger}`,
     at, trigger, accountIds: ids,
     accounts: ids.length,
-    regions: (e.regionsList || []).length,
-    sites: e.sitesCount || (e.sites || []).length || 0,
+    regions: whole ? (e.regionsList || []).length : covered.reduce((n, a) => n + (a.regions || 0), 0),
+    sites: whole ? (e.sitesCount != null ? e.sitesCount : (e.sites || []).length) : 0,
     ok: true,
   };
 }
