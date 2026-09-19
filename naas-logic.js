@@ -23,7 +23,7 @@ export function heroLayout(est, opts) {
   out.ghost = empty;
 
   const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || est.sites);
-  const sites = rawSites.length > 7 ? [...rawSites.slice(0, 6), { name: `+${fmtN(rawSites.length - 6)} more`, access: 'In the level map', more: true, rollup: false }] : rawSites;
+  const sites = rawSites.length > 7 ? [...rawSites.slice(0, 6), { name: `+${fmtN(rawSites.length - 6)} more`, access: 'open the list ›', more: true, rollup: false }] : rawSites;
   const n = sites.length;
   const gap = n > 1 ? Math.min(66, (H - 120) / (n - 1)) : 0;
   const top = 48 + ((H - 96) - (n - 1) * gap) / 2 - 18;
@@ -54,7 +54,7 @@ export function heroLayout(est, opts) {
     });
     y += groupGap;
   });
-  if (!empty && est.regionsExtra && !opts.regionRows) { out.regions.push({ cloud: '', region: '+' + est.regionsExtra + ' regions', rollup: true, y, cy: y + 14, key: 'more' }); y += rowH; }
+  if (!empty && est.regionsExtra && !opts.regionRows) { out.regions.push({ cloud: '', region: `${est.regionsExtra} smaller regions rolled up`, rollup: true, muted: true, y, cy: y + 14, key: 'more' }); y += rowH; }
   out.internet = { y: Math.min(H - 36, Math.max(y + 8, 380)) };
   out.edges.push({ id: 'inet', kind: 'internet', priv: false, ghost: empty, viaLane: true, x1: bandX + bandW, y1: lane.y + lane.h - 14, x2: 980, y2: out.internet.y + 14, internet: true });
   (est && est.arcs || []).forEach((a, i) => {

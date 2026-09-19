@@ -149,26 +149,29 @@ export function siteDrillRows(est, trail, opts = {}) {
   if (!trail || !trail.length) return null;
   const tree = S.siteTree(est);
   const all = P.allSites(est);
-  const cls = tree.find(c => c.cls === trail[0] || c.label === trail[0]);
+  const [clsKey, grpIx] = String(trail[0]).split('#');
+  const cls = tree.find(c => c.cls === clsKey || c.label === clsKey);
   if (!cls) { const named = all.find(x => x.name === trail[0]); return named && trail.length === 1 ? pathsOfSite(est, named) : null; }
+  const kids = grpIx == null ? cls.children : cls.children.filter(ch => String(ch.key).startsWith(`${cls.cls}:${grpIx}:`));
+  const clsLabel = S.labelOfKey(est, trail[0]);
   const siteRowOf = (x) => ({ key: 'site:' + x.id, name: x.id, access: x.address || `${x.metro} · ${x.access || ''}`, priv: !!x.priv, drillKey: x.id, rollup: false, cursor: 'pointer' });
   const pathsOf = (site) => pathsOfSite(est, site);
   const _unused = (site) => { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T fabric' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; };
   if (trail.length === 1) {
-    const rows = cls.children.map(ch => ch.kind === 'metro'
-      ? { key: 'metro:' + ch.name, name: `${ch.name} (${ch.count.toLocaleString('en-US')})`, access: `${ch.onFabric.toLocaleString('en-US')} of ${ch.count.toLocaleString('en-US')} on the fabric · ${ch.access}`, priv: ch.onFabric >= ch.count / 2, drillKey: ch.name, rollup: true, cursor: 'pointer' }
+    const rows = kids.map(ch => ch.kind === 'metro'
+      ? { key: 'metro:' + ch.key, name: `${ch.name} (${ch.count.toLocaleString('en-US')})`, access: `${ch.onFabric.toLocaleString('en-US')} of ${ch.count.toLocaleString('en-US')} on the fabric · ${ch.access}`, priv: ch.onFabric >= ch.count / 2, drillKey: ch.key, rollup: true, cursor: 'pointer' }
       : { key: 'site:' + ch.name, name: ch.name, access: ch.address || ch.access, priv: !!ch.priv, drillKey: ch.name, rollup: false, cursor: 'pointer' });
-    return { level: cls.children[0] && cls.children[0].kind === 'metro' ? 'metro' : 'site', label: cls.label, rows };
+    return { level: kids[0] && kids[0].kind === 'metro' ? 'metro' : 'site', label: clsLabel, rows };
   }
-  const second = cls.children.find(ch => ch.name === trail[1] || ch.key === trail[1]);
+  const second = kids.find(ch => ch.name === trail[1] || ch.key === trail[1]);
   if (!second) return null;
   if (second.kind === 'site') return pathsOf(all.find(x => x.name === second.name) || { ...second, cls: cls.cls, clsLabel: cls.label });
   if (trail.length === 2) {
     let rows = second.sites.map(siteRowOf);
     // A site pinned from the drawer leads the sample.
     if (opts.pin && !rows.some(r => r.drillKey === opts.pin)) { const pinned = S.metroSites(second).find(x => x.id === opts.pin); if (pinned) rows = [siteRowOf(pinned), ...rows.slice(0, 5)]; }
-    if (second.more) rows.push({ key: 'more', name: `+${second.more.toLocaleString('en-US')} more in ${second.name}`, access: 'open the drawer ›', more: true, rollup: false, cursor: 'pointer' });
-    return { level: 'site', label: `${cls.label} · ${second.name}`, rows };
+    if (second.more) rows.push({ key: 'more', name: `+${second.more.toLocaleString('en-US')} more in ${second.name}`, access: 'open the list ›', more: true, rollup: false, cursor: 'pointer' });
+    return { level: 'site', label: `${clsLabel} · ${second.name}`, rows };
   }
   const site = all.find(x => x.id === trail[2] || x.name === trail[2]) || (second.kind === 'metro' ? S.metroSites(second).find(x => x.id === trail[2]) : null);
   return site ? pathsOf({ ...site, cls: cls.cls, clsLabel: cls.label, access: site.access || second.access }) : null;
@@ -196,7 +199,7 @@ export function regionDrillRows(est, inv, trail) {
     }
   }
   const others = est.regionsList.length - 1 + (est.regionsExtra || 0);
-  const rows = [pinned, ...children, ...(others > 0 ? [{ cloud: '', region: `+${others} other regions`, rollup: true, other: true, wl: 0, priv: false }] : [])];
+  const rows = [pinned, ...children, ...(others > 0 ? [{ cloud: '', region: `Back to ${est.regionsList.length} regions`, rollup: true, other: true, toRoot: true, wl: 0, priv: false }] : [])];
   // Every hop by name, cloud first. The crumb used to be built from `label`,
   // which already carried the region, so it read "Clouds › AWS › us-east-1 ›
   // AWS us-east-1". This is the trail; nothing derives it twice.

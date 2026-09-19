@@ -205,8 +205,8 @@ export function vals(c) {
     const ov = overlayFor(e, s, est0, ob, hp, R, steered, hoverKey);
     return { ...e, ...ov, key: e.id, d, op: ov.opOverride != null ? Math.min(op, ov.opOverride) : op, landed: !!(e.region && e.region.landed), amber: hh === 'amber', openObserve: hh === 'amber' ? () => { go('s3', { layer: 'cloud', tab: 'observe', obScope: 'cloud:' + e.region.cloud })(); } : null, stroke: ov.stroke || (e.ghost ? 'var(--border-primary)' : healthStroke || (e.priv ? '#3374cc' : 'var(--text-disabled)')), w: ov.w || (e.priv ? 2 : 1.5), dash: dashed ? '6 6' : 'none', crawl: !e.priv && !e.ghost, mx: (e.x1 + e.x2) / 2, my: (e.y1 + e.y2) / 2, px: e.kind === 'ingress' ? e.x2 : e.x1, py: e.kind === 'ingress' ? e.y2 : e.y1, portFill: e.priv ? '#0057b8' : 'var(--bg-base)', durS: ov.durS || (e.dur ? e.dur + 's' : '2s'), tailBegin: '-0.25s', chipW: e.chip ? e.chip.length * 8 + 14 : 0, showChip: !!e.chip && op === 1 || !!e.chip && !hoverKey, pulse: simHit || !!(e.region && e.region.landed) };
   });
-  const heroSites = L.sites.map(st => ({ ...st, key: st.key, textW: (200 - 24 - (st.hasAction || (!st.ghost && !st.leaf) ? 62 : 18)) + 'px', op: dimFor(['site' + st.name]), ty: st.y + 15, ty2: st.y + 29, dash: st.ghost || st.more ? '4 4' : 'none', color: st.ghost ? 'var(--text-disabled)' : st.more ? 'var(--link)' : 'var(--text-heading)', click: () => { if (st.ghost || st.leaf) return; if (st.more) { if (s.drill.length >= 2) openVolume(s.drill[0], s.drill[1]); return; } const isSite = (s.drill.length >= 2 && st.drillKey) || (st.drillKey && /^(DC|CAM|OFF|PLT|BR|ATM|FLD)-/.test(String(st.drillKey))) || (!st.rollup && S.countOf(st.name) === 1 && !st.drillKey && !/\(/.test(st.name)); if (isSite) set({ mapSel: 'asset:' + (st.drillKey || st.name), panelTab: 'overview' }); const key = st.drillKey || (S.countOf(st.name) > 1 || st.rollup ? S.classOf(st) : st.name); set({ drill: [...s.drill, key] }); }, enter: () => set({ hoverNode: 'site' + st.name }), leave: () => set({ hoverNode: null }), cursor: st.ghost || st.leaf ? 'default' : 'pointer', caret: st.ghost || st.leaf || st.more ? '' : '›', hasAction: !st.ghost && !st.more && !st.priv && !st.leaf, action: 'Attach', act: () => { c.setState({ screen: 's4', compose: prefillCompose(est) }); syncHash('s4', s.layer, s.tab); } }));
-  const heroRegions = L.regions.map(r => ({ ...r, key: r.key, op: dimFor(['reg' + r.region]), ty: r.y + 19, dash: r.seeAll ? '3 3' : r.ghost ? '4 4' : 'none', stroke: r.seeAll ? 'var(--cta)' : 'var(--border-primary)', color: r.seeAll ? 'var(--link)' : r.ghost ? 'var(--text-disabled)' : 'var(--text-heading)', relFill: r.ghost ? 'transparent' : hp.regionHealth[r.region] === 'amber' ? 'var(--warning)' : 'var(--success)', relTitle: r.link === 'degraded' ? `Degraded: BGP flapping on ${r.ramp || 'NetBond'}` : hp.regionHealth[r.region] === 'amber' ? 'Degraded: latency spike on the public path' : 'Healthy', rx: 980 + (r.indent || 0), rw: 240 - (r.indent || 0), rh: r.child ? 26 : 28, caret: r.seeAll ? '›' : r.ghost || r.rollup || r.other ? (r.other ? '‹' : '') : (r.pinned ? '‹' : r.leaf ? '' : '›'), action: r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : ''), hasAction: !!(r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : '')), act: () => { if (r.link === 'degraded') { go('s3', { layer: 'cloud', tab: 'observe', mapSel: 'cx-' + r.region, mapRegion: r.region, panelTab: 'impact' })(); return; } composeFor(go, r)(); }, actionBg: r.link === 'degraded' ? 'var(--warning)' : 'var(--cta)', rectFill: r.seeAll ? 'var(--bg-accent)' : r.pinned ? 'var(--bg-accent)' : r.child ? 'var(--bg-wash)' : 'var(--bg-base)', relOp: r.child || r.other ? 0 : 1, click: () => { if (r.ghost) return; if (r.seeAll) { openWorkloads(r.wlScope.region, r.wlScope.vpcId, r.wlScope.snId); return; } if (r.wlSel) { set({ mapSel: r.wlSel, panelTab: 'overview' }); return; } if (r.other || r.pinned) { set({ cloudDrill: cloudDrill.slice(0, -1) }); return; } if (r.rollup) return; if (r.child) { if (r.drill) set({ cloudDrill: [...cloudDrill, r.drill] }); return; } set({ cloudDrill: [r.region], andiScope: { kind: 'region', id: r.region, label: r.cloud + ' ' + r.region } }); }, enter: () => set({ hoverNode: 'reg' + r.region, hoverRegion: r.ghost || r.rollup ? null : r.region }), leave: () => set({ hoverNode: null, hoverRegion: null }) }));
+  const heroSites = L.sites.map(st => ({ ...st, key: st.key, textW: (200 - 24 - (st.hasAction || (!st.ghost && !st.leaf) ? 62 : 18)) + 'px', op: dimFor(['site' + st.name]), ty: st.y + 15, ty2: st.y + 29, dash: st.ghost || st.more ? '4 4' : 'none', color: st.ghost ? 'var(--text-disabled)' : st.more ? 'var(--link)' : 'var(--text-heading)', click: () => { if (st.ghost || st.leaf) return; if (st.more) { openLevel('sites'); return; } const isSite = (s.drill.length >= 2 && st.drillKey) || (st.drillKey && /^(DC|CAM|OFF|PLT|BR|ATM|FLD)-/.test(String(st.drillKey))) || (!st.rollup && S.countOf(st.name) === 1 && !st.drillKey && !/\(/.test(st.name)); if (isSite) set({ mapSel: 'asset:' + (st.drillKey || st.name), panelTab: 'overview' }); const key = st.drillKey || S.rollupKeyOf(est, st) || (S.countOf(st.name) > 1 || st.rollup ? S.classOf(st) : st.name); set({ drill: [...s.drill, key] }); }, enter: () => set({ hoverNode: 'site' + st.name }), leave: () => set({ hoverNode: null }), cursor: st.ghost || st.leaf ? 'default' : 'pointer', caret: st.ghost || st.leaf || st.more ? '' : '›', hasAction: !st.ghost && !st.more && !st.priv && !st.leaf, action: 'Attach', act: () => { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); syncHash('s4', s.layer, s.tab); } }));
+  const heroRegions = L.regions.map(r => ({ ...r, key: r.key, op: dimFor(['reg' + r.region]), ty: r.y + 19, dash: r.seeAll ? '3 3' : r.ghost ? '4 4' : 'none', stroke: r.seeAll ? 'var(--cta)' : 'var(--border-primary)', color: r.seeAll ? 'var(--link)' : (r.ghost || r.muted) ? 'var(--text-disabled)' : 'var(--text-heading)', cursor: r.ghost || r.muted ? 'default' : 'pointer', relFill: r.ghost ? 'transparent' : hp.regionHealth[r.region] === 'amber' ? 'var(--warning)' : 'var(--success)', relTitle: r.link === 'degraded' ? `Degraded: BGP flapping on ${r.ramp || 'NetBond'}` : hp.regionHealth[r.region] === 'amber' ? 'Degraded: latency spike on the public path' : 'Healthy', rx: 980 + (r.indent || 0), rw: 240 - (r.indent || 0), rh: r.child ? 26 : 28, caret: r.seeAll ? '›' : r.ghost || r.rollup || r.other ? (r.other ? '‹' : '') : (r.pinned ? '‹' : r.leaf ? '' : '›'), action: r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : ''), hasAction: !!(r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : '')), act: () => { if (r.link === 'degraded') { go('s3', { layer: 'cloud', tab: 'observe', mapSel: 'cx-' + r.region, mapRegion: r.region, panelTab: 'impact' })(); return; } composeFor(go, r)(); }, actionBg: r.link === 'degraded' ? 'var(--warning)' : 'var(--cta)', rectFill: r.seeAll ? 'var(--bg-accent)' : r.pinned ? 'var(--bg-accent)' : r.child ? 'var(--bg-wash)' : 'var(--bg-base)', relOp: r.child || r.other ? 0 : 1, click: () => { if (r.ghost) return; if (r.seeAll) { openWorkloads(r.wlScope.region, r.wlScope.vpcId, r.wlScope.snId); return; } if (r.wlSel) { set({ mapSel: r.wlSel, panelTab: 'overview' }); return; } if (r.toRoot) { set({ cloudDrill: [] }); return; } if (r.pinned) { set({ cloudDrill: cloudDrill.slice(0, -1) }); return; } if (r.rollup) return; if (r.child) { if (r.drill) set({ cloudDrill: [...cloudDrill, r.drill] }); return; } set({ cloudDrill: [r.region], andiScope: { kind: 'region', id: r.region, label: r.cloud + ' ' + r.region } }); }, enter: () => set({ hoverNode: 'reg' + r.region, hoverRegion: r.ghost || r.rollup ? null : r.region }), leave: () => set({ hoverNode: null, hoverRegion: null }) }));
   const heroWorkloads0 = L.workloads.map(w => ({ ...w, op: dimFor(['reg' + w.region]), click: () => { const r = est.regionsList.find(x => x.region === w.region); if (r && !cloudDrill.length) set({ cloudDrill: [w.region] }); }, cursor: cloudDrill.length ? 'default' : 'pointer' }));
   const heroWorkloads = heroWorkloads0.map(w => ({ ...w, n: String(w.label).replace(/\s*workloads?$/i, '') }));
   const heroArcs = L.arcs.map(a => ({ ...a, key: a.id, d: arcPath(a), stroke: a.priv ? '#3374cc' : 'var(--text-disabled)', dash: a.priv ? 'none' : '4 4' }));
@@ -222,32 +222,173 @@ export function vals(c) {
   const vol = s.vol || null;
   const volOpts = { q: s.volQ || '', path: s.volPath || 'all', state: s.volState || 'all', page: s.volPage || 1, sel: s.volSel || [] };
   const volSlide = s.volSlide || 0;
-  const volList = vol ? (vol.kind === 'workloads' ? V.workloadList(est0, inv, vol, volOpts) : V.volumeList(est0, vol, volOpts)) : null;
-  const openVolume = (cls, metro) => set({ vol: { kind: 'metro', cls, metro }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [] });
+  // One trail per column, read live. The drawer no longer owns a path, so the
+  // picture and the list are always on the same node by definition.
+  const colTrail = (col) => col === 'sites' ? s.drill : col === 'clouds' ? cloudDrill : (s.fabDrill || []);
+  // The picture's own band code (below, untouched) reads s.fabDrill raw and
+  // trusts trail[0] to be the 'fab' placeholder (naas-fabric.js fabricRows
+  // keys off trail LENGTH, not content). colTrail('fabric') stays exactly
+  // `s.fabDrill || []` per the brief, so a write here is the one place that
+  // must keep that invariant - otherwise a level scope opened before the band
+  // ever seeded 'fab' drills the drawer one way and leaves the picture at the
+  // facility list, which breaks "the picture follows."
+  const setColTrail = (col, next) => set(col === 'sites' ? { drill: next } : col === 'clouds' ? { cloudDrill: next } : { fabDrill: next.length && next[0] !== 'fab' ? ['fab', ...next] : next });
+  // The fabric trail carries its own root ('fab'); the other two do not, so
+  // crumb i cuts one deeper on the band.
+  const crumbCut = (col, i) => colTrail(col).slice(0, col === 'fabric' ? i + 1 : i);
+  const openLevel = (col) => set({ vol: { kind: 'level', col }, volFlat: false, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [], volSlide: (s.volSlide || 0) + 1 });
+  // A level scope holds no ids of its own - the column trail IS the scope. The
+  // row handlers below still need cls/metro/region/vpcId, so resolve them once
+  // and never read `vol.cls` or `vol.region` again.
+  const volCtx = (s.vol && s.vol.kind === 'level')
+    ? (s.vol.col === 'clouds'
+      ? { region: colTrail('clouds')[0], vpcId: colTrail('clouds')[1], snId: colTrail('clouds')[2] || null, cls: '', metro: '', metroLabel: '' }
+      : { region: '', vpcId: '', cls: String(colTrail('sites')[0] || '').split('#')[0], metro: colTrail('sites')[1], metroLabel: S.labelOfKey(est, colTrail('sites')[1]) })
+    : { ...(s.vol || {}), metroLabel: (s.vol && s.vol.metro) ? S.labelOfKey(est, s.vol.metro) : '' };
+  const volList = vol ? (vol.kind === 'level' ? V.levelList(est, inv, obAll, vol.col, colTrail(vol.col), { ...volOpts, flat: !!s.volFlat })
+    : vol.kind === 'workloads' ? V.workloadList(est0, inv, vol, volOpts) : V.volumeList(est0, vol, volOpts)) : null;
   /** The column's handoff: every workload in a VPC, or in one subnet of it. */
   const openWorkloads = (region, vpcId, snId) => set({ vol: { kind: 'workloads', region, vpcId, snId: snId || null }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [], volSlide: 0 });
-  /** Slide in one level: the drawer is the drill surface, not a dead end. */
+  /** Slide in one level. For a level scope the COLUMN trail grows, so the picture drills with the drawer. */
   const drawerInto = (patch) => set({ vol: { ...(s.vol || {}), ...patch }, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [], volSlide: (s.volSlide || 0) + 1 });
-  /** Climb back out one level. */
-  const drawerBack = () => { const v = s.vol || {}; if (v.flat) { set({ vol: { ...v, flat: false }, volQ: '', volPath: 'all', volPage: 1, volSlide: volSlide + 1 }); return; } if (v.snId) { set({ vol: { ...v, snId: null }, volQ: '', volPath: 'all', volPage: 1, volSlide: volSlide + 1 }); return; } closeVolume(); };
-  const closeVolume = () => set({ vol: null, drawerOpen: false, volSel: [], volPin: null });
-  const bulkAttach = () => { if (!volList) return; const cnt = volList.bulk.attach; const what = `${cnt.toLocaleString('en-US')} ${volList.rows[0] ? (S.CLASS[vol.cls] || S.CLASS.Branch).plural : 'sites'} in ${vol.metro} on a public first mile`; c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: what }, parsedNote: `Attach ${what}. One order, one policy, ${cnt.toLocaleString('en-US')} circuits.` }); syncHash('s4', s.layer, s.tab); };
-  const drawer = volList ? { ...volList, key: 'vol', slideKey: 'sl' + volSlide, canBack: !!(vol && (vol.snId || vol.flat)), back: drawerBack, hasFlatDoor: !!volList.flatDoor, flatDoorLabel: volList.flatDoor ? volList.flatDoor.label : '', flatDoorSub: volList.flatDoor ? volList.flatDoor.sub : '', goFlat: () => drawerInto({ flat: true, snId: null }), isSubnets: volList.level === 'subnets', searchHint: volList.kind === 'workloads' ? 'Search name, ip, type, app' : 'Search id, street, host', q: s.volQ || '', setQ: (e) => set({ volQ: e.target.value, volPage: 1 }), close: closeVolume,
+  const levelInto = (col, into) => { setColTrail(col, [...colTrail(col), into]); set({ volFlat: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [], volSlide: (s.volSlide || 0) + 1 }); };
+  /** Climb back out one level: a slice, never a pair of hardcoded pops. The
+   *  fabric trail carries its own root ('fab'), so its floor is one hop, not
+   *  zero - `colTrail('fabric')` at rest is `['fab']`, length 1, not `[]`. */
+  const drawerFloor = (col) => col === 'fabric' ? 1 : 0;
+  const drawerPath = () => { const v = s.vol || {}; return v.kind === 'level' ? colTrail(v.col).slice(drawerFloor(v.col)) : [v.snId, s.volFlat || v.flat].filter(Boolean); };
+  const drawerBack = () => {
+    const v = s.vol || {};
+    if (v.kind === 'level') {
+      if (s.volFlat) { set({ volFlat: false, volQ: '', volPath: 'all', volPage: 1, volSlide: volSlide + 1 }); return; }
+      const t = colTrail(v.col);
+      if (t.length <= drawerFloor(v.col)) return; // already at the column's root; nothing to climb
+      setColTrail(v.col, t.slice(0, -1));
+      set({ volQ: '', volPath: 'all', volPage: 1, volSlide: volSlide + 1 });
+      return;
+    }
+    if (v.flat) { set({ vol: { ...v, flat: false }, volQ: '', volPath: 'all', volPage: 1, volSlide: volSlide + 1 }); return; }
+    if (v.snId) { set({ vol: { ...v, snId: null }, volQ: '', volPath: 'all', volPage: 1, volSlide: volSlide + 1 }); return; }
+    closeVolume();
+  };
+  const closeVolume = () => set({ vol: null, drawerOpen: false, volSel: [], volPin: null, volFlat: false });
+  // The footer button's own label already branches on volList.kind (Isolate
+  // for a workloads-shaped list, Attach otherwise, in bulkLabel below) - this
+  // handler must compose the SAME verb, or a clouds level scope drilled to a
+  // VPC/subnet (which delegates to workloadList, so volList.kind==='workloads'
+  // exactly like the old 'workloads' scope) shows "Isolate" and then composes
+  // an Attach order with a site noun and an empty place.
+  const bulkAttach = () => {
+    if (!volList) return;
+    const cnt = volList.bulk.attach;
+    if (volList.kind === 'workloads') {
+      const noun = cnt === 1 ? 'workload' : 'workloads';
+      const what = `${cnt.toLocaleString('en-US')} exposed ${noun} in ${volCtx.region}`;
+      // qty is a site count (composeOrder scales NetBond by it); Isolate never
+      // orders a circuit, so it stays unset here - cnt workloads inside one
+      // VPC do not buy cnt NetBond ports.
+      c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: what, note: `Isolate ${what}: bring them off the public path.` }) });
+      syncHash('s4', s.layer, s.tab);
+      return;
+    }
+    const what = `${cnt.toLocaleString('en-US')} ${volList.rows[0] ? (S.CLASS[volCtx.cls] || S.CLASS.Branch).plural : 'sites'} in ${volCtx.metroLabel || volCtx.metro} on a public first mile`;
+    c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: what, qty: cnt, note: `Attach ${what}. One order, one policy, ${cnt.toLocaleString('en-US')} circuits.` }) });
+    syncHash('s4', s.layer, s.tab);
+  };
+  // A row's own Attach action (`sitesLevel`/`cloudsLevel` root rows, or a
+  // site's `path` level) has no address/metro of its own - those only exist
+  // on a delegated volumeList row. Resolve a place from the column's trail so
+  // the compose note never prints "undefined"; at a column's root there is no
+  // deeper trail to read, so the row's own id (already self-describing there,
+  // e.g. "AWS us-east-2") stands alone rather than forcing an empty "in ".
+  const attachTrail = vol && vol.kind === 'level' ? colTrail(vol.col) : [];
+  const attachPlace = (x) => x.metro || (attachTrail.length ? S.labelOfKey(est, attachTrail[attachTrail.length - 1]) : '') || volCtx.metroLabel || '';
+  // Only the old `metro` kind rebuilds `s.drill` on pin. It is opened from the
+  // picture's `+N more` row, where the drill can be shorter than the metro the
+  // drawer is showing, so the pin drills the picture to that metro - load-bearing.
+  // A LEVEL scope has nothing to rebuild: `s.drill` already IS colTrail('sites')
+  // by construction. Rebuilding it from volCtx (whose cls/metro are only ever
+  // read off the sites trail) writes ['<hop>', undefined] at depth 1 and
+  // ['', undefined] on clouds/fabric; siteDrillRows reads either as null, so the
+  // drawer unmounts mid-render and openLevel('sites') stays dead afterward.
+  const pinMayDrill = vol && vol.kind === 'metro';
+  const drawer = volList ? { ...volList, key: 'vol', slideKey: 'sl' + volSlide,
+    canBack: drawerPath().length > 0, isLevel: vol && vol.kind === 'level',
+    capSearch: !!(volList.caps && volList.caps.search), capChips: !!(volList.caps && volList.caps.chips), capBulk: !!(volList.caps && volList.caps.bulk),
+    crumbs: (volList.trail || []).map((name, i, a) => ({ key: 'dc' + i, name, last: i === a.length - 1, notLast: i < a.length - 1, ariaCurrent: i === a.length - 1 ? 'page' : 'false', go: vol && vol.kind === 'level' ? () => { setColTrail(vol.col, crumbCut(vol.col, i)); set({ volFlat: false, volPage: 1, volQ: '', volSlide: volSlide + 1 }); } : () => {} })),
+    hasCrumbs: (volList.trail || []).length > 1,
+    back: drawerBack, hasFlatDoor: !!volList.flatDoor, flatDoorLabel: volList.flatDoor ? volList.flatDoor.label : '', flatDoorSub: volList.flatDoor ? volList.flatDoor.sub : '', goFlat: vol && vol.kind === 'level' ? () => set({ volFlat: true, volQ: '', volPath: 'all', volPage: 1, volSlide: volSlide + 1 }) : () => drawerInto({ flat: true, snId: null }), isSubnets: volList.level === 'subnets', searchHint: volList.searchHint || (volList.kind === 'workloads' ? 'Search name, ip, type, app' : 'Search id, street, host'), q: s.volQ || '', setQ: (e) => set({ volQ: e.target.value, volPage: 1 }), close: closeVolume,
     paths: (volList.kind === 'workloads' ? [['all', `All apps · ${volList.counts.apps}`], ...volList.apps.slice(0, 6).map(a => [a.tag, `${a.tag} · ${a.count}`])] : [['all', 'All'], ['fabric', 'On the fabric'], ['public', 'Public']]).map(([k, l]) => ({ key: k, label: l, on: (s.volPath || 'all') === k, go: () => set({ volPath: k, volPage: 1 }), bg: (s.volPath || 'all') === k ? 'var(--cta)' : 'var(--bg-base)', color: (s.volPath || 'all') === k ? '#fff' : 'var(--text-heading)', border: (s.volPath || 'all') === k ? 'var(--cta)' : 'var(--border-secondary)' })),
     states: (volList.kind === 'workloads' ? [['all', 'Any state'], ['exposed', `Exposed · ${volList.counts.exposed}`]] : [['all', 'Any state'], ['degraded', 'Degraded']]).map(([k, l]) => ({ key: k, label: l, on: (s.volState || 'all') === k, go: () => set({ volState: k, volPage: 1 }), bg: (s.volState || 'all') === k ? 'var(--cta)' : 'var(--bg-base)', color: (s.volState || 'all') === k ? '#fff' : 'var(--text-heading)', border: (s.volState || 'all') === k ? 'var(--cta)' : 'var(--border-secondary)' })),
-    rows: volList.rows.map(x => ({ ...x, key: x.id, dot: x.state === 'degraded' ? 'var(--error)' : x.state === 'public' ? 'var(--warning)' : 'var(--success)', pinned: s.volPin === x.id, bg: s.volPin === x.id ? 'var(--bg-accent)' : 'transparent', toggle: () => set({ volSel: (s.volSel || []).includes(x.id) ? (s.volSel || []).filter(k => k !== x.id) : [...(s.volSel || []), x.id] }), pin: volList.kind === 'workloads' ? () => set({ volPin: x.id, mapSel: `wl:${vol.region}|${vol.vpcId}|${x.id}`, panelTab: 'overview', andiScope: { kind: 'workload', id: x.id, label: `${x.id} · ${x.tag || 'untagged'}` } }) : () => set({ volPin: x.id, mapSel: 'asset:' + x.id, panelTab: 'overview', drill: s.drill.length >= 2 ? s.drill : [vol.cls, vol.metro] }), isDoor: !!x.descend, notDoor: !x.descend, descend: x.descend ? () => drawerInto({ snId: x.snId }) : () => {}, hasAction: !!x.action, act: volList.kind === 'workloads' ? () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: `${x.id} · ${x.tag || 'untagged'} · ${x.ip}` }, parsedNote: `Isolate ${x.id} (${x.ip}, ${x.tag || 'untagged'}) in ${vol.region}: bring it off the public path.` }); syncHash('s4', s.layer, s.tab); } : x.action === 'Attach' ? () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: `${x.id} · ${x.address}` }, parsedNote: `Attach ${x.id} (${x.address}) in ${x.metro}: one circuit onto the fabric.` }); syncHash('s4', s.layer, s.tab); } : () => set({ andiScope: { kind: 'region', id: x.id, label: x.id }, andiOpen: true }) })),
+    rows: volList.rows.map(x => ({ ...x, key: x.id, selected: !!x.selected, dot: x.state === 'degraded' ? 'var(--error)' : x.state === 'public' ? 'var(--warning)' : 'var(--success)', pinned: s.volPin === x.id, bg: s.volPin === x.id ? 'var(--bg-accent)' : 'transparent', toggle: () => set({ volSel: (s.volSel || []).includes(x.id) ? (s.volSel || []).filter(k => k !== x.id) : [...(s.volSel || []), x.id] }),
+      pin: volList.kind === 'workloads' ? () => set({ volPin: x.id, mapSel: `wl:${volCtx.region}|${volCtx.vpcId}|${x.id}`, panelTab: 'overview', andiScope: { kind: 'workload', id: x.id, label: `${x.id} · ${x.tag || 'untagged'}` } })
+        : pinMayDrill ? () => set({ volPin: x.id, mapSel: 'asset:' + x.id, panelTab: 'overview', drill: s.drill.length >= 2 ? s.drill : [volCtx.cls, (V.metroOf(est, volCtx.cls, volCtx.metro) || {}).key || volCtx.metro] })
+        : () => set({ volPin: x.id, mapSel: 'asset:' + x.id, panelTab: 'overview' }),
+      isDoor: !!(x.into || x.descend), notDoor: !(x.into || x.descend), descend: x.into ? () => levelInto(vol.col, x.into) : x.descend ? () => drawerInto({ snId: x.snId }) : () => {}, hasAction: !!x.action,
+      act: volList.kind === 'workloads' ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: `${x.id} · ${x.tag || 'untagged'} · ${x.ip}`, qty: 1, note: `Isolate ${x.id} (${x.ip}, ${x.tag || 'untagged'}) in ${volCtx.region}: bring it off the public path.` }) }); syncHash('s4', s.layer, s.tab); }
+        : x.action === 'Attach' ? () => { const place = attachPlace(x); const addr = x.address ? ` (${x.address})` : ''; const bulk = x.address ? `${x.id} · ${x.address}` : (place ? `${x.id} · ${place}` : x.id); c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk, qty: 1, note: place ? `Attach ${x.id}${addr} in ${place}: one circuit onto the fabric.` : `Attach ${x.id}${addr}: one circuit onto the fabric.` }) }); syncHash('s4', s.layer, s.tab); }
+        : () => set({ andiScope: { kind: 'region', id: x.id, label: x.id }, andiOpen: true }) })),
     more: () => set({ volPage: (s.volPage || 1) + 1 }), moreLabel: `Show ${Math.min(60, volList.matching - volList.shownCount)} more · ${volList.shownCount.toLocaleString('en-US')} of ${volList.matching.toLocaleString('en-US')}`,
-    selectAll: () => set({ volSel: volList.matchingIds }), clearSel: () => set({ volSel: [] }), hasSel: (s.volSel || []).length > 0, bulkLabel: volList.kind === 'workloads' ? `Isolate ${volList.bulk.attach.toLocaleString('en-US')} exposed · ${volList.bulk.label}` : `Attach ${volList.bulk.attach.toLocaleString('en-US')} · ${volList.bulk.label}`, canBulk: volList.bulk.attach > 0, bulkAttach, matchingF: volList.matching.toLocaleString('en-US') } : null;
+    selectAll: () => set({ volSel: volList.matchingIds }), clearSel: () => set({ volSel: [] }), hasSel: (s.volSel || []).length > 0, bulkLabel: volList.kind === 'workloads' ? `Isolate ${volList.bulk.attach.toLocaleString('en-US')} exposed · ${volList.bulk.label}` : `Attach ${volList.bulk.attach.toLocaleString('en-US')} · ${volList.bulk.label}`, canBulk: !!(volList.caps && volList.caps.bulk) && volList.bulk.attach > 0, bulkAttach, matchingF: volList.matching.toLocaleString('en-US') } : null;
   const drawerOpen = !!(s.drawerOpen && drawer);
 
   // ---- inside the fabric (Micah, 14:13): facilities → ports → circuits, in place ----
   const fabDrill = s.fabDrill || [];
   const fabInfo = fabDrill.length ? FB.fabricRows(est0, inv, obAll, fabDrill) : null;
   const FAB_STATE = { ok: 'var(--success)', saturating: 'var(--warning)', degraded: 'var(--error)' };
-  const fabRows = fabInfo ? fabInfo.rows.slice(0, 8).map((r, i) => ({ ...r, key: r.key, x: L.bandX + 12, w: L.bandW - 24, y: L.bandY + 40 + i * 32, dot: FAB_STATE[r.state] || FAB_STATE.ok, caret: r.leaf ? '' : '›', cursor: r.leaf ? 'default' : 'pointer', hasAction: !!r.leaf, action: 'Add circuit', act: () => { c.setState({ screen: 's4', compose: prefillCompose(est) }); syncHash('s4', s.layer, s.tab); }, click: () => { if (r.leaf) return; set({ fabDrill: [...fabDrill, r.drill] }); } })) : [];
-  const fabHead = fabInfo ? { label: fabInfo.label, head: fabInfo.head, more: fabInfo.rows.length > 8 ? `+${fabInfo.rows.length - 8} more` : '', x: L.bandX + 12, w: L.bandW - 24, moreY: L.bandY + 40 + 8 * 32 } : null;
+  // The door's right margin inside its header, because the runtime cannot
+  // subtract. The 10px edge rule is RENDERED pixels, not viewBox units: the
+  // hero draws 1087 CSS px wide for a 1392 viewBox at the 1440x900 reference
+  // (scale .7809), so 12 units would clear by 9.37px and fail. 16 units clears
+  // by 12.49px there, and holds 10px down to an 870px hero (10 * 1392 / 16).
+  // Hoisted above fabRows and fabHead (Task 11 fix round 2): every row in the
+  // band - the port rows, the '‹ Up' row, the overflow button - shares this
+  // one edge, or their hard edges stagger against each other.
+  const EDGE = 16;
+  const fabRows = fabInfo ? fabInfo.rows.slice(0, 8).map((r, i) => ({ ...r, key: r.key, x: L.bandX + EDGE, w: L.bandW - 2 * EDGE, y: L.bandY + 40 + i * 32, dot: FAB_STATE[r.state] || FAB_STATE.ok, caret: r.leaf ? '' : '›', cursor: r.leaf ? 'default' : 'pointer', hasAction: !!r.leaf, action: 'Add circuit', act: () => { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); syncHash('s4', s.layer, s.tab); }, click: () => { if (r.leaf) return; set({ fabDrill: [...fabDrill, r.drill] }); } })) : [];
+  const fabHead = fabInfo ? { label: fabInfo.label, head: fabInfo.head, more: fabInfo.rows.length > 8 ? `+${fabInfo.rows.length - 8} more · open the list ›` : '', x: L.bandX + EDGE, w: L.bandW - 2 * EDGE, moreY: L.bandY + 40 + 8 * 32 } : null;
   const fabUp = () => set({ fabDrill: fabDrill.slice(0, -1) });
   const fabTrail = fabDrill.map((k, i) => ({ key: 'fb' + i, label: i === 0 ? 'AT&T fabric' : (i === 1 ? 'AT&T ' + k : String(k).replace(/^port:[^:]+:/, 'port ')), go: () => set({ fabDrill: fabDrill.slice(0, i + 1) }), last: i === fabDrill.length - 1, notLast: i < fabDrill.length - 1 }));
+
+  // ---- the header door (2026-09-17): the count is the door ----
+  // Unconditional, so the rule survives contact with every level. The number
+  // is the one that fills the drawer, so the cloud root reads "All 6 regions".
+  const nfmt = (x) => Number(x).toLocaleString('en-US');
+  // EDGE is declared above, before fabRows and fabHead, since the whole band
+  // shares it now (Task 11 fix round 2).
+  // One source for the clouds header width: the door's gutter and the header
+  // itself must move together or the door drifts off its column.
+  const cloudsHeadW = cloudDrill.length ? 412 : 240;
+  const sitesGutter = (24 + 460) - 224 + EDGE;              // header 24..484, cards end at 224
+  const cloudsGutter = (980 + cloudsHeadW) - 1220 + EDGE;   // header 980.., cards end at 1220
+  const bandGutter = EDGE;                                  // the header IS the band: same edges
+  // `shown` is how many of them the canvas is drawing right now, or null when
+  // the canvas is drawing none of them - a closed band is not "4 hidden".
+  const doorFor = (col, shown, gutter, open) => {
+    const h = V.levelHead(est, inv, obAll, col, colTrail(col));
+    if (!h) return { has: false, hasNot: true, label: '', title: '', color: 'var(--text-disabled)', gutter, open: () => {} };
+    // Zero children still print. A level that holds nothing says so in
+    // disabled ink with no caret and no handler: not a dead button, not a
+    // button at all. `has` gates the handler, never the words.
+    if (!h.total) return { has: false, hasNot: true, label: `0 ${h.noun}`, title: `${h.title}: nothing to open yet`, color: 'var(--text-disabled)', gutter, open: () => {} };
+    const hidden = shown == null ? 0 : Math.max(0, h.total - shown);
+    return {
+      has: true,
+      hasNot: false,
+      label: hidden ? `All ${nfmt(h.total)} ${h.noun} · ${nfmt(hidden)} hidden ›` : `All ${nfmt(h.total)} ${h.noun} ›`,
+      title: `Open the list: ${h.title}`,
+      color: hidden ? 'var(--link)' : 'var(--text-light)',
+      gutter,
+      open,
+    };
+  };
+  // `seeAll` is a door, not a sampled child: counting it would report one
+  // fewer hidden workload than the drawer holds.
+  const sitesDoor = doorFor('sites', L.sites.filter(x => !x.more && !x.ghost).length, sitesGutter, () => openLevel('sites'));
+  const cloudsDoor = doorFor('clouds', L.regions.filter(x => !x.rollup && !x.other && !x.pinned && !x.ghost && !x.seeAll).length, cloudsGutter, () => openLevel('clouds'));
+  // A closed band has to open with its drawer, or the picture sits on the
+  // facility list while the drawer walks off it (see the invariant above).
+  const bandDoor = doorFor('fabric', fabDrill.length ? fabRows.length : null, bandGutter, () => { if (!fabDrill.length) set({ fabDrill: ['fab'] }); openLevel('fabric'); });
 
   // ---- launch cards (Ramesh, 2026-09-09: four launch-off points; new customers start at Connect, everyone else at Observe) ----
   const violationsN = [...(est.policies || []), ...(s.customPolicies || [])].reduce((a, p) => a + (p.viol || 0), 0);
@@ -301,14 +442,33 @@ export function vals(c) {
   const sankeyRibbons = sk ? sk.ribbons.map((r, i) => ({ ...r, key: 'r' + i, fill: r.priv ? '#3374cc' : '#8a949c' })) : [];
   const flows = isEmpty ? [] : D.FLOWS.map((f, i) => ({ ...f, key: 'f' + i, deny: f.action === 'deny', bg: f.action === 'deny' ? 'var(--bg-accent)' : 'transparent', dot: f.action === 'deny' ? 'var(--error)' : 'var(--success)' }));
   const verbTabs = TABS.map(t => ({ key: t, label: TAB_LABEL[t], sub: layer.sub ? layer.sub[t] : '', active: s.tab === t, go: () => { set({ tab: t }); syncHash('s3', s.layer, t); scrollToResult('S3 Department'); } }));
-  const crumbLabel = (d) => (S.CLASS[d] || {}).label || String(d);
-  const crumbs = [{ key: 'floor', label: 'Home', go: go('s3', { layer: 'cloud', tab: 'connect', drill: [], cloudDrill: [] }) }, ...s.drill.map((d, i) => ({ key: 'd' + i, label: crumbLabel(d), go: () => set({ drill: s.drill.slice(0, i + 1) }) })), ...((regionDrill && regionDrill.crumb) || cloudDrill).map((name, i) => ({ key: 'c' + i, label: name, go: () => set({ cloudDrill: cloudDrill.slice(0, Math.max(1, i)) }) }))];
+  const crumbLabel = (d) => S.labelOfKey(est, d);
+  // The cloud crumb starts at the cloud name; the cloud drill starts at the
+  // region. Index i of the crumb is depth i of the drill, so "AWS" clears it.
+  const cloudCrumbs = ((regionDrill && regionDrill.crumb) || cloudDrill).map((name, i, a) => ({ key: 'c' + i, label: name, notLast: i < a.length - 1, ariaCurrent: i === a.length - 1 ? 'page' : 'false', go: () => set({ cloudDrill: cloudDrill.slice(0, i) }) }));
+  const crumbs = [{ key: 'floor', label: 'Home', go: go('s3', { layer: 'cloud', tab: 'connect', drill: [], cloudDrill: [] }) }, ...s.drill.map((d, i) => ({ key: 'd' + i, label: crumbLabel(d), go: () => set({ drill: s.drill.slice(0, i + 1) }) }))].map((c, i, a) => ({ ...c, notLast: i < a.length - 1, ariaCurrent: i === a.length - 1 ? 'page' : 'false' }));
   const drillLabel = drillInfo ? (drillInfo.level === 'path' ? drillInfo.label : `${drillInfo.label} · ${drillInfo.level}s`) : '';
 
   // ---- compose ----
   const cp = s.compose;
   const outcome = D.OUTCOMES.find(o => o.id === cp.outcome);
-  const setC = (patch) => set({ compose: { ...cp, ...patch, ...(patch.resiliency !== undefined ? { resiliencyChosen: true } : {}) } });
+  // Picking a metro, a control, a resiliency tier keeps building the SAME
+  // order, so they spread `cp` unchanged. Changing the outcome on a compose
+  // that carries a site count is a NEW order - u2/u3 never consume `qty`, so
+  // the label and count would otherwise survive pointing at a price nothing
+  // still explains (Fix round 2, finding E).
+  // Fix round 3, finding H: guard on what an order actually looks like
+  // (carriesOrder), not on `sourceLabel` alone - the drawer's bulk attach
+  // carries `bulk`/`qty` with no label and was slipping past a
+  // sourceLabel-only guard. `note` now lives inside `compose`, so cleaning
+  // it is just part of cleanCompose; no separate parsedNote side effect.
+  // Fix round 4, finding N1: carriesOrder must gate only the cleanCompose
+  // half. An outcome switch is always a new order - a plain wizard compose
+  // (no count, no label, no note; carriesOrder false) still left a stale
+  // Review snapshot behind. `order: null` is now unconditional on any
+  // outcome switch; a SAME-order patch (no `outcome` key) still leaves
+  // `order` untouched either way.
+  const setC = (patch) => { const startsNew = patch.outcome !== undefined; set({ compose: { ...(startsNew && carriesOrder(cp) ? cleanCompose(cp) : cp), ...patch, ...(patch.resiliency !== undefined ? { resiliencyChosen: true } : {}) }, ...(startsNew ? { order: null } : {}) }); };
   const toggle = (field, v, single) => () => { if (single) return setC({ [field]: v }); const arr = cp[field]; setC({ [field]: arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v] }); };
   const chipRow = (field, list, single) => list.map(v => ({ key: v, label: v, on: single ? cp[field] === v : cp[field].includes(v), click: toggle(field, v, single) }));
   const metroChips = (D.COMPOSE_CHIPS.regions[cp.regionTab] || []).map(m => ({ key: m, label: m, on: cp.metros.includes(m), click: () => setC({ metros: cp.metros.includes(m) ? cp.metros.filter(x => x !== m) : [...cp.metros, m].slice(-2) }) }));
@@ -320,7 +480,7 @@ export function vals(c) {
 
   // ---- review ----
   const ord = s.order || composed;
-  const orderLines = (ord.lines || []).map((l, i) => ({ ...l, key: 'l' + i, monthlyF: l.unpriced ? 'Priced after survey' : fmt(l.monthly) + '/mo', color: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
+  const orderLines = (ord.lines || []).map((l, i) => ({ ...l, key: 'l' + i, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? 'Priced after survey' : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : fmt(l.monthly) + '/mo', color: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
   const pricedTotal = (ord.lines || []).filter(l => !l.unpriced).reduce((a, l) => a + l.monthly, 0);
   const termDisc = { 0: 0, 12: 15, 24: 30, 36: 50 }[s.term];
   const termTotal = Math.round(pricedTotal * (1 - termDisc / 100));
@@ -393,12 +553,17 @@ export function vals(c) {
   const landedAll = !!s.landed;
   const pendingStages = D.LIFECYCLE.map((l, i) => landedAll ? ({ key: l, label: l, fill: 'var(--success)', ring: 'var(--success)', color: 'var(--text-heading)', line: 'var(--success)' }) : ({ key: l, label: l, fill: i < 2 ? 'var(--success)' : i === 2 ? 'var(--cta)' : 'var(--bg-base)', ring: i < 2 ? 'var(--success)' : i === 2 ? 'var(--cta)' : 'var(--border-primary)', color: i <= 2 ? 'var(--text-heading)' : 'var(--text-disabled)', line: i < 2 ? 'var(--success)' : 'var(--border-secondary)' }));
 
-  const places = [['s0', 'Front door'], ['s1', 'Discover'], ['s2', 'Floor'], ['s4', 'Compose'], ['s7', 'Marketplace']].map(([id, label]) => ({ key: id, label, current: s.screen === id || (id === 's2' && s.screen === 's3') || (id === 's7' && s.screen === 's8') ? 'page' : 'false', go: go(id) }));
-
   return {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
     view: s.view, setView: (e) => set({ view: e.target.value, drill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep }),
-    places, goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goDiscover: go('s1'), goCompose: () => { const pf = prefillCompose(est); c.setState({ screen: 's4', compose: cp.outcome ? { ...cp, step: cp.step || 0 } : pf }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
+    // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
+    // which nulled s.order even when the live compose had not started an
+    // outcome yet - exactly the state right after a marketplace product
+    // pick (the product path sets s.order but never touches compose). This
+    // shortcut means "start composing," not "discard whatever was just
+    // reviewed," so it writes a fresh compose without resetting order; only
+    // an actual outcome switch (setC) resets a stale order now.
+    goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(cp.outcome ? { compose: { ...cp, step: cp.step || 0 } } : { compose: prefillCompose(est) }) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
     hasTasks: s.submitted, taskCount: 1, showPending, pendingStages, landed: landedAll, notLanded: !landedAll, pendingSub: landedAll ? 'Validated · live. First flow logs are in.' : 'Submitted for approval',
     deliverNow: () => { const cand = (s.compose && s.compose.prefillRegion ? s.compose.prefillRegion.split(' ')[1] : null) || (estRaw.regionsList.find(r => !r.priv) || {}).region; if (!cand) return; c.setState({ landed: cand, layer: 'cloud', tab: 'observe', screen: 's3', events: [...(s.events || []), { key: 'e' + Date.now(), t: new Date().toLocaleTimeString('en-US', { hour12: false }), text: `${cand} validated · live. Hosted VPC on the fabric; first flow logs received; coverage up by one region.` }] }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
     ...shellVals(s, set, go, est, c),
@@ -426,9 +591,9 @@ export function vals(c) {
     modeTabs: [{ key: 'foryou', label: 'For you', active: !['s7', 's8'].includes(s.screen), click: () => { set({ mode: 'foryou' }); go('s3', { layer: 'cloud', tab: 'connect' })(); } }, { key: 'browse', label: 'Browse the marketplace', active: ['s7', 's8'].includes(s.screen), click: () => { set({ mode: 'browse' }); go('s7')(); } }],
     intakeOrg: s.intakeOrg, setOrg: (e) => set({ intakeOrg: e.target.value }), intakeSource: s.intakeSource, setSource: (v) => () => set({ intakeSource: v }), srcCredential: s.intakeSource === 'credential', srcInventory: s.intakeSource === 'inventory', intakeProvider: s.intakeProvider, setProvider: (e) => set({ intakeProvider: e.target.value }), startScan: () => { set({ view: 'partial', screen: 's1', scanStep: 0 }); startScan(c); syncHash('s1'); }, credBorder: s.intakeSource === 'credential' ? 'var(--border-active)' : 'var(--border-secondary)', invBorder: s.intakeSource === 'inventory' ? 'var(--border-active)' : 'var(--border-secondary)',
     // hero
-    drawer, drawerOpen, hasDrawer: drawerOpen, noDrawer: !drawerOpen, andiFabRight: drawerOpen ? '396px' : '16px',
-    fabOpen: fabDrill.length > 0, fabClosed: fabDrill.length === 0, fabRows, fabHead, fabUp, fabTrail, hasFabMore: !!(fabHead && fabHead.more), fabMore: fabHead ? fabHead.more : '', fabHeadY: L.bandY + 8, bandX: L.bandX, bandW: L.bandW, bandLabelX: L.bandX, laneX: L.lane.x, laneW: L.lane.w, strataX: L.bandX + 12, strataW: L.bandW - 24,
-    laneFocus: !!s.laneFocus, toggleLane: () => set({ laneFocus: !s.laneFocus }), laneTitle: s.laneFocus ? 'Show everything' : 'Show only what rides outside the fabric', laneCount: `${est.regionsList.filter(r => !r.priv).length + est.sites.filter(x => !x.priv).length} public`, laneAttach: () => { const r = est.regionsList.find(x => !x.priv); if (r) composeFor(go, r)(); else { c.setState({ screen: 's4', compose: prefillCompose(est) }); } },
+    drawer, drawerOpen, openLevel, hasDrawer: drawerOpen, noDrawer: !drawerOpen, andiFabRight: drawerOpen ? '396px' : '16px',
+    fabOpen: fabDrill.length > 0, fabClosed: fabDrill.length === 0, sitesDoor, bandDoor, cloudsDoor, fabRows, fabHead, fabUp, fabTrail, hasFabMore: !!(fabHead && fabHead.more), fabMore: fabHead ? fabHead.more : '', openBandLevel: () => openLevel('fabric'), fabHeadY: L.bandY + 8, bandX: L.bandX, bandW: L.bandW, bandLabelX: L.bandX, laneX: L.lane.x, laneW: L.lane.w,
+    laneFocus: !!s.laneFocus, toggleLane: () => set({ laneFocus: !s.laneFocus }), laneTitle: s.laneFocus ? 'Show everything' : 'Show only what rides outside the fabric', laneCount: `${est.regionsList.filter(r => !r.priv).length + est.sites.filter(x => !x.priv).length} public`, laneAttach: () => { const r = est.regionsList.find(x => !x.priv); if (r) composeFor(go, r)(); else { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); } },
     heroSites, heroRegions, heroGroups: L.groups.map(g => ({ ...g, key: 'g' + g.cloud + g.y })), heroWorkloads, heroEdges, heroArcs, strata: strataMeta, showWorkloads: heroWorkloads.length > 0, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T fabric' : 'AT&T fabric  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on the fabric` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
     perfCard: hr ? { region: `${hr.cloud} ${hr.region}`, msLine: `${hr.priv ? hr.fab : hr.pub} ms ${hr.priv ? 'on the fabric' : 'public'}${hr.rel === 'warn' ? ' · degraded' : ''}`, pub: `Public today ${hr.pub} ms`, fab: `on the fabric ${hr.fab} ms`, rel: hr.rel === 'warn' ? 'Reliability: degraded' : 'Reliability: healthy', relFill: hr.rel === 'warn' ? 'var(--warning)' : 'var(--success)', top: Math.max(0, Math.min(340, hrNode.y - 70)) + 'px', left: 'calc(100% - 236px)', go: go('s3', { layer: 'cloud', tab: 'observe' }) } : null, hasPerf: !!hr,
     // floor
@@ -436,13 +601,13 @@ export function vals(c) {
     // department
     layerBar: D.LAYERS.map(l => ({ key: l.id, label: l.label, on: s.layer === l.id, go: () => { set({ layer: l.id, drill: [], regionDrill: null }); syncHash('s3', l.id, s.tab); scrollToResult('S3 Department'); }, bg: s.layer === l.id ? 'var(--cta)' : 'transparent', color: s.layer === l.id ? '#fff' : 'var(--text-heading)' })),
     backToPicture: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
-    layerLabel: layer.id === 'cloud' ? 'Network services' : layer.label, layerTagline: layer.id === 'cloud' ? 'The services layer' : layer.tagline, crumbs, verbTabs, showCrumbs: s.drill.length > 0 || cloudDrill.length > 0, drillLabel: [drillLabel, regionDrill ? `${regionDrill.label} · ${regionDrill.level}s` : ''].filter(Boolean).join(' · '), hasDrill: s.drill.length > 0 || cloudDrill.length > 0, drillUp: () => set({ drill: s.drill.slice(0, -1), cloudDrill: cloudDrill.slice(0, -1) }), sitesHead: s.drill.length ? '‹ Sites › ' + s.drill.map(k => (S.CLASS[k] || {}).label || String(k)).join(' › ') : 'Sites', sitesUp: () => set({ drill: s.drill.slice(0, -1) }), sitesHeadColor: s.drill.length ? 'var(--link)' : 'var(--text-light)', cloudsHead: cloudDrill.length ? '‹ ' + ['Clouds', ...((regionDrill && regionDrill.crumb) || [cloudDrill[0]])].join(' › ') : 'Clouds', cloudsUp: () => set({ cloudDrill: cloudDrill.slice(0, -1) }), cloudsHeadColor: cloudDrill.length ? 'var(--link)' : 'var(--text-light)', cloudsHeadW: cloudDrill.length ? 412 : 240, cloudsHeadSize: cloudDrill.length ? '12px' : '13px', cloudsHeadCase: cloudDrill.length ? 'none' : 'uppercase', cloudsHeadTrack: cloudDrill.length ? '0' : '.04em', showWorkloadsHead: !cloudDrill.length, tConnect: s.tab === 'connect', tGovern: s.tab === 'govern', tObserve: s.tab === 'observe', tCost: s.tab === 'cost',
+    crumbs, verbTabs, cloudCrumbs, hasCloudCrumbs: cloudCrumbs.length > 0, showCrumbs: s.drill.length > 0 || cloudDrill.length > 0, drillLabel: [drillLabel, regionDrill ? `${regionDrill.label} · ${regionDrill.level}s` : ''].filter(Boolean).join(' · '), hasDrill: s.drill.length > 0 || cloudDrill.length > 0, drillUp: () => set({ drill: s.drill.slice(0, -1), cloudDrill: cloudDrill.slice(0, -1) }), sitesHead: s.drill.length ? '‹ ' + S.labelOfKey(est, s.drill[s.drill.length - 1]) : 'Sites', sitesUp: () => set({ drill: s.drill.slice(0, -1) }), sitesHeadColor: s.drill.length ? 'var(--link)' : 'var(--text-light)', cloudsHead: cloudDrill.length ? '‹ ' + ((regionDrill && regionDrill.crumb) || [cloudDrill[0]]).slice(-1)[0] : 'Clouds', cloudsUp: () => set({ cloudDrill: cloudDrill.slice(0, -1) }), cloudsHeadColor: cloudDrill.length ? 'var(--link)' : 'var(--text-light)', cloudsHeadW, cloudsHeadSize: cloudDrill.length ? '12px' : '13px', cloudsHeadCase: cloudDrill.length ? 'none' : 'uppercase', cloudsHeadTrack: cloudDrill.length ? '0' : '.04em', showWorkloadsHead: !cloudDrill.length, tConnect: s.tab === 'connect', tGovern: s.tab === 'govern', tObserve: s.tab === 'observe', tCost: s.tab === 'cost',
     ...connectVals(s, set, R.applyScope(est, obScope), go, ob),
     connectFindings: deptFindings('connect'), hasConnectFindings: deptFindings('connect').length > 0, tabLabel: TAB_LABEL[s.tab] || 'Connect', noConnectFindings: deptFindings('connect').length === 0, connectOthers: ['govern', 'observe', 'cost'].map(t => ({ key: t, n: findingsFor(s.layer, t).length, label: `${findingsFor(s.layer, t).length} close on ${TAB_LABEL[t]}`, go: () => { set({ tab: t }); syncHash('s3', s.layer, t); scrollToResult('S3 Department'); } })).filter(x => x.n > 0), hasConnectOthers: ['govern', 'observe', 'cost'].some(t => findingsFor(s.layer, t).length > 0), mostChosen, levelTiles: sorted, levelCount: levelItems.length, levelSort: s.levelSort, setLevelSort: (e) => set({ levelSort: e.target.value }), levelQuery: s.levelQuery, setLevelQuery: (e) => set({ levelQuery: e.target.value }), levelTitle: drillInfo ? drillInfo.label : levelMapTitle(layer), levelMore: Math.max(0, levelItems.length - 60), hasLevelMore: levelItems.length > 60, catalogRow, visionRow, hasVision: visionRow.length > 0,
     hasSim: !!s.simulated || (s.customPolicies || []).some(p => p.state === 'simulated'),
-    governVerdict, governFindings: deptFindings('govern'), policies, hasPolicies: policies.length > 0, examplePolicies0: [{ key: 'a', t: 'Tag PCI forces a private path', m: 'tag PCI', r: 'Private path required' }, { key: 'b', t: 'Tag Internet-facing gets NGFW plus AT&T egress', m: 'tag Internet-facing', r: 'Inline security inspection' }, { key: 'c', t: 'Branch Finance reaches only finance-tagged workloads', m: 'branch Finance', r: 'Segment intra-tag only' }], authorPolicy: go('s4', { compose: { ...cp, outcome: 'u1', control: ['Private path required'], source: ['Data center'], dest: ['Clouds'] } }), simulate: () => set({ simulated: true, enforced: false }), enforce: () => set({ enforced: true }), undo: () => set({ simulated: false, enforced: false }), simulated: s.simulated, enforced: s.enforced, canEnforce: s.simulated && !s.enforced, simulateText: s.enforced ? 'Enforced. Paths rerouted onto the fabric.' : s.simulated ? `Simulated: ${pciViol ? pciViol.split(' ')[0] : 0} paths reroute onto the fabric, 2 flows denied. Drawn dashed until enforced.` : 'Simulate shows what changes before enforce is enabled.', enforceBg: s.simulated && !s.enforced ? 'var(--cta)' : 'var(--bg-neutral)', enforceColor: s.simulated && !s.enforced ? '#fff' : 'var(--text-disabled)',
+    governVerdict, governFindings: deptFindings('govern'), policies, hasPolicies: policies.length > 0, examplePolicies0: [{ key: 'a', t: 'Tag PCI forces a private path', m: 'tag PCI', r: 'Private path required' }, { key: 'b', t: 'Tag Internet-facing gets NGFW plus AT&T egress', m: 'tag Internet-facing', r: 'Inline security inspection' }, { key: 'c', t: 'Branch Finance reaches only finance-tagged workloads', m: 'branch Finance', r: 'Segment intra-tag only' }], authorPolicy: go('s4', { ...newOrder({ ...cleanCompose(cp), outcome: 'u1', control: ['Private path required'], source: ['Data center'], dest: ['Clouds'] }) }), simulate: () => set({ simulated: true, enforced: false }), enforce: () => set({ enforced: true }), undo: () => set({ simulated: false, enforced: false }), simulated: s.simulated, enforced: s.enforced, canEnforce: s.simulated && !s.enforced, simulateText: s.enforced ? 'Enforced. Paths rerouted onto the fabric.' : s.simulated ? `Simulated: ${pciViol ? pciViol.split(' ')[0] : 0} paths reroute onto the fabric, 2 flows denied. Drawn dashed until enforced.` : 'Simulate shows what changes before enforce is enabled.', enforceBg: s.simulated && !s.enforced ? 'var(--cta)' : 'var(--bg-neutral)', enforceColor: s.simulated && !s.enforced ? '#fff' : 'var(--text-disabled)',
     kpis, hasKpis: kpis.length > 0, sankeyNodes, sankeyRibbons, sankeyW: sk ? sk.W : 900, sankeyH: sk ? sk.H : 260, sankeyVB: `0 0 ${sk ? sk.W : 900} ${sk ? sk.H : 260}`, flows, observeFindings: deptFindings('observe'), seeSavings: () => { set({ tab: 'cost' }); syncHash('s3', s.layer, 'cost'); }, observeVerdict: isEmpty ? 'No telemetry yet. It starts with the first attach.' : `${est.observedPct}% of paths send telemetry. ${flows.filter(f => f.deny).length} flows denied in the last minute by the vSRX pair.`, chipScope,
-    ...costVals(s, set, R.applyScope(est, obScope), ob, go, c),
+    ...costVals(s, set, R.applyScope(est, obScope), A.inventory(est), ob, go, c),
     costVerdict, buckets, steerRecs: steerable, costFindings: deptFindings('cost'), hasBuckets: buckets.length > 0, bTotalF: fmt(bTotal), bFabF: fmt(bFab), bSaveF: fmt(bTotal - bFab),
     // compose
     ...wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c),
@@ -499,7 +664,7 @@ function levelMapTitle(layer) { return { ai: 'Providers', cloud: 'Regions', net:
 
 function levelMap(s, est, layer, drillInfo, set) {
   const tile = (t, drillable, label) => ({ ...t, click: drillable ? () => set({ drill: [...s.drill, label] }) : null, drillable, cursor: drillable ? 'pointer' : 'default' });
-  if (drillInfo) return drillInfo.rows.map(r => tile({ key: r.name, name: r.name, sub: r.access, size: r.count, exposed: r.priv ? 0 : r.count, meta: `${r.access} · ${r.priv ? 'private' : 'public'}`, dot: r.priv ? 'var(--success)' : 'var(--warning)' }, r.rollup, r.name));
+  if (drillInfo) return drillInfo.rows.map(r => tile({ key: r.key || r.name, name: r.name, sub: r.access, size: r.count, exposed: r.priv ? 0 : r.count, meta: `${r.access} · ${r.priv ? 'private' : 'public'}`, dot: r.priv ? 'var(--success)' : 'var(--warning)' }, r.rollup, r.drillKey || r.name));
   if (layer.id === 'cloud') {
     const extra = ['ap-south-1', 'ca-central-1', 'sa-east-1', 'northeurope', 'japaneast', 'asia-east1', 'australia-southeast1', 'eu-north-1', 'us-east-2', 'francecentral'].slice(0, est.regionsExtra || 0).map((r, i) => ({ region: r, cloud: ['AWS', 'Azure', 'GCP'][i % 3], wl: 3 + i, priv: (i * 37) % 100 < (est.privatePct || 0), tags: [] }));
     return [...est.regionsList, ...extra].map(r => ({ key: r.region, name: r.region, sub: r.cloud, size: r.wl || 0, exposed: r.priv ? 0 : (r.wl || 1), meta: `${(r.wl || 0).toLocaleString('en-US')} workloads · ${r.priv ? 'private' : 'public'}`, dot: r.priv ? 'var(--success)' : 'var(--warning)' }));
@@ -546,10 +711,20 @@ const POLICY_FOR_CONTROL = { 'Private path required': { match: 'tag PCI', req: '
 function composeOrder(cp, outcome, est) {
   if (!outcome) return { lines: [], policies: [], monthly: 0, savings: 0, days: 0 };
   const mult = { Standard: 1, Geodiversity: 1.6, Maximum: 2.2 }[cp.resiliency];
+  // The site-attach routes (gap row, drawer bulk attach, a row's own Attach)
+  // are the only writers of `cp.qty`; every wizard-built order leaves it
+  // unset and renders exactly as before (siteQty defaults to 1).
+  const siteQty = cp.qty || 1;
   const P = (id) => D.CATALOG.find(p => p.id === id);
   const lines = [];
-  const add = (p, qty, note) => lines.push({ line: lines.length + 1, product: note ? `${p.name} (${note})` : p.name, qty, term: '36-month', monthly: Math.round((p.price || 0) * qty * mult), unpriced: p.price === null });
-  if (outcome.id === 'u1') { add(P('netbond'), 1); if (cp.control.includes('Private path required')) add(P('hosted-vpc'), 1, cp.metros[0] || 'region'); }
+  // unitPrice carries the resiliency multiplier so `monthly` (unitPrice * qty)
+  // is exact - no rounding drift between the per-site rate the Monthly column
+  // shows and the total that feeds the order's footer sum.
+  const add = (p, qty, note, perSite) => { const unitPrice = Math.round((p.price || 0) * mult); lines.push({ line: lines.length + 1, product: note ? `${p.name} (${note})` : p.name, qty, unitPrice, perSite: !!perSite, term: '36-month', monthly: unitPrice * qty, unpriced: p.price === null }); };
+  // NetBond is the connectivity line a site-attach order's count belongs on;
+  // the hosted VPC, policy and observability lines are per-region/account,
+  // not per-site, so they stay at qty 1 regardless of how many sites attach.
+  if (outcome.id === 'u1') { add(P('netbond'), siteQty, null, siteQty > 1); if (cp.control.includes('Private path required')) add(P('hosted-vpc'), 1, cp.metros[0] || 'region'); }
   if (outcome.id === 'u2') { add(P('hosted-vpc'), 1, 'AWS us-east-1'); add(P('ngfw'), 1); }
   if (outcome.id === 'u3') { add(P('c2c'), 1); add(P('hub'), cp.metros.length || 1); }
   if (cp.control.includes('Inline inspection') && outcome.id !== 'u2') add(P('ngfw'), 1);
@@ -580,7 +755,7 @@ function chooseTier(c, f, tierName, prod, est) {
   if (/^Author/.test(tierName) || /^Steer/.test(tierName) || /^Attach/.test(tierName) || /^Enable/.test(tierName) || /^Add/.test(tierName) && !prod) {
     const control = /private path/i.test(tierName) ? ['Private path required'] : /inspection/i.test(tierName) ? ['Inline inspection'] : /segment/i.test(tierName) ? ['Segment by tag'] : ['Cost-aware routing'];
     const outcome = /Steer/.test(tierName) ? 'u2' : 'u1';
-    c.setState({ screen: 's4', compose: { outcome, source: outcome === 'u2' ? ['A cloud region'] : ['Data center'], dest: outcome === 'u2' ? ['The Internet'] : ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control } });
+    c.setState({ screen: 's4', ...newOrder({ outcome, source: outcome === 'u2' ? ['A cloud region'] : ['Data center'], dest: outcome === 'u2' ? ['The Internet'] : ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control }) });
     window.scrollTo(0, 0); syncHash('s4'); return;
   }
   const order = prod ? productOrder(prod, est) : { lines: [{ line: 1, product: tierName, qty: 1, term: '36-month', monthly: 0, unpriced: true }], policies: [], monthly: 0, savings: 0, days: 10, title: tierName, pathDesc: f.head };
@@ -593,7 +768,7 @@ function chooseTier(c, f, tierName, prod, est) {
 }
 
 function steerBucket(c, b, est) {
-  c.setState({ screen: 's4', compose: { outcome: 'u2', source: ['A cloud region'], dest: ['The Internet'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['No direct internet path', 'Cost-aware routing'] }, steerBucket: b.name });
+  c.setState({ screen: 's4', ...newOrder({ outcome: 'u2', source: ['A cloud region'], dest: ['The Internet'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['No direct internet path', 'Cost-aware routing'] }), steerBucket: b.name });
   window.scrollTo(0, 0); syncHash('s4');
 }
 
@@ -612,7 +787,12 @@ function parseText(c, t) {
   const metros = ['ashburn', 'dallas', 'chicago', 'san jose', 'frankfurt', 'atlanta', 'denver', 'london'].filter(m => s.includes(m)).map(m => m.replace(/\b\w/g, ch => ch.toUpperCase()));
   const ctl = control.length ? control : D.OUTCOMES.find(o => o.id === outcome).control.slice();
   const source = outcome === 'u1' ? ['Data center'] : ['A cloud region'];
-  c.setState(st => ({ compose: { ...st.compose, outcome, control: ctl, dest, source, resiliency, metros: metros.length ? metros : st.compose.metros, prefilled: false, step: 0 }, parsedNote: `Understood: ${D.OUTCOMES.find(o => o.id === outcome).name.toLowerCase()} · from ${source.join(', ').toLowerCase()} · to ${dest.join(', ').toLowerCase()}${metros.length ? ' · via ' + metros.join(', ') : ''} · ${resiliency.toLowerCase()} resiliency · require ${ctl.join(', ').toLowerCase()}. Each step below is filled; correct anything I got wrong.` }));
+  // Spreads the live compose rather than rebuilding it through prefillCompose,
+  // so it is a NEW-order writer that must go through cleanCompose explicitly:
+  // the user just typed this order themselves - it does not come "from"
+  // anything upstream, so the fields that carry provenance and count are
+  // wiped here, not inherited from whatever route ran before it.
+  c.setState(st => ({ ...newOrder({ ...cleanCompose(st.compose), outcome, control: ctl, dest, source, resiliency, metros: metros.length ? metros : st.compose.metros, prefilled: false, step: 0, note: `Understood: ${D.OUTCOMES.find(o => o.id === outcome).name.toLowerCase()} · from ${source.join(', ').toLowerCase()} · to ${dest.join(', ').toLowerCase()}${metros.length ? ' · via ' + metros.join(', ') : ''} · ${resiliency.toLowerCase()} resiliency · require ${ctl.join(', ').toLowerCase()}. Each step below is filled; correct anything I got wrong.` }) }));
 }
 
 
@@ -671,9 +851,20 @@ function iwVals(iw, s, set, go, winLabel) {
     slo: iw.slo.map(flowRow), hasSlo: iw.slo.length > 0, sloGo: () => set({ obTab: 'latency' }), sloLegend: `Over ${iw.SLO} ms`,
   };
 }
+/**
+ * Compose, prefilled for one region or site: the shape composeFor, the gap
+ * card's site rows, the Cost tab's "Attach" strip and its arbitrage rows all
+ * need. One copy so it can only drift once; the same duplication that let
+ * `go()`'s effects (scroll to top; clear hoverRegion/andiScope/drill/
+ * cloudDrill/fabDrill/laneFocus) go missing from one of the four call sites
+ * produced this wave's Task 1 defect too.
+ */
+function prefillAttach(r) {
+  return { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Private path required'], step: 5, prefilled: true, prefillRegion: r.region, prefillWl: r.wl };
+}
 /** Compose, prefilled for one region: the door the arbitrage table, the utilization card and the strips share. */
 function composeFor(go, r) {
-  return go('s4', { compose: { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Private path required'], step: 5, prefilled: true, prefillRegion: r.region, prefillWl: r.wl } });
+  return go('s4', { ...newOrder(prefillAttach(r)) });
 }
 function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0) {
   const obScope = s.obScope || 'all';
@@ -685,7 +876,16 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
   const isEmpty = est.stage === 'empty';
   const openMap = s.inv || {}, sel = s.invSel || [];
   const toggle = (id) => () => set({ inv: { ...openMap, [id]: !openMap[id] } });
-  const allKeys = inv.flatMap(cl => [cl.id, ...cl.regions.flatMap(r => [r.id, ...r.vpcs.flatMap(v => [v.id, ...v.subnets.map(sn => sn.id), ...v.gws.filter(g => g.circuits).map(g => v.id + g.name)])])]);
+  // Expand all opens the three cheap levels. Opening every subnet (and every
+  // gateway's circuit list) rendered 47,659 DOM nodes over 7.2 seconds on the
+  // trust estate; a subnet's workload list and a gateway's circuits open on
+  // their own click, where the user asked for them.
+  const openKeys = inv.flatMap(cl => [cl.id, ...cl.regions.flatMap(r => [r.id, ...r.vpcs.map(v => v.id)])]);
+  // The tag view is not a tree of open nodes: `tagTree` (naas-app.js:1917)
+  // walks `cl.regions -> rg.vpcs` to group every VPC by tag, so gating those
+  // arrays on open state would empty the whole view. Under `tagView` the tree
+  // is built in full, which is what it already cost before this task.
+  const branchOpen = (id) => !!s.tagView || !!openMap[id];
   const chip = (t) => { const st = A.tagStyle(t, dark); return { key: t, label: t, bg: st.bg, border: st.border, color: st.color }; };
   const badge = (priv, label) => ({ label: label || (priv ? 'via the AT&T fabric' : 'public internet'), bg: priv ? (dark ? 'rgba(79,191,116,.12)' : '#eef8f0') : 'var(--bg-wash)', border: priv ? (dark ? 'rgba(79,191,116,.5)' : '#8fd4a4') : 'var(--border-secondary)', color: priv ? (dark ? '#8fe0a8' : '#1e7a3c') : 'var(--text-body)', icon: priv ? 'link' : 'globe' });
   const GW_TINT = { igw: '#0057b8', nat: '#5d6f80', endpoint: '#7b3fbf', dx: '#1e7a3c', tgw: '#00838f' };
@@ -706,28 +906,28 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
   const winDays = winDaysOf(s), winLabel = winLabelOf(s), newOnly = !!s.newOnly;
   const isNew = (x) => !!x && x.since != null && x.since <= winDays;
   const LK = labelKit(s, set);
-  const tree = inv.map(cl => ({
+  const tree = inv.filter(cl => !newOnly || cl.regions.some(r => r.vpcs.some(isNew))).map(cl => ({
     key: cl.id, name: cl.name, mark: cl.mark, hasMark: !!cl.mark, noMark: !cl.mark, notTag: true, isTag: false, initials: cl.initials, gpu: cl.gpu, sub: `${cl.regions.length} ${cl.regions.length === 1 ? 'region' : 'regions'} · ${cl.vpcs} VPC · ${cl.wl.toLocaleString('en-US')} workloads`,
     open: !!openMap[cl.id], toggle: toggle(cl.id), caret: openMap[cl.id] ? 'rotate(90deg)' : 'rotate(0deg)', badge: badge(cl.priv),
-    regions: cl.regions.filter(r => !newOnly || r.vpcs.some(isNew)).map(r => ({
+    regions: branchOpen(cl.id) ? cl.regions.filter(r => !newOnly || r.vpcs.some(isNew)).map(r => ({
       key: r.id, region: r.region, city: r.city, open: !!openMap[r.id], toggle: toggle(r.id), caret: openMap[r.id] ? 'rotate(90deg)' : 'rotate(0deg)', badge: badge(r.priv), jumpKey: 'reg:' + r.region,
       pathsOpen: !!po['reg:' + r.region], togglePaths: () => set({ pathOpen: { ...po, ['reg:' + r.region]: !po['reg:' + r.region] } }),
       ...(po['reg:' + r.region] ? (() => { const rs = P.regionSites(est, estR(r)); return { reachSites: rs.rows.map(x => pathRow(x.site, estR(r), 'region')), reachLine: `${rs.total} ${rs.total === 1 ? 'site reaches' : 'sites reach'} ${r.region} · ${rs.gbps} Gbps`, reachHasMore: rs.more > 0, reachMoreLabel: `+${rs.more} more, ranked lower by traffic` }; })() : { reachSites: [], reachLine: '', reachHasMore: false, reachMoreLabel: '' }),
       askAndi: () => set({ andiScope: { kind: 'region', id: r.region, label: r.cloud + ' ' + r.region }, andiOpen: true }),
       ctl: () => set({ authoring: { match: 'region ' + r.region, scope: 'any cloud', req: ['Private path required'] }, screen: 's3', layer: 'cloud', tab: 'govern' }), pathShort: R.PATHS.find(p => p.id === R.regionPath(r)).short, lensDot: R.SCORE_COLOR[R.lensScore(estR(r), s.lens || 'security')], lensWord: R.SCORE_WORD[R.lensScore(estR(r), s.lens || 'security')], compareOpen: s.compareRegion === r.region, toggleCompare: () => set({ compareRegion: s.compareRegion === r.region ? null : r.region }), compare: R.compareRegion(estR(r), egressBase).map(p => ({ ...p, key: p.id, curBg: p.cur ? 'var(--bg-accent)' : 'transparent', curLabel: p.cur ? 'today' : '', egressF: fmt(p.egressMo), relScoreColor: R.SCORE_COLOR[p.relScore], secScoreColor: R.SCORE_COLOR[p.secScore], latScoreColor: R.SCORE_COLOR[p.latScore], costScoreColor: R.SCORE_COLOR[p.costScore] })),
       stats: [{ key: 'v', v: r.vpcs.length, l: 'VPC/VNet' }, { key: 's', v: r.subnets, l: 'Subnets' }, { key: 'l', v: r.latency + 'ms', l: r.priv ? 'Latency · fabric' : 'Latency · public' }],
-      vpcs: r.vpcs.filter(v => !newOnly || isNew(v)).map(v => ({
+      vpcs: branchOpen(r.id) ? r.vpcs.filter(v => !newOnly || isNew(v)).map(v => ({
         key: v.id, jumpKey: 'vpc:' + v.id, isNew: isNew(v), sinceLabel: sinceLabel(v), mgmt: v.managed ? 'AT&T-managed' : 'Customer-managed', mgmtClass: v.managed ? 'fx-badge att' : 'fx-badge', userLabels: LK.labelsOf(v.id), ...LK.ui(v.id, [cl.name, r.region, v.label, r.priv ? (r.ramp || 'NetBond') : 'Internet']), label: v.label, name: v.name, purpose: v.purpose, cidr: v.cidr, wl: v.wl, open: !!openMap[v.id], toggle: toggle(v.id), caret: openMap[v.id] ? 'rotate(90deg)' : 'rotate(0deg)',
         ctl: () => set({ authoring: { match: 'tag ' + (v.tags[0] || 'default'), scope: 'any cloud', req: ['Private path required'] }, screen: 's3', layer: 'cloud', tab: 'govern' }),
         selected: sel.includes(v.id), select: () => set({ invSel: sel.includes(v.id) ? sel.filter(x => x !== v.id) : [...sel, v.id] }), rowBg: sel.includes(v.id) ? 'var(--bg-accent)' : 'var(--bg-base)',
         tags: v.tags.map(chip), stats: [{ key: 'a', v: v.azs, l: 'AZs' }, { key: 's', v: v.subnets.length, l: 'Subnets' }], badge: badge(v.priv, v.priv ? 'Private' : 'Public'),
-        azGroups: Array.from(new Set(v.subnets.map(sn => sn.az))).map(az => ({ key: az, az, subnets: v.subnets.filter(sn => sn.az === az).map(sn => ({ ...sn, key: sn.id, open: !!openMap[sn.id], toggle: toggle(sn.id), caret: openMap[sn.id] ? 'rotate(90deg)' : 'rotate(0deg)', wls: (sn.workloads || []).filter(w => !newOnly || isNew(w)).map(w => ({ ...w, key: w.id, isNew: isNew(w), sinceLabel: sinceLabel(w), ...R.endpointsFor(w, cl.name), open: !!openMap[w.id], toggle: toggle(w.id), caret: openMap[w.id] ? 'rotate(90deg)' : 'rotate(0deg)', ctl: () => set({ authoring: { match: 'tag ' + (w.tag || 'default'), scope: 'any cloud', req: ['Private path required'] }, screen: 's3', layer: 'cloud', tab: 'govern' }), tag: chip(w.tag || 'untagged'), dot: w.exposed ? 'var(--warning)' : 'var(--success)', dotLabel: w.exposed ? 'exposed' : 'private' })), moreWl: sn.wl > (sn.workloads || []).length ? `+${sn.wl - (sn.workloads || []).length} more` : '', hasMoreWl: sn.wl > (sn.workloads || []).length, tags: sn.tags.map(chip), pill: sn.pub ? { label: 'public', bg: 'var(--bg-wash)', border: 'var(--border-secondary)', color: 'var(--text-body)', dot: 'transparent', ring: 'var(--text-disabled)' } : { label: 'private', bg: dark ? 'rgba(79,191,116,.12)' : '#eef8f0', border: dark ? 'rgba(79,191,116,.5)' : '#8fd4a4', color: dark ? '#8fe0a8' : '#1e7a3c', dot: '#4fbf74', ring: '#4fbf74' } })) })),
+        azGroups: branchOpen(v.id) ? Array.from(new Set(v.subnets.map(sn => sn.az))).map(az => ({ key: az, az, subnets: v.subnets.filter(sn => sn.az === az).map(sn => ({ ...sn, key: sn.id, open: !!openMap[sn.id], toggle: toggle(sn.id), caret: openMap[sn.id] ? 'rotate(90deg)' : 'rotate(0deg)', wls: (sn.workloads || []).filter(w => !newOnly || isNew(w)).map(w => ({ ...w, key: w.id, isNew: isNew(w), sinceLabel: sinceLabel(w), ...R.endpointsFor(w, cl.name), open: !!openMap[w.id], toggle: toggle(w.id), caret: openMap[w.id] ? 'rotate(90deg)' : 'rotate(0deg)', ctl: () => set({ authoring: { match: 'tag ' + (w.tag || 'default'), scope: 'any cloud', req: ['Private path required'] }, screen: 's3', layer: 'cloud', tab: 'govern' }), tag: chip(w.tag || 'untagged'), dot: w.exposed ? 'var(--warning)' : 'var(--success)', dotLabel: w.exposed ? 'exposed' : 'private' })), moreWl: sn.wl > (sn.workloads || []).length ? `+${sn.wl - (sn.workloads || []).length} more` : '', hasMoreWl: sn.wl > (sn.workloads || []).length, tags: sn.tags.map(chip), pill: sn.pub ? { label: 'public', bg: 'var(--bg-wash)', border: 'var(--border-secondary)', color: 'var(--text-body)', dot: 'transparent', ring: 'var(--text-disabled)' } : { label: 'private', bg: dark ? 'rgba(79,191,116,.12)' : '#eef8f0', border: dark ? 'rgba(79,191,116,.5)' : '#8fd4a4', color: dark ? '#8fe0a8' : '#1e7a3c', dot: '#4fbf74', ring: '#4fbf74' } })) })) : [],
         routeTables: v.routeTables.map(t => ({ ...t, key: t.name, hasViol: t.viol > 0, violLabel: t.viol ? `${t.viol} policy violation${t.viol > 1 ? 's' : ''}` : '' })),
         gws: v.gws.map(g => ({ ...g, key: g.name, tint: GW_TINT[g.kind], tileBg: GW_TINT[g.kind] + (dark ? '2e' : '18'), hasLock: !!g.lock, hasCircuits: !!(g.circuits && g.circuits.length), open: !!openMap[v.id + g.name], toggle: toggle(v.id + g.name), caret: openMap[v.id + g.name] ? 'rotate(90deg)' : 'rotate(0deg)', circuits: (g.circuits || []).map(cx => ({ ...cx, key: cx.id, dot: cx.status === 'Active' ? 'var(--success)' : 'var(--warning)' })) })),
         hasViol: v.violations > 0, violLabel: v.violations ? `${v.violations} policy violation${v.violations > 1 ? 's' : ''}` : '',
-      })),
-    })),
-  })).filter(cl => !newOnly || cl.regions.length);
+      })) : [],
+    })) : [],
+  }));
   // What arrived inside the window (AO-362): the strip over Explore 360 and the "New" badges.
   const allVpcs = inv.flatMap(cl => cl.regions.flatMap(r => r.vpcs));
   const allWls = allVpcs.flatMap(v => v.subnets.flatMap(sn => sn.workloads || []));
@@ -909,17 +1109,31 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
     alt: 'or Direct Connect / ExpressRoute · 4 to 8 weeks, you run the routers',
     go: composeFor(go, r),
   }));
-  const gapSites = (est.sites || []).filter(x => !x.priv).map(x => ({
-    key: 'gs-' + x.name, kind: 'site', name: x.name,
-    sub: `${x.access || 'first mile'} · ${x.metro || 'various'} · public first mile`,
-    tags: [], hasTags: false,
-    best: 'Attach the first mile to the fabric', bestWhy: 'AVPN or ASE, same-day on existing access',
-    alt: 'or keep the internet path with inline inspection',
-    go: composeFor(go, x),
-  }));
+  const gapSites = (est.sites || []).filter(x => !x.priv).map(x => {
+    const qty = S.countOf(x.name);
+    const label = x.name.replace(/\s*\([\d,]+\)\s*$/, '');
+    const what = `${qty.toLocaleString('en-US')} ${qty === 1 ? 'site' : 'sites'} · ${label}`;
+    const countPrefix = qty === 1 ? '' : `${qty.toLocaleString('en-US')} sites · `;
+    return {
+      key: 'gs-' + x.name, kind: 'site', name: label, qty,
+      sub: `${countPrefix}${x.access || 'first mile'} · ${x.metro || 'various'} · public first mile`,
+      tags: [], hasTags: false,
+      best: 'Attach the first mile to the fabric', bestWhy: 'AVPN or ASE, same-day on existing access',
+      alt: 'or keep the internet path with inline inspection',
+      // Same entry as composeFor(go, x) on the base - prefillAttach, through
+      // go() - so the two row kinds in this card behave as one card, scroll
+      // reset and all. The source label and quantity ride inside `compose`;
+      // noteStep says which step gets to show the alert they explain (fix
+      // round 2, finding A) - the next prefillCompose-based route wipes both,
+      // and cleanCompose wipes them explicitly wherever a NEW order starts
+      // from a live `compose` instead (fix round 2, finding B).
+      go: go('s4', { ...newOrder({ ...prefillAttach(x), bulk: what, qty, sourceLabel: 'Not connected yet', noteStep: 5, note: `Attach ${what}. One order, one policy, ${qty.toLocaleString('en-US')} ${qty === 1 ? 'circuit' : 'circuits'}.` }) }),
+    };
+  });
   const gapRows = [...gapRegions, ...gapSites];
+  const gapSiteN = S.gapSiteCount(est);
   const gapSummary = gapRows.length
-    ? `${gapRows.length} ${gapRows.length === 1 ? 'thing is' : 'things are'} still on the public internet — ${gapRegions.length} cloud ${gapRegions.length === 1 ? 'region' : 'regions'}, ${gapSites.length} ${gapSites.length === 1 ? 'site' : 'sites'}.`
+    ? `${gapRegions.length} cloud ${gapRegions.length === 1 ? 'region' : 'regions'} and ${gapSiteN.toLocaleString('en-US')} ${gapSiteN === 1 ? 'site is' : 'sites are'} still on the public internet, in ${gapRows.length} ${gapRows.length === 1 ? 'group' : 'groups'}.`
     : 'Everything discovered is on the AT&T fabric.';
   // Connect, as three decisions in the order a customer makes them:
   // which path, how to buy it, what happens after the order is placed.
@@ -980,8 +1194,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
     { key: 'p6', n: '6', t: 'Policy on day one', d: 'The tags you already govern apply to the new path the moment it carries traffic.' },
   ];
   const provSub = `${pathChosen.name} · ${buyChosen.name}`;
-  const startOrder = () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), path: pathPick, buy: buyPick } }); syncHash('s4', s.layer, s.tab); };
-  const stepVals = { pathRows, buyRows, provSteps, provSub, startOrder, pathChosenName: pathChosen.name, buyChosenName: buyChosen.name };
+  const stepVals = { pathRows, buyRows, provSteps, provSub, pathChosenName: pathChosen.name, buyChosenName: buyChosen.name };
   const connectNext = { title: 'Next stop: Observe', text: isEmpty ? 'Once the first region is attached, telemetry starts and Observe shows what the fabric carries.' : `${conns.total} ${conns.total === 1 ? 'connection carries' : 'connections carry'} ${(ob.fab || 0).toFixed(1)} Gbps on the fabric. See which one is degraded and what it impacts.`, cta: 'Open Observe', go: () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow' }); } };
   const governNext = { title: 'Next stop: Cost', text: isEmpty ? 'Policies price themselves once traffic is seen.' : `Every policy that requires a private path moves egress off the hyperscaler rate. ${totalSave ? fmt(totalSave) + '/mo is on the table.' : 'See what the fabric already saves.'}`, cta: 'Open Cost', go: go('s3', { layer: 'cloud', tab: 'cost' }) };
   const costNext = { title: 'Next stop: Connect', text: isEmpty ? 'Attach the first region to start saving.' : `${est.regionsList.filter(r => !r.priv).length} ${est.regionsList.filter(r => !r.priv).length === 1 ? 'region still rides the public internet. Attaching it' : 'regions still ride the public internet. Attaching them'} is where the savings above come from.`, cta: 'Open Connect', go: go('s3', { layer: 'cloud', tab: 'connect' }) };
@@ -1131,9 +1344,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
   const queueRows = OD.queue(est0, ob, conns, null).map(q => ({ ...q, tone: q.sev >= 2 ? 'var(--error)' : 'var(--warning)', go: () => { if (q.action === 'impact') set({ mapSel: q.connId, mapRegion: q.region, panelTab: 'impact' }); else if (q.action === 'port' || q.action === 'attach') composeFor(go, est0.regionsList.find(x => x.region === q.region) || {})(); else if (q.action === 'steer') set({ steered: [...(s.steered || []), q.flowId] }); }, select: () => set({ mapSel: q.connId || (q.region ? null : null), mapRegion: q.region || null, panelTab: 'impact' }), wlF: q.wl ? q.wl.toLocaleString('en-US') + ' workloads' : '' }));
   const panel0 = OD.panelFor(mapSel, { est: est0, inv, flows: ob.flows, map, conns });
   const panelTab = s.panelTab || 'overview';
-  const panel = panel0 ? { ...panel0, trail: (panel0.trail || []).map((t, i, a) => ({ ...t, key: 'pt' + i, go: () => set({ mapSel: t.key }), last: i === a.length - 1, notLast: i < a.length - 1 })), overview: panel0.overview.map(([k, v]) => ({ key: k, k, v })), ...panelShape(panel0.overview), hasImpact: !!panel0.impact, noImpact: !panel0.impact, noRecords: panel0.records.length === 0, impact: panel0.impact ? { ...panel0.impact, isHit: panel0.impact.kind !== 'none', vpcs: panel0.impact.vpcs.map(v => ({ ...v, key: v.name, wlF: v.wl.toLocaleString('en-US'), tagsF: (v.tags || []).join(' · ') })), downstream: panel0.impact.downstream.map(d => ({ ...d, key: d.label, vpcsF: d.vpcs.map(v => v.name).join(', ') })), hasDown: panel0.impact.downstream.length > 0, tone: panel0.impact.kind === 'direct' ? 'var(--error)' : panel0.impact.kind === 'possible' ? 'var(--warning)' : 'var(--success)' } : null, records: panel0.records.map(r => ({ ...r, key: r.id })), hasRecords: panel0.records.length > 0, actions: panel0.actions.map(a => ({ ...a, key: a.key, go: a.key === 'attach' && a.site ? () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: a.site }, parsedNote: `Attach ${a.site}: one circuit onto the fabric.` }); syncHash('s4', s.layer, s.tab); } : a.key === 'path' ? () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: a.site }, parsedNote: `Add a second path for ${a.site}: a second metro for geodiversity.` }); syncHash('s4', s.layer, s.tab); } : a.key === 'failover' ? () => set({ events: [...(s.events || []), { key: 'e' + Date.now(), t: new Date().toLocaleTimeString('en-US', { hour12: false }), text: `Failover test on ${panel0.title} · secondary path healthy` }], panelTab: 'overview' }) : a.key === 'port' || a.key === 'attach' ? composeFor(go, est0.regionsList.find(x => x.region === a.region) || {}) : a.key === 'policy' ? () => { go('s3', { layer: 'cloud', tab: 'govern' })(); set({ authoring: true }); } : a.key === 'steer' ? () => { const f = ob.flows.find(x => x.name === (panel0.title) || (x.region || '').includes(panel0.title)); if (f) set({ steered: [...(s.steered || []), f.id] }); } : () => set({ panelTab: 'records' }) })), isSite: panel0.kind === 'site' || panel0.kind === 'workload', paths: (panel0.paths || []).map(x => ({ ...x, key: x.key, msF: x.ms + ' ms', gbpsF: x.gbps >= 1 ? x.gbps.toFixed(1) + ' Gbps' : Math.round(x.gbps * 1000) + ' Mbps', dot: x.state === 'ok' ? 'var(--success)' : x.state === 'bad' ? 'var(--error)' : 'var(--warning)', word: x.priv ? 'AT&T fabric' : 'public internet' })), children: panel0.children ? { ...panel0.children, hasNote2: !!panel0.children.note, rows: panel0.children.rows.map((r, i) => ({ ...r, key: r.key || ('leaf' + i), go: r.key ? (r.key.startsWith('vol:') ? () => { const [cls, metro] = r.key.slice(4).split('|'); openVolume(cls, metro); } : () => set({ mapSel: r.key, panelTab: 'overview' })) : () => {}, isLeaf: !r.key, notLeaf: !!r.key, cursor: r.key ? 'pointer' : 'default', hasPort: !!r.port, hasVer: !!r.ver, hasRate: !!r.rate, noteBg: r.warn ? 'rgba(212,140,0,.16)' : 'var(--bg-wash)', dot: r.warn ? 'var(--warning)' : 'var(--success)', portBg: r.warn ? 'rgba(212,140,0,.14)' : 'var(--bg-wash)', portInk: r.warn ? '#7a4b00' : 'var(--text-body)', ink: r.warn ? 'var(--warning)' : 'var(--text-light)', hasNote: !!r.note })) } : null,
+  const panel = panel0 ? { ...panel0, trail: (panel0.trail || []).map((t, i, a) => ({ ...t, key: 'pt' + i, go: () => set({ mapSel: t.key }), last: i === a.length - 1, notLast: i < a.length - 1 })), overview: panel0.overview.map(([k, v]) => ({ key: k, k, v })), ...panelShape(panel0.overview), hasImpact: !!panel0.impact, noImpact: !panel0.impact, noRecords: panel0.records.length === 0, impact: panel0.impact ? { ...panel0.impact, isHit: panel0.impact.kind !== 'none', vpcs: panel0.impact.vpcs.map(v => ({ ...v, key: v.name, wlF: v.wl.toLocaleString('en-US'), tagsF: (v.tags || []).join(' · ') })), downstream: panel0.impact.downstream.map(d => ({ ...d, key: d.label, vpcsF: d.vpcs.map(v => v.name).join(', ') })), hasDown: panel0.impact.downstream.length > 0, tone: panel0.impact.kind === 'direct' ? 'var(--error)' : panel0.impact.kind === 'possible' ? 'var(--warning)' : 'var(--success)' } : null, records: panel0.records.map(r => ({ ...r, key: r.id })), hasRecords: panel0.records.length > 0, actions: panel0.actions.map(a => ({ ...a, key: a.key, go: a.key === 'attach' && a.site ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Attach ${a.site}: one circuit onto the fabric.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'path' ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Add a second path for ${a.site}: a second metro for geodiversity.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'failover' ? () => set({ events: [...(s.events || []), { key: 'e' + Date.now(), t: new Date().toLocaleTimeString('en-US', { hour12: false }), text: `Failover test on ${panel0.title} · secondary path healthy` }], panelTab: 'overview' }) : a.key === 'port' || a.key === 'attach' ? composeFor(go, est0.regionsList.find(x => x.region === a.region) || {}) : a.key === 'policy' ? () => { go('s3', { layer: 'cloud', tab: 'govern' })(); set({ authoring: true }); } : a.key === 'steer' ? () => { const f = ob.flows.find(x => x.name === (panel0.title) || (x.region || '').includes(panel0.title)); if (f) set({ steered: [...(s.steered || []), f.id] }); } : () => set({ panelTab: 'records' }) })), isSite: panel0.kind === 'site' || panel0.kind === 'workload', paths: (panel0.paths || []).map(x => ({ ...x, key: x.key, msF: x.ms + ' ms', gbpsF: x.gbps >= 1 ? x.gbps.toFixed(1) + ' Gbps' : Math.round(x.gbps * 1000) + ' Mbps', dot: x.state === 'ok' ? 'var(--success)' : x.state === 'bad' ? 'var(--error)' : 'var(--warning)', word: x.priv ? 'AT&T fabric' : 'public internet' })), children: panel0.children ? { ...panel0.children, hasNote2: !!panel0.children.note, rows: panel0.children.rows.map((r, i) => ({ ...r, key: r.key || ('leaf' + i), go: r.key ? (r.key.startsWith('vol:') ? () => { const [cls, metro] = r.key.slice(4).split('|'); openVolume(cls, metro); } : () => set({ mapSel: r.key, panelTab: 'overview' })) : () => {}, isLeaf: !r.key, notLeaf: !!r.key, cursor: r.key ? 'pointer' : 'default', hasPort: !!r.port, hasVer: !!r.ver, hasRate: !!r.rate, noteBg: r.warn ? 'rgba(212,140,0,.16)' : 'var(--bg-wash)', dot: r.warn ? 'var(--warning)' : 'var(--success)', portBg: r.warn ? 'rgba(212,140,0,.14)' : 'var(--bg-wash)', portInk: r.warn ? '#7a4b00' : 'var(--text-body)', ink: r.warn ? 'var(--warning)' : 'var(--text-light)', hasNote: !!r.note })) } : null,
     hasChildren2: !!(panel0.children && panel0.children.rows.length),
-    talks: (() => { const ts = panel0.talks || []; const max = Math.max(0.0001, ...ts.map(t => t.gbps || 0)); return ts.map(t => ({ ...t, key: t.key, gbpsF: t.gbps >= 1 ? t.gbps.toFixed(1) + ' Gbps' : Math.round(t.gbps * 1000) + ' Mbps', barW: Math.max(3, Math.round((t.gbps || 0) / max * 100)) + '%' })); })(), hasTalks: !!(panel0.talks && panel0.talks.length), backToList: () => set({ mapSel: null }), hasList: !!(s.drawerOpen && s.vol), isPaths: panelTab === 'paths', tabs: (panel0.kind === 'vpc' || panel0.kind === 'subnet' ? [['overview', 'Overview'], ['actions', 'Actions']] : panel0.kind === 'site' || panel0.kind === 'workload' ? [['overview', 'Overview'], ['paths', 'Paths'], ['records', 'Records'], ['actions', 'Actions']] : [['overview', 'Overview'], ['impact', 'Impact'], ['records', 'Records'], ['actions', 'Actions']]).map(([k, l]) => ({ key: k, label: l, on: panelTab === k, go: () => set({ panelTab: k }), bg: panelTab === k ? 'var(--cta)' : 'transparent', color: panelTab === k ? '#fff' : 'var(--text-heading)', border: panelTab === k ? 'var(--cta)' : 'var(--border-secondary)' })), isOverview: panelTab === 'overview', isImpact: panelTab === 'impact', isRecords: panelTab === 'records', isActions: panelTab === 'actions', close: () => set({ mapSel: null }), primary: (() => { const a = panel0.actions.find(x => x.key !== 'logs'); return a ? { label: a.label.replace(/ for these workloads| here$/, ''), go: a.key === 'attach' && a.site ? () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: a.site }, parsedNote: `Attach ${a.site}: one circuit onto the fabric.` }); syncHash('s4', s.layer, s.tab); } : a.key === 'path' ? () => { c.setState({ screen: 's4', compose: { ...prefillCompose(est), bulk: a.site }, parsedNote: `Add a second path for ${a.site}: a second metro for geodiversity.` }); syncHash('s4', s.layer, s.tab); } : a.key === 'failover' ? () => set({ events: [...(s.events || []), { key: 'e' + Date.now(), t: new Date().toLocaleTimeString('en-US', { hour12: false }), text: `Failover test on ${panel0.title} · secondary path healthy` }], panelTab: 'overview' }) : a.key === 'port' || a.key === 'attach' ? composeFor(go, est0.regionsList.find(x => x.region === a.region) || {}) : a.key === 'policy' ? () => { go('s3', { layer: 'cloud', tab: 'govern' })(); set({ authoring: true }); } : () => set({ panelTab: 'actions' }) } : null; })(), hasPrimary: panel0.actions.some(x => x.key !== 'logs') } : null;
+    talks: (() => { const ts = panel0.talks || []; const max = Math.max(0.0001, ...ts.map(t => t.gbps || 0)); return ts.map(t => ({ ...t, key: t.key, gbpsF: t.gbps >= 1 ? t.gbps.toFixed(1) + ' Gbps' : Math.round(t.gbps * 1000) + ' Mbps', barW: Math.max(3, Math.round((t.gbps || 0) / max * 100)) + '%' })); })(), hasTalks: !!(panel0.talks && panel0.talks.length), backToList: () => set({ mapSel: null }), hasList: !!(s.drawerOpen && s.vol), isPaths: panelTab === 'paths', tabs: (panel0.kind === 'vpc' || panel0.kind === 'subnet' ? [['overview', 'Overview'], ['actions', 'Actions']] : panel0.kind === 'site' || panel0.kind === 'workload' ? [['overview', 'Overview'], ['paths', 'Paths'], ['records', 'Records'], ['actions', 'Actions']] : [['overview', 'Overview'], ['impact', 'Impact'], ['records', 'Records'], ['actions', 'Actions']]).map(([k, l]) => ({ key: k, label: l, on: panelTab === k, go: () => set({ panelTab: k }), bg: panelTab === k ? 'var(--cta)' : 'transparent', color: panelTab === k ? '#fff' : 'var(--text-heading)', border: panelTab === k ? 'var(--cta)' : 'var(--border-secondary)' })), isOverview: panelTab === 'overview', isImpact: panelTab === 'impact', isRecords: panelTab === 'records', isActions: panelTab === 'actions', close: () => set({ mapSel: null }), primary: (() => { const a = panel0.actions.find(x => x.key !== 'logs'); return a ? { label: a.label.replace(/ for these workloads| here$/, ''), go: a.key === 'attach' && a.site ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Attach ${a.site}: one circuit onto the fabric.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'path' ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Add a second path for ${a.site}: a second metro for geodiversity.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'failover' ? () => set({ events: [...(s.events || []), { key: 'e' + Date.now(), t: new Date().toLocaleTimeString('en-US', { hour12: false }), text: `Failover test on ${panel0.title} · secondary path healthy` }], panelTab: 'overview' }) : a.key === 'port' || a.key === 'attach' ? composeFor(go, est0.regionsList.find(x => x.region === a.region) || {}) : a.key === 'policy' ? () => { go('s3', { layer: 'cloud', tab: 'govern' })(); set({ authoring: true }); } : () => set({ panelTab: 'actions' }) } : null; })(), hasPrimary: panel0.actions.some(x => x.key !== 'logs') } : null;
   const PATTERN_ALL = ['all', 'All', 'Every flow the estate carries, whichever way it goes.'];
   // The map draws the site story, so its chips are the patterns that have
   // ribbons - ingress and the internet path. All five patterns keep their
@@ -1309,7 +1522,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
   const obX = { sources, sourcesSub: `${credScanned} of ${sources.length} credentials scanning · everything above is drawn from these`, addSourceOpen: !!s.addSourceOpen, toggleAddSource: () => set({ addSourceOpen: !s.addSourceOpen }), addSourceLabel: s.addSourceOpen ? 'Close' : 'Add a source', addSourceKind: s.addSourceKind || 'AWS account', setAddSourceKind: (e) => set({ addSourceKind: e.target.value }), addSource: () => set({ addedSources: [...(s.addedSources || []), s.addSourceKind || 'AWS account'], addSourceOpen: false }), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage === 'perf', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
   return {
     invTree: s.tagView ? tagTree(inv, tree, chip) : tree, tagView: !!s.tagView, cloudView: !s.tagView, toggleTagView: () => set({ tagView: !s.tagView }), tagViewUb: s.tagView ? 'var(--cta)' : 'transparent', tagViewColor: s.tagView ? 'var(--link)' : 'var(--text-body)', cloudViewUb: !s.tagView ? 'var(--cta)' : 'transparent', cloudViewColor: !s.tagView ? 'var(--link)' : 'var(--text-body)', hasTree: tree.length > 0, invStats: [{ key: 's', v: stats.sites, l: 'sites' }, { key: 'c', v: stats.clouds, l: 'clouds' }, { key: 'r', v: stats.regions, l: 'regions' }, { key: 'w', v: stats.workloads.toLocaleString('en-US'), l: 'workloads' }, { key: 'a', v: stats.attached, l: 'attached' }, { key: 'e', v: stats.exposed, l: 'exposed' }],
-    expandAll: () => set({ inv: Object.fromEntries(allKeys.map(k => [k, true])) }), collapseAll: () => set({ inv: {} }), collapsedLabel: Object.values(openMap).some(Boolean) ? 'Expanded view' : 'Collapsed view',
+    expandAll: () => set({ inv: { ...openMap, ...Object.fromEntries(openKeys.map(k => [k, true])) } }), collapseAll: () => set({ inv: {} }), collapsedLabel: Object.values(openMap).some(Boolean) ? 'Expanded view' : 'Collapsed view',
     overflowRow: est.regionsExtra ? `${est.regionsExtra.toLocaleString('en-US')} smaller regions rolled up · ${Math.round(est.regionsExtra * 0.6)} on the fabric · ${Math.round(est.regionsExtra * 0.4)} public` : '', hasOverflow: !!est.regionsExtra, overflowW: est.regionsExtra ? '60%' : '0%',
     // Sites drilled like clouds: class → metro → site (naas-sites.js). Open state lives in s.siteOpen.
     ...(() => {
@@ -1368,7 +1581,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0)
     obWindows: ['7d', '30d', '90d'].map(w => ({ key: w, label: w, on: (s.obWindow || '30d') === w, go: () => set({ obWindow: w }), ub: (s.obWindow || '30d') === w ? 'var(--cta)' : 'transparent', uc: (s.obWindow || '30d') === w ? 'var(--link)' : 'var(--text-body)', uw: (s.obWindow || '30d') === w ? 700 : 500 })),
     obTrends: R.trends(ob, s.obWindow || '30d').map(k => ({ ...k, hasUnit: !!k.u, badge: `${k.arrow} ${k.delta}`, go: ({ thr: () => set({ obTab: 'throughput' }), p95: () => set({ obTab: 'latency' }), loss: () => set({ obTab: 'loss' }), egr: () => set({ obTab: 'egress' }), fab: () => set({ obTab: 'flow' }), sav: go('s3', { layer: 'cloud', tab: 'cost' }), util: () => set({ obTab: 'flow' }) })[k.key] || (() => {}) })),
     utilRows: (ob.utilRows || []).map(u => { const hot = u.pct >= 80; const r = est0.regionsList.find(x => x.region === u.region) || { region: u.region, wl: 0 }; return { ...u, key: u.id, label: `${u.cloud} ${u.region}`, sub: `${u.ramp} · ${u.ports} × 10 Gbps`, w: u.pct + '%', v: `${u.gbps} Gbps`, pctF: u.pct + '%', fill: hot ? '#ff8500' : '#009fdb', doorLabel: hot ? 'Add a port →' : 'Ask Andi →', doorColor: hot ? 'var(--warning)' : 'var(--link)', go: hot ? composeFor(go, r) : () => set({ andiScope: { kind: 'region', id: u.region, label: `${u.cloud} ${u.region}` }, andiOpen: true }) }; }),
-    obStrip: (() => { const rows = ob.utilRows || []; const hot = rows.filter(u => u.pct >= 80 && !(connRow && connRow.region === u.region && connRow.degraded)); const blind = ob.blind || []; const parts = []; const deg = conns.rows.find(r => r.degraded); if (deg) parts.push(`${deg.cloud} ${deg.region} is degraded on ${deg.ramp}: BGP flapping, ${deg.drops} drops, ${deg.wl.toLocaleString('en-US')} workloads behind it.`); if (hot.length) parts.push(`${hot.map(u => `${u.cloud} ${u.region}`).join(', ')} ${hot.length === 1 ? 'runs' : 'run'} above 80% of ${hot.length === 1 ? 'its' : 'their'} ports.`); if (blind.length) parts.push(`${blind.length} ${blind.length === 1 ? 'region sends' : 'regions send'} no flow logs, so ${ob.pub.toFixed(1)} Gbps is unseen.`); if (ob.worst && !blind.length) parts.push(`${ob.worst.name} is the slowest public flow at ${ob.worst.latency} ms.`); const first = hot[0] ? est0.regionsList.find(x => x.region === hot[0].region) : blind[0]; return { has: parts.length > 0, title: 'Act on it', text: parts.join(' ') + (hot.length ? ' Add a port before it saturates.' : blind.length ? ' Attach it to bring the traffic under control.' : ''), cta: hot.length ? `Add a port on ${hot[0].region}` : blind.length ? `Attach ${blind[0].region}` : 'Steer worst offender', go: first ? composeFor(go, first) : (ob.worst ? () => set({ steered: [...(s.steered || []), ob.worst.id] }) : () => {}) }; })(), hasUtil: (ob.utilRows || []).length > 0, utilLine: `${ob.util}% of ${ob.capGbps} Gbps in use · ${(ob.utilRows || []).length} ${(ob.utilRows || []).length === 1 ? 'connection' : 'connections'}`, utilHot: (ob.utilRows || []).filter(u => u.pct >= 80).length, goCapacity: go('s4'), anomalies: R.anomalies(R.applyScope(est0, obScope), ob).map(a => ({ ...a, dot: a.sev === 'amber' ? 'var(--warning)' : 'var(--link)', go: a.region ? () => set({ obScope: 'cloud:' + (est0.regionsList.find(r => r.region === a.region) || {}).cloud }) : () => {} })), hasAnomalies: R.anomalies(R.applyScope(est0, obScope), ob).length > 0, insights: R.insights(R.applyScope(est0, obScope), ob), hasInsights: !isEmpty, iw: iwVals(R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s)), s, set, go, winLabelOf(s)) || {}, hasIw: !!R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s)),
+    obStrip: (() => { const rows = ob.utilRows || []; const hot = rows.filter(u => u.pct >= 80 && !(connRow && connRow.region === u.region && connRow.degraded)); const blind = ob.blind || []; const parts = []; const deg = conns.rows.find(r => r.degraded); if (deg) parts.push(`${deg.cloud} ${deg.region} is degraded on ${deg.ramp}: BGP flapping, ${deg.drops} drops, ${deg.wl.toLocaleString('en-US')} workloads behind it.`); if (hot.length) parts.push(`${hot.map(u => `${u.cloud} ${u.region}`).join(', ')} ${hot.length === 1 ? 'runs' : 'run'} above 80% of ${hot.length === 1 ? 'its' : 'their'} ports.`); if (blind.length) parts.push(`${blind.length} ${blind.length === 1 ? 'region sends' : 'regions send'} no flow logs, so ${ob.pub.toFixed(1)} Gbps is unseen.`); if (ob.worst && !blind.length) parts.push(`${ob.worst.name} is the slowest public flow at ${ob.worst.latency} ms.`); const first = hot[0] ? est0.regionsList.find(x => x.region === hot[0].region) : blind[0]; return { has: parts.length > 0, title: 'Act on it', text: parts.join(' ') + (hot.length ? ' Add a port before it saturates.' : blind.length ? ' Attach it to bring the traffic under control.' : ''), cta: hot.length ? `Add a port on ${hot[0].region}` : blind.length ? `Attach ${blind[0].region}` : 'Steer worst offender', go: first ? composeFor(go, first) : (ob.worst ? () => set({ steered: [...(s.steered || []), ob.worst.id] }) : () => {}) }; })(), hasUtil: (ob.utilRows || []).length > 0, utilLine: `${ob.util}% of ${ob.capGbps} Gbps in use · ${(ob.utilRows || []).length} ${(ob.utilRows || []).length === 1 ? 'connection' : 'connections'}`, utilHot: (ob.utilRows || []).filter(u => u.pct >= 80).length, anomalies: R.anomalies(R.applyScope(est0, obScope), ob).map(a => ({ ...a, dot: a.sev === 'amber' ? 'var(--warning)' : 'var(--link)', go: a.region ? () => set({ obScope: 'cloud:' + (est0.regionsList.find(r => r.region === a.region) || {}).cloud }) : () => {} })), hasAnomalies: R.anomalies(R.applyScope(est0, obScope), ob).length > 0, insights: R.insights(R.applyScope(est0, obScope), ob), hasInsights: !isEmpty, iw: iwVals(R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s)), s, set, go, winLabelOf(s)) || {}, hasIw: !!R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s)),
     obVerdict: ob.verdict, obCoverage: ob.coverage, obKpis: ob.kpis.map(k => ({ ...k, hasUnit: !!k.u, hasE: !!k.e })), obTabs, obIsFlow: obTab === 'flow', trend, hasTrend: !!trend,
     ...logVals, ...gapVals, ...stepVals,
     skVB: `0 0 ${sk.W} ${sk.H}`, skNodes, skHeads, skRibbons, goLogs: () => toLogs({ logPattern: 'all' }), skSub: ob.subVerdict, skFoot: `All flows · ${ob.flows.filter(f => f.kind === 'App').length} app flows, ${ob.flows.filter(f => f.kind !== 'App').length} cloud-to-cloud. Sites roll up by class; the records table lists cloud flows only.`,
@@ -1391,6 +1604,47 @@ const CARD_DESC = {
 const METRO_RAMPS = { Ashburn: 'NetBond · DX · ER · IX · 8 ms', Atlanta: 'NetBond · DX · 11 ms', 'New York': 'NetBond · DX · ER · 9 ms', Dallas: 'NetBond · DX · ER · 9 ms', Chicago: 'NetBond · DX · ER · 10 ms', Denver: 'NetBond · 14 ms', 'San Jose': 'NetBond · DX · ER · 7 ms', 'Los Angeles': 'NetBond · DX · 9 ms', Seattle: 'DX · ER · 11 ms', Frankfurt: 'NetBond · DX · ER · 9 ms', London: 'NetBond · DX · ER · 8 ms', Amsterdam: 'NetBond · DX · 10 ms', Singapore: 'NetBond · DX · 12 ms', Tokyo: 'DX · ER · 13 ms', Sydney: 'DX · 15 ms' };
 const REGION_OF_METRO = (m) => Object.keys(D.COMPOSE_CHIPS.regions).find(r => D.COMPOSE_CHIPS.regions[r].includes(m)) || 'US East';
 const REGION_GEO = { 'us-east-1': 'Ashburn', 'us-east-2': 'Chicago', 'us-west-2': 'Seattle', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'London', 'ap-southeast-1': 'Singapore', eastus: 'Ashburn', westeurope: 'Amsterdam', centralus: 'Dallas', 'us-central1': 'Chicago', 'us-east-04': 'New York', 'uk-south': 'London' };
+
+/**
+ * Strips a compose of everything that names where it came from, how many of
+ * it there are, or what it says about itself: `sourceLabel` (the alert's
+ * title), `bulk` and `qty` (the count a site-attach route wrote), `noteStep`
+ * (the step that count's alert belongs on), and `note` (fix round 3: the
+ * alert's body text itself, moved in from the top-level `parsedNote` this
+ * was previously named for - the root fix. A fresh compose no longer needs
+ * a fresh writer to remember to clear a sibling field; there is no sibling
+ * field left). Every route that starts a genuinely NEW order from a compose
+ * that might carry those - Govern's "Author policy", the free-text parser,
+ * and switching the outcome under an order-carrying compose - runs it
+ * through this first. A route that is still building the SAME order
+ * (picking a metro, adding a control, resuming the header's "Compose"
+ * shortcut) spreads `cp` unchanged; those fields are exactly what should
+ * survive.
+ */
+const cleanCompose = (cp) => ({ ...cp, sourceLabel: null, bulk: null, qty: 1, noteStep: 0, note: null });
+
+/**
+ * Whether a compose carries an order at all - fix round 3, finding H: the
+ * round-2 guard keyed on `sourceLabel` alone, which only the gap route
+ * writes, so an outcome switch after the drawer's bulk attach (label-less,
+ * but `bulk`/`qty` both set) slipped through uncleaned. This names every
+ * shape a "this compose is about N sites/a labelled card/a written note"
+ * order can take, so a future writer that sets any one of them is covered
+ * without a fourth patch.
+ */
+const carriesOrder = (cp) => !!(cp.sourceLabel || cp.bulk || (cp.qty || 1) > 1 || cp.note);
+
+/**
+ * Fix round 3, finding R3 (the reviewer's own, pre-existing on the base):
+ * `s.order` freezes whatever Review last showed - set by choosing a
+ * marketplace product or package, or by Review itself - and nothing cleared
+ * it when a NEW order started from Compose. Every NEW-order writer spreads
+ * this alongside its `compose`, so Review's `s.order || composed` falls
+ * through to the live compose instead of a stale snapshot. SAME-order
+ * writers (setC's general case, goCompose's resume branch) do not use this -
+ * they are still building toward whatever `s.order` already is or isn't.
+ */
+const newOrder = (compose) => ({ compose, order: null });
 
 function prefillCompose(est) {
   const base = { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [], step: 0, prefilled: false };
@@ -1438,7 +1692,7 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
     stepIs0: step === 0, stepIs1: step === 1, stepIs2: step === 2, stepIs3: step === 3, stepIs4: step === 4, stepIs5: step === 5,
     srcCards: D.COMPOSE_CHIPS.source.map(v => card('source', v, false, CARD_DESC.source[v])), dstCards: D.COMPOSE_CHIPS.dest.map(v => card('dest', v, false, CARD_DESC.dest[v])), resCards: D.COMPOSE_CHIPS.resiliency.map(v => card('resiliency', v, true, CARD_DESC.resiliency[v])), ctlCards: D.COMPOSE_CHIPS.control.map(v => card('control', v, false, CARD_DESC.control[v])),
     metroCards: (D.COMPOSE_CHIPS.regions[cp.regionTab] || []).map(m => ({ ...card('metros', m, false, METRO_RAMPS[m] || 'NetBond'), })),
-    parsedNote: s.parsedNote || '', hasParsedNote: !!s.parsedNote && step === 0, prefilled: !!cp.prefilled && !s.parsedNote, prefillLine: cp.prefilled ? `Started from your estate: ${cp.prefillRegion} has ${cp.prefillWl} workloads on the public internet. Every step is filled; change what you like.` : '',
+    parsedNote: cp.note || '', parsedNoteTitle: cp.sourceLabel || 'From the drawer', hasParsedNote: !!cp.note && step === (cp.noteStep ?? 0), prefilled: !!cp.prefilled && !cp.note, prefillLine: cp.prefilled ? `Started from your estate: ${cp.prefillRegion} has ${cp.prefillWl} workloads on the public internet. Every step is filled; change what you like.` : '',
     slotRows: [['Outcome', outcome ? outcome.name : '', 0, 'Pick an outcome'], ['From', cp.source.join(', '), 1, 'Pick a source'], ['To', cp.dest.join(', '), 2, 'Pick a destination'], ['Via', cp.metros.join(', '), 3, 'Pick a metro'], ['Resiliency', cp.resiliencyChosen ? cp.resiliency : `${cp.resiliency} (default)`, 4, ''], ['Require', cp.control.join(', '), 5, 'Pick a control']].map(([label, v, i, empty]) => ({ key: label, label, text: v || empty, go: goStep(i), cur: step === i, weight: v ? 500 : 400, color: step === i ? 'var(--link)' : v ? 'var(--text-heading)' : 'var(--text-disabled)' })),
     sent: sentence, slotSrc: slot(sentence.src, 1, 'a source'), slotDst: slot(sentence.dst, 2, 'a destination'), slotMetro: slot(sentence.metro, 3, 'a metro'), slotRes: slot(sentence.res, 4, 'resiliency'), slotCtl: slot(sentence.ctl, 5, 'a control'), slotOutcome: slot(outcome ? outcome.name.toLowerCase() : '', 0, 'an outcome'),
     polSent: policySentence, hasConstraintNow: !!constraint && step === 4,
@@ -1670,7 +1924,7 @@ function connectVals(s, set, est, go, ob) {
   return { lenses, lens, lensQ, lensVerdict: R.lensVerdict(est, lens), matrix, pathsSub, matrixHeads: R.LENSES.map(l => ({ key: l.id, label: l.label, hi: l.id === lens, color: l.id === lens ? 'var(--link)' : 'var(--text-light)' })), lensRegions, hasLensRegions: rs.length > 0, isCloudLayer: s.layer === 'cloud', notCloudLayer: s.layer !== 'cloud' };
 }
 function egressBaseFor(est, ob) { const bucketToday = (est.buckets || []).reduce((a, b) => a + b.today, 0); return bucketToday || ob.egressMo || 0; }
-function costVals(s, set, est, ob, go, c) {
+function costVals(s, set, est, invAll, ob, go, c) {
   const base = egressBaseFor(est, ob);
   const bT = (est.buckets || []).reduce((a, b) => a + b.today, 0), bF = (est.buckets || []).reduce((a, b) => a + b.fabric, 0);
   const targetSave = bT > bF ? bT - bF : 0;
@@ -1679,7 +1933,20 @@ function costVals(s, set, est, ob, go, c) {
   const maxNow = Math.max(1, ...arb.map(a => a.saveN / 0.07 * 0.09));
   // AT&T charges (AO-360): catalog prices against what is attached. Fabric egress is the "On the fabric" total from the buckets.
   const attached = est.regionsList.filter(r => r.priv);
-  const vpcsAll = A.inventory(est).flatMap(c => c.regions.flatMap(r => r.vpcs));
+  // `invAll` is the unscoped, unfiltered tree (A.inventory on the same estate
+  // applyScope received), intersected down to `est`'s (scoped) region list.
+  // Base built vpcsAll straight off a scoped `A.inventory(scopedEst)`, which
+  // this reproduces exactly for what vpcsAll reads (v.managed, v.priv - the
+  // FIELDS are scope-independent, but the SET of VPCs is not: base's tree
+  // only ever contained the scoped regions' VPCs, and a wider tree filtered
+  // down to the same region set gives the same counts). Taking `invAll`
+  // rather than vals()'s facet-filtered `inv` also keeps a Discover chip
+  // from moving the Cost card, which the base never allowed either. When no
+  // chip is active this is a cache hit on the same key `inv` already built;
+  // one chip active costs one extra cache entry, never a second full build
+  // of the scoped tree naas-round2.js's applyScope used to force.
+  const inScope = new Set(est.regionsList.map(r => r.region));
+  const vpcsAll = invAll.flatMap(c => c.regions.filter(r => inScope.has(r.region)).flatMap(r => r.vpcs));
   const hostedN = vpcsAll.filter(v => v.managed).length, l3N = vpcsAll.filter(v => v.priv && !v.managed).length;
   const chargeRows = [
     { key: 'nb', label: 'NetBond on-ramps', sub: `${attached.length} ${attached.length === 1 ? 'region' : 'regions'} × $1,800`, v: attached.length * 1800 },
@@ -1734,13 +2001,13 @@ function costVals(s, set, est, ob, go, c) {
     ], { key: 'move', title: 'What can actually move', sub: 'Every bucket, by whether steering changes the bill', centre: kF(recover), centreSub: 'recoverable' }),
   ].filter(d => d.total > 1).map(d => ({ ...d, rows: d.rows.map(r => ({ ...r, key: d.key + ':' + r.label })) }));
   return { attCharges, hasAttCharges: attCharges.length > 0, attTotalF: fmt(attTotal), attNetF: (attNet >= 0 ? '+' : '−') + fmt(Math.abs(attNet)), attNetLabel: attNet >= 0 ? 'Net saving after charges' : 'Net cost after savings', attNetColor: attNet >= 0 ? 'var(--success)' : 'var(--warning)', attNote: `${fmt(attTotal)}/mo · carries ${fmt(ob.savingsMo || 0)}/mo of savings`, goMarketplace: go('s7'),
-    costStrip: { has: !!(top || pubSite), title: 'Act on it', text: [pubSite ? `${fmt(pubSite.pubPart)}/mo of egress still leaves ${pubSite.label.toLowerCase()} on a public first mile.` : '', top ? `Attaching ${top.region} moves ${top.wl} workloads to $0.02/GB and saves ${fmt(top.saveN)}/mo, the largest single move on the table.` : 'Every region is attached; the remaining lever is the commit table below.'].filter(Boolean).join(' '), cta: top ? `Attach ${top.region}` : 'Drill sites', go: top ? go('s4', { compose: { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Private path required'], step: 5, prefilled: true, prefillRegion: top.region, prefillWl: top.wl } }) : go('s1') },
+    costStrip: { has: !!(top || pubSite), title: 'Act on it', text: [pubSite ? `${fmt(pubSite.pubPart)}/mo of egress still leaves ${pubSite.label.toLowerCase()} on a public first mile.` : '', top ? `Attaching ${top.region} moves ${top.wl} workloads to $0.02/GB and saves ${fmt(top.saveN)}/mo, the largest single move on the table.` : 'Every region is attached; the remaining lever is the commit table below.'].filter(Boolean).join(' '), cta: top ? `Attach ${top.region}` : 'Drill sites', go: top ? go('s4', { ...newOrder(prefillAttach(top)) }) : go('s1') },
     bySite, hasBySite: bySite.length > 0, bySiteTotalF: fmt(bySiteTotal), bySiteNote: `${fmt(siteRows.reduce((a, r) => a + r.pubPart, 0))}/mo still on a public first mile`, goSites: go('s1'),
     costDonuts, hasCostDonuts: costDonuts.length > 0,
     arbitrage: arb.map(a => ({ ...a, fabW: Math.round(a.saveN / 0.07 * 0.02 / maxNow * 100) + '%', premW: Math.round(a.saveN / maxNow * 100) + '%',
       explainGo: explainNav(c, { label: `${a.cloud || ''} ${a.region || a.label || ''}`.trim() + ' — what it would save', value: a.saveF || fmt(a.saveN) + '/mo',
         sub: 'The premium this region pays for leaving on the public path.',
-        cut: 'The records this region sent on the public path.', path: 'public', parts: [] }), enter: () => set({ hoverNode: 'reg' + a.regionId }), leave: () => set({ hoverNode: null }), attach: go('s4', { compose: { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Private path required'], step: 5, prefilled: true, prefillRegion: a.region, prefillWl: a.wl } }) })), hasArbitrage: arb.length > 0, arbTotal: fmt(arb.reduce((a, r) => a + r.saveN, 0)), arbTotalYr: fmt(arb.reduce((a, r) => a + r.saveN, 0) * 12),
+        cut: 'The records this region sent on the public path.', path: 'public', parts: [] }), enter: () => set({ hoverNode: 'reg' + a.regionId }), leave: () => set({ hoverNode: null }), attach: go('s4', { ...newOrder(prefillAttach(a)) }) })), hasArbitrage: arb.length > 0, arbTotal: fmt(arb.reduce((a, r) => a + r.saveN, 0)), arbTotalYr: fmt(arb.reduce((a, r) => a + r.saveN, 0) * 12),
     // Cost figures reach the same records. A dollar figure is bytes times a
     // rate, so it explains through the flows that carried the bytes.
     destClasses: R.destClasses(ob, base, targetSave).map((d, i) => ({ ...d, op: [1, 0.75, 0.5, 0.3][i] || 0.3,
@@ -1773,7 +2040,7 @@ function andiVals(s, set, go, est, ob, x) {
     qs = { connect: ['Which region should I attach first?', 'What does NetBond give me over Direct Connect?', 'Where does latency vary by hour?'], govern: ['Which policy has violations?', 'What would enforcing PCI change?', 'Is anything internet-facing uninspected?'], observe: ['Which flow saves most if steered?', 'What is driving public egress?', 'Is any controlled flow single-homed?'], cost: ['Where is the biggest arbitrage?', 'Commit or stay metered?', 'What does the 90-day curve assume?'] }[s.tab] || [];
     if (s.tab === 'observe') acts = [{ key: 'a', label: 'Show public flows', go: () => set({ obTab: 'flow' }) }, { key: 'b', label: 'Steer worst offender', go: ob.worst ? () => set({ steered: [...(s.steered || []), ob.worst.id] }) : () => {} }, { key: 'c', label: 'Path diversity', go: () => set({ obTab: 'control' }) }];
   }
-  else if (s.screen === 's4') { lead = s.parsedNote || (s.compose && s.compose.prefilled ? `Started from your estate: ${s.compose.prefillRegion} has ${s.compose.prefillWl} workloads on the public internet. Every step is filled; change what you like.` : 'Describe the outcome. AT&T composes the connection.'); sub = ['One outcome per order; the control ships with the path.', 'Pick every source that applies.', 'The destination decides the on-ramp.', 'Two metros for geodiversity or maximum resiliency.', 'Standard is one path; the other two add a second metro.', 'This is the policy, in Govern\'s words.'][(s.compose && s.compose.step) || 0]; qs = ['Why two metros?', 'What does inline inspection cost?', 'How long until it is live?']; }
+  else if (s.screen === 's4') { lead = (s.compose && s.compose.note) || (s.compose && s.compose.prefilled ? `Started from your estate: ${s.compose.prefillRegion} has ${s.compose.prefillWl} workloads on the public internet. Every step is filled; change what you like.` : 'Describe the outcome. AT&T composes the connection.'); sub = ['One outcome per order; the control ships with the path.', 'Pick every source that applies.', 'The destination decides the on-ramp.', 'Two metros for geodiversity or maximum resiliency.', 'Standard is one path; the other two add a second metro.', 'This is the policy, in Govern\'s words.'][(s.compose && s.compose.step) || 0]; qs = ['Why two metros?', 'What does inline inspection cost?', 'How long until it is live?']; }
   else if (s.screen === 's6') { lead = 'Review the order. Nothing is ordered until you submit.'; qs = ['What ships on day one?', 'Can I change the policy later?']; }
   else if (s.screen === 's7' || s.screen === 's8') { lead = 'Filter by what the path must do, not by product name.'; qs = ['Which products fit tag PCI?', 'What do estates like mine choose?']; }
   // scoped focus

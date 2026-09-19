@@ -149,3 +149,43 @@ export function accessOf(st) {
   if (/abf|business fiber/.test(a)) return 'abf';
   return 'other';
 }
+
+/**
+ * Display label for any drill key. The trail carries identity; the screen
+ * carries names, so nothing ever prints "Branch:2:Chicago" at a user.
+ * Handles a class key, a rollup-group key (Task 2) and a metro or site key.
+ */
+export function labelOfKey(est, key) {
+  const k = String(key);
+  if (CLASS[k]) return CLASS[k].label;
+  const hash = k.indexOf('#');
+  if (hash > 0) {
+    const cls = k.slice(0, hash), ri = parseInt(k.slice(hash + 1), 10);
+    const peers = (est && est.sites || []).filter(x => classOf(x) === cls && countOf(x.name) > 1);
+    if (peers[ri]) return peers[ri].name.replace(/\s*\([\d,]+\)\s*$/, '');
+    return (CLASS[cls] || {}).label || cls;
+  }
+  const parts = k.split(':');
+  if (parts.length >= 3) return parts.slice(2).join(':');
+  if (parts.length === 2) return parts[1];
+  return k;
+}
+
+/**
+ * The stable key for a rolled-up row of `est.sites`. The canvas draws East,
+ * Central and West as three rows; `classOf` collapses all three into one
+ * class, so without this a click on "Remote sites, East (1,640)" lands on
+ * 4,054 sites. Null for a single named site, which is already addressable.
+ */
+export function rollupKeyOf(est, st) {
+  if (!st || countOf(st.name) <= 1) return null;
+  const cls = classOf(st);
+  const peers = (est && est.sites || []).filter(x => classOf(x) === cls && countOf(x.name) > 1);
+  const ri = peers.findIndex(x => x.name === st.name);
+  return ri < 0 ? null : `${cls}#${ri}`;
+}
+
+/** How many sites are still on a public first mile. Rows are rollups; this counts inside them. */
+export function gapSiteCount(est) {
+  return (est && est.sites || []).filter(x => !x.priv).reduce((a, x) => a + countOf(x.name), 0);
+}
