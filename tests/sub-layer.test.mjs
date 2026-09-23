@@ -105,3 +105,62 @@ test('AT&T inventory rows are live and never say scanning', () => {
   assert.ok(att.length > 0, 'no AT&T rows to check');
   for (const r of att) assert.equal(r.seen, 'live');
 });
+
+// ---- Observe and Cost layer their drill-downs ----
+// Observe was 4566px: a 1377px flow map with Insights (782) and Logs (1391)
+// stacked under it. Cost was 3196px: egress with Forecast (608) and Charges
+// (358) under it. Those are drill-downs of the hero, not peers of it.
+
+test('Observe and Cost declare their drill-downs as panels', () => {
+  assert.deepEqual(SUB_PANELS.observe.map(p => p.key), ['insights', 'logs']);
+  assert.deepEqual(SUB_PANELS.cost.map(p => p.key), ['forecast', 'charges']);
+});
+
+test('the Records and Forecast links open the layer instead of scrolling', () => {
+  const c = mkC({ screen: 's3', tab: 'observe' });
+  vals(c).railGroups.flatMap(g => g.items).find(r => r.label === 'Records').go();
+  assert.deepEqual(c.state.sub, { page: 'observe', panel: 'logs' });
+  const k = mkC({ screen: 's3', tab: 'cost' });
+  vals(k).railGroups.flatMap(g => g.items).find(r => r.label === 'Forecast').go();
+  assert.deepEqual(k.state.sub, { page: 'cost', panel: 'forecast' });
+});
+
+test('each drill-down section lives inside the layer, not on its page', async () => {
+  const { readFileSync } = await import('node:fs');
+  const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
+  const a = HTML.indexOf('<aside aria-label="Discovery"');
+  const z = HTML.indexOf('</aside>', a);
+  const layer = HTML.slice(a, z);
+  for (const id of ['sec-insights', 'sec-logs', 'sec-forecast', 'sec-charges']) {
+    assert.ok(layer.includes(`id="${id}"`), `${id} is still stacked on its page`);
+  }
+});
+
+// A balanced census is not a correct structure. The first cut of this move put
+// Insights inside the What we found gate (so it could never render) and let
+// Ways to connect escape it (so it rendered on every page), and every tag still
+// balanced. This walks the gates and pins each section to its own panel.
+test('each section in the layer sits under its own panel gate and no other', async () => {
+  const { readFileSync } = await import('node:fs');
+  const L = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8').split('\n');
+  const a = L.findIndex(l => l.includes('<aside aria-label="Discovery"'));
+  const z = L.findIndex((l, i) => i > a && l.includes('</aside>'));
+  const want = {
+    'sec-accounts': 'subIsSources', 'sec-gap': 'subIsFound', 'sec-paths': 'subIsFound',
+    'sec-insights': 'subIsInsights', 'sec-logs': 'subIsLogs',
+    'sec-forecast': 'subIsForecast', 'sec-charges': 'subIsCharges',
+  };
+  const stack = [];
+  const seen = new Set();
+  for (let n = a; n <= z; n++) {
+    for (const m of L[n].matchAll(/<sc-if value="\{\{ (\w+) \}\}"|<\/sc-if>/g)) {
+      if (m[1]) stack.push(m[1]); else stack.pop();
+    }
+    const id = (L[n].match(/id="(sec-[\w-]+)"/) || [])[1];
+    if (!id || !want[id]) continue;
+    const panels = stack.filter(g => g.startsWith('subIs'));
+    assert.deepEqual(panels, [want[id]], `${id} sits under ${JSON.stringify(panels)}`);
+    seen.add(id);
+  }
+  assert.deepEqual([...seen].sort(), Object.keys(want).sort(), 'a section is missing from the layer, so the check above passed on nothing');
+});

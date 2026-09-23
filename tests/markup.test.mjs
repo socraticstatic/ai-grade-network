@@ -88,11 +88,19 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Personas and states: the discovery bar is gated to Discover and the telemetry
 // window to Observe and Cost (sc-if +2), and the stat line that restated the
 // four tiles is deleted (div -1). div 878 -> 877, sc-if 306 -> 308.
+// Observe and Cost layer their drill-downs: Insights, Logs, Forecast and
+// Charges move into the sub layer, each under a panel gate. Insights and
+// Charges carry their own guards (hasAnomalies, hasAttCharges) with them.
+// Pure move plus four gates. sc-if 308 -> 312.
+// Observe and Cost layer their drill-downs: Insights, Logs, Forecast and
+// Charges move into the sub layer, each under a panel gate. Insights and
+// Charges carry their own guards (hasAnomalies, hasAttCharges) with them.
+// Pure move plus four gates. sc-if 308 -> 312.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 877],
     ['span', /<span\b/g, /<\/span>/g, 645],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 308],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 312],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 176],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 254],
