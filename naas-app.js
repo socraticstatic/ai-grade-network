@@ -291,17 +291,24 @@ export function vals(c) {
   const cloudDrill = s.cloudDrill || [];
   const regionDrill = cloudDrill.length ? X.regionDrillRows(est, inv, cloudDrill) : null;
   const fabOpenNow = (s.fabDrill || []).length > 0;
-  const L = heroLayout(est, { siteRows: drillRows, regionRows: regionDrill ? regionDrill.rows : null, bandX: fabOpenNow ? 380 : 560, bandW: fabOpenNow ? 420 : 240 });
+  const L = heroLayout(est, { siteRows: drillRows, regionRows: regionDrill ? regionDrill.rows : null, bandX: 300, bandW: 500 });
   const hoverKey = s.hoverNode;
   const dimFor = (keys) => hoverKey ? (keys.includes(hoverKey) ? 1 : 0.72) : 1;
   const layerEdgeKinds = { ai: ['egress'], cloud: ['egress', 'internet'], net: ['ingress', 'internet'], transport: ['ingress'] };
   const inDept = s.screen === 's3';
-  const strataMeta = D.LAYERS.map((l, i) => {
-    const live = layerProducts(l.id).length, fcount = findingsFor(l.id).length;
-    const selected = inDept && s.layer === l.id;
-    const dim = l.id !== 'cloud';
-    return { ...l, ...L.strata[i], ry: L.strata[i].y + 6, live, fcount, hasFindings: fcount > 0, selected, open: dim ? () => {} : () => set({ fabDrill: ['fab'], bandOpen: false }), cursor: dim ? 'default' : 'pointer', short: l.id === 'cloud' ? 'NetBond Advanced ↗' : l.id === 'transport' ? 'Vision' : '', open2: undefined, fill: selected ? 'var(--cta)' : 'var(--bg-base)', labelColor: selected ? '#fff' : 'var(--text-heading)', subColor: selected ? '#cfe3ff' : 'var(--text-light)', op: dim ? 0.4 : inDept && !selected ? 0.6 : 1, ty: L.strata[i].y + 30, ty2: L.strata[i].y + 48, ty3: L.strata[i].y + 70 };
-  });
+  // The five segments of the path. Core is the door into the facilities
+  // drill, which the Cloud layer card used to open; the other three layer
+  // cards were dim and did nothing, and none of the four was a place a packet
+  // passes through.
+  const segmentsMeta = L.segments.map(sg => ({ ...sg,
+    y: L.bandY, h: L.bandH, bottom: L.bandY + L.bandH, labelY: L.bandY + 10,
+    role: sg.side === 'core' ? 'button' : 'presentation',
+    isCore: sg.side === 'core',
+    open: sg.side === 'core' ? () => set({ fabDrill: ['fab'], bandOpen: true }) : () => {},
+    cursor: sg.side === 'core' ? 'pointer' : 'default',
+    fill: sg.side === 'core' ? 'var(--bg-accent)' : 'transparent',
+    divider: sg.i > 0 ? 1 : 0,
+  }));
   const steeredRegionNames = new Set(steered.filter(id => id.startsWith('f-')).map(id => (estRaw.regionsList[+id.split('-')[1]] || {}).region));
   const heroEdges = L.edges.map(e => {
     const keys = [e.site ? 'site' + e.site.name : null, e.region ? 'reg' + e.region.region : null, e.internet ? 'inet' : null].filter(Boolean);
@@ -732,7 +739,7 @@ export function vals(c) {
     drawer, drawerOpen, openLevel, hasDrawer: drawerOpen, noDrawer: !drawerOpen, andiFabRight: drawerOpen ? '396px' : '16px',
     fabOpen: fabDrill.length > 0, fabClosed: fabDrill.length === 0, sitesDoor, bandDoor, cloudsDoor, fabRows, fabHead, fabUp, fabTrail, hasFabMore: !!(fabHead && fabHead.more), fabMore: fabHead ? fabHead.more : '', openBandLevel: () => openLevel('fabric'), fabHeadY: L.bandY + 8, fabEmpty, fabEmptyY: L.bandY + 40, fabEmptyHead: fabInfo ? fabInfo.emptyHead : '', fabEmptyLine: fabInfo ? fabInfo.emptyLine : '', fabEmptyCta: fabInfo ? fabInfo.emptyCta : '', fabEmptyGo, bandX: L.bandX, bandW: L.bandW, bandLabelX: L.bandX, laneX: L.lane.x, laneW: L.lane.w,
     laneFocus: !!s.laneFocus, toggleLane: () => set({ laneFocus: !s.laneFocus }), laneTitle: s.laneFocus ? 'Show everything' : 'Show only what rides outside the fabric', laneCount: `${est.regionsList.filter(r => !r.priv).length + est.sites.filter(x => !x.priv).length} public`, laneAttach: () => { const r = est.regionsList.find(x => !x.priv); if (r) composeFor(go, r)(); else { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); } },
-    heroSites, heroRegions, heroGroups: L.groups.map(g => ({ ...g, key: 'g' + g.cloud + g.y })), heroWorkloads, heroEdges, heroArcs, strata: strataMeta, showWorkloads: heroWorkloads.length > 0, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T network' : 'AT&T network  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on the fabric` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
+    heroSites, heroRegions, heroGroups: L.groups.map(g => ({ ...g, key: 'g' + g.cloud + g.y })), heroWorkloads, heroEdges, heroArcs, segments: segmentsMeta, showWorkloads: heroWorkloads.length > 0, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T network' : 'AT&T network  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on the fabric` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
     perfCard: hr ? { region: `${hr.cloud} ${hr.region}`, msLine: `${hr.priv ? hr.fab : hr.pub} ms ${hr.priv ? 'on the fabric' : 'public'}${hr.rel === 'warn' ? ' · degraded' : ''}`, pub: `Public today ${hr.pub} ms`, fab: `on the fabric ${hr.fab} ms`, rel: hr.rel === 'warn' ? 'Reliability: degraded' : 'Reliability: healthy', relFill: hr.rel === 'warn' ? 'var(--warning)' : 'var(--success)', top: Math.max(0, Math.min(340, hrNode.y - 70)) + 'px', left: 'calc(100% - 236px)', go: go('s3', { layer: 'cloud', tab: 'observe' }) } : null, hasPerf: !!hr,
     // floor
     rollup, floorFindings, hasFloorFindings: floorFindings.length > 0, recFindings, hasRecFindings: recFindings.length > 0, packages, tailored, hasTailored: isMature, hasAddons: tailored.addons.length > 0, hasTermUps: tailored.terms.length > 0, hasHubs: tailored.hubs.length > 0,

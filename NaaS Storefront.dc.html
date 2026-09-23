@@ -379,18 +379,11 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <rect x="{{ bandX }}" y="{{ bandY }}" width="{{ bandW }}" height="{{ bandH }}" rx="16" fill="{{ bandFill }}" style="stroke:var(--band-stroke);animation:bandBreathe 2.4s ease-out 1"></rect>
     <foreignObject x="{{ bandLabelX }}" y="0" width="{{ bandW }}" height="18"><div style="display:flex;align-items:center;gap:8px;height:18px"><button onClick="{{ toggleBand }}" aria-label="Expand the fabric band" style="flex:1;min-width:0;border:0;background:transparent;padding:0;color:var(--link);font-size:11px;line-height:18px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;text-align:center;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit">{{ bandLabel }}</button><sc-if value="{{ bandDoor.has }}" hint-placeholder-val="{{ true }}"><button onClick="{{ bandDoor.open }}" title="{{ bandDoor.title }}" style="flex:none;margin-right:{{ bandDoor.gutter }}px;border:0;background:transparent;padding:0;color:{{ bandDoor.color }};font-size:11px;line-height:18px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">{{ bandDoor.label }}</button></sc-if><sc-if value="{{ bandDoor.hasNot }}" hint-placeholder-val="{{ false }}"><span style="flex:none;margin-right:{{ bandDoor.gutter }}px;color:{{ bandDoor.color }};font-size:11px;line-height:18px;font-weight:600;white-space:nowrap;font-family:inherit">{{ bandDoor.label }}</span></sc-if></div></foreignObject>
     <sc-if value="{{ fabClosed }}" hint-placeholder-val="{{ true }}">
-    <sc-for list="{{ strata }}" as="s" hint-placeholder-count="4">
-      <g onClick="{{ s.open }}" role="button" aria-label="{{ s.label }}" opacity="{{ s.op }}" style="cursor:pointer;transition:opacity .2s"><title>Open the fabric: facilities, ports, circuits</title>
-        <rect x="572" y="{{ s.ry }}" width="216" height="{{ strataCardH }}" rx="8" fill="{{ s.fill }}" style="stroke:var(--border-secondary)"></rect>
-        <foreignObject x="572" y="{{ s.ry }}" width="216" height="{{ strataCardH }}" style="pointer-events:none">
-          <div style="box-sizing:border-box;height:{{ strataCardH }}px;padding:{{ strataPadY }}px 14px;display:grid;grid-template-rows:auto auto auto;gap:{{ strataRowGap }}px;align-content:center">
-            <div style="display:flex;align-items:center;gap:8px;font-size:14px;line-height:18px;font-weight:700;color:{{ s.labelColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ s.iconSrc }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="display:inline-block;width:18px;height:18px;flex:none;background:url('{{ s.iconSrc }}') center / contain no-repeat"></span></sc-if>{{ s.label }}</div>
-            <div style="font-size:11px;line-height:14px;color:{{ s.subColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.short }}</div>
-            <div style="display:flex;justify-content:space-between;align-items:center;height:20px"><span style="font-size:12px;line-height:20px;color:{{ s.subColor }}">{{ s.live }}</span>
-              <sc-if value="{{ s.hasFindings }}" hint-placeholder-val="{{ false }}"><span style="height:20px;padding:0 8px;border-radius:9999px;background:var(--warning);color:#fff;font-size:12px;line-height:20px;font-weight:500;white-space:nowrap">{{ s.fcount }}</span></sc-if>
-            </div>
-          </div>
-        </foreignObject>
+    <sc-for list="{{ segments }}" as="sg" hint-placeholder-count="5">
+      <g onClick="{{ sg.open }}" role="{{ sg.role }}" aria-label="{{ sg.label }}" style="cursor:{{ sg.cursor }}">
+        <rect x="{{ sg.x }}" y="{{ sg.y }}" width="{{ sg.w }}" height="{{ sg.h }}" style="fill:{{ sg.fill }}"></rect>
+        <line x1="{{ sg.x }}" y1="{{ sg.y }}" x2="{{ sg.x }}" y2="{{ sg.bottom }}" stroke-width="1" style="stroke:var(--border-secondary);opacity:{{ sg.divider }}"></line>
+        <foreignObject x="{{ sg.x }}" y="{{ sg.labelY }}" width="{{ sg.w }}" height="16" style="pointer-events:none"><div style="text-align:center;font-size:11px;line-height:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light)">{{ sg.label }}</div></foreignObject>
       </g>
     </sc-for>
     </sc-if>
@@ -2121,14 +2114,12 @@ class Component extends DCLogic {
     v.setSourceInv = () => this.setState({ intakeSource: 'inventory' });
     // The lens label (private, 12 ms, $0.02/GB) ends 8px left of the on-ramp chip instead of on top of it.
     v.heroEdges = v.heroEdges.map(e => ({ ...e, chipX: e.mx - e.chipW / 2, chipY: e.my - 9, lx: e.hasLabel && e.chip ? e.mx - e.chipW / 2 - 188 : e.lx, ly: e.hasLabel && e.chip ? e.my - 22 : e.ly, chipTy: e.my + 4, sx: e.mx + (e.chip ? e.chipW / 2 + 14 : 0), sy: e.my }));
-    v.strata = v.strata.map(st => ({ ...st }));
     v.facilityRows = v.facilityRows.map(f => ({ ...f, ty: f.y + 22, ty2: f.y + 40, ty3: f.y + 58 }));
     v.heroGroups = v.heroGroups.map(g => ({ ...g, ty: g.y + 14 }));
     v.heroWorkloads = v.heroWorkloads.map(w => ({ ...w, ly: w.y + 12, ty: w.y + 16 }));
     v.routeD = v.routePreview ? `M540,${v.routePreview.y1} C575,${v.routePreview.y1} 575,${v.routePreview.y2} 540,${v.routePreview.y2}` : '';
     v.modeTabs = v.modeTabs.map(t => ({ ...t, border: t.active ? 'var(--cta)' : 'transparent', color: t.active ? 'var(--link)' : 'var(--text-light)' }));
     const TAB_ICON = { connect: 'cloud', govern: 'check-shield', observe: 'high-meter', cost: 'bill' };
-    const LAYER_ICON = { ai: 'apis', cloud: 'cloud', net: 'firewall', transport: 'router' };
     const CAT_ICON = { hosted: 'cloud', maxres: 'hub', private: 'lock', internet: 'ethernet', security: 'check-shield', vnf: 'apps', apis: 'apis', managed: 'person-group' };
     const SCAN_ICON = ['cloud', 'cable', 'hub', 'pie-chart'];
     const PROVIDER_MARK = (p) => /aws/i.test(p) ? 'brand/providers/aws.svg' : /azure/i.test(p) ? 'brand/providers/azure.svg' : /gcp|google/i.test(p) ? 'brand/providers/google.svg' : /oracle/i.test(p) ? 'brand/providers/oracle.svg' : /equinix|coreweave/i.test(p) ? 'brand/providers/equinix.svg' : null;
@@ -2136,7 +2127,6 @@ class Component extends DCLogic {
     v.iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light';
     v.iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
     v.verbTabs = v.verbTabs.map(t => ({ ...t, icon: TAB_ICON[t.key], iconSrc: (t.active ? v.iconLink : v.iconDir) + '/' + TAB_ICON[t.key] + '.svg', border: t.active ? 'var(--cta)' : 'transparent', color: t.active ? 'var(--link)' : 'var(--text-light)' }));
-    v.strata = v.strata.map(st => ({ ...st, icon: LAYER_ICON[st.id], iconSrc: 'brand/icons-' + (st.selected || s.theme === 'dark' ? 'dark' : 'light') + '/' + LAYER_ICON[st.id] + '.svg' }));
     v.categories = (v.categories || []).map(c => { const ic = CAT_ICON[c.id] || 'grid'; const linkable = ['cloud', 'bill', 'check-shield', 'high-meter'].includes(ic); return { ...c, icon: ic, iconSrc: c.on ? 'brand/icons-dark/' + ic + '.svg' : linkable ? (dark ? 'brand/icons-linkdark/' : 'brand/icons-link/') + ic + '.svg' : (dark ? 'brand/icons-dark/' : 'brand/icons-light/') + ic + '.svg' }; });
     v.scanSteps = (v.scanSteps || []).map((st, i) => ({ ...st, icon: SCAN_ICON[i], iconSrc: v.iconDir + '/' + SCAN_ICON[i] + '.svg' }));
     v.heroRegions = v.heroRegions.map(r => ({ ...r, markSrc: r.ghost || r.rollup ? null : PROVIDER_MARK(r.cloud) }));

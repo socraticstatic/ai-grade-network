@@ -92,6 +92,19 @@ export function heroLayout(est, opts) {
     if (r1 && r2) out.arcs.push({ id: 'arc' + i, priv: a.priv, y1: r1.cy, y2: r2.cy, from: a.from, to: a.to });
   });
   out.strata = [0, 1, 2, 3].map(i => ({ i, y: bandY + i * strataH, h: strataH }));
+  // The path a packet takes, left to right. Core is singular and shared; the
+  // two sides mirror it. Integer widths that tile the band exactly, with any
+  // remainder given to Core so the mirror stays exact.
+  const SEG = [['Access', 'site'], ['Edge', 'site'], ['Core', 'core'], ['Edge', 'cloud'], ['Access', 'cloud']];
+  const side = Math.floor(bandW / SEG.length);
+  const coreW = bandW - side * (SEG.length - 1);
+  let sx = bandX;
+  out.segments = SEG.map(([label, sd], i) => {
+    const w = i === 2 ? coreW : side;
+    const seg = { key: 'seg' + i, i, label, side: sd, x: sx, w, cx: sx + w / 2 };
+    sx += w;
+    return seg;
+  });
   return out;
 }
 

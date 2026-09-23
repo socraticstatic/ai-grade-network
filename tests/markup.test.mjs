@@ -96,11 +96,18 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Charges move into the sub layer, each under a panel gate. Insights and
 // Charges carry their own guards (hasAnomalies, hasAttCharges) with them.
 // Pure move plus four gates. sc-if 308 -> 312.
+// The middle becomes the path: five segments (Access, Edge, Core, Edge, Access)
+// replace the four product-layer cards. Each card was a g with a rect and a
+// foreignObject holding four divs, three spans and two sc-ifs (findings,
+// fabOpen); each segment is a g, a rect, a line and a text, none of them
+// pinned here. The segment label is a foreignObject with one div, because the
+// runtime wraps an interpolation in an HTML span and a span inside SVG <text>
+// draws nothing. div 877 -> 874, span 645 -> 642, sc-if 312 -> 310.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 877],
-    ['span', /<span\b/g, /<\/span>/g, 645],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 312],
+    ['div', /<div\b/g, /<\/div>/g, 874],
+    ['span', /<span\b/g, /<\/span>/g, 642],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 310],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 176],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 254],
@@ -347,4 +354,24 @@ test('the compose alert title is bound to parsedNoteTitle, not the static defaul
   assert.ok(line, 'the compose alert (gated on hasParsedNote) is gone');
   assert.ok(/class="fx-alert-title">\{\{ parsedNoteTitle \}\}</.test(line), 'fx-alert-title must bind {{ parsedNoteTitle }}');
   assert.equal(HTML.includes('From the drawer'), false, 'the default lives in JS (wizardVals) now, not as static markup');
+});
+
+// renderVals in the markup post-processes values from vals(): it maps them,
+// spreads them, reads fields off them. Every test here calls vals() directly
+// and never runs renderVals, so retiring a value renderVals still maps passes
+// the whole suite and blanks every screen. Retiring the four product-layer
+// strata did exactly that. Every `v.X = v.X.map(` must name a list vals() returns.
+test('renderVals only maps values that vals() still returns', async () => {
+  const { vals } = await import('../naas-app.js');
+  const { mkC } = await import('./harness.mjs');
+  if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
+  const i = HTML.indexOf('renderVals() {');
+  assert.ok(i > 0, 'renderVals is gone');
+  const body = HTML.slice(i, HTML.indexOf('\n  }\n', i));
+  const mapped = [...new Set([...body.matchAll(/v\.(\w+) = v\.\1\.map\(/g)].map(m => m[1]))];
+  assert.ok(mapped.length > 3, `only found ${mapped.length} mapped values; the pattern broke, not the code`);
+  for (const view of ['empty', 'small', 'mature']) {
+    const v = vals(mkC({ view, estateParam: null }));
+    for (const k of mapped) assert.ok(Array.isArray(v[k]), `${view}: renderVals maps v.${k}, which vals() returns as ${typeof v[k]}`);
+  }
 });
