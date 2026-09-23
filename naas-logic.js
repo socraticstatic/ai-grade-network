@@ -6,6 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 // Layout and derivation helpers for the NaaS storefront. Pure functions, no DOM.
+import { siteChain, cloudEdgeThing, cloudAccessThing, coreThing, accessThing } from './naas-things.js';
 export const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
 export const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 /** "1 cloud" / "2 clouds" / "4,120 sites". Every count in the copy goes through this. */
@@ -54,8 +55,14 @@ export function regionRows(est) {
       const rep = seen[k];
       return { key: k === 'att>att' ? 'att' : k, priv: !!rep.priv, access: rep.access, accessSla: rep.accessSla, carrier: rep.carrier, core: rep.core, via: rep.via, viaRamp: rep.viaRamp };
     });
+    // The lines a region card draws: one per circuit its sites use (and one for
+    // the internet), so the root shows which things a region runs through, not
+    // just whose they are.
+    const lineSeen = {};
+    sites.forEach(site => { const t = accessThing(site); const k = t ? t.id + (site.core === 'third' ? '>third' : '') : 'public'; if (!lineSeen[k]) lineSeen[k] = site; });
+    const lines = Object.entries(lineSeen).map(([k, rep]) => ({ key: k, priv: !!rep.priv, access: rep.access, accessSla: rep.accessSla, carrier: rep.carrier, core: rep.core, via: rep.via, viaRamp: rep.viaRamp, xc: rep.xc }));
     const count = sites.reduce((a, s2) => a + countOf(s2.name), 0);
-    return { name, sites, patterns, count };
+    return { name, sites, patterns, lines, count };
   });
 }
 
@@ -107,7 +114,7 @@ export function heroLayout(est, opts) {
   const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || regionRows(est).map(r => {
     const carriers = [...new Set(r.patterns.map(p => (p.key === 'public' ? 'public' : p.key.startsWith('third') ? (p.carrier || 'third party') : 'AT&T')))];
     return { name: r.name, access: `${r.count.toLocaleString('en-US')} ${r.count === 1 ? 'site' : 'sites'} · ${carriers.join(', ')}`,
-      priv: r.patterns.some(p => p.priv), drillKey: 'region:' + r.name, rollup: true, region: true, patterns: r.patterns, groups: r.sites.length };
+      priv: r.patterns.some(p => p.priv), drillKey: 'region:' + r.name, rollup: true, region: true, patterns: r.patterns, lines: r.lines, groups: r.sites.length };
   }));
   const cap = opts.siteRows ? DRILL_SITES : ROOT_SITES;
   const sites = rawSites.length > cap ? [...rawSites.slice(0, cap - 1), { name: `+${fmtN(rawSites.length - (cap - 1))} more`, access: 'open the list ›', more: true, rollup: false }] : rawSites;
@@ -129,8 +136,8 @@ export function heroLayout(est, opts) {
     // A region card draws one line per distinct path in it, fanned around its
     // entry, each carrying a stand-in site with that path's access, core and
     // on-ramp, so the routing below draws a region exactly as it draws a site.
-    const lines = s.patterns ? s.patterns.map((p, k) => ({ k, n: s.patterns.length,
-      site: { name: `${s.name} · ${p.key}`, access: p.access, accessSla: p.accessSla, carrier: p.carrier, priv: p.priv, core: p.core, via: p.via, viaRamp: p.viaRamp, region: s.name } }))
+    const lines = s.lines ? s.lines.map((p, k) => ({ k, n: s.lines.length,
+      site: { ...p, name: `${s.name} · ${p.key}`, label: s.name, region: s.name } }))
       : [{ k: 0, n: 1, site: s }];
     lines.forEach(({ k, n: np, site }) => {
       const viaLane = !site.priv && !site.ghost;
@@ -180,85 +187,105 @@ export function heroLayout(est, opts) {
     sx += w;
     return seg;
   });
-  // Routes through the segments. Sites and regions are not paired and do not
-  // need to be: Core is shared. A site crosses Access and Edge into Core; a
-  // region leaves Core across Edge and Access. Each leg is owned by whoever
-  // holds the SLA for it, and a handoff is marked where the owner changes.
-  const [sA, sE, sC, cE, cA] = out.segments;
-  // Two tracks per segment: AT&T on the row, not-AT&T a step below it. A route
-  // runs on the track of whoever owns the segment and bends where that changes,
-  // so where the line drops is how far AT&T stays accountable. An owner change
-  // that stays off AT&T (Equinix to CoreWeave) is a colour change, not a bend.
-  const DROP = 14;
-  const trackOf = (owner) => (owner === 'att' ? 'att' : 'other');
-  out.legs = []; out.bends = []; out.xconnects = [];
-  // A bend is a gentle S, 2*BEND wide, and the legs either side stop where it
-  // starts, so line, curve and line meet end to end with a flat tangent at each
-  // join. A 20px bend drawn over legs that ran to the boundary overlapped them
-  // for 10px a side and read as a notch, not a curve.
-  const BEND = 22;
-  const place = (path, baseY, who, side) => {
-    const pts = path.map(g => { const track = trackOf(g.owner); return { ...g, track, y: track === 'att' ? baseY : baseY + DROP }; });
-    const bendAt = new Set();
-    for (let i = 1; i < pts.length; i++) if (pts[i].track !== pts[i - 1].track) bendAt.add(i);
-    pts.forEach((g, i) => {
-      if (g.w) {
-        const x0 = g.x + (bendAt.has(i) ? BEND : 0), x1 = g.x + g.w - (bendAt.has(i + 1) ? BEND : 0);
-        const { track, y, ...rest } = g;
-        out.legs.push({ ...rest, ...who, key: `l:${who.site || who.region}:${g.seg}`, y, track, side, d: `M${x0},${y} L${x1},${y}` });
-      }
-      if (bendAt.has(i)) {
-        const prev = pts[i - 1], b = g.x;
-        out.bends.push({ ...who, key: `b:${who.site || who.region}:${prev.seg}>${g.seg}`, x: b, y1: prev.y, y2: g.y, between: [prev.seg, g.seg],
-          d: `M${b - BEND},${prev.y} C${b},${prev.y} ${b},${g.y} ${b + BEND},${g.y}` });
-      }
-    });
+  // Sites and regions are not paired and do not need to be: Core is shared.
+  // Each segment holds things - a circuit, a router, a backbone, an on-ramp, a
+  // gateway - and each thing is AT&T's or not. A route is the chain of things it
+  // uses, one per segment; routes that use the same thing meet at it. A thing
+  // sits at the average height of what uses it, so lines run as straight as they
+  // can, and things in one segment never overlap.
+  out.nodes = []; out.pieces = []; out.routes = []; out.xconnects = [];
+  const byId = {};
+  const want = (thing, i, y) => {
+    if (!byId[thing.id]) { byId[thing.id] = { ...thing, seg: i, ys: [], users: [] }; out.nodes.push(byId[thing.id]); }
+    byId[thing.id].ys.push(y);
+    return byId[thing.id];
   };
-  out.edges.filter(e => e.kind === 'ingress' && e.priv && !e.ghost && !e.viaLane && e.site && !e.site.more && e.site.core !== 'third').forEach(e => {
-    place([
-      { seg: 'Access', x: sA.x, w: sA.w, owner: accessOwner(e.site) },
-      { seg: 'Edge', x: sE.x, w: sE.w, owner: 'att' },
-      { seg: 'Core', x: sC.x, owner: 'att' },
-    ], e.y2, { site: e.site.name }, 'site');
+  const use = (n, who) => { if (!n.users.includes(who)) n.users.push(who); };
+  const drafts = [];
+  // Sites: Access, Edge, into Core. A third-party core runs all five, site to region.
+  out.edges.filter(e => e.kind === 'ingress' && e.priv && !e.ghost && !e.viaLane && e.site && !e.site.more).forEach(e => {
+    const site = e.site, y = e.y1, who = site.name, label = site.label || site.name;
+    const chain = siteChain(site);
+    if (!chain) return;
+    if (site.core === 'third') {
+      const target = out.regions.find(r => r.region === site.via);
+      if (!target) return;
+      const full = [...chain, cloudEdgeThing(target, site.carrier || site.viaRamp), cloudAccessThing(target)];
+      const ys = [y, y, (y + target.cy) / 2, target.cy, target.cy];
+      drafts.push({ who, label, side: 'path', region: site.region, e, target, xc: site.xc, nodes: full.map((t, i) => want(t, i, ys[i])) });
+    } else drafts.push({ who, label, side: 'site', region: site.region, e, xc: site.xc, nodes: chain.map((t, i) => want(t, i, y)) });
   });
+  // Regions: out of Core, across the on-ramp, into the cloud's own gateway.
   out.edges.filter(e => e.kind === 'egress' && e.priv && !e.ghost && !e.viaLane && e.region).forEach(e => {
-    place([
-      { seg: 'Core', x: sC.x + sC.w, owner: 'att' },
-      { seg: 'Edge', x: cE.x, w: cE.w, owner: RAMP_EDGE[e.region.ramp] || 'cloud', label: e.region.ramp || '' },
-      { seg: 'Access', x: cA.x, w: cA.w, owner: 'cloud' },
-    ], e.y1, { region: e.region.region, cloud: e.region.cloud }, 'cloud');
-    // The wire out to the cloud leaves from wherever the last leg ended, or the
-    // two meet with a jog at the band's edge.
-    const last = out.legs.filter(g => g.region === e.region.region).pop();
-    if (last) e.y1 = last.y;
-    // A cross-connect the customer ordered is a cable on the handoff into the
-    // cloud's edge, not a segment, so it is a mark on that bend.
-    const bend = out.bends.find(b => b.region === e.region.region && b.between[1] === 'Edge');
-    if (e.region.xc && bend) out.xconnects.push({ key: 'xc:' + e.region.region, region: e.region.region, cloud: e.region.cloud, ramp: e.region.ramp, ...e.region.xc, x: bend.x, y: Math.round((bend.y1 + bend.y2) / 2) });
+    const r = e.region, y = r.cy != null ? r.cy : e.y2;
+    const chain = [coreThing(null), cloudEdgeThing(r), cloudAccessThing(r)];
+    drafts.push({ who: r.region, label: `${r.cloud} ${r.region}`, side: 'region', region: r.region, e, xc: r.xc, nodes: chain.map((t, i) => want(t, i + 2, y)) });
   });
-  // A third-party core is not the shared AT&T backbone, so its route cannot meet
-  // the others there. It runs site to region on the not-AT&T track through all
-  // five segments and bends across Core from its site's row to its region's.
-  out.edges.filter(e => e.kind === 'ingress' && e.priv && !e.viaLane && e.site && e.site.core === 'third').forEach(e => {
-    const target = out.regions.find(r => r.region === e.site.via);
-    if (!target) return;
-    const name = e.site.name, y1 = e.y2 + DROP;
-    const regionEdge = out.edges.find(x => x.kind === 'egress' && x.region && x.region.region === target.region);
-    const y2 = (regionEdge ? regionEdge.y1 : clampBand(target.cy)) + DROP;
-    const leg = (seg, x, w, owner, y, extra = {}) => out.legs.push({ seg, x, w, owner, y, track: 'other', site: name, side: 'path',
-      key: `l:${name}:${seg}:${x}`, d: `M${x},${y} L${x + w},${y}`, ...extra });
-    leg('Access', sA.x, sA.w, accessOwner(e.site), y1);
-    leg('Edge', sE.x, sE.w, 'third', y1);
-    const mx = sC.x + sC.w / 2;
-    leg('Core', sC.x, sC.w, 'third', y1, { y2, d: `M${sC.x},${y1} C${mx},${y1} ${mx},${y2} ${sC.x + sC.w},${y2}` });
-    leg('Edge', cE.x, cE.w, 'third', y2, { label: e.site.viaRamp || '', region: target.region });
-    leg('Access', cA.x, cA.w, 'cloud', y2, { region: target.region, cloud: target.cloud });
-    out.edges.push({ id: 'lumen' + name, kind: 'egress', lumen: true, priv: true, x1: cA.x + cA.w, y1: y2, x2: 980, y2: target.cy, site: e.site, dur: 3 });
+  drafts.forEach(d => d.nodes.forEach(n => use(n, d.label)));
+  // Place: each thing at the mean height of what uses it, then spread apart in
+  // its segment, clear of the segment label above and the band floor below.
+  const NODE_GAP = 24, nodeTop = bandY + 30, nodeBot = bandY + bandH - 12;
+  for (let i = 0; i < SEG.length; i++) {
+    const col = out.nodes.filter(n => n.seg === i).map(n => { n.y = n.ys.reduce((a2, b2) => a2 + b2, 0) / n.ys.length; return n; }).sort((p, q) => p.y - q.y);
+    // Down from the top, then up from the floor, then down once more so a column
+    // taller than the band keeps its gaps and only overhangs the floor.
+    col.forEach((n, k) => { n.y = Math.max(n.y, k ? col[k - 1].y + NODE_GAP : nodeTop); });
+    for (let k = col.length - 1; k >= 0; k--) col[k].y = Math.min(col[k].y, k === col.length - 1 ? nodeBot : col[k + 1].y - NODE_GAP);
+    col.forEach((n, k) => { n.y = Math.max(n.y, nodeTop + k * NODE_GAP); });
+    col.forEach(n => { n.y = Math.round(n.y); const sg = out.segments[i]; n.x = sg.x; n.w = sg.w; n.cx = sg.cx; });
+  }
+  out.nodes.forEach(n => { delete n.ys; });
+  // Draw: one piece per thing on a route, from boundary to boundary. Where the
+  // next thing sits at another height the piece ends in the first half of an S
+  // and the next begins with the second half, so a route is one smooth line
+  // that changes colour exactly at the handoff.
+  const B = 18;
+  const half1 = (e2, y, yn) => ` L${e2 - B},${y} C${e2 - B / 2},${y} ${e2 - B / 4},${(3 * y + yn) / 4} ${e2},${(y + yn) / 2}`;
+  const half2 = (b2, yp, y) => `M${b2},${(yp + y) / 2} C${b2 + B / 4},${(yp + 3 * y) / 4} ${b2 + B / 2},${y} ${b2 + B},${y}`;
+  // Wires that share a first (or last) thing spread a few pixels apart at the
+  // band's edge and ease into it, so a shared circuit reads as a bundle, not a
+  // knot, and each wire's chips and dots keep their own height.
+  const fanOf = {};
+  drafts.forEach(d => {
+    const n = d.side === 'region' ? d.nodes[d.nodes.length - 1] : d.nodes[0];
+    const k = (d.side === 'region' ? 'out:' : 'in:') + n.id;
+    (fanOf[k] = fanOf[k] || []).push(d);
   });
-  // Every site arrives on the track its first leg runs on.
-  out.edges.filter(e => e.kind === 'ingress' && e.site).forEach(e => {
-    const first = out.legs.find(g => g.site === e.site.name);
-    if (first) e.y2 = first.y;
+  Object.values(fanOf).forEach(ds => {
+    ds.sort((p, q) => (p.side === 'region' ? p.e.region.cy : p.e.y1) - (q.side === 'region' ? q.e.region.cy : q.e.y1));
+    const step = ds.length > 1 ? Math.min(6, (NODE_GAP - 4) / (ds.length - 1)) : 0;
+    ds.forEach((d, k) => { d.fan = Math.round((k - (ds.length - 1) / 2) * step); });
+  });
+  const pieceKeys = {};
+  drafts.forEach(d => {
+    const ns = d.nodes, last = ns.length - 1;
+    const xStart = d.side === 'region' ? ns[0].cx : bandX;
+    const xEnd = d.side === 'site' ? ns[last].cx : bandX + bandW;
+    const keys = ns.map((n, i) => {
+      const prev = ns[i - 1], next = ns[i + 1];
+      const inFan = i === 0 && d.side !== 'region' && d.fan, outFan = i === last && d.side === 'region' && d.fan;
+      let path = prev && prev.y !== n.y ? half2(n.x, prev.y, n.y)
+        : inFan ? `M${xStart},${n.y + d.fan} C${xStart + B},${n.y + d.fan} ${xStart + B},${n.y} ${xStart + 2 * B},${n.y}` : `M${i ? n.x : xStart},${n.y}`;
+      path += next && next.y !== n.y ? half1(next.x, n.y, next.y)
+        : outFan ? ` L${xEnd - 2 * B},${n.y} C${xEnd - B},${n.y} ${xEnd - B},${n.y + d.fan} ${xEnd},${n.y + d.fan}` : ` L${next ? next.x : xEnd},${n.y}`;
+      const key = n.id + '|' + path;
+      if (!pieceKeys[key]) { pieceKeys[key] = { key, d: path, node: n.id, owner: n.owner, users: [] }; out.pieces.push(pieceKeys[key]); }
+      if (!pieceKeys[key].users.includes(d.label)) pieceKeys[key].users.push(d.label);
+      return key;
+    });
+    out.routes.push({ who: d.who, label: d.label, side: d.side, region: d.region, nodes: ns.map(n => n.id), pieces: keys });
+    // The wires in and out of the band meet the route's first and last thing.
+    if (d.side !== 'region') d.e.y2 = ns[0].y + (d.fan || 0);
+    if (d.side === 'region') d.e.y1 = ns[last].y + (d.fan || 0);
+    if (d.side === 'path' && !out.edges.some(x => x.kind === 'egress' && x.region && x.region.region === d.target.region))
+      out.edges.push({ id: 'via' + d.who, kind: 'egress', priv: true, x1: bandX + bandW, y1: ns[last].y, x2: 980, y2: d.target.cy, region: d.target, dur: 3 });
+    // A customer's own cross-connect is a cable on a handoff, not a thing: a
+    // site's lands between its circuit and the AT&T edge, a region's between
+    // the backbone and the cloud's on-ramp.
+    if (d.xc) {
+      const [p, q] = ns;
+      out.xconnects.push({ key: 'xc:' + d.who, ...(d.side === 'region' ? { region: d.who, cloud: d.e.region.cloud, ramp: d.e.region.ramp } : { site: d.who }), ...d.xc, x: q.x, y: Math.round((p.y + q.y) / 2) });
+    }
   });
   return out;
 }

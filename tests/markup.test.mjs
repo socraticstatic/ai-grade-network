@@ -108,11 +108,14 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // draws a dot where the owner changes. div 874 -> 875, sc-if 310 -> 311,
 // sc-for 176 -> 178.
 // The customer's own cross-connect, marked on its handoff (one loop): sc-for 178 -> 179.
+// Things in each segment: the legs loop (and its chip: one sc-if, one div) and the
+// bends loop become a pieces loop and a things loop (a pill: two divs).
+// div 875 -> 876, sc-if 311 -> 310, sc-for unchanged at 179.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 875],
+    ['div', /<div\b/g, /<\/div>/g, 876],
     ['span', /<span\b/g, /<\/span>/g, 642],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 311],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 310],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 179],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 254],

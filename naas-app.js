@@ -308,24 +308,23 @@ export function vals(c) {
     cloud: { stroke: 'var(--text-light)', width: 2, dash: 'none', ownerLabel: 'Cloud provider' },
     third: { stroke: 'var(--viz-5)', width: 2, dash: '5 3', ownerLabel: 'Third party' },
   };
-  const legsMeta = (L.legs || []).map(g => ({ ...OWNER[g.owner], ...g, x2: g.x + g.w,
-    ownerName: g.owner === 'cloud' ? (g.cloud || 'Cloud provider') : OWNER[g.owner].ownerLabel,
-    hasLabel: !!g.label, chipW: g.label ? g.label.length * 8 + 16 : 0,
-    chipX: g.x + (g.w - (g.label ? g.label.length * 8 + 16 : 0)) / 2, chipY: g.y - 10 }));
-  // A bend is drawn in the colour of the owner it hands to, so the line reads as
-  // one continuous path that changes hands where it drops.
-  const bendsMeta = (L.bends || []).map(b => {
-    const to = (L.legs || []).find(g => (g.site || g.region) === (b.site || b.region) && g.seg === b.between[1]) || {};
-    const o = OWNER[to.owner] || OWNER.att;
-    return { ...b, stroke: o.stroke, width: o.width, dash: o.dash, title: `Handoff: ${b.between[0]} to ${b.between[1]}` };
-  });
+  // The things in each segment, named and owned, and the pieces of line between
+  // them. A piece takes the style of the thing it belongs to, so a route changes
+  // colour exactly where it changes hands.
+  const ownerName = (n) => (n.owner === 'cloud' ? (n.cloud || 'Cloud provider') : OWNER[n.owner].ownerLabel);
+  const nodesMeta = (L.nodes || []).map(n => ({ ...n, key: 'n:' + n.id, fx: n.x + 4, fy: n.y - 10, fw: n.w - 8,
+    border: `1.5px ${OWNER[n.owner].dash === 'none' ? 'solid' : 'dashed'} ${OWNER[n.owner].stroke}`,
+    title: `${n.name} · ${ownerName(n)} · used by ${n.users.slice(0, 4).join(', ')}${n.users.length > 4 ? ` and ${n.users.length - 4} more` : ''}` }));
+  const piecesMeta = (L.pieces || []).map(p => ({ ...OWNER[p.owner], ...p }));
   // The customer's own cross-connect: the one cable on the path that neither
   // AT&T nor the cloud answers for. A square, not a colour: every colour here
   // already means an owner or a health state.
   const XC = 10;
   const xconnectsMeta = (L.xconnects || []).map(x => ({ ...x, s: XC, sx: x.x - XC / 2, sy: x.y - XC / 2,
-    title: `Your cross-connect at ${x.at}, into ${x.cloud} ${x.ramp}. You ordered it from the colo, which answers for it - not AT&T, not ${x.cloud}.` }));
-  const legRegions = new Set((L.legs || []).filter(g => g.region).map(g => g.region));
+    title: x.region
+      ? `Your cross-connect at ${x.at}, into ${x.cloud} ${x.ramp}. You ordered it from the colo, which answers for it - not AT&T, not ${x.cloud}.`
+      : `Your cross-connect at ${x.at}, from your ${x.site} circuit to an AT&T port. You ordered it from the colo, which answers for it - not AT&T.` }));
+  const legRegions = new Set((L.routes || []).filter(r => r.side === 'region').map(r => r.who));
   const segmentsMeta = L.segments.map(sg => ({ ...sg,
     y: L.bandY, h: L.bandH, bottom: L.bandY + L.bandH,
     // At the band's top edge: the first route can enter 24px in, so a label any
@@ -771,7 +770,7 @@ export function vals(c) {
     drawer, drawerOpen, openLevel, hasDrawer: drawerOpen, noDrawer: !drawerOpen, andiFabRight: drawerOpen ? '396px' : '16px',
     fabOpen: fabDrill.length > 0, fabClosed: fabDrill.length === 0, sitesDoor, bandDoor, cloudsDoor, fabRows, fabHead, fabUp, fabTrail, hasFabMore: !!(fabHead && fabHead.more), fabMore: fabHead ? fabHead.more : '', openBandLevel: () => openLevel('fabric'), fabHeadY: L.bandY + 8, fabEmpty, fabEmptyY: L.bandY + 40, fabEmptyHead: fabInfo ? fabInfo.emptyHead : '', fabEmptyLine: fabInfo ? fabInfo.emptyLine : '', fabEmptyCta: fabInfo ? fabInfo.emptyCta : '', fabEmptyGo, bandX: L.bandX, bandW: L.bandW, bandLabelX: L.bandX, laneX: L.lane.x, laneW: L.lane.w,
     laneFocus: !!s.laneFocus, toggleLane: () => set({ laneFocus: !s.laneFocus }), laneTitle: s.laneFocus ? 'Show everything' : 'Show only what rides outside the fabric', laneCount: `${est.regionsList.filter(r => !r.priv).length + est.sites.filter(x => !x.priv).length} public`, laneAttach: () => { const r = est.regionsList.find(x => !x.priv); if (r) composeFor(go, r)(); else { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); } },
-    heroSites, heroRegions, heroGroups: L.groups.map(g => ({ ...g, key: 'g' + g.cloud + g.y })), heroWorkloads, heroEdges, heroArcs, segments: segmentsMeta, legs: legsMeta, bends: bendsMeta, xconnects: xconnectsMeta, ownerKey: Object.entries(OWNER).map(([k, o]) => ({ key: k, ...o })), showWorkloads: heroWorkloads.length > 0, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T network' : 'AT&T network  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on the fabric` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
+    heroSites, heroRegions, heroGroups: L.groups.map(g => ({ ...g, key: 'g' + g.cloud + g.y })), heroWorkloads, heroEdges, heroArcs, segments: segmentsMeta, nodes: nodesMeta, pieces: piecesMeta, xconnects: xconnectsMeta, ownerKey: Object.entries(OWNER).map(([k, o]) => ({ key: k, ...o })), showWorkloads: heroWorkloads.length > 0, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T network' : 'AT&T network  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on the fabric` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
     perfCard: hr ? { region: `${hr.cloud} ${hr.region}`, msLine: `${hr.priv ? hr.fab : hr.pub} ms ${hr.priv ? 'on the fabric' : 'public'}${hr.rel === 'warn' ? ' · degraded' : ''}`, pub: `Public today ${hr.pub} ms`, fab: `on the fabric ${hr.fab} ms`, rel: hr.rel === 'warn' ? 'Reliability: degraded' : 'Reliability: healthy', relFill: hr.rel === 'warn' ? 'var(--warning)' : 'var(--success)', top: Math.max(0, Math.min(340, hrNode.y - 70)) + 'px', left: 'calc(100% - 236px)', go: go('s3', { layer: 'cloud', tab: 'observe' }) } : null, hasPerf: !!hr,
     // floor
     rollup, floorFindings, hasFloorFindings: floorFindings.length > 0, recFindings, hasRecFindings: recFindings.length > 0, packages, tailored, hasTailored: isMature, hasAddons: tailored.addons.length > 0, hasTermUps: tailored.terms.length > 0, hasHubs: tailored.hubs.length > 0,

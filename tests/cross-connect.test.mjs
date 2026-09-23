@@ -25,34 +25,42 @@ test('mature us-west-2 is a dedicated Direct Connect port on the customer\'s own
   assert.deepEqual(r.xc, { by: 'yours', at: 'Equinix SE2, Seattle' });
 });
 
-test('the cross-connect is marked on the handoff into the cloud\'s edge, not drawn as a leg', () => {
+test('the cross-connect is marked on the handoff into the cloud\'s edge, not drawn as a thing', () => {
   const l = L();
-  assert.equal(l.xconnects.length, 1);
-  const xc = l.xconnects[0];
-  assert.equal(xc.region, 'us-west-2');
+  const xc = l.xconnects.find(x => x.region === 'us-west-2');
+  assert.ok(xc, 'us-west-2 lost its cross-connect');
   const edge = l.segments[3];
   assert.equal(xc.x, edge.x, 'the mark is not on the Core-to-Edge boundary');
-  const bend = l.bends.find(b => b.region === 'us-west-2');
-  assert.ok(bend, 'us-west-2 has no handoff to sit on');
-  assert.equal(xc.y, Math.round((bend.y1 + bend.y2) / 2), 'the mark is off the line');
-  assert.equal(l.legs.some(g => g.seg === 'XC' || g.owner === 'yours'), false, 'a cross-connect was drawn as a segment');
+  const r = l.routes.find(x => x.who === 'us-west-2');
+  const y = (id) => l.nodes.find(n => n.id === id).y;
+  assert.equal(xc.y, Math.round((y(r.nodes[0]) + y(r.nodes[1])) / 2), 'the mark is off the line');
+  assert.equal(l.nodes.some(n => /cross-connect/i.test(n.label)), false, 'a cross-connect was drawn as a thing in a segment');
+});
+
+test('Salt Lake\'s own cross-connect sits on its handoff to AT&T', () => {
+  const l = heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, siteRows: siteDrillRows(D.ESTATES.mature, ['region:US West']).rows });
+  const xc = l.xconnects.find(x => x.site === 'Salt Lake branch');
+  assert.ok(xc, 'Salt Lake lost its cross-connect');
+  assert.equal(xc.x, l.segments[1].x, 'the mark is not on the Access-to-Edge boundary');
 });
 
 test('no cross-connect is invented: NetBond and unstated regions carry none', () => {
   const l = L();
   const marked = new Set(l.xconnects.map(x => x.region));
   for (const r of D.ESTATES.mature.regionsList) if (!r.xc) assert.equal(marked.has(r.region), false, `${r.region} got a cross-connect it never stated`);
+  assert.equal(l.xconnects.filter(x => x.region).length, 1, 'the root shows a cross-connect nobody stated');
   for (const k of ['small', 'partial', 'trust']) assert.equal(heroLayout(D.ESTATES[k], {}).xconnects.length, 0, k);
 });
 
 test('the mark survives the drill into a site', () => {
   const rows = siteDrillRows(D.ESTATES.mature, ['region:US West', 'Denver branch']).rows;
-  assert.equal(L({ siteRows: rows }).xconnects.length, 1);
+  assert.equal(L({ siteRows: rows }).xconnects.filter(x => x.region === 'us-west-2').length, 1);
 });
 
 test('the mark says who answers for it, in words', () => {
   const v = vals(mkC({ view: 'mature', screen: 's3', tab: 'connect' }));
   const xc = v.xconnects.find(x => x.region === 'us-west-2');
+  assert.match(xc.title, /AWS/);
   assert.ok(xc, 'the view model dropped the cross-connect');
   assert.match(xc.title, /Your cross-connect/);
   assert.match(xc.title, /Equinix SE2, Seattle/);

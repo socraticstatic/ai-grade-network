@@ -144,7 +144,7 @@ export const ESTATES = {
       // so Lumen answers for the last mile. Phoenix: Lumen end to end - access,
       // core and its own cloud on-ramp into us-west-2 - and never touches AT&T.
       { name: 'Denver branch', cls: 'Branch', access: 'Lumen off-net', carrier: 'Lumen', accessSla: 'att', priv: true, metro: 'Denver' },
-      { name: 'Salt Lake branch', cls: 'Branch', access: 'Lumen Ethernet', carrier: 'Lumen', accessSla: 'third', priv: true, metro: 'Salt Lake City' },
+      { name: 'Salt Lake branch', cls: 'Branch', access: 'Lumen Ethernet', carrier: 'Lumen', accessSla: 'third', priv: true, metro: 'Salt Lake City', xc: { by: 'yours', at: 'a Salt Lake City colo' } },
       { name: 'Phoenix DC', cls: 'Data center', access: 'Lumen fiber', carrier: 'Lumen', accessSla: 'third', priv: true, metro: 'Phoenix', core: 'third', via: 'us-west-2', viaRamp: 'Lumen' },
       { name: 'Singapore DC', cls: 'Data center', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Singapore' },
     ],
