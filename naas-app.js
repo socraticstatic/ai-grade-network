@@ -30,9 +30,47 @@ const TABS = ['connect', 'govern', 'observe', 'cost'];
 // open. Adding Observe or Cost is a new entry, not new markup.
 export const SUB_PANELS = {
   connect: [
-    { key: 'sources', label: 'Connected accounts' },
+    { key: 'sources', label: 'Connected accounts', sec: 'sec-accounts' },
     { key: 'run', label: 'Discovery run', handoff: (st) => (st.scanStep >= 4 ? 'found' : null) },
-    { key: 'found', label: 'What we found' },
+    { key: 'found', label: 'What we found', sec: 'sec-gap' },
+  ],
+  observe: [
+    { key: 'insights', label: 'Insights', sec: 'sec-insights' },
+    { key: 'logs', label: 'Logs', sec: 'sec-logs' },
+  ],
+  govern: [
+    { key: 'templates', label: 'Templates', sec: 'sec-starting' },
+  ],
+  cost: [
+    { key: 'forecast', label: '90-day forecast', sec: 'sec-forecast' },
+    { key: 'charges', label: 'AT&T charges', sec: 'sec-charges' },
+  ],
+};
+
+// Two links under each verb, and a link earns its place only where the page
+// gives you no door to the thing. Fabric, Health, Flow map, Policies, Savings
+// and Egress are the pages themselves. Accounts, Off fabric and Paths open from
+// the header and the verdict. What is left is Explore 360, a screen of its own,
+// and the panels nothing on the page points at yet.
+export const SECTIONS = {
+  connect: [
+    ['@discover', 'Explore 360', 'search'],
+    ['sources', 'Accounts', 'lock'],
+  ],
+  // Observe, Govern and Cost keep scroll anchors until their sub layer exists.
+  // The panels are declared above and the rail will point at them the moment
+  // the markup can render them; pointing early would break a working link.
+  observe: [
+    ['sec-insights', 'Insights', 'question-circle'],
+    ['sec-logs', 'Logs', 'checklist'],
+  ],
+  govern: [
+    ['sec-policies', 'Policies', 'check-shield'],
+    ['sec-starting', 'Templates', 'grid'],
+  ],
+  cost: [
+    ['sec-forecast', 'Forecast', 'pie-chart'],
+    ['sec-charges', 'AT&T charges', 'bill'],
   ],
 };
 const TAB_LABEL = { connect: 'Connect', govern: 'Govern', observe: 'Observe', cost: 'Cost' };
@@ -1918,7 +1956,10 @@ function shellVals(s, set, go, est, c, sched) {
   // later: not in the first cut Ramesh asked for (2026-09-09); still reachable, drawn at 40 percent.
   // `sub` is the stage's job in the customer's words, drawn under the label.
   // A four-word loop only teaches itself if each word says what it is for.
-  const item = (label, ic, fn, cur, later, sub) => ({ key: label, label, pad: railBtnPad, sub: sub || '', hasSub: !!sub, cur: !!cur, go: () => { fn(); set(close); }, icon: iconDir + '/' + ic + '.svg', bg: cur ? 'var(--sidebar-accent)' : 'transparent', color: cur ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: cur ? '8px' : '4px', op: later ? 0.4 : 1, title: later ? label + ' · later, not in the first cut' : (sub ? label + ' · ' + sub : label) });
+  // `close` clears the sub layer, so a row whose whole job is to open a panel
+  // has to close everything else without closing itself.
+  const closeKeepSub = { elevatorOpen: false };
+  const item = (label, ic, fn, cur, later, sub, keepSub) => ({ key: label, label, pad: railBtnPad, sub: sub || '', hasSub: !!sub, cur: !!cur, go: () => { fn(); set(keepSub ? closeKeepSub : close); }, icon: iconDir + '/' + ic + '.svg', bg: cur ? 'var(--sidebar-accent)' : 'transparent', color: cur ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: cur ? '8px' : '4px', op: later ? 0.4 : 1, title: later ? label + ' · later, not in the first cut' : (sub ? label + ' · ' + sub : label) });
   const onS3 = (layer, tab) => s.screen === 's3' && s.layer === layer && s.tab === tab;
   const composeCur = ['s4', 's5', 's6'].includes(s.screen);
   /**
@@ -1930,45 +1971,16 @@ function shellVals(s, set, go, est, c, sched) {
    * there, and each section carries the same words as its nav item — so the
    * name you clicked is the name you land on.
    */
-  const SECTIONS = {
-    connect: [
-      ['sec-fabric', 'Fabric', 'cable'],
-      ['@discover', 'Explore 360', 'search'],
-      ['sec-accounts', 'Accounts', 'lock'],
-      ['sec-gap', 'Off fabric', 'router'],
-      ['sec-paths', 'Paths', 'apis'],
-    ],
-    observe: [
-      ['sec-health', 'Health', 'high-meter'],
-      ['sec-flow', 'Flow map', 'hub'],
-      ['sec-insights', 'Insights', 'question-circle'],
-      ['sec-logs', 'Logs', 'checklist'],
-    ],
-    govern: [
-      ['sec-policies', 'Policies', 'check-shield'],
-      ['sec-starting', 'Templates', 'grid'],
-    ],
-    cost: [
-      // Five links, five rows. Eight links for three screens meant four of them
-      // landed 25px apart on the two halves of the same grid row, and two
-      // pointed at bare anchors with no heading on them.
-      ['sec-arbitrage', 'Savings', 'bill'],
-      ['sec-egress', 'Egress', 'cloud'],
-      ['sec-forecast', 'Forecast', 'pie-chart'],
-      ['sec-charges', 'AT&T charges', 'bill'],
-      ['sec-buckets', 'Steer to save', 'router'],
-    ],
-  };
   const activeSec = s.activeSec || '';
   const subNav = ((s.screen !== 's3' && s.screen !== 's1')) ? [] : (SECTIONS[s.screen === 's1' ? 'connect' : s.tab] || []).map(([id, label, ic]) => {
     const isNav = id.startsWith('@');
     const on = isNav ? s.screen === 's1' : (activeSec === id && s.screen === 's3');
-    return { key: id, id, label, on, icon: iconDir + '/' + (ic || 'apps') + '.svg', go: isNav ? go('s1') : () => set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }),
+    return { key: id, id, label, on, icon: iconDir + '/' + (ic || 'apps') + '.svg', go: isNav ? go('s1') : id.startsWith('sec-') ? () => set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }) : () => set({ sub: { page: s.tab, panel: id } }),
       bg: on ? 'var(--sidebar-accent)' : 'transparent', color: on ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: on ? '8px' : '4px' };
   });
   const hasSubNav = false;
   // The rail carries the cadence with no new markup: item() already takes a sub.
-  const railSub = { 'sec-accounts': sched.cadence.empty ? '' : `Next scan ${nextWord}` };
+  const railSub = { sources: sched.cadence.empty ? '' : `Next scan ${nextWord}` };
   const railGroups = (() => {
         // Their rail, our destinations. Home on top, then a bold group label
         // per verb over the very rows the sub-nav already carried. Nothing
@@ -1976,9 +1988,17 @@ function shellVals(s, set, go, est, c, sched) {
         const TABS = [['connect', 'Discover'], ['observe', 'Observe'], ['govern', 'Govern'], ['cost', 'Cost']];
         const row = (tab, id, label, ic, sub) => {
           const isNav = id.startsWith('@');
-          const cur = isNav ? s.screen === 's1' : (onS3('cloud', tab) && activeSec === id);
+          // Three kinds of link: a screen of its own, an anchor on the page, and
+          // a panel in the sub layer. Only the first two ever scrolled.
+          const isPanel = !isNav && !id.startsWith('sec-');
+          const cur = isNav ? s.screen === 's1'
+            : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
+            : (onS3('cloud', tab) && activeSec === id);
+          const goTo = isNav ? go('s1')
+            : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
+            : () => { go('s3', { layer: 'cloud', tab })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
-          return { ...item(label, ic, isNav ? go('s1') : () => { go('s3', { layer: 'cloud', tab })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); }, cur, false, sub), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
+          return { ...item(label, ic, goTo, cur, false, sub, isPanel), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };
         const goTabRow = (tab) => tab === 'observe'
           ? () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow' }); }
