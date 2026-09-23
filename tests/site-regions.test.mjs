@@ -66,3 +66,42 @@ test('drilling past a region never shows the region again', async () => {
     }
   }
 });
+
+// ---- a site's carrier survives every level of the drill ----
+// Found 2026-09-23: drilling into Denver fell back to the regions (siteTree
+// dropped named sites from any class that also held a rollup), and drilling into
+// Phoenix drew six Lumen-onto-AT&T paths labelled "AT&T network" (siteTree dropped
+// core/via, and pathsOfSite read privacy off the cloud region, not the path).
+
+test('a named site survives beside a rollup of the same class', async () => {
+  const S = await import('../naas-sites.js');
+  const branch = S.siteTree(D.ESTATES.mature).find(c => c.cls === 'Branch');
+  assert.ok(branch.children.some(ch => ch.name === 'Denver branch'), 'Denver was dropped because Branch also holds Remote sites (212)');
+  assert.ok(branch.children.some(ch => ch.kind === 'metro'), 'the Remote sites rollup was lost instead');
+});
+
+test('the facts that make a site third party survive the site tree', async () => {
+  const P = await import('../naas-paths.js');
+  const phoenix = P.allSites(D.ESTATES.mature).find(x => x.name === 'Phoenix DC');
+  assert.equal(phoenix.core, 'third');
+  assert.equal(phoenix.via, 'us-west-2');
+  assert.equal(phoenix.viaRamp, 'Lumen');
+});
+
+test('drilling to Denver shows Denver, not the regions', async () => {
+  const C = await import('../naas-connections.js');
+  const r = C.siteDrillRows(D.ESTATES.mature, ['region:US West', 'Denver branch']);
+  assert.ok(r, 'the drill returned nothing, so the picture fell back to the regions');
+  assert.equal(r.level, 'path');
+  for (const row of r.rows) assert.match(row.access, /^Lumen/, `${row.name} lost its Lumen access`);
+});
+
+test('drilling to Phoenix shows only where Lumen goes, and never says AT&T', async () => {
+  const C = await import('../naas-connections.js');
+  const r = C.siteDrillRows(D.ESTATES.mature, ['region:US West', 'Phoenix DC']);
+  assert.deepEqual(r.rows.map(x => x.name), ['AWS us-west-2'], 'Phoenix has one on-ramp; the others were invented');
+  const row = r.rows[0];
+  assert.equal(row.core, 'third');
+  assert.equal(row.via, 'us-west-2');
+  assert.doesNotMatch(row.access, /AT&T/, 'a Lumen end-to-end path is labelled AT&T');
+});

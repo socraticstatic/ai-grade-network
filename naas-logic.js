@@ -190,17 +190,26 @@ export function heroLayout(est, opts) {
   const DROP = 14;
   const trackOf = (owner) => (owner === 'att' ? 'att' : 'other');
   out.legs = []; out.bends = [];
+  // A bend is a gentle S, 2*BEND wide, and the legs either side stop where it
+  // starts, so line, curve and line meet end to end with a flat tangent at each
+  // join. A 20px bend drawn over legs that ran to the boundary overlapped them
+  // for 10px a side and read as a notch, not a curve.
+  const BEND = 22;
   const place = (path, baseY, who, side) => {
-    let prev = null;
-    path.forEach(g => {
-      const track = trackOf(g.owner);
-      const y = track === 'att' ? baseY : baseY + DROP;
-      if (g.w) out.legs.push({ ...g, ...who, key: `l:${who.site || who.region}:${g.seg}`, y, track, side, d: `M${g.x},${y} L${g.x + g.w},${y}` });
-      if (prev && prev.track !== track) {
-        out.bends.push({ ...who, key: `b:${who.site || who.region}:${prev.seg}>${g.seg}`, x: g.x, y1: prev.y, y2: y,
-          between: [prev.seg, g.seg], d: `M${g.x - 10},${prev.y} C${g.x},${prev.y} ${g.x},${y} ${g.x + 10},${y}` });
+    const pts = path.map(g => { const track = trackOf(g.owner); return { ...g, track, y: track === 'att' ? baseY : baseY + DROP }; });
+    const bendAt = new Set();
+    for (let i = 1; i < pts.length; i++) if (pts[i].track !== pts[i - 1].track) bendAt.add(i);
+    pts.forEach((g, i) => {
+      if (g.w) {
+        const x0 = g.x + (bendAt.has(i) ? BEND : 0), x1 = g.x + g.w - (bendAt.has(i + 1) ? BEND : 0);
+        const { track, y, ...rest } = g;
+        out.legs.push({ ...rest, ...who, key: `l:${who.site || who.region}:${g.seg}`, y, track, side, d: `M${x0},${y} L${x1},${y}` });
       }
-      prev = { seg: g.seg, track, y };
+      if (bendAt.has(i)) {
+        const prev = pts[i - 1], b = g.x;
+        out.bends.push({ ...who, key: `b:${who.site || who.region}:${prev.seg}>${g.seg}`, x: b, y1: prev.y, y2: g.y, between: [prev.seg, g.seg],
+          d: `M${b - BEND},${prev.y} C${b},${prev.y} ${b},${g.y} ${b + BEND},${g.y}` });
+      }
     });
   };
   out.edges.filter(e => e.kind === 'ingress' && e.priv && !e.ghost && !e.viaLane && e.site && !e.site.more && e.site.core !== 'third').forEach(e => {

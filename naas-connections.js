@@ -150,7 +150,22 @@ export function records(est, inv, ob, pattern = 'all') {
 // ---------- Drills in place (Santosh, 16:02: "I don't want to lose the context") ----------
 import * as S from './naas-sites.js';
 
-function pathsOfSite(est, site) { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; }
+// A third-party-core site does not ride the AT&T network, so it reaches the
+// clouds over its own carrier and only where that carrier has an on-ramp. The
+// generic rows below read privacy off the cloud region and printed "AT&T
+// network" for every attached region, which drew Phoenix, Lumen end to end, as
+// six paths handing off to AT&T.
+function pathsOfSite(est, site) {
+  if (site.core === 'third') {
+    const r = est.regionsList.find(x => x.region === site.via);
+    const carrier = site.viaRamp || 'third party';
+    return { level: 'path', label: `${site.name || site.id} · paths`, rows: r ? [{ key: 'path:' + r.region, name: `${r.cloud} ${r.region}`,
+      access: `${site.access} · ${P.path(site, r).ms} ms · ${carrier} network`, priv: true, core: 'third', via: r.region, viaRamp: site.viaRamp,
+      leaf: true, region: r.region }] : [] };
+  }
+  return pathsOfAttSite(est, site);
+}
+function pathsOfAttSite(est, site) { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; }
 
 /** Left column of the hero for a drill trail: [] → the estate's sites; [class] → metros or named sites; [class, metro] → sites; [class, metro, site] → the site's paths. */
 export function siteDrillRows(est, trail, opts = {}) {

@@ -89,7 +89,7 @@ export function siteTree(est) {
   });
   return Object.values(groups).map((g, gi) => {
     const privShare = g.count ? g.onFabric / g.count : 0;
-    let children;
+    let children = [];
     if (g.rollups.length) {
       let seed = gi;
       children = g.rollups.flatMap((r, ri) => splitMetros(r.n, seed++).map((m, mi) => {
@@ -101,9 +101,14 @@ export function siteTree(est) {
           gen: { cls: g.cls, mi, privShare },
         };
       }));
-    } else {
-      children = g.named.map((st, i) => ({ kind: 'site', key: `${g.cls}:${st.name}`, ...siteRow(g.cls, st.metro, i, !!st.priv), name: st.name, address: `${st.metro} · ${st.access}`, metro: st.metro, access: st.access, priv: !!st.priv, since: (st.idx * 97 + 17) % 365 }));
     }
+    // Named sites stand beside a class's rollups, never instead of them: a class
+    // holding one rollup used to drop every named site in it, which is how Denver
+    // (a named Branch beside Remote sites) vanished. And a site keeps the facts
+    // that say whose network it rides - core, via, viaRamp - or a drill forgets
+    // that Phoenix is Lumen end to end.
+    children = children.concat(g.named.map((st, i) => ({ kind: 'site', key: `${g.cls}:${st.name}`, ...siteRow(g.cls, st.metro, i, !!st.priv), name: st.name, address: `${st.metro} · ${st.access}`, metro: st.metro, access: st.access, priv: !!st.priv, since: (st.idx * 97 + 17) % 365,
+      core: st.core, via: st.via, viaRamp: st.viaRamp })));
     // The class rolls up from what it contains, so a class badge can never contradict its metros.
     const onFabric = children.reduce((a, ch) => a + (ch.kind === 'metro' ? ch.onFabric : (ch.priv ? 1 : 0)), 0);
     return { kind: 'class', key: g.cls, cls: g.cls, label: g.label, icon: g.icon, unit: g.unit, plural: g.plural, count: g.count, onFabric, access: [...g.access], children };

@@ -263,3 +263,26 @@ test('no route runs through a segment label', () => {
   const topEntry = Math.min(...v.legs.map(g => g.y));
   assert.ok(topEntry > labelBottom, `a route at y ${topEntry} runs under labels ending at ${labelBottom}`);
 });
+
+// The legs ran to the boundary and a 20px bend sat on top of them, so the two
+// overlapped and read as a notch. A bend now starts exactly where its leg stops.
+test('a bend meets its legs end to end, with no overlap', () => {
+  const l = L();
+  const endOf = (d) => d.match(/L([\d.]+),([\d.]+)$/).slice(1).map(Number);
+  const startOf = (d) => d.match(/^M([\d.]+),([\d.]+)/).slice(1).map(Number);
+  for (const b of l.bends) {
+    const who = b.site || b.region;
+    const legs = l.legs.filter(g => (g.site || g.region) === who && g.side !== 'path');
+    const before = legs.find(g => g.seg === b.between[0]), after = legs.find(g => g.seg === b.between[1]);
+    const [bx0, by0] = startOf(b.d), [bx1, by1] = b.d.match(/([\d.]+),([\d.]+)$/).slice(1).map(Number);
+    if (before) assert.deepEqual(endOf(before.d), [bx0, by0], `${who}: ${b.between[0]} does not stop where the bend starts`);
+    if (after) assert.deepEqual(startOf(after.d), [bx1, by1], `${who}: ${b.between[1]} does not start where the bend ends`);
+  }
+});
+
+test('a bend is gentler than it is tall', () => {
+  for (const b of L().bends) {
+    const [x0] = b.d.match(/^M([\d.]+)/).slice(1).map(Number), [x1] = b.d.match(/([\d.]+),[\d.]+$/).slice(1).map(Number);
+    assert.ok(x1 - x0 >= 2 * Math.abs(b.y2 - b.y1), `${b.site || b.region}: a ${Math.abs(b.y2 - b.y1)}px drop over ${x1 - x0}px is a step`);
+  }
+});

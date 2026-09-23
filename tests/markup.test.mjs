@@ -379,3 +379,13 @@ test('renderVals only maps values that vals() still returns', async () => {
     for (const k of mapped) assert.ok(Array.isArray(v[k]), `${view}: renderVals maps v.${k}, which vals() returns as ${typeof v[k]}`);
   }
 });
+
+// Traffic flows both ways. Every private wire carried two dots and both ran
+// site to cloud; a third runs the same wire back, half a cycle out of phase.
+test('a private wire animates traffic in both directions', () => {
+  const i = HTML.indexOf('<sc-if value="{{ e.priv }}"');
+  const block = HTML.slice(i, HTML.indexOf('</sc-if>', i));
+  assert.ok(/keyPoints="1;0"/.test(block), 'no dot runs from the cloud back to the site');
+  assert.ok(/<animateMotion(?![^>]*keyPoints)[^>]*>/.test(block), 'no dot runs from the site to the cloud');
+  assert.ok(block.includes('{{ e.retBegin }}'), 'the return dot is not offset, so the two directions overlap');
+});

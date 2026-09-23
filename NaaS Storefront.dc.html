@@ -358,6 +358,8 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <sc-if value="{{ e.priv }}" hint-placeholder-val="{{ false }}">
         <circle r="2.5" fill="#3374cc" opacity=".45"><animateMotion dur="{{ e.durS }}" begin="{{ e.tailBegin }}" repeatCount="indefinite"><mpath href="#e-{{ e.id }}"></mpath></animateMotion></circle>
         <circle r="3.5" fill="#00abeb"><animateMotion dur="{{ e.durS }}" repeatCount="indefinite"><mpath href="#e-{{ e.id }}"></mpath></animateMotion></circle>
+        <!-- Traffic flows both ways: the reply runs the same wire from the cloud back. -->
+        <circle r="3" fill="#3374cc" opacity=".8"><animateMotion dur="{{ e.durS }}" begin="{{ e.retBegin }}" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#e-{{ e.id }}"></mpath></animateMotion></circle>
       </sc-if>
       <circle cx="{{ e.px }}" cy="{{ e.py }}" r="4" fill="{{ e.portFill }}" stroke="#0057b8" stroke-width="1.5"></circle>
       <sc-if value="{{ e.chip }}" hint-placeholder-val="{{ false }}">
