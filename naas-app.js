@@ -21,6 +21,20 @@ import * as VD from './naas-verdicts.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
+
+// One layer for sub-content, shared by every page. Each page is a hero plus a
+// stack of drill-downs of that hero: Discover's picture over accounts, gap and
+// paths; Observe's flow map over insights and logs; Cost's egress over forecast
+// and charges. Stacked on the page they are 1285px, 2173px and ~1000px of
+// scroll. A page declares its panels here and one aside renders whichever is
+// open. Adding Observe or Cost is a new entry, not new markup.
+export const SUB_PANELS = {
+  connect: [
+    { key: 'sources', label: 'Connected accounts' },
+    { key: 'run', label: 'Discovery run', handoff: (st) => (st.scanStep >= 4 ? 'found' : null) },
+    { key: 'found', label: 'What we found' },
+  ],
+};
 const TAB_LABEL = { connect: 'Connect', govern: 'Govern', observe: 'Observe', cost: 'Cost' };
 const TIERS = ['Start here', 'Recommended', 'Full control'];
 const PERSONA_PRODUCT = { 'Steer this bucket on the fabric': 'steer', 'Steer every internet bucket': 'steer', 'Hosted VPC with AT&T egress for the region': 'hosted-vpc', 'Cloud to Cloud for the pair': 'c2c', 'Multi-region, multi-cloud routing': 'c2c', 'Neocloud reach via Equinix Fabric': 'neocloud', 'Hosted VPC in us-east-1 with the policy enforced': 'hosted-vpc', 'Hosted VPC in us-west-2 with the policy enforced': 'hosted-vpc', 'Hosted VPC plus inline inspection': 'hosted-vpc', 'NGFW (Palo Alto) in path': 'ngfw', 'Hosted VPC with the vSRX pair and AT&T egress': 'hosted-vpc', 'Advanced Network Monitoring for the estate': 'monitoring', 'Advanced Network Monitoring for APAC': 'monitoring', 'Managed NOC with path telemetry': 'noc', 'AWS Interconnect Last Mile, maximum resiliency': 'lmcc', 'Add a second ADI circuit': 'adi', '14-day AI traffic assessment': 'ai-assess', 'Add the providers to AI Fabric': 'ai-gov', 'Virtual keys with team limits': 'ai-gov', 'Connection Hub in Atlanta': 'hub', 'Connection Hubs in Atlanta and Chicago': 'hub', "Segmentation across the region's hosted VNet": 'hosted-vnet' };
@@ -81,7 +95,7 @@ export function defaults() {
   return {
     screen: 's0', view: 'mature', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
-    drill: [], regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
+    drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
     order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null,
     simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36,
@@ -1594,7 +1608,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // schedules, so they carry no cadence control.
   const acctRow = (a) => ({
     key: 'src:' + a.id, name: a.name, kind: a.cloud, cred: a.cred, scope: a.scope,
-    seen: SCH.agoLabel(a.lastRun, sched.nowMs),
+    // The run record is written when the scan starts, so this label read
+    // "just now" for the two seconds the scan was still running.
+    seen: s.scanBusy ? 'scanning…' : SCH.agoLabel(a.lastRun, sched.nowMs),
     nextSeen: SCH.nextLabel(a.schedule, a.nextRun, sched.nowMs),
     cadenceValue: SCH.scheduleId(a.schedule), cadenceLabel: SCH.scheduleLabel(a.schedule),
     setCadence: sched.setSchedule([a.id]), canSchedule: true, noSchedule: false,
@@ -1851,7 +1867,9 @@ function shellVals(s, set, go, est, c, sched) {
   // never has to reason about a second layer that is not there.
   const top = s.screen === 's1' ? 'discover' : 'net';
   const layerSubtitle = top === 'discover' || s.screen === 's7' || s.screen === 's8' ? 'All layers' : 'Network services layer';
-  const close = { elevatorOpen: false };
+  // The sub layer belongs to the visit, not the session: leaving the page it
+  // was opened on shuts it.
+  const close = { elevatorOpen: false, sub: null };
   const goTab = (screen, extra) => () => { go(screen, extra)(); set(close); };
   const topTabs = [
     { key: 'discover', label: 'Discover', current: top === 'discover', go: goTab('s1') },
@@ -1987,7 +2005,10 @@ function shellVals(s, set, go, est, c, sched) {
   const pageTitle = s.screen === 's1' ? 'Explore 360' : s.screen === 's4' ? 'Compose' : s.screen === 's5' ? 'Recommend' : s.screen === 's6' ? 'Review order' : storeCur ? 'Marketplace'
     : s.screen === 's3' ? ({ connect: 'Discover', govern: 'Govern', observe: (obTabNow === logsTab ? 'Observe · Logs' : 'Observe'), cost: 'Cost' }[s.tab] || 'Discover')
     : 'Discover';
-  const rescan = sched.runNow(schedAcctIds, 'manual');
+  // Re-discover keeps its one click and finally has somewhere to report: the
+  // run opens as a panel instead of a two-second flicker on a page of other things.
+  const rescanNow = sched.runNow(schedAcctIds, 'manual');
+  const rescan = () => { set({ sub: { page: 'connect', panel: 'run' } }); rescanNow(); };
   const credsN = sched.accounts.length;
   const credsLabel = credsN ? `Manage credentials (${credsN})` : 'Manage credentials';
   const credsTitle = credsN
@@ -1997,10 +2018,33 @@ function shellVals(s, set, go, est, c, sched) {
   // the accounts are. It scrolls to the Accounts card by the same mechanism the
   // rail already uses (naas-app.js:1576), and only falls back to s0 when there
   // is genuinely nothing to scroll to.
+  // The sub layer. `s.sub` is {page, panel} or null and one aside renders it.
+  // A panel may hand over to another when its work is done, which is how the
+  // discovery run becomes its own result without a timer.
+  const subPage = s.sub ? s.sub.page : null;
+  const subPanels = SUB_PANELS[subPage] || [];
+  const subDef = subPanels.find(p => p.key === (s.sub && s.sub.panel));
+  const subPanelNow = s.sub ? ((subDef && subDef.handoff && subDef.handoff(s)) || s.sub.panel) : null;
+  const openSub = (page, panel) => () => set({ ...close, sub: { page, panel } });
+  const closeSub = () => set({ sub: null });
+  const subOpen = !!s.sub;
+  const subTabs = subPanels.map(p => ({ key: p.key, label: p.label, on: p.key === subPanelNow, go: openSub(subPage, p.key) }));
+  const subTitle = (subPanels.find(p => p.key === subPanelNow) || {}).label || '';
+  const openFindings = openSub('connect', 'found');
+  // The verdict sentence is the door to the findings, but only where the
+  // findings exist. Elsewhere it carries no affordance rather than a dead one.
+  const verdictIsDoor = s.screen === 's3' && s.tab === 'connect';
+  const verdictGo = verdictIsDoor ? openFindings : () => {};
+  const verdictRole = verdictIsDoor ? 'button' : '';
+  const verdictTab = verdictIsDoor ? '0' : '';
+  const verdictCursor = verdictIsDoor ? 'pointer' : 'default';
+  const verdictLine = verdictIsDoor ? 'underline' : 'none';
+  const subIsSources = subPanelNow === 'sources', subIsRun = subPanelNow === 'run', subIsFound = subPanelNow === 'found';
+  // Manage credentials scrolled to a card that is now a panel. It opens it.
   const manageCreds = () => {
     if (!credsN) { go('s0')(); set(close); return; }
     go('s3', { layer: 'cloud', tab: 'connect' })();
-    set({ ...close, scrollToSec: 'sec-accounts', scrollNonce: (s.scrollNonce || 0) + 1 });
+    set({ ...close, sub: { page: 'connect', panel: 'sources' } });
   };
   const windowLabel = winLabelOf(s);
   const rangeValue = s.obWindow || '30d';
@@ -2013,7 +2057,7 @@ function shellVals(s, set, go, est, c, sched) {
     pills, railGroups, subNav, hasSubNav, pageTitle, credsLabel, credsTitle, manageCreds, showPageTitle, rangeValue, setRange, bellLabel, buildLabel: (typeof window !== 'undefined' && window.__naasVersion) ? `v${window.__naasVersion.build} · ${window.__naasVersion.date}` : '', hasBuildLabel: !!(typeof window !== 'undefined' && window.__naasVersion), railCollapsed, railExpanded: !railCollapsed, railToggleTitle: railCollapsed ? 'Expand navigation' : 'Collapse navigation', iconAndi: 'brand/andi-symbol.svg', iconCalendar: iconDir + '/checklist.svg', goBrowseClose: () => { go('s7')(); set({ demoOpen: false }); },
     topTabs, layerSubtitle, elevatorOpen: !!s.elevatorOpen, toggleElevator: () => set({ elevatorOpen: !s.elevatorOpen }), closeElevator: () => set(close), chevronRot: s.elevatorOpen ? 'rotate(180deg)' : 'rotate(0deg)', elevator,
     goDiscoverClose: goTab('s1'), goHomeClose: goTab('s3', { layer: 'cloud', tab: 'connect' }),
-    showRail, showHeader, schedLine, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
+    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsSources, subIsRun, subIsFound, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
   };
 }
 

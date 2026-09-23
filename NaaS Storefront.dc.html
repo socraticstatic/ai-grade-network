@@ -253,7 +253,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <main style="min-width:0;max-width:1392px;margin:0 auto;padding:16px 24px 16px;width:100%;box-sizing:border-box">
 <sc-if value="{{ showPageTitle }}" hint-placeholder-val="{{ true }}">
 <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 16px;margin-bottom:24px;border-bottom:1px solid var(--border-secondary)">
-  <div style="display:grid;gap:2px;min-width:0;flex:1 1 320px"><h1 style="margin:0;font-size:26px;line-height:32px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)">{{ pageTitle }}</h1><sc-if value="{{ hasPageSub }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;line-height:20px;font-weight:500;color:var(--text-heading);text-wrap:pretty">{{ pageVerdict }}</div><div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty">{{ pageStat }}</div></sc-if></div>
+  <div style="display:grid;gap:2px;min-width:0;flex:1 1 320px"><h1 style="margin:0;font-size:26px;line-height:32px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)">{{ pageTitle }}</h1><sc-if value="{{ hasPageSub }}" hint-placeholder-val="{{ false }}"><div onClick="{{ verdictGo }}" role="{{ verdictRole }}" tabindex="{{ verdictTab }}" style="font-size:14px;line-height:20px;font-weight:500;color:var(--text-heading);text-wrap:pretty;cursor:{{ verdictCursor }};text-decoration-line:{{ verdictLine }};text-decoration-style:dotted;text-underline-offset:3px">{{ pageVerdict }}</div><div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty">{{ pageStat }}</div></sc-if></div>
   <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-light)">
     <sc-if value="{{ hasBuildLabel }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:var(--text-disabled)">{{ buildLabel }}</span><span aria-hidden="true" style="width:1px;height:16px;background:var(--border-secondary)"></span></sc-if>
     <label class="sched-cadence" title="{{ schedTitle }}" style="position:relative;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer"><span id="sched-line">{{ schedLine }}</span><span aria-hidden="true" style="color:var(--link);font-weight:700">▾</span><select value="{{ cadenceValue }}" onChange="{{ setCadence }}" aria-label="Discovery cadence" aria-describedby="sched-line" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font:inherit"><option value="">Mixed</option><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></label>
@@ -971,6 +971,15 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <sc-if value="{{ tConnect }}" hint-placeholder-val="{{ true }}">
   <div style="display:grid;gap:32px;margin-top:24px">
     <div class="fx-filters"><label class="fx-filter"><span class="fx-label">Scope</span><select class="fx-select" value="{{ obScope }}" onChange="{{ setObScope }}" aria-label="Scope"><sc-for list="{{ obScopes }}" as="sc" hint-placeholder-count="4"><option value="{{ sc.key }}">{{ sc.label }}</option></sc-for></select></label><span class="fx-spacer"></span><button class="fx-btn" onClick="{{ goDiscover }}">Explore the estate</button></div>
+<sc-if value="{{ subOpen }}" hint-placeholder-val="{{ false }}">
+<aside aria-label="Discovery" style="position:fixed;top:var(--hdr,65px);right:0;width:min(880px,92vw);height:calc(100vh - var(--hdr,65px));z-index:46;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr);border-left:1px solid var(--border-secondary);background:var(--bg-base);box-shadow:-12px 0 32px rgba(0,0,0,.16);animation:fadeIn .18s">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 24px;border-bottom:1px solid var(--border-secondary)">
+    <h2 style="margin:0;flex:1 1 auto;min-width:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">{{ subTitle }}</h2>
+    <sc-for list="{{ subTabs }}" as="sb" hint-placeholder-count="3"><button onClick="{{ sb.go }}" aria-current="{{ sb.on }}" style="height:28px;padding:0 12px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-body);font-size:13px;cursor:pointer;white-space:nowrap" style-hover="border-color:var(--border-active)">{{ sb.label }}</button></sc-for>
+    <button onClick="{{ closeSub }}" aria-label="Close" style="height:28px;padding:0 12px;border:0;border-radius:9999px;background:transparent;color:var(--link);font-size:13px;font-weight:500;cursor:pointer">Close</button>
+  </div>
+  <div style="min-height:0;overflow-y:auto;padding:24px">
+    <sc-if value="{{ subIsSources }}" hint-placeholder-val="{{ true }}">
     <div id="sec-accounts" class="fx-card" aria-label="Sources" style="gap:10px;padding:16px 24px">
       <div class="fx-card-head"><div><h3 class="fx-card-title">Connected accounts</h3><div class="fx-card-sub">{{ sourcesSub }}</div></div><button class="fx-btn" onClick="{{ toggleAddSource }}" style="height:32px">{{ addSourceLabel }}</button></div>
       <sc-if value="{{ addSourceOpen }}" hint-placeholder-val="{{ false }}">
@@ -1007,6 +1016,14 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         </sc-for></div>
       </div>
     </div>
+    </sc-if>
+    <sc-if value="{{ subIsRun }}" hint-placeholder-val="{{ false }}">
+    <div style="display:grid;gap:12px">
+      <sc-if value="{{ scanning }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:var(--text-light)">{{ scanLine }}</div></sc-if>
+      <sc-for list="{{ scanSteps }}" as="sst" hint-placeholder-count="4"><div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:1px solid var(--border-secondary);border-radius:12px"><span aria-hidden="true" style="width:18px;flex:none;color:{{ sst.color }}">{{ sst.mark }}</span><div style="min-width:0"><div style="font-size:14px;font-weight:600;color:var(--text-heading)">{{ sst.label }}</div><div style="font-size:12px;color:var(--text-light)">{{ sst.src }}</div></div></div></sc-for>
+    </div>
+    </sc-if>
+    <sc-if value="{{ subIsFound }}" hint-placeholder-val="{{ false }}">
 
     <sc-if value="{{ hasGap }}" hint-placeholder-val="{{ true }}">
     <div id="sec-gap" class="fx-card" style="gap:12px;padding:16px 24px">
@@ -1064,6 +1081,10 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <div style="font-size:11px;line-height:16px;color:var(--text-disabled);text-wrap:pretty">The table compares the middle mile. An SD-WAN overlay rides whichever of these your sites already have — it changes the edge, not the middle, so its numbers follow the row underneath it.</div>
     </div>
     </sc-if>
+    </sc-if>
+  </div>
+</aside>
+</sc-if>
     <div class="fx-alert" role="status" aria-label="Next stop">
       <div class="fx-alert-body"><span class="fx-alert-icon" aria-hidden="true"></span><div><div class="fx-alert-title">{{ connectNext.title }}</div><div class="fx-alert-text">{{ connectNext.text }}</div></div></div>
       <button class="fx-btn" onClick="{{ connectNext.go }}">{{ connectNext.cta }}</button>
@@ -1997,7 +2018,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { screen: 's3', view: 'mature', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36 }; }
+  constructor(p) { super(p); this.state = { screen: 's3', view: 'mature', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36 }; }
   componentDidUpdate() {
     // Guarded on the instance, not on prevState: comparing against prevState
     // re-entered on the very setState this handler makes, and React counted

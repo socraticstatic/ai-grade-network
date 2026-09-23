@@ -76,15 +76,23 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // fabOpen, one card - a wrapper div, its head div, its copy div (div +3), a
 // foreignObject (not pinned here), and the "Attach a region" button
 // (button +1). div 867 -> 870, sc-if 300 -> 301, button 251 -> 252.
+// The sub layer: one aside wrapping the three blocks that were stacked under
+// Discover's picture. Its own chrome is the aside, a header div, a body div,
+// the title h2, a subTabs sc-for with its button, and a Close button. The run
+// panel adds a wrapper div, a scanLine sc-if with its div, and a scanSteps
+// sc-for whose row is a div, a span and two divs. Three panel gates (sources,
+// run, found) plus the subOpen gate. Nothing inside the three blocks moved.
+// div 870 -> 878, span 644 -> 645, sc-if 301 -> 306, sc-for 174 -> 176,
+// button 252 -> 254, aside 9 -> 10.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 870],
-    ['span', /<span\b/g, /<\/span>/g, 644],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 301],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 174],
+    ['div', /<div\b/g, /<\/div>/g, 878],
+    ['span', /<span\b/g, /<\/span>/g, 645],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 306],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 176],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 252],
-    ['aside', /<aside\b/g, /<\/aside>/g, 9],
+    ['button', /<button\b/g, /<\/button>/g, 254],
+    ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 28],
   ];
   for (const [name, open, close, expected] of pairs) {
