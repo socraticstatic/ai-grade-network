@@ -107,12 +107,13 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // names an on-ramp, a chip (one sc-if, one foreignObject div); a handoffs loop
 // draws a dot where the owner changes. div 874 -> 875, sc-if 310 -> 311,
 // sc-for 176 -> 178.
+// The customer's own cross-connect, marked on its handoff (one loop): sc-for 178 -> 179.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 875],
     ['span', /<span\b/g, /<\/span>/g, 642],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 311],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 178],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 179],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 254],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],

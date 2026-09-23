@@ -397,6 +397,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <sc-for list="{{ bends }}" as="bd" hint-placeholder-count="6">
       <path d="{{ bd.d }}" style="fill:none;stroke:{{ bd.stroke }};stroke-width:{{ bd.width }};stroke-dasharray:{{ bd.dash }};stroke-linecap:round"><title>{{ bd.title }}</title></path>
     </sc-for>
+    <sc-for list="{{ xconnects }}" as="xc" hint-placeholder-count="1">
+      <rect x="{{ xc.sx }}" y="{{ xc.sy }}" width="{{ xc.s }}" height="{{ xc.s }}" rx="1" style="fill:var(--bg-base);stroke:var(--text-heading);stroke-width:1.5"><title>{{ xc.title }}</title></rect>
+    </sc-for>
     </sc-if>
     <!-- inside the fabric (2026-09-09): facilities → ports → circuits, opened in place -->
     <sc-if value="{{ fabOpen }}" hint-placeholder-val="{{ false }}">

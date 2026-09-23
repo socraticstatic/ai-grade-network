@@ -32,7 +32,9 @@ export const HEADSTART = [
 ];
 
 // x: { link: 'ok'|'degraded', paths: 1|2, acct: string } for the Observe connections panel (2026-09-09).
-const REG = (cloud, region, wl, priv, ramp, pub, fab, tags, rel, x) => ({ cloud, region, wl, priv, ramp, pub, fab, tags: tags || [], rel: rel || 'ok', link: (x && x.link) || 'ok', paths: (x && x.paths) || 1, acct: (x && x.acct) || null });
+// x.xc: a cross-connect the customer ordered themselves, { by: 'yours', at: colo }. Only
+// a dedicated port has one; a partner-hosted port (NetBond) is cross-connected by the partner.
+const REG = (cloud, region, wl, priv, ramp, pub, fab, tags, rel, x) => ({ cloud, region, wl, priv, ramp, pub, fab, tags: tags || [], rel: rel || 'ok', link: (x && x.link) || 'ok', paths: (x && x.paths) || 1, acct: (x && x.acct) || null, xc: (x && x.xc) || null });
 
 export const ESTATES = {
   empty: {
@@ -148,7 +150,9 @@ export const ESTATES = {
     ],
     regionsList: [
       REG('AWS', 'us-east-1', 210, true, 'NetBond', 38, 8, ['PCI', 'Prod'], 'ok', { paths: 2 }),
-      REG('AWS', 'us-west-2', 120, true, 'DX', 52, 12, ['Prod'], 'ok', { acct: 'acct 4102-8837-5510', paths: 2 }),
+      // A dedicated Direct Connect port: AWS issued the LOA-CFA, the customer
+      // ordered the cable from Equinix, and Equinix answers for it.
+      REG('AWS', 'us-west-2', 120, true, 'DX', 52, 12, ['Prod'], 'ok', { acct: 'acct 4102-8837-5510', paths: 2, xc: { by: 'yours', at: 'Equinix SE2, Seattle' } }),
       REG('AWS', 'eu-central-1', 96, true, 'DX', 88, 19, ['Prod'], 'ok', { link: 'degraded', acct: 'acct 4102-8837-5510', paths: 1 }),
       REG('Azure', 'eastus', 140, true, 'ER', 36, 9, ['Finance'], 'ok', { acct: 'sub 7f3a-…-21c4' }),
       REG('Azure', 'westeurope', 88, true, 'ER', 91, 21, ['Finance'], 'ok', { acct: 'sub 7f3a-…-21c4' }),

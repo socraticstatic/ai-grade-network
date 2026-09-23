@@ -191,7 +191,7 @@ export function heroLayout(est, opts) {
   // that stays off AT&T (Equinix to CoreWeave) is a colour change, not a bend.
   const DROP = 14;
   const trackOf = (owner) => (owner === 'att' ? 'att' : 'other');
-  out.legs = []; out.bends = [];
+  out.legs = []; out.bends = []; out.xconnects = [];
   // A bend is a gentle S, 2*BEND wide, and the legs either side stop where it
   // starts, so line, curve and line meet end to end with a flat tangent at each
   // join. A 20px bend drawn over legs that ran to the boundary overlapped them
@@ -231,6 +231,10 @@ export function heroLayout(est, opts) {
     // two meet with a jog at the band's edge.
     const last = out.legs.filter(g => g.region === e.region.region).pop();
     if (last) e.y1 = last.y;
+    // A cross-connect the customer ordered is a cable on the handoff into the
+    // cloud's edge, not a segment, so it is a mark on that bend.
+    const bend = out.bends.find(b => b.region === e.region.region && b.between[1] === 'Edge');
+    if (e.region.xc && bend) out.xconnects.push({ key: 'xc:' + e.region.region, region: e.region.region, cloud: e.region.cloud, ramp: e.region.ramp, ...e.region.xc, x: bend.x, y: Math.round((bend.y1 + bend.y2) / 2) });
   });
   // A third-party core is not the shared AT&T backbone, so its route cannot meet
   // the others there. It runs site to region on the not-AT&T track through all
