@@ -29,9 +29,12 @@ const TABS = ['connect', 'govern', 'observe', 'cost'];
 // scroll. A page declares its panels here and one aside renders whichever is
 // open. Adding Observe or Cost is a new entry, not new markup.
 export const SUB_PANELS = {
-  connect: [
+  // Discover owns the reading of the estate. Connect owns what to do about it.
+  discover: [
     { key: 'sources', label: 'Connected accounts', sec: 'sec-accounts' },
-    { key: 'run', label: 'Discovery run', handoff: (st) => (st.scanStep >= 4 ? 'found' : null) },
+    { key: 'run', label: 'Discovery run' },
+  ],
+  connect: [
     { key: 'found', label: 'What we found', sec: 'sec-gap' },
   ],
   observe: [
@@ -2073,7 +2076,7 @@ function shellVals(s, set, go, est, c, sched) {
   // Re-discover keeps its one click and finally has somewhere to report: the
   // run opens as a panel instead of a two-second flicker on a page of other things.
   const rescanNow = sched.runNow(schedAcctIds, 'manual');
-  const rescan = () => { set({ sub: { page: 'connect', panel: 'run' } }); rescanNow(); };
+  const rescan = () => { set({ sub: { page: 'discover', panel: 'run' } }); rescanNow(); };
   const credsN = sched.accounts.length;
   const credsLabel = credsN ? `Manage credentials (${credsN})` : 'Manage credentials';
   const credsTitle = credsN
@@ -2113,6 +2116,9 @@ function shellVals(s, set, go, est, c, sched) {
   // Discovery belongs to Discover, but Discover is s1 and s1 draws its own
   // header, so the bar has nowhere to land there yet. It stays where the sub
   // layer is until the layer moves out of the Connect block.
+  // Discovery is Discover's task, but s1 draws its own header and the shared
+  // title row skips s1 entirely, so the controls have nowhere to land there.
+  // They stay on Connect until s1's header can carry them.
   const ownsDiscovery = s.screen === 's0' || (s.screen === 's3' && s.tab === 'connect');
   const ownsTelemetry = s.screen === 's3' && (s.tab === 'observe' || s.tab === 'cost');
   const railIsSequence = railFor(est).sequence;
@@ -2127,13 +2133,14 @@ function shellVals(s, set, go, est, c, sched) {
   const needsYouLabel = needsYou.length ? needsYou.join(' · ') : 'Nothing needs you';
   // Exposed is a filter on the estate, not a stop of its own.
   const estateExposedGo = () => { go('s1')(); set({ chips: ['exposed'] }); };
-  const subAt = (i) => !!(subPanels[i] && subPanels[i].key === subPanelNow);
-  const subIs1 = subAt(0), subIs2 = subAt(1), subIs3 = subAt(2);
+  const subIsSources = subPanelNow === 'sources';
+  const subIsRun = subPanelNow === 'run';
+  const subIsFound = subPanelNow === 'found';
   // Manage credentials scrolled to a card that is now a panel. It opens it.
   const manageCreds = () => {
     if (!credsN) { go('s0')(); set(close); return; }
     go('s3', { layer: 'cloud', tab: 'connect' })();
-    set({ ...close, sub: { page: 'connect', panel: 'sources' } });
+    set({ ...close, sub: { page: 'discover', panel: 'sources' } });
   };
   const windowLabel = winLabelOf(s);
   const rangeValue = s.obWindow || '30d';
@@ -2146,7 +2153,7 @@ function shellVals(s, set, go, est, c, sched) {
     pills, railGroups, subNav, hasSubNav, pageTitle, credsLabel, credsTitle, manageCreds, showPageTitle, rangeValue, setRange, bellLabel, buildLabel: (typeof window !== 'undefined' && window.__naasVersion) ? `v${window.__naasVersion.build} · ${window.__naasVersion.date}` : '', hasBuildLabel: !!(typeof window !== 'undefined' && window.__naasVersion), railCollapsed, railExpanded: !railCollapsed, railToggleTitle: railCollapsed ? 'Expand navigation' : 'Collapse navigation', iconAndi: 'brand/andi-symbol.svg', iconCalendar: iconDir + '/checklist.svg', goBrowseClose: () => { go('s7')(); set({ demoOpen: false }); },
     topTabs, layerSubtitle, elevatorOpen: !!s.elevatorOpen, toggleElevator: () => set({ elevatorOpen: !s.elevatorOpen }), closeElevator: () => set(close), chevronRot: s.elevatorOpen ? 'rotate(180deg)' : 'rotate(0deg)', elevator,
     goDiscoverClose: goTab('s1'), goHomeClose: goTab('s3', { layer: 'cloud', tab: 'connect' }),
-    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, railIsSequence, needsYouLabel, estateExposedGo, ownsDiscovery, ownsTelemetry, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIs1, subIs2, subIs3, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
+    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, railIsSequence, needsYouLabel, estateExposedGo, ownsDiscovery, ownsTelemetry, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsSources, subIsRun, subIsFound, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
   };
 }
 

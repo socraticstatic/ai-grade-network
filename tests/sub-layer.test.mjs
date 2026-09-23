@@ -44,12 +44,12 @@ test('closing the sub layer leaves nothing open', () => {
 });
 
 test('the open panel is switchable from inside the layer', () => {
-  const c = on({ sub: { page: 'connect', panel: 'sources' } });
+  const c = on({ sub: { page: 'discover', panel: 'sources' } });
   const tabs = vals(c).subTabs;
-  assert.deepEqual(tabs.map(t => t.key), SUB_PANELS.connect.map(p => p.key));
+  assert.deepEqual(tabs.map(t => t.key), SUB_PANELS.discover.map(p => p.key));
   assert.equal(tabs.find(t => t.key === 'sources').on, true);
-  tabs.find(t => t.key === 'found').go();
-  assert.equal(vals(c).subPanelNow, 'found');
+  tabs.find(t => t.key === 'run').go();
+  assert.equal(vals(c).subPanelNow, 'run');
 });
 
 // ---- Discover's three doors ----
@@ -57,7 +57,7 @@ test('the open panel is switchable from inside the layer', () => {
 test('Manage credentials opens the sub layer at its sources', () => {
   const c = on();
   vals(c).manageCreds();
-  assert.equal(c.state.sub.page, 'connect');
+  assert.equal(c.state.sub.page, 'discover');
   assert.equal(c.state.sub.panel, 'sources');
 });
 
@@ -77,15 +77,13 @@ test('the verdict line opens the layer at what was found', () => {
 
 // ---- the run hands over to its own result ----
 
-test('the run panel becomes the findings panel when the scan ends', () => {
-  const mid = vals(on({ sub: { page: 'connect', panel: 'run' }, scanStep: 1 }));
-  assert.equal(mid.subPanelNow, 'run');
-  const done = vals(on({ sub: { page: 'connect', panel: 'run' }, scanStep: 4 }));
-  assert.equal(done.subPanelNow, 'found', 'the run never hands over to its own result');
+test('a finished run stays a run; it does not jump to another page\'s panel', () => {
+  const done = vals(on({ sub: { page: 'discover', panel: 'run' }, scanStep: 4 }));
+  assert.equal(done.subPanelNow, 'run');
 });
 
 test('a panel opened directly does not move when a scan finishes', () => {
-  const v = vals(on({ sub: { page: 'connect', panel: 'sources' }, scanStep: 4 }));
+  const v = vals(on({ sub: { page: 'discover', panel: 'sources' }, scanStep: 4 }));
   assert.equal(v.subPanelNow, 'sources');
 });
 
