@@ -327,3 +327,18 @@ test('a piece keeps its key and its shape when the band folds', () => {
   const shape = (d) => d.replace(/[\d.]+/g, '#');
   for (const p of open.pieces) assert.equal(shape(shut.pieces.find(q => q.key === p.key).d), shape(p.d), p.key);
 });
+
+// "It's not spaced quite right on collapse. Balance it out" (2026-09-23): folded
+// or not, the band sits centred between the site cards and the cloud column,
+// and folded it narrows rather than stranding its stacks at the ends.
+test('the band is centred between the columns, folded and unfolded', async () => {
+  const { RX } = await import('../naas-logic.js');
+  for (const bandUnfolded of [false, true]) {
+    const v = vals(mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null, bandUnfolded }));
+    const left = v.bandX - 224, right = RX - (v.bandX + v.bandW);
+    assert.ok(Math.abs(left - right) <= 1, `${bandUnfolded ? 'unfolded' : 'folded'}: ${left} left, ${right} right`);
+  }
+  const shut = vals(mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null }));
+  assert.equal(shut.bandW, 404, 'the folded band did not narrow');
+  assert.equal(shut.segments[2].w, 260);
+});

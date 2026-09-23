@@ -6,7 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 import * as D from './naas-data.js';
-import { fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey } from './naas-logic.js';
+import { fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX } from './naas-logic.js';
 import * as A from './naas-addendum.js';
 import * as R from './naas-round2.js';
 import * as S from './naas-sites.js';
@@ -295,9 +295,14 @@ export function vals(c) {
   const regionDrill = cloudDrill.length ? X.regionDrillRows(est, inv, cloudDrill) : cloudPick ? X.providerRows(est, cloudPick) : null;
   const cloudsUpNow = () => set(cloudDrill.length ? { cloudDrill: cloudDrill.slice(0, -1), cloudPick } : { cloudPick: null });
   const fabOpenNow = (s.fabDrill || []).length > 0;
-  // Access and Edge start folded to card edges; a click unfolds them.
-  const folded = !s.bandUnfolded;
-  const L = heroLayout(est, { siteRows: drillRows, regionRows: regionDrill ? regionDrill.rows : null, bandX: 320, bandW: 580, folded });
+  // Access and Edge start folded to card edges; a click unfolds them. The
+  // facilities list needs the whole band, so it opens unfolded. Folded or not,
+  // the band sits centred between the site cards and the cloud column: folded,
+  // it narrows to four card stacks and a 260 Core rather than stranding the
+  // stacks at the ends of an empty stage.
+  const folded = !s.bandUnfolded && !fabOpenNow;
+  const SITES_END = 224, bandW = folded ? 4 * 36 + 260 : 580;
+  const L = heroLayout(est, { siteRows: drillRows, regionRows: regionDrill ? regionDrill.rows : null, bandX: Math.round(SITES_END + (RX - SITES_END - bandW) / 2), bandW, folded });
   const hoverKey = s.hoverNode;
   const dimFor = (keys) => hoverKey ? (keys.includes(hoverKey) ? 1 : 0.72) : 1;
   const layerEdgeKinds = { ai: ['egress'], cloud: ['egress', 'internet'], net: ['ingress', 'internet'], transport: ['ingress'] };
