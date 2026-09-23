@@ -342,3 +342,26 @@ test('the band is centred between the columns, folded and unfolded', async () =>
   assert.equal(shut.bandW, 404, 'the folded band did not narrow');
   assert.equal(shut.segments[2].w, 260);
 });
+
+// "You haven't balanced out the cards in collapsed state" (2026-09-23): folded,
+// the lines climbed to each thing's row inside 36-unit columns and stood up as
+// walls. Folded, a line runs flat through the stacks on its backbone's row.
+test('folded, every line runs flat through the Edge stacks', () => {
+  const l = heroLayout(D.ESTATES.mature, { bandX: 460, bandW: 404, folded: true });
+  const edges = new Set(l.nodes.filter(n => n.seg === 1 || n.seg === 3).map(n => n.id));
+  const pieces = l.pieces.filter(p => edges.has(p.node));
+  assert.ok(pieces.length > 0);
+  for (const p of pieces) {
+    const ys = [...p.d.matchAll(/[\d.]+,([\d.]+)/g)].map(m => +m[1]);
+    assert.equal(new Set(ys).size, 1, `${p.key} climbs inside a folded stack: ${p.d}`);
+  }
+});
+
+test('folded, the Lumen line reaches its cloud on its own wire', () => {
+  const l = heroLayout(D.ESTATES.mature, { bandX: 460, bandW: 404, folded: true });
+  const lumen = l.routes.find(r => r.side === 'path');
+  const end = +lumen.d.match(/([\d.]+)$/)[1];
+  const wire = l.edges.find(e => e.kind === 'egress' && String(e.id).startsWith('via'));
+  assert.ok(wire, 'the Lumen line stops at the band edge');
+  assert.equal(wire.y1, end);
+});

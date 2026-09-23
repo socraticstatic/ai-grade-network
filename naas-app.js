@@ -353,7 +353,10 @@ export function vals(c) {
     tip: sg.side === 'core' ? 'Open the facilities' : folded ? `${sg.label}: click to unfold` : `${sg.label}: click to fold`,
     // Folded, a side segment is a stack of card edges with its name on end.
     edgeOp: folded && sg.side !== 'core' ? 1 : 0, pillOp: folded && sg.side !== 'core' ? 0 : 1,
-    stackH: L.bandH - 100, stackY: L.bandY + 88, vlabelY: L.bandY + 10,
+    // The stack starts under its name and stops as far from the floor; its back
+    // cards peek outward, left on the site side and right on the cloud side.
+    stackH: L.bandH - 112, stackY: L.bandY + 100,
+    stackA: sg.side === 'site' ? 17 : 9, stackB: 13, stackC: sg.side === 'site' ? 9 : 17,
     // Depth into the backbone: Access lightest, Edge deeper, Core deepest, so
     // the five columns read apart and the eye lands on the backbone.
     fill: (s.theme === 'dark' ? { Access: 'rgba(255,255,255,0.02)', Edge: 'rgba(255,255,255,0.06)', Core: 'rgba(102,200,240,0.14)' } : { Access: 'rgba(0,87,184,0.02)', Edge: 'rgba(0,87,184,0.08)', Core: 'rgba(0,87,184,0.17)' })[sg.label],

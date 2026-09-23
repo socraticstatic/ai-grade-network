@@ -321,10 +321,16 @@ export function heroLayout(est, opts) {
   // Wires that share a first (or last) thing spread a few pixels apart at the
   // band's edge and ease into it, so a shared circuit reads as a bundle, not a
   // knot, and each wire's chips and dots keep their own height.
+  // Folded, the sides are card stacks, not rows of things: a line runs flat
+  // through them on its backbone's row, and all the converging happens in the
+  // wide Core and in the wires outside, so the fold reads as one clean pipe.
+  const folded = !!opts.folded;
+  const coreOf = (d) => d.nodes.find(x => x.seg === 2);
+  const yOf = (n, d) => (folded && n.seg !== 2 ? coreOf(d).y : n.y);
   const fanOf = {};
   drafts.forEach(d => {
     if (d.shared) return;
-    const n = d.side === 'region' ? d.nodes[d.nodes.length - 1] : d.nodes[0];
+    const n = folded ? coreOf(d) : d.side === 'region' ? d.nodes[d.nodes.length - 1] : d.nodes[0];
     const k = (d.side === 'region' ? 'out:' : 'in:') + n.id;
     (fanOf[k] = fanOf[k] || []).push(d);
   });
@@ -340,14 +346,19 @@ export function heroLayout(est, opts) {
     const ns = d.nodes, last = ns.length - 1;
     const xStart = d.side === 'region' ? ns[0].cx : bandX;
     const xEnd = d.side === 'site' ? ns[last].cx : bandX + bandW;
+    const fan = d.fan || 0;
     const keys = ns.map((n, i) => {
-      const prev = ns[i - 1], next = ns[i + 1];
-      const inFan = i === 0 && d.side !== 'region' && d.fan, outFan = i === last && d.side === 'region' && d.fan;
-      let path = prev && prev.y !== n.y ? half2(n.x, prev.y, n.y)
-        : inFan ? `M${xStart},${n.y + d.fan} C${xStart + B},${n.y + d.fan} ${xStart + B},${n.y} ${xStart + 2 * B},${n.y}` : `M${i ? n.x : xStart},${n.y}`;
-      path += next && next.y !== n.y ? half1(next.x, n.y, next.y)
-        : outFan ? ` L${xEnd - 2 * B},${n.y} C${xEnd - B},${n.y} ${xEnd - B},${n.y + d.fan} ${xEnd},${n.y + d.fan}` : ` L${next ? next.x : xEnd},${n.y}`;
-      const key = [n.id, prev ? prev.id : '', next ? next.id : '', inFan ? 'i' + d.fan : '', outFan ? 'o' + d.fan : '', i === 0 ? d.side : ''].join('|');
+      const prev = ns[i - 1], next = ns[i + 1], y = yOf(n, d);
+      // Every piece has the same commands folded or not - a flat curve where
+      // nothing changes height - so the browser can ease one into the other.
+      const fansIn = i === 0 && d.side !== 'region', fansOut = i === last && d.side === 'region';
+      let path = prev ? half2(n.x, yOf(prev, d), y)
+        : fansIn ? `M${xStart},${y + fan} C${xStart + B},${y + fan} ${xStart + B},${y} ${xStart + 2 * B},${y}` : `M${xStart},${y}`;
+      path += next ? half1(next.x, y, yOf(next, d))
+        : fansOut ? ` L${xEnd - 2 * B},${y} C${xEnd - B},${y} ${xEnd - B},${y + fan} ${xEnd},${y + fan}` : ` L${xEnd},${y}`;
+      // A piece where a wire meets the band belongs to that wire alone; the rest
+      // are named by the things either side, and routes that share them share them.
+      const key = fansIn ? 'in|' + d.who : fansOut ? 'out|' + d.who : [n.id, prev ? prev.id : '', next ? next.id : ''].join('|');
       if (!pieceKeys[key]) { pieceKeys[key] = { key, d: path, node: n.id, owner: n.owner, users: [] }; out.pieces.push(pieceKeys[key]); }
       if (!pieceKeys[key].users.includes(d.label)) pieceKeys[key].users.push(d.label);
       return key;
@@ -357,16 +368,18 @@ export function heroLayout(est, opts) {
     const routeD = keys.map((k2, i) => (i ? pieceKeys[k2].d.replace(/^M[^A-Za-z]*/, ' ') : pieceKeys[k2].d)).join('');
     out.routes.push({ who: d.who, label: d.label, side: d.side, region: d.region, nodes: ns.map(n => n.id), pieces: keys, d: routeD });
     // The wires in and out of the band meet the route's first and last thing.
-    if (d.side !== 'region') d.e.y2 = ns[0].y + (d.fan || 0);
-    if (d.side === 'region') d.e.y1 = ns[last].y + (d.fan || 0);
-    if (d.side === 'path' && !out.edges.some(x => x.kind === 'egress' && x.priv && x.region && x.region.region === d.target.region))
-      out.edges.push({ id: 'via' + d.who, kind: 'egress', priv: true, x1: bandX + bandW, y1: ns[last].y, x2: RX, y2: d.target.cy, region: d.target, dur: 3 });
+    if (d.side !== 'region') d.e.y2 = yOf(ns[0], d) + fan;
+    if (d.side === 'region') d.e.y1 = yOf(ns[last], d) + fan;
+    // Folded, a third-party core keeps its own row to the band's edge, so it
+    // reaches its cloud on its own wire rather than stopping short of the AT&T one.
+    if (d.side === 'path' && (folded || !out.edges.some(x => x.kind === 'egress' && x.priv && x.region && x.region.region === d.target.region)))
+      out.edges.push({ id: 'via' + d.who, kind: 'egress', priv: true, x1: bandX + bandW, y1: yOf(ns[last], d), x2: RX, y2: d.target.cy, region: d.target, dur: 3 });
     // A customer's own cross-connect is a cable on a handoff, not a thing: a
     // site's lands between its circuit and the AT&T edge, a region's between
     // the backbone and the cloud's on-ramp.
     if (d.xc) {
       const [p, q] = ns;
-      out.xconnects.push({ key: 'xc:' + d.who, ...(d.side === 'region' ? { region: d.region, cloud: d.e.region.cloud, ramp: d.e.region.ramp } : { site: d.who }), ...d.xc, x: q.x, y: Math.round((p.y + q.y) / 2) });
+      out.xconnects.push({ key: 'xc:' + d.who, ...(d.side === 'region' ? { region: d.region, cloud: d.e.region.cloud, ramp: d.e.region.ramp } : { site: d.who }), ...d.xc, x: q.x, y: Math.round((yOf(p, d) + yOf(q, d)) / 2) });
     }
   });
   return out;
