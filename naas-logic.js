@@ -117,29 +117,43 @@ export function heroLayout(est, opts) {
   // region leaves Core across Edge and Access. Each leg is owned by whoever
   // holds the SLA for it, and a handoff is marked where the owner changes.
   const [sA, sE, sC, cE, cA] = out.segments;
-  out.legs = []; out.handoffs = [];
-  const mark = (path, x0, y, who) => {
-    for (let i = 1; i < path.length; i++) {
-      if (path[i].owner !== path[i - 1].owner) out.handoffs.push({ ...who, key: `h:${who.site || who.region}:${i}`, x: path[i].x, y, between: [path[i - 1].seg, path[i].seg] });
-    }
+  // Two tracks per segment: AT&T on the row, not-AT&T a step below it. A route
+  // runs on the track of whoever owns the segment and bends where that changes,
+  // so where the line drops is how far AT&T stays accountable. An owner change
+  // that stays off AT&T (Equinix to CoreWeave) is a colour change, not a bend.
+  const DROP = 14;
+  const trackOf = (owner) => (owner === 'att' ? 'att' : 'other');
+  out.legs = []; out.bends = [];
+  const place = (path, baseY, who, side) => {
+    let prev = null;
+    path.forEach(g => {
+      const track = trackOf(g.owner);
+      const y = track === 'att' ? baseY : baseY + DROP;
+      if (g.w) out.legs.push({ ...g, ...who, key: `l:${who.site || who.region}:${g.seg}`, y, track, side });
+      if (prev && prev.track !== track) {
+        out.bends.push({ ...who, key: `b:${who.site || who.region}:${prev.seg}>${g.seg}`, x: g.x, y1: prev.y, y2: y,
+          between: [prev.seg, g.seg], d: `M${g.x - 10},${prev.y} C${g.x},${prev.y} ${g.x},${y} ${g.x + 10},${y}` });
+      }
+      prev = { seg: g.seg, track, y };
+    });
   };
   out.edges.filter(e => e.kind === 'ingress' && e.priv && !e.ghost && !e.viaLane && e.site && !e.site.more).forEach(e => {
-    const y = e.y2, name = e.site.name;
-    const legs = [
+    place([
       { seg: 'Access', x: sA.x, w: sA.w, owner: accessOwner(e.site.access) },
       { seg: 'Edge', x: sE.x, w: sE.w, owner: 'att' },
-    ];
-    legs.forEach(g => out.legs.push({ ...g, key: `l:${name}:${g.seg}`, y, site: name, side: 'site' }));
-    mark([...legs, { seg: 'Core', x: sC.x, owner: 'att' }], sA.x, y, { site: name });
+      { seg: 'Core', x: sC.x, owner: 'att' },
+    ], e.y2, { site: e.site.name }, 'site');
   });
   out.edges.filter(e => e.kind === 'egress' && e.priv && !e.ghost && !e.viaLane && e.region).forEach(e => {
-    const y = e.y1, name = e.region.region;
-    const legs = [
+    place([
+      { seg: 'Core', x: sC.x + sC.w, owner: 'att' },
       { seg: 'Edge', x: cE.x, w: cE.w, owner: RAMP_EDGE[e.region.ramp] || 'cloud', label: e.region.ramp || '' },
       { seg: 'Access', x: cA.x, w: cA.w, owner: 'cloud' },
-    ];
-    legs.forEach(g => out.legs.push({ ...g, key: `l:${name}:${g.seg}`, y, region: name, cloud: e.region.cloud, side: 'cloud' }));
-    mark([{ seg: 'Core', x: sC.x, owner: 'att' }, ...legs], sC.x, y, { region: name });
+    ], e.y1, { region: e.region.region, cloud: e.region.cloud }, 'cloud');
+    // The wire out to the cloud leaves from wherever the last leg ended, or the
+    // two meet with a jog at the band's edge.
+    const last = out.legs.filter(g => g.region === e.region.region).pop();
+    if (last) e.y1 = last.y;
   });
   return out;
 }

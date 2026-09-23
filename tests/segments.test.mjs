@@ -103,18 +103,11 @@ test('the on-ramp is named inside the Edge segment it belongs to', () => {
   assert.ok(leg.x >= edge.x && leg.x + leg.w <= edge.x + edge.w, 'NetBond is drawn outside the Edge segment');
 });
 
-test('a handoff is marked exactly where the owner changes', () => {
-  const l = L();
-  const at = (region) => l.handoffs.filter(h => h.region === region).map(h => h.between);
-  assert.deepEqual(at('us-east-1'), [['Edge', 'Access']]);          // AT&T all the way to the cloud port
-  assert.deepEqual(at('us-west-2'), [['Core', 'Edge']]);            // AT&T hands to AWS at the edge
-  assert.deepEqual(at('us-east-04'), [['Core', 'Edge'], ['Edge', 'Access']]); // Equinix in between
-});
 
-test('an all-AT&T site path has no handoff before Core', () => {
+test('an all-AT&T site path stays on the AT&T track into Core', () => {
   const l = L();
-  const ashburn = l.handoffs.filter(h => h.site === 'Ashburn DC');
-  assert.deepEqual(ashburn, []);
+  assert.deepEqual(l.bends.filter(b => b.site === 'Ashburn DC'), []);
+  assert.equal(l.handoffs, undefined, 'the handoff dots are back beside the bends');
 });
 
 // The owner style carried a `label` field and was spread after the leg, so
@@ -134,4 +127,52 @@ test('no ownership colour is also a lens colour', () => {
   const v = vals(mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null }));
   const owners = new Set(v.ownerKey.map(o => o.stroke));
   for (const lens of ['var(--success)', 'var(--warning)', 'var(--error)']) assert.equal(owners.has(lens), false, `${lens} means two things`);
+});
+
+// ---- lanes: each segment has an AT&T track and a not-AT&T track ----
+// A route runs on the track of whoever owns that segment and bends where the
+// owner changes. The bend is the handoff, and where the line drops shows how far
+// AT&T stays accountable. Replaces the handoff dots.
+
+test('a leg runs on the AT&T track only where AT&T owns it', () => {
+  const l = L();
+  for (const g of l.legs) assert.equal(g.track, g.owner === 'att' ? 'att' : 'other', `${g.site || g.region} ${g.seg}`);
+});
+
+test('the not-AT&T track sits below the AT&T track on the same row', () => {
+  const l = L();
+  // NetBond: AT&T on the Edge, the AWS port on Access. Same row, two tracks.
+  const edge = l.legs.find(g => g.region === 'us-east-1' && g.seg === 'Edge');
+  const port = l.legs.find(g => g.region === 'us-east-1' && g.seg === 'Access');
+  assert.equal(edge.track, 'att');
+  assert.ok(port.y > edge.y, 'the not-AT&T leg is not below the AT&T leg');
+});
+
+test('a route bends exactly where its owner changes, at the segment boundary', () => {
+  const l = L();
+  const bendsOf = (region) => l.bends.filter(b => b.region === region).map(b => b.between);
+  assert.deepEqual(bendsOf('us-east-1'), [['Edge', 'Access']]);            // NetBond: AT&T to the cloud port
+  assert.deepEqual(bendsOf('us-west-2'), [['Core', 'Edge']]);              // DX: hands off at the edge
+  const edge = l.segments.find(s => s.label === 'Edge' && s.side === 'cloud');
+  assert.equal(l.bends.find(b => b.region === 'us-west-2').x, edge.x, 'the DX bend is not on the Core/Edge boundary');
+});
+
+test('a bend is a curve from one track to the other, not a straight line', () => {
+  const b = L().bends.find(x => x.region === 'us-west-2');
+  assert.match(b.d, /^M[\d.]+,[\d.]+ C/, 'a bend is not drawn as a curve');
+  assert.notEqual(b.y1, b.y2, 'a bend that does not change height is not a bend');
+});
+
+test('the Equinix path bends into the third party and out to the cloud', () => {
+  const l = L();
+  assert.deepEqual(l.bends.filter(b => b.region === 'us-east-04').map(b => b.between), [['Core', 'Edge']]);
+  // Equinix and CoreWeave are both not-AT&T: one track, so only one bend.
+});
+
+test('the wire out to the cloud leaves from where the last leg ended', () => {
+  const l = L();
+  for (const e of l.edges.filter(x => x.kind === 'egress' && x.priv && !x.viaLane && x.region)) {
+    const last = l.legs.filter(g => g.region === e.region.region).pop();
+    if (last) assert.equal(e.y1, last.y, `${e.region.region} jogs at the band edge`);
+  }
 });
