@@ -47,19 +47,30 @@ export const SUB_PANELS = {
   ],
 };
 
-// Two links under each verb, and a link earns its place only where the page
-// gives you no door to the thing. Fabric, Health, Flow map, Policies, Savings
-// and Egress are the pages themselves. Accounts, Off fabric and Paths open from
-// the header and the verdict. What is left is Explore 360, a screen of its own,
-// and the panels nothing on the page points at yet.
+// The lifecycle, in the order the work happens. Discover is the inventory: what
+// you have. Connect is the work of getting it onto the fabric. The app had these
+// two swapped - the connect tab was labelled Discover and the inventory was
+// exiled to "Explore 360" underneath it - which is why they read as rivals.
+export const STOPS = [
+  { key: 'discover', label: 'Discover', screen: 's1' },
+  { key: 'connect', label: 'Connect', tab: 'connect' },
+  { key: 'observe', label: 'Observe', tab: 'observe' },
+  { key: 'govern', label: 'Govern', tab: 'govern' },
+  { key: 'cost', label: 'Cost', tab: 'cost' },
+];
+
+// Two sub-tasks under each stop, and nothing else is a link. Actions are not
+// navigation: Sources and Run are the Manage credentials door and the
+// Re-discover button, where a customer is already looking.
 export const SECTIONS = {
-  connect: [
-    ['@discover', 'Explore 360', 'search'],
-    ['sources', 'Accounts', 'lock'],
+  discover: [
+    ['@tree', 'Tree', 'apis'],
+    ['@map', 'Map', 'hub'],
   ],
-  // Observe, Govern and Cost keep scroll anchors until their sub layer exists.
-  // The panels are declared above and the rail will point at them the moment
-  // the markup can render them; pointing early would break a working link.
+  connect: [
+    ['sec-gap', 'Off fabric', 'router'],
+    ['sec-paths', 'Ways to connect', 'apis'],
+  ],
   observe: [
     ['sec-insights', 'Insights', 'question-circle'],
     ['sec-logs', 'Logs', 'checklist'],
@@ -1985,24 +1996,25 @@ function shellVals(s, set, go, est, c, sched) {
         // Their rail, our destinations. Home on top, then a bold group label
         // per verb over the very rows the sub-nav already carried. Nothing
         // moves, nothing is added, nothing is dropped.
-        const TABS = [['connect', 'Discover'], ['observe', 'Observe'], ['govern', 'Govern'], ['cost', 'Cost']];
+        const TABS = STOPS.map(st => [st.key, st.label]);
         const row = (tab, id, label, ic, sub) => {
-          const isNav = id.startsWith('@');
-          // Three kinds of link: a screen of its own, an anchor on the page, and
-          // a panel in the sub layer. Only the first two ever scrolled.
-          const isPanel = !isNav && !id.startsWith('sec-');
-          const cur = isNav ? s.screen === 's1'
+          // Three kinds of sub-task: a view on the inventory, a section of the
+          // stop's own page, and a panel in the sub layer.
+          const isView = id.startsWith('@');
+          const isPanel = !isView && !id.startsWith('sec-');
+          const view = isView ? id.slice(1) : '';
+          const cur = isView ? (s.screen === 's1' && (s.treeOrMap || 'tree') === view)
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
             : (onS3('cloud', tab) && activeSec === id);
-          const goTo = isNav ? go('s1')
+          const goTo = isView ? () => { go('s1')(); set({ treeOrMap: view }); }
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
             : () => { go('s3', { layer: 'cloud', tab })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
-          return { ...item(label, ic, goTo, cur, false, sub, isPanel), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
+          return { ...item(label, ic, goTo, cur, false, sub, isPanel || isView), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };
-        const goTabRow = (tab) => tab === 'observe'
-          ? () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow' }); }
-          : go('s3', { layer: 'cloud', tab });
+        const goTabRow = (key) => key === 'discover' ? go('s1')
+          : key === 'observe' ? () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow' }); }
+          : go('s3', { layer: 'cloud', tab: key });
         return [
           { key: 'home', hasTitle: false, title: '', items: [
             item('NaaS', 'home', () => { if (est.stage === 'empty') go('s0')(); else go('s3', { layer: 'cloud', tab: 'connect' })(); }, false),
@@ -2013,7 +2025,8 @@ function shellVals(s, set, go, est, c, sched) {
           // icon rows and the fourth as a group label made peers look like two
           // different levels depending on where you stood.
           ...TABS.map(([tab, title]) => {
-            const here = onS3('cloud', tab) || (tab === 'connect' && (s.screen === 's0' || s.screen === 's1' || s.screen === 's2'));
+            const here = tab === 'discover' ? s.screen === 's1'
+              : onS3('cloud', tab) || (tab === 'connect' && (s.screen === 's0' || s.screen === 's2'));
             return {
               key: tab, hasTitle: true, title, titleGo: () => { goTabRow(tab)(); set(close); }, titleCur: here,
               // Every category shows its sections all the time. The rail scrolls.
@@ -2022,8 +2035,8 @@ function shellVals(s, set, go, est, c, sched) {
           }),
         ];
       })();
-  const pageTitle = s.screen === 's1' ? 'Explore 360' : s.screen === 's4' ? 'Compose' : s.screen === 's5' ? 'Recommend' : s.screen === 's6' ? 'Review order' : storeCur ? 'Marketplace'
-    : s.screen === 's3' ? ({ connect: 'Discover', govern: 'Govern', observe: (obTabNow === logsTab ? 'Observe · Logs' : 'Observe'), cost: 'Cost' }[s.tab] || 'Discover')
+  const pageTitle = s.screen === 's1' ? 'Discover' : s.screen === 's4' ? 'Compose' : s.screen === 's5' ? 'Recommend' : s.screen === 's6' ? 'Review order' : storeCur ? 'Marketplace'
+    : s.screen === 's3' ? ({ connect: 'Connect', govern: 'Govern', observe: (obTabNow === logsTab ? 'Observe · Logs' : 'Observe'), cost: 'Cost' }[s.tab] || 'Connect')
     : 'Discover';
   // Re-discover keeps its one click and finally has somewhere to report: the
   // run opens as a panel instead of a two-second flicker on a page of other things.
@@ -2059,7 +2072,10 @@ function shellVals(s, set, go, est, c, sched) {
   const verdictTab = verdictIsDoor ? '0' : '';
   const verdictCursor = verdictIsDoor ? 'pointer' : 'default';
   const verdictLine = verdictIsDoor ? 'underline' : 'none';
-  const subIsSources = subPanelNow === 'sources', subIsRun = subPanelNow === 'run', subIsFound = subPanelNow === 'found';
+  // Panels are gated by position, not by name, so every page uses the same
+  // three booleans and a new page needs no new ones. No page has more than three.
+  const subAt = (i) => !!(subPanels[i] && subPanels[i].key === subPanelNow);
+  const subIs1 = subAt(0), subIs2 = subAt(1), subIs3 = subAt(2);
   // Manage credentials scrolled to a card that is now a panel. It opens it.
   const manageCreds = () => {
     if (!credsN) { go('s0')(); set(close); return; }
@@ -2077,7 +2093,7 @@ function shellVals(s, set, go, est, c, sched) {
     pills, railGroups, subNav, hasSubNav, pageTitle, credsLabel, credsTitle, manageCreds, showPageTitle, rangeValue, setRange, bellLabel, buildLabel: (typeof window !== 'undefined' && window.__naasVersion) ? `v${window.__naasVersion.build} · ${window.__naasVersion.date}` : '', hasBuildLabel: !!(typeof window !== 'undefined' && window.__naasVersion), railCollapsed, railExpanded: !railCollapsed, railToggleTitle: railCollapsed ? 'Expand navigation' : 'Collapse navigation', iconAndi: 'brand/andi-symbol.svg', iconCalendar: iconDir + '/checklist.svg', goBrowseClose: () => { go('s7')(); set({ demoOpen: false }); },
     topTabs, layerSubtitle, elevatorOpen: !!s.elevatorOpen, toggleElevator: () => set({ elevatorOpen: !s.elevatorOpen }), closeElevator: () => set(close), chevronRot: s.elevatorOpen ? 'rotate(180deg)' : 'rotate(0deg)', elevator,
     goDiscoverClose: goTab('s1'), goHomeClose: goTab('s3', { layer: 'cloud', tab: 'connect' }),
-    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsSources, subIsRun, subIsFound, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
+    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIs1, subIs2, subIs3, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
   };
 }
 

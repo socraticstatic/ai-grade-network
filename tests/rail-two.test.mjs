@@ -7,7 +7,7 @@ if (typeof globalThis.window === 'undefined') {
   globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 }
 
-const PAGES = ['connect', 'observe', 'govern', 'cost'];
+const PAGES = ['discover', 'connect', 'observe', 'govern', 'cost'];
 
 test('no group offers more than two links', () => {
   for (const page of PAGES) {
@@ -17,9 +17,8 @@ test('no group offers more than two links', () => {
   }
 });
 
-test('every page declares the sub-content it used to stack on itself', () => {
-  for (const page of PAGES) {
-    const panels = SUB_PANELS[page];
+test('every page that declares sub-content declares it the same way', () => {
+  for (const [page, panels] of Object.entries(SUB_PANELS)) {
     assert.ok(Array.isArray(panels) && panels.length > 0, `${page} declares no panels`);
     for (const p of panels) {
       assert.ok(p.key && p.label, `${page} has an incomplete panel`);
@@ -33,7 +32,7 @@ test('every page declares the sub-content it used to stack on itself', () => {
 test('a rail link either names a panel on its own page or leaves for a screen', () => {
   for (const page of PAGES) {
     for (const [id, label] of SECTIONS[page] || []) {
-      if (id.startsWith('@')) continue;               // a real screen
+      if (id.startsWith('@')) continue;               // a view on the inventory
       if (id.startsWith('sec-')) continue;            // an anchor on the page itself
       const panel = (SUB_PANELS[page] || []).find(p => p.key === id);
       assert.ok(panel, `${page} link "${label}" points at ${id}, which is neither a screen, an anchor, nor a panel`);
@@ -41,22 +40,7 @@ test('a rail link either names a panel on its own page or leaves for a screen', 
   }
 });
 
-test('a rail link that names a panel opens the layer at it', () => {
-  const c = mkC({ screen: 's3', tab: 'connect' });
-  const link = vals(c).railGroups.flatMap(g => g.items).find(r => r.label === 'Accounts');
-  assert.ok(link, 'Discover lost its Accounts link');
-  link.go();
-  assert.equal(c.state.sub.page, 'connect');
-  assert.equal(c.state.sub.panel, 'sources');
-});
 
-test('Explore 360 still leaves for its own screen', () => {
-  const c = mkC({ screen: 's3', tab: 'connect' });
-  const link = vals(c).railGroups.flatMap(g => g.items).find(r => r.label === 'Explore 360');
-  assert.ok(link, 'Explore 360 is gone');
-  link.go();
-  assert.equal(c.state.screen, 's1');
-});
 
 test('the six links that left have a home in the layer', () => {
   const homed = {

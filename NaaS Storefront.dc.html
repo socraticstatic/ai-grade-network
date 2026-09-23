@@ -564,7 +564,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <sc-if value="{{ sS1 }}" hint-placeholder-val="{{ false }}">
 <section data-screen-label="S1 Discover" style="animation:fadeIn .3s;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)">
   <div style="display:flex;align-items:center;gap:16px;min-height:40px;flex-wrap:wrap">
-    <h1 style="margin:0;font-size:26px;line-height:34px;font-weight:700;color:var(--text-heading)">Explore 360</h1>
+    <h1 style="margin:0;font-size:26px;line-height:34px;font-weight:700;color:var(--text-heading)">Discover</h1>
     <sc-if value="{{ scanDone }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ invStats }}" as="k" hint-placeholder-count="5"><span style="display:inline-flex;align-items:baseline;gap:5px;height:28px;padding:0 10px;border-radius:9999px;background:var(--bg-base);border:1px solid var(--border-secondary);font-size:12px;color:var(--text-light);white-space:nowrap"><strong style="font-size:13px;color:var(--text-heading)">{{ k.v }}</strong>{{ k.l }}</span></sc-for><sc-if value="{{ newStrip.hasNew }}" hint-placeholder-val="{{ false }}"><button class="fx-badge new" onClick="{{ newStrip.toggle }}" aria-pressed="{{ newOnly }}" style="height:28px;padding:0 10px;font-size:12px;cursor:pointer">{{ newStrip.pill }}</button></sc-if></div></sc-if>
     <sc-if value="{{ scanning }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;color:var(--text-light)">Scanning…</span></sc-if>
     <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
@@ -979,7 +979,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <button onClick="{{ closeSub }}" aria-label="Close" style="height:28px;padding:0 12px;border:0;border-radius:9999px;background:transparent;color:var(--link);font-size:13px;font-weight:500;cursor:pointer">Close</button>
   </div>
   <div style="min-height:0;overflow-y:auto;padding:24px">
-    <sc-if value="{{ subIsSources }}" hint-placeholder-val="{{ true }}">
+    <sc-if value="{{ subIs1 }}" hint-placeholder-val="{{ true }}">
     <div id="sec-accounts" class="fx-card" aria-label="Sources" style="gap:10px;padding:16px 24px">
       <div class="fx-card-head"><div><h3 class="fx-card-title">Connected accounts</h3><div class="fx-card-sub">{{ sourcesSub }}</div></div><button class="fx-btn" onClick="{{ toggleAddSource }}" style="height:32px">{{ addSourceLabel }}</button></div>
       <sc-if value="{{ addSourceOpen }}" hint-placeholder-val="{{ false }}">
@@ -1017,13 +1017,13 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       </div>
     </div>
     </sc-if>
-    <sc-if value="{{ subIsRun }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ subIs2 }}" hint-placeholder-val="{{ false }}">
     <div style="display:grid;gap:12px">
       <sc-if value="{{ scanning }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:var(--text-light)">{{ scanLine }}</div></sc-if>
       <sc-for list="{{ scanSteps }}" as="sst" hint-placeholder-count="4"><div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:1px solid var(--border-secondary);border-radius:12px"><span aria-hidden="true" style="width:18px;flex:none;color:{{ sst.color }}">{{ sst.mark }}</span><div style="min-width:0"><div style="font-size:14px;font-weight:600;color:var(--text-heading)">{{ sst.label }}</div><div style="font-size:12px;color:var(--text-light)">{{ sst.src }}</div></div></div></sc-for>
     </div>
     </sc-if>
-    <sc-if value="{{ subIsFound }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ subIs3 }}" hint-placeholder-val="{{ false }}">
 
     <sc-if value="{{ hasGap }}" hint-placeholder-val="{{ true }}">
     <div id="sec-gap" class="fx-card" style="gap:12px;padding:16px 24px">
