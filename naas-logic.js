@@ -17,10 +17,12 @@ const CLOUD_ORDER = ['AWS', 'Azure', 'GCP', 'CoreWeave', 'Oracle'];
 
 // Who holds the SLA for each segment of a path. NetBond is AT&T's edge (the IPE);
 // Direct Connect and ExpressRoute are the hyperscaler's; Equinix is a third
-// party. Every access product on these estates is AT&T's today; a Lumen or other
-// carrier last mile is a third party even when it hands off onto AT&T's edge.
+// party. The last mile is whoever the site says answers for it: an off-net
+// circuit AT&T ordered from Lumen is AT&T's, the same wire bought by the
+// customer is Lumen's. It used to be read off the word "Lumen" in the label,
+// which put AT&T's off-net circuits on the not-AT&T track.
 export const RAMP_EDGE = { NetBond: 'att', DX: 'cloud', ER: 'cloud', Interconnect: 'cloud', EQX: 'third' };
-export const accessOwner = (access) => (/lumen/i.test(access || '') ? 'third' : 'att');
+export const accessOwner = (site) => ((site && site.accessSla) || 'att');
 
 // The left column starts at regions. A site is placed by its metro, or, for a
 // nationwide rollup, by the region its own name carries ("Remote sites, East").
@@ -28,7 +30,7 @@ export const accessOwner = (access) => (/lumen/i.test(access || '') ? 'third' : 
 const METRO_REGION = {
   Ashburn: 'US East', Atlanta: 'US East',
   Austin: 'US Central', Chicago: 'US Central', Dallas: 'US Central', Houston: 'US Central',
-  Denver: 'US West', Phoenix: 'US West', 'San Jose': 'US West',
+  Denver: 'US West', Phoenix: 'US West', 'Salt Lake City': 'US West', 'San Jose': 'US West',
   Frankfurt: 'International', Singapore: 'International',
 };
 const REGION_ORDER = ['US East', 'US Central', 'US West', 'International', 'Nationwide'];
@@ -39,7 +41,7 @@ export function regionOf(site) {
 }
 // The path a site's traffic takes, as a key: its access owner, then its core
 // owner, or 'public' if it never enters a private network at all.
-const patternOf = (site) => (!site.priv ? 'public' : `${accessOwner(site.access)}>${site.core === 'third' ? 'third' : 'att'}`);
+const patternOf = (site) => (!site.priv ? 'public' : `${accessOwner(site)}>${site.core === 'third' ? 'third' : 'att'}`);
 const PATTERN_ORDER = ['att>att', 'third>att', 'third>third', 'public'];
 export function regionRows(est) {
   const by = {};
@@ -50,7 +52,7 @@ export function regionRows(est) {
     sites.forEach(site => { const k = patternOf(site); if (!seen[k]) seen[k] = site; });
     const patterns = PATTERN_ORDER.filter(k => seen[k]).map(k => {
       const rep = seen[k];
-      return { key: k === 'att>att' ? 'att' : k, priv: !!rep.priv, access: rep.access, core: rep.core, via: rep.via, viaRamp: rep.viaRamp };
+      return { key: k === 'att>att' ? 'att' : k, priv: !!rep.priv, access: rep.access, accessSla: rep.accessSla, carrier: rep.carrier, core: rep.core, via: rep.via, viaRamp: rep.viaRamp };
     });
     const count = sites.reduce((a, s2) => a + countOf(s2.name), 0);
     return { name, sites, patterns, count };
@@ -103,7 +105,7 @@ export function heroLayout(est, opts) {
   out.ghost = empty;
 
   const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || regionRows(est).map(r => {
-    const carriers = [...new Set(r.patterns.map(p => (p.key === 'public' ? 'public' : p.key.startsWith('third') ? 'Lumen' : 'AT&T')))];
+    const carriers = [...new Set(r.patterns.map(p => (p.key === 'public' ? 'public' : p.key.startsWith('third') ? (p.carrier || 'third party') : 'AT&T')))];
     return { name: r.name, access: `${r.count.toLocaleString('en-US')} ${r.count === 1 ? 'site' : 'sites'} · ${carriers.join(', ')}`,
       priv: r.patterns.some(p => p.priv), drillKey: 'region:' + r.name, rollup: true, region: true, patterns: r.patterns, groups: r.sites.length };
   }));
@@ -128,7 +130,7 @@ export function heroLayout(est, opts) {
     // entry, each carrying a stand-in site with that path's access, core and
     // on-ramp, so the routing below draws a region exactly as it draws a site.
     const lines = s.patterns ? s.patterns.map((p, k) => ({ k, n: s.patterns.length,
-      site: { name: `${s.name} · ${p.key}`, access: p.access, priv: p.priv, core: p.core, via: p.via, viaRamp: p.viaRamp, region: s.name } }))
+      site: { name: `${s.name} · ${p.key}`, access: p.access, accessSla: p.accessSla, carrier: p.carrier, priv: p.priv, core: p.core, via: p.via, viaRamp: p.viaRamp, region: s.name } }))
       : [{ k: 0, n: 1, site: s }];
     lines.forEach(({ k, n: np, site }) => {
       const viaLane = !site.priv && !site.ghost;
@@ -214,7 +216,7 @@ export function heroLayout(est, opts) {
   };
   out.edges.filter(e => e.kind === 'ingress' && e.priv && !e.ghost && !e.viaLane && e.site && !e.site.more && e.site.core !== 'third').forEach(e => {
     place([
-      { seg: 'Access', x: sA.x, w: sA.w, owner: accessOwner(e.site.access) },
+      { seg: 'Access', x: sA.x, w: sA.w, owner: accessOwner(e.site) },
       { seg: 'Edge', x: sE.x, w: sE.w, owner: 'att' },
       { seg: 'Core', x: sC.x, owner: 'att' },
     ], e.y2, { site: e.site.name }, 'site');
@@ -241,7 +243,7 @@ export function heroLayout(est, opts) {
     const y2 = (regionEdge ? regionEdge.y1 : clampBand(target.cy)) + DROP;
     const leg = (seg, x, w, owner, y, extra = {}) => out.legs.push({ seg, x, w, owner, y, track: 'other', site: name, side: 'path',
       key: `l:${name}:${seg}:${x}`, d: `M${x},${y} L${x + w},${y}`, ...extra });
-    leg('Access', sA.x, sA.w, accessOwner(e.site.access), y1);
+    leg('Access', sA.x, sA.w, accessOwner(e.site), y1);
     leg('Edge', sE.x, sE.w, 'third', y1);
     const mx = sC.x + sC.w / 2;
     leg('Core', sC.x, sC.w, 'third', y1, { y2, d: `M${sC.x},${y1} C${mx},${y1} ${mx},${y2} ${sC.x + sC.w},${y2}` });

@@ -188,11 +188,39 @@ test('the wire out to the cloud leaves from where the last leg ended', () => {
 // AT&T bought Lumen's mass-market fiber, not its enterprise network, so in an
 // enterprise estate Lumen is a separate carrier. Two scenarios, side by side.
 
-test('Denver: a Lumen last mile handed onto AT&T at the Edge', () => {
+// Owner means who holds the SLA, not whose wire it is. Found 2026-09-23: Denver's
+// data said "AT&T orders Lumen's circuit and takes it over ENNI", which is an AT&T
+// off-net circuit, so AT&T holds the SLA. The picture drew it on the not-AT&T track
+// anyway, because owner was read off the word "Lumen" in the access label.
+test('a carrier name never decides who owns the Access leg; the stated SLA does', async () => {
+  const { accessOwner } = await import('../naas-logic.js');
+  assert.equal(accessOwner({ access: 'Lumen Ethernet' }), 'att', 'the word Lumen made a leg third party');
+  assert.equal(accessOwner({ access: 'Anything', accessSla: 'third' }), 'third');
+  assert.equal(accessOwner({ access: 'ABF (Business Fiber)' }), 'att');
+});
+
+test('Denver: Lumen\'s wire, AT&T\'s SLA, so it never leaves the AT&T track', () => {
   const l = West();
   const legs = l.legs.filter(g => g.site === 'Denver branch');
+  assert.deepEqual(legs.map(g => [g.seg, g.owner]), [['Access', 'att'], ['Edge', 'att']]);
+  assert.equal(l.bends.filter(b => b.site === 'Denver branch').length, 0, 'an off-net circuit AT&T answers for was drawn as a handoff');
+});
+
+test('Salt Lake: a Lumen circuit the customer bought, handed onto AT&T at the Edge', () => {
+  const l = West();
+  const legs = l.legs.filter(g => g.site === 'Salt Lake branch');
   assert.deepEqual(legs.map(g => [g.seg, g.owner]), [['Access', 'third'], ['Edge', 'att']]);
-  assert.deepEqual(l.bends.filter(b => b.site === 'Denver branch').map(b => b.between), [['Access', 'Edge']], 'the ENNI handoff is not drawn');
+  assert.deepEqual(l.bends.filter(b => b.site === 'Salt Lake branch').map(b => b.between), [['Access', 'Edge']], 'the handoff is not drawn');
+});
+
+test('the SLA owner survives the drill to a site\'s paths', () => {
+  for (const [site, owner] of [['Denver branch', 'att'], ['Salt Lake branch', 'third']]) {
+    const rows = siteDrillRows(D.ESTATES.mature, ['region:US West', site]).rows;
+    const l = heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, siteRows: rows });
+    const access = l.legs.filter(g => g.seg === 'Access' && g.side === 'site');
+    assert.ok(access.length > 0, `${site}: no paths drawn`);
+    for (const g of access) assert.equal(g.owner, owner, `${site} → ${g.site}`);
+  }
 });
 
 test('Phoenix: Lumen end to end never touches AT&T, core included', () => {
@@ -233,9 +261,21 @@ test('the Lumen story is on the first screen: US West carries all three paths', 
   assert.equal(lumen.some(g => g.owner === 'att'), false, 'the Lumen end-to-end line touches AT&T');
 });
 
-test('drilled into US West, both Lumen sites are themselves', () => {
+test('drilled into US West, every Lumen site is itself', () => {
   const names = West().sites.map(s => s.name);
-  assert.ok(names.includes('Denver branch') && names.includes('Phoenix DC'), names.join(', '));
+  for (const n of ['Denver branch', 'Salt Lake branch', 'Phoenix DC']) assert.ok(names.includes(n), `${n} missing: ${names.join(', ')}`);
+});
+
+test('a region card names the carrier it has, not a hard-coded one', () => {
+  const west = L().sites.find(s => s.name === 'US West');
+  assert.match(west.access, /AT&T, Lumen$/);
+  const odd = { ...D.ESTATES.mature, sites: [{ name: 'X', access: 'Zayo Ethernet', accessSla: 'third', carrier: 'Zayo', priv: true, metro: 'Denver' }] };
+  assert.match(heroLayout(odd, {}).sites[0].access, /Zayo$/, 'every third party was called Lumen');
+});
+
+test('Phoenix\'s access is the circuit, not the on-ramp product', () => {
+  const phoenix = D.ESTATES.mature.sites.find(s => s.name === 'Phoenix DC');
+  assert.doesNotMatch(phoenix.access, /Cloud Connect/, 'an Edge product is labelled as Access');
 });
 
 // Nine sites are taller than the band. Clamping each separately piled every site

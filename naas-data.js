@@ -135,11 +135,15 @@ export const ESTATES = {
       { name: 'Austin campus', cls: 'Campus', access: 'ABF (Business Fiber)', priv: true, metro: 'Austin' },
       { name: 'Remote sites (212)', cls: 'Branch', access: 'SD-WAN over AVPN', priv: true, metro: 'Various' },
       { name: 'Field (wireless)', cls: 'Mobility', access: 'Mobility first mile', priv: true, metro: 'Various' },
-      // Lumen, two ways. Denver's last mile is Lumen's, handed onto AT&T's edge
-      // over ENNI. Phoenix is Lumen end to end - access, core and its own cloud
-      // on-ramp into us-west-2 - and never touches AT&T.
-      { name: 'Denver branch', cls: 'Branch', access: 'Lumen (Ethernet)', priv: true, metro: 'Denver' },
-      { name: 'Phoenix DC', cls: 'Data center', access: 'Lumen Cloud Connect', priv: true, metro: 'Phoenix', core: 'third', via: 'us-west-2', viaRamp: 'Lumen' },
+      // Lumen, three ways. The owner of a segment is whoever holds its SLA, which
+      // is not always whoever owns the wire. Denver: AT&T ordered Lumen's circuit
+      // and takes it over ENNI (off-net), so AT&T answers for it. Salt Lake: the
+      // customer bought Lumen themselves and cross-connects it to an AT&T port,
+      // so Lumen answers for the last mile. Phoenix: Lumen end to end - access,
+      // core and its own cloud on-ramp into us-west-2 - and never touches AT&T.
+      { name: 'Denver branch', cls: 'Branch', access: 'Lumen off-net', carrier: 'Lumen', accessSla: 'att', priv: true, metro: 'Denver' },
+      { name: 'Salt Lake branch', cls: 'Branch', access: 'Lumen Ethernet', carrier: 'Lumen', accessSla: 'third', priv: true, metro: 'Salt Lake City' },
+      { name: 'Phoenix DC', cls: 'Data center', access: 'Lumen fiber', carrier: 'Lumen', accessSla: 'third', priv: true, metro: 'Phoenix', core: 'third', via: 'us-west-2', viaRamp: 'Lumen' },
       { name: 'Singapore DC', cls: 'Data center', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Singapore' },
     ],
     regionsList: [

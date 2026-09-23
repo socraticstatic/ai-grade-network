@@ -93,7 +93,10 @@ test('drilling to Denver shows Denver, not the regions', async () => {
   const r = C.siteDrillRows(D.ESTATES.mature, ['region:US West', 'Denver branch']);
   assert.ok(r, 'the drill returned nothing, so the picture fell back to the regions');
   assert.equal(r.level, 'path');
-  for (const row of r.rows) assert.match(row.access, /^Lumen/, `${row.name} lost its Lumen access`);
+  for (const row of r.rows) {
+    assert.match(row.access, /Lumen/, `${row.name} lost its Lumen access`);
+    assert.equal(row.accessSla, 'att', `${row.name} forgot that AT&T answers for Denver's off-net circuit`);
+  }
 });
 
 test('drilling to Phoenix shows only where Lumen goes, and never says AT&T', async () => {

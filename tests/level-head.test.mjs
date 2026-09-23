@@ -229,7 +229,8 @@ test('the band door opens the band with the drawer, in one frame', () => {
 
 test('the roots still read on partial and mature', () => {
   // Mature gained Denver branch and Phoenix DC, the two Lumen sites: 7 -> 9.
-  for (const [view, sites, fab, clouds] of [['partial', 5, 2, 7], ['mature', 9, 7, 8]]) {
+  // Then Salt Lake branch, a Lumen last mile the customer bought: 9 -> 10.
+  for (const [view, sites, fab, clouds] of [['partial', 5, 2, 7], ['mature', 10, 7, 8]]) {
     const v = vals(mkC({ view }));
     assert.ok(v.sitesDoor.label.startsWith(`All ${sites} `), `${view} sites: ${v.sitesDoor.label}`);
     assert.ok(v.bandDoor.label.startsWith(`All ${fab} `), `${view} fabric: ${v.bandDoor.label}`);

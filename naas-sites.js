@@ -108,7 +108,7 @@ export function siteTree(est) {
     // that say whose network it rides - core, via, viaRamp - or a drill forgets
     // that Phoenix is Lumen end to end.
     children = children.concat(g.named.map((st, i) => ({ kind: 'site', key: `${g.cls}:${st.name}`, ...siteRow(g.cls, st.metro, i, !!st.priv), name: st.name, address: `${st.metro} · ${st.access}`, metro: st.metro, access: st.access, priv: !!st.priv, since: (st.idx * 97 + 17) % 365,
-      core: st.core, via: st.via, viaRamp: st.viaRamp })));
+      core: st.core, via: st.via, viaRamp: st.viaRamp, accessSla: st.accessSla, carrier: st.carrier })));
     // The class rolls up from what it contains, so a class badge can never contradict its metros.
     const onFabric = children.reduce((a, ch) => a + (ch.kind === 'metro' ? ch.onFabric : (ch.priv ? 1 : 0)), 0);
     return { kind: 'class', key: g.cls, cls: g.cls, label: g.label, icon: g.icon, unit: g.unit, plural: g.plural, count: g.count, onFabric, access: [...g.access], children };

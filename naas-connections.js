@@ -158,14 +158,14 @@ import * as S from './naas-sites.js';
 function pathsOfSite(est, site) {
   if (site.core === 'third') {
     const r = est.regionsList.find(x => x.region === site.via);
-    const carrier = site.viaRamp || 'third party';
+    const carrier = site.carrier || site.viaRamp || 'third party';
     return { level: 'path', label: `${site.name || site.id} · paths`, rows: r ? [{ key: 'path:' + r.region, name: `${r.cloud} ${r.region}`,
-      access: `${site.access} · ${P.path(site, r).ms} ms · ${carrier} network`, priv: true, core: 'third', via: r.region, viaRamp: site.viaRamp,
+      access: `${site.access} · ${P.path(site, r).ms} ms · ${carrier} network`, priv: true, core: 'third', via: r.region, viaRamp: site.viaRamp, accessSla: site.accessSla, carrier: site.carrier,
       leaf: true, region: r.region }] : [] };
   }
   return pathsOfAttSite(est, site);
 }
-function pathsOfAttSite(est, site) { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; }
+function pathsOfAttSite(est, site) { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, accessSla: site.accessSla, carrier: site.carrier, gbps: x.gbps, leaf: true, region: x.region.region })) }; }
 
 /** Left column of the hero for a drill trail: [] → the estate's sites; [class] → metros or named sites; [class, metro] → sites; [class, metro, site] → the site's paths. */
 export function siteDrillRows(est, trail, opts = {}) {
@@ -183,7 +183,7 @@ export function siteDrillRows(est, trail, opts = {}) {
       // the drill cannot resolve returned null and dropped the picture back to
       // the regions, so the region reappeared and was appended to the trail again.
       return { level: 'site', label: name, rows: region.sites.map(x => ({ key: 'site:' + x.name, name: x.name, access: x.access, metro: x.metro,
-        priv: !!x.priv, core: x.core, via: x.via, viaRamp: x.viaRamp, rollup: !!x.rollup, cursor: 'pointer' })) };
+        priv: !!x.priv, core: x.core, via: x.via, viaRamp: x.viaRamp, accessSla: x.accessSla, carrier: x.carrier, rollup: !!x.rollup, cursor: 'pointer' })) };
     }
     return siteDrillRows(est, trail.slice(1), opts);
   }

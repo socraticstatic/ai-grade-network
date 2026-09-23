@@ -377,7 +377,7 @@ test('fix (round 2): a sites level scope never rebuilds s.drill - only the old `
   v = vals(c);
   assert.deepEqual(c.state.drill, []);
   assert.equal(v.drawer.title, 'Sites');
-  assert.equal(v.drawer.total, 9); // mature gained the two Lumen sites
+  assert.equal(v.drawer.total, 10); // mature gained the three Lumen sites
 
   // The old `metro` kind's rebuild is load-bearing - Task 11 rerouted the
   // picture's own `+N more` row to `openLevel('sites')`, but `metro` is still
