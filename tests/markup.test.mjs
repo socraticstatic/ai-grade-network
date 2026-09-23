@@ -111,12 +111,19 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Things in each segment: the legs loop (and its chip: one sc-if, one div) and the
 // bends loop become a pieces loop and a things loop (a pill: two divs).
 // div 875 -> 876, sc-if 311 -> 310, sc-for unchanged at 179.
+// Provider cards, the first level on the right (one loop; a mark sc-if, a mark
+// span and a caret span, four divs): div 876 -> 880, span 642 -> 644,
+// sc-if 310 -> 311, sc-for 179 -> 180.
+// The center band: each segment label and each thing gets a span (a pill and an
+// owner dot), and a loop runs traffic along every route: span 644 -> 646,
+// sc-for 180 -> 181.
+// The fold: a folded side's name reads on end (one div): div 880 -> 881.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 876],
-    ['span', /<span\b/g, /<\/span>/g, 642],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 310],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 179],
+    ['div', /<div\b/g, /<\/div>/g, 881],
+    ['span', /<span\b/g, /<\/span>/g, 646],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 311],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 181],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 254],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],

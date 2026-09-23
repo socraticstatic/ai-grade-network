@@ -174,6 +174,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 .fx-btn:hover{border-color:var(--border-active)}
 .fx-spacer{margin-left:auto}
 @keyframes bandBreathe{0%{opacity:.7}50%{opacity:1}100%{opacity:.92}}
+/* The band folds and unfolds with an ease and a slight overshoot. Geometry moves through CSS (x, width, d, transform) so the browser eases one state into the other. */
+.fold{transition:transform .55s cubic-bezier(.34,1.45,.64,1),x .55s cubic-bezier(.34,1.45,.64,1),y .55s cubic-bezier(.34,1.45,.64,1),width .55s cubic-bezier(.34,1.45,.64,1),d .55s cubic-bezier(.34,1.45,.64,1),opacity .3s ease}
+@media (prefers-reduced-motion:reduce){.fold{transition:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes crawl{to{stroke-dashoffset:-24}}
 @keyframes pulseOnce{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}
@@ -339,7 +342,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <linearGradient id="bandGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0e2a4d"></stop><stop offset="1" stop-color="#00235a"></stop></linearGradient>
   </defs>
   <foreignObject x="24" y="0" width="460" height="18"><div style="display:flex;align-items:center;gap:8px;height:18px"><button onClick="{{ sitesUp }}" title="Up one level" style="flex:1;min-width:0;border:0;background:transparent;padding:0;margin:0;text-align:left;color:{{ sitesHeadColor }};font-size:11px;line-height:18px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit">{{ sitesHead }}</button><sc-if value="{{ sitesDoor.has }}" hint-placeholder-val="{{ true }}"><button onClick="{{ sitesDoor.open }}" title="{{ sitesDoor.title }}" style="flex:none;margin-right:{{ sitesDoor.gutter }}px;border:0;background:transparent;padding:0;color:{{ sitesDoor.color }};font-size:11px;line-height:18px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">{{ sitesDoor.label }}</button></sc-if><sc-if value="{{ sitesDoor.hasNot }}" hint-placeholder-val="{{ false }}"><span style="flex:none;margin-right:{{ sitesDoor.gutter }}px;color:{{ sitesDoor.color }};font-size:11px;line-height:18px;font-weight:600;white-space:nowrap;font-family:inherit">{{ sitesDoor.label }}</span></sc-if></div></foreignObject>
-  <foreignObject x="980" y="0" width="{{ cloudsHeadW }}" height="18"><div style="display:flex;align-items:center;gap:8px;height:18px"><button onClick="{{ cloudsUp }}" title="{{ cloudsHead }}" style="flex:1;min-width:0;border:0;background:transparent;padding:0;margin:0;text-align:left;color:{{ cloudsHeadColor }};font-size:{{ cloudsHeadSize }};line-height:18px;letter-spacing:{{ cloudsHeadTrack }};text-transform:{{ cloudsHeadCase }};font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit">{{ cloudsHead }}</button><sc-if value="{{ cloudsDoor.has }}" hint-placeholder-val="{{ true }}"><button onClick="{{ cloudsDoor.open }}" title="{{ cloudsDoor.title }}" style="flex:none;margin-right:{{ cloudsDoor.gutter }}px;border:0;background:transparent;padding:0;color:{{ cloudsDoor.color }};font-size:11px;line-height:18px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">{{ cloudsDoor.label }}</button></sc-if><sc-if value="{{ cloudsDoor.hasNot }}" hint-placeholder-val="{{ false }}"><span style="flex:none;margin-right:{{ cloudsDoor.gutter }}px;color:{{ cloudsDoor.color }};font-size:11px;line-height:18px;font-weight:600;white-space:nowrap;font-family:inherit">{{ cloudsDoor.label }}</span></sc-if></div></foreignObject>
+  <foreignObject x="{{ rightX }}" y="0" width="{{ cloudsHeadW }}" height="18"><div style="display:flex;align-items:center;gap:8px;height:18px"><button onClick="{{ cloudsUp }}" title="{{ cloudsHead }}" style="flex:1;min-width:0;border:0;background:transparent;padding:0;margin:0;text-align:left;color:{{ cloudsHeadColor }};font-size:{{ cloudsHeadSize }};line-height:18px;letter-spacing:{{ cloudsHeadTrack }};text-transform:{{ cloudsHeadCase }};font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit">{{ cloudsHead }}</button><sc-if value="{{ cloudsDoor.has }}" hint-placeholder-val="{{ true }}"><button onClick="{{ cloudsDoor.open }}" title="{{ cloudsDoor.title }}" style="flex:none;margin-right:{{ cloudsDoor.gutter }}px;border:0;background:transparent;padding:0;color:{{ cloudsDoor.color }};font-size:11px;line-height:18px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">{{ cloudsDoor.label }}</button></sc-if><sc-if value="{{ cloudsDoor.hasNot }}" hint-placeholder-val="{{ false }}"><span style="flex:none;margin-right:{{ cloudsDoor.gutter }}px;color:{{ cloudsDoor.color }};font-size:11px;line-height:18px;font-weight:600;white-space:nowrap;font-family:inherit">{{ cloudsDoor.label }}</span></sc-if></div></foreignObject>
   <sc-if value="{{ showWorkloadsHead }}" hint-placeholder-val="{{ true }}"><foreignObject x="1252" y="0" width="136" height="18"><div style="color:var(--text-light);font-size:11px;line-height:18px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;white-space:nowrap">Workloads</div></foreignObject></sc-if>
 
   <sc-for list="{{ heroEdges }}" as="e" hint-placeholder-count="6">
@@ -382,20 +385,31 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <foreignObject x="{{ bandLabelX }}" y="0" width="{{ bandW }}" height="18"><div style="display:flex;align-items:center;gap:8px;height:18px"><button onClick="{{ toggleBand }}" aria-label="Expand the fabric band" style="flex:1;min-width:0;border:0;background:transparent;padding:0;color:var(--link);font-size:11px;line-height:18px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;text-align:center;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit">{{ bandLabel }}</button><sc-if value="{{ bandDoor.has }}" hint-placeholder-val="{{ true }}"><button onClick="{{ bandDoor.open }}" title="{{ bandDoor.title }}" style="flex:none;margin-right:{{ bandDoor.gutter }}px;border:0;background:transparent;padding:0;color:{{ bandDoor.color }};font-size:11px;line-height:18px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">{{ bandDoor.label }}</button></sc-if><sc-if value="{{ bandDoor.hasNot }}" hint-placeholder-val="{{ false }}"><span style="flex:none;margin-right:{{ bandDoor.gutter }}px;color:{{ bandDoor.color }};font-size:11px;line-height:18px;font-weight:600;white-space:nowrap;font-family:inherit">{{ bandDoor.label }}</span></sc-if></div></foreignObject>
     <sc-if value="{{ fabClosed }}" hint-placeholder-val="{{ true }}">
     <sc-for list="{{ segments }}" as="sg" hint-placeholder-count="5">
-      <g onClick="{{ sg.open }}" role="{{ sg.role }}" aria-label="{{ sg.label }}" style="cursor:{{ sg.cursor }}">
-        <rect x="{{ sg.x }}" y="{{ sg.y }}" width="{{ sg.w }}" height="{{ sg.h }}" style="fill:{{ sg.fill }}"></rect>
-        <line x1="{{ sg.x }}" y1="{{ sg.y }}" x2="{{ sg.x }}" y2="{{ sg.bottom }}" stroke-width="1" style="stroke:var(--border-secondary);opacity:{{ sg.divider }}"></line>
-        <foreignObject x="{{ sg.x }}" y="{{ sg.labelY }}" width="{{ sg.w }}" height="16" style="pointer-events:none"><div style="text-align:center;font-size:11px;line-height:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light)">{{ sg.label }}</div></foreignObject>
+      <g class="fold" onClick="{{ sg.open }}" role="button" aria-label="{{ sg.tip }}" style="cursor:{{ sg.cursor }};transform:translate({{ sg.x }}px,0px)"><title>{{ sg.tip }}</title>
+        <rect class="fold" x="0" y="{{ sg.y }}" width="{{ sg.w }}" height="{{ sg.h }}" style="width:{{ sg.w }}px;fill:{{ sg.fill }}"></rect>
+        <line x1="0" y1="{{ sg.y }}" x2="0" y2="{{ sg.bottom }}" stroke-width="1" stroke-dasharray="3 4" style="stroke:var(--band-stroke);opacity:{{ sg.divider }}"></line>
+        <g class="fold" style="opacity:{{ sg.edgeOp }}">
+          <rect x="17" y="{{ sg.stackY }}" width="10" height="{{ sg.stackH }}" rx="3" style="fill:var(--bg-base);stroke:var(--border-secondary);filter:drop-shadow(0 1px 2px rgba(0,0,0,.16))"></rect>
+          <rect x="13" y="{{ sg.stackY }}" width="10" height="{{ sg.stackH }}" rx="3" style="fill:var(--bg-base);stroke:var(--border-secondary);filter:drop-shadow(0 1px 2px rgba(0,0,0,.16))"></rect>
+          <rect x="9" y="{{ sg.stackY }}" width="10" height="{{ sg.stackH }}" rx="3" style="fill:var(--bg-base);stroke:var(--border-primary);filter:drop-shadow(0 2px 3px rgba(0,0,0,.2))"></rect>
+          <foreignObject x="0" y="{{ sg.vlabelY }}" width="36" height="74" style="pointer-events:none"><div style="writing-mode:vertical-rl;transform:rotate(180deg);margin:0 auto;height:74px;line-height:36px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-body)">{{ sg.label }}</div></foreignObject>
+        </g>
+        <foreignObject class="fold" x="0" y="{{ sg.labelY }}" width="{{ sg.w }}" height="18" style="pointer-events:none;width:{{ sg.w }}px;opacity:{{ sg.pillOp }}"><div style="text-align:center;line-height:16px;white-space:nowrap"><span style="display:inline-block;padding:0 8px;border-radius:9px;border:1px solid {{ sg.pillBorder }};background:{{ sg.pillBg }};color:{{ sg.pillColor }};font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">{{ sg.label }}</span></div></foreignObject>
       </g>
     </sc-for>
     <sc-for list="{{ pieces }}" as="pc" hint-placeholder-count="12">
-      <path d="{{ pc.d }}" style="fill:none;stroke:{{ pc.stroke }};stroke-width:{{ pc.width }};stroke-dasharray:{{ pc.dash }};stroke-linecap:round"></path>
+      <path class="fold" d="{{ pc.d }}" style="d:path('{{ pc.d }}');fill:none;stroke:{{ pc.stroke }};stroke-width:{{ pc.width }};stroke-dasharray:{{ pc.dash }};stroke-linecap:round"></path>
+    </sc-for>
+    <sc-for list="{{ routeDots }}" as="rd" hint-placeholder-count="8">
+      <path id="{{ rd.id }}" d="{{ rd.d }}" style="fill:none;stroke:none"></path>
+      <circle r="2.2" style="fill:var(--link)" opacity=".85"><animateMotion dur="{{ rd.dur }}" begin="{{ rd.begin }}" repeatCount="indefinite"><mpath href="#{{ rd.id }}"></mpath></animateMotion></circle>
+      <circle r="2.2" style="fill:var(--link)" opacity=".55"><animateMotion dur="{{ rd.dur }}" begin="{{ rd.back }}" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#{{ rd.id }}"></mpath></animateMotion></circle>
     </sc-for>
     <sc-for list="{{ nodes }}" as="nd" hint-placeholder-count="10">
-      <foreignObject x="{{ nd.fx }}" y="{{ nd.fy }}" width="{{ nd.fw }}" height="20"><div style="display:flex;justify-content:center;height:20px;align-items:center"><div title="{{ nd.title }}" style="max-width:100%;box-sizing:border-box;padding:0 5px;height:18px;line-height:15px;border:{{ nd.border }};border-radius:9px;background:var(--bg-base);font-size:10px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ nd.label }}</div></div></foreignObject>
+      <foreignObject class="fold" x="{{ nd.fx }}" y="{{ nd.fy }}" width="{{ nd.fw }}" height="20" style="x:{{ nd.fx }}px;y:{{ nd.fy }}px;width:{{ nd.fw }}px;opacity:{{ nd.op }};pointer-events:{{ nd.pe }}"><div style="display:flex;justify-content:center;height:20px;align-items:center"><div title="{{ nd.title }}" style="max-width:100%;box-sizing:border-box;padding:0 6px 0 4px;height:18px;line-height:15px;border:{{ nd.border }};border-radius:9px;background:var(--bg-base);box-shadow:0 1px 3px rgba(0,0,0,.14);font-size:10px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="display:inline-block;width:6px;height:6px;border-radius:3px;margin-right:4px;vertical-align:1px;background:{{ nd.dot }}"></span>{{ nd.label }}</div></div></foreignObject>
     </sc-for>
     <sc-for list="{{ xconnects }}" as="xc" hint-placeholder-count="1">
-      <rect x="{{ xc.sx }}" y="{{ xc.sy }}" width="{{ xc.s }}" height="{{ xc.s }}" rx="1" style="fill:var(--bg-base);stroke:var(--text-heading);stroke-width:1.5"><title>{{ xc.title }}</title></rect>
+      <rect class="fold" x="{{ xc.sx }}" y="{{ xc.sy }}" width="{{ xc.s }}" height="{{ xc.s }}" rx="1" style="x:{{ xc.sx }}px;y:{{ xc.sy }}px;fill:var(--bg-base);stroke:var(--text-heading);stroke-width:1.5"><title>{{ xc.title }}</title></rect>
     </sc-for>
     </sc-if>
     <!-- inside the fabric (2026-09-09): facilities → ports → circuits, opened in place -->
@@ -415,7 +429,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <!-- outside the fabric: third party, internet (Ramesh, 2026-09-09) -->
   <g aria-label="Outside the AT&amp;T network">
     <rect x="{{ laneX }}" y="{{ laneY }}" width="{{ laneW }}" height="{{ laneH }}" rx="12" fill="var(--bg-wash)" style="stroke:var(--border-secondary);cursor:pointer" onClick="{{ toggleLane }}" role="button" aria-label="Outside the AT&amp;T network"><title>{{ laneTitle }}</title></rect>
-    <foreignObject x="{{ laneX }}" y="{{ laneY }}" width="{{ laneW }}" height="{{ laneH }}" style="pointer-events:none"><div style="box-sizing:border-box;height:76px;padding:0 16px;display:flex;flex-direction:column;justify-content:center;gap:2px"><div style="font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap">Outside the AT&amp;T network</div><div style="font-size:11px;line-height:16px;color:var(--text-light);white-space:nowrap">third party · internet · {{ laneCount }} · isolate ›</div></div></foreignObject>
+    <foreignObject x="{{ laneX }}" y="{{ laneY }}" width="{{ laneW }}" height="{{ laneH }}" style="pointer-events:none"><div style="box-sizing:border-box;height:76px;padding:0 16px;display:flex;flex-direction:column;justify-content:center;gap:2px"><div style="font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap">Outside the AT&amp;T network</div><div style="font-size:11px;line-height:16px;color:var(--text-light);white-space:nowrap">third party · {{ laneCount }} · isolate ›</div></div></foreignObject>
     <foreignObject x="{{ laneX }}" y="{{ laneY }}" width="{{ laneW }}" height="{{ laneH }}"><div style="display:flex;justify-content:flex-end;padding:10px 12px 0 0"><button onClick="{{ laneAttach }}" style="border:0;background:var(--cta);color:#fff;border-radius:9999px;height:20px;padding:0 9px;font:inherit;font-size:11px;font-weight:700;cursor:pointer;line-height:20px">Attach</button></div></foreignObject>
   </g>
 
@@ -448,18 +462,26 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 
   <!-- regions -->
   <sc-for list="{{ heroGroups }}" as="g" hint-placeholder-count="3">
-    <foreignObject x="980" y="{{ g.y }}" width="200" height="16"><div style="font-size:12px;line-height:16px;letter-spacing:.04em;text-transform:uppercase;font-weight:500;color:var(--text-disabled)">{{ g.cloud }}</div></foreignObject>
+    <foreignObject x="{{ rightX }}" y="{{ g.y }}" width="200" height="16"><div style="font-size:12px;line-height:16px;letter-spacing:.04em;text-transform:uppercase;font-weight:500;color:var(--text-disabled)">{{ g.cloud }}</div></foreignObject>
   </sc-for>
   <sc-for list="{{ heroRegions }}" as="r" hint-placeholder-count="6">
-    <g onClick="{{ r.click }}" onMouseEnter="{{ r.enter }}" onMouseLeave="{{ r.leave }}" opacity="{{ r.op }}" style="cursor:{{ r.cursor }};transition:opacity .2s">
+    <g onClick="{{ r.click }}" onMouseEnter="{{ r.enter }}" onMouseLeave="{{ r.leave }}" opacity="{{ r.op }}" style="cursor:{{ r.cursor }};transition:opacity .2s"><title>{{ r.tip }}</title>
       <rect x="{{ r.rx }}" y="{{ r.y }}" width="{{ r.rw }}" height="28" rx="8" style="fill:{{ r.rectFill }};stroke:{{ r.stroke }}" stroke-dasharray="{{ r.dash }}"></rect>
-      <foreignObject x="{{ r.rx }}" y="{{ r.y }}" width="{{ r.rw }}" height="28" style="pointer-events:none"><div style="padding:0 12px;font-size:13px;line-height:28px;font-weight:500;color:{{ r.color }};display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ r.markSrc }}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="{{ r.cloud }}" style="display:inline-block;width:16px;height:16px;flex:none;background:url('{{ r.markSrc }}') center / contain no-repeat"></span></sc-if><span title="{{ r.region }}" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">{{ r.region }}</span><span style="margin-left:auto;display:inline-flex;align-items:center;justify-content:flex-end;gap:6px;flex:none"><span style="display:inline-flex;justify-content:flex-end"><sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.act }}" style="pointer-events:auto;border:0;background:{{ r.actionBg }};color:#fff;border-radius:9999px;height:18px;padding:0 7px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;line-height:18px;white-space:nowrap">{{ r.action }}</button></sc-if></span><span style="width:8px"></span><span style="width:10px;text-align:center;font-size:14px;font-weight:700;color:var(--link)">{{ r.caret }}</span></span></div></foreignObject>
-      <circle cx="1194" cy="{{ r.cy }}" r="4" fill="{{ r.relFill }}" opacity="{{ r.relOp }}"><title>{{ r.relTitle }}</title></circle>
+      <foreignObject x="{{ r.rx }}" y="{{ r.y }}" width="{{ r.rw }}" height="28" style="pointer-events:none"><div style="padding:0 12px;font-size:13px;line-height:28px;font-weight:500;color:{{ r.color }};display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ r.markSrc }}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="{{ r.cloud }}" style="display:inline-block;width:16px;height:16px;flex:none;background:url('{{ r.markSrc }}') center / contain no-repeat"></span></sc-if><span title="{{ r.tip }}" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">{{ r.region }}</span><span style="margin-left:auto;display:inline-flex;align-items:center;justify-content:flex-end;gap:6px;flex:none"><span style="display:inline-flex;justify-content:flex-end"><sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.act }}" style="pointer-events:auto;border:0;background:{{ r.actionBg }};color:#fff;border-radius:9999px;height:18px;padding:0 7px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;line-height:18px;white-space:nowrap">{{ r.action }}</button></sc-if></span><span style="width:8px"></span><span style="width:10px;text-align:center;font-size:14px;font-weight:700;color:var(--link)">{{ r.caret }}</span></span></div></foreignObject>
+      <circle cx="{{ r.dotX }}" cy="{{ r.cy }}" r="4" fill="{{ r.relFill }}" opacity="{{ r.relOp }}"><title>{{ r.relTitle }}</title></circle>
+    </g>
+  </sc-for>
+  <!-- providers: the first level on the right -->
+  <sc-for list="{{ heroClouds }}" as="cc" hint-placeholder-count="4">
+    <g onClick="{{ cc.click }}" onMouseEnter="{{ cc.enter }}" onMouseLeave="{{ cc.leave }}" opacity="{{ cc.op }}" style="cursor:pointer;transition:opacity .2s"><title>{{ cc.tip }}</title>
+      <rect x="{{ cc.x }}" y="{{ cc.y }}" width="240" height="36" rx="8" style="fill:var(--bg-base);stroke:var(--border-primary)"></rect>
+      <foreignObject x="{{ cc.x }}" y="{{ cc.y }}" width="240" height="36" style="pointer-events:none"><div style="padding:4px 12px;font-size:13px;line-height:15px;font-weight:500;color:var(--text-heading);white-space:nowrap;display:flex;align-items:center;gap:8px"><sc-if value="{{ cc.markSrc }}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="{{ cc.cloud }}" style="display:inline-block;width:18px;height:18px;flex:none;background:url('{{ cc.markSrc }}') center / contain no-repeat"></span></sc-if><div style="flex:1;min-width:0"><div style="overflow:hidden;text-overflow:ellipsis">{{ cc.cloud }}</div><div style="font-size:12px;line-height:13px;font-weight:400;color:var(--text-light);overflow:hidden;text-overflow:ellipsis">{{ cc.sub }}</div></div><span style="width:10px;text-align:center;font-size:14px;font-weight:700;color:var(--link);margin-right:14px">›</span></div></foreignObject>
+      <circle cx="{{ cc.dotX }}" cy="{{ cc.cy }}" r="4" fill="{{ cc.relFill }}"><title>{{ cc.relTitle }}</title></circle>
     </g>
   </sc-for>
   <g opacity="{{ inetOp }}" style="transition:opacity .2s">
-    <rect x="980" y="{{ internetY }}" width="200" height="30" rx="8" style="fill:var(--bg-neutral);stroke:var(--border-primary)"></rect>
-    <text x="992" y="{{ internetTy }}" style="font-size:13px;font-weight:500;fill:var(--text-heading)">Internet / SaaS</text>
+    <rect x="{{ rightX }}" y="{{ internetY }}" width="200" height="30" rx="8" style="fill:var(--bg-neutral);stroke:var(--border-primary)"></rect>
+    <text x="{{ internetTx }}" y="{{ internetTy }}" style="font-size:13px;font-weight:500;fill:var(--text-heading)">Internet / SaaS</text>
   </g>
 
   <!-- workloads -->
@@ -2133,7 +2155,11 @@ class Component extends DCLogic {
     const TAB_ICON = { connect: 'cloud', govern: 'check-shield', observe: 'high-meter', cost: 'bill' };
     const CAT_ICON = { hosted: 'cloud', maxres: 'hub', private: 'lock', internet: 'ethernet', security: 'check-shield', vnf: 'apps', apis: 'apis', managed: 'person-group' };
     const SCAN_ICON = ['cloud', 'cable', 'hub', 'pie-chart'];
-    const PROVIDER_MARK = (p) => /aws/i.test(p) ? 'brand/providers/aws.svg' : /azure/i.test(p) ? 'brand/providers/azure.svg' : /gcp|google/i.test(p) ? 'brand/providers/google.svg' : /oracle/i.test(p) ? 'brand/providers/oracle.svg' : /equinix|coreweave/i.test(p) ? 'brand/providers/equinix.svg' : null;
+    // AWS and Google ship as unstyled paths that draw black, so dark mode takes
+    // their reversed marks. CoreWeave has no mark here; it used to borrow
+    // Equinix's, which named the wrong company.
+    const markDark = s.theme === 'dark';
+    const PROVIDER_MARK = (p) => /aws/i.test(p) ? (markDark ? 'brand/providers/aws-dark.svg' : 'brand/providers/aws.svg') : /azure/i.test(p) ? 'brand/providers/azure.svg' : /gcp|google/i.test(p) ? (markDark ? 'brand/providers/google-dark.svg' : 'brand/providers/google.svg') : /oracle/i.test(p) ? 'brand/providers/oracle.svg' : /equinix/i.test(p) ? 'brand/providers/equinix.svg' : null;
     const dark = s.theme === 'dark';
     v.iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light';
     v.iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
@@ -2141,6 +2167,7 @@ class Component extends DCLogic {
     v.categories = (v.categories || []).map(c => { const ic = CAT_ICON[c.id] || 'grid'; const linkable = ['cloud', 'bill', 'check-shield', 'high-meter'].includes(ic); return { ...c, icon: ic, iconSrc: c.on ? 'brand/icons-dark/' + ic + '.svg' : linkable ? (dark ? 'brand/icons-linkdark/' : 'brand/icons-link/') + ic + '.svg' : (dark ? 'brand/icons-dark/' : 'brand/icons-light/') + ic + '.svg' }; });
     v.scanSteps = (v.scanSteps || []).map((st, i) => ({ ...st, icon: SCAN_ICON[i], iconSrc: v.iconDir + '/' + SCAN_ICON[i] + '.svg' }));
     v.heroRegions = v.heroRegions.map(r => ({ ...r, markSrc: r.ghost || r.rollup ? null : PROVIDER_MARK(r.cloud) }));
+    v.heroClouds = v.heroClouds.map(r => ({ ...r, markSrc: PROVIDER_MARK(r.cloud) }));
     // The right-hand surfaces push the page rather than cover it. Two can be
     // open at once (a list and the thing you opened from it), so the shell
     // gives back exactly as much width as they take. hasDrawer and queueOpen

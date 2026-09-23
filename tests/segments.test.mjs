@@ -10,9 +10,12 @@ import { mkC } from './harness.mjs';
 // Access, Edge, Core, Edge, Access. It replaces four horizontal product layers
 // (AI Fabric, Cloud, Network services, Transport) that a packet never passes
 // through. Core is singular and shared; the two sides mirror it.
-const L = () => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500 });
-// The root is regions; drilled into US West, Denver and Phoenix are themselves.
-const West = () => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, siteRows: siteDrillRows(D.ESTATES.mature, ['region:US West']).rows });
+// The right column's first level is providers (tests/cloud-cards.test.mjs); these
+// read the things per region, so they lay the regions out as the drill does.
+const REGIONS = D.ESTATES.mature.regionsList;
+const L = () => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, regionRows: REGIONS });
+// The left root is regions; drilled into US West, Denver and Phoenix are themselves.
+const West = () => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, regionRows: REGIONS, siteRows: siteDrillRows(D.ESTATES.mature, ['region:US West']).rows });
 
 test('the middle is five segments, in path order', () => {
   assert.deepEqual(L().segments.map(s => s.label), ['Access', 'Edge', 'Core', 'Edge', 'Access']);
@@ -44,11 +47,24 @@ test('the picture draws the segments, not the four product layers', () => {
   assert.equal(v.strata, undefined, 'the four product layers still reach the picture');
 });
 
-test('the band has room for five segments whether or not the facilities drill is open', () => {
+test('unfolded, the band has room for five segments whether or not the facilities drill is open', () => {
   for (const fabDrill of [[], ['fab']]) {
-    const v = vals(mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null, fabDrill }));
+    const v = vals(mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null, fabDrill, bandUnfolded: true }));
     for (const sg of v.segments) assert.ok(sg.w >= 90, `${sg.label} is ${sg.w}px wide`);
   }
+});
+
+test('the band starts folded, and a click on a folded side unfolds it, and back', () => {
+  const c = mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null });
+  let v = vals(c);
+  assert.equal(v.segments[0].w, 36, 'Access is not folded on arrival');
+  for (const n of v.nodes.filter(x => x.seg !== 2)) assert.equal(n.op, 0, `${n.label} shows inside a folded segment`);
+  v.segments[0].open();
+  v = vals(c);
+  assert.ok(v.segments[0].w >= 90, 'the click did not unfold Access');
+  assert.ok(v.nodes.every(n => n.op === 1));
+  v.segments[1].open();
+  assert.equal(vals(c).segments[1].w, 36, 'a click on an open side did not fold it back');
 });
 
 // ---- things: each segment holds named things, each owned by AT&T or not ----
@@ -251,7 +267,7 @@ test('Phoenix lands on the same AWS gateway as the AT&T routes, and reaches us-w
 test('the SLA owner survives the drill to a site\'s paths', () => {
   for (const [site, owner, label] of [['Denver branch', 'att', 'Lumen off-net'], ['Salt Lake branch', 'third', 'Lumen Ethernet']]) {
     const rows = siteDrillRows(D.ESTATES.mature, ['region:US West', site]).rows;
-    const l = heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, siteRows: rows });
+    const l = heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, regionRows: REGIONS, siteRows: rows });
     const firsts = l.routes.filter(r => r.side === 'site').map(r => node(l, r.nodes[0]));
     assert.ok(firsts.length > 0, `${site}: no paths drawn`);
     for (const n of firsts) assert.deepEqual([n.label, n.owner], [label, owner], site);
@@ -280,4 +296,34 @@ test('a region card names the carrier it has, not a hard-coded one', () => {
 test('Phoenix\'s access is the circuit, not the on-ramp product', () => {
   const phoenix = D.ESTATES.mature.sites.find(s => s.name === 'Phoenix DC');
   assert.doesNotMatch(phoenix.access, /Cloud Connect/, 'an Edge product is labelled as Access');
+});
+
+// Traffic runs along each route through its things, so a route is also one path.
+test('a route is drawable as one path that starts where its first piece starts and ends where its last ends', () => {
+  const l = L();
+  for (const r of l.routes) {
+    const first = l.pieces.find(p => p.key === r.pieces[0]).d, last = l.pieces.find(p => p.key === r.pieces[r.pieces.length - 1]).d;
+    assert.equal(r.d.match(/^M[\d.]+,[\d.]+/)[0], first.match(/^M[\d.]+,[\d.]+/)[0], r.who);
+    assert.equal(r.d.match(/[\d.]+,[\d.]+$/)[0], last.match(/[\d.]+,[\d.]+$/)[0], r.who);
+    assert.equal((r.d.match(/M/g) || []).length, 1, `${r.who} lifts the pen mid-route`);
+  }
+});
+
+// ---- the fold (2026-09-23): Access and Edge collapse to card edges, click unfolds ----
+test('folded, Access and Edge narrow to card edges and Core takes the band', () => {
+  const f = heroLayout(D.ESTATES.mature, { bandX: 320, bandW: 580, folded: true });
+  const w = f.segments.map(s => s.w);
+  assert.deepEqual([w[0], w[1], w[3], w[4]], [36, 36, 36, 36]);
+  assert.equal(w.reduce((a, b) => a + b, 0), 580, 'the folded band does not tile');
+  assert.ok(w[2] > 400, `Core is only ${w[2]} wide folded`);
+});
+
+// Folding animates: each piece keeps its key and its shape, only its numbers
+// move, so the browser can ease one into the other instead of redrawing.
+test('a piece keeps its key and its shape when the band folds', () => {
+  const open = heroLayout(D.ESTATES.mature, { bandX: 320, bandW: 580 });
+  const shut = heroLayout(D.ESTATES.mature, { bandX: 320, bandW: 580, folded: true });
+  assert.deepEqual(shut.pieces.map(p => p.key).sort(), open.pieces.map(p => p.key).sort());
+  const shape = (d) => d.replace(/[\d.]+/g, '#');
+  for (const p of open.pieces) assert.equal(shape(shut.pieces.find(q => q.key === p.key).d), shape(p.d), p.key);
 });

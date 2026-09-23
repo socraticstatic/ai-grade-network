@@ -239,7 +239,7 @@ export function regionDrillRows(est, inv, trail) {
     }
   }
   const others = est.regionsList.length - 1 + (est.regionsExtra || 0);
-  const rows = [pinned, ...children, ...(others > 0 ? [{ cloud: '', region: `Back to ${est.regionsList.length} regions`, rollup: true, other: true, toRoot: true, wl: 0, priv: false }] : [])];
+  const rows = [pinned, ...children, ...(others > 0 ? [{ cloud: '', region: `Back to ${top.cloud}`, rollup: true, other: true, toRoot: true, toProvider: true, wl: 0, priv: false }] : [])];
   // Every hop by name, cloud first. The crumb used to be built from `label`,
   // which already carried the region, so it read "Clouds › AWS › us-east-1 ›
   // AWS us-east-1". This is the trail; nothing derives it twice.
@@ -247,6 +247,14 @@ export function regionDrillRows(est, inv, trail) {
   const snOf = vpcOf && trail.length > 2 ? vpcOf.subnets.find(x => x.id === trail[2]) : null;
   const crumb = [top.cloud, top.region, vpcOf ? vpcOf.name : null, snOf ? snOf.name : null].filter(Boolean);
   return { level, label, crumb, rows, top };
+}
+
+/** The provider level on the right: that provider's regions, each with its own wire, and a way back to every provider. */
+export function providerRows(est, cloud) {
+  const rows = est.regionsList.filter(r => r.cloud === cloud);
+  if (!rows.length) return null;
+  const n = new Set(est.regionsList.map(r => r.cloud)).size;
+  return { level: 'region', label: cloud, crumb: [cloud], rows: [...rows, { cloud: '', region: `Back to ${n} providers`, rollup: true, other: true, toRoot: true, wl: 0, priv: false }] };
 }
 
 /** Sankey split: 'site:<class>' splits a site class by metro; 'tag:<group>' splits a workload group by region. */

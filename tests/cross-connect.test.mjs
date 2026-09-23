@@ -17,7 +17,8 @@ import { mkC } from './harness.mjs';
 // customer's own cross-connect fails, neither AT&T nor the cloud answers for it.
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
-const L = (opts = {}) => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, ...opts });
+// Region level: the first level on the right is providers (tests/cloud-cards.test.mjs).
+const L = (opts = {}) => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, regionRows: D.ESTATES.mature.regionsList, ...opts });
 
 test('mature us-west-2 is a dedicated Direct Connect port on the customer\'s own cross-connect', () => {
   const r = D.ESTATES.mature.regionsList.find(x => x.region === 'us-west-2');
@@ -59,9 +60,10 @@ test('the mark survives the drill into a site', () => {
 
 test('the mark says who answers for it, in words', () => {
   const v = vals(mkC({ view: 'mature', screen: 's3', tab: 'connect' }));
-  const xc = v.xconnects.find(x => x.region === 'us-west-2');
-  assert.match(xc.title, /AWS/);
+  // The first level is providers, so us-west-2's cable rides the AWS card's Direct Connect wire.
+  const xc = v.xconnects.find(x => x.region === 'AWS');
   assert.ok(xc, 'the view model dropped the cross-connect');
+  assert.match(xc.title, /AWS/);
   assert.match(xc.title, /Your cross-connect/);
   assert.match(xc.title, /Equinix SE2, Seattle/);
   assert.match(xc.title, /not AT&T/);

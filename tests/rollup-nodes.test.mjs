@@ -43,7 +43,8 @@ test('the climb row stops looking like an overflow row', () => {
   const inv = A.inventory(est);
   const rows = regionDrillRows(est, inv, ['us-east-1']).rows;
   const climb = rows.find(r => r.other);
-  assert.equal(climb.region, 'Back to 6 regions');
+  // A region climbs to its provider now that providers are the first level.
+  assert.equal(climb.region, 'Back to AWS');
   assert.equal(climb.toRoot, true);
   assert.ok(!/\+/.test(climb.region), 'no plus sign: it climbs, it does not overflow');
 });

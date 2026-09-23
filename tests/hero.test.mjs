@@ -51,9 +51,13 @@ test('the canvas a full estate needs does not move', () => {
     assert.equal(L.lane.y, laneY, id);
     assert.equal(L.strata[0].h, strataH, id);
   }
-  assert.equal(heroLayout(D.ESTATES.mature, {}).internet.y, 472);
-  assert.equal(heroLayout(D.ESTATES.trust, {}).internet.y, 376); // 4px up with trust's canvas
-  assert.equal(heroLayout(D.ESTATES.partial, {}).internet.y, 406);
+  // The right column's first level is provider cards, centred like the left's
+  // region cards; the internet row follows the cards and the rollup row. The
+  // canvas above still measures every region, so it did not move.
+  // Cards then moved onto the shared row grid inside the band (2026-09-23).
+  assert.equal(heroLayout(D.ESTATES.mature, {}).internet.y, 438);
+  assert.equal(heroLayout(D.ESTATES.trust, {}).internet.y, 376);
+  assert.equal(heroLayout(D.ESTATES.partial, {}).internet.y, 394);
   // Drilling must not resize the picture under the click.
   const t = D.ESTATES.trust;
   const drilled = heroLayout(t, { siteRows: t.sites.slice(0, 3), regionRows: t.regionsList.slice(0, 1) });
@@ -79,7 +83,8 @@ test('a small estate gets a canvas sized to it', () => {
   }
   // Dallas HQ and Houston yard are both US Central: one region card.
   assert.equal(heroLayout(D.ESTATES.small, {}).sites.length, 1);
-  assert.equal(heroLayout(D.ESTATES.small, {}).regions.length, 2);
+  // Both regions are AWS: one provider card.
+  assert.equal(heroLayout(D.ESTATES.small, {}).regions.length, 1);
 });
 
 test('zero sites and one region still lay out', () => {
@@ -92,7 +97,9 @@ test('zero sites and one region still lay out', () => {
 
   const oneRegion = heroLayout({ ...base, regionsList: [base.regionsList[0]] }, {});
   assert.equal(oneRegion.regions.length, 1);
-  assert.equal(oneRegion.groups.length, 1);
+  // One provider card, and a card needs no group header above it.
+  assert.equal(oneRegion.regions.filter(r => r.card).length, 1);
+  assert.equal(oneRegion.groups.length, 0);
   assert.ok(oneRegion.internet.y > oneRegion.regions[0].y, 'the internet row rides up over the regions');
   assert.ok(oneRegion.internet.y + 30 <= oneRegion.H);
 
