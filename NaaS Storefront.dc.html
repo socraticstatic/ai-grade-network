@@ -386,6 +386,15 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         <foreignObject x="{{ sg.x }}" y="{{ sg.labelY }}" width="{{ sg.w }}" height="16" style="pointer-events:none"><div style="text-align:center;font-size:11px;line-height:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light)">{{ sg.label }}</div></foreignObject>
       </g>
     </sc-for>
+    <sc-for list="{{ legs }}" as="lg" hint-placeholder-count="12">
+      <g><title>{{ lg.seg }} · {{ lg.ownerName }}</title>
+        <line x1="{{ lg.x }}" y1="{{ lg.y }}" x2="{{ lg.x2 }}" y2="{{ lg.y }}" style="stroke:{{ lg.stroke }};stroke-width:{{ lg.width }};stroke-dasharray:{{ lg.dash }};stroke-linecap:round"></line>
+        <sc-if value="{{ lg.hasLabel }}" hint-placeholder-val="{{ false }}"><rect x="{{ lg.chipX }}" y="{{ lg.chipY }}" width="{{ lg.chipW }}" height="20" rx="10" style="fill:var(--bg-base);stroke:var(--border-secondary)"></rect><foreignObject x="{{ lg.chipX }}" y="{{ lg.chipY }}" width="{{ lg.chipW }}" height="20" style="pointer-events:none"><div style="font-size:11px;line-height:20px;font-weight:600;text-align:center;color:var(--link);white-space:nowrap">{{ lg.label }}</div></foreignObject></sc-if>
+      </g>
+    </sc-for>
+    <sc-for list="{{ handoffs }}" as="hf" hint-placeholder-count="6">
+      <circle cx="{{ hf.x }}" cy="{{ hf.y }}" r="4.5" style="fill:var(--bg-base);stroke:var(--text-heading);stroke-width:1.5"><title>{{ hf.title }}</title></circle>
+    </sc-for>
     </sc-if>
     <!-- inside the fabric (2026-09-09): facilities → ports → circuits, opened in place -->
     <sc-if value="{{ fabOpen }}" hint-placeholder-val="{{ false }}">

@@ -103,12 +103,16 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // pinned here. The segment label is a foreignObject with one div, because the
 // runtime wraps an interpolation in an HTML span and a span inside SVG <text>
 // draws nothing. div 877 -> 874, span 645 -> 642, sc-if 312 -> 310.
+// Stage 2: routes cross the segments. A legs loop draws each leg and, where it
+// names an on-ramp, a chip (one sc-if, one foreignObject div); a handoffs loop
+// draws a dot where the owner changes. div 874 -> 875, sc-if 310 -> 311,
+// sc-for 176 -> 178.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 874],
+    ['div', /<div\b/g, /<\/div>/g, 875],
     ['span', /<span\b/g, /<\/span>/g, 642],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 310],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 176],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 311],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 178],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 254],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],

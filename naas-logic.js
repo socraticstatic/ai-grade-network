@@ -15,6 +15,13 @@ export const estatePhrase = (est) => `${plural(est.clouds, 'cloud', 'clouds')}, 
 
 const CLOUD_ORDER = ['AWS', 'Azure', 'GCP', 'CoreWeave', 'Oracle'];
 
+// Who holds the SLA for each segment of a path. NetBond is AT&T's edge (the IPE);
+// Direct Connect and ExpressRoute are the hyperscaler's; Equinix is a third
+// party. Every access product on these estates is AT&T's today; a Lumen or other
+// carrier last mile is a third party even when it hands off onto AT&T's edge.
+export const RAMP_EDGE = { NetBond: 'att', DX: 'cloud', ER: 'cloud', Interconnect: 'cloud', EQX: 'third' };
+export const accessOwner = (access) => (/lumen/i.test(access || '') ? 'third' : 'att');
+
 export function heroLayout(est, opts) {
   // The canvas is derived from the estate, not fixed. A full estate fills
   // every one of these numbers, so they are the maxima; a two-site estate
@@ -104,6 +111,35 @@ export function heroLayout(est, opts) {
     const seg = { key: 'seg' + i, i, label, side: sd, x: sx, w, cx: sx + w / 2 };
     sx += w;
     return seg;
+  });
+  // Routes through the segments. Sites and regions are not paired and do not
+  // need to be: Core is shared. A site crosses Access and Edge into Core; a
+  // region leaves Core across Edge and Access. Each leg is owned by whoever
+  // holds the SLA for it, and a handoff is marked where the owner changes.
+  const [sA, sE, sC, cE, cA] = out.segments;
+  out.legs = []; out.handoffs = [];
+  const mark = (path, x0, y, who) => {
+    for (let i = 1; i < path.length; i++) {
+      if (path[i].owner !== path[i - 1].owner) out.handoffs.push({ ...who, key: `h:${who.site || who.region}:${i}`, x: path[i].x, y, between: [path[i - 1].seg, path[i].seg] });
+    }
+  };
+  out.edges.filter(e => e.kind === 'ingress' && e.priv && !e.ghost && !e.viaLane && e.site && !e.site.more).forEach(e => {
+    const y = e.y2, name = e.site.name;
+    const legs = [
+      { seg: 'Access', x: sA.x, w: sA.w, owner: accessOwner(e.site.access) },
+      { seg: 'Edge', x: sE.x, w: sE.w, owner: 'att' },
+    ];
+    legs.forEach(g => out.legs.push({ ...g, key: `l:${name}:${g.seg}`, y, site: name, side: 'site' }));
+    mark([...legs, { seg: 'Core', x: sC.x, owner: 'att' }], sA.x, y, { site: name });
+  });
+  out.edges.filter(e => e.kind === 'egress' && e.priv && !e.ghost && !e.viaLane && e.region).forEach(e => {
+    const y = e.y1, name = e.region.region;
+    const legs = [
+      { seg: 'Edge', x: cE.x, w: cE.w, owner: RAMP_EDGE[e.region.ramp] || 'cloud', label: e.region.ramp || '' },
+      { seg: 'Access', x: cA.x, w: cA.w, owner: 'cloud' },
+    ];
+    legs.forEach(g => out.legs.push({ ...g, key: `l:${name}:${g.seg}`, y, region: name, cloud: e.region.cloud, side: 'cloud' }));
+    mark([{ seg: 'Core', x: sC.x, owner: 'att' }, ...legs], sC.x, y, { region: name });
   });
   return out;
 }

@@ -300,13 +300,27 @@ export function vals(c) {
   // drill, which the Cloud layer card used to open; the other three layer
   // cards were dim and did nothing, and none of the four was a place a packet
   // passes through.
+  // Ownership is drawn inside the band; the security lens still colours the
+  // wires outside it. Who holds the SLA and how well the path performs are two
+  // different questions, and one colour cannot answer both.
+  const OWNER = {
+    att: { stroke: '#3374cc', width: 3, dash: 'none', ownerLabel: 'AT&T' },
+    cloud: { stroke: 'var(--text-light)', width: 2, dash: 'none', ownerLabel: 'Cloud provider' },
+    third: { stroke: 'var(--viz-5)', width: 2, dash: '5 3', ownerLabel: 'Third party' },
+  };
+  const legsMeta = (L.legs || []).map(g => ({ ...OWNER[g.owner], ...g, x2: g.x + g.w,
+    ownerName: g.owner === 'cloud' ? (g.cloud || 'Cloud provider') : OWNER[g.owner].ownerLabel,
+    hasLabel: !!g.label, chipW: g.label ? g.label.length * 8 + 16 : 0,
+    chipX: g.x + (g.w - (g.label ? g.label.length * 8 + 16 : 0)) / 2, chipY: g.y - 10 }));
+  const handoffsMeta = (L.handoffs || []).map(h => ({ ...h, title: `Handoff: ${h.between[0]} to ${h.between[1]}` }));
+  const legRegions = new Set((L.legs || []).filter(g => g.region).map(g => g.region));
   const segmentsMeta = L.segments.map(sg => ({ ...sg,
     y: L.bandY, h: L.bandH, bottom: L.bandY + L.bandH, labelY: L.bandY + 10,
     role: sg.side === 'core' ? 'button' : 'presentation',
     isCore: sg.side === 'core',
     open: sg.side === 'core' ? () => set({ fabDrill: ['fab'], bandOpen: true }) : () => {},
     cursor: sg.side === 'core' ? 'pointer' : 'default',
-    fill: sg.side === 'core' ? 'var(--bg-accent)' : 'transparent',
+    fill: sg.side === 'core' ? 'rgba(51,116,204,0.10)' : 'transparent',
     divider: sg.i > 0 ? 1 : 0,
   }));
   const steeredRegionNames = new Set(steered.filter(id => id.startsWith('f-')).map(id => (estRaw.regionsList[+id.split('-')[1]] || {}).region));
@@ -318,6 +332,7 @@ export function vals(c) {
     const steeredHere = e.region && steeredRegionNames.has(e.region.region);
     if (steeredHere) e = { ...e, priv: true, chip: e.chip || 'Steered', shield: false };
     const simHit = s.simulated && !s.enforced && e.region && ((e.region.tags || []).includes('PCI') || (s.customPolicies || []).some(p => p.state === 'simulated' && (e.region.tags || []).some(t => p.match.toLowerCase().includes(t.toLowerCase()))));
+    if (e.kind === 'egress' && e.region && legRegions.has(e.region.region)) e = { ...e, chip: null };
     const dashed = !e.priv || simHit;
     const d = edgePath(e);
     const hh = e.region ? hp.regionHealth[e.region.region] : null;
@@ -739,7 +754,7 @@ export function vals(c) {
     drawer, drawerOpen, openLevel, hasDrawer: drawerOpen, noDrawer: !drawerOpen, andiFabRight: drawerOpen ? '396px' : '16px',
     fabOpen: fabDrill.length > 0, fabClosed: fabDrill.length === 0, sitesDoor, bandDoor, cloudsDoor, fabRows, fabHead, fabUp, fabTrail, hasFabMore: !!(fabHead && fabHead.more), fabMore: fabHead ? fabHead.more : '', openBandLevel: () => openLevel('fabric'), fabHeadY: L.bandY + 8, fabEmpty, fabEmptyY: L.bandY + 40, fabEmptyHead: fabInfo ? fabInfo.emptyHead : '', fabEmptyLine: fabInfo ? fabInfo.emptyLine : '', fabEmptyCta: fabInfo ? fabInfo.emptyCta : '', fabEmptyGo, bandX: L.bandX, bandW: L.bandW, bandLabelX: L.bandX, laneX: L.lane.x, laneW: L.lane.w,
     laneFocus: !!s.laneFocus, toggleLane: () => set({ laneFocus: !s.laneFocus }), laneTitle: s.laneFocus ? 'Show everything' : 'Show only what rides outside the fabric', laneCount: `${est.regionsList.filter(r => !r.priv).length + est.sites.filter(x => !x.priv).length} public`, laneAttach: () => { const r = est.regionsList.find(x => !x.priv); if (r) composeFor(go, r)(); else { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); } },
-    heroSites, heroRegions, heroGroups: L.groups.map(g => ({ ...g, key: 'g' + g.cloud + g.y })), heroWorkloads, heroEdges, heroArcs, segments: segmentsMeta, showWorkloads: heroWorkloads.length > 0, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T network' : 'AT&T network  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on the fabric` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
+    heroSites, heroRegions, heroGroups: L.groups.map(g => ({ ...g, key: 'g' + g.cloud + g.y })), heroWorkloads, heroEdges, heroArcs, segments: segmentsMeta, legs: legsMeta, handoffs: handoffsMeta, ownerKey: Object.entries(OWNER).map(([k, o]) => ({ key: k, ...o })), showWorkloads: heroWorkloads.length > 0, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T network' : 'AT&T network  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on the fabric` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
     perfCard: hr ? { region: `${hr.cloud} ${hr.region}`, msLine: `${hr.priv ? hr.fab : hr.pub} ms ${hr.priv ? 'on the fabric' : 'public'}${hr.rel === 'warn' ? ' · degraded' : ''}`, pub: `Public today ${hr.pub} ms`, fab: `on the fabric ${hr.fab} ms`, rel: hr.rel === 'warn' ? 'Reliability: degraded' : 'Reliability: healthy', relFill: hr.rel === 'warn' ? 'var(--warning)' : 'var(--success)', top: Math.max(0, Math.min(340, hrNode.y - 70)) + 'px', left: 'calc(100% - 236px)', go: go('s3', { layer: 'cloud', tab: 'observe' }) } : null, hasPerf: !!hr,
     // floor
     rollup, floorFindings, hasFloorFindings: floorFindings.length > 0, recFindings, hasRecFindings: recFindings.length > 0, packages, tailored, hasTailored: isMature, hasAddons: tailored.addons.length > 0, hasTermUps: tailored.terms.length > 0, hasHubs: tailored.hubs.length > 0,
@@ -2392,7 +2407,13 @@ function overlayFor(e, s, est, ob, hp, R, steered, hoverKey) {
 function overlayLegend(s, R) {
   if (s.screen !== 's3') return [];
   const tab = s.tab;
-  if (tab === 'connect') return [{ key: 'g', sw: 'var(--success)', l: 'good' }, { key: 'f', sw: 'var(--warning)', l: 'fair' }, { key: 'p', sw: 'var(--error)', l: 'poor' }, { key: 'lens', sw: null, l: 'wire colour follows the ' + (s.lens || 'security') + ' lens · change it in Choose a path' }];
+  // Inside the band a wire's colour says who holds the SLA; outside it, how the
+  // path performs. The legend says which is which.
+  if (tab === 'connect') return [
+    { key: 'oa', sw: '#3374cc', l: 'AT&T' }, { key: 'oc', sw: 'var(--text-light)', l: 'cloud provider' }, { key: 'ot', sw: 'var(--viz-5)', l: 'third party (dashed)' },
+    { key: 'oh', sw: null, l: '○ handoff between owners' },
+    { key: 'g', sw: 'var(--success)', l: 'good' }, { key: 'f', sw: 'var(--warning)', l: 'fair' }, { key: 'p', sw: 'var(--error)', l: 'poor' },
+    { key: 'lens', sw: null, l: 'outside the network, wire colour follows the ' + (s.lens || 'security') + ' lens' }];
   if (tab === 'observe') return [{ key: 'w', sw: null, l: 'thickness = Gbps' }, { key: 'b', sw: '#0057b8', l: 'AT&T network' }, { key: 'p', sw: '#8a949c', l: 'public internet' }, { key: 'r', sw: 'var(--error)', l: 'red sleeve = over 100 ms' }, { key: 'd', sw: null, l: 'dashed = public path' }];
   if (tab === 'govern') return [{ key: 'g', sw: '#0057b8', l: 'gate = policy on this path' }, { key: 'o', sw: '#00abeb', l: 'matched by the policy you are authoring' }, { key: 'v', sw: 'var(--error)', l: 'violation' }, { key: 'd', sw: null, l: 'dashed = simulated' }];
   if (tab === 'cost') return [{ key: 'w', sw: null, l: 'thickness = $/mo' }, { key: 'r', sw: 'var(--error)', l: 'red sleeve = premium over the fabric rate' }, { key: 's', sw: null, l: 'slide the forecast to land the moves' }];
