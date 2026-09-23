@@ -328,7 +328,7 @@ export function vals(c) {
     title: `${n.name} · ${ownerName(n)} · used by ${n.users.slice(0, 4).join(', ')}${n.users.length > 4 ? ` and ${n.users.length - 4} more` : ''}` }));
   const piecesMeta = (L.pieces || []).map(p => ({ ...OWNER[p.owner], ...p }));
   // A folded side's name, upright on its stack and above the lines through it.
-  const foldTags = L.segments.filter(sg => sg.side !== 'core').map(sg => ({ key: 'ft' + sg.i, x: sg.x, y: L.bandY + 26, label: sg.label, op: folded ? 1 : 0, pe: folded ? 'auto' : 'none', open: () => set({ bandUnfolded: true }), tip: `${sg.label}: click to unfold` }));
+  const foldTags = L.segments.filter(sg => sg.side !== 'core').map(sg => ({ key: 'ft' + sg.i, x: sg.x, y: L.bandY + 3, label: sg.label, op: folded ? 1 : 0, pe: folded ? 'auto' : 'none', open: () => set({ bandUnfolded: true }), tip: `${sg.label}: click to unfold` }));
   // Traffic runs both ways along every route, as it does on the wires outside.
   const routeDots = (L.routes || []).map((r, i) => ({ key: 'rt' + i, id: 'rt' + i, d: r.d, dur: '3.2s', begin: '-' + ((i * 0.37) % 3.2).toFixed(2) + 's', back: '-' + ((i * 0.37 + 1.6) % 3.2).toFixed(2) + 's' }));
   // The customer's own cross-connect: the one cable on the path that neither
@@ -355,8 +355,13 @@ export function vals(c) {
     edgeOp: folded && sg.side !== 'core' ? 1 : 0, pillOp: folded && sg.side !== 'core' ? 0 : 1,
     // The stack starts under its name and stops as far from the floor; its back
     // cards peek outward, left on the site side and right on the cloud side.
-    stackH: L.bandH - 112, stackY: L.bandY + 100,
+    stackH: L.bandH - 92, stackY: L.bandY + 80,
     stackA: sg.side === 'site' ? 17 : 9, stackB: 13, stackC: sg.side === 'site' ? 9 : 17,
+    // Access folds to a light stack of two; Edge, a step deeper, to three with
+    // more shadow and a blue front card, so the two folds read apart.
+    backOp: sg.label === 'Edge' ? 1 : 0,
+    frontFill: sg.label === 'Edge' ? 'var(--bg-accent)' : 'var(--bg-base)', frontStroke: sg.label === 'Edge' ? 'var(--band-stroke)' : 'var(--border-primary)',
+    frontShadow: sg.label === 'Edge' ? 'drop-shadow(0 2px 4px rgba(0,40,120,.28))' : 'drop-shadow(0 1px 2px rgba(0,0,0,.14))',
     // Depth into the backbone: Access lightest, Edge deeper, Core deepest, so
     // the five columns read apart and the eye lands on the backbone.
     fill: (s.theme === 'dark' ? { Access: 'rgba(255,255,255,0.02)', Edge: 'rgba(255,255,255,0.06)', Core: 'rgba(102,200,240,0.14)' } : { Access: 'rgba(0,87,184,0.02)', Edge: 'rgba(0,87,184,0.08)', Core: 'rgba(0,87,184,0.17)' })[sg.label],

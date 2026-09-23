@@ -120,11 +120,13 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // The fold: a folded side's name reads on end (one div): div 880 -> 881.
 // Folded names moved to their own loop above the lines, as upright pills (one
 // loop, two divs where one was): div 881 -> 882, sc-for 181 -> 182.
+// A provider with no mark gets a monogram tile so titles align (one sc-if, one
+// span): span 646 -> 647, sc-if 311 -> 312.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 882],
-    ['span', /<span\b/g, /<\/span>/g, 646],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 311],
+    ['span', /<span\b/g, /<\/span>/g, 647],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 312],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 182],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 254],

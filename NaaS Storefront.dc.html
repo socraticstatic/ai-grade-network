@@ -176,7 +176,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 @keyframes bandBreathe{0%{opacity:.7}50%{opacity:1}100%{opacity:.92}}
 /* The band folds and unfolds with an ease and a slight overshoot. Geometry moves through CSS (x, width, d, transform) so the browser eases one state into the other. */
 .fold{transition:transform .55s cubic-bezier(.34,1.45,.64,1),x .55s cubic-bezier(.34,1.45,.64,1),y .55s cubic-bezier(.34,1.45,.64,1),width .55s cubic-bezier(.34,1.45,.64,1),d .55s cubic-bezier(.34,1.45,.64,1),opacity .3s ease}
-@media (prefers-reduced-motion:reduce){.fold{transition:none}}
+@media (prefers-reduced-motion:reduce){.fold{transition:none}.route-dot{display:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes crawl{to{stroke-dashoffset:-24}}
 @keyframes pulseOnce{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}
@@ -389,9 +389,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         <rect class="fold" x="0" y="{{ sg.y }}" width="{{ sg.w }}" height="{{ sg.h }}" style="width:{{ sg.w }}px;fill:{{ sg.fill }}"></rect>
         <line x1="0" y1="{{ sg.y }}" x2="0" y2="{{ sg.bottom }}" stroke-width="1" stroke-dasharray="3 4" style="stroke:var(--band-stroke);opacity:{{ sg.divider }}"></line>
         <g class="fold" style="opacity:{{ sg.edgeOp }}">
-          <rect x="{{ sg.stackA }}" y="{{ sg.stackY }}" width="10" height="{{ sg.stackH }}" rx="3" style="fill:var(--bg-base);stroke:var(--border-secondary);filter:drop-shadow(0 1px 2px rgba(0,0,0,.16))"></rect>
+          <rect x="{{ sg.stackA }}" y="{{ sg.stackY }}" width="10" height="{{ sg.stackH }}" rx="3" style="fill:var(--bg-base);stroke:var(--border-secondary);opacity:{{ sg.backOp }};filter:drop-shadow(0 1px 2px rgba(0,0,0,.16))"></rect>
           <rect x="{{ sg.stackB }}" y="{{ sg.stackY }}" width="10" height="{{ sg.stackH }}" rx="3" style="fill:var(--bg-base);stroke:var(--border-secondary);filter:drop-shadow(0 1px 2px rgba(0,0,0,.16))"></rect>
-          <rect x="{{ sg.stackC }}" y="{{ sg.stackY }}" width="10" height="{{ sg.stackH }}" rx="3" style="fill:var(--bg-base);stroke:var(--border-primary);filter:drop-shadow(0 2px 3px rgba(0,0,0,.2))"></rect>
+          <rect x="{{ sg.stackC }}" y="{{ sg.stackY }}" width="10" height="{{ sg.stackH }}" rx="3" style="fill:{{ sg.frontFill }};stroke:{{ sg.frontStroke }};filter:{{ sg.frontShadow }}"></rect>
         </g>
         <foreignObject class="fold" x="0" y="{{ sg.labelY }}" width="{{ sg.w }}" height="18" style="pointer-events:none;width:{{ sg.w }}px;opacity:{{ sg.pillOp }}"><div style="text-align:center;line-height:16px;white-space:nowrap"><span style="display:inline-block;padding:0 8px;border-radius:9px;border:1px solid {{ sg.pillBorder }};background:{{ sg.pillBg }};color:{{ sg.pillColor }};font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">{{ sg.label }}</span></div></foreignObject>
       </g>
@@ -401,8 +401,8 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     </sc-for>
     <sc-for list="{{ routeDots }}" as="rd" hint-placeholder-count="8">
       <path id="{{ rd.id }}" d="{{ rd.d }}" style="fill:none;stroke:none"></path>
-      <circle r="2.2" style="fill:var(--link)" opacity=".85"><animateMotion dur="{{ rd.dur }}" begin="{{ rd.begin }}" repeatCount="indefinite"><mpath href="#{{ rd.id }}"></mpath></animateMotion></circle>
-      <circle r="2.2" style="fill:var(--link)" opacity=".55"><animateMotion dur="{{ rd.dur }}" begin="{{ rd.back }}" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#{{ rd.id }}"></mpath></animateMotion></circle>
+      <circle class="route-dot" r="2.2" style="fill:var(--link)" opacity=".85"><animateMotion dur="{{ rd.dur }}" begin="{{ rd.begin }}" repeatCount="indefinite"><mpath href="#{{ rd.id }}"></mpath></animateMotion></circle>
+      <circle class="route-dot" r="2.2" style="fill:var(--link)" opacity=".55"><animateMotion dur="{{ rd.dur }}" begin="{{ rd.back }}" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#{{ rd.id }}"></mpath></animateMotion></circle>
     </sc-for>
     <sc-for list="{{ foldTags }}" as="ft" hint-placeholder-count="4">
       <foreignObject class="fold" x="{{ ft.x }}" y="{{ ft.y }}" width="36" height="70" onClick="{{ ft.open }}" style="x:{{ ft.x }}px;opacity:{{ ft.op }};pointer-events:{{ ft.pe }};cursor:pointer"><div style="display:flex;justify-content:center;height:70px"><div title="{{ ft.tip }}" style="writing-mode:vertical-rl;transform:rotate(180deg);padding:8px 0;width:18px;box-sizing:border-box;border-radius:9px;border:1px solid var(--border-secondary);background:var(--bg-base);box-shadow:0 1px 3px rgba(0,0,0,.14);text-align:center;line-height:16px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-body)">{{ ft.label }}</div></div></foreignObject>
@@ -477,12 +477,12 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <sc-for list="{{ heroClouds }}" as="cc" hint-placeholder-count="4">
     <g onClick="{{ cc.click }}" onMouseEnter="{{ cc.enter }}" onMouseLeave="{{ cc.leave }}" opacity="{{ cc.op }}" style="cursor:{{ cc.cursor }};transition:opacity .2s"><title>{{ cc.tip }}</title>
       <rect x="{{ cc.x }}" y="{{ cc.y }}" width="240" height="44" rx="10" stroke-dasharray="{{ cc.dash }}" style="fill:var(--bg-base);stroke:var(--border-primary);filter:drop-shadow(0 1px 2px rgba(0,0,0,.06))"></rect>
-      <foreignObject x="{{ cc.x }}" y="{{ cc.y }}" width="240" height="44" style="pointer-events:none"><div style="padding:0 12px;height:44px;box-sizing:border-box;font-size:15px;line-height:17px;font-weight:600;color:{{ cc.color }};white-space:nowrap;display:flex;align-items:center;gap:10px"><sc-if value="{{ cc.markSrc }}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="{{ cc.cloud }}" style="display:inline-block;width:26px;height:26px;flex:none;background:url('{{ cc.markSrc }}') center / contain no-repeat"></span></sc-if><div style="flex:1;min-width:0"><div style="overflow:hidden;text-overflow:ellipsis">{{ cc.cloud }}</div><div style="font-size:12px;line-height:13px;font-weight:400;color:var(--text-light);overflow:hidden;text-overflow:ellipsis">{{ cc.sub }}</div></div><span style="width:10px;text-align:center;font-size:14px;font-weight:700;color:var(--link);margin-right:14px">{{ cc.caret }}</span></div></foreignObject>
+      <foreignObject x="{{ cc.x }}" y="{{ cc.y }}" width="240" height="44" style="pointer-events:none"><div style="padding:0 12px;height:44px;box-sizing:border-box;font-size:15px;line-height:17px;font-weight:600;color:{{ cc.color }};white-space:nowrap;display:flex;align-items:center;gap:10px"><sc-if value="{{ cc.noMark }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex:none;border-radius:7px;background:var(--bg-neutral);border:1px solid var(--border-secondary);font-size:10px;font-weight:700;letter-spacing:.02em;color:var(--text-body)">{{ cc.initials }}</span></sc-if><sc-if value="{{ cc.markSrc }}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="{{ cc.cloud }}" style="display:inline-block;width:26px;height:26px;flex:none;background:url('{{ cc.markSrc }}') center / contain no-repeat"></span></sc-if><div style="flex:1;min-width:0"><div style="overflow:hidden;text-overflow:ellipsis">{{ cc.cloud }}</div><div style="font-size:12px;line-height:13px;font-weight:400;color:var(--text-light);overflow:hidden;text-overflow:ellipsis">{{ cc.sub }}</div></div><span style="width:10px;text-align:center;font-size:14px;font-weight:700;color:var(--link);margin-right:14px">{{ cc.caret }}</span></div></foreignObject>
       <circle cx="{{ cc.dotX }}" cy="{{ cc.cy }}" r="4" fill="{{ cc.relFill }}"><title>{{ cc.relTitle }}</title></circle>
     </g>
   </sc-for>
   <g opacity="{{ inetOp }}" style="transition:opacity .2s">
-    <rect x="{{ rightX }}" y="{{ internetY }}" width="200" height="30" rx="8" style="fill:var(--bg-neutral);stroke:var(--border-primary)"></rect>
+    <rect x="{{ rightX }}" y="{{ internetY }}" width="240" height="30" rx="10" style="fill:var(--bg-neutral);stroke:var(--border-primary)"></rect>
     <text x="{{ internetTx }}" y="{{ internetTy }}" style="font-size:13px;font-weight:500;fill:var(--text-heading)">Internet / SaaS</text>
   </g>
 
@@ -2161,7 +2161,7 @@ class Component extends DCLogic {
     // their reversed marks. CoreWeave has no mark here; it used to borrow
     // Equinix's, which named the wrong company.
     const markDark = s.theme === 'dark';
-    const PROVIDER_MARK = (p) => /aws/i.test(p) ? (markDark ? 'brand/providers/aws-dark.svg' : 'brand/providers/aws.svg') : /azure/i.test(p) ? 'brand/providers/azure.svg' : /gcp|google/i.test(p) ? (markDark ? 'brand/providers/google-dark.svg' : 'brand/providers/google.svg') : /oracle/i.test(p) ? 'brand/providers/oracle.svg' : /equinix/i.test(p) ? 'brand/providers/equinix.svg' : null;
+    const PROVIDER_MARK = (p) => /aws/i.test(p) ? (markDark ? 'brand/providers/aws-dark.svg' : 'brand/providers/aws.svg') : /azure/i.test(p) ? 'brand/providers/azure.svg' : /gcp|google/i.test(p) ? 'brand/providers/google-icon.svg' : /oracle/i.test(p) ? 'brand/providers/oracle.svg' : /equinix/i.test(p) ? 'brand/providers/equinix.svg' : null;
     const dark = s.theme === 'dark';
     v.iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light';
     v.iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
@@ -2169,7 +2169,7 @@ class Component extends DCLogic {
     v.categories = (v.categories || []).map(c => { const ic = CAT_ICON[c.id] || 'grid'; const linkable = ['cloud', 'bill', 'check-shield', 'high-meter'].includes(ic); return { ...c, icon: ic, iconSrc: c.on ? 'brand/icons-dark/' + ic + '.svg' : linkable ? (dark ? 'brand/icons-linkdark/' : 'brand/icons-link/') + ic + '.svg' : (dark ? 'brand/icons-dark/' : 'brand/icons-light/') + ic + '.svg' }; });
     v.scanSteps = (v.scanSteps || []).map((st, i) => ({ ...st, icon: SCAN_ICON[i], iconSrc: v.iconDir + '/' + SCAN_ICON[i] + '.svg' }));
     v.heroRegions = v.heroRegions.map(r => ({ ...r, markSrc: r.ghost || r.rollup ? null : PROVIDER_MARK(r.cloud) }));
-    v.heroClouds = v.heroClouds.map(r => ({ ...r, markSrc: PROVIDER_MARK(r.cloud) }));
+    v.heroClouds = v.heroClouds.map(r => { const m = r.ghost ? null : PROVIDER_MARK(r.cloud); return { ...r, markSrc: m, noMark: !m, initials: String(r.cloud).replace(/^Your\s+/, '').split(/(?=[A-Z])|\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() }; });
     // The right-hand surfaces push the page rather than cover it. Two can be
     // open at once (a list and the thing you opened from it), so the shell
     // gives back exactly as much width as they take. hasDrawer and queueOpen
