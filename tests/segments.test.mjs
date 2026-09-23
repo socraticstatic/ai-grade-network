@@ -58,7 +58,8 @@ const seg = (l, label, side) => l.segments.find(s => s.label === label && s.side
 test('every private site crosses Access and Edge and stops at Core', () => {
   const l = L();
   const core = seg(l, 'Core', 'core');
-  const sites = l.sites.filter(s => s.priv && !s.ghost);
+  // A third-party core is its own route (see Phoenix below); this is the shared AT&T core.
+  const sites = l.sites.filter(s => s.priv && !s.ghost && s.core !== 'third');
   assert.ok(sites.length > 0);
   for (const s of sites) {
     const legs = l.legs.filter(g => g.site === s.name);
@@ -71,7 +72,7 @@ test('every private region leaves Core and crosses Edge and Access', () => {
   const l = L();
   const core = seg(l, 'Core', 'core');
   for (const r of l.regions.filter(r => r.priv && !r.ghost && !r.rollup)) {
-    const legs = l.legs.filter(g => g.region === r.region);
+    const legs = l.legs.filter(g => g.region === r.region && g.side === 'cloud');
     assert.deepEqual(legs.map(g => g.seg), ['Edge', 'Access'], `${r.region} legs`);
     assert.equal(legs[0].x, core.x + core.w, `${r.region} does not leave from Core`);
   }
@@ -172,7 +173,82 @@ test('the Equinix path bends into the third party and out to the cloud', () => {
 test('the wire out to the cloud leaves from where the last leg ended', () => {
   const l = L();
   for (const e of l.edges.filter(x => x.kind === 'egress' && x.priv && !x.viaLane && x.region)) {
-    const last = l.legs.filter(g => g.region === e.region.region).pop();
+    const last = l.legs.filter(g => g.region === e.region.region && g.side === 'cloud').pop();
     if (last) assert.equal(e.y1, last.y, `${e.region.region} jogs at the band edge`);
   }
+});
+
+// ---- Lumen: a real mixed-carrier estate ----
+// Lumen sells its own private cloud on-ramps (Cloud Connect, and since April
+// 2026 AWS Interconnect - last mile) and hands off to other carriers over ENNI.
+// AT&T bought Lumen's mass-market fiber, not its enterprise network, so in an
+// enterprise estate Lumen is a separate carrier. Two scenarios, side by side.
+
+test('Denver: a Lumen last mile handed onto AT&T at the Edge', () => {
+  const l = L();
+  const legs = l.legs.filter(g => g.site === 'Denver branch');
+  assert.deepEqual(legs.map(g => [g.seg, g.owner]), [['Access', 'third'], ['Edge', 'att']]);
+  assert.deepEqual(l.bends.filter(b => b.site === 'Denver branch').map(b => b.between), [['Access', 'Edge']], 'the ENNI handoff is not drawn');
+});
+
+test('Phoenix: Lumen end to end never touches AT&T, core included', () => {
+  const legs = L().legs.filter(g => g.site === 'Phoenix DC');
+  assert.deepEqual(legs.map(g => g.seg), ['Access', 'Edge', 'Core', 'Edge', 'Access']);
+  assert.equal(legs.some(g => g.owner === 'att'), false, 'a Lumen path is drawn on AT&T');
+  assert.equal(legs.find(g => g.seg === 'Core').owner, 'third');
+  assert.equal(legs.find(g => g.seg === 'Edge' && g.label).label, 'Lumen');
+});
+
+test('Phoenix runs to the region Lumen reaches, so its line bends through Core', () => {
+  const l = L();
+  const core = l.legs.find(g => g.site === 'Phoenix DC' && g.seg === 'Core');
+  assert.match(core.d, / C/, 'the Lumen core leg is straight, so it cannot reach another row');
+  const target = l.regions.find(r => r.region === 'us-west-2');
+  const out = l.edges.find(e => e.lumen && e.site && e.site.name === 'Phoenix DC');
+  assert.ok(out, 'nothing carries Phoenix from the band to its cloud');
+  assert.equal(out.y2, target.cy, 'Phoenix does not land on us-west-2');
+});
+
+test('every leg is a path, straight or curved, so one loop draws them all', () => {
+  for (const g of L().legs) assert.match(g.d, /^M[\d.]+,[\d.]+ [LC]/, `${g.site || g.region} ${g.seg}`);
+});
+
+test('a site arrives on the track its first leg runs on', () => {
+  const l = L();
+  for (const e of l.edges.filter(x => x.kind === 'ingress' && x.site && !x.viaLane)) {
+    const first = l.legs.find(g => g.site === e.site.name);
+    if (first) assert.equal(e.y2, first.y, `${e.site.name} jogs at the band edge`);
+  }
+});
+
+test('both Lumen sites are visible, not folded into +N more', () => {
+  const names = L().sites.map(s => s.name);
+  assert.ok(names.includes('Denver branch') && names.includes('Phoenix DC'), names.join(', '));
+  assert.equal(names.some(n => /more$/.test(n)), false);
+});
+
+// Nine sites are taller than the band. Clamping each separately piled every site
+// below the band's floor onto one pixel, so Denver and Phoenix entered on top of
+// each other. Two routes must never enter the band at the same height.
+test('no two sites enter the band at the same height, on any estate', () => {
+  for (const k of ['small', 'partial', 'mature', 'trust']) {
+    const ys = heroLayout(D.ESTATES[k], { bandX: 300, bandW: 500 }).edges.filter(e => e.kind === 'ingress' && !e.viaLane && !e.ghost).map(e => e.y2);
+    assert.equal(new Set(ys).size, ys.length, `${k}: sites share an entry: ${ys.join(', ')}`);
+  }
+});
+
+test('a site column that fits the band is not re-spaced', () => {
+  const l = heroLayout(D.ESTATES.partial, { bandX: 300, bandW: 500 });
+  for (const e of l.edges.filter(x => x.kind === 'ingress' && !x.viaLane && !x.ghost && x.site && !x.site.core)) {
+    const first = l.legs.find(g => g.site === e.site.name);
+    const onTrack = first && first.track === 'other' ? 14 : 0;
+    assert.equal(e.y2 - onTrack, Math.round(Math.min(l.bandY + l.bandH - 24, Math.max(l.bandY + 24, e.y1))), `${e.site.name} moved`);
+  }
+});
+
+test('no route runs through a segment label', () => {
+  const v = vals(mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null }));
+  const labelBottom = v.segments[0].labelY + 16;
+  const topEntry = Math.min(...v.legs.map(g => g.y));
+  assert.ok(topEntry > labelBottom, `a route at y ${topEntry} runs under labels ending at ${labelBottom}`);
 });

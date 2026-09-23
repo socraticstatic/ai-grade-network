@@ -388,7 +388,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     </sc-for>
     <sc-for list="{{ legs }}" as="lg" hint-placeholder-count="12">
       <g><title>{{ lg.seg }} · {{ lg.ownerName }}</title>
-        <line x1="{{ lg.x }}" y1="{{ lg.y }}" x2="{{ lg.x2 }}" y2="{{ lg.y }}" style="stroke:{{ lg.stroke }};stroke-width:{{ lg.width }};stroke-dasharray:{{ lg.dash }};stroke-linecap:round"></line>
+        <path d="{{ lg.d }}" style="fill:none;stroke:{{ lg.stroke }};stroke-width:{{ lg.width }};stroke-dasharray:{{ lg.dash }};stroke-linecap:round"></path>
         <sc-if value="{{ lg.hasLabel }}" hint-placeholder-val="{{ false }}"><rect x="{{ lg.chipX }}" y="{{ lg.chipY }}" width="{{ lg.chipW }}" height="20" rx="10" style="fill:var(--bg-base);stroke:var(--border-secondary)"></rect><foreignObject x="{{ lg.chipX }}" y="{{ lg.chipY }}" width="{{ lg.chipW }}" height="20" style="pointer-events:none"><div style="font-size:11px;line-height:20px;font-weight:600;text-align:center;color:var(--link);white-space:nowrap">{{ lg.label }}</div></foreignObject></sc-if>
       </g>
     </sc-for>

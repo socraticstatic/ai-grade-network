@@ -321,7 +321,10 @@ export function vals(c) {
   });
   const legRegions = new Set((L.legs || []).filter(g => g.region).map(g => g.region));
   const segmentsMeta = L.segments.map(sg => ({ ...sg,
-    y: L.bandY, h: L.bandH, bottom: L.bandY + L.bandH, labelY: L.bandY + 10,
+    y: L.bandY, h: L.bandH, bottom: L.bandY + L.bandH,
+    // At the band's top edge: the first route can enter 24px in, so a label any
+    // lower is drawn under a line.
+    labelY: L.bandY + 3,
     role: sg.side === 'core' ? 'button' : 'presentation',
     isCore: sg.side === 'core',
     open: sg.side === 'core' ? () => set({ fabDrill: ['fab'], bandOpen: true }) : () => {},

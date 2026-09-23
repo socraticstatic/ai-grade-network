@@ -135,6 +135,11 @@ export const ESTATES = {
       { name: 'Austin campus', cls: 'Campus', access: 'ABF (Business Fiber)', priv: true, metro: 'Austin' },
       { name: 'Remote sites (212)', cls: 'Branch', access: 'SD-WAN over AVPN', priv: true, metro: 'Various' },
       { name: 'Field (wireless)', cls: 'Mobility', access: 'Mobility first mile', priv: true, metro: 'Various' },
+      // Lumen, two ways. Denver's last mile is Lumen's, handed onto AT&T's edge
+      // over ENNI. Phoenix is Lumen end to end - access, core and its own cloud
+      // on-ramp into us-west-2 - and never touches AT&T.
+      { name: 'Denver branch', cls: 'Branch', access: 'Lumen (Ethernet)', priv: true, metro: 'Denver' },
+      { name: 'Phoenix DC', cls: 'Data center', access: 'Lumen Cloud Connect', priv: true, metro: 'Phoenix', core: 'third', via: 'us-west-2', viaRamp: 'Lumen' },
       { name: 'Singapore DC', cls: 'Data center', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Singapore' },
     ],
     regionsList: [

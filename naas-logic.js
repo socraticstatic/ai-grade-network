@@ -22,6 +22,12 @@ const CLOUD_ORDER = ['AWS', 'Azure', 'GCP', 'CoreWeave', 'Oracle'];
 export const RAMP_EDGE = { NetBond: 'att', DX: 'cloud', ER: 'cloud', Interconnect: 'cloud', EQX: 'third' };
 export const accessOwner = (access) => (/lumen/i.test(access || '') ? 'third' : 'att');
 
+// A mixed-carrier estate needs its third-party sites on the picture, not folded
+// into "+N more", so the root shows up to nine. A drill level keeps its sample
+// of seven: the full list lives in the drawer, and the sample size is what the
+// drawer's "hidden" count is measured against.
+const ROOT_SITES = 9, DRILL_SITES = 7;
+
 export function heroLayout(est, opts) {
   // The canvas is derived from the estate, not fixed. A full estate fills
   // every one of these numbers, so they are the maxima; a two-site estate
@@ -43,7 +49,7 @@ export function heroLayout(est, opts) {
   // so shrinking the picture never re-spaces a full estate's rows.
   const pitch = (k) => k > 1 ? Math.min(GAP_MAX, (H_MAX - 120) / (k - 1)) : 0;
 
-  const rootN = empty ? 3 : Math.min(7, (est.sites || []).length);
+  const rootN = empty ? 3 : Math.min(ROOT_SITES, (est.sites || []).length);
   const sitesEnd = rootN ? COL_TOP + (rootN - 1) * pitch(rootN) + CARD_H : 0;
   const rootRegs = empty ? 2 : (est.regionsList || []).length;
   const rootClouds = empty ? 2 : new Set((est.regionsList || []).map(r => r.cloud)).size;
@@ -61,15 +67,25 @@ export function heroLayout(est, opts) {
   out.ghost = empty;
 
   const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || est.sites);
-  const sites = rawSites.length > 7 ? [...rawSites.slice(0, 6), { name: `+${fmtN(rawSites.length - 6)} more`, access: 'open the list ›', more: true, rollup: false }] : rawSites;
+  const cap = opts.siteRows ? DRILL_SITES : ROOT_SITES;
+  const sites = rawSites.length > cap ? [...rawSites.slice(0, cap - 1), { name: `+${fmtN(rawSites.length - (cap - 1))} more`, access: 'open the list ›', more: true, rollup: false }] : rawSites;
   const n = sites.length;
   const gap = pitch(n);
   const top = 48 + ((H - 96) - (n - 1) * gap) / 2 - 18;
+  // Where a site enters the band. Clamping each one separately is right while the
+  // column fits the band, but once it is taller every site below the band's floor
+  // lands on the same pixel, and two routes enter on top of each other. Then the
+  // column is spread across the band's height instead.
+  const colTop = top + 18, colBot = top + (n - 1) * gap + 18, usable = bandH - 48;
+  // Taller than the band can hold, not merely offset from it: an offset column
+  // still clamps cleanly, and re-spacing it would move estates that were fine.
+  const overflows = n > 1 && colBot - colTop > usable;
+  const enterBand = (y) => overflows ? Math.round(bandY + 24 + (y - colTop) / (colBot - colTop) * usable) : clampBand(y);
   sites.forEach((s, i) => {
     const y = Math.round(top + i * gap);
     out.sites.push({ ...s, i, y, cy: y + 18, key: 'site' + i });
     const viaLane = !s.priv && !s.ghost;
-    out.edges.push({ id: 'in' + i, kind: 'ingress', priv: !!s.priv, ghost: !!s.ghost, viaLane, x1: 224, y1: y + 18, x2: bandX, y2: viaLane ? clampLane(y + 18) : clampBand(y + 18), site: s });
+    out.edges.push({ id: 'in' + i, kind: 'ingress', priv: !!s.priv, ghost: !!s.ghost, viaLane, x1: 224, y1: y + 18, x2: bandX, y2: viaLane ? clampLane(y + 18) : enterBand(y + 18), site: s });
   });
 
   const regs = empty ? [{ cloud: 'Clouds', region: 'Your regions', ghost: true, wl: 0 }, { cloud: 'Neoclouds', region: 'Your GPU regions', ghost: true, wl: 0 }] : (opts.regionRows || est.regionsList);
@@ -129,7 +145,7 @@ export function heroLayout(est, opts) {
     path.forEach(g => {
       const track = trackOf(g.owner);
       const y = track === 'att' ? baseY : baseY + DROP;
-      if (g.w) out.legs.push({ ...g, ...who, key: `l:${who.site || who.region}:${g.seg}`, y, track, side });
+      if (g.w) out.legs.push({ ...g, ...who, key: `l:${who.site || who.region}:${g.seg}`, y, track, side, d: `M${g.x},${y} L${g.x + g.w},${y}` });
       if (prev && prev.track !== track) {
         out.bends.push({ ...who, key: `b:${who.site || who.region}:${prev.seg}>${g.seg}`, x: g.x, y1: prev.y, y2: y,
           between: [prev.seg, g.seg], d: `M${g.x - 10},${prev.y} C${g.x},${prev.y} ${g.x},${y} ${g.x + 10},${y}` });
@@ -137,7 +153,7 @@ export function heroLayout(est, opts) {
       prev = { seg: g.seg, track, y };
     });
   };
-  out.edges.filter(e => e.kind === 'ingress' && e.priv && !e.ghost && !e.viaLane && e.site && !e.site.more).forEach(e => {
+  out.edges.filter(e => e.kind === 'ingress' && e.priv && !e.ghost && !e.viaLane && e.site && !e.site.more && e.site.core !== 'third').forEach(e => {
     place([
       { seg: 'Access', x: sA.x, w: sA.w, owner: accessOwner(e.site.access) },
       { seg: 'Edge', x: sE.x, w: sE.w, owner: 'att' },
@@ -154,6 +170,30 @@ export function heroLayout(est, opts) {
     // two meet with a jog at the band's edge.
     const last = out.legs.filter(g => g.region === e.region.region).pop();
     if (last) e.y1 = last.y;
+  });
+  // A third-party core is not the shared AT&T backbone, so its route cannot meet
+  // the others there. It runs site to region on the not-AT&T track through all
+  // five segments and bends across Core from its site's row to its region's.
+  out.edges.filter(e => e.kind === 'ingress' && e.priv && !e.viaLane && e.site && e.site.core === 'third').forEach(e => {
+    const target = out.regions.find(r => r.region === e.site.via);
+    if (!target) return;
+    const name = e.site.name, y1 = e.y2 + DROP;
+    const regionEdge = out.edges.find(x => x.kind === 'egress' && x.region && x.region.region === target.region);
+    const y2 = (regionEdge ? regionEdge.y1 : clampBand(target.cy)) + DROP;
+    const leg = (seg, x, w, owner, y, extra = {}) => out.legs.push({ seg, x, w, owner, y, track: 'other', site: name, side: 'path',
+      key: `l:${name}:${seg}:${x}`, d: `M${x},${y} L${x + w},${y}`, ...extra });
+    leg('Access', sA.x, sA.w, accessOwner(e.site.access), y1);
+    leg('Edge', sE.x, sE.w, 'third', y1);
+    const mx = sC.x + sC.w / 2;
+    leg('Core', sC.x, sC.w, 'third', y1, { y2, d: `M${sC.x},${y1} C${mx},${y1} ${mx},${y2} ${sC.x + sC.w},${y2}` });
+    leg('Edge', cE.x, cE.w, 'third', y2, { label: e.site.viaRamp || '', region: target.region });
+    leg('Access', cA.x, cA.w, 'cloud', y2, { region: target.region, cloud: target.cloud });
+    out.edges.push({ id: 'lumen' + name, kind: 'egress', lumen: true, priv: true, x1: cA.x + cA.w, y1: y2, x2: 980, y2: target.cy, site: e.site, dur: 3 });
+  });
+  // Every site arrives on the track its first leg runs on.
+  out.edges.filter(e => e.kind === 'ingress' && e.site).forEach(e => {
+    const first = out.legs.find(g => g.site === e.site.name);
+    if (first) e.y2 = first.y;
   });
   return out;
 }
