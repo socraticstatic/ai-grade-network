@@ -203,7 +203,7 @@ export function levelHead(est, inv, ob, col, trail = [], flat = false) {
  * reach a screen.
  */
 function labels(est, inv, col, trail) {
-  const root = col === 'sites' ? 'Sites' : col === 'fabric' ? 'AT&T fabric' : 'Clouds';
+  const root = col === 'sites' ? 'Sites' : col === 'fabric' ? 'AT&T network' : 'Clouds';
   if (col === 'sites') return [root, ...trail.map(k => S.labelOfKey(est, k))];
   if (col === 'fabric') return [root, ...fabTrail(trail).slice(1).map(k => String(k).replace(/^port:[^:]+:/, 'port '))];
   const out = [root];
@@ -290,7 +290,7 @@ function frame(head, rows, opts, extra = {}) {
 }
 
 const stateOfPriv = (priv) => (priv ? 'ok' : 'public');
-const labelOfPriv = (priv) => (priv ? 'On the AT&T fabric' : 'Public first mile');
+const labelOfPriv = (priv) => (priv ? 'On the AT&T network' : 'Public first mile');
 
 /**
  * The rows behind a column header's door, at any level of any column.
@@ -358,7 +358,7 @@ function cloudsLevel(est, inv, trail, opts) {
   if (!trail.length) {
     const rows = est.regionsList.map(r => ({
       id: `${r.cloud} ${r.region}`, into: r.region,
-      state: stateOfPriv(r.priv), stateLabel: r.priv ? 'On the AT&T fabric' : 'Public internet',
+      state: stateOfPriv(r.priv), stateLabel: r.priv ? 'On the AT&T network' : 'Public internet',
       sub: `${n(r.wl || 0)} ${r.wl === 1 ? 'workload' : 'workloads'} · ${r.ramp || 'no on-ramp'}`,
       action: r.priv ? '' : 'Attach',
     }));

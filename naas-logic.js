@@ -166,7 +166,7 @@ export function sankey(est) {
   const st = srcs.reduce((a, b) => a + b.v, 0);
   srcs.forEach(s => (s.v = s.v / st * total));
   const privV = dsts.filter(d => d.priv).reduce((a, b) => a + b.v, 0);
-  const mids = [{ name: 'AT&T fabric', v: privV, priv: true }, { name: 'Public internet', v: total - privV, priv: false }];
+  const mids = [{ name: 'AT&T network', v: privV, priv: true }, { name: 'Public internet', v: total - privV, priv: false }];
   const stack = (arr, x) => { let y = 10; const pad = 8; const scale = (H - 20 - pad * (arr.length - 1)) / total; return arr.map(a => { const h = a.v * scale; const o = { ...a, x, y, h, x2: x + colW, used: 0 }; y += h + pad; return o; }); };
   const S = stack(srcs, 0), M = stack(mids, W / 2 - colW / 2), D = stack(dsts, W - colW);
   const ribbons = [];

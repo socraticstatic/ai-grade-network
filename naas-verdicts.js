@@ -14,10 +14,10 @@ export function connectVerdict(est, layer = 'cloud', items = []) {
   const noun = cloud
     ? ['region', 'regions', 'still ride the public internet']
     : ['site', 'sites', 'reach clouds over the public internet'];
-  if (!exposedN) return `Every ${noun[0]} is on the AT&T fabric.`;
+  if (!exposedN) return `Every ${noun[0]} is on the AT&T network.`;
   const onFabric = totalN - exposedN;
   const extra = cloud && est.regionsExtra ? `, plus ${est.regionsExtra} smaller regions rolled up` : '';
-  return `${exposedN} of ${totalN} ${noun[1]} ${noun[2]}. ${onFabric} ${onFabric === 1 ? 'is' : 'are'} on the AT&T fabric${extra}.`;
+  return `${exposedN} of ${totalN} ${noun[1]} ${noun[2]}. ${onFabric} ${onFabric === 1 ? 'is' : 'are'} on the AT&T network${extra}.`;
 }
 
 export function governVerdict(est) {

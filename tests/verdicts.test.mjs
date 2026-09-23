@@ -14,22 +14,22 @@ const EXPECT = {
     observe: 'No telemetry yet.',
   },
   partial: {
-    connect: '5 of 7 regions still ride the public internet. 2 are on the AT&T fabric, plus 5 smaller regions rolled up.',
+    connect: '5 of 7 regions still ride the public internet. 2 are on the AT&T network, plus 5 smaller regions rolled up.',
     govern: '4 policies enforced. 11 PCI-tagged workloads reach the internet directly',
     cost: '$36,000/mo on the table across 2 priced findings. $0/mo already saved on the fabric.',
-    observe: '40% of traffic on the AT&T fabric, saving $0/mo. 5 regions are blind.',
+    observe: '40% of traffic on the AT&T network, saving $0/mo. 5 regions are blind.',
   },
   mature: {
-    connect: '1 of 8 regions still ride the public internet. 7 are on the AT&T fabric, plus 10 smaller regions rolled up.',
+    connect: '1 of 8 regions still ride the public internet. 7 are on the AT&T network, plus 10 smaller regions rolled up.',
     govern: '14 policies enforced. 2 authored but not enforced.',
     cost: '$32,800/mo leaves through public egress that the fabric would carry for $15,300.',
-    observe: '95% of traffic on the AT&T fabric, saving $61.4k/mo. 1 region is blind.',
+    observe: '95% of traffic on the AT&T network, saving $61.4k/mo. 1 region is blind.',
   },
   trust: {
-    connect: '2 of 6 regions still ride the public internet. 4 are on the AT&T fabric, plus 8 smaller regions rolled up.',
+    connect: '2 of 6 regions still ride the public internet. 4 are on the AT&T network, plus 8 smaller regions rolled up.',
     govern: '9 policies enforced. 96 PCI-tagged workloads reach the internet directly',
     cost: '$132,000/mo on the table across 2 priced findings. $0/mo already saved on the fabric.',
-    observe: '77% of traffic on the AT&T fabric, saving $0/mo. 2 regions are blind.',
+    observe: '77% of traffic on the AT&T network, saving $0/mo. 2 regions are blind.',
   },
 };
 
@@ -50,7 +50,7 @@ test('off the cloud layer the connect verdict counts sites, not regions', () => 
   const items = [{ exposed: 2 }, { exposed: 0 }, { exposed: 0 }];
   assert.equal(
     connectVerdict(est, 'net', items),
-    '1 of 3 sites reach clouds over the public internet. 2 are on the AT&T fabric.',
+    '1 of 3 sites reach clouds over the public internet. 2 are on the AT&T network.',
   );
 });
 

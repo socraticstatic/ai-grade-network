@@ -43,7 +43,7 @@ export function path(site, region) {
   if (AGG.has(site.cls)) { ms += 1; hops.push({ kind: 'hub', name: `${metro} hub`, sub: 'branch aggregation', ms, state: 'ok' }); }
   ms += 2; hops.push({ kind: 'pop', name: `${metro} PoP`, sub: 'AT&T on-net', ms, state: 'ok' });
   if (region.priv) {
-    ms += Math.max(2, (region.fab || 8) - 4); hops.push({ kind: 'fabric', name: 'AT&T fabric', sub: 'deterministic path', ms, state: region.rel === 'warn' ? 'warn' : 'ok' });
+    ms += Math.max(2, (region.fab || 8) - 4); hops.push({ kind: 'fabric', name: 'AT&T network', sub: 'deterministic path', ms, state: region.rel === 'warn' ? 'warn' : 'ok' });
     ms += 1; hops.push({ kind: 'ramp', name: `${region.ramp || 'NetBond'} on-ramp`, sub: region.city || 'private on-ramp', ms, state: 'ok' });
   } else {
     ms += Math.max(4, (region.pub || 60) - 2); hops.push({ kind: 'public', name: 'Public internet', sub: 'no path control', ms, state: ms > SLO ? 'bad' : 'warn' });

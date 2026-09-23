@@ -211,7 +211,7 @@ export function observe(est, steered, inv, split) {
     { key: 'sav', l: 'Savings', v: short(savingsMo), u: '', e: '/mo' },
     ...(capTotal ? [{ key: 'util', l: 'Utilization', v: String(util), u: '%', e: 'of attached capacity' }] : []),
   ];
-  const verdict = total ? `${covPct}% of traffic on the AT&T fabric, saving ${short(savingsMo)}/mo. ${blind.length} ${blind.length === 1 ? 'region is' : 'regions are'} blind.` : 'No telemetry yet.';
+  const verdict = total ? `${covPct}% of traffic on the AT&T network, saving ${short(savingsMo)}/mo. ${blind.length} ${blind.length === 1 ? 'region is' : 'regions are'} blind.` : 'No telemetry yet.';
   const coverage = `${covPct}% of traffic and ${Math.min(pathsCovered, est.regionsList.length)} of ${est.regionsList.length} paths are covered. ${blind.length} ${blind.length === 1 ? 'region is' : 'regions are'} blind.`;
   const subVerdict = { pub: pub.toFixed(1), total: total.toFixed(1), fab: fab.toFixed(1) };
   const briefing = total ? [
@@ -260,7 +260,7 @@ function sankey3(est, flows, split) {
   const dests = [...(sitesV ? [{ kind: 'dest', key: 'dest:regions', name: 'Cloud regions (from sites)', v: sitesV, fabV: sitesFab }] : []), ...Object.values(dmap).sort((a, b) => b.v - a.v)];
   const T = groups.reduce((a, g) => a + g.nodes.reduce((x, n) => x + n.v, 0), 0);
   const fabV = groups.reduce((a, g) => a + g.nodes.reduce((x, n) => x + n.fabV, 0), 0);
-  const mids = [{ kind: 'mid', key: 'mid:fabric', name: 'AT&T fabric', v: fabV, priv: true }, { kind: 'mid', key: 'mid:public', name: 'Public internet', v: T - fabV, priv: false }].filter(m => m.v > 0);
+  const mids = [{ kind: 'mid', key: 'mid:fabric', name: 'AT&T network', v: fabV, priv: true }, { kind: 'mid', key: 'mid:public', name: 'Public internet', v: T - fabV, priv: false }].filter(m => m.v > 0);
   const nLeft = groups.reduce((a, g) => a + g.nodes.length, 0);
   const H0 = 320;
   const leftOverhead = top + groups.length * (headH + gap) + (nLeft - groups.length) * pad;

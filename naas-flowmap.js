@@ -332,7 +332,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
   const rightH = DD.length ? DD[DD.length - 1].y + DD[DD.length - 1].h + 8 : top;
   const H = Math.max(leftH, rightH, H0);
   const midPct = (v) => T - localV > 0.001 ? ` · ${Math.round(v / (T - localV) * 100)}%` : '';
-  const mids = [{ kind: 'mid', key: 'mid:fabric', name: 'AT&T fabric', sub: midPct(fabV).replace(' · ', '') + ' of what sites send', v: fabV, fabV, priv: true, state: 'ok', hasChildren: false }, { kind: 'mid', key: 'mid:public', name: 'Outside the fabric', sub: midPct(T - fabV - localV).replace(' · ', '') + ' of what sites send', fabV: 0, v: T - fabV - localV, priv: false, state: 'ok', hasChildren: false }].filter(m => m.v > 0.001);
+  const mids = [{ kind: 'mid', key: 'mid:fabric', name: 'AT&T network', sub: midPct(fabV).replace(' · ', '') + ' of what sites send', v: fabV, fabV, priv: true, state: 'ok', hasChildren: false }, { kind: 'mid', key: 'mid:public', name: 'Outside the fabric', sub: midPct(T - fabV - localV).replace(' · ', '') + ' of what sites send', fabV: 0, v: T - fabV - localV, priv: false, state: 'ok', hasChildren: false }].filter(m => m.v > 0.001);
   // The band carries only what crosses a mid mile, so it is scaled against
   // that, not against the estate total. Scaling against T left the two nodes
   // short and hanging in the middle of the column once region-local traffic
@@ -383,7 +383,7 @@ export function litFor(map, key) {
 export const PATTERNS = [
   ['region', 'In the region', 'Traffic that starts and ends inside one cloud region. It never crosses a region boundary, so it costs nothing in egress.'],
   ['regions', 'Across regions', 'Traffic between two regions of the SAME cloud — us-east-1 to us-west-2. It leaves a region, so the hyperscaler bills egress on it.'],
-  ['clouds', 'Across clouds', 'Traffic between DIFFERENT clouds — AWS to Azure. Billed egress at both ends unless it rides the AT&T fabric.'],
+  ['clouds', 'Across clouds', 'Traffic between DIFFERENT clouds — AWS to Azure. Billed egress at both ends unless it rides the AT&T network.'],
   ['internet', 'To the internet', 'Traffic leaving your estate for the public internet or SaaS. The most expensive path per GB and the least visible.'],
   ['inbound', 'Coming in', 'Traffic arriving from your sites and users into the cloud. Usually free to receive; the first mile decides how fast it is.'],
 ];

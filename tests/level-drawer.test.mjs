@@ -136,7 +136,7 @@ test('fabric: setColTrail keeps the "fab" placeholder even when the band was nev
   v = vals(c);
   assert.deepEqual(c.state.fabDrill, ['fab']);
   assert.equal(v.fabOpen, true, 'band stays open (picture does not disappear)');
-  assert.equal(v.fabHead.label, 'AT&T fabric');
+  assert.equal(v.fabHead.label, 'AT&T network');
 });
 
 test('fabric: when the band WAS already seeded by the picture, behavior is unchanged', () => {
@@ -216,7 +216,7 @@ test('fix (Important 1): fabric canBack is false at the root (trail floor is 1, 
   v = vals(c);
   assert.deepEqual(c.state.fabDrill, ['fab'], 'Back at the root must never collapse fabDrill to []');
   assert.equal(v.fabOpen, true, 'the band stays open - it must not disappear from the picture');
-  assert.equal(v.fabHead.label, 'AT&T fabric');
+  assert.equal(v.fabHead.label, 'AT&T network');
 
   // One level in: canBack true, Back pops exactly one hop, never past the floor.
   const door = v.drawer.rows.find(r => r.isDoor);

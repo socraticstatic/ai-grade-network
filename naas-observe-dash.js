@@ -158,7 +158,7 @@ export function workloadPanel(sel, ctx) {
       ['Subnet', `${sn.name} · ${sn.cidr}`],
       ['Availability zone', sn.az],
       ['Reachability', w.exposed ? 'Exposed to the internet' : 'Private'],
-      ['Path', top.priv ? `AT&T fabric · ${top.ramp || 'NetBond'}` : 'Public internet'],
+      ['Path', top.priv ? `AT&T network · ${top.ramp || 'NetBond'}` : 'Public internet'],
       ['Latency to the on-ramp', `${ms} ms`],
       ...(row ? [['Connection', `${row.ramp} · ${row.state}`]] : []),
       ['First seen', w.since === 0 ? 'today' : w.since === 1 ? '1 day ago' : `${w.since} days ago`],
@@ -249,7 +249,7 @@ export function vpcPanel(sel, ctx) {
       ['Traffic', `${n(wls.length)} workloads`],
       ['Instances sharing this app', `${n(apps.length)} ${apps.length === 1 ? 'app' : 'apps'}: ${apps.slice(0, 3).join(', ')}`],
       ['Reachability', exposed ? `${n(exposed)} exposed to the internet` : 'All private'],
-      ['Path', top.priv ? `AT&T fabric · ${top.ramp || 'NetBond'}` : 'Public internet'],
+      ['Path', top.priv ? `AT&T network · ${top.ramp || 'NetBond'}` : 'Public internet'],
       ['Latency to the on-ramp', `${top.priv ? top.fab : top.pub} ms`],
     ],
     children: { title: `${n(vpc.subnets.length)} ${vpc.subnets.length === 1 ? 'subnet' : 'subnets'}`, rows: vpc.subnets.map(x => {
@@ -283,7 +283,7 @@ export function subnetPanel(sel, ctx) {
       ['Traffic', `${n(wls.length)} workloads`],
       ['Instances sharing this app', apps.join(', ')],
       ['Reachability', sn.pub ? (exposed ? `Public subnet · ${n(exposed)} exposed` : 'Public subnet') : 'Private subnet'],
-      ['Path', top.priv ? `AT&T fabric · ${top.ramp || 'NetBond'}` : 'Public internet'],
+      ['Path', top.priv ? `AT&T network · ${top.ramp || 'NetBond'}` : 'Public internet'],
     ],
     children: { title: `${n(wls.length)} ${wls.length === 1 ? 'workload' : 'workloads'}`, rows: wls.slice(0, 40).map(y => ({
       key: `wl:${c.region}|${vpc.id}|${y.id}`, name: y.name, sub: `${y.ip} · ${y.type} · ${y.tag || 'untagged'}`, warn: !!y.exposed, note: y.exposed ? 'exposed' : '',

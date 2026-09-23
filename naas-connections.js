@@ -149,7 +149,7 @@ export function records(est, inv, ob, pattern = 'all') {
 // ---------- Drills in place (Santosh, 16:02: "I don't want to lose the context") ----------
 import * as S from './naas-sites.js';
 
-function pathsOfSite(est, site) { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T fabric' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; }
+function pathsOfSite(est, site) { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; }
 
 /** Left column of the hero for a drill trail: [] → the estate's sites; [class] → metros or named sites; [class, metro] → sites; [class, metro, site] → the site's paths. */
 export function siteDrillRows(est, trail, opts = {}) {
@@ -163,7 +163,7 @@ export function siteDrillRows(est, trail, opts = {}) {
   const clsLabel = S.labelOfKey(est, trail[0]);
   const siteRowOf = (x) => ({ key: 'site:' + x.id, name: x.id, access: x.address || `${x.metro} · ${x.access || ''}`, priv: !!x.priv, drillKey: x.id, rollup: false, cursor: 'pointer' });
   const pathsOf = (site) => pathsOfSite(est, site);
-  const _unused = (site) => { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T fabric' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; };
+  const _unused = (site) => { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; };
   if (trail.length === 1) {
     const rows = kids.map(ch => ch.kind === 'metro'
       ? { key: 'metro:' + ch.key, name: `${ch.name} (${ch.count.toLocaleString('en-US')})`, access: `${ch.onFabric.toLocaleString('en-US')} of ${ch.count.toLocaleString('en-US')} on the fabric · ${ch.access}`, priv: ch.onFabric >= ch.count / 2, drillKey: ch.key, rollup: true, cursor: 'pointer' }
