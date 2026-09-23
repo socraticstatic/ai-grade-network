@@ -92,6 +92,9 @@ export function heroLayout(est, opts) {
   const W = 1392, H_MAX = 560, BAND_H_MAX = 396, BAND_H_MIN = 336;
   const FAN = 18;
   const LANE_GAP = 16, LANE_H = 76, FOOT = 44, COL_TOP = 30, CARD_H = 36, GAP_MAX = 66, INET_OVER_LANE = 60;
+  // Cards are drawn CARD tall on rows ROW apart (2026-09-23: taller, so logos and
+  // titles read larger). The canvas is still measured with CARD_H, so it did not grow.
+  const CARD = 44, HALF = CARD / 2;
   const rowH = 34, groupHead = 20, groupGap = 12;
   const bandX = opts.bandX || 560, bandW = opts.bandW || 240, bandY = 28;
   const empty = !est || est.stage === 'empty';
@@ -129,29 +132,32 @@ export function heroLayout(est, opts) {
   // cards on the left, things in the band and provider cards on the right all
   // sit on them, so a card, the things it uses and its cloud can share a line.
   // A column takes every other row when it has room, and is centred on them.
-  const ROW = 44, rowTop = bandY + 30, rows = Math.max(1, Math.floor((bandY + bandH - 12 - rowTop) / ROW) + 1);
+  const ROW = 52, rowTop = bandY + 30, rows = Math.max(1, Math.floor((bandY + bandH - 12 - rowTop) / ROW) + 1);
   const rowY = (i) => rowTop + i * ROW;
+  // Cards may use the rows that continue below the band, beside the lane, so a
+  // column of cards gets every other row; the things stay on the band's rows.
+  const cardRows = Math.max(rows, Math.floor((H - FOOT + 4 - HALF - rowTop) / ROW) + 1);
   const onRows = (k) => {
-    const step = k > 1 ? Math.min(2, Math.floor((rows - 1) / (k - 1))) : 0;
-    if (k > 1 && step < 1) return null; // taller than the band: fall back to spacing
-    const start = Math.floor(((rows - 1) - (k - 1) * step) / 2);
+    const step = k > 1 ? Math.min(2, Math.floor((cardRows - 1) / (k - 1))) : 0;
+    if (k > 1 && step < 1) return null; // taller than the canvas: fall back to spacing
+    const start = Math.floor(((cardRows - 1) - (k - 1) * step) / 2);
     return (i) => rowY(start + i * step);
   };
   const siteRow = onRows(n);
   const gap = siteRow ? (n > 1 ? siteRow(1) - siteRow(0) : 0) : pitch(n);
-  const top = siteRow ? siteRow(0) - 18 : 48 + ((H - 96) - (n - 1) * gap) / 2 - 18;
+  const top = siteRow ? siteRow(0) - HALF : 48 + ((H - 96) - (n - 1) * gap) / 2 - HALF;
   // Where a site enters the band. Clamping each one separately is right while the
   // column fits the band, but once it is taller every site below the band's floor
   // lands on the same pixel, and two routes enter on top of each other. Then the
   // column is spread across the band's height instead.
-  const colTop = top + 18, colBot = top + (n - 1) * gap + 18, usable = bandH - 48;
+  const colTop = top + HALF, colBot = top + (n - 1) * gap + HALF, usable = bandH - 48;
   // Taller than the band can hold, not merely offset from it: an offset column
   // still clamps cleanly, and re-spacing it would move estates that were fine.
   const overflows = n > 1 && colBot - colTop > usable;
   const enterBand = (y) => overflows ? Math.round(bandY + 24 + (y - colTop) / (colBot - colTop) * usable) : clampBand(y);
   sites.forEach((s, i) => {
     const y = Math.round(top + i * gap);
-    out.sites.push({ ...s, i, y, cy: y + 18, key: 'site' + i });
+    out.sites.push({ ...s, i, y, cy: y + HALF, h: CARD, key: 'site' + i });
     // A region card draws one line per distinct path in it, fanned around its
     // entry, each carrying a stand-in site with that path's access, core and
     // on-ramp, so the routing below draws a region exactly as it draws a site.
@@ -161,12 +167,12 @@ export function heroLayout(est, opts) {
     lines.forEach(({ k, n: np, site }) => {
       const viaLane = !site.priv && !site.ghost;
       const fan = (k - (np - 1) / 2) * FAN;
-      out.edges.push({ id: 'in' + i + (np > 1 ? '.' + k : ''), kind: 'ingress', priv: !!site.priv, ghost: !!site.ghost, viaLane, x1: 224, y1: y + 18,
-        x2: bandX, y2: viaLane ? clampLane(y + 18) : enterBand(y + 18) + fan, site });
+      out.edges.push({ id: 'in' + i + (np > 1 ? '.' + k : ''), kind: 'ingress', priv: !!site.priv, ghost: !!site.ghost, viaLane, x1: 224, y1: y + HALF,
+        x2: bandX, y2: viaLane ? clampLane(y + HALF) : enterBand(y + HALF) + fan, site });
     });
   });
 
-  const regs = empty ? [{ cloud: 'Clouds', region: 'Your regions', ghost: true, wl: 0 }, { cloud: 'Neoclouds', region: 'Your GPU regions', ghost: true, wl: 0 }] : (opts.regionRows || est.regionsList);
+  const regs = empty ? [{ cloud: 'Your clouds', region: 'Your regions', ghost: true, wl: 0 }, { cloud: 'Your neoclouds', region: 'Your GPU regions', ghost: true, wl: 0 }] : (opts.regionRows || est.regionsList);
   const byCloud = {};
   regs.forEach(r => { (byCloud[r.cloud] = byCloud[r.cloud] || []).push(r); });
   const ord = (c) => { const i = CLOUD_ORDER.indexOf(c); return i < 0 ? 99 : i; };
@@ -176,33 +182,35 @@ export function heroLayout(est, opts) {
   // A provider card fans one wire per on-ramp its regions use, and one for the
   // internet, each carrying its regions' numbers so the lenses still read. The
   // canvas is still measured from every region, so a drill never resizes it.
-  const cardRoot = !empty && !opts.regionRows;
+  const cardRoot = !opts.regionRows;
   if (cardRoot) {
     const k = clouds.length, cardRow = onRows(k), gapR = cardRow ? (k > 1 ? cardRow(1) - cardRow(0) : 0) : pitch(k);
-    const topR = cardRow ? cardRow(0) - 18 : Math.round(48 + ((H - 96) - (k - 1) * gapR) / 2 - 18);
+    const topR = cardRow ? cardRow(0) - HALF : Math.round(48 + ((H - 96) - (k - 1) * gapR) / 2 - HALF);
     clouds.forEach((c, j) => {
-      const rs = byCloud[c], ry = Math.round(topR + j * gapR), cy = ry + 18;
-      const card = { cloud: c, region: c, card: true, key: 'cloud:' + c, regions: rs.map(r => r.region), count: rs.length,
+      const rs = byCloud[c], ry = Math.round(topR + j * gapR), cy = ry + HALF;
+      const card = { cloud: c, region: c, card: true, ghost: !!rs[0].ghost, key: 'cloud:' + c, regions: rs.map(r => r.region), count: rs.length,
         wl: rs.reduce((a2, r) => a2 + (r.wl || 0), 0), priv: rs.some(r => r.priv), link: rs.some(r => r.link === 'degraded') ? 'degraded' : 'ok', y: ry, cy };
       out.regions.push(card);
+      // Before it is opened a provider draws one wire (Micah, 2026-09-23: "the
+      // AWS line one line by default pre-expand"). Inside the band each on-ramp
+      // still runs its own route into the provider's gateway; out of the band,
+      // one wire carries them all. A provider with nothing private draws its
+      // one wire through the lane instead.
+      const privRegs = rs.filter(r => r.priv), lr = privRegs.length ? privRegs : rs, priv = privRegs.length > 0, viaLane = !priv;
       const byLine = {};
-      rs.forEach(r => { const line = r.priv ? cloudEdgeThing(r).id : 'public'; (byLine[line] = byLine[line] || []).push(r); });
-      const lineKeys = Object.keys(byLine).sort((a2, b2) => (a2 === 'public') - (b2 === 'public'));
-      card.lines = lineKeys;
-      lineKeys.forEach((line, i2) => {
-        const lr = byLine[line], priv = line !== 'public', viaLane = !priv;
-        const avg = (f) => Math.round(lr.reduce((a2, r) => a2 + (r[f] || 0), 0) / lr.length);
-        const stand = { cloud: c, region: c, line, card: true, priv, ramp: priv ? lr[0].ramp : null, regions: lr.map(r => r.region),
-          wl: lr.reduce((a2, r) => a2 + (r.wl || 0), 0), fab: avg('fab'), pub: avg('pub'), tags: [...new Set(lr.flatMap(r => r.tags || []))],
-          link: lr.some(r => r.link === 'degraded') ? 'degraded' : 'ok', xc: (lr.find(r => r.xc) || {}).xc || null, cy };
-        const fan = Math.round((i2 - (lineKeys.length - 1) / 2) * 12);
-        out.edges.push({ id: `eg:${c}:${line}`, kind: 'egress', priv, ghost: false, viaLane, x1: bandX + bandW,
-          y1: viaLane ? clampLane(cy) : Math.round(Math.min(bandY + bandH - 40, Math.max(bandY + 24, cy))), x2: RX, y2: cy + fan,
-          chip: stand.ramp, shield: priv && (stand.ramp === 'NetBond' || stand.ramp === 'ER'), region: stand, dur: stand.fab ? Math.max(1.2, stand.fab / 6) : 3 });
-      });
+      privRegs.forEach(r => { const line = cloudEdgeThing(r).id; (byLine[line] = byLine[line] || []).push(r); });
+      const lines = Object.entries(byLine).map(([line, xs]) => ({ line, cloud: c, ramp: xs[0].ramp, regions: xs.map(r => r.region), xc: (xs.find(r => r.xc) || {}).xc || null }));
+      card.lines = lines.map(l2 => l2.line);
+      const avg = (f) => Math.round(lr.reduce((a2, r) => a2 + (r[f] || 0), 0) / lr.length);
+      const stand = { cloud: c, region: c, card: true, priv, ramp: lines.length === 1 ? lines[0].ramp : null, lines: priv ? lines : null, regions: lr.map(r => r.region),
+        wl: lr.reduce((a2, r) => a2 + (r.wl || 0), 0), fab: avg('fab'), pub: avg('pub'), tags: [...new Set(lr.flatMap(r => r.tags || []))],
+        link: lr.some(r => r.link === 'degraded') ? 'degraded' : 'ok', cy };
+      out.edges.push({ id: `eg:${c}`, kind: 'egress', priv, ghost: card.ghost, viaLane: viaLane && !card.ghost, x1: bandX + bandW,
+        y1: viaLane ? clampLane(cy) : Math.round(Math.min(bandY + bandH - 40, Math.max(bandY + 24, cy))), x2: RX, y2: cy,
+        chip: null, shield: false, region: stand, dur: stand.fab ? Math.max(1.2, stand.fab / 6) : 3 });
       if (card.wl) out.workloads.push({ region: c, y: ry + 7, label: card.wl.toLocaleString('en-US') + ' workloads', key: 'wl' + c, tags: [] });
     });
-    y = k ? topR + (k - 1) * gapR + CARD_H + groupGap : COL_TOP;
+    y = k ? topR + (k - 1) * gapR + CARD + groupGap : COL_TOP;
   }
   if (!cardRoot) clouds.forEach(c => {
     out.groups.push({ cloud: c, y, count: byCloud[c].length });
@@ -273,8 +281,11 @@ export function heroLayout(est, opts) {
   // Regions: out of Core, across the on-ramp, into the cloud's own gateway.
   out.edges.filter(e => e.kind === 'egress' && e.priv && !e.ghost && !e.viaLane && e.region).forEach(e => {
     const r = e.region, y = r.cy != null ? r.cy : e.y2;
-    const chain = [coreThing(null), cloudEdgeThing(r), cloudAccessThing(r)];
-    drafts.push({ who: r.line ? `${r.region} · ${r.line}` : r.region, label: r.card ? r.cloud : `${r.cloud} ${r.region}`, side: 'region', region: r.region, e, xc: r.xc, nodes: chain.map((t, i) => want(t, i + 2, y)) });
+    // A provider's one wire carries a route per on-ramp; they share the wire.
+    (r.lines || [r]).forEach((part, pi) => {
+      const chain = [coreThing(null), cloudEdgeThing({ ...part, cloud: r.cloud }), cloudAccessThing(r)];
+      drafts.push({ who: r.lines ? `${r.region} · ${part.line}` : r.region, label: r.card ? r.cloud : `${r.cloud} ${r.region}`, side: 'region', region: r.region, e, shared: pi > 0, xc: part.xc, nodes: chain.map((t, i) => want(t, i + 2, y)) });
+    });
   });
   drafts.forEach(d => d.nodes.forEach(n => use(n, d.label)));
   // Place: each thing at the mean height of what uses it, then spread apart in
@@ -312,6 +323,7 @@ export function heroLayout(est, opts) {
   // knot, and each wire's chips and dots keep their own height.
   const fanOf = {};
   drafts.forEach(d => {
+    if (d.shared) return;
     const n = d.side === 'region' ? d.nodes[d.nodes.length - 1] : d.nodes[0];
     const k = (d.side === 'region' ? 'out:' : 'in:') + n.id;
     (fanOf[k] = fanOf[k] || []).push(d);
@@ -321,6 +333,8 @@ export function heroLayout(est, opts) {
     const step = ds.length > 1 ? Math.min(ds[0].side === 'region' ? 10 : 6, (ROW - 8) / (ds.length - 1)) : 0;
     ds.forEach((d, k) => { d.fan = Math.round((k - (ds.length - 1) / 2) * step); });
   });
+  // Routes that share a wire leave the band where that wire does.
+  drafts.forEach(d => { if (d.shared) d.fan = drafts.find(x => x.e === d.e && !x.shared).fan; });
   const pieceKeys = {};
   drafts.forEach(d => {
     const ns = d.nodes, last = ns.length - 1;

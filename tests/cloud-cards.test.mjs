@@ -31,16 +31,16 @@ test('a provider card counts its regions and sums their workloads', () => {
   assert.deepEqual(aws.regions, regs.map(r => r.region));
 });
 
-test('a provider card fans one wire per on-ramp it uses, and one for the internet', () => {
+// "Make the AWS line one line by default pre-expand" (2026-09-23): a provider
+// draws one wire out of the band; inside, each on-ramp keeps its own route.
+test('a provider draws one wire until it is opened, and a route per on-ramp inside the band', () => {
   const l = root();
-  const lines = (cloud) => l.edges.filter(e => e.kind === 'egress' && e.region && e.region.card && e.region.cloud === cloud).map(e => e.region.line);
-  assert.deepEqual(lines('AWS'), ['ce:netbond', 'ce:dx', 'public']);
-  assert.deepEqual(lines('Azure'), ['ce:er']);
-  assert.deepEqual(lines('CoreWeave'), ['ce:eqx']);
-  const aws = cards(l).find(c => c.cloud === 'AWS');
-  const ys = l.edges.filter(e => e.kind === 'egress' && e.region && e.region.cloud === 'AWS').map(e => e.y2);
-  assert.equal(new Set(ys).size, ys.length, 'two AWS wires land on one pixel');
-  for (const y of ys) assert.ok(Math.abs(y - aws.cy) <= 18, `an AWS wire lands ${y - aws.cy}px off its card`);
+  const wires = (cloud) => l.edges.filter(e => e.kind === 'egress' && e.region && e.region.card && e.region.cloud === cloud);
+  for (const c of ['AWS', 'Azure', 'GCP', 'CoreWeave']) assert.equal(wires(c).length, 1, `${c} draws ${wires(c).length} wires`);
+  assert.equal(wires('AWS')[0].y2, cards(l).find(c => c.cloud === 'AWS').cy);
+  assert.equal(wires('AWS')[0].priv, true);
+  const aws = l.routes.filter(r => r.side === 'region' && r.region === 'AWS').map(r => r.who);
+  assert.deepEqual(aws, ['AWS · ce:netbond', 'AWS · ce:dx']);
 });
 
 test('each private wire runs Core, its on-ramp, the provider\'s gateway', () => {
@@ -54,8 +54,8 @@ test('each private wire runs Core, its on-ramp, the provider\'s gateway', () => 
 });
 
 test('a wire carries its regions\' numbers, so the lenses still read', () => {
-  const dx = root().edges.find(e => e.region && e.region.cloud === 'AWS' && e.region.line === 'ce:dx').region;
-  const regs = M.regionsList.filter(r => r.cloud === 'AWS' && r.ramp === 'DX');
+  const dx = root().edges.find(e => e.region && e.region.card && e.region.cloud === 'AWS').region;
+  const regs = M.regionsList.filter(r => r.cloud === 'AWS' && r.priv);
   assert.equal(dx.wl, regs.reduce((a, r) => a + r.wl, 0));
   for (const k of ['fab', 'pub']) assert.ok(Number.isFinite(dx[k]), `${k} is ${dx[k]}`);
   assert.equal(dx.link, 'degraded', 'eu-central-1 is degraded and its card wire hides it');
@@ -133,8 +133,8 @@ test('the markup draws the provider cards', () => {
 test('cards on both sides and the things between them sit on one set of rows', () => {
   for (const k of ['mature', 'partial', 'trust']) {
     const l = heroLayout(D.ESTATES[k], { bandX: 320, bandW: 580 });
-    const rowTop = l.bandY + 30, onRow = (y) => (y - rowTop) % 44 === 0;
-    for (const s of l.sites) assert.ok(onRow(s.y + 18), `${k}: ${s.name} is off the rows at ${s.y + 18}`);
+    const rowTop = l.bandY + 30, onRow = (y) => (y - rowTop) % 52 === 0;
+    for (const s of l.sites) assert.ok(onRow(s.cy), `${k}: ${s.name} is off the rows at ${s.cy}`);
     for (const c of cards(l)) assert.ok(onRow(c.cy), `${k}: ${c.cloud} is off the rows at ${c.cy}`);
     for (const n of l.nodes) assert.ok(onRow(n.y), `${k}: ${n.label} is off the rows at ${n.y}`);
   }

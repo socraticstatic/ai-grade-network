@@ -19,8 +19,10 @@ test('the lane sits beneath the band, clear of the strata', () => {
   assert.ok(strataBottom <= L.bandY + L.bandH, 'strata overflow the band');
 });
 
+// Region level: at the first level a provider draws one wire, and a provider
+// with anything private draws it through the band (tests/cloud-cards.test.mjs).
 test('public edges enter and leave through the lane; private edges use the band', () => {
-  const L = heroLayout(est, {});
+  const L = heroLayout(est, { regionRows: est.regionsList });
   const inLane = (y) => y >= L.lane.y && y <= L.lane.y + L.lane.h;
   // The root is region cards that fan one line per path, so edge ids carry a
   // pattern suffix; find each by what it is, which is what this test is about.
@@ -55,9 +57,10 @@ test('the canvas a full estate needs does not move', () => {
   // region cards; the internet row follows the cards and the rollup row. The
   // canvas above still measures every region, so it did not move.
   // Cards then moved onto the shared row grid inside the band (2026-09-23).
-  assert.equal(heroLayout(D.ESTATES.mature, {}).internet.y, 438);
-  assert.equal(heroLayout(D.ESTATES.trust, {}).internet.y, 376);
-  assert.equal(heroLayout(D.ESTATES.partial, {}).internet.y, 394);
+  // Then taller cards on 52-unit rows that continue below the band (2026-09-23).
+  assert.equal(heroLayout(D.ESTATES.mature, {}).internet.y, 498);
+  assert.equal(heroLayout(D.ESTATES.trust, {}).internet.y, 446);
+  assert.equal(heroLayout(D.ESTATES.partial, {}).internet.y, 446);
   // Drilling must not resize the picture under the click.
   const t = D.ESTATES.trust;
   const drilled = heroLayout(t, { siteRows: t.sites.slice(0, 3), regionRows: t.regionsList.slice(0, 1) });
