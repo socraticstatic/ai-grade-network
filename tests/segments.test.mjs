@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as D from '../naas-data.js';
 import { heroLayout } from '../naas-logic.js';
 import { vals } from '../naas-app.js';
+import { siteDrillRows } from '../naas-connections.js';
 import { mkC } from './harness.mjs';
 
 // The middle of the picture is the path a packet takes, left to right:
@@ -10,6 +11,8 @@ import { mkC } from './harness.mjs';
 // (AI Fabric, Cloud, Network services, Transport) that a packet never passes
 // through. Core is singular and shared; the two sides mirror it.
 const L = () => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500 });
+// The root is regions; drilled into US West, Denver and Phoenix are themselves.
+const West = () => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, siteRows: siteDrillRows(D.ESTATES.mature, ['region:US West']).rows });
 
 test('the middle is five segments, in path order', () => {
   assert.deepEqual(L().segments.map(s => s.label), ['Access', 'Edge', 'Core', 'Edge', 'Access']);
@@ -58,10 +61,11 @@ const seg = (l, label, side) => l.segments.find(s => s.label === label && s.side
 test('every private site crosses Access and Edge and stops at Core', () => {
   const l = L();
   const core = seg(l, 'Core', 'core');
-  // A third-party core is its own route (see Phoenix below); this is the shared AT&T core.
-  const sites = l.sites.filter(s => s.priv && !s.ghost && s.core !== 'third');
-  assert.ok(sites.length > 0);
-  for (const s of sites) {
+  // One line per region pattern at the root. A third-party core is its own route
+  // (see Phoenix below); these are the lines that meet in the shared AT&T core.
+  const lines = l.edges.filter(e => e.kind === 'ingress' && e.priv && !e.ghost && !e.viaLane && e.site.core !== 'third').map(e => e.site);
+  assert.ok(lines.length > 0);
+  for (const s of lines) {
     const legs = l.legs.filter(g => g.site === s.name);
     assert.deepEqual(legs.map(g => g.seg), ['Access', 'Edge'], `${s.name} legs`);
     assert.equal(legs[1].x + legs[1].w, core.x, `${s.name} does not reach Core`);
@@ -185,14 +189,14 @@ test('the wire out to the cloud leaves from where the last leg ended', () => {
 // enterprise estate Lumen is a separate carrier. Two scenarios, side by side.
 
 test('Denver: a Lumen last mile handed onto AT&T at the Edge', () => {
-  const l = L();
+  const l = West();
   const legs = l.legs.filter(g => g.site === 'Denver branch');
   assert.deepEqual(legs.map(g => [g.seg, g.owner]), [['Access', 'third'], ['Edge', 'att']]);
   assert.deepEqual(l.bends.filter(b => b.site === 'Denver branch').map(b => b.between), [['Access', 'Edge']], 'the ENNI handoff is not drawn');
 });
 
 test('Phoenix: Lumen end to end never touches AT&T, core included', () => {
-  const legs = L().legs.filter(g => g.site === 'Phoenix DC');
+  const legs = West().legs.filter(g => g.site === 'Phoenix DC');
   assert.deepEqual(legs.map(g => g.seg), ['Access', 'Edge', 'Core', 'Edge', 'Access']);
   assert.equal(legs.some(g => g.owner === 'att'), false, 'a Lumen path is drawn on AT&T');
   assert.equal(legs.find(g => g.seg === 'Core').owner, 'third');
@@ -200,7 +204,7 @@ test('Phoenix: Lumen end to end never touches AT&T, core included', () => {
 });
 
 test('Phoenix runs to the region Lumen reaches, so its line bends through Core', () => {
-  const l = L();
+  const l = West();
   const core = l.legs.find(g => g.site === 'Phoenix DC' && g.seg === 'Core');
   assert.match(core.d, / C/, 'the Lumen core leg is straight, so it cannot reach another row');
   const target = l.regions.find(r => r.region === 'us-west-2');
@@ -221,10 +225,17 @@ test('a site arrives on the track its first leg runs on', () => {
   }
 });
 
-test('both Lumen sites are visible, not folded into +N more', () => {
-  const names = L().sites.map(s => s.name);
+test('the Lumen story is on the first screen: US West carries all three paths', () => {
+  const l = L();
+  const west = l.edges.filter(e => e.kind === 'ingress' && e.site && e.site.region === 'US West').map(e => e.site.name);
+  assert.deepEqual(west, ['US West · att', 'US West · third>att', 'US West · third>third']);
+  const lumen = l.legs.filter(g => g.site === 'US West · third>third');
+  assert.equal(lumen.some(g => g.owner === 'att'), false, 'the Lumen end-to-end line touches AT&T');
+});
+
+test('drilled into US West, both Lumen sites are themselves', () => {
+  const names = West().sites.map(s => s.name);
   assert.ok(names.includes('Denver branch') && names.includes('Phoenix DC'), names.join(', '));
-  assert.equal(names.some(n => /more$/.test(n)), false);
 });
 
 // Nine sites are taller than the band. Clamping each separately piled every site

@@ -269,13 +269,14 @@ test('fix (Important 3): a row\'s own Attach action never prints "undefined" whe
   // frame()-built rows with no address/metro of their own.
   const c = mkC();
   let v = vals(c);
-  for (let i = 0; i < 3; i++) {
+  // Four hops now: the root is regions, so region -> rollup group -> metro -> site.
+  for (let i = 0; i < 4; i++) {
     const row = v.heroSites.find(x => !x.ghost && !x.leaf && !x.more);
     assert.ok(row, `a clickable site-tree row exists at depth ${i}`);
     row.click();
     v = vals(c);
   }
-  assert.equal(c.state.drill.length, 3, 'drilled the picture three levels deep, onto an actual site');
+  assert.equal(c.state.drill.length, 4, 'drilled the picture four levels deep, onto an actual site');
   v.openLevel('sites');
   v = vals(c);
   assert.equal(v.drawer.level, 'path');

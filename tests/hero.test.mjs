@@ -22,7 +22,9 @@ test('the lane sits beneath the band, clear of the strata', () => {
 test('public edges enter and leave through the lane; private edges use the band', () => {
   const L = heroLayout(est, {});
   const inLane = (y) => y >= L.lane.y && y <= L.lane.y + L.lane.h;
-  const pubIn = L.edges.find(e => e.id === 'in1'), privIn = L.edges.find(e => e.id === 'in0');
+  // The root is region cards that fan one line per path, so edge ids carry a
+  // pattern suffix; find each by what it is, which is what this test is about.
+  const pubIn = L.edges.find(e => e.kind === 'ingress' && e.viaLane), privIn = L.edges.find(e => e.kind === 'ingress' && e.priv);
   assert.equal(pubIn.viaLane, true);
   assert.ok(inLane(pubIn.y2), `public ingress lands at ${pubIn.y2}, outside the lane`);
   assert.equal(privIn.viaLane, false);
@@ -36,23 +38,29 @@ test('public edges enter and leave through the lane; private edges use the band'
 });
 
 test('the canvas a full estate needs does not move', () => {
+  // Trust's root is four region cards rather than seven site groups, so its seven
+  // cloud regions set the height: 4px under the tallest canvas. Height is still
+  // measured from the root, so it never changes under a click.
+  const TALL = { partial: [560, 396, 440, 99], mature: [560, 396, 440, 99], trust: [556, 392, 436, 98] };
   for (const id of ['partial', 'mature', 'trust']) {
     const L = heroLayout(D.ESTATES[id], {});
+    const [H, bandH, laneY, strataH] = TALL[id];
     assert.equal(L.W, 1392, id);
-    assert.equal(L.H, 560, id);
-    assert.equal(L.bandH, 396, id);
-    assert.equal(L.lane.y, 440, id);
-    assert.equal(L.strata[0].h, 99, id);
+    assert.equal(L.H, H, id);
+    assert.equal(L.bandH, bandH, id);
+    assert.equal(L.lane.y, laneY, id);
+    assert.equal(L.strata[0].h, strataH, id);
   }
   assert.equal(heroLayout(D.ESTATES.mature, {}).internet.y, 472);
-  assert.equal(heroLayout(D.ESTATES.trust, {}).internet.y, 380);
+  assert.equal(heroLayout(D.ESTATES.trust, {}).internet.y, 376); // 4px up with trust's canvas
   assert.equal(heroLayout(D.ESTATES.partial, {}).internet.y, 406);
   // Drilling must not resize the picture under the click.
   const t = D.ESTATES.trust;
   const drilled = heroLayout(t, { siteRows: t.sites.slice(0, 3), regionRows: t.regionsList.slice(0, 1) });
-  assert.equal(drilled.H, 560);
-  assert.equal(drilled.bandH, 396);
-  assert.equal(drilled.lane.y, 440);
+  const root = heroLayout(t, {});
+  assert.equal(drilled.H, root.H);
+  assert.equal(drilled.bandH, root.bandH);
+  assert.equal(drilled.lane.y, root.lane.y);
 });
 
 test('a small estate gets a canvas sized to it', () => {
@@ -69,7 +77,8 @@ test('a small estate gets a canvas sized to it', () => {
     for (const s of L.sites) assert.ok(s.y >= 0 && s.y + 36 <= L.H, `${id}: site at ${s.y} leaves the canvas`);
     for (const r of L.regions) assert.ok(r.y + 28 <= L.H, `${id}: region at ${r.y} leaves the canvas`);
   }
-  assert.equal(heroLayout(D.ESTATES.small, {}).sites.length, 2);
+  // Dallas HQ and Houston yard are both US Central: one region card.
+  assert.equal(heroLayout(D.ESTATES.small, {}).sites.length, 1);
   assert.equal(heroLayout(D.ESTATES.small, {}).regions.length, 2);
 });
 

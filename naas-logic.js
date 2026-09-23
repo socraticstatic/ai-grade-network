@@ -22,6 +22,41 @@ const CLOUD_ORDER = ['AWS', 'Azure', 'GCP', 'CoreWeave', 'Oracle'];
 export const RAMP_EDGE = { NetBond: 'att', DX: 'cloud', ER: 'cloud', Interconnect: 'cloud', EQX: 'third' };
 export const accessOwner = (access) => (/lumen/i.test(access || '') ? 'third' : 'att');
 
+// The left column starts at regions. A site is placed by its metro, or, for a
+// nationwide rollup, by the region its own name carries ("Remote sites, East").
+// Denver and Phoenix are West, as the drill's state table already has it.
+const METRO_REGION = {
+  Ashburn: 'US East', Atlanta: 'US East',
+  Austin: 'US Central', Chicago: 'US Central', Dallas: 'US Central', Houston: 'US Central',
+  Denver: 'US West', Phoenix: 'US West', 'San Jose': 'US West',
+  Frankfurt: 'International', Singapore: 'International',
+};
+const REGION_ORDER = ['US East', 'US Central', 'US West', 'International', 'Nationwide'];
+export function regionOf(site) {
+  if (METRO_REGION[site.metro]) return METRO_REGION[site.metro];
+  const m = /,\s*(East|Central|West)\b/.exec(site.name || '');
+  return m ? 'US ' + m[1] : 'Nationwide';
+}
+// The path a site's traffic takes, as a key: its access owner, then its core
+// owner, or 'public' if it never enters a private network at all.
+const patternOf = (site) => (!site.priv ? 'public' : `${accessOwner(site.access)}>${site.core === 'third' ? 'third' : 'att'}`);
+const PATTERN_ORDER = ['att>att', 'third>att', 'third>third', 'public'];
+export function regionRows(est) {
+  const by = {};
+  (est.sites || []).forEach(site => { (by[regionOf(site)] = by[regionOf(site)] || []).push(site); });
+  return REGION_ORDER.filter(r => by[r]).map(name => {
+    const sites = by[name];
+    const seen = {};
+    sites.forEach(site => { const k = patternOf(site); if (!seen[k]) seen[k] = site; });
+    const patterns = PATTERN_ORDER.filter(k => seen[k]).map(k => {
+      const rep = seen[k];
+      return { key: k === 'att>att' ? 'att' : k, priv: !!rep.priv, access: rep.access, core: rep.core, via: rep.via, viaRamp: rep.viaRamp };
+    });
+    const count = sites.reduce((a, s2) => a + countOf(s2.name), 0);
+    return { name, sites, patterns, count };
+  });
+}
+
 // A mixed-carrier estate needs its third-party sites on the picture, not folded
 // into "+N more", so the root shows up to nine. A drill level keeps its sample
 // of seven: the full list lives in the drawer, and the sample size is what the
@@ -41,6 +76,7 @@ export function heroLayout(est, opts) {
   // The measurement reads the ROOT rows, never opts.siteRows / opts.regionRows,
   // so the picture never changes height under a click.
   const W = 1392, H_MAX = 560, BAND_H_MAX = 396, BAND_H_MIN = 336;
+  const FAN = 18;
   const LANE_GAP = 16, LANE_H = 76, FOOT = 44, COL_TOP = 30, CARD_H = 36, GAP_MAX = 66, INET_OVER_LANE = 60;
   const rowH = 34, groupHead = 20, groupGap = 12;
   const bandX = opts.bandX || 560, bandW = opts.bandW || 240, bandY = 28;
@@ -49,7 +85,7 @@ export function heroLayout(est, opts) {
   // so shrinking the picture never re-spaces a full estate's rows.
   const pitch = (k) => k > 1 ? Math.min(GAP_MAX, (H_MAX - 120) / (k - 1)) : 0;
 
-  const rootN = empty ? 3 : Math.min(ROOT_SITES, (est.sites || []).length);
+  const rootN = empty ? 3 : Math.min(ROOT_SITES, regionRows(est).length);
   const sitesEnd = rootN ? COL_TOP + (rootN - 1) * pitch(rootN) + CARD_H : 0;
   const rootRegs = empty ? 2 : (est.regionsList || []).length;
   const rootClouds = empty ? 2 : new Set((est.regionsList || []).map(r => r.cloud)).size;
@@ -66,7 +102,11 @@ export function heroLayout(est, opts) {
   const clampLane = (y) => Math.round(Math.min(lane.y + lane.h - 14, Math.max(lane.y + 14, y)));
   out.ghost = empty;
 
-  const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || est.sites);
+  const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || regionRows(est).map(r => {
+    const carriers = [...new Set(r.patterns.map(p => (p.key === 'public' ? 'public' : p.key.startsWith('third') ? 'Lumen' : 'AT&T')))];
+    return { name: r.name, access: `${r.count.toLocaleString('en-US')} ${r.count === 1 ? 'site' : 'sites'} · ${carriers.join(', ')}`,
+      priv: r.patterns.some(p => p.priv), drillKey: 'region:' + r.name, rollup: true, region: true, patterns: r.patterns, groups: r.sites.length };
+  }));
   const cap = opts.siteRows ? DRILL_SITES : ROOT_SITES;
   const sites = rawSites.length > cap ? [...rawSites.slice(0, cap - 1), { name: `+${fmtN(rawSites.length - (cap - 1))} more`, access: 'open the list ›', more: true, rollup: false }] : rawSites;
   const n = sites.length;
@@ -84,8 +124,18 @@ export function heroLayout(est, opts) {
   sites.forEach((s, i) => {
     const y = Math.round(top + i * gap);
     out.sites.push({ ...s, i, y, cy: y + 18, key: 'site' + i });
-    const viaLane = !s.priv && !s.ghost;
-    out.edges.push({ id: 'in' + i, kind: 'ingress', priv: !!s.priv, ghost: !!s.ghost, viaLane, x1: 224, y1: y + 18, x2: bandX, y2: viaLane ? clampLane(y + 18) : enterBand(y + 18), site: s });
+    // A region card draws one line per distinct path in it, fanned around its
+    // entry, each carrying a stand-in site with that path's access, core and
+    // on-ramp, so the routing below draws a region exactly as it draws a site.
+    const lines = s.patterns ? s.patterns.map((p, k) => ({ k, n: s.patterns.length,
+      site: { name: `${s.name} · ${p.key}`, access: p.access, priv: p.priv, core: p.core, via: p.via, viaRamp: p.viaRamp, region: s.name } }))
+      : [{ k: 0, n: 1, site: s }];
+    lines.forEach(({ k, n: np, site }) => {
+      const viaLane = !site.priv && !site.ghost;
+      const fan = (k - (np - 1) / 2) * FAN;
+      out.edges.push({ id: 'in' + i + (np > 1 ? '.' + k : ''), kind: 'ingress', priv: !!site.priv, ghost: !!site.ghost, viaLane, x1: 224, y1: y + 18,
+        x2: bandX, y2: viaLane ? clampLane(y + 18) : enterBand(y + 18) + fan, site });
+    });
   });
 
   const regs = empty ? [{ cloud: 'Clouds', region: 'Your regions', ghost: true, wl: 0 }, { cloud: 'Neoclouds', region: 'Your GPU regions', ghost: true, wl: 0 }] : (opts.regionRows || est.regionsList);

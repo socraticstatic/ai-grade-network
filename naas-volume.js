@@ -204,7 +204,7 @@ export function levelHead(est, inv, ob, col, trail = [], flat = false) {
  */
 function labels(est, inv, col, trail) {
   const root = col === 'sites' ? 'Sites' : col === 'fabric' ? 'AT&T network' : 'Clouds';
-  if (col === 'sites') return [root, ...trail.map(k => S.labelOfKey(est, k))];
+  if (col === 'sites') return [root, ...trail.map(k => (String(k).startsWith('region:') ? String(k).slice(7) : S.labelOfKey(est, k)))];
   if (col === 'fabric') return [root, ...fabTrail(trail).slice(1).map(k => String(k).replace(/^port:[^:]+:/, 'port '))];
   const out = [root];
   if (!trail.length) return out;
@@ -218,8 +218,14 @@ function labels(est, inv, col, trail) {
   return out;
 }
 
+// The root is regions. Once the trail is inside one, the rest of it is exactly
+// the site trail this module already understands, so the region is dropped for
+// the logic and kept for the breadcrumb.
+const pastRegion = (trail) => (trail.length > 1 && String(trail[0]).startsWith('region:') ? trail.slice(1) : trail);
+
 function sitesHead(est, trail) {
   const tr = labels(est, null, 'sites', trail);
+  trail = pastRegion(trail);
   if (!trail.length) {
     const total = (est.sites || []).length;
     return { col: 'sites', level: 'group', noun: nounFor('group', total), total, title: 'Sites', sub: `${n(total)} groups · ${n(totalSites(est))} sites`, trail: tr };
@@ -306,6 +312,7 @@ export function levelList(est, inv, ob, col, trail = [], opts = {}) {
 
 function sitesLevel(est, trail, opts) {
   const head = sitesHead(est, trail);
+  trail = pastRegion(trail);
   if (!head) return null;
   if (!trail.length) {
     const rows = (est.sites || []).map((st) => {

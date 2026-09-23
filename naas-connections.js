@@ -11,6 +11,7 @@
 // are the workloads that are impacted. These workloads are also talking to
 // these other workloads."
 import * as P from './naas-paths.js';
+import { regionRows } from './naas-logic.js';
 
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const rnd = (seed) => { let x = seed || 1; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 10000) / 10000; }; };
@@ -154,6 +155,23 @@ function pathsOfSite(est, site) { const sr = P.siteRegions(est, site, 6); return
 /** Left column of the hero for a drill trail: [] → the estate's sites; [class] → metros or named sites; [class, metro] → sites; [class, metro, site] → the site's paths. */
 export function siteDrillRows(est, trail, opts = {}) {
   if (!trail || !trail.length) return null;
+  // The root is regions. A region opens to its sites, each drawn on its own path
+  // (so Denver and Phoenix show Lumen), and past that the site drill is the one
+  // that already exists, rooted at the site that was chosen.
+  if (String(trail[0]).startsWith('region:')) {
+    const name = String(trail[0]).slice('region:'.length);
+    const region = regionRows(est).find(r => r.name === name);
+    if (!region) return null;
+    if (trail.length === 1) {
+      // No drillKey: the card's click turns a rollup into its class key and a named
+      // site into its name, exactly as it did when these sat at the root. A name
+      // the drill cannot resolve returned null and dropped the picture back to
+      // the regions, so the region reappeared and was appended to the trail again.
+      return { level: 'site', label: name, rows: region.sites.map(x => ({ key: 'site:' + x.name, name: x.name, access: x.access, metro: x.metro,
+        priv: !!x.priv, core: x.core, via: x.via, viaRamp: x.viaRamp, rollup: !!x.rollup, cursor: 'pointer' })) };
+    }
+    return siteDrillRows(est, trail.slice(1), opts);
+  }
   const tree = S.siteTree(est);
   const all = P.allSites(est);
   const [clsKey, grpIx] = String(trail[0]).split('#');

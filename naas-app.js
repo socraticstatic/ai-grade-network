@@ -538,7 +538,9 @@ export function vals(c) {
   };
   // `seeAll` is a door, not a sampled child: counting it would report one
   // fewer hidden workload than the drawer holds.
-  const sitesDoor = doorFor('sites', L.sites.filter(x => !x.more && !x.ghost).length, sitesGutter, () => openLevel('sites'));
+  // A region card stands for every site group in it. Grouping is not hiding, so
+  // the door counts the groups the cards carry, not the cards.
+  const sitesDoor = doorFor('sites', L.sites.filter(x => !x.more && !x.ghost).reduce((a, x) => a + (x.region ? x.groups : 1), 0), sitesGutter, () => openLevel('sites'));
   const cloudsDoor = doorFor('clouds', L.regions.filter(x => !x.rollup && !x.other && !x.pinned && !x.ghost && !x.seeAll).length, cloudsGutter, () => openLevel('clouds'));
   // A closed band has to open with its drawer, or the picture sits on the
   // facility list while the drawer walks off it (see the invariant above).
