@@ -103,9 +103,12 @@ export function launchCards({ est, ob, conns, totalSave, violations, isEmpty }) 
     { key: 'govern', label: 'Govern', value: isEmpty ? 'No policies yet' : n(violations), sub: isEmpty ? 'three starting points' : `policy violations across ${(est.policies || []).length} policies`, bar: null },
     { key: 'cost', label: 'Cost', value: isEmpty ? 'No egress seen yet' : cold ? money(ob.egressMo || 0) + '/mo' : totalSave ? money(totalSave) + '/mo' : money(ob.savingsMo || 0) + '/mo', sub: isEmpty ? 'priced after the scan' : cold ? 'of egress, every byte on public rates' : totalSave ? `on the table across ${est.findings.filter(f => f.priced).length} findings` : 'already saved on the fabric', bar: null },
   ].map(c => {
+    // A dashboard tile is a label and a number. The eyebrow, the sentence and
+    // the link under each one were four fragments of copy per tile, sixteen
+    // across the row, above every chart on every page.
     const primary = cold ? c.key === 'connect' : c.key === 'observe';
     const door = { connect: isEmpty ? 'Connect a cloud' : pub ? `Attach the ${pub === 1 ? 'region' : pub + ' regions'}` : 'See the fabric', observe: cold ? 'Open Observe' : degRow ? 'What is impacted' : 'See the traffic', govern: isEmpty ? 'Start a policy' : violations ? 'Review violations' : 'Review policies', cost: cold ? 'Open Cost' : 'See the savings' }[c.key];
-    return { ...c, primary, door, eyebrow: primary ? (cold ? 'Start here · new to the fabric' : 'Start here · you are connected') : '' };
+    return { ...c, primary, door, eyebrow: '' };
   });
 }
 

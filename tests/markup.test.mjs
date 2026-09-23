@@ -11,8 +11,9 @@ test('the page title row leads with the verdict and demotes the stat line', () =
   assert.ok(i > 0, 'the page title row is gone');
   const row = HTML.slice(i, i + 900);
   assert.ok(row.includes('{{ pageVerdict }}'), 'the written verdict is not bound in the title row');
-  assert.ok(row.includes('{{ pageStat }}'), 'the stat string is not bound in the title row');
-  assert.ok(row.indexOf('{{ pageVerdict }}') < row.indexOf('{{ pageStat }}'), 'the stat line must sit under the verdict');
+  // The stat line restated the four tiles directly beneath it: "1 of 8 regions
+  // public · 16 attached · 7 sites" over a CONNECT tile reading "1 of 8 regions".
+  assert.equal(HTML.includes('{{ pageStat }}'), false, 'the stat line is back, and the tiles still say it');
   assert.equal(HTML.includes('{{ pageSub }}'), false, 'pageSub is retired');
   // deptVerdict was the same ternary under a name nothing bound. One copy, or it drifts.
   assert.equal(APP.includes('deptVerdict'), false, 'deptVerdict was renamed to pageVerdict, not duplicated by it');
@@ -84,11 +85,14 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // run, found) plus the subOpen gate. Nothing inside the three blocks moved.
 // div 870 -> 878, span 644 -> 645, sc-if 301 -> 306, sc-for 174 -> 176,
 // button 252 -> 254, aside 9 -> 10.
+// Personas and states: the discovery bar is gated to Discover and the telemetry
+// window to Observe and Cost (sc-if +2), and the stat line that restated the
+// four tiles is deleted (div -1). div 878 -> 877, sc-if 306 -> 308.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 878],
+    ['div', /<div\b/g, /<\/div>/g, 877],
     ['span', /<span\b/g, /<\/span>/g, 645],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 306],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 308],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 176],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 254],

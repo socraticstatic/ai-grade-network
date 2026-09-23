@@ -66,7 +66,6 @@ test('four launch cards; Observe primary on a live estate, Connect on an empty o
   assert.match(c[1].value, /1 of \d+ connections/); assert.match(c[1].sub, /degraded/);
   const e = launchCards({ est: D.ESTATES.empty, ob: A.observe(D.ESTATES.empty, [], []), conns: { rows: [], degraded: 0, total: 0 }, totalSave: 0, violations: 0, isEmpty: true });
   assert.equal(e.find(x => x.primary).key, 'connect'); assert.equal(e[0].value, 'Nothing connected yet');
-  assert.equal(c[1].door, 'What is impacted'); assert.match(c[1].eyebrow, /Start here/); assert.equal(c[0].eyebrow, ''); assert.equal(e[0].door, 'Connect a cloud');
 });
 
 import { records } from '../naas-connections.js';
@@ -119,15 +118,12 @@ test('nothing attached starts at Connect, whatever else was discovered', () => {
   const cards = launchCards({ est: e, ob: o, conns: c, totalSave: 0, violations: 20, isEmpty: false });
   const by = (k) => cards.find(x => x.key === k);
   assert.equal(cards.find(x => x.primary).key, 'connect');
-  assert.equal(by('connect').eyebrow, 'Start here · new to the fabric');
   assert.match(by('connect').value, /2 of 2 regions/);
   assert.equal(by('connect').door, 'Attach the 2 regions');
-  assert.equal(by('observe').eyebrow, '');
   assert.equal(by('observe').value, 'No telemetry yet');
   assert.equal(by('observe').door, 'Open Observe');
   assert.equal(by('govern').value, '20');
   // An attached estate is untouched.
   const warm = launchCards({ est, ob, conns: connections(est, ob), totalSave: 12000, violations: 52, isEmpty: false });
   assert.equal(warm.find(x => x.primary).key, 'observe');
-  assert.match(warm.find(x => x.key === 'observe').eyebrow, /you are connected/);
 });
