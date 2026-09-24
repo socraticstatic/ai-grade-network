@@ -6,7 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 import * as D from './naas-data.js';
-import { fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE } from './naas-logic.js';
+import { fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END } from './naas-logic.js';
 import * as A from './naas-addendum.js';
 import * as R from './naas-round2.js';
 import * as S from './naas-sites.js';
@@ -301,7 +301,7 @@ export function vals(c) {
   // it narrows to four card stacks and a 260 Core rather than stranding the
   // stacks at the ends of an empty stage.
   const folded = !s.bandUnfolded && !fabOpenNow;
-  const SITES_END = 224, bandW = folded ? 4 * FOLDED_SIDE + 260 : 580;
+  const bandW = folded ? 4 * FOLDED_SIDE + 260 : 580;
   const L = heroLayout(est, { siteRows: drillRows, regionRows: regionDrill ? regionDrill.rows : null, bandX: Math.round(SITES_END + (RX - SITES_END - bandW) / 2), bandW, folded });
   const hoverKey = s.hoverNode;
   const dimFor = (keys) => hoverKey ? (keys.includes(hoverKey) ? 1 : 0.72) : 1;
@@ -358,8 +358,8 @@ export function vals(c) {
     // The stack starts under its name and stops as far from the floor; its back
     // cards peek outward, left on the site side and right on the cloud side.
     stackH: L.bandH - 92, stackY: L.bandY + 80,
-    // Cards 20 wide, offset 7, centred in the 72-unit folded column.
-    stackA: sg.side === 'site' ? 33 : 19, stackB: 26, stackC: sg.side === 'site' ? 19 : 33,
+    // Cards 30 wide, offset 7, centred in the 72-unit folded column.
+    stackA: sg.side === 'site' ? 28 : 14, stackB: 21, stackC: sg.side === 'site' ? 14 : 28,
     // Access folds to a light stack of two; Edge, a step deeper, to three with
     // more shadow and a blue front card, so the two folds read apart.
     backOp: sg.label === 'Edge' ? 1 : 0,
@@ -371,6 +371,8 @@ export function vals(c) {
     divider: sg.i > 0 ? 1 : 0,
     pillBg: sg.side === 'core' ? 'var(--cta)' : 'var(--bg-base)', pillColor: sg.side === 'core' ? '#fff' : 'var(--text-body)',
     pillBorder: sg.side === 'core' ? 'var(--cta)' : 'var(--border-secondary)',
+    // Folded, CORE is the one label left on the band, so it reads larger.
+    pillFs: folded && sg.side === 'core' ? '14px' : '10px', pillLh: folded && sg.side === 'core' ? 22 : 16, pillH: folded && sg.side === 'core' ? 26 : 18, pillPad: folded && sg.side === 'core' ? 12 : 8,
   }));
   const steeredRegionNames = new Set(steered.filter(id => id.startsWith('f-')).map(id => (estRaw.regionsList[+id.split('-')[1]] || {}).region));
   const heroEdges = L.edges.map(e => {
@@ -392,7 +394,7 @@ export function vals(c) {
   // A provider card's wires say the same thing ("private") side by side; once is enough.
   const saidOnCard = new Set();
   heroEdges.forEach(e => { if (!e.region || !e.region.card || !e.hasLabel) return; const k = e.region.cloud + '|' + e.label; if (saidOnCard.has(k)) e.hasLabel = false; else saidOnCard.add(k); });
-  const heroSites = L.sites.map(st => ({ ...st, key: st.key, textW: (200 - 24 - (!st.ghost && !st.more && !st.priv && !st.leaf ? 62 : !st.ghost && !st.leaf ? 24 : 18)) + 'px', op: dimFor(['site' + st.name]), ty: st.y + 15, ty2: st.y + 29, dash: st.ghost || st.more ? '4 4' : 'none', color: st.ghost ? 'var(--text-disabled)' : st.more ? 'var(--link)' : 'var(--text-heading)', click: () => { if (st.ghost || st.leaf) return; if (st.more) { openLevel('sites'); return; } const isSite = (s.drill.length >= 2 && st.drillKey) || (st.drillKey && /^(DC|CAM|OFF|PLT|BR|ATM|FLD)-/.test(String(st.drillKey))) || (!st.rollup && S.countOf(st.name) === 1 && !st.drillKey && !/\(/.test(st.name)); if (isSite) set({ mapSel: 'asset:' + (st.drillKey || st.name), panelTab: 'overview' }); const key = st.drillKey || S.rollupKeyOf(est, st) || (S.countOf(st.name) > 1 || st.rollup ? S.classOf(st) : st.name); set({ drill: [...s.drill, key] }); }, enter: () => set({ hoverNode: 'site' + st.name }), leave: () => set({ hoverNode: null }), cursor: st.ghost || st.leaf ? 'default' : 'pointer', caret: st.ghost || st.leaf || st.more ? '' : '›', hasAction: !st.ghost && !st.more && !st.priv && !st.leaf, action: 'Attach', act: () => { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); syncHash('s4', s.layer, s.tab); } }));
+  const heroSites = L.sites.map(st => ({ ...st, key: st.key, textW: (SITES_END - 24 - 24 - (!st.ghost && !st.more && !st.priv && !st.leaf ? 62 : !st.ghost && !st.leaf ? 24 : 18)) + 'px', op: dimFor(['site' + st.name]), ty: st.y + 15, ty2: st.y + 29, dash: st.ghost || st.more ? '4 4' : 'none', color: st.ghost ? 'var(--text-disabled)' : st.more ? 'var(--link)' : 'var(--text-heading)', click: () => { if (st.ghost || st.leaf) return; if (st.more) { openLevel('sites'); return; } const isSite = (s.drill.length >= 2 && st.drillKey) || (st.drillKey && /^(DC|CAM|OFF|PLT|BR|ATM|FLD)-/.test(String(st.drillKey))) || (!st.rollup && S.countOf(st.name) === 1 && !st.drillKey && !/\(/.test(st.name)); if (isSite) set({ mapSel: 'asset:' + (st.drillKey || st.name), panelTab: 'overview' }); const key = st.drillKey || S.rollupKeyOf(est, st) || (S.countOf(st.name) > 1 || st.rollup ? S.classOf(st) : st.name); set({ drill: [...s.drill, key] }); }, enter: () => set({ hoverNode: 'site' + st.name }), leave: () => set({ hoverNode: null }), cursor: st.ghost || st.leaf ? 'default' : 'pointer', caret: st.ghost || st.leaf || st.more ? '' : '›', hasAction: !st.ghost && !st.more && !st.priv && !st.leaf, action: 'Attach', act: () => { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); syncHash('s4', s.layer, s.tab); } }));
   // Workload counts live on hover, not in a column beside the picture (Micah, 2026-09-23).
   const wlTip = (name, r) => (r.wl || r.wlLabel ? `${name} · ${r.wlLabel || plural(r.wl, 'workload', 'workloads')}` : name);
   const heroRegions = L.regions.filter(r => !r.card).map(r => ({ ...r, key: r.key, tip: wlTip(r.cloud && !r.child ? `${r.cloud} ${r.region}` : r.region, r), op: dimFor(['reg' + r.region]), ty: r.y + 19, dash: r.seeAll ? '3 3' : r.ghost ? '4 4' : 'none', stroke: r.seeAll ? 'var(--cta)' : 'var(--border-primary)', color: r.seeAll ? 'var(--link)' : (r.ghost || r.muted) ? 'var(--text-disabled)' : 'var(--text-heading)', cursor: r.ghost || r.muted ? 'default' : 'pointer', relFill: r.ghost ? 'transparent' : hp.regionHealth[r.region] === 'amber' ? 'var(--warning)' : 'var(--success)', relTitle: r.link === 'degraded' ? `Degraded: BGP flapping on ${r.ramp || 'NetBond'}` : hp.regionHealth[r.region] === 'amber' ? 'Degraded: latency spike on the public path' : 'Healthy', rx: L.rightX + (r.indent || 0), dotX: L.rightX + 214, rw: 240 - (r.indent || 0), rh: r.child ? 26 : 28, caret: r.seeAll ? '›' : r.ghost || r.rollup || r.other ? (r.other ? '‹' : '') : (r.pinned ? '‹' : r.leaf ? '' : '›'), action: r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : ''), hasAction: !!(r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : '')), act: () => { if (r.link === 'degraded') { go('s3', { layer: 'cloud', tab: 'observe', mapSel: 'cx-' + r.region, mapRegion: r.region, panelTab: 'impact' })(); return; } composeFor(go, r)(); }, actionBg: r.link === 'degraded' ? 'var(--warning)' : 'var(--cta)', rectFill: r.seeAll ? 'var(--bg-accent)' : r.pinned ? 'var(--bg-accent)' : r.child ? 'var(--bg-wash)' : 'var(--bg-base)', relOp: r.child || r.other ? 0 : 1, click: () => { if (r.ghost) return; if (r.seeAll) { openWorkloads(r.wlScope.region, r.wlScope.vpcId, r.wlScope.snId); return; } if (r.wlSel) { set({ mapSel: r.wlSel, panelTab: 'overview' }); return; } if (r.toRoot) { set(r.toProvider ? { cloudDrill: [], cloudPick } : { cloudDrill: [], cloudPick: null }); return; } if (r.pinned) { set({ cloudDrill: cloudDrill.slice(0, -1), cloudPick }); return; } if (r.rollup) return; if (r.child) { if (r.drill) set({ cloudDrill: [...cloudDrill, r.drill] }); return; } set({ cloudDrill: [r.region], cloudPick: r.cloud, andiScope: { kind: 'region', id: r.region, label: r.cloud + ' ' + r.region } }); }, enter: () => set({ hoverNode: 'reg' + r.region, hoverRegion: r.ghost || r.rollup ? null : r.region }), leave: () => set({ hoverNode: null, hoverRegion: null }) }));
@@ -570,7 +572,7 @@ export function vals(c) {
   // One source for the clouds header width: the door's gutter and the header
   // itself must move together or the door drifts off its column.
   const cloudsHeadW = regionDrill ? 412 : 240;
-  const sitesGutter = (24 + 460) - 224 + EDGE;              // header 24..484, cards end at 224
+  const sitesGutter = (24 + 460) - SITES_END + EDGE;        // header 24..484, cards end at SITES_END
   const cloudsGutter = (L.rightX + cloudsHeadW) - (L.rightX + 240) + EDGE;   // header at rightX, cards end 240 later
   const bandGutter = EDGE;                                  // the header IS the band: same edges
   // `shown` is how many of them the canvas is drawing right now, or null when

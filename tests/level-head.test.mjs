@@ -165,8 +165,8 @@ test('the gutter clears each column card edge by 16 viewBox units', () => {
   // 16 units, not 12: the hero renders 1087 CSS px for a 1392 viewBox at the
   // 1440x900 reference, so a unit is .781 px and the 10px edge rule bites.
   const EDGE = 16;
-  // SITES header x=24 w=460 -> right 484; the 200-wide card ends at 224.
-  assert.equal(vals(mkC()).sitesDoor.gutter, (24 + 460) - 224 + EDGE);
+  // SITES header x=24 w=460 -> right 484; the card (240 wide since 2026-09-23) ends at 264.
+  assert.equal(vals(mkC()).sitesDoor.gutter, (24 + 460) - 264 + EDGE);
   // CLOUDS: the gutter is derived from cloudsHeadW, never a second copy of it.
   for (const extra of [{}, { cloudDrill: ['us-east-1'] }]) {
     const v = vals(mkC(extra));

@@ -336,7 +336,7 @@ test('the band is centred between the columns, folded and unfolded', async () =>
   const { RX } = await import('../naas-logic.js');
   for (const bandUnfolded of [false, true]) {
     const v = vals(mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null, bandUnfolded }));
-    const left = v.bandX - 224, right = RX - (v.bandX + v.bandW);
+    const left = v.bandX - 264, right = RX - (v.bandX + v.bandW);
     assert.ok(Math.abs(left - right) <= 1, `${bandUnfolded ? 'unfolded' : 'folded'}: ${left} left, ${right} right`);
   }
   const shut = vals(mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null }));

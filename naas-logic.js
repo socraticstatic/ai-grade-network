@@ -78,6 +78,9 @@ const ROOT_SITES = 9, DRILL_SITES = 7;
 export const RX = 1100;
 // A folded Access or Edge column, wide enough to read as a stack of cards.
 export const FOLDED_SIDE = 72;
+// Site cards match the cloud cards: 240 wide from x 24, so the two columns
+// read as a pair and the band centres on the whole picture, not off it.
+export const SITES_END = 264;
 
 export function heroLayout(est, opts) {
   // The canvas is derived from the estate, not fixed. A full estate fills
@@ -169,7 +172,7 @@ export function heroLayout(est, opts) {
     lines.forEach(({ k, n: np, site }) => {
       const viaLane = !site.priv && !site.ghost;
       const fan = (k - (np - 1) / 2) * FAN;
-      out.edges.push({ id: 'in' + i + (np > 1 ? '.' + k : ''), kind: 'ingress', priv: !!site.priv, ghost: !!site.ghost, viaLane, x1: 224, y1: y + HALF,
+      out.edges.push({ id: 'in' + i + (np > 1 ? '.' + k : ''), kind: 'ingress', priv: !!site.priv, ghost: !!site.ghost, viaLane, x1: SITES_END, y1: y + HALF,
         x2: bandX, y2: viaLane ? clampLane(y + HALF) : enterBand(y + HALF) + fan, site });
     });
   });
