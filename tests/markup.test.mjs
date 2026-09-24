@@ -122,14 +122,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // loop, two divs where one was): div 881 -> 882, sc-for 181 -> 182.
 // A provider with no mark gets a monogram tile so titles align (one sc-if, one
 // span): span 646 -> 647, sc-if 311 -> 312.
+// Sources is a page for a customer with none (a tile loop with a mark or a
+// monogram, and one button for discovery, where one box and one button were):
+// div 882 -> 886, span 647 -> 653, sc-if 312 -> 314, sc-for 182 -> 183, button 254 -> 255.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 882],
-    ['span', /<span\b/g, /<\/span>/g, 647],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 312],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 182],
+    ['div', /<div\b/g, /<\/div>/g, 886],
+    ['span', /<span\b/g, /<\/span>/g, 653],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 314],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 183],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 254],
+    ['button', /<button\b/g, /<\/button>/g, 255],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 28],
   ];

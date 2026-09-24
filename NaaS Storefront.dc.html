@@ -956,7 +956,23 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </div>
   </sc-if>
   <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
-    <div style="padding:24px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;display:flex;align-items:center;gap:24px"><div style="flex:1;color:var(--text-body)">Add a cloud credential or pick an inventory to start.</div><button onClick="{{ goFront }}" style="height:36px;padding:0 16px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">Add</button></div>
+    <!-- Sources, for a customer with none yet: the task is the page (2026-09-23) -->
+    <div aria-label="Connect your first cloud" style="padding:28px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;display:grid;gap:20px">
+      <div><div style="font-size:20px;line-height:28px;font-weight:700;color:var(--text-heading)">Connect your first cloud</div><div style="color:var(--text-light)">Read-only. {{ intakeCadenceLabel }}. Nothing changes in your routing. Discovery draws the rest.</div></div>
+      <div role="radiogroup" aria-label="Source" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+        <sc-for list="{{ sourceTiles }}" as="st" hint-placeholder-count="6">
+          <button type="button" role="radio" aria-checked="{{ st.on }}" onClick="{{ st.pick }}" style="display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;border:1.5px solid {{ st.border }};border-radius:12px;background:{{ st.bg }};cursor:pointer;font-family:inherit;transition:border-color .15s ease,background .15s ease">
+            <sc-if value="{{ st.markSrc }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width:30px;height:30px;flex:none;background:url('{{ st.markSrc }}') center / contain no-repeat"></span></sc-if>
+            <sc-if value="{{ st.noMark }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex:none;border-radius:8px;background:var(--bg-neutral);border:1px solid var(--border-secondary);font-size:10px;font-weight:700;color:var(--text-body)">{{ st.initials }}</span></sc-if>
+            <span style="display:grid;min-width:0"><span style="font-size:15px;line-height:20px;font-weight:600;color:var(--text-heading)">{{ st.name }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ st.cred }}</span></span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <button type="button" onClick="{{ startScan }}" style="height:40px;padding:0 20px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">Discover what you have</button>
+        <span style="font-size:12px;color:var(--text-light)">Read-only, all regions. You can add more sources after.</span>
+      </div>
+    </div>
   </sc-if>
   </sc-if>
 </section>
@@ -2171,6 +2187,7 @@ class Component extends DCLogic {
     v.categories = (v.categories || []).map(c => { const ic = CAT_ICON[c.id] || 'grid'; const linkable = ['cloud', 'bill', 'check-shield', 'high-meter'].includes(ic); return { ...c, icon: ic, iconSrc: c.on ? 'brand/icons-dark/' + ic + '.svg' : linkable ? (dark ? 'brand/icons-linkdark/' : 'brand/icons-link/') + ic + '.svg' : (dark ? 'brand/icons-dark/' : 'brand/icons-light/') + ic + '.svg' }; });
     v.scanSteps = (v.scanSteps || []).map((st, i) => ({ ...st, icon: SCAN_ICON[i], iconSrc: v.iconDir + '/' + SCAN_ICON[i] + '.svg' }));
     v.heroRegions = v.heroRegions.map(r => ({ ...r, markSrc: r.ghost || r.rollup ? null : PROVIDER_MARK(r.cloud) }));
+    v.sourceTiles = (v.sourceTiles || []).map(t => { const m = PROVIDER_MARK(t.provider); return { ...t, markSrc: m, noMark: !m, initials: t.provider === 'AT&T' ? 'AT&T' : String(t.name).slice(0, 2).toUpperCase() }; });
     v.heroClouds = v.heroClouds.map(r => { const m = r.ghost ? null : PROVIDER_MARK(r.cloud); return { ...r, markSrc: m, noMark: !m, initials: String(r.cloud).replace(/^Your\s+/, '').split(/(?=[A-Z])|\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() }; });
     // The right-hand surfaces push the page rather than cover it. Two can be
     // open at once (a list and the thing you opened from it), so the shell
