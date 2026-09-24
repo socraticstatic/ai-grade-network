@@ -92,11 +92,12 @@ a{color:#0057b8}a:hover{color:#00388f}
 .fx-row .val small{display:block;font-size:11px;line-height:14px;color:var(--text-light);font-weight:400}
 main button[style*="border-radius:9999px"],main button[style*="border-radius: 9999px"]{border-radius:8px!important}
 /* Tables (2026-09-24). One system for every .dt in the file: 13px body on 18px, 12px 16px cells (44px rows), one header voice, hairline rows, hover on rows that open something. Cells override only width, alignment and vertical-align. */
-.dt{display:table;width:100%;border-collapse:collapse;font-size:13px;line-height:18px;color:var(--text-body)}
+.dt{display:table;width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;line-height:18px;color:var(--text-body)}
+}
 .fx-card>.dt{width:calc(100% + 32px);margin:0 -16px}
 .dt-h{display:table-header-group}.dt-b{display:table-row-group}.dt-r{display:table-row}
 .dt-c{display:table-cell;vertical-align:middle;padding:12px 16px;min-width:0}
-.dt-th{padding:10px 16px;font-size:11px;line-height:16px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--text-light);text-align:left;white-space:nowrap;border-bottom:1px solid var(--border-secondary)}
+.dt-th{padding:10px 16px;font-size:11px;line-height:16px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--text-light);text-align:left;overflow-wrap:anywhere;border-bottom:1px solid var(--border-secondary)}
 .dt-b .dt-r+.dt-r{border-top:1px solid var(--border-secondary)}
 .dt-b .dt-r.cont{border-top:0}
 .dt-r[role="button"]{cursor:pointer;transition:background .12s ease}
@@ -113,6 +114,21 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 .dt .dt-select{box-sizing:border-box;max-width:100%;height:28px;padding:0 8px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:12px;line-height:26px;cursor:pointer}
 .dt .dt-select:hover{border-color:var(--border-primary)}
 .dt .dt-select:focus{outline:2px solid var(--border-active);outline-offset:1px}
+/* No table scrolls sideways. Fixed layout keeps every table at its container's width; under 560px of container width the rows stack and each cell carries its column name (data-th) as a label. */
+:is(div,details):has(>.dt){container-type:inline-size}
+@container (max-width:560px){
+.dt,.dt-b{display:block}
+.dt-h{display:none}
+.dt-b .dt-r{display:block;padding:10px 0}
+.dt-b .dt-r.cont{padding-top:0}
+.dt-c{display:flow-root;padding:3px 0;width:auto!important;text-align:left;white-space:normal;vertical-align:top}
+.dt-c::before{content:attr(data-th);float:left;width:34%;min-width:88px;max-width:160px;margin-right:12px;font-size:11px;line-height:18px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--text-light)}
+.dt-c[data-th=""]::before{content:none}
+.dt-c:empty{display:none}
+.dt .num{text-align:left;white-space:normal}
+.dt-r.total .dt-c{border-top:0}
+.fx-card>.dt{width:auto;margin:0}
+.dt-r[role="button"]{border-radius:8px}
 .sk{background:var(--bg-neutral);border-radius:8px;animation:skPulse 1.4s ease-in-out infinite}
 @keyframes skPulse{0%,100%{opacity:1}50%{opacity:.55}}
 @keyframes skSpin{to{transform:rotate(360deg)}}
@@ -671,16 +687,16 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         </div></div>
         <div class="dt-b"><sc-for list="{{ sources }}" as="sr" hint-placeholder-count="4">
           <div class="dt-r">
-            <div class="dt-c"><span style="display:flex;align-items:center;gap:8px;min-width:0"><i style="width:8px;height:8px;border-radius:9999px;background:{{ sr.dot }};flex:none"></i><span class="dt-name" style="overflow-wrap:anywhere">{{ sr.name }}</span></span></div>
-            <div class="dt-c" style="overflow-wrap:anywhere">{{ sr.cred }}</div>
-            <div class="dt-c" style="color:var(--text-light);overflow-wrap:anywhere">{{ sr.scope }}</div>
-            <div class="dt-c" style="color:var(--text-light);white-space:nowrap">{{ sr.seen }}</div>
-            <div class="dt-c" style="color:var(--text-light);white-space:nowrap">{{ sr.nextSeen }}</div>
-            <div class="dt-c">
+            <div data-th="Account" class="dt-c"><span style="display:flex;align-items:center;gap:8px;min-width:0"><i style="width:8px;height:8px;border-radius:9999px;background:{{ sr.dot }};flex:none"></i><span class="dt-name" style="overflow-wrap:anywhere">{{ sr.name }}</span></span></div>
+            <div data-th="Credential" class="dt-c" style="overflow-wrap:anywhere">{{ sr.cred }}</div>
+            <div data-th="Scope" class="dt-c" style="color:var(--text-light);overflow-wrap:anywhere">{{ sr.scope }}</div>
+            <div data-th="Last scan" class="dt-c" style="color:var(--text-light);white-space:nowrap">{{ sr.seen }}</div>
+            <div data-th="Next scan" class="dt-c" style="color:var(--text-light);white-space:nowrap">{{ sr.nextSeen }}</div>
+            <div data-th="Cadence" class="dt-c">
               <sc-if value="{{ sr.canSchedule }}" hint-placeholder-val="{{ true }}"><select class="dt-select" value="{{ sr.cadenceValue }}" onChange="{{ sr.setCadence }}" aria-label="Cadence"><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></sc-if>
               <sc-if value="{{ sr.noSchedule }}" hint-placeholder-val="{{ false }}"><span style="color:var(--text-light)">{{ sr.cadenceLabel }}</span></sc-if>
             </div>
-            <div class="dt-c"><span style="display:flex;gap:16px"><button class="dt-link" onClick="{{ sr.rescan }}">Re-scan</button><button class="dt-link" onClick="{{ sr.edit }}">Edit access</button></span></div>
+            <div data-th="Manage" class="dt-c"><span style="display:flex;gap:16px"><button class="dt-link" onClick="{{ sr.rescan }}">Re-scan</button><button class="dt-link" onClick="{{ sr.edit }}">Edit access</button></span></div>
           </div>
         </sc-for></div>
       </div>
@@ -783,7 +799,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
                   <div style="margin:0 12px 12px 12px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;overflow:hidden;animation:fadeIn .2s">
                     <div class="dt">
                       <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th" style="width:22%">Path</div><div class="dt-c dt-th">Security</div><div class="dt-c dt-th">Latency</div><div class="dt-c dt-th">Reliability</div><div class="dt-c dt-th">Egress / mo</div><div class="dt-c dt-th">Set-up</div></div></div>
-                      <div class="dt-b"><sc-for list="{{ rg.compare }}" as="cp" hint-placeholder-count="3"><div class="dt-r" style="background:{{ cp.curBg }}"><div class="dt-c"><div class="dt-name">{{ cp.short }}</div><div style="font-size:11px;color:var(--link);font-weight:500">{{ cp.curLabel }}</div></div><div class="dt-c"><span style="display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:7px;height:7px;border-radius:9999px;background:{{ cp.secScoreColor }}"></span>{{ cp.sec }}</span></div><div class="dt-c"><span style="display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:7px;height:7px;border-radius:9999px;background:{{ cp.latScoreColor }}"></span>{{ cp.latText }}</span></div><div class="dt-c"><span style="display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:7px;height:7px;border-radius:9999px;background:{{ cp.relScoreColor }}"></span>{{ cp.relLabel }}</span></div><div class="dt-c"><div class="dt-name">{{ cp.egressF }}</div><div class="dt-sub">{{ cp.math }}</div></div><div class="dt-c">{{ cp.setup }}</div></div></sc-for></div>
+                      <div class="dt-b"><sc-for list="{{ rg.compare }}" as="cp" hint-placeholder-count="3"><div class="dt-r" style="background:{{ cp.curBg }}"><div data-th="Path" class="dt-c"><div class="dt-name">{{ cp.short }}</div><div style="font-size:11px;color:var(--link);font-weight:500">{{ cp.curLabel }}</div></div><div data-th="Security" class="dt-c"><span style="display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:7px;height:7px;border-radius:9999px;background:{{ cp.secScoreColor }}"></span>{{ cp.sec }}</span></div><div data-th="Latency" class="dt-c"><span style="display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:7px;height:7px;border-radius:9999px;background:{{ cp.latScoreColor }}"></span>{{ cp.latText }}</span></div><div data-th="Reliability" class="dt-c"><span style="display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:7px;height:7px;border-radius:9999px;background:{{ cp.relScoreColor }}"></span>{{ cp.relLabel }}</span></div><div data-th="Egress / mo" class="dt-c"><div class="dt-name">{{ cp.egressF }}</div><div class="dt-sub">{{ cp.math }}</div></div><div data-th="Set-up" class="dt-c">{{ cp.setup }}</div></div></sc-for></div>
                     </div>
                   </div>
                   </sc-if>
@@ -1280,7 +1296,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <details style="background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;overflow:hidden"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;font-size:13px;font-weight:700;color:var(--text-heading)"><span aria-hidden="true" style="color:var(--text-light)">›</span>Arbitrage arithmetic per region<span style="margin-left:auto;font-size:11px;font-weight:500;color:var(--text-light)">details · export</span></summary>      <div style="border-top:1px solid var(--border-secondary)">
         <div class="dt">
           <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th">Region</div><div class="dt-c dt-th" style="white-space:nowrap">GB / mo</div><div class="dt-c dt-th" style="white-space:nowrap">Today</div><div class="dt-c dt-th" style="white-space:nowrap">On fabric</div><div class="dt-c dt-th" style="white-space:nowrap">Saving</div><div class="dt-c dt-th"></div></div></div>
-          <div class="dt-b"><sc-for list="{{ arbitrage }}" as="a" hint-placeholder-count="3"><div class="dt-r"><div class="dt-c" style="padding-bottom:4px;vertical-align:top;white-space:nowrap"><div class="dt-name">{{ a.region }}</div><div class="dt-sub">{{ a.wl }} workloads</div></div><div class="dt-c" style="padding-bottom:4px;vertical-align:top;white-space:nowrap">{{ a.gbF }}</div><div class="dt-c" style="padding-bottom:4px;vertical-align:top;white-space:nowrap"><div class="dt-name">{{ a.now }}</div><div class="dt-sub">internet · $0.09/GB</div></div><div class="dt-c" style="padding-bottom:4px;vertical-align:top;white-space:nowrap"><div class="dt-name" style="color:var(--link)">{{ a.fabric }}</div><div class="dt-sub">fabric · $0.02/GB</div></div><div class="dt-c" style="padding-bottom:4px;vertical-align:top;white-space:nowrap;font-weight:700;color:var(--success)">{{ a.save }}/mo</div><div class="dt-c num" style="padding-bottom:4px;vertical-align:top"><button onClick="{{ a.attach }}" style="height:28px;padding:0 12px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Attach</button></div></div><div class="dt-r cont"><div class="dt-c" colSpan="6" style="padding:0 16px 12px"><div style="display:flex;gap:8px 24px;flex-wrap:wrap;font-size:11px;color:var(--text-light)"><code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;white-space:nowrap">{{ a.math }}</code></div></div></div></sc-for></div>
+          <div class="dt-b"><sc-for list="{{ arbitrage }}" as="a" hint-placeholder-count="3"><div class="dt-r"><div data-th="Region" class="dt-c" style="padding-bottom:4px;vertical-align:top"><div class="dt-name">{{ a.region }}</div><div class="dt-sub">{{ a.wl }} workloads</div></div><div data-th="GB / mo" class="dt-c" style="padding-bottom:4px;vertical-align:top">{{ a.gbF }}</div><div data-th="Today" class="dt-c" style="padding-bottom:4px;vertical-align:top"><div class="dt-name">{{ a.now }}</div><div class="dt-sub">internet · $0.09/GB</div></div><div data-th="On fabric" class="dt-c" style="padding-bottom:4px;vertical-align:top"><div class="dt-name" style="color:var(--link)">{{ a.fabric }}</div><div class="dt-sub">fabric · $0.02/GB</div></div><div data-th="Saving" class="dt-c" style="padding-bottom:4px;vertical-align:top;font-weight:700;color:var(--success)">{{ a.save }}/mo</div><div data-th="" class="dt-c num" style="padding-bottom:4px;vertical-align:top"><button onClick="{{ a.attach }}" style="height:28px;padding:0 12px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Attach</button></div></div><div class="dt-r cont"><div data-th="" class="dt-c" colSpan="6" style="padding:0 16px 12px"><div style="display:flex;gap:8px 24px;flex-wrap:wrap;font-size:11px;color:var(--text-light)"><code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;white-space:nowrap">{{ a.math }}</code></div></div></div></sc-for></div>
         </div>
       </div></details>
     </div>
@@ -1301,9 +1317,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         </sc-for></div>
         </sc-if>
         <details style="background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;overflow:hidden"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;font-size:13px;font-weight:700;color:var(--text-heading)"><span aria-hidden="true" style="color:var(--text-light)">›</span>Destination classes and rates<span style="margin-left:auto;font-size:11px;font-weight:500;color:var(--text-light)">details · export</span></summary>        <div style="border-top:1px solid var(--border-secondary)">
-          <div class="dt" style="table-layout:fixed">
+          <div class="dt">
             <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th" style="width:30%">Destination</div><div class="dt-c dt-th">GB / mo</div><div class="dt-c dt-th">Hyper. rate</div><div class="dt-c dt-th">Fabric rate</div><div class="dt-c dt-th">Today</div><div class="dt-c dt-th">If all on fabric</div></div></div>
-            <div class="dt-b"><sc-for list="{{ destClasses }}" as="d" hint-placeholder-count="4"><div class="dt-r" onClick="{{ d.explainGo }}" role="button" tabindex="0" title="Explain this figure, down to the records" style="border-bottom:1px solid var(--border-secondary);cursor:pointer"><div class="dt-c"><div class="dt-name">{{ d.label }}</div><div style="height:4px;border-radius:9999px;background:var(--bg-neutral);margin-top:6px;overflow:hidden"><div style="height:100%;width:{{ d.w }};background:var(--cta)"></div></div></div><div class="dt-c">{{ d.gbF }}</div><div class="dt-c">{{ d.hyperF }}</div><div class="dt-c" style="color:var(--link);font-weight:700">{{ d.fabricF }}</div><div class="dt-c" style="color:var(--text-heading)">{{ d.nowF }}</div><div class="dt-c" style="color:var(--success);font-weight:700">{{ d.ifAllF }}</div></div></sc-for></div>
+            <div class="dt-b"><sc-for list="{{ destClasses }}" as="d" hint-placeholder-count="4"><div class="dt-r" onClick="{{ d.explainGo }}" role="button" tabindex="0" title="Explain this figure, down to the records" style="border-bottom:1px solid var(--border-secondary);cursor:pointer"><div data-th="Destination" class="dt-c"><div class="dt-name">{{ d.label }}</div><div style="height:4px;border-radius:9999px;background:var(--bg-neutral);margin-top:6px;overflow:hidden"><div style="height:100%;width:{{ d.w }};background:var(--cta)"></div></div></div><div data-th="GB / mo" class="dt-c">{{ d.gbF }}</div><div data-th="Hyper. rate" class="dt-c">{{ d.hyperF }}</div><div data-th="Fabric rate" class="dt-c" style="color:var(--link);font-weight:700">{{ d.fabricF }}</div><div data-th="Today" class="dt-c" style="color:var(--text-heading)">{{ d.nowF }}</div><div data-th="If all on fabric" class="dt-c" style="color:var(--success);font-weight:700">{{ d.ifAllF }}</div></div></sc-for></div>
           </div>
         </div></details>
       </div>
@@ -1320,11 +1336,11 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     </div>
     <div class="fx-card" style="gap:12px;padding:16px 24px">
       <div id="sec-buckets" style="display:grid;gap:1px"><h3 class="fx-card-title">Savings by bucket</h3><div class="fx-card-sub">Every bucket of egress, what it costs today, what the fabric would carry it for, and the ones worth steering.</div></div>
-      <div class="dt" style="table-layout:fixed">
+      <div class="dt">
         <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th" style="width:30%">Bucket</div><div class="dt-c dt-th num">Today on the hyperscaler</div><div class="dt-c dt-th num">On the fabric</div><div class="dt-c dt-th num">Saved</div><div class="dt-c dt-th" style="width:20%">Action</div></div></div>
         <div class="dt-b">
-          <sc-for list="{{ buckets }}" as="b" hint-placeholder-count="5"><div class="dt-r" onClick="{{ b.explainGo }}" role="button" tabindex="0" title="Explain this bucket, down to the records" style="border-top:1px solid var(--border-secondary);cursor:pointer"><div class="dt-c" style="color:var(--text-heading);font-weight:500">{{ b.name }}</div><div class="dt-c num">{{ b.todayF }}/mo</div><div class="dt-c num">{{ b.fabricF }}/mo</div><div class="dt-c num" style="color:var(--success);font-weight:500">{{ b.savedF }}</div><div class="dt-c"><sc-if value="{{ b.canSteer }}" hint-placeholder-val="{{ true }}"><button onClick="{{ b.steer }}" style="height:28px;padding:0 12px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Steer</button></sc-if></div></div></sc-for>
-          <div class="dt-r total"><div class="dt-c">Total</div><div class="dt-c num">{{ bTotalF }}/mo</div><div class="dt-c num">{{ bFabF }}/mo</div><div class="dt-c num" style="color:var(--success)">save {{ bSaveF }}/mo</div><div class="dt-c"></div></div>
+          <sc-for list="{{ buckets }}" as="b" hint-placeholder-count="5"><div class="dt-r" onClick="{{ b.explainGo }}" role="button" tabindex="0" title="Explain this bucket, down to the records" style="border-top:1px solid var(--border-secondary);cursor:pointer"><div data-th="Bucket" class="dt-c" style="color:var(--text-heading);font-weight:500">{{ b.name }}</div><div data-th="Today on the hyperscaler" class="dt-c num">{{ b.todayF }}/mo</div><div data-th="On the fabric" class="dt-c num">{{ b.fabricF }}/mo</div><div data-th="Saved" class="dt-c num" style="color:var(--success);font-weight:500">{{ b.savedF }}</div><div data-th="Action" class="dt-c"><sc-if value="{{ b.canSteer }}" hint-placeholder-val="{{ true }}"><button onClick="{{ b.steer }}" style="height:28px;padding:0 12px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Steer</button></sc-if></div></div></sc-for>
+          <div class="dt-r total"><div data-th="Bucket" class="dt-c">Total</div><div data-th="Today on the hyperscaler" class="dt-c num">{{ bTotalF }}/mo</div><div data-th="On the fabric" class="dt-c num">{{ bFabF }}/mo</div><div data-th="Saved" class="dt-c num" style="color:var(--success)">save {{ bSaveF }}/mo</div><div data-th="Action" class="dt-c"></div></div>
         </div>
       </div>
     </div>
@@ -1420,8 +1436,8 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
           </div>
         </sc-for>
       </div>
-      <div style="overflow-x:auto;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px">
-        <div class="dt" style="min-width:820px;table-layout:fixed">
+      <div style="background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;overflow:hidden">
+        <div class="dt">
           <div class="dt-h"><div class="dt-r">
             <div class="dt-c dt-th" style="width:22%">Path</div>
             <sc-for list="{{ matrixHeads }}" as="mh" hint-placeholder-count="4"><div class="dt-c dt-th" style="color:{{ mh.color }}">{{ mh.label }}</div></sc-for>
@@ -1429,9 +1445,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
           </div></div>
           <div class="dt-b"><sc-for list="{{ matrix }}" as="m" hint-placeholder-count="3">
             <div class="dt-r">
-              <div class="dt-c" style="vertical-align:top"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span aria-hidden="true" style="width:10px;height:10px;border-radius:2px;background:{{ m.tone }};flex:none"></span><span style="font-weight:700;color:var(--text-heading)">{{ m.short }}</span></div><span style="margin-top:4px;display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ m.yoursBg }};color:{{ m.yoursInk }};font-size:11px;font-weight:600;white-space:nowrap">{{ m.yours }}</span></div>
-              <sc-for list="{{ m.cells }}" as="cl" hint-placeholder-count="4"><div class="dt-c" style="vertical-align:top"><div style="display:flex;align-items:center;gap:6px;min-width:0"><span aria-hidden="true" style="width:6px;height:6px;border-radius:9999px;background:{{ cl.color }};flex:none"></span><span style="font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ cl.text }}</span></div><div style="font-size:11px;line-height:15px;color:var(--text-light);overflow-wrap:anywhere">{{ cl.sub }}</div></div></sc-for>
-              <div class="dt-c" style="vertical-align:top;font-size:12px;line-height:16px;overflow-wrap:anywhere">{{ m.setup }}</div>
+              <div data-th="Path" class="dt-c" style="vertical-align:top"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span aria-hidden="true" style="width:10px;height:10px;border-radius:2px;background:{{ m.tone }};flex:none"></span><span style="font-weight:700;color:var(--text-heading)">{{ m.short }}</span></div><span style="margin-top:4px;display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ m.yoursBg }};color:{{ m.yoursInk }};font-size:11px;font-weight:600;white-space:nowrap">{{ m.yours }}</span></div>
+              <sc-for list="{{ m.cells }}" as="cl" hint-placeholder-count="4"><div data-th="{{ cl.label }}" class="dt-c" style="vertical-align:top"><div style="display:flex;align-items:center;gap:6px;min-width:0"><span aria-hidden="true" style="width:6px;height:6px;border-radius:9999px;background:{{ cl.color }};flex:none"></span><span style="font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ cl.text }}</span></div><div style="font-size:11px;line-height:15px;color:var(--text-light);overflow-wrap:anywhere">{{ cl.sub }}</div></div></sc-for>
+              <div data-th="Time to stand up" class="dt-c" style="vertical-align:top;font-size:12px;line-height:16px;overflow-wrap:anywhere">{{ m.setup }}</div>
             </div>
           </sc-for></div>
         </div>
@@ -1477,26 +1493,26 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <div class="fx-chips" style="gap:6px"><sc-for list="{{ logPathChips }}" as="lp" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ lp.on }}" onClick="{{ lp.go }}" style="cursor:pointer;background:{{ lp.bg }};color:{{ lp.color }};border-color:{{ lp.border }}">{{ lp.label }}</button></sc-for><span style="width:10px"></span><sc-for list="{{ logActChips }}" as="la" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ la.on }}" onClick="{{ la.go }}" style="cursor:pointer;background:{{ la.bg }};color:{{ la.color }};border-color:{{ la.border }}">{{ la.label }}</button></sc-for></div>
   </div></sc-if>
   <sc-if value="{{ hasLogs }}" hint-placeholder-val="{{ true }}">
-  <div style="overflow-x:auto">
-    <div class="dt" style="min-width:800px;table-layout:fixed">
+  <div>
+    <div class="dt">
       <div class="dt-h"><div class="dt-r">
         <div class="dt-c dt-th" style="width:9%">Time</div>
-        <div class="dt-c dt-th" style="width:26%">Source</div>
-        <div class="dt-c dt-th" style="width:26%">Destination</div>
-        <div class="dt-c dt-th" style="width:13%">Proto</div>
+        <div class="dt-c dt-th" style="width:24%">Source</div>
+        <div class="dt-c dt-th" style="width:24%">Destination</div>
+        <div class="dt-c dt-th" style="width:12%">Proto</div>
         <div class="dt-c dt-th num" style="width:10%">Bytes</div>
-        <div class="dt-c dt-th" style="width:8%">Path</div>
-        <div class="dt-c dt-th" style="width:8%">Action</div>
+        <div class="dt-c dt-th" style="width:10%">Path</div>
+        <div class="dt-c dt-th" style="width:11%">Action</div>
       </div></div>
       <div class="dt-b"><sc-for list="{{ flowRecords }}" as="lr" hint-placeholder-count="10">
         <div class="dt-r">
-          <div class="dt-c mono" style="vertical-align:top;color:var(--text-light);white-space:nowrap">{{ lr.time }}</div>
-          <div class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ lr.srcName }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ lr.srcSub }}</div></div>
-          <div class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ lr.dstName }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ lr.dstSub }}</div></div>
-          <div class="dt-c mono" style="vertical-align:top;white-space:nowrap">{{ lr.proto }}</div>
-          <div class="dt-c num" style="vertical-align:top;color:var(--text-heading);white-space:nowrap">{{ lr.bytes }}</div>
-          <div class="dt-c" style="vertical-align:top"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:{{ lr.pathInk }};white-space:nowrap"><i style="width:6px;height:6px;border-radius:9999px;background:{{ lr.pathInk }}"></i>{{ lr.pathWord }}</span></div>
-          <div class="dt-c" style="vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ lr.actBg }};color:{{ lr.actColor }};font-size:11px;font-weight:700;white-space:nowrap">{{ lr.action }}</span></div>
+          <div data-th="Time" class="dt-c mono" style="vertical-align:top;color:var(--text-light);white-space:nowrap">{{ lr.time }}</div>
+          <div data-th="Source" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ lr.srcName }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ lr.srcSub }}</div></div>
+          <div data-th="Destination" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ lr.dstName }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ lr.dstSub }}</div></div>
+          <div data-th="Proto" class="dt-c mono" style="vertical-align:top;white-space:nowrap">{{ lr.proto }}</div>
+          <div data-th="Bytes" class="dt-c num" style="vertical-align:top;color:var(--text-heading);white-space:nowrap">{{ lr.bytes }}</div>
+          <div data-th="Path" class="dt-c" style="vertical-align:top"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:{{ lr.pathInk }};white-space:nowrap"><i style="width:6px;height:6px;border-radius:9999px;background:{{ lr.pathInk }}"></i>{{ lr.pathWord }}</span></div>
+          <div data-th="Action" class="dt-c" style="vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ lr.actBg }};color:{{ lr.actColor }};font-size:11px;font-weight:700;white-space:nowrap">{{ lr.action }}</span></div>
         </div>
       </sc-for></div>
     </div>
@@ -1507,8 +1523,8 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}">
   <label class="fx-search" style="width:100%"><span aria-hidden="true"></span><input value="{{ actQ }}" onChange="{{ setActQ }}" placeholder="Person, action, region, policy" aria-label="Search user activity"></input></label>
   <sc-if value="{{ hasAct }}" hint-placeholder-val="{{ true }}">
-  <div style="overflow-x:auto">
-    <div class="dt" style="min-width:820px;table-layout:fixed">
+  <div>
+    <div class="dt">
       <div class="dt-h"><div class="dt-r">
         <div class="dt-c dt-th" style="width:9%">When</div>
         <div class="dt-c dt-th" style="width:15%">Who</div>
@@ -1519,12 +1535,12 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       </div></div>
       <div class="dt-b"><sc-for list="{{ actRows }}" as="ua" hint-placeholder-count="10">
         <div class="dt-r">
-          <div class="dt-c mono" style="vertical-align:top;color:var(--text-light);white-space:nowrap">{{ ua.when }}</div>
-          <div class="dt-c" style="vertical-align:top;font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ ua.who }}</div>
-          <div class="dt-c" style="vertical-align:top;overflow-wrap:anywhere">{{ ua.verb }}</div>
-          <div class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ ua.target }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ ua.detail }}</div></div>
-          <div class="dt-c mono" style="vertical-align:top;color:var(--text-light);overflow-wrap:anywhere">{{ ua.from }}</div>
-          <div class="dt-c" style="vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ ua.resBg }};color:{{ ua.resInk }};font-size:11px;font-weight:700;white-space:nowrap">{{ ua.result }}</span></div>
+          <div data-th="When" class="dt-c mono" style="vertical-align:top;color:var(--text-light);white-space:nowrap">{{ ua.when }}</div>
+          <div data-th="Who" class="dt-c" style="vertical-align:top;font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ ua.who }}</div>
+          <div data-th="Change" class="dt-c" style="vertical-align:top;overflow-wrap:anywhere">{{ ua.verb }}</div>
+          <div data-th="What it touched" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ ua.target }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ ua.detail }}</div></div>
+          <div data-th="From" class="dt-c mono" style="vertical-align:top;color:var(--text-light);overflow-wrap:anywhere">{{ ua.from }}</div>
+          <div data-th="Result" class="dt-c" style="vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ ua.resBg }};color:{{ ua.resInk }};font-size:11px;font-weight:700;white-space:nowrap">{{ ua.result }}</span></div>
         </div>
       </sc-for></div>
     </div>
@@ -1762,16 +1778,16 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       </svg>
       <div style="display:grid;gap:12px">
         <h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Order summary</h2>
-        <div class="dt" style="table-layout:fixed">
+        <div class="dt">
           <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th" style="width:8%">Line</div><div class="dt-c dt-th">Product</div><div class="dt-c dt-th num" style="width:12%">Quantity</div><div class="dt-c dt-th" style="width:16%">Term</div><div class="dt-c dt-th num" style="width:22%">Monthly</div></div></div>
-          <div class="dt-b"><sc-for list="{{ orderLines }}" as="l" hint-placeholder-count="3"><div class="dt-r"><div class="dt-c" style="color:var(--text-light)">{{ l.line }}</div><div class="dt-c" style="color:var(--text-heading);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ l.product }}</div><div class="dt-c num">{{ l.qtyF }}</div><div class="dt-c">{{ termLabel }}</div><div class="dt-c num" style="color:{{ l.color }}">{{ l.monthlyF }}</div></div></sc-for></div>
+          <div class="dt-b"><sc-for list="{{ orderLines }}" as="l" hint-placeholder-count="3"><div class="dt-r"><div data-th="Line" class="dt-c" style="color:var(--text-light)">{{ l.line }}</div><div data-th="Product" class="dt-c" style="color:var(--text-heading);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ l.product }}</div><div data-th="Quantity" class="dt-c num">{{ l.qtyF }}</div><div data-th="Term" class="dt-c">{{ termLabel }}</div><div data-th="Monthly" class="dt-c num" style="color:{{ l.color }}">{{ l.monthlyF }}</div></div></sc-for></div>
         </div>
       </div>
       <div style="display:grid;gap:12px">
         <h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Ships with this order</h2>
-        <div class="dt" style="table-layout:fixed">
+        <div class="dt">
           <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th">Match</div><div class="dt-c dt-th">Requirement</div><div class="dt-c dt-th">State</div></div></div>
-          <div class="dt-b"><sc-for list="{{ orderPolicies }}" as="p" hint-placeholder-count="1"><div class="dt-r"><div class="dt-c" style="color:var(--text-heading);font-weight:500">{{ p.match }}</div><div class="dt-c">{{ p.req }}</div><div class="dt-c"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:9999px;background:var(--cta)"></span>{{ p.state }}</span></div></div></sc-for></div>
+          <div class="dt-b"><sc-for list="{{ orderPolicies }}" as="p" hint-placeholder-count="1"><div class="dt-r"><div data-th="Match" class="dt-c" style="color:var(--text-heading);font-weight:500">{{ p.match }}</div><div data-th="Requirement" class="dt-c">{{ p.req }}</div><div data-th="State" class="dt-c"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:9999px;background:var(--cta)"></span>{{ p.state }}</span></div></div></sc-for></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;color:var(--text-body)"><span style="width:8px;height:8px;border-radius:9999px;background:var(--success)"></span>Visible on delivery: path, throughput, P95 latency, loss, egress and flow logs{{ orderInspection }}.</div>
       </div>
@@ -1945,9 +1961,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <sc-if value="{{ hasTerms }}" hint-placeholder-val="{{ false }}">
       <div style="display:grid;gap:12px">
         <h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Term pricing</h2>
-        <div class="dt" style="table-layout:fixed;max-width:560px">
+        <div class="dt" style="max-width:560px">
           <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th">Term</div><div class="dt-c dt-th num">Monthly</div><div class="dt-c dt-th num">Saving</div></div></div>
-          <div class="dt-b"><div class="dt-r"><div class="dt-c" style="color:var(--text-heading);font-weight:500">On-demand</div><div class="dt-c num">{{ product.odPrice }}</div><div class="dt-c num" style="color:var(--text-light)">Base</div></div><sc-for list="{{ product.terms }}" as="t" hint-placeholder-count="3"><div class="dt-r"><div class="dt-c" style="color:var(--text-heading);font-weight:500">{{ t.term }}</div><div class="dt-c num">{{ t.price }}</div><div class="dt-c num" style="color:var(--success);font-weight:500">{{ t.save }}</div></div></sc-for></div>
+          <div class="dt-b"><div class="dt-r"><div data-th="Term" class="dt-c" style="color:var(--text-heading);font-weight:500">On-demand</div><div data-th="Monthly" class="dt-c num">{{ product.odPrice }}</div><div data-th="Saving" class="dt-c num" style="color:var(--text-light)">Base</div></div><sc-for list="{{ product.terms }}" as="t" hint-placeholder-count="3"><div class="dt-r"><div data-th="Term" class="dt-c" style="color:var(--text-heading);font-weight:500">{{ t.term }}</div><div data-th="Monthly" class="dt-c num">{{ t.price }}</div><div data-th="Saving" class="dt-c num" style="color:var(--success);font-weight:500">{{ t.save }}</div></div></sc-for></div>
         </div>
       </div>
       </sc-if>
