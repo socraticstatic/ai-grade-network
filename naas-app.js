@@ -2315,7 +2315,7 @@ function connectVals(s, set, est, go, ob) {
       hasYours: n > 0,
       yoursBg: n > 0 ? 'var(--bg-accent)' : 'transparent',
       yoursInk: n > 0 ? 'var(--link)' : 'var(--text-disabled)',
-      cells: R.LENSES.map(l => ({ key: l.id, ...cell(p, l.id), color: R.SCORE_COLOR[cell(p, l.id).score], word: R.SCORE_WORD[cell(p, l.id).score], hi: l.id === lens })),
+      cells: R.LENSES.map(l => ({ key: l.id, label: l.label, ...cell(p, l.id), color: R.SCORE_COLOR[cell(p, l.id).score], word: R.SCORE_WORD[cell(p, l.id).score], hi: l.id === lens })),
     };
   });
   const spread = R.PATHS.map(p => ({ id: p.id, short: p.short, n: pathCount(p.id) })).filter(x => x.n > 0);

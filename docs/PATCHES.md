@@ -412,3 +412,44 @@ Tests: 235 → 249. New coverage for `heroLayout` on the empty estate, on zero s
 on one site and on one region; for `fabricRows` on a zero-facility estate; for
 `estateFor`, `shouldScan` and `runScan`; and for the big estates' canvas, which had
 no pin at all before this wave.
+
+## Tables: one system (2026-09-24)
+
+Eleven `.dt` tables carried three header voices (10px disabled uppercase, 11px
+light uppercase, and a `--bg-wash` band) and eleven cell paddings from `6px 10px`
+to `12px 14px`, every one written inline. The stylesheet now owns the table:
+13px body on 18px, `12px 16px` cells (44px rows), one uppercase 11px header in
+`--text-light` with a hairline under it, hairlines between body rows, a hover
+and a focus ring on rows that open something (`role="button"`), `.total` for
+the bucket sum, `.num` for right-aligned tabular figures, `.mono` for times and
+protocols, `.dt-name` and `.dt-sub` for the two-line cell, `.dt-link` for the
+row actions and `.dt-select` for the cadence control on Sources. Cells keep
+only width, alignment and `vertical-align`. A table inside an `.fx-card`
+bleeds 16px so its first column aligns with the card title and hover rows run
+wider than the text. The two `<details>` tables on Cost lost their second
+border; the arbitrage maths row joins its record with no hairline; the flow
+log fits the drawer without a horizontal scroll. No values change; `npm test`
+is 369 passing either side.
+
+## Tables: no sideways scroll (2026-09-24)
+
+Three tables carried a `min-width` (the paths matrix at 820px, the flow log at
+860px, user activity at 820px) inside `overflow-x:auto` wrappers, and the log
+drawer's inner width is 781px, so both logs scrolled sideways on every screen.
+Cost's arbitrage table used automatic layout with `nowrap` cells and grew past
+its card from 1024px down. Measured with a headless probe over every table
+surface at 1440, 1180, 1024, 820 and 390.
+
+Now `table-layout:fixed` is the default for every `.dt`, so a table is never
+wider than its container; the min-widths and scroll wrappers are gone; headers
+wrap instead of spilling; the arbitrage cells wrap. Every body cell carries its
+column name as `data-th` (generated from the header order; the matrix lens
+cells carry `cl.label`, added in `naas-app.js`). The element holding a table
+is a container (`:has(>.dt)`), and under 560px of container width the rows
+stack: header hidden, each cell a labelled pair with the column name floated
+left. The flow log's columns rebalance so Action's header fits on one line.
+
+Out of scope and unchanged: at 820px with the drawer open the Observe live
+flow map (a fixed-width SVG) is 736px behind it, and at 390px the shell itself
+(rail, hero, filter chip rows, the log tab row) is 700px wide. Those are the
+phone-readiness of the shell, not the tables. Tests 369 → 369.
