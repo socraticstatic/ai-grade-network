@@ -129,11 +129,14 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // page, and the drawer became an add-or-edit form (provider tiles, credential
 // pills, scope and schedule, save and re-scan): div 886 -> 896, span 653 -> 658,
 // sc-if 314 -> 321, sc-for 183 -> 185, button 255 -> 258, label 28 -> 27.
+// Persona, estate and theme moved from the account menu to the rail's foot (a
+// footer div, a label span, and gates for the rail width and the two icons):
+// div 896 -> 897, span 658 -> 659, sc-if 321 -> 325.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 896],
-    ['span', /<span\b/g, /<\/span>/g, 658],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 321],
+    ['div', /<div\b/g, /<\/div>/g, 897],
+    ['span', /<span\b/g, /<\/span>/g, 659],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 325],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 185],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 258],
