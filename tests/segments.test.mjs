@@ -57,14 +57,14 @@ test('unfolded, the band has room for five segments whether or not the facilitie
 test('the band starts folded, and a click on a folded side unfolds it, and back', () => {
   const c = mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null });
   let v = vals(c);
-  assert.equal(v.segments[0].w, 36, 'Access is not folded on arrival');
+  assert.equal(v.segments[0].w, 52, 'Access is not folded on arrival');
   for (const n of v.nodes.filter(x => x.seg !== 2)) assert.equal(n.op, 0, `${n.label} shows inside a folded segment`);
   v.segments[0].open();
   v = vals(c);
   assert.ok(v.segments[0].w >= 90, 'the click did not unfold Access');
   assert.ok(v.nodes.every(n => n.op === 1));
   v.segments[1].open();
-  assert.equal(vals(c).segments[1].w, 36, 'a click on an open side did not fold it back');
+  assert.equal(vals(c).segments[1].w, 52, 'a click on an open side did not fold it back');
 });
 
 // ---- things: each segment holds named things, each owned by AT&T or not ----
@@ -313,9 +313,10 @@ test('a route is drawable as one path that starts where its first piece starts a
 test('folded, Access and Edge narrow to card edges and Core takes the band', () => {
   const f = heroLayout(D.ESTATES.mature, { bandX: 320, bandW: 580, folded: true });
   const w = f.segments.map(s => s.w);
-  assert.deepEqual([w[0], w[1], w[3], w[4]], [36, 36, 36, 36]);
+  // Thickened from 36 to 52 on 2026-09-23 ("make edge and access thicker in collapsed").
+  assert.deepEqual([w[0], w[1], w[3], w[4]], [52, 52, 52, 52]);
   assert.equal(w.reduce((a, b) => a + b, 0), 580, 'the folded band does not tile');
-  assert.ok(w[2] > 400, `Core is only ${w[2]} wide folded`);
+  assert.ok(w[2] > 340, `Core is only ${w[2]} wide folded`);
 });
 
 // Folding animates: each piece keeps its key and its shape, only its numbers
@@ -339,7 +340,7 @@ test('the band is centred between the columns, folded and unfolded', async () =>
     assert.ok(Math.abs(left - right) <= 1, `${bandUnfolded ? 'unfolded' : 'folded'}: ${left} left, ${right} right`);
   }
   const shut = vals(mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null }));
-  assert.equal(shut.bandW, 404, 'the folded band did not narrow');
+  assert.equal(shut.bandW, 4 * 52 + 260, 'the folded band did not narrow');
   assert.equal(shut.segments[2].w, 260);
 });
 

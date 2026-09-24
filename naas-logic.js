@@ -76,6 +76,8 @@ const ROOT_SITES = 9, DRILL_SITES = 7;
 // into the hover titles (2026-09-23), so the column moved right into its space
 // and the band widened, which is the breathing room the picture was missing.
 export const RX = 1100;
+// A folded Access or Edge column, wide enough to read as a stack of cards.
+export const FOLDED_SIDE = 52;
 
 export function heroLayout(est, opts) {
   // The canvas is derived from the estate, not fixed. A full estate fills
@@ -239,7 +241,7 @@ export function heroLayout(est, opts) {
   const SEG = [['Access', 'site'], ['Edge', 'site'], ['Core', 'core'], ['Edge', 'cloud'], ['Access', 'cloud']];
   // Folded, Access and Edge narrow to a stack of card edges and Core takes the
   // width they give up; unfolded, all five share the band.
-  const FOLD_W = 36;
+  const FOLD_W = FOLDED_SIDE;
   const side = opts.folded ? FOLD_W : Math.floor(bandW / SEG.length);
   const coreW = bandW - side * (SEG.length - 1);
   let sx = bandX;
