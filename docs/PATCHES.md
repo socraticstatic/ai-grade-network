@@ -430,3 +430,26 @@ wider than the text. The two `<details>` tables on Cost lost their second
 border; the arbitrage maths row joins its record with no hairline; the flow
 log fits the drawer without a horizontal scroll. No values change; `npm test`
 is 369 passing either side.
+
+## Tables: no sideways scroll (2026-09-24)
+
+Three tables carried a `min-width` (the paths matrix at 820px, the flow log at
+860px, user activity at 820px) inside `overflow-x:auto` wrappers, and the log
+drawer's inner width is 781px, so both logs scrolled sideways on every screen.
+Cost's arbitrage table used automatic layout with `nowrap` cells and grew past
+its card from 1024px down. Measured with a headless probe over every table
+surface at 1440, 1180, 1024, 820 and 390.
+
+Now `table-layout:fixed` is the default for every `.dt`, so a table is never
+wider than its container; the min-widths and scroll wrappers are gone; headers
+wrap instead of spilling; the arbitrage cells wrap. Every body cell carries its
+column name as `data-th` (generated from the header order; the matrix lens
+cells carry `cl.label`, added in `naas-app.js`). The element holding a table
+is a container (`:has(>.dt)`), and under 560px of container width the rows
+stack: header hidden, each cell a labelled pair with the column name floated
+left. The flow log's columns rebalance so Action's header fits on one line.
+
+Out of scope and unchanged: at 820px with the drawer open the Observe live
+flow map (a fixed-width SVG) is 736px behind it, and at 390px the shell itself
+(rail, hero, filter chip rows, the log tab row) is 700px wide. Those are the
+phone-readiness of the shell, not the tables. Tests 369 → 369.
