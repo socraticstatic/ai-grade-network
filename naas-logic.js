@@ -77,7 +77,7 @@ const ROOT_SITES = 9, DRILL_SITES = 7;
 // and the band widened, which is the breathing room the picture was missing.
 export const RX = 1100;
 // A folded Access or Edge column, wide enough to read as a stack of cards.
-export const FOLDED_SIDE = 52;
+export const FOLDED_SIDE = 72;
 
 export function heroLayout(est, opts) {
   // The canvas is derived from the estate, not fixed. A full estate fills

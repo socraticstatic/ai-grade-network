@@ -325,7 +325,7 @@ export function vals(c) {
   const ownerName = (n) => (n.owner === 'cloud' ? (n.cloud || 'Cloud provider') : OWNER[n.owner].ownerLabel);
   // Folded, the backbones are all that is left to read, so they read larger.
   const bigCore = (n) => folded && n.seg === 2;
-  const nodesMeta = (L.nodes || []).map(n => ({ ...n, key: 'n:' + n.id, fx: n.x + 4, fy: n.y - (bigCore(n) ? 13 : 10), fw: Math.max(0, n.w - 8), fh: bigCore(n) ? 26 : 20, ph: bigCore(n) ? 24 : 18, plh: bigCore(n) ? 21 : 15, pfs: bigCore(n) ? '13px' : '10px', pdot: bigCore(n) ? 8 : 6, dot: OWNER[n.owner].stroke, op: folded && n.seg !== 2 ? 0 : 1, pe: folded && n.seg !== 2 ? 'none' : 'auto',
+  const nodesMeta = (L.nodes || []).map(n => ({ ...n, key: 'n:' + n.id, fx: n.x + 4, fy: n.y - (bigCore(n) ? 16 : 10), fw: Math.max(0, n.w - 8), fh: bigCore(n) ? 32 : 20, ph: bigCore(n) ? 30 : 18, plh: bigCore(n) ? 27 : 15, pfs: bigCore(n) ? '15px' : '10px', pdot: bigCore(n) ? 9 : 6, dot: OWNER[n.owner].stroke, op: folded && n.seg !== 2 ? 0 : 1, pe: folded && n.seg !== 2 ? 'none' : 'auto',
     border: `1.5px ${OWNER[n.owner].dash === 'none' ? 'solid' : 'dashed'} ${OWNER[n.owner].stroke}`,
     title: `${n.name} · ${ownerName(n)} · used by ${n.users.slice(0, 4).join(', ')}${n.users.length > 4 ? ` and ${n.users.length - 4} more` : ''}` }));
   const piecesMeta = (L.pieces || []).map(p => ({ ...OWNER[p.owner], ...p }));
@@ -358,7 +358,8 @@ export function vals(c) {
     // The stack starts under its name and stops as far from the floor; its back
     // cards peek outward, left on the site side and right on the cloud side.
     stackH: L.bandH - 92, stackY: L.bandY + 80,
-    stackA: sg.side === 'site' ? 25 : 13, stackB: 19, stackC: sg.side === 'site' ? 13 : 25,
+    // Cards 20 wide, offset 7, centred in the 72-unit folded column.
+    stackA: sg.side === 'site' ? 33 : 19, stackB: 26, stackC: sg.side === 'site' ? 19 : 33,
     // Access folds to a light stack of two; Edge, a step deeper, to three with
     // more shadow and a blue front card, so the two folds read apart.
     backOp: sg.label === 'Edge' ? 1 : 0,
