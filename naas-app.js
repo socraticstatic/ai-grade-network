@@ -30,8 +30,10 @@ const TABS = ['connect', 'govern', 'observe', 'cost'];
 // open. Adding Observe or Cost is a new entry, not new markup.
 export const SUB_PANELS = {
   // Discover owns the reading of the estate. Connect owns what to do about it.
+  // Sources is a page (source management); the drawer adds a source, or edits
+  // one's credential, scope and schedule (Micah, 2026-09-23).
   discover: [
-    { key: 'sources', label: 'Connected accounts', sec: 'sec-accounts' },
+    { key: 'add', label: 'Add a source' },
     { key: 'run', label: 'Discovery run' },
   ],
   connect: [
@@ -83,7 +85,7 @@ export const STEPS = [
 export const SECTIONS = {
   discover: [
     ['@estate', 'Estate', 'apis'],
-    ['sources', 'Sources', 'lock'],
+    ['@sources', 'Sources', 'lock'],
   ],
   connect: [
     ['sec-paths', 'Options', 'apis'],
@@ -248,7 +250,7 @@ export function vals(c) {
   const hp = R.health(est0, obAll, steered);
   const conns = X.connections(est0, obAll);
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, ob), ...est0.findings] };
-  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], laneFocus: false, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
+  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -803,6 +805,10 @@ export function vals(c) {
     pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? ob.verdict : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on the fabric · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${est.policiesEnforced} of ${est.policiesAuthored} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
     persona: s.persona || 'architect', personaName: persona, setPersona: (e) => set({ persona: e.target.value }), personas: PERSONAS.map(p => ({ key: p, label: p })), moreByTab, hasMoreByTab: moreByTab.length > 0, pendingTitle: (s.order && s.order.title) || 'Hosted VPC order', dismissPending: () => set({ pendingDismissed: true }),
     estateName: est.name, isEmpty, isPartial, isMature, notEmpty: !isEmpty, stageKicker, floorVerdict,
+    // Discover has two views: the estate, and its sources (source management).
+    s1Title: s.discoverView === 'sources' ? 'Sources' : 'Discover',
+    showSourcesBody: !isEmpty && s.discoverView === 'sources', showEstateBody: !isEmpty && s.discoverView !== 'sources',
+    showEstateStats: s.scanStep >= 4 && s.discoverView !== 'sources',
     sS0: s.screen === 's0' || (s.screen === 's2' && isEmpty), sS1: s.screen === 's1', sS2: s.screen === 's2' && !isEmpty, showLaunch: !isEmpty && (s.screen === 's2' || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect')), sS3: s.screen === 's3', sS4: s.screen === 's4', sS5: s.screen === 's5', sS6: s.screen === 's6', sS7: s.screen === 's7', sS8: s.screen === 's8',
     heroVB: `0 0 ${L.W} ${L.H}`,
     fabricHealth: (() => {
@@ -828,7 +834,7 @@ export function vals(c) {
       return { key: 'tile:' + name, name, cred, provider: key || 'AT&T', on, border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)',
         pick: () => set(key ? { intakeSource: 'credential', intakeProvider: key } : { intakeSource: 'inventory' }) };
     }),
-    intakeOrg: s.intakeOrg, setOrg: (e) => set({ intakeOrg: e.target.value }), intakeSource: s.intakeSource, setSource: (v) => () => set({ intakeSource: v }), srcCredential: s.intakeSource === 'credential', srcInventory: s.intakeSource === 'inventory', intakeProvider: s.intakeProvider, setProvider: (e) => set({ intakeProvider: e.target.value }), startScan: () => { set({ view: 'partial', estateParam: null, screen: 's1', scanStep: 0, cadenceAsk: true }); startScan(c); syncHash('s1'); }, credBorder: s.intakeSource === 'credential' ? 'var(--border-active)' : 'var(--border-secondary)', invBorder: s.intakeSource === 'inventory' ? 'var(--border-active)' : 'var(--border-secondary)',
+    intakeOrg: s.intakeOrg, setOrg: (e) => set({ intakeOrg: e.target.value }), intakeSource: s.intakeSource, setSource: (v) => () => set({ intakeSource: v }), srcCredential: s.intakeSource === 'credential', srcInventory: s.intakeSource === 'inventory', intakeProvider: s.intakeProvider, setProvider: (e) => set({ intakeProvider: e.target.value }), startScan: () => { set({ view: 'partial', estateParam: null, screen: 's1', discoverView: 'estate', scanStep: 0, cadenceAsk: true }); startScan(c); syncHash('s1'); }, credBorder: s.intakeSource === 'credential' ? 'var(--border-active)' : 'var(--border-secondary)', invBorder: s.intakeSource === 'inventory' ? 'var(--border-active)' : 'var(--border-secondary)',
     // hero
     drawer, drawerOpen, openLevel, hasDrawer: drawerOpen, noDrawer: !drawerOpen, andiFabRight: drawerOpen ? '396px' : '16px',
     fabOpen: fabDrill.length > 0, fabClosed: fabDrill.length === 0, sitesDoor, bandDoor, cloudsDoor, fabRows, fabHead, fabUp, fabTrail, hasFabMore: !!(fabHead && fabHead.more), fabMore: fabHead ? fabHead.more : '', openBandLevel: () => openLevel('fabric'), fabHeadY: L.bandY + 8, fabEmpty, fabEmptyY: L.bandY + 40, fabEmptyHead: fabInfo ? fabInfo.emptyHead : '', fabEmptyLine: fabInfo ? fabInfo.emptyLine : '', fabEmptyCta: fabInfo ? fabInfo.emptyCta : '', fabEmptyGo, bandX: L.bandX, bandW: L.bandW, bandLabelX: L.bandX, laneX: L.lane.x, laneW: L.lane.w,
@@ -1811,12 +1817,34 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     }))),
   ];
   const sources = rawSources.map(r => ({ ...r,
-    edit: () => set({ addSourceOpen: true, addSourceKind: r.kind }),
+    edit: () => set({ sub: { page: 'discover', panel: 'add' }, sourceEdit: r.key }),
     remove: () => set({ addedSources: (s.addedSources || []).filter(x => 'src:new' + (s.addedSources || []).indexOf(x) !== r.key) }),
     canRemove: r.key.startsWith('src:new') }));
   const credScanned = sources.filter(x => x.state === 'Connected').length;
   const gapVals = { gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
-  const obX = { sources, sourcesSub: `${credScanned} connected · ${sched.cadence.empty ? 'nothing on a schedule yet' : sched.cadence.label.toLowerCase()}`, addSourceOpen: !!s.addSourceOpen, toggleAddSource: () => set({ addSourceOpen: !s.addSourceOpen }), addSourceLabel: s.addSourceOpen ? 'Close' : 'Add a source', addSourceKind: s.addSourceKind || 'AWS account', setAddSourceKind: (e) => set({ addSourceKind: e.target.value }), addSource: () => set({ addedSources: [...(s.addedSources || []), s.addSourceKind || 'AWS account'], addSourceOpen: false }), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage === 'perf', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
+  const obX = { sources, sourcesSub: `${credScanned} connected · ${sched.cadence.empty ? 'nothing on a schedule yet' : sched.cadence.label.toLowerCase()}`, ...(() => {
+      // One drawer adds a source or edits one: which cloud (adding only), then its
+      // credential, scope and schedule. AT&T inventory has nothing to manage.
+      const CRED_OPTS = { AWS: ['Cross-account role', 'Access keys'], Azure: ['Service principal', 'Managed identity'], GCP: ['Service account', 'Workload identity federation'], Oracle: ['API signing key'], CoreWeave: ['API key'] };
+      const editing = s.sourceEdit ? sources.find(r => r.key === s.sourceEdit) : null;
+      const provOf = (kind) => (/aws/i.test(kind) ? 'AWS' : /azure/i.test(kind) ? 'Azure' : /gcp|google/i.test(kind) ? 'GCP' : /oracle/i.test(kind) ? 'Oracle' : /coreweave/i.test(kind) ? 'CoreWeave' : null);
+      const prov = editing ? provOf(editing.kind) : (s.intakeSource === 'inventory' ? null : (s.intakeProvider || 'AWS'));
+      const creds = prov ? CRED_OPTS[prov] || [] : [];
+      const tile = ['AWS', 'Azure', 'Google Cloud', 'Oracle Cloud', 'CoreWeave'][['AWS', 'Azure', 'GCP', 'Oracle', 'CoreWeave'].indexOf(prov)];
+      return {
+        srcEditing: !!editing, srcAdding: !editing, srcEditName: editing ? editing.name : '', srcEditKind: editing ? `${editing.kind} · ${editing.scope}` : '',
+        srcHasCred: !!prov, srcNoCred: !prov, srcCred: s.srcCred && creds.includes(s.srcCred) ? s.srcCred : (editing && creds.includes(editing.cred) ? editing.cred : creds[0] || ''),
+        srcCredOpts: creds.map(o => { const on = o === (s.srcCred && creds.includes(s.srcCred) ? s.srcCred : (editing && creds.includes(editing.cred) ? editing.cred : creds[0])); return { key: o, label: o, on, border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', pick: () => set({ srcCred: o }) }; }),
+        setSrcCred: (e) => set({ srcCred: e.target.value }), srcScope: s.srcScope || 'Read-only, all regions', setSrcScope: (e) => set({ srcScope: e.target.value }),
+        srcCadence: editing && editing.canSchedule ? editing.cadenceValue : (s.srcCadence || 'nightly'), setSrcCadence: editing && editing.canSchedule ? editing.setCadence : (e) => set({ srcCadence: e.target.value }),
+        srcCanSchedule: !editing || editing.canSchedule, srcInventoryNote: editing && !editing.canSchedule ? 'AT&T keeps this inventory live. There is no credential or schedule to manage.' : 'AT&T inventory needs no credential; AT&T keeps it live.',
+        srcDoneLabel: editing ? 'Save' : 'Add and scan', srcRescan: editing ? editing.rescan : () => {}, srcCanRescan: !!editing,
+        openAddSource: () => set({ sub: { page: 'discover', panel: 'add' }, sourceEdit: null, srcCred: null }),
+        addSource: () => set(editing
+          ? { sub: null, sourceEdit: null, srcCred: null }
+          : { addedSources: [...(s.addedSources || []), prov ? `${tile} account` : 'AT&T inventory'], sub: null, sourceEdit: null, srcCred: null, screen: 's1', discoverView: 'sources' }),
+      };
+    })(), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage === 'perf', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
   return {
     invTree: s.tagView ? tagTree(inv, tree, chip) : tree, tagView: !!s.tagView, cloudView: !s.tagView, toggleTagView: () => set({ tagView: !s.tagView }), tagViewUb: s.tagView ? 'var(--cta)' : 'transparent', tagViewColor: s.tagView ? 'var(--link)' : 'var(--text-body)', cloudViewUb: !s.tagView ? 'var(--cta)' : 'transparent', cloudViewColor: !s.tagView ? 'var(--link)' : 'var(--text-body)', hasTree: tree.length > 0, invStats: [{ key: 's', v: stats.sites, l: 'sites' }, { key: 'c', v: stats.clouds, l: 'clouds' }, { key: 'r', v: stats.regions, l: 'regions' }, { key: 'w', v: stats.workloads.toLocaleString('en-US'), l: 'workloads' }, { key: 'a', v: stats.attached, l: 'attached' }, { key: 'e', v: stats.exposed, l: 'exposed' }],
     expandAll: () => set({ inv: { ...openMap, ...Object.fromEntries(openKeys.map(k => [k, true])) } }), collapseAll: () => set({ inv: {} }), collapsedLabel: Object.values(openMap).some(Boolean) ? 'Expanded view' : 'Collapsed view',
@@ -2128,10 +2156,10 @@ function shellVals(s, set, go, est, c, sched) {
           const isView = id.startsWith('@');
           const isPanel = !isView && !id.startsWith('sec-');
           const view = isView ? id.slice(1) : '';
-          const cur = isView ? (view === 'estate' ? s.screen === 's1' : ['s4', 's5', 's6'].includes(s.screen))
+          const cur = isView ? (view === 'estate' ? s.screen === 's1' && s.discoverView !== 'sources' : view === 'sources' ? s.screen === 's1' && s.discoverView === 'sources' : ['s4', 's5', 's6'].includes(s.screen))
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
             : (onS3('cloud', tab) && activeSec === id);
-          const goTo = isView ? (view === 'estate' ? go('s1') : go('s4'))
+          const goTo = isView ? (view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
             : () => { go('s3', { layer: 'cloud', tab })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
@@ -2156,11 +2184,11 @@ function shellVals(s, set, go, est, c, sched) {
               ...item(st.label, 'apis', () => {
                 // Until there is a source, adding one is the task, so it is a page;
                 // after that, managing them sits in the drawer beside the picture.
-                if (st.key === 'sources') { if (!sched.accounts.length) { go('s1')(); return; } go('s3', { layer: 'cloud', tab: 'connect' })(); set({ sub: { page: 'discover', panel: 'sources' } }); return; }
+                if (st.key === 'sources') { go('s1', { discoverView: 'sources' })(); return; }
                 if (st.key === 'estate') { go('s1')(); return; }
                 if (st.key === 'options') { go('s3', { layer: 'cloud', tab: 'connect' })(); set({ scrollToSec: 'sec-paths', scrollNonce: (s.scrollNonce || 0) + 1 }); return; }
                 go('s4')();
-              }, st.key === 'sources' && s.screen === 's1' && !sched.accounts.length, false, '', st.key === 'sources'), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px', ready: true }),
+              }, st.key === 'sources' ? s.screen === 's1' && (s.discoverView === 'sources' || !sched.accounts.length) : st.key === 'estate' ? s.screen === 's1' && s.discoverView !== 'sources' : false, false, '', st.key === 'sources'), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px', ready: true }),
             ),
           }] : []),
           ...(seq ? [] : TABS).map(([tab, title]) => {
@@ -2201,7 +2229,7 @@ function shellVals(s, set, go, est, c, sched) {
   const closeSub = () => set({ sub: null });
   const subOpen = !!s.sub;
   const subTabs = subPanels.map(p => ({ key: p.key, label: p.label, on: p.key === subPanelNow, go: openSub(subPage, p.key) }));
-  const subTitle = (subPanels.find(p => p.key === subPanelNow) || {}).label || '';
+  const subTitle = subPanelNow === 'add' && s.sourceEdit ? 'Edit a source' : (subPanels.find(p => p.key === subPanelNow) || {}).label || '';
   const openFindings = openSub('connect', 'found');
   // The verdict sentence is the door to the findings, but only where the
   // findings exist. Elsewhere it carries no affordance rather than a dead one.
@@ -2237,16 +2265,15 @@ function shellVals(s, set, go, est, c, sched) {
   const needsYouLabel = needsYou.length ? needsYou.join(' · ') : 'Nothing needs you';
   // Exposed is a filter on the estate, not a stop of its own.
   const estateExposedGo = () => { go('s1')(); set({ chips: ['exposed'] }); };
-  const subIsSources = subPanelNow === 'sources';
+  const subIsAdd = subPanelNow === 'add';
   const subIsRun = subPanelNow === 'run';
   const subIsFound = subPanelNow === 'found';
   const subIsInsights = subPanelNow === 'insights', subIsLogs = subPanelNow === 'logs';
   const subIsForecast = subPanelNow === 'forecast', subIsCharges = subPanelNow === 'charges';
   // Manage credentials scrolled to a card that is now a panel. It opens it.
   const manageCreds = () => {
-    if (!credsN) { go('s1')(); set(close); return; }
-    go('s3', { layer: 'cloud', tab: 'connect' })();
-    set({ ...close, sub: { page: 'discover', panel: 'sources' } });
+    go('s1', { discoverView: 'sources' })();
+    set(close);
   };
   const windowLabel = winLabelOf(s);
   const rangeValue = s.obWindow || '30d';
@@ -2259,7 +2286,7 @@ function shellVals(s, set, go, est, c, sched) {
     pills, railGroups, subNav, hasSubNav, pageTitle, credsLabel, credsTitle, manageCreds, showPageTitle, rangeValue, setRange, bellLabel, buildLabel: (typeof window !== 'undefined' && window.__naasVersion) ? `v${window.__naasVersion.build} · ${window.__naasVersion.date}` : '', hasBuildLabel: !!(typeof window !== 'undefined' && window.__naasVersion), railCollapsed, railExpanded: !railCollapsed, railToggleTitle: railCollapsed ? 'Expand navigation' : 'Collapse navigation', iconAndi: 'brand/andi-symbol.svg', iconCalendar: iconDir + '/checklist.svg', goBrowseClose: () => { go('s7')(); set({ demoOpen: false }); },
     topTabs, layerSubtitle, elevatorOpen: !!s.elevatorOpen, toggleElevator: () => set({ elevatorOpen: !s.elevatorOpen }), closeElevator: () => set(close), chevronRot: s.elevatorOpen ? 'rotate(180deg)' : 'rotate(0deg)', elevator,
     goDiscoverClose: goTab('s1'), goHomeClose: goTab('s3', { layer: 'cloud', tab: 'connect' }),
-    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, railIsSequence, needsYouLabel, estateExposedGo, ownsDiscovery, ownsTelemetry, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsSources, subIsRun, subIsFound, subIsInsights, subIsLogs, subIsForecast, subIsCharges, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
+    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, railIsSequence, needsYouLabel, estateExposedGo, ownsDiscovery, ownsTelemetry, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsAdd, subIsRun, subIsFound, subIsInsights, subIsLogs, subIsForecast, subIsCharges, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
   };
 }
 

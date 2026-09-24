@@ -44,21 +44,23 @@ test('closing the sub layer leaves nothing open', () => {
 });
 
 test('the open panel is switchable from inside the layer', () => {
-  const c = on({ sub: { page: 'discover', panel: 'sources' } });
+  const c = on({ sub: { page: 'discover', panel: 'add' } });
   const tabs = vals(c).subTabs;
   assert.deepEqual(tabs.map(t => t.key), SUB_PANELS.discover.map(p => p.key));
-  assert.equal(tabs.find(t => t.key === 'sources').on, true);
+  assert.equal(tabs.find(t => t.key === 'add').on, true);
   tabs.find(t => t.key === 'run').go();
   assert.equal(vals(c).subPanelNow, 'run');
 });
 
 // ---- Discover's three doors ----
 
-test('Manage credentials opens the sub layer at its sources', () => {
+// Sources is a page now (source management, 2026-09-23); the drawer adds or edits one.
+test('Manage credentials opens the Sources page, not a drawer', () => {
   const c = on();
   vals(c).manageCreds();
-  assert.equal(c.state.sub.page, 'discover');
-  assert.equal(c.state.sub.panel, 'sources');
+  assert.equal(c.state.screen, 's1');
+  assert.equal(c.state.discoverView, 'sources');
+  assert.ok(!c.state.sub);
 });
 
 test('Re-discover opens the layer on the run, and still starts the scan', () => {
@@ -83,8 +85,8 @@ test('a finished run stays a run; it does not jump to another page\'s panel', ()
 });
 
 test('a panel opened directly does not move when a scan finishes', () => {
-  const v = vals(on({ sub: { page: 'discover', panel: 'sources' }, scanStep: 4 }));
-  assert.equal(v.subPanelNow, 'sources');
+  const v = vals(on({ sub: { page: 'discover', panel: 'add' }, scanStep: 4 }));
+  assert.equal(v.subPanelNow, 'add');
 });
 
 // ---- the bug inside the task ----
@@ -146,7 +148,7 @@ test('each section in the layer sits under its own panel gate and no other', asy
   const a = L.findIndex(l => l.includes('<aside aria-label="Discovery"'));
   const z = L.findIndex((l, i) => i > a && l.includes('</aside>'));
   const want = {
-    'sec-accounts': 'subIsSources', 'sec-gap': 'subIsFound', 'sec-paths': 'subIsFound',
+    'sec-gap': 'subIsFound', 'sec-paths': 'subIsFound',
     'sec-insights': 'subIsInsights', 'sec-logs': 'subIsLogs',
     'sec-forecast': 'subIsForecast', 'sec-charges': 'subIsCharges',
   };

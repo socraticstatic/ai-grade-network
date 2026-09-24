@@ -125,16 +125,20 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Sources is a page for a customer with none (a tile loop with a mark or a
 // monogram, and one button for discovery, where one box and one button were):
 // div 882 -> 886, span 647 -> 653, sc-if 312 -> 314, sc-for 182 -> 183, button 254 -> 255.
+// Source management: the accounts table moved from the drawer to the Sources
+// page, and the drawer became an add-or-edit form (provider tiles, credential
+// pills, scope and schedule, save and re-scan): div 886 -> 896, span 653 -> 658,
+// sc-if 314 -> 321, sc-for 183 -> 185, button 255 -> 258, label 28 -> 27.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 886],
-    ['span', /<span\b/g, /<\/span>/g, 653],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 314],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 183],
+    ['div', /<div\b/g, /<\/div>/g, 896],
+    ['span', /<span\b/g, /<\/span>/g, 658],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 321],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 185],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 255],
+    ['button', /<button\b/g, /<\/button>/g, 258],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
-    ['label', /<label\b/g, /<\/label>/g, 28],
+    ['label', /<label\b/g, /<\/label>/g, 27],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

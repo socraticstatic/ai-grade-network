@@ -598,11 +598,11 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <sc-if value="{{ sS1 }}" hint-placeholder-val="{{ false }}">
 <section data-screen-label="S1 Discover" style="animation:fadeIn .3s;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)">
   <div style="display:flex;align-items:center;gap:16px;min-height:40px;flex-wrap:wrap">
-    <h1 style="margin:0;font-size:26px;line-height:34px;font-weight:700;color:var(--text-heading)">Discover</h1>
-    <sc-if value="{{ scanDone }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ invStats }}" as="k" hint-placeholder-count="5"><span style="display:inline-flex;align-items:baseline;gap:5px;height:28px;padding:0 10px;border-radius:9999px;background:var(--bg-base);border:1px solid var(--border-secondary);font-size:12px;color:var(--text-light);white-space:nowrap"><strong style="font-size:13px;color:var(--text-heading)">{{ k.v }}</strong>{{ k.l }}</span></sc-for><sc-if value="{{ newStrip.hasNew }}" hint-placeholder-val="{{ false }}"><button class="fx-badge new" onClick="{{ newStrip.toggle }}" aria-pressed="{{ newOnly }}" style="height:28px;padding:0 10px;font-size:12px;cursor:pointer">{{ newStrip.pill }}</button></sc-if></div></sc-if>
+    <h1 style="margin:0;font-size:26px;line-height:34px;font-weight:700;color:var(--text-heading)">{{ s1Title }}</h1>
+    <sc-if value="{{ showEstateStats }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ invStats }}" as="k" hint-placeholder-count="5"><span style="display:inline-flex;align-items:baseline;gap:5px;height:28px;padding:0 10px;border-radius:9999px;background:var(--bg-base);border:1px solid var(--border-secondary);font-size:12px;color:var(--text-light);white-space:nowrap"><strong style="font-size:13px;color:var(--text-heading)">{{ k.v }}</strong>{{ k.l }}</span></sc-for><sc-if value="{{ newStrip.hasNew }}" hint-placeholder-val="{{ false }}"><button class="fx-badge new" onClick="{{ newStrip.toggle }}" aria-pressed="{{ newOnly }}" style="height:28px;padding:0 10px;font-size:12px;cursor:pointer">{{ newStrip.pill }}</button></sc-if></div></sc-if>
     <sc-if value="{{ scanning }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;color:var(--text-light)">Scanning…</span></sc-if>
     <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
-      <button onClick="{{ goFront }}" style="height:32px;padding:0 12px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:var(--bg-accent)">+ Add cloud</button>
+      <button onClick="{{ openAddSource }}" style="height:32px;padding:0 12px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:var(--bg-accent)">+ Add a source</button>
       <sc-if value="{{ scanDone }}" hint-placeholder-val="{{ false }}"><button onClick="{{ stationCta.go }}" style="height:32px;padding:0 14px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:var(--cta-hover)">{{ stationCta.label }}</button></sc-if>
     </span>
   </div>
@@ -634,7 +634,38 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </div>
   </sc-if>
   <sc-if value="{{ scanDone }}" hint-placeholder-val="{{ false }}">
-  <sc-if value="{{ notEmpty }}" hint-placeholder-val="{{ true }}">
+  <!-- Source management: the connected accounts on the page; the drawer adds a source or edits one's credentials and schedule (2026-09-23) -->
+  <sc-if value="{{ showSourcesBody }}" hint-placeholder-val="{{ false }}">
+    <div id="sec-accounts" class="fx-card" aria-label="Sources" style="gap:10px;padding:16px 24px;animation:fadeIn .3s">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Connected accounts</h3><div class="fx-card-sub">{{ sourcesSub }}</div></div><button class="fx-btn" onClick="{{ openAddSource }}" style="height:32px;background:var(--cta);color:#fff;border-color:var(--cta)">Add a source</button></div>
+      <div class="dt" style="width:100%;font-size:12px">
+        <div class="dt-h"><div class="dt-r" style="border-bottom:1px solid var(--border-secondary)">
+          <div class="dt-c dt-th" style="width:22%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Account</div>
+          <div class="dt-c dt-th" style="width:14%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Credential</div>
+          <div class="dt-c dt-th" style="width:15%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Scope</div>
+          <div class="dt-c dt-th" style="width:11%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Last scan</div>
+          <div class="dt-c dt-th" style="width:11%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Next scan</div>
+          <div class="dt-c dt-th" style="width:15%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Cadence</div>
+          <div class="dt-c dt-th" style="width:12%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Manage</div>
+        </div></div>
+        <div class="dt-b"><sc-for list="{{ sources }}" as="sr" hint-placeholder-count="4">
+          <div class="dt-r" style="border-bottom:1px solid var(--border-secondary)">
+            <div class="dt-c" style="padding:8px 10px;vertical-align:middle"><span style="display:flex;align-items:center;gap:8px;min-width:0"><i style="width:8px;height:8px;border-radius:9999px;background:{{ sr.dot }};flex:none"></i><span style="font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ sr.name }}</span></span></div>
+            <div class="dt-c" style="padding:8px 10px;vertical-align:middle;color:var(--text-body);overflow-wrap:anywhere">{{ sr.cred }}</div>
+            <div class="dt-c" style="padding:8px 10px;vertical-align:middle;color:var(--text-light);overflow-wrap:anywhere">{{ sr.scope }}</div>
+            <div class="dt-c" style="padding:8px 10px;vertical-align:middle;color:var(--text-light);white-space:nowrap">{{ sr.seen }}</div>
+            <div class="dt-c" style="padding:8px 10px;vertical-align:middle;color:var(--text-light);white-space:nowrap">{{ sr.nextSeen }}</div>
+            <div class="dt-c" style="padding:8px 10px;vertical-align:middle">
+              <sc-if value="{{ sr.canSchedule }}" hint-placeholder-val="{{ true }}"><select value="{{ sr.cadenceValue }}" onChange="{{ sr.setCadence }}" aria-label="Cadence" style="max-width:100%;height:20px;padding:0 4px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:11px;line-height:18px;cursor:pointer"><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></sc-if>
+              <sc-if value="{{ sr.noSchedule }}" hint-placeholder-val="{{ false }}"><span style="color:var(--text-light)">{{ sr.cadenceLabel }}</span></sc-if>
+            </div>
+            <div class="dt-c" style="padding:8px 10px;vertical-align:middle"><span style="display:flex;gap:10px;white-space:nowrap"><button onClick="{{ sr.rescan }}" style="border:0;background:transparent;padding:0;color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer">Re-scan</button><button onClick="{{ sr.edit }}" style="border:0;background:transparent;padding:0;color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer">Edit access</button></span></div>
+          </div>
+        </sc-for></div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ showEstateBody }}" hint-placeholder-val="{{ true }}">
   <div style="display:grid;gap:16px;animation:fadeIn .3s">
     <sc-if value="{{ anyFacetOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeFacets }}" style="position:fixed;inset:0;z-index:10"></div></sc-if>
     <div class="fx-alert" role="status" aria-label="Discovered in the window">
@@ -1285,6 +1316,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;color:var(--text-body)">No egress seen yet.</div></sc-if>
   </div>
   </sc-if>
+</section>
+</sc-if>
+<!-- The sub layer is every page's, so it sits outside every screen gate (2026-09-23: it sat inside S3 and never opened on Discover). -->
 <sc-if value="{{ subOpen }}" hint-placeholder-val="{{ false }}">
 <aside aria-label="Discovery" style="position:fixed;top:var(--hdr,65px);right:0;width:min(880px,92vw);height:calc(100vh - var(--hdr,65px));z-index:46;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr);border-left:1px solid var(--border-secondary);background:var(--bg-base);box-shadow:-12px 0 32px rgba(0,0,0,.16);animation:fadeIn .18s">
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 24px;border-bottom:1px solid var(--border-secondary)">
@@ -1293,42 +1327,31 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <button onClick="{{ closeSub }}" aria-label="Close" style="height:28px;padding:0 12px;border:0;border-radius:9999px;background:transparent;color:var(--link);font-size:13px;font-weight:500;cursor:pointer">Close</button>
   </div>
   <div style="min-height:0;overflow-y:auto;padding:24px">
-    <sc-if value="{{ subIsSources }}" hint-placeholder-val="{{ true }}">
-    <div id="sec-accounts" class="fx-card" aria-label="Sources" style="gap:10px;padding:16px 24px">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Connected accounts</h3><div class="fx-card-sub">{{ sourcesSub }}</div></div><button class="fx-btn" onClick="{{ toggleAddSource }}" style="height:32px">{{ addSourceLabel }}</button></div>
-      <sc-if value="{{ addSourceOpen }}" hint-placeholder-val="{{ false }}">
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end;padding:12px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-wash)">
-        <label class="fx-filter" style="display:grid;gap:4px"><span class="fx-label">Source</span><select class="fx-select" value="{{ addSourceKind }}" onChange="{{ setAddSourceKind }}" style="width:100%"><option>AWS account</option><option>Azure subscription</option><option>Google Cloud project</option><option>Oracle tenancy</option><option>NetBond inventory</option><option>AVPN sites</option></select></label>
-        <label class="fx-filter" style="display:grid;gap:4px"><span class="fx-label">Access</span><select class="fx-select" style="width:100%"><option>Cross-account role</option><option>Service principal</option><option>Service account</option><option>Existing AT&amp;T inventory</option></select></label>
-        <label class="fx-filter" style="display:grid;gap:4px"><span class="fx-label">Scope</span><select class="fx-select" style="width:100%"><option>Read-only, all regions</option><option>Read-only, selected regions</option></select></label>
-        <button class="fx-btn" onClick="{{ addSource }}" style="height:36px;background:var(--cta);color:#fff;border-color:var(--cta);justify-content:center">Add and scan</button>
+    <!-- Add a source: the drawer's one job for sources (2026-09-23). The list lives on the Sources page. -->
+    <sc-if value="{{ subIsAdd }}" hint-placeholder-val="{{ false }}">
+    <div aria-label="{{ subTitle }}" style="display:grid;gap:16px">
+      <sc-if value="{{ srcEditing }}" hint-placeholder-val="{{ false }}"><div><div style="font-size:16px;line-height:22px;font-weight:700;color:var(--text-heading)">{{ srcEditName }}</div><div style="font-size:12px;color:var(--text-light)">{{ srcEditKind }}</div></div></sc-if>
+      <div style="color:var(--text-light)">Read-only. Nothing changes in your routing.</div>
+      <sc-if value="{{ srcAdding }}" hint-placeholder-val="{{ true }}">
+      <div role="radiogroup" aria-label="Source" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+        <sc-for list="{{ sourceTiles }}" as="at" hint-placeholder-count="6">
+          <button type="button" role="radio" aria-checked="{{ at.on }}" onClick="{{ at.pick }}" style="display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;border:1.5px solid {{ at.border }};border-radius:12px;background:{{ at.bg }};cursor:pointer;font-family:inherit;transition:border-color .15s ease,background .15s ease">
+            <sc-if value="{{ at.markSrc }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width:30px;height:30px;flex:none;background:url('{{ at.markSrc }}') center / contain no-repeat"></span></sc-if>
+            <sc-if value="{{ at.noMark }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex:none;border-radius:8px;background:var(--bg-neutral);border:1px solid var(--border-secondary);font-size:10px;font-weight:700;color:var(--text-body)">{{ at.initials }}</span></sc-if>
+            <span style="display:grid;min-width:0"><span style="font-size:15px;line-height:20px;font-weight:600;color:var(--text-heading)">{{ at.name }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ at.cred }}</span></span>
+          </button>
+        </sc-for>
       </div>
       </sc-if>
-      <div class="dt" style="width:100%;font-size:12px">
-        <div class="dt-h"><div class="dt-r" style="border-bottom:1px solid var(--border-secondary)">
-          <div class="dt-c dt-th" style="width:22%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Account</div>
-          <div class="dt-c dt-th" style="width:14%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Credential</div>
-          <div class="dt-c dt-th" style="width:15%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Scope</div>
-          <div class="dt-c dt-th" style="width:11%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Last scan</div>
-          <div class="dt-c dt-th" style="width:11%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Next scan</div>
-          <div class="dt-c dt-th" style="width:15%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Cadence</div>
-          <div class="dt-c dt-th" style="width:12%;text-align:left;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Manage</div>
-        </div></div>
-        <div class="dt-b"><sc-for list="{{ sources }}" as="sr" hint-placeholder-count="4">
-          <div class="dt-r" style="border-bottom:1px solid var(--border-secondary)">
-            <div class="dt-c" style="padding:8px 10px;vertical-align:middle"><span style="display:flex;align-items:center;gap:8px;min-width:0"><i style="width:8px;height:8px;border-radius:9999px;background:{{ sr.dot }};flex:none"></i><span style="font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ sr.name }}</span></span></div>
-            <div class="dt-c" style="padding:8px 10px;vertical-align:middle;color:var(--text-body);overflow-wrap:anywhere">{{ sr.cred }}</div>
-            <div class="dt-c" style="padding:8px 10px;vertical-align:middle;color:var(--text-light);overflow-wrap:anywhere">{{ sr.scope }}</div>
-            <div class="dt-c" style="padding:8px 10px;vertical-align:middle;color:var(--text-light);white-space:nowrap">{{ sr.seen }}</div>
-            <div class="dt-c" style="padding:8px 10px;vertical-align:middle;color:var(--text-light);white-space:nowrap">{{ sr.nextSeen }}</div>
-            <div class="dt-c" style="padding:8px 10px;vertical-align:middle">
-              <sc-if value="{{ sr.canSchedule }}" hint-placeholder-val="{{ true }}"><select value="{{ sr.cadenceValue }}" onChange="{{ sr.setCadence }}" aria-label="Cadence" style="max-width:100%;height:20px;padding:0 4px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:11px;line-height:18px;cursor:pointer"><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></sc-if>
-              <sc-if value="{{ sr.noSchedule }}" hint-placeholder-val="{{ false }}"><span style="color:var(--text-light)">{{ sr.cadenceLabel }}</span></sc-if>
-            </div>
-            <div class="dt-c" style="padding:8px 10px;vertical-align:middle"><span style="display:flex;gap:10px;white-space:nowrap"><button onClick="{{ sr.rescan }}" style="border:0;background:transparent;padding:0;color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer">Re-scan</button><button onClick="{{ sr.edit }}" style="border:0;background:transparent;padding:0;color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer">Edit access</button></span></div>
-          </div>
-        </sc-for></div>
+      <sc-if value="{{ srcHasCred }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+        <div style="display:grid;gap:4px;grid-column:1 / -1"><span class="fx-label">Credential</span><div role="radiogroup" aria-label="Credential" style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ srcCredOpts }}" as="co" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{ co.on }}" onClick="{{ co.pick }}" style="height:32px;padding:0 14px;border:1.5px solid {{ co.border }};border-radius:9999px;background:{{ co.bg }};color:var(--text-heading);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap">{{ co.label }}</button></sc-for></div></div>
+        <label class="fx-filter" style="display:grid;gap:4px"><span class="fx-label">Scope</span><select class="fx-select" value="{{ srcScope }}" onChange="{{ setSrcScope }}" style="width:100%"><option>Read-only, all regions</option><option>Read-only, selected regions</option></select></label>
+        <label class="fx-filter" style="display:grid;gap:4px"><span class="fx-label">Schedule</span><select class="fx-select" value="{{ srcCadence }}" onChange="{{ setSrcCadence }}" style="width:100%"><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></label>
       </div>
+      </sc-if>
+      <sc-if value="{{ srcNoCred }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 14px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-wash);color:var(--text-body)">{{ srcInventoryNote }}</div></sc-if>
+      <div style="display:flex;gap:10px;align-items:center"><button type="button" onClick="{{ addSource }}" style="height:40px;padding:0 20px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">{{ srcDoneLabel }}</button><sc-if value="{{ srcCanRescan }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ srcRescan }}" class="fx-btn" style="height:40px">Re-scan now</button></sc-if></div>
     </div>
     </sc-if>
     <sc-if value="{{ subIsRun }}" hint-placeholder-val="{{ false }}">
@@ -1341,7 +1364,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 
     <sc-if value="{{ hasGap }}" hint-placeholder-val="{{ true }}">
     <div id="sec-gap" class="fx-card" style="gap:12px;padding:16px 24px">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Not connected yet</h3><div class="fx-card-sub">{{ gapSummary }}</div></div><button class="fx-btn" onClick="{{ toggleAddSource }}" style="flex:none;height:28px;padding:0 12px;font-size:12px">Connect something else</button></div>
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Not connected yet</h3><div class="fx-card-sub">{{ gapSummary }}</div></div><button class="fx-btn" onClick="{{ openAddSource }}" style="flex:none;height:28px;padding:0 12px;font-size:12px">Connect something else</button></div>
       <div style="display:grid">
         <sc-for list="{{ gapRows }}" as="gp" hint-placeholder-count="4">
           <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:12px 0;border-top:1px solid var(--border-secondary);min-width:0">
@@ -1520,8 +1543,6 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     </sc-if>
   </div>
 </aside>
-</sc-if>
-</section>
 </sc-if>
 
 <!-- ===== S4 COMPOSE ===== -->
@@ -2187,7 +2208,7 @@ class Component extends DCLogic {
     v.categories = (v.categories || []).map(c => { const ic = CAT_ICON[c.id] || 'grid'; const linkable = ['cloud', 'bill', 'check-shield', 'high-meter'].includes(ic); return { ...c, icon: ic, iconSrc: c.on ? 'brand/icons-dark/' + ic + '.svg' : linkable ? (dark ? 'brand/icons-linkdark/' : 'brand/icons-link/') + ic + '.svg' : (dark ? 'brand/icons-dark/' : 'brand/icons-light/') + ic + '.svg' }; });
     v.scanSteps = (v.scanSteps || []).map((st, i) => ({ ...st, icon: SCAN_ICON[i], iconSrc: v.iconDir + '/' + SCAN_ICON[i] + '.svg' }));
     v.heroRegions = v.heroRegions.map(r => ({ ...r, markSrc: r.ghost || r.rollup ? null : PROVIDER_MARK(r.cloud) }));
-    v.sourceTiles = (v.sourceTiles || []).map(t => { const m = PROVIDER_MARK(t.provider); return { ...t, markSrc: m, noMark: !m, initials: t.provider === 'AT&T' ? 'AT&T' : String(t.name).slice(0, 2).toUpperCase() }; });
+    v.sourceTiles = (v.sourceTiles || []).map(t => { const m = PROVIDER_MARK(t.provider); return { ...t, markSrc: m, noMark: !m, initials: t.provider === 'AT&T' ? 'AT&T' : (String(t.name).match(/[A-Z]/g) || []).join('').slice(0, 2) }; });
     v.heroClouds = v.heroClouds.map(r => { const m = r.ghost ? null : PROVIDER_MARK(r.cloud); return { ...r, markSrc: m, noMark: !m, initials: String(r.cloud).replace(/^Your\s+/, '').split(/(?=[A-Z])|\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() }; });
     // The right-hand surfaces push the page rather than cover it. Two can be
     // open at once (a list and the thing you opened from it), so the shell

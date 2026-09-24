@@ -65,12 +65,57 @@ test('the Connect page points a new customer at Sources, not three steps ahead',
   assert.equal(c.state.screen, 's1');
 });
 
-// ---- once there is a source, the drawer is right, and it reads right ----
-test('with a source, Sources opens the drawer under Discover, whose tabs are its own', () => {
+// ---- with sources: source management is a page, and the drawer adds or edits one ----
+// "Connected accounts on main page, drawer for new account form ... add or edit a
+// source ... edit the automation or credentials of another" (Micah, 2026-09-23).
+test('with a source, Sources is a page listing the connected accounts', () => {
   const c = mkC({ view: 'small', estateParam: null, screen: 's3', tab: 'connect' });
   step(vals(c), 'Sources').go();
-  assert.equal(c.state.sub.page, 'discover');
-  assert.deepEqual(vals(c).subTabs.map(t => t.label), ['Connected accounts', 'Discovery run']);
+  const v = vals(c);
+  assert.equal(c.state.screen, 's1');
+  assert.ok(!c.state.sub, 'a drawer opened over the page');
+  assert.equal(v.s1Title, 'Sources');
+  assert.equal(v.showSourcesBody, true);
+  assert.equal(v.showEstateBody, false);
+  assert.ok(v.sources.length > 0);
+});
+
+test('Add a source opens the drawer to add one', () => {
+  const c = mkC({ view: 'small', estateParam: null, screen: 's1', discoverView: 'sources' });
+  vals(c).openAddSource();
+  const v = vals(c);
+  assert.deepEqual(c.state.sub, { page: 'discover', panel: 'add' });
+  assert.equal(v.subTitle, 'Add a source');
+  assert.equal(v.srcAdding, true);
+  assert.deepEqual(v.subTabs.map(t => t.label), ['Add a source', 'Discovery run']);
+  vals(c).sourceTiles.find(t => t.name === 'Azure').pick();
+  assert.deepEqual(vals(c).srcCredOpts.map(o => o.label), ['Service principal', 'Managed identity']);
+  vals(c).addSource();
+  assert.ok(!c.state.sub, 'the drawer stayed open after adding');
+  assert.ok(vals(c).sources.some(r => r.name === 'Azure account'), 'the new source is not on the page');
+});
+
+test('Edit access opens the same drawer on that source: its credential, scope and schedule', () => {
+  const c = mkC({ view: 'mature', estateParam: null, screen: 's1', discoverView: 'sources' });
+  const aws = vals(c).sources.find(r => r.kind === 'AWS');
+  aws.edit();
+  const v = vals(c);
+  assert.equal(v.subTitle, 'Edit a source');
+  assert.equal(v.srcEditing, true);
+  assert.equal(v.srcEditName, aws.name);
+  assert.deepEqual(v.srcCredOpts.map(o => o.label), ['Cross-account role', 'Access keys']);
+  assert.equal(v.srcCadence, aws.cadenceValue, 'the schedule is not the source\'s own');
+  v.setSrcCadence({ target: { value: 'weekly' } });
+  assert.equal(vals(c).sources.find(r => r.key === aws.key).cadenceValue, 'weekly', 'changing the schedule did not reach the source');
+  assert.equal(v.srcDoneLabel, 'Save');
+});
+
+test('AT&T inventory has nothing to manage, and says so', () => {
+  const c = mkC({ view: 'mature', estateParam: null, screen: 's1', discoverView: 'sources' });
+  vals(c).sources.find(r => r.kind === 'AT&T').edit();
+  const v = vals(c);
+  assert.equal(v.srcNoCred, true);
+  assert.match(v.srcInventoryNote, /nothing|no credential/i);
 });
 
 test('the drawer subtitle counts what is connected and never points "above"', () => {
@@ -82,4 +127,16 @@ test('the drawer subtitle counts what is connected and never points "above"', ()
 test('the markup draws the Sources page tiles', () => {
   const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
   assert.match(HTML, /<sc-for list="\{\{ sourceTiles \}\}" as="st"/);
+});
+
+// The drawer sat inside the Connect screen's gate, so on Discover "Add a source"
+// set the state and nothing appeared. vals() tests cannot see the markup.
+test('the sub layer is not inside any screen\'s gate', () => {
+  const L = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8').split('\n');
+  const stack = [];
+  for (const l of L) {
+    if (l.includes('<aside aria-label="Discovery"')) break;
+    for (const m of l.matchAll(/<sc-if value="\{\{ ([\w.]+) \}\}"|<\/sc-if>/g)) { if (m[1]) stack.push(m[1]); else stack.pop(); }
+  }
+  assert.deepEqual(stack, ['subOpen'], `the drawer is gated by ${stack.join(' > ')}`);
 });
