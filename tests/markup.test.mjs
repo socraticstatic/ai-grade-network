@@ -135,14 +135,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // The breadcrumb row above the tiles became depth ladders above the picture (two
 // loops of stepped buttons, a bar div) and the drilled columns got tint rects:
 // div 897 -> 898, span 659 -> 663, sc-if 325 -> 322, button 258 -> 257.
+// The ladders came out again the same day: each column's header became its
+// breadcrumb (a nav, two gates for link or current) and the accent edges went:
+// div 898 -> 897, span 663 -> 659, sc-if 322 -> 326, button 257 -> 255.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 898],
-    ['span', /<span\b/g, /<\/span>/g, 663],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 322],
+    ['div', /<div\b/g, /<\/div>/g, 897],
+    ['span', /<span\b/g, /<\/span>/g, 659],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 326],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 185],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 257],
+    ['button', /<button\b/g, /<\/button>/g, 255],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];
@@ -340,29 +343,29 @@ test('the band overflow row is a button, not a dead div', () => {
   assert.ok(line.includes('{{ openBandLevel }}'));
 });
 
-// --- Wave 2, Task 12 / Task 17 item 4, carried onto the depth ladders ---
-// The breadcrumb above the card became a ladder per column, right above the
-// picture (2026-09-25). The rules it kept still hold: the two columns stay
-// apart, the step you are on binds aria-current, separators are hidden.
+// --- Wave 2, Task 12 / Task 17 item 4, carried onto the column-header breadcrumbs ---
+// The breadcrumb above the card became a breadcrumb in each column's own header
+// (2026-09-25). The rules it kept still hold: the two columns stay apart, the
+// current place binds aria-current, separators are hidden from screen readers.
 
-test('the depth ladders keep the two columns apart', () => {
-  assert.ok(HTML.includes('<nav aria-label="Sites depth"') && HTML.includes('<nav aria-label="Clouds depth"'), 'the two columns share one trail');
+test('the breadcrumbs keep the two columns apart', () => {
+  assert.ok(HTML.includes('<nav aria-label="Sites breadcrumb"') && HTML.includes('<nav aria-label="Clouds breadcrumb"'), 'the two columns share one trail');
   assert.ok(!HTML.includes('{{ layerLabel }}'), 'the layer label is not a crumb at all');
 });
 
-test('every ladder step binds its own aria-current, and so does the drawer crumb', () => {
-  for (const a of ['ls', 'lc']) {
+test('the current place binds aria-current on both trails, and so does the drawer crumb', () => {
+  for (const a of ['tr', 'tc']) {
     const line = LINES.find(l => l.includes(`{{ ${a}.go }}`));
-    assert.ok(line && line.includes(`aria-current="{{ ${a}.aria }}"`), `the ${a} ladder step does not bind aria-current`);
+    assert.ok(line && line.includes(`aria-current="{{ ${a}.aria }}"`), `the ${a} trail does not bind aria-current`);
   }
   const dc = LINES.find(l => l.includes('{{ dc.go }}'));
   assert.ok(dc && dc.includes('aria-current="{{ dc.ariaCurrent }}"'), 'the drawer crumb button does not bind aria-current');
 });
 
-test('every ladder and crumb separator is hidden from screen readers', () => {
-  for (const a of ['ls', 'lc']) {
+test('every breadcrumb separator is hidden from screen readers', () => {
+  for (const a of ['tr', 'tc']) {
     const line = LINES.find(l => l.includes(`{{ ${a}.go }}`));
-    assert.ok(new RegExp(`<sc-if value="\\{\\{ ${a}\\.sep \\}\\}"[^>]*><span aria-hidden="true"[^>]*>›</span>`).test(line), `the ${a} ladder's › is not aria-hidden`);
+    assert.ok(new RegExp(`<sc-if value="\\{\\{ ${a}\\.sep \\}\\}"[^>]*><span aria-hidden="true"[^>]*>›</span>`).test(line), `the ${a} trail's › is not aria-hidden`);
   }
   const dcLine = LINES.find(l => l.includes('{{ dc.go }}'));
   assert.ok(/<sc-if value="\{\{ dc\.notLast \}\}"[^>]*><span aria-hidden="true"[^>]*>›<\/span>/.test(dcLine), 'the drawer crumb\'s › separator is not aria-hidden');

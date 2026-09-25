@@ -573,7 +573,10 @@ export function vals(c) {
   // shares it now (Task 11 fix round 2).
   // One source for the clouds header width: the door's gutter and the header
   // itself must move together or the door drifts off its column.
-  const cloudsHeadW = regionDrill ? 412 : 240;
+  // Each column's header runs the width it has: to the band on the left, to the
+  // canvas edge on the right, so the breadcrumb and its door read on one line.
+  const cloudsHeadW = L.W - 8 - L.rightX;
+  const sitesHeadW = L.bandX - 16 - 24;
   const sitesGutter = (24 + 460) - SITES_END + EDGE;        // header 24..484, cards end at SITES_END
   const cloudsGutter = (L.rightX + cloudsHeadW) - (L.rightX + 240) + EDGE;   // header at rightX, cards end 240 later
   const bandGutter = EDGE;                                  // the header IS the band: same edges
@@ -666,30 +669,37 @@ export function vals(c) {
   const cloudCrumbs = ((regionDrill && regionDrill.crumb) || cloudDrill).map((name, i, a) => ({ key: 'c' + i, label: name, notLast: i < a.length - 1, ariaCurrent: i === a.length - 1 ? 'page' : 'false', go: () => set({ cloudDrill: cloudDrill.slice(0, i), cloudPick }) }));
   const crumbs = [{ key: 'floor', label: 'Home', go: go('s3', { layer: 'cloud', tab: 'connect', drill: [], cloudDrill: [], cloudPick: null }) }, ...s.drill.map((d, i) => ({ key: 'd' + i, label: crumbLabel(d), go: () => set({ drill: s.drill.slice(0, i + 1) }) }))].map((c, i, a) => ({ ...c, notLast: i < a.length - 1, ariaCurrent: i === a.length - 1 ? 'page' : 'false' }));
   const drillLabel = drillInfo ? (drillInfo.level === 'path' ? drillInfo.label : `${drillInfo.label} · ${drillInfo.level}s`) : '';
-  // Depth ladders (2026-09-25): each column names its levels - the ones passed,
-  // with what was chosen (click to go back), the one you are on, and the ones
-  // still below - so how far down you are is on the picture, not above the tiles.
-  const step = (name, i, state, value, goTo) => ({ key: name + i, name, value: value || (state === 'here' ? 'You are here' : ''), sep: i > 0,
-    isDone: state === 'done', isCurrent: state === 'here', isNext: state === 'next', aria: state === 'here' ? 'step' : 'false',
-    go: state === 'done' ? goTo : () => {}, cursor: state === 'done' ? 'pointer' : 'default',
-    bg: state === 'here' ? 'var(--bg-accent)' : 'transparent', border: state === 'here' ? 'var(--border-active)' : 'transparent',
-    nameInk: state === 'here' ? 'var(--link)' : state === 'done' ? 'var(--text-light)' : 'var(--text-disabled)',
-    valueInk: state === 'here' ? 'var(--text-heading)' : state === 'done' ? 'var(--link)' : 'var(--text-disabled)', valueW: state === 'here' ? 600 : 500 });
-  const LEVEL_NAME = { region: 'Regions', site: 'Sites', metro: 'Metros', state: 'States', district: 'Districts', path: 'Paths' };
-  const siteLevelAt = (depth) => (depth === 0 ? 'Regions' : LEVEL_NAME[((X.siteDrillRows(est, s.drill.slice(0, depth)) || {}).level)] || 'Sites');
+  // Breadcrumbs in each column's header (2026-09-25, after NN/g's guidelines):
+  // the column title is the root, then the chosen things. Ancestors are links;
+  // the last item is where you are and is not one. One line, and a long trail
+  // keeps the root and the last two, folding the middle into "…".
+  const crumb = (label, isLast, goTo) => ({ key: label, label, isLast, isLink: !isLast, sep: true, go: isLast ? () => {} : goTo, title: label });
+  const fold = (t) => {
+    if (t.length <= 4) return t.map((c, i) => ({ ...c, key: i + ':' + c.key, sep: i > 0 }));
+    // Past four, the root and where you are stay whole; the rest fold into
+    // "…", whose hover names them. A clean fold reads better than cut words.
+    const mid = t.slice(1, -1);
+    return [t[0], { key: 'fold', label: '…', isLast: false, isLink: false, go: () => {}, title: mid.map(c => c.label).join(' › ') }, t[t.length - 1]]
+      .map((c, i) => ({ ...c, key: i + ':' + c.key, sep: i > 0 }));
+  };
+  // The root is the column's title and keeps the header style; the chosen things
+  // keep their own case (us-east-1 is an identifier, not a label to shout).
+  const dress = (t) => t.map((c, i) => ({ ...c, isStatic: !c.isLink, aria: c.isLast ? 'location' : 'false',
+    // The root and where you are never shrink; only the ancestors between do.
+    flex: i === 0 || c.isLast || c.label === '…' ? 'none' : '0 1 auto', maxW: i === 0 || c.isLast || c.label === '…' ? 'none' : '160px',
+    fs: i === 0 ? headUnits(L.W) + 'px' : graphUnits(12, L.W) + 'px', upper: i === 0 ? 'uppercase' : 'none', track: i === 0 ? '.08em' : '0',
+    weight: c.isLast && i > 0 ? 600 : i === 0 ? 600 : 500,
+    ink: c.isLink ? 'var(--link)' : c.label === '…' ? 'var(--text-light)' : i === 0 ? 'var(--text-light)' : 'var(--text-heading)' }));
   const plainKey = (d) => String(d).replace(/^region:/, '');
-  const siteLadder = [
-    ...s.drill.map((d, i) => step(siteLevelAt(i), i, 'done', /^region:/.test(d) ? plainKey(d) : crumbLabel(d), () => set({ drill: s.drill.slice(0, i) }))),
-    step(siteLevelAt(s.drill.length), s.drill.length, 'here'),
-  ];
-  if (siteLadder[siteLadder.length - 1].name !== 'Paths') siteLadder.push(step('Paths', siteLadder.length, 'next'));
-  const CLOUD_LEVELS = ['Providers', 'Regions', 'VPCs', 'Subnets', 'Workloads'];
-  const cloudCrumbNames = (regionDrill && regionDrill.crumb) || [];
-  const cloudAt = cloudPick ? cloudDrill.length + 1 : 0;
-  const cloudLadder = CLOUD_LEVELS.map((name, i) => step(name, i, i < cloudAt ? 'done' : i === cloudAt ? 'here' : 'next', cloudCrumbNames[i],
-    () => set(i === 0 ? { cloudPick: null, cloudDrill: [] } : i === 1 ? { cloudDrill: [], cloudPick } : { cloudDrill: cloudDrill.slice(0, i - 1), cloudPick })));
-  const siteDepth = `Level ${s.drill.length + 1}`;
-  const cloudDepth = `Level ${cloudAt + 1} of ${CLOUD_LEVELS.length}`;
+  const siteTrail = dress(fold([
+    crumb('Sites', !s.drill.length, () => set({ drill: [] })),
+    ...s.drill.map((d, i) => crumb(/^region:/.test(d) ? plainKey(d) : crumbLabel(d), i === s.drill.length - 1, () => set({ drill: s.drill.slice(0, i + 1) }))),
+  ]));
+  const cloudNames = (regionDrill && regionDrill.crumb) || [];
+  const cloudTrail = dress(fold([
+    crumb('Clouds', !cloudPick, () => set({ cloudPick: null, cloudDrill: [] })),
+    ...cloudNames.map((name, i) => crumb(name, i === cloudNames.length - 1, () => set(i === 0 ? { cloudDrill: [], cloudPick } : { cloudDrill: cloudDrill.slice(0, i), cloudPick }))),
+  ]));
 
   // ---- compose ----
   const cp = s.compose;
@@ -865,7 +875,7 @@ export function vals(c) {
     laneFocus: !!s.laneFocus, toggleLane: () => set({ laneFocus: !s.laneFocus }), laneTitle: s.laneFocus ? 'Show everything' : 'Show only what rides outside the fabric', laneCount: `${est.regionsList.filter(r => !r.priv).length + est.sites.filter(x => !x.priv).length} on the internet`, laneAttach: () => { const r = est.regionsList.find(x => !x.priv); if (r) composeFor(go, r)(); else { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); } },
     heroSites, heroRegions, heroClouds, heroGroups: L.groups.map(g => ({ ...g, key: 'g' + g.cloud + g.y })), heroWorkloads: [], heroEdges, heroArcs, segments: segmentsMeta, nodes: nodesMeta, pieces: piecesMeta, foldTags, routeDots, pipeOp: folded ? 1 : 0, xconnects: xconnectsMeta, ownerKey: Object.entries(OWNER).map(([k, o]) => ({ key: k, ...o })), showWorkloads: false, graphHeadFs: headUnits(L.W) + 'px', rightX: L.rightX,
     // A drilled column sits on a tinted panel with an accent edge.
-    colTintH: L.H - 30, siteTintOp: s.drill.length ? 1 : 0, cloudTintOp: cloudPick ? 1 : 0, cloudTintX: L.rightX - 14, cloudTintEdgeX: L.rightX + 251, internetTx: L.rightX + 12, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T network' : 'AT&T network  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on the fabric` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
+    colTintH: L.H - 30, siteTintOp: s.drill.length ? 1 : 0, cloudTintOp: cloudPick ? 1 : 0, cloudTintX: L.rightX - 14, crumbFs: graphUnits(12, L.W) + 'px', sitesHeadW, internetTx: L.rightX + 12, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T network' : 'AT&T network  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on the fabric` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
     // The card anchors to the hovered region's row; at the provider level there is no row.
     perfCard: hr && hrNode ? { region: `${hr.cloud} ${hr.region}`, msLine: `${hr.priv ? hr.fab : hr.pub} ms ${hr.priv ? 'on the fabric' : 'public'}${hr.rel === 'warn' ? ' · degraded' : ''}`, pub: `Public today ${hr.pub} ms`, fab: `on the fabric ${hr.fab} ms`, rel: hr.rel === 'warn' ? 'Reliability: degraded' : 'Reliability: healthy', relFill: hr.rel === 'warn' ? 'var(--warning)' : 'var(--success)', top: Math.max(0, Math.min(340, hrNode.y - 70)) + 'px', left: 'calc(100% - 236px)', go: go('s3', { layer: 'cloud', tab: 'observe' }) } : null, hasPerf: !!hr,
     // floor
@@ -873,7 +883,7 @@ export function vals(c) {
     // department
     layerBar: D.LAYERS.map(l => ({ key: l.id, label: l.label, on: s.layer === l.id, go: () => { set({ layer: l.id, drill: [], regionDrill: null }); syncHash('s3', l.id, s.tab); scrollToResult('S3 Department'); }, bg: s.layer === l.id ? 'var(--cta)' : 'transparent', color: s.layer === l.id ? '#fff' : 'var(--text-heading)' })),
     backToPicture: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
-    crumbs, verbTabs, cloudCrumbs, siteLadder, cloudLadder, siteDepth, cloudDepth, sitesDrilled: s.drill.length > 0, cloudsDrilled: !!cloudPick, hasCloudCrumbs: cloudCrumbs.length > 0, showCrumbs: s.drill.length > 0 || cloudDrill.length > 0, drillLabel: [drillLabel, regionDrill ? `${regionDrill.label} · ${regionDrill.level}s` : ''].filter(Boolean).join(' · '), hasDrill: s.drill.length > 0 || cloudDrill.length > 0, drillUp: () => set({ drill: s.drill.slice(0, -1), cloudDrill: cloudDrill.slice(0, -1), cloudPick: cloudDrill.length ? cloudPick : null }), sitesHead: s.drill.length ? '‹ ' + S.labelOfKey(est, s.drill[s.drill.length - 1]) : 'Sites', sitesUp: () => set({ drill: s.drill.slice(0, -1) }), sitesHeadColor: s.drill.length ? 'var(--link)' : 'var(--text-light)', cloudsHead: regionDrill ? '‹ ' + (regionDrill.crumb || [cloudDrill[0]]).slice(-1)[0] : 'Clouds', cloudsUp: cloudsUpNow, cloudsHeadColor: regionDrill ? 'var(--link)' : 'var(--text-light)', cloudsHeadW, showWorkloadsHead: false, tConnect: s.tab === 'connect', tGovern: s.tab === 'govern', tObserve: s.tab === 'observe', tCost: s.tab === 'cost',
+    crumbs, verbTabs, cloudCrumbs, siteTrail, cloudTrail, sitesDrilled: s.drill.length > 0, cloudsDrilled: !!cloudPick, hasCloudCrumbs: cloudCrumbs.length > 0, showCrumbs: s.drill.length > 0 || cloudDrill.length > 0, drillLabel: [drillLabel, regionDrill ? `${regionDrill.label} · ${regionDrill.level}s` : ''].filter(Boolean).join(' · '), hasDrill: s.drill.length > 0 || cloudDrill.length > 0, drillUp: () => set({ drill: s.drill.slice(0, -1), cloudDrill: cloudDrill.slice(0, -1), cloudPick: cloudDrill.length ? cloudPick : null }), sitesHead: s.drill.length ? '‹ ' + S.labelOfKey(est, s.drill[s.drill.length - 1]) : 'Sites', sitesUp: () => set({ drill: s.drill.slice(0, -1) }), sitesHeadColor: s.drill.length ? 'var(--link)' : 'var(--text-light)', cloudsHead: regionDrill ? '‹ ' + (regionDrill.crumb || [cloudDrill[0]]).slice(-1)[0] : 'Clouds', cloudsUp: cloudsUpNow, cloudsHeadColor: regionDrill ? 'var(--link)' : 'var(--text-light)', cloudsHeadW, showWorkloadsHead: false, tConnect: s.tab === 'connect', tGovern: s.tab === 'govern', tObserve: s.tab === 'observe', tCost: s.tab === 'cost',
     ...connectVals(s, set, R.applyScope(est, obScope), go, ob),
     connectFindings: deptFindings('connect'), hasConnectFindings: deptFindings('connect').length > 0, tabLabel: TAB_LABEL[s.tab] || 'Connect', noConnectFindings: deptFindings('connect').length === 0, connectOthers: ['govern', 'observe', 'cost'].map(t => ({ key: t, n: findingsFor(s.layer, t).length, label: `${findingsFor(s.layer, t).length} close on ${TAB_LABEL[t]}`, go: () => { set({ tab: t }); syncHash('s3', s.layer, t); scrollToResult('S3 Department'); } })).filter(x => x.n > 0), hasConnectOthers: ['govern', 'observe', 'cost'].some(t => findingsFor(s.layer, t).length > 0), mostChosen, levelTiles: sorted, levelCount: levelItems.length, levelSort: s.levelSort, setLevelSort: (e) => set({ levelSort: e.target.value }), levelQuery: s.levelQuery, setLevelQuery: (e) => set({ levelQuery: e.target.value }), levelTitle: drillInfo ? drillInfo.label : levelMapTitle(layer), levelMore: Math.max(0, levelItems.length - 60), hasLevelMore: levelItems.length > 60, catalogRow, visionRow, hasVision: visionRow.length > 0,
     hasSim: !!s.simulated || (s.customPolicies || []).some(p => p.state === 'simulated'),
