@@ -414,3 +414,20 @@ test('a private wire animates traffic in both directions', () => {
   assert.ok(/<animateMotion(?![^>]*keyPoints)[^>]*>/.test(block), 'no dot runs from the site to the cloud');
   assert.ok(block.includes('{{ e.retBegin }}'), 'the return dot is not offset, so the two directions overlap');
 });
+
+// Found 2026-09-25: a table pass put the @container block's closing brace after
+// .dt instead of after the block, so every rule below it - chips, buttons,
+// cards, 94 of them - applied only inside containers under 560px wide, and the
+// panel tabs fell back to square browser buttons. Nothing parsed the CSS.
+test('every stylesheet in the page balances its braces, so no rule swallows the rest', () => {
+  for (const [, css] of HTML.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) {
+    let depth = 0, line = 1;
+    for (const ch of css.replace(/\/\*[\s\S]*?\*\//g, '')) {
+      if (ch === '\n') line++;
+      if (ch === '{') depth++;
+      if (ch === '}') depth--;
+      assert.ok(depth >= 0, `a stray } at style line ${line}`);
+    }
+    assert.equal(depth, 0, 'a block in the stylesheet is never closed');
+  }
+});
