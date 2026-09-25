@@ -6,7 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 import * as D from './naas-data.js';
-import { fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits } from './naas-logic.js';
+import { fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits } from './naas-logic.js';
 import * as A from './naas-addendum.js';
 import * as R from './naas-round2.js';
 import * as S from './naas-sites.js';
@@ -1775,7 +1775,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   };
   const plNow = PERSONA_LENS[personaNow] || PERSONA_LENS['Executive'];
   const dash = { ...mixVals, ...insightVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: `${queueRows.length} open`, queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ queueOpen: true }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
-    mapNodes, mapRibbons, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
+    // Node names read as labels (13px) and their numbers as meta (12px) on screen.
+    mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0, scopeLabel,
     clearScope: () => set({ obScope: 'all', obDim: 'all' }), scopeIsAll: !obScope || obScope === 'all',
     mapFiltersOpen, mapFiltersShut: !mapFiltersOpen,

@@ -80,7 +80,8 @@ export const RX = 1100;
 // fills the same card (GRAPH_REF_W wide at 1440), so a header set in drawing
 // units shows at GRAPH_HEAD_PX whatever the graph's own width.
 export const GRAPH_HEAD_PX = 11, GRAPH_REF_W = 1102;
-export const headUnits = (vbW) => Math.round(GRAPH_HEAD_PX * vbW / GRAPH_REF_W * 10) / 10;
+export const graphUnits = (px, vbW) => Math.round(px * vbW / GRAPH_REF_W * 10) / 10;
+export const headUnits = (vbW) => graphUnits(GRAPH_HEAD_PX, vbW);
 // A folded Access or Edge column, wide enough to read as a stack of cards.
 export const FOLDED_SIDE = 72;
 // Site cards match the cloud cards: 240 wide from x 24, so the two columns
