@@ -10,6 +10,10 @@
 // things it uses. Paths that use the same thing meet at it, so shared kit shows.
 // Pure functions, no DOM.
 //
+// The center names a thing by what it is to AT&T, never by carrier: "Don't
+// mention Lumen in the Core" (Micah, 2026-09-25). The carrier stays on the
+// site and region cards either side, where it is the customer's fact.
+//
 // Owners: 'att', 'third' (another carrier or an exchange), 'cloud' (the
 // hyperscaler's own kit). A customer's own cross-connect is not a thing in a
 // segment; it is a cable on a handoff between two of them (see heroLayout).
@@ -21,8 +25,9 @@ const T = (id, label, owner, name) => ({ id, label, owner, name: name || label }
 export function accessThing(site) {
   if (!site || !site.priv) return null;
   const a = site.circuit || site.access || '';
-  if (site.accessSla === 'third') return T('a:' + slug(a), a, 'third', `${a}, bought from ${site.carrier || 'a third party'}`);
-  if (site.carrier) return T('a:offnet-' + slug(site.carrier), `${site.carrier} off-net`, 'att', `${site.carrier} circuit ordered by AT&T (off-net)`);
+  const kind = (x) => { const k = String(x).replace(site.carrier || '', '').trim() || 'access'; return k[0].toUpperCase() + k.slice(1); };
+  if (site.accessSla === 'third') return T('a:' + slug(a), `Third Party ${kind(a)}`, 'third', `${kind(a)} circuit bought from a third party`);
+  if (site.carrier) return T('a:offnet-' + slug(site.carrier), 'AT&T off-net', 'att', 'Circuit AT&T ordered from another carrier (off-net)');
   if (/ASE/.test(a)) return T('a:ase', 'ASE access', 'att', 'AT&T Switched Ethernet access');
   if (/AVPN/.test(a)) return T('a:avpn', 'AVPN access', 'att', 'AT&T VPN access circuit');
   if (/ABF|Business Fiber/.test(a)) return T('a:abf', 'Business Fiber', 'att', 'AT&T Business Fiber');
@@ -34,14 +39,14 @@ export function accessThing(site) {
 /** Site-side Edge: where the circuit lands and the traffic gets its service. */
 export function edgeThing(site) {
   if (!site || !site.priv) return null;
-  if (site.core === 'third') { const c = site.carrier || site.viaRamp || 'Third-party'; return T('e:' + slug(c), `${c} edge`, 'third', `${c} provider edge`); }
+  if (site.core === 'third') { const c = site.carrier || site.viaRamp || 'third'; return T('e:' + slug(c), 'Third Party Edge', 'third', 'Third-party provider edge'); }
   if (site.carrier && site.accessSla !== 'third') return T('e:enni', 'ENNI', 'att', 'AT&T ENNI (where another carrier hands off to AT&T)');
   return T('e:pe', 'AT&T PE', 'att', 'AT&T provider edge router');
 }
 
 /** Core: the backbone between edges. */
 export function coreThing(site) {
-  if (site && site.core === 'third') { const c = site.carrier || site.viaRamp || 'Third-party'; return T('c:' + slug(c), `${c} core`, 'third', `${c} backbone`); }
+  if (site && site.core === 'third') { const c = site.carrier || site.viaRamp || 'third'; return T('c:' + slug(c), 'Third Party Core', 'third', 'Third-party backbone'); }
   return T('c:att', 'AT&T backbone', 'att', 'AT&T MPLS backbone');
 }
 
@@ -54,7 +59,7 @@ const RAMP_THING = {
 };
 /** Cloud-side Edge: the on-ramp into the cloud. A third-party core reaches it over its carrier's own on-ramp. */
 export function cloudEdgeThing(region, viaCarrier) {
-  if (viaCarrier) return T('ce:' + slug(viaCarrier), `${viaCarrier} on-ramp`, 'third', `${viaCarrier} Cloud Connect, ${viaCarrier}'s own cloud on-ramp`);
+  if (viaCarrier) return T('ce:' + slug(viaCarrier), 'Third Party On-ramp', 'third', "The carrier's own cloud on-ramp");
   const r = RAMP_THING[region && region.ramp];
   if (!r) return T('ce:private', 'Private on-ramp', 'cloud');
   return { ...T('ce:' + slug(region.ramp), r[0], r[1], r[2]), cloud: r[1] === 'cloud' ? region.cloud : undefined };

@@ -327,7 +327,7 @@ export function vals(c) {
   const ownerName = (n) => (n.owner === 'cloud' ? (n.cloud || 'Cloud provider') : OWNER[n.owner].ownerLabel);
   // Folded, the backbones are all that is left to read, so they read larger.
   const bigCore = (n) => folded && n.seg === 2;
-  const nodesMeta = (L.nodes || []).map(n => ({ ...n, key: 'n:' + n.id, fx: n.x + 4, fy: n.y - (bigCore(n) ? 16 : 10), fw: Math.max(0, n.w - 8), fh: bigCore(n) ? 32 : 20, ph: bigCore(n) ? 30 : 18, plh: bigCore(n) ? 27 : 15, pfs: bigCore(n) ? '15px' : '10px', pdot: bigCore(n) ? 9 : 6, dot: OWNER[n.owner].stroke, op: folded && n.seg !== 2 ? 0 : 1, pe: folded && n.seg !== 2 ? 'none' : 'auto',
+  const nodesMeta = (L.nodes || []).map(n => ({ ...n, key: 'n:' + n.id, fx: n.x + 2, fy: n.y - (bigCore(n) ? 16 : 10), fw: Math.max(0, n.w - 4), fh: bigCore(n) ? 32 : 20, ph: bigCore(n) ? 30 : 18, plh: bigCore(n) ? 27 : 15, pfs: bigCore(n) ? '15px' : '10px', pdot: bigCore(n) ? 9 : 6, dot: OWNER[n.owner].stroke, op: folded && n.seg !== 2 ? 0 : 1, pe: folded && n.seg !== 2 ? 'none' : 'auto',
     border: `1.5px ${OWNER[n.owner].dash === 'none' ? 'solid' : 'dashed'} ${OWNER[n.owner].stroke}`,
     title: `${n.name} · ${ownerName(n)} · used by ${n.users.slice(0, 4).join(', ')}${n.users.length > 4 ? ` and ${n.users.length - 4} more` : ''}` }));
   const piecesMeta = (L.pieces || []).map(p => ({ ...OWNER[p.owner], ...p }));

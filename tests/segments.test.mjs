@@ -240,20 +240,22 @@ test('a carrier name never decides who owns the Access leg; the stated SLA does'
 
 test('Denver: Lumen\'s wire, ordered by AT&T, lands on AT&T\'s ENNI', () => {
   const l = West(), r = routeOf(l, 'Denver branch');
-  assert.deepEqual(labels(l, r), ['Lumen off-net', 'ENNI', 'AT&T backbone']);
+  assert.deepEqual(labels(l, r), ['AT&T off-net', 'ENNI', 'AT&T backbone']);
   assert.deepEqual(owners(l, r), ['att', 'att', 'att'], 'an off-net circuit AT&T answers for is drawn as third party');
 });
 
 test('Salt Lake: a Lumen circuit the customer bought, handed to an AT&T PE', () => {
   const l = West(), r = routeOf(l, 'Salt Lake branch');
-  assert.deepEqual(labels(l, r), ['Lumen Ethernet', 'AT&T PE', 'AT&T backbone']);
+  assert.deepEqual(labels(l, r), ['Third Party Ethernet', 'AT&T PE', 'AT&T backbone']);
   assert.deepEqual(owners(l, r), ['third', 'att', 'att']);
 });
 
 test('Phoenix: Lumen end to end, five things, none of them AT&T\'s', () => {
   const l = West(), r = routeOf(l, 'Phoenix DC');
   assert.equal(r.side, 'path');
-  assert.deepEqual(labels(l, r), ['Lumen fiber', 'Lumen edge', 'Lumen core', 'Lumen on-ramp', 'AWS gateway']);
+  // The center names things by what they are to AT&T, never by carrier:
+  // "Don't mention Lumen in the Core" (Micah, 2026-09-25). Lumen stays on the cards.
+  assert.deepEqual(labels(l, r), ['Third Party Fiber', 'Third Party Edge', 'Third Party Core', 'Third Party On-ramp', 'AWS gateway']);
   assert.equal(owners(l, r).includes('att'), false, 'a Lumen path runs through AT&T');
 });
 
@@ -265,7 +267,7 @@ test('Phoenix lands on the same AWS gateway as the AT&T routes, and reaches us-w
 });
 
 test('the SLA owner survives the drill to a site\'s paths', () => {
-  for (const [site, owner, label] of [['Denver branch', 'att', 'Lumen off-net'], ['Salt Lake branch', 'third', 'Lumen Ethernet']]) {
+  for (const [site, owner, label] of [['Denver branch', 'att', 'AT&T off-net'], ['Salt Lake branch', 'third', 'Third Party Ethernet']]) {
     const rows = siteDrillRows(D.ESTATES.mature, ['region:US West', site]).rows;
     const l = heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, regionRows: REGIONS, siteRows: rows });
     const firsts = l.routes.filter(r => r.side === 'site').map(r => node(l, r.nodes[0]));
@@ -277,7 +279,7 @@ test('the SLA owner survives the drill to a site\'s paths', () => {
 test('the root fans a region into one line per circuit it uses', () => {
   const l = L();
   const circuits = (region) => l.routes.filter(r => r.side !== 'region' && r.region === region).map(r => node(l, r.nodes[0]).label);
-  assert.deepEqual(circuits('US West'), ['AVPN access', 'Lumen off-net', 'Lumen Ethernet', 'Lumen fiber']);
+  assert.deepEqual(circuits('US West'), ['AVPN access', 'AT&T off-net', 'Third Party Ethernet', 'Third Party Fiber']);
   assert.deepEqual(circuits('Nationwide'), ['AVPN access', 'AT&T wireless']);
 });
 
@@ -365,4 +367,15 @@ test('folded, the Lumen line reaches its cloud on its own wire', () => {
   const wire = l.edges.find(e => e.kind === 'egress' && String(e.id).startsWith('via'));
   assert.ok(wire, 'the Lumen line stops at the band edge');
   assert.equal(wire.y1, end);
+});
+
+test('no carrier is named anywhere in the center, label or hover', () => {
+  for (const k of ['mature', 'partial', 'trust']) {
+    for (const opts of [{}, { regionRows: D.ESTATES[k].regionsList }, { siteRows: k === 'mature' ? siteDrillRows(D.ESTATES.mature, ['region:US West']).rows : undefined }]) {
+      const l = heroLayout(D.ESTATES[k], { bandX: 320, bandW: 580, ...opts });
+      for (const n of l.nodes) assert.doesNotMatch(`${n.label} ${n.name}`, /Lumen/, `${k}: ${n.label} / ${n.name}`);
+    }
+  }
+  const v = vals(mkC({ screen: 's3', tab: 'connect', view: 'mature', estateParam: null, bandUnfolded: true }));
+  for (const n of v.nodes) assert.doesNotMatch(n.title.split(' · used by')[0], /Lumen/, n.title);
 });
