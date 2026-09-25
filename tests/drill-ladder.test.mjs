@@ -14,44 +14,38 @@ if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: ()
 const on = (patch = {}) => mkC({ view: 'mature', screen: 's3', tab: 'connect', estateParam: null, ...patch });
 const labels = (t) => t.map(c => c.label);
 
-// Third cut, same day, after research (NN/g breadcrumb guidelines; drill-down
-// dashboard practice): the trail lives in each column's own header, where the
-// eye already is. The column title is the root, then the chosen things; every
-// ancestor is a link, the last item is the current place and not a link, one
-// line, ">" separators, middle truncation. Depth is the trail's own length.
+// Fourth cut, same day. The trails crammed into the column headers were
+// "really shoved in and sloppy". After NN/g's breadcrumb guidelines: one row
+// of its own at the top of the picture, always there so nothing jumps, a trail
+// per column. One size; ancestors are links; the last item is the current
+// place, darker, not a link; ">" separators; middle truncation.
 
-test('at the top, each column header is just its title, and it is the current place', () => {
+test('at the top, each trail reads "All sites" / "All clouds", and it is the current place', () => {
   const v = vals(on());
-  assert.deepEqual(labels(v.siteTrail), ['Sites']);
-  assert.deepEqual(labels(v.cloudTrail), ['Clouds']);
+  assert.deepEqual(labels(v.siteTrail), ['All sites']);
+  assert.deepEqual(labels(v.cloudTrail), ['All clouds']);
   assert.equal(v.siteTrail[0].isLast, true);
   assert.equal(v.siteTrail[0].isLink, false, 'a link to the page you are on does nothing');
 });
 
-test('drilled in, the header reads the chosen things, ancestors are links, the last is not', () => {
+test('drilled in, the trail reads the chosen things, ancestors are links, the last is not', () => {
   const v = vals(on({ drill: ['region:US West', 'Denver branch'] }));
-  assert.deepEqual(labels(v.siteTrail), ['Sites', 'US West', 'Denver branch']);
+  assert.deepEqual(labels(v.siteTrail), ['All sites', 'US West', 'Denver branch']);
   assert.deepEqual(v.siteTrail.map(c => c.isLink), [true, true, false]);
   assert.equal(v.sitesDrilled, true);
 });
 
 test('the cloud trail keeps identifiers in their own case', () => {
   const v = vals(on({ cloudPick: 'AWS', cloudDrill: ['us-east-1'] }));
-  assert.deepEqual(labels(v.cloudTrail), ['Clouds', 'AWS', 'us-east-1']);
+  assert.deepEqual(labels(v.cloudTrail), ['All clouds', 'AWS', 'us-east-1']);
   assert.equal(v.cloudsDrilled, true);
 });
 
-test('a long trail keeps the root and where you are, and folds the rest into a named "…"', () => {
-  const v = vals(on({ cloudPick: 'AWS', cloudDrill: ['us-east-1', 'vpc-0-0', 'vpc-0-0-prv-0'] }));
-  const t = v.cloudTrail;
-  assert.equal(t.length, 3, labels(t).join(' > '));
-  assert.equal(t[0].label, 'Clouds');
-  assert.equal(t[1].label, '…');
-  assert.equal(t[1].isLink, false);
-  assert.match(t[1].title, /AWS › us-east-1 › /);
-  assert.equal(t[2].isLast, true);
-  const four = vals(on({ cloudPick: 'AWS', cloudDrill: ['us-east-1', 'vpc-0-0'] })).cloudTrail;
-  assert.equal(four.length, 4, 'four levels still show whole');
+test('the deepest trail, five levels, reads whole: nothing folds that has room', () => {
+  const t = vals(on({ cloudPick: 'AWS', cloudDrill: ['us-east-1', 'vpc-0-0', 'vpc-0-0-prv-0'] })).cloudTrail;
+  assert.equal(t.length, 5, labels(t).join(' > '));
+  assert.ok(!t.some(c => c.label === '…'));
+  assert.equal(t[4].isLast, true);
 });
 
 test('an ancestor takes you back to it', () => {
@@ -68,12 +62,16 @@ test('an ancestor takes you back to it', () => {
   assert.deepEqual(s.state.drill, []);
 });
 
-test('the trails live in the column headers; no second bar, no "you are here"', () => {
+test('the trails sit in one row above the picture; the column headers are just title and door', () => {
   const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
+  const bar = HTML.indexOf('aria-label="Where you are"'), svg = HTML.indexOf('<svg viewBox="{{ heroVB }}"');
+  assert.ok(bar > 0 && bar < svg, 'the row comes right before the picture');
+  const row = HTML.slice(bar, svg);
+  assert.match(row, /<sc-for list="\{\{ siteTrail \}\}"/);
+  assert.match(row, /<sc-for list="\{\{ cloudTrail \}\}"/);
   const head = (x) => { const i = HTML.indexOf(`<foreignObject x="${x}" y="0"`); return HTML.slice(i, HTML.indexOf('</foreignObject>', i)); };
-  assert.match(head('24'), /<sc-for list="\{\{ siteTrail \}\}"/);
-  assert.match(head('{{ rightX }}'), /<sc-for list="\{\{ cloudTrail \}\}"/);
-  assert.doesNotMatch(HTML, /aria-label="Where you are"|You are here|<nav aria-label="Breadcrumb"/);
+  assert.doesNotMatch(head('24') + head('{{ rightX }}'), /Trail/);
+  assert.doesNotMatch(HTML, /You are here/);
 });
 
 // Found 2026-09-25 walking the ladder: hovering a region set hoverRegion, and

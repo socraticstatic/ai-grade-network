@@ -161,15 +161,16 @@ test('every field a door carries is a plain value the dc-runtime can bind', () =
   }
 });
 
-// The column headers carry a breadcrumb now (2026-09-25), and the door follows
-// the trail instead of being pinned to the card's edge, so the header runs the
-// width it has: to the band on the left, to the canvas edge on the right.
-test('each column header stays clear of the band and the canvas edge', () => {
+test('the gutter clears each column card edge by 16 viewBox units', () => {
+  // 16 units, not 12: the hero renders 1087 CSS px for a 1392 viewBox at the
+  // 1440x900 reference, so a unit is .781 px and the 10px edge rule bites.
   const EDGE = 16;
-  for (const extra of [{}, { drill: ['region:US West', 'Denver branch'] }, { cloudPick: 'AWS', cloudDrill: ['us-east-1'] }, { bandUnfolded: true }]) {
+  // SITES header x=24 w=460 -> right 484; the card (240 wide since 2026-09-23) ends at 264.
+  assert.equal(vals(mkC()).sitesDoor.gutter, (24 + 460) - 264 + EDGE);
+  // CLOUDS: the gutter is derived from cloudsHeadW, never a second copy of it.
+  for (const extra of [{}, { cloudDrill: ['us-east-1'] }]) {
     const v = vals(mkC(extra));
-    assert.ok(24 + v.sitesHeadW <= v.bandX - EDGE, `sites header runs into the band: ${JSON.stringify(extra)}`);
-    assert.ok(v.rightX + v.cloudsHeadW <= 1392 - 8, `clouds header runs off the canvas: ${JSON.stringify(extra)}`);
+    assert.equal(v.cloudsDoor.gutter, (980 + v.cloudsHeadW) - 1220 + EDGE, JSON.stringify(extra));
   }
   // The band header IS the band (x=bandX w=bandW), so its edges are the card's.
   assert.equal(vals(mkC()).bandDoor.gutter, EDGE);

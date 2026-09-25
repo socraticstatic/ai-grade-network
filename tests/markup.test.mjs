@@ -138,10 +138,15 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // The ladders came out again the same day: each column's header became its
 // breadcrumb (a nav, two gates for link or current) and the accent edges went:
 // div 898 -> 897, span 663 -> 659, sc-if 322 -> 326, button 257 -> 255.
+// "Really shoved in and sloppy": the trails left the headers for one row of
+// their own above the picture (a div), and the headers got their titles back:
+// div 897 -> 898, span 659 -> 661. The Sites and Clouds headers then took a
+// spacer and a shrinking tail each, so a long door slides past the card edge
+// instead of under the title: span 661 -> 665.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 897],
-    ['span', /<span\b/g, /<\/span>/g, 659],
+    ['div', /<div\b/g, /<\/div>/g, 898],
+    ['span', /<span\b/g, /<\/span>/g, 665],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 326],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 185],
     ['section', /<section\b/g, /<\/section>/g, 11],
