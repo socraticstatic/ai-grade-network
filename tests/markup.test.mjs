@@ -132,14 +132,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Persona, estate and theme moved from the account menu to the rail's foot (a
 // footer div, a label span, and gates for the rail width and the two icons):
 // div 896 -> 897, span 658 -> 659, sc-if 321 -> 325.
+// The breadcrumb row above the tiles became depth ladders above the picture (two
+// loops of stepped buttons, a bar div) and the drilled columns got tint rects:
+// div 897 -> 898, span 659 -> 663, sc-if 325 -> 322, button 258 -> 257.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 897],
-    ['span', /<span\b/g, /<\/span>/g, 659],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 325],
+    ['div', /<div\b/g, /<\/div>/g, 898],
+    ['span', /<span\b/g, /<\/span>/g, 663],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 322],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 185],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 258],
+    ['button', /<button\b/g, /<\/button>/g, 257],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];
@@ -337,34 +340,30 @@ test('the band overflow row is a button, not a dead div', () => {
   assert.ok(line.includes('{{ openBandLevel }}'));
 });
 
-// --- Wave 2, Task 12: the breadcrumb above the card splits into two trails ---
+// --- Wave 2, Task 12 / Task 17 item 4, carried onto the depth ladders ---
+// The breadcrumb above the card became a ladder per column, right above the
+// picture (2026-09-25). The rules it kept still hold: the two columns stay
+// apart, the step you are on binds aria-current, separators are hidden.
 
-test('the breadcrumb keeps the two columns apart', () => {
-  assert.ok(HTML.includes('{{ cloudCrumbs }}'), 'the cloud trail is its own row');
-  assert.ok(HTML.includes('{{ hasCloudCrumbs }}'));
-  assert.ok(HTML.includes('{{ cc.notLast }}') && HTML.includes('{{ cr.notLast }}'), 'no dangling caret on either trail');
+test('the depth ladders keep the two columns apart', () => {
+  assert.ok(HTML.includes('<nav aria-label="Sites depth"') && HTML.includes('<nav aria-label="Clouds depth"'), 'the two columns share one trail');
   assert.ok(!HTML.includes('{{ layerLabel }}'), 'the layer label is not a crumb at all');
-  const [from, to] = block('<!-- ===== S3 header: breadcrumb', '<!-- ===== S2 LAUNCH POINTS');
-  assertBalanced(from, to, 'the breadcrumb');
 });
 
-// --- Task 17, item 4: aria-current on the deepest crumb, aria-hidden on separators ---
-
-test('every crumb button binds its own ariaCurrent, on both nav trails and the drawer', () => {
-  const cr = LINES.find(l => l.includes('{{ cr.go }}'));
-  assert.ok(cr && cr.includes('aria-current="{{ cr.ariaCurrent }}"'), 'the site trail crumb button does not bind aria-current');
-  const cc = LINES.find(l => l.includes('{{ cc.go }}'));
-  assert.ok(cc && cc.includes('aria-current="{{ cc.ariaCurrent }}"'), 'the cloud trail crumb button does not bind aria-current');
+test('every ladder step binds its own aria-current, and so does the drawer crumb', () => {
+  for (const a of ['ls', 'lc']) {
+    const line = LINES.find(l => l.includes(`{{ ${a}.go }}`));
+    assert.ok(line && line.includes(`aria-current="{{ ${a}.aria }}"`), `the ${a} ladder step does not bind aria-current`);
+  }
   const dc = LINES.find(l => l.includes('{{ dc.go }}'));
   assert.ok(dc && dc.includes('aria-current="{{ dc.ariaCurrent }}"'), 'the drawer crumb button does not bind aria-current');
 });
 
-test('every crumb separator (›, ·) is hidden from screen readers', () => {
-  const cr = LINES.find(l => l.includes('{{ cr.go }}'));
-  assert.ok(/<sc-if value="\{\{ cr\.notLast \}\}"[^>]*><span aria-hidden="true"[^>]*>›<\/span>/.test(cr), 'the site trail\'s › separator is not aria-hidden');
-  const ccLine = LINES.find(l => l.includes('{{ cc.go }}'));
-  assert.ok(/<span aria-hidden="true" style="color:var\(--text-disabled\)">·<\/span>/.test(ccLine), 'the · separator between the two trails is not aria-hidden');
-  assert.ok(/<sc-if value="\{\{ cc\.notLast \}\}"[^>]*><span aria-hidden="true"[^>]*>›<\/span>/.test(ccLine), 'the cloud trail\'s › separator is not aria-hidden');
+test('every ladder and crumb separator is hidden from screen readers', () => {
+  for (const a of ['ls', 'lc']) {
+    const line = LINES.find(l => l.includes(`{{ ${a}.go }}`));
+    assert.ok(new RegExp(`<sc-if value="\\{\\{ ${a}\\.sep \\}\\}"[^>]*><span aria-hidden="true"[^>]*>›</span>`).test(line), `the ${a} ladder's › is not aria-hidden`);
+  }
   const dcLine = LINES.find(l => l.includes('{{ dc.go }}'));
   assert.ok(/<sc-if value="\{\{ dc\.notLast \}\}"[^>]*><span aria-hidden="true"[^>]*>›<\/span>/.test(dcLine), 'the drawer crumb\'s › separator is not aria-hidden');
 });
