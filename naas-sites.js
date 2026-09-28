@@ -153,7 +153,7 @@ export const SERVICE = {
   aiab:  { key: 'aiab',  label: 'AIA-B',              name: 'AT&T Internet Air for Business',   onAtt: true,  access: 'AIA-B' },
   tpa:   { key: 'tpa',   label: 'Third Party Access', name: 'Another carrier\'s access',        onAtt: false, access: 'Third Party Access' },
 };
-const SERVICE_OF_ACCESS = { avpn: 'avpn', ase: 'aseod', adi: 'adi', abf: 'abf', sdwan: 'avpn', mobility: 'aiab', ipsec: 'tpa' };
+const SERVICE_OF_ACCESS = { avpn: 'avpn', ase: 'aseod', adi: 'adi', abf: 'abf', sdwan: 'avpn', mobility: 'aiab', ipsec: 'tpa', aiab: 'aiab' };
 /**
  * A site's services, primary first. Sites that declare them (Growing) keep
  * theirs; the rest read one from their access string, so every estate answers.
@@ -176,6 +176,7 @@ export const ACCESS_CLASS = {
   abf:      { label: 'Business Fiber',      unit: 'site on fiber',  plural: 'sites on fiber' },
   sdwan:    { label: 'SD-WAN',              unit: 'SD-WAN site',    plural: 'SD-WAN sites' },
   ipsec:    { label: 'IPsec over internet', unit: 'IPsec site',     plural: 'IPsec sites' },
+  aiab:     { label: 'Internet Air',        unit: 'site on AIA-B',  plural: 'sites on AIA-B' },
   mobility: { label: 'Mobility first mile', unit: 'wireless site',  plural: 'wireless sites' },
   other:    { label: 'Other first mile',    unit: 'site',           plural: 'sites' },
 };
@@ -184,6 +185,7 @@ export const ACCESS_CLASS = {
 export function accessOf(st) {
   const a = String(st.access || '').toLowerCase();
   if (/ipsec/.test(a)) return 'ipsec';
+  if (/aia-b|internet air/.test(a)) return 'aiab';
   if (/sd-wan|sdwan/.test(a)) return 'sdwan';
   if (/mobility|wireless/.test(a)) return 'mobility';
   if (/avpn|mpls/.test(a)) return 'avpn';

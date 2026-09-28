@@ -158,15 +158,18 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // why, did and do lines (2026-09-28): div 967 -> 965. Logs followed it to a
 // page of its own, in a page wrapper: div 965 -> 966. Each insight card drills
 // to its findings (a link per card, a focus chip on Findings): sc-if 336 -> 337,
-// button 265 -> 272.
+// button 265 -> 272. The map's head traded its subtitle, persona line and
+// pattern/colour blocks for six rollup tiles and two segmented controls, and
+// Health stopped describing itself: div 966 -> 961, span 734 -> 730,
+// sc-if 337 -> 336, sc-for 197 -> 198, button 272 -> 271.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 966],
-    ['span', /<span\b/g, /<\/span>/g, 734],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 337],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 197],
+    ['div', /<div\b/g, /<\/div>/g, 961],
+    ['span', /<span\b/g, /<\/span>/g, 730],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 336],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 198],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 272],
+    ['button', /<button\b/g, /<\/button>/g, 271],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];

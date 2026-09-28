@@ -1593,7 +1593,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // Lighting order: hover, then the pattern lens, then the selection. A selected connection (cx-…) lights nothing on the map; the filter does that.
   const hovLit = F.litFor(map, mapHov); const selLit = mapSel && !mapSel.startsWith('cx-') ? F.litFor(map, mapSel) : null; const mapPattern = s.mapPattern || 'all'; const patLit = F.patternLit(map, mapPattern);
   const nodeOp = (k) => hovLit ? (hovLit.keys.has(k) ? 1 : 0.3) : patLit ? (patLit.keys.has(k) ? 1 : 0.35) : selLit ? (selLit.keys.has(k) ? 1 : 0.6) : 1;
-  const ribOp = (i, priv, local) => { const base = local ? 0.45 : priv ? 0.6 : 0.36; return hovLit ? (hovLit.ribbons.has(i) ? 0.8 : 0.08) : patLit ? (patLit.ribbons.has(i) ? 0.8 : 0.07) : selLit ? (selLit.ribbons.has(i) ? 0.8 : 0.18) : base; };
+  // The path filter dims what the viewer set aside (2026-09-28): On AT&T or Outside AT&T.
+  const mapPath = s.mapPath || 'all';
+  const pathOff = (priv) => (mapPath === 'att' && !priv) || (mapPath === 'out' && priv);
+  const ribOp = (i, priv, local) => { if (pathOff(priv)) return 0.1; const base = local ? 0.45 : priv ? 0.6 : 0.36; return hovLit ? (hovLit.ribbons.has(i) ? 0.8 : 0.08) : patLit ? (patLit.ribbons.has(i) ? 0.8 : 0.07) : selLit ? (selLit.ribbons.has(i) ? 0.8 : 0.18) : base; };
   const closeBranch = (arr, key) => arr.filter(k => k !== key && !k.startsWith(key + '/'));
   const toggleOpen = (key, select) => { const isOpen = mapOpen.includes(key); set({ mapOpen: isOpen ? closeBranch(mapOpen, key) : [...mapOpen, key], ...(select ? { mapSel: key, panelTab: s.panelTab || 'overview' } : {}) }); };
   const STATE_FILL = { ok: dark ? '#c5cfd9' : '#1a2431', degraded: '#ff8500', slo: '#c9362c' };
@@ -1689,7 +1692,28 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     pubPctF: Math.round(pubAll / (crossed || 1) * 100) + '%',
     mixSub: `${(mixTotal).toFixed(1)} Gbps in the window. ${locAll.toFixed(1)} Gbps of it never leaves its region, so it crosses no mid mile at all.`,
   };
-  const mapRibbons = map.ribbons.map((r, i) => { const base = r.local ? '#4db6ac' : r.priv ? '#3374cc' : (dark ? '#5d6f80' : '#8a949c'); const fill = mapMode === 'delta' ? (r.delta > 10 ? '#1e7a3c' : r.delta < -10 ? '#c9362c' : (dark ? '#5d6f80' : '#b8c2cc')) : mapMode === 'slo' ? (r.state === 'slo' ? '#c9362c' : base) : base; return { key: 'r' + i, d: r.d, fill, op: ribOp(i, r.priv, r.local), pulse: mapMode === 'state' && r.state === 'degraded' ? 'skPulse 1.6s ease-in-out infinite' : 'none', sleeve: (mapMode === 'state' || mapMode === 'slo') && r.state === 'slo' ? '#c9362c' : 'transparent', title: `${r.v.toFixed(2)} Gbps · ${r.local ? 'stays in the region' : r.priv ? 'AT&T network' : 'outside the fabric'} · ${(F.PATTERNS.find(x => x[0] === r.pattern) || ['', r.pattern])[1]} · ${(r.delta >= 0 ? '+' : '') + r.delta}% vs prior window` }; });
+  // Cost view: what leaves AT&T is priced at the estate's own avoidable rate, per Gbps outside.
+  const egBuckets = est.buckets || [], egSpend = egBuckets.reduce((a, b) => a + b.today, 0), egAvoid = egBuckets.reduce((a, b) => a + Math.max(0, b.today - b.fabric), 0);
+  const outGbps = Math.max(0.001, map.ribbons.filter(r => !r.priv && !r.local && String(r.from).startsWith('mid:')).reduce((a, r) => a + r.v, 0));
+  // The map draws what sites send, so its outside ribbons are priced against site egress: the IPsec bucket where there is one, else internet egress.
+  const siteBucket = egBuckets.find(b => b.id === 'ipsec') || egBuckets.find(b => b.id === 'misc') || { today: 0, fabric: 0 };
+  const perGbps = siteBucket.today / outGbps, perSave = Math.max(0, siteBucket.today - siteBucket.fabric) / outGbps;
+  const mapRibbons = map.ribbons.map((r, i) => { const base = r.local ? '#4db6ac' : r.priv ? '#3374cc' : (dark ? '#5d6f80' : '#8a949c'); const fill = mapMode === 'cost' ? (r.priv ? (dark ? '#3374cc' : '#6f9fd8') : (dark ? '#ffa25e' : '#e07b00')) : mapMode === 'delta' ? (r.delta > 10 ? '#1e7a3c' : r.delta < -10 ? '#c9362c' : (dark ? '#5d6f80' : '#b8c2cc')) : mapMode === 'slo' ? (r.state === 'slo' ? '#c9362c' : base) : base; return { key: 'r' + i, d: r.d, fill, op: ribOp(i, r.priv, r.local), pulse: mapMode === 'state' && r.state === 'degraded' ? 'skPulse 1.6s ease-in-out infinite' : 'none', sleeve: (mapMode === 'state' || mapMode === 'slo') && r.state === 'slo' ? '#c9362c' : 'transparent', title: mapMode === 'cost' ? `${r.v.toFixed(1)} Gbps · ${r.priv ? 'on AT&T, at the private rate' : `outside AT&T · ${fmt(Math.round(r.v * perGbps / 100) * 100)}/mo egress · ${fmt(Math.round(r.v * perSave / 100) * 100)}/mo to save on AT&T`}` : `${r.v.toFixed(2)} Gbps · ${r.local ? 'stays in the region' : r.priv ? 'AT&T network' : 'outside the fabric'} · ${(F.PATTERNS.find(x => x[0] === r.pattern) || ['', r.pattern])[1]} · ${(r.delta >= 0 ? '+' : '') + r.delta}% vs prior window` }; });
+  // The head's rollups double as filters; the control is the view (2026-09-28).
+  const kShort = (n) => (n >= 1000 ? '$' + (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'k' : '$' + n);
+  const sloN = (ob.flows || []).filter(f => f.latency > F.SLO).length;
+  const tileOn = (k) => ({ traffic: mapMode === 'state' && mapPath === 'all', onatt: mapPath === 'att', egress: mapMode === 'cost' && mapPath === 'all', saving: false, could: mapMode === 'cost' && mapPath === 'out', slo: mapMode === 'slo' })[k];
+  const flowTiles = [
+    ['traffic', 'Traffic', map.total.toFixed(1), 'Gbps', { mapMode: 'state', mapPath: 'all' }],
+    ['onatt', 'On AT&T', (() => { const p = map.fabV / (map.total || 1) * 100; return p >= 99.95 ? '100%' : p >= 99 ? p.toFixed(1) + '%' : Math.round(p) + '%'; })(), '', { mapMode: 'state', mapPath: 'att' }],
+    ['egress', 'Egress', kShort(egSpend), '/mo', { mapMode: 'cost', mapPath: 'all' }],
+    ['saving', 'Saving', kShort(ob.savingsMo || 0), '/mo', { mapMode: 'cost', mapPath: 'att' }],
+    ['could', 'Could save', kShort(totalSave), '/mo', { mapMode: 'cost', mapPath: 'out' }],
+    ['slo', 'Over SLO', String(sloN), sloN === 1 ? 'flow' : 'flows', { mapMode: 'slo', mapPath: 'all' }],
+  ].map(([k, l, v, u, patch]) => { const on = !!tileOn(k); return { key: k, l, v, u, on, go: () => set(patch), border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)' }; });
+  const seg = (on) => ({ bg: on ? 'var(--bg-base)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 600 : 500, shadow: on ? '0 1px 2px rgba(16,24,40,.10), 0 0 0 1px var(--border-secondary)' : 'none' });
+  const flowViews = [['state', 'Traffic'], ['cost', 'Cost'], ['slo', 'Performance']].map(([k, l]) => { const on = mapMode === k || (k === 'state' && mapMode === 'delta'); return { key: k, label: l, on, ...seg(on), go: () => set({ mapMode: k }) }; });
+  const flowPaths = [['all', 'All paths'], ['att', 'On AT&T'], ['out', 'Outside AT&T']].map(([k, l]) => { const on = mapPath === k; return { key: k, label: l, on, ...seg(on), go: () => set({ mapPath: k }) }; });
   const mapHeads = map.heads.map((h, i) => ({ ...h, key: 'h' + i,
     // A centred head gets no trailing rule: the rule is 240px wide and would
     // run straight through the head to its right.
@@ -1900,7 +1924,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const plNow = PERSONA_LENS[personaNow] || PERSONA_LENS['Executive'];
   const dash = { ...mixVals, ...insightVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: `${queueRows.length} open`, queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ queueOpen: true }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
-    mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
+    flowTiles, flowViews, flowPaths, mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0, scopeLabel,
     clearScope: () => set({ obScope: 'all', obDim: 'all' }), scopeIsAll: !obScope || obScope === 'all',
     mapFiltersOpen, mapFiltersShut: !mapFiltersOpen,
