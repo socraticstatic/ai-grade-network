@@ -41,7 +41,7 @@ export const SUB_PANELS = {
   ],
   observe: [
     { key: 'insights', label: 'Insights', sec: 'sec-insights' },
-    { key: 'logs', label: 'Logs', sec: 'sec-logs' },
+    { key: 'logs', label: 'Records', sec: 'sec-logs' },
   ],
   govern: [
     { key: 'templates', label: 'Templates', sec: 'sec-starting' },
@@ -92,8 +92,11 @@ export const SECTIONS = {
     ['@orders', 'Orders', 'checklist'],
   ],
   observe: [
-    ['sec-health', 'Health', 'high-meter'],
+    // Health is where "Observe" itself lands, so it gives its slot to Insights
+    // (2026-09-28): the six cards and the findings open in the layer, and with
+    // no rail link they were reachable only through Records' tab strip.
     ['sec-flow', 'Traffic', 'hub'],
+    ['insights', 'Insights', 'question-circle'],
     ['logs', 'Records', 'checklist'],
   ],
   govern: [
@@ -1133,18 +1136,20 @@ function labelKit(s, set) {
 /** Insight cards: the generator's rows plus the doors each row and card opens. */
 function iwVals(iw, s, set, go, winLabel) {
   if (!iw) return null;
-  const govern = (name) => () => { set({ authoring: { match: 'destination ' + name, scope: 'any cloud', req: ['Inspection in path'] } }); go('s3', { layer: 'cloud', tab: 'govern' })(); };
+  // Every door that leaves the drawer closes it; the drawer sits over every page.
+  const govern = (name) => () => { set({ authoring: { match: 'destination ' + name, scope: 'any cloud', req: ['Inspection in path'] } }); go('s3', { layer: 'cloud', tab: 'govern', sub: null })(); };
+  const toMap = (mapMode) => () => { go('s3', { layer: 'cloud', tab: 'observe', sub: null })(); set({ mapMode, scrollToSec: 'sec-flow', scrollNonce: (s.scrollNonce || 0) + 1 }); };
   const andiFlow = (f) => () => set({ andiScope: { kind: 'flow', id: f.id, label: f.name }, andiOpen: true });
   const steer = (f) => () => set({ steered: [...(s.steered || []), f.id], events: [...(s.events || []), { key: 'e' + Date.now(), t: new Date().toLocaleTimeString('en-US', { hour12: false }), text: `Steered ${f.name} onto the AT&T network` }] });
   const flowRow = (f) => ({ ...f, go: f.steerable ? steer(f) : andiFlow(f), doorLabel: f.steerable ? 'Steer →' : 'Ask Andi →', doorColor: f.steerable ? 'var(--warning)' : 'var(--link)' });
   return {
     ...iw, winLabel,
-    talkers: iw.talkers.map(t => ({ ...t, go: () => set({ andiScope: { kind: 'region', id: t.region, label: t.label }, andiOpen: true }), doorLabel: 'Ask Andi →', enter: () => set({ hoverNode: 'reg' + t.region }), leave: () => set({ hoverNode: null }) })), talkersGo: () => set({ obTab: 'control' }),
-    newDest: iw.newDest.map(d => ({ ...d, go: govern(d.name), doorLabel: 'Set policy →' })), hasNewDest: iw.newDest.length > 0, newDestGo: go('s3', { layer: 'cloud', tab: 'govern' }),
-    shadow: iw.shadow.map(d => ({ ...d, go: govern(d.name), doorLabel: d.covered ? 'Policy →' : 'Set policy →' })), shadowGo: go('s3', { layer: 'cloud', tab: 'govern' }),
-    growthGo: go('s3', { layer: 'cloud', tab: 'cost' }),
-    multi: { ...iw.multi, rows: iw.multi.rows.map(flowRow), has: iw.multi.rows.length > 0 }, multiGo: () => set({ obTab: 'flow' }),
-    slo: iw.slo.map(flowRow), hasSlo: iw.slo.length > 0, sloGo: () => set({ obTab: 'latency' }), sloLegend: `Over ${iw.SLO} ms`,
+    talkers: iw.talkers.map(t => ({ ...t, go: () => set({ andiScope: { kind: 'region', id: t.region, label: t.label }, andiOpen: true }), doorLabel: 'Ask Andi →', enter: () => set({ hoverNode: 'reg' + t.region }), leave: () => set({ hoverNode: null }) })), talkersGo: () => set({ sub: { page: 'observe', panel: 'logs' } }),
+    newDest: iw.newDest.map(d => ({ ...d, go: govern(d.name), doorLabel: 'Set policy →' })), hasNewDest: iw.newDest.length > 0, newDestGo: go('s3', { layer: 'cloud', tab: 'govern', sub: null }),
+    shadow: iw.shadow.map(d => ({ ...d, go: govern(d.name), doorLabel: d.covered ? 'Policy →' : 'Set policy →' })), shadowGo: go('s3', { layer: 'cloud', tab: 'govern', sub: null }),
+    growthGo: go('s3', { layer: 'cloud', tab: 'cost', sub: null }),
+    multi: { ...iw.multi, rows: iw.multi.rows.map(flowRow), has: iw.multi.rows.length > 0 }, multiGo: toMap('state'),
+    slo: iw.slo.map(flowRow), hasSlo: iw.slo.length > 0, sloGo: toMap('slo'), sloLegend: `Over ${iw.SLO} ms`,
   };
 }
 /**
@@ -1789,6 +1794,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     .map(r => ({ ...r, pFor: 'For ' + ({ 'Cloud & Platform Architect': 'Architect', 'Network Engineering': 'Network Eng', 'Security & Compliance': 'Security', 'FinOps & SRE': 'FinOps & SRE', 'Executive': 'Executive' }[r.persona] || r.persona), pInk: r.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect') ? 'var(--link)' : 'var(--text-disabled)' }));
   const insightVals = {
     insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, insightFilters,
+    // Standing findings are true in a quiet window too; the card shows while either kind exists.
+    hasFindings: insightAll.length > 0,
     insightCount: `${insightAll.length} open`,
     insightSub: `${anomalyRows.length} ${anomalyRows.length === 1 ? 'event' : 'events'} in the window · ${insightRows.length} standing findings. Each one names the evidence and the next move.`,
   };
@@ -2266,7 +2273,9 @@ function shellVals(s, set, go, est, c, sched) {
   const openSub = (page, panel) => () => set({ ...close, sub: { page, panel } });
   const closeSub = () => set({ sub: null });
   const subOpen = !!s.sub;
-  const subTabs = subPanels.map(p => ({ key: p.key, label: p.label, on: p.key === subPanelNow, go: openSub(subPage, p.key) }));
+  // The open panel's tab reads as chosen; two identical pills never said which was open.
+  const subTabs = subPanels.map(p => { const on = p.key === subPanelNow; return { key: p.key, label: p.label, on, go: openSub(subPage, p.key),
+    bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', color: on ? 'var(--link)' : 'var(--text-body)', border: on ? 'var(--border-active)' : 'var(--border-secondary)', weight: on ? 600 : 400 }; });
   const subTitle = subPanelNow === 'add' && s.sourceEdit ? 'Edit a source' : (subPanels.find(p => p.key === subPanelNow) || {}).label || '';
   const openFindings = openSub('connect', 'found');
   // The verdict sentence is the door to the findings, but only where the

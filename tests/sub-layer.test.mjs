@@ -155,7 +155,8 @@ test('each section in the layer sits under its own panel gate and no other', asy
   const stack = [];
   const seen = new Set();
   for (let n = a; n <= z; n++) {
-    for (const m of L[n].matchAll(/<sc-if value="\{\{ (\w+) \}\}"|<\/sc-if>/g)) {
+    // Gates may be dotted (iw.hasNewDest); a walker that skipped their opens still popped their closes.
+    for (const m of L[n].matchAll(/<sc-if value="\{\{ ([\w.]+) \}\}"|<\/sc-if>/g)) {
       if (m[1]) stack.push(m[1]); else stack.pop();
     }
     const id = (L[n].match(/id="(sec-[\w-]+)"/) || [])[1];

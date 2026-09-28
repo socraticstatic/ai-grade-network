@@ -143,14 +143,18 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // div 897 -> 898, span 659 -> 661. The Sites and Clouds headers then took a
 // spacer and a shrinking tail each, so a long door slides past the card edge
 // instead of under the title: span 661 -> 665.
+// The six insight cards come back in the Observe drawer (2026-09-28): a grid
+// div and the cards' own markup from iteration 1, one new gate (hasIw) and the
+// findings card's gate renamed in place:
+// div 898 -> 942, span 665 -> 705, sc-if 326 -> 330, sc-for 185 -> 191, button 255 -> 261.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 898],
-    ['span', /<span\b/g, /<\/span>/g, 665],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 326],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 185],
+    ['div', /<div\b/g, /<\/div>/g, 942],
+    ['span', /<span\b/g, /<\/span>/g, 705],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 330],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 191],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 255],
+    ['button', /<button\b/g, /<\/button>/g, 261],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];

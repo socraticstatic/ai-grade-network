@@ -1363,7 +1363,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <aside aria-label="Discovery" style="position:fixed;top:var(--hdr,65px);right:0;width:min(880px,92vw);height:calc(100vh - var(--hdr,65px));z-index:46;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr);border-left:1px solid var(--border-secondary);background:var(--bg-base);box-shadow:-12px 0 32px rgba(0,0,0,.16);animation:fadeIn .18s">
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 24px;border-bottom:1px solid var(--border-secondary)">
     <h2 style="margin:0;flex:1 1 auto;min-width:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">{{ subTitle }}</h2>
-    <sc-for list="{{ subTabs }}" as="sb" hint-placeholder-count="3"><button onClick="{{ sb.go }}" aria-current="{{ sb.on }}" style="height:28px;padding:0 12px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-body);font-size:13px;cursor:pointer;white-space:nowrap" style-hover="border-color:var(--border-active)">{{ sb.label }}</button></sc-for>
+    <sc-for list="{{ subTabs }}" as="sb" hint-placeholder-count="3"><button onClick="{{ sb.go }}" aria-current="{{ sb.on }}" style="height:28px;padding:0 12px;border:1px solid {{ sb.border }};border-radius:9999px;background:{{ sb.bg }};color:{{ sb.color }};font-size:13px;font-weight:{{ sb.weight }};cursor:pointer;white-space:nowrap" style-hover="border-color:var(--border-active)">{{ sb.label }}</button></sc-for>
     <button onClick="{{ closeSub }}" aria-label="Close" style="height:28px;padding:0 12px;border:0;border-radius:9999px;background:transparent;color:var(--link);font-size:13px;font-weight:500;cursor:pointer">Close</button>
   </div>
   <div style="min-height:0;overflow-y:auto;padding:24px">
@@ -1460,9 +1460,45 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     </sc-if>
     </sc-if>
     <sc-if value="{{ subIsInsights }}" hint-placeholder-val="{{ false }}">
-<sc-if value="{{ hasAnomalies }}" hint-placeholder-val="{{ true }}">
+<!-- The six insight cards, back from iteration 1 (2026-09-28): "we had a fantastic Insights section". Two up in the drawer. -->
+<sc-if value="{{ hasIw }}" hint-placeholder-val="{{ true }}">
+<div aria-label="Insight cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px">
+    <div class="fx-card sm" aria-label="Top talkers">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Top talkers</h3><div class="fx-card-sub" title="{{ iw.talkers.0.label }} carries {{ iw.talkers.0.share }} of all traffic">{{ iw.talkers.0.label }} · {{ iw.talkers.0.share }} of traffic</div></div><button class="fx-btn" onClick="{{ iw.talkersGo }}">Records</button></div>
+      <div class="fx-rows"><sc-for list="{{ iw.talkers }}" as="t" hint-placeholder-count="5"><div class="fx-row door" role="button" tabindex="0" onClick="{{ t.go }}" aria-label="{{ t.label }} {{ t.v }} · {{ t.doorLabel }}"><span class="lbl"><b title="{{ t.label }}">{{ t.label }}</b><small>{{ t.sub }}</small></span><span class="bar"><span style="width:{{ t.w }};background:{{ t.fill }}"></span></span><span class="val">{{ t.share }}<small>{{ t.v }}</small></span></div></sc-for></div>
+      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On the fabric</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
+    </div>
+    <div class="fx-card sm" aria-label="New destinations">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">New destinations · {{ iw.winLabel }}</h3><div class="fx-card-sub" title="{{ iw.newDestN }} destinations not seen before the window, by volume">{{ iw.newDestN }} new, by volume</div></div><button class="fx-btn" onClick="{{ iw.newDestGo }}">Policies</button></div>
+      <sc-if value="{{ iw.hasNewDest }}" hint-placeholder-val="{{ true }}"><div class="fx-rows"><sc-for list="{{ iw.newDest }}" as="d" hint-placeholder-count="4"><div class="fx-row door" role="button" tabindex="0" onClick="{{ d.go }}" aria-label="{{ d.name }} · {{ d.doorLabel }}"><span class="lbl"><b title="{{ d.name }}">{{ d.name }}</b><small>{{ d.sub }}</small></span><span class="bar"><span style="width:{{ d.w }};background:{{ d.fill }}"></span></span><span class="val">{{ d.v }}<span class="door-l" style="color:var(--link)">{{ d.doorLabel }}</span></span></div></sc-for></div></sc-if>
+      <sc-if value="{{ iw.hasNewDest }}" hint-placeholder-val="{{ true }}"><div class="fx-legend"><span><i style="background:var(--viz-5)"></i>AI endpoint</span><span><i style="background:var(--viz-4)"></i>SaaS</span><span><i style="background:var(--viz-2)"></i>Object storage</span></div></sc-if>
+    </div>
+    <div class="fx-card sm" aria-label="Shadow SaaS">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Shadow SaaS</h3><div class="fx-card-sub" title="{{ iw.shadowN }} domains move {{ iw.shadowGb }} GB a day with no policy">{{ iw.shadowN }} with no policy · {{ iw.shadowGb }} GB/day</div></div><button class="fx-btn" onClick="{{ iw.shadowGo }}">Policies</button></div>
+      <div class="fx-rows"><sc-for list="{{ iw.shadow }}" as="d" hint-placeholder-count="5"><div class="fx-row door" role="button" tabindex="0" onClick="{{ d.go }}" aria-label="{{ d.name }} · {{ d.doorLabel }}"><span class="lbl"><b title="{{ d.name }}">{{ d.name }}</b><small>{{ d.sub }}</small></span><span class="bar"><span style="width:{{ d.w }};background:{{ d.fill }}"></span></span><span class="val">{{ d.v }}<span class="door-l" style="color:var(--link)">{{ d.doorLabel }}</span></span></div></sc-for></div>
+      <div class="fx-legend"><span><i style="background:var(--viz-4)"></i>No policy</span><span><i style="background:var(--viz-1)"></i>Covered</span></div>
+    </div>
+    <div class="fx-card sm" aria-label="Egress growth">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Egress growth · 12 weeks</h3><div class="fx-card-sub" title="Public {{ iw.growth.pubThen }} → {{ iw.growth.pubNow }} Gbps · fabric {{ iw.growth.fabPctF }}">Public {{ iw.growth.pubPctF }} · fabric {{ iw.growth.fabPctF }}</div></div><button class="fx-btn" onClick="{{ iw.growthGo }}">Cost</button></div>
+      <div class="fx-cols" role="img" aria-label="Weekly egress, fabric under public"><sc-for list="{{ iw.growth.weeks }}" as="w" hint-placeholder-count="12"><div title="{{ w.title }}"><span style="height:{{ w.pubH }};background:var(--viz-6)"></span><span style="height:{{ w.fabH }};background:var(--viz-1)"></span></div></sc-for></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;line-height:12px;color:var(--text-light)"><span>12 weeks ago</span><span>this week</span></div>
+      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On the fabric</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
+    </div>
+    <div class="fx-card sm" aria-label="Cloud-to-cloud paths">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Cloud-to-cloud paths</h3><div class="fx-card-sub">{{ iw.multi.privN }} of {{ iw.multi.totalN }} on the fabric</div></div><button class="fx-btn" onClick="{{ iw.multiGo }}">Flow map</button></div>
+      <div class="fx-rows"><sc-for list="{{ iw.multi.rows }}" as="m" hint-placeholder-count="3"><div class="fx-row door" role="button" tabindex="0" onClick="{{ m.go }}" aria-label="{{ m.name }} · {{ m.doorLabel }}"><span class="lbl"><b title="{{ m.name }}">{{ m.name }}</b><small>{{ m.sub }}</small></span><span class="bar"><span style="width:{{ m.w }};background:{{ m.fill }}"></span></span><span class="val">{{ m.v }}<span class="door-l" style="color:{{ m.doorColor }}">{{ m.doorLabel }}</span></span></div></sc-for></div>
+      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On the fabric</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
+    </div>
+    <div class="fx-card sm" aria-label="Latency over SLO">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Latency over SLO</h3><div class="fx-card-sub">{{ iw.sloN }} of {{ iw.sloTotal }} flows over {{ iw.SLO }} ms</div></div><button class="fx-btn" onClick="{{ iw.sloGo }}">Latency</button></div>
+      <sc-if value="{{ iw.hasSlo }}" hint-placeholder-val="{{ true }}"><div class="fx-rows"><sc-for list="{{ iw.slo }}" as="f" hint-placeholder-count="3"><div class="fx-row door" role="button" tabindex="0" onClick="{{ f.go }}" aria-label="{{ f.name }} {{ f.v }} · {{ f.doorLabel }}"><span class="lbl"><b title="{{ f.name }}">{{ f.name }}</b><small>{{ f.sub }}</small></span><span class="bar"><span style="width:{{ f.w }};background:{{ f.fill }}"></span></span><span class="val">{{ f.v }}<span class="door-l" style="color:{{ f.doorColor }}">{{ f.doorLabel }}</span></span></div></sc-for></div></sc-if>
+      <div class="fx-legend"><span><i style="background:var(--error)"></i>{{ iw.sloLegend }}</span></div>
+    </div>
+</div>
+</sc-if>
+<sc-if value="{{ hasFindings }}" hint-placeholder-val="{{ true }}">
 <div id="sec-insights" class="fx-card" style="gap:12px;padding:16px 24px;margin-top:16px">
-  <div class="fx-card-head" style="align-items:flex-start"><div style="min-width:0"><h3 class="fx-card-title">Insights</h3><div class="fx-card-sub">{{ insightSub }}</div></div><span style="flex:none;font-size:12px;color:var(--text-light);white-space:nowrap">{{ insightCount }}</span></div>
+  <div class="fx-card-head" style="align-items:flex-start"><div style="min-width:0"><h3 class="fx-card-title">Findings</h3><div class="fx-card-sub">{{ insightSub }}</div></div><span style="flex:none;font-size:12px;color:var(--text-light);white-space:nowrap">{{ insightCount }}</span></div>
   <div class="fx-chips" style="gap:6px"><sc-for list="{{ insightFilters }}" as="if" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ if.on }}" onClick="{{ if.go }}" style="cursor:pointer;background:{{ if.bg }};color:{{ if.color }};border-color:{{ if.border }}">{{ if.label }}</button></sc-for></div>
   <sc-if value="{{ hasInsights }}" hint-placeholder-val="{{ true }}">
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:stretch">
