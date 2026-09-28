@@ -1730,6 +1730,17 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     ['slo', 'Over SLO', String(sloN), sloN === 1 ? 'flow' : 'flows', { mapMode: 'slo', mapPath: 'all' }],
   ].map(([k, l, v, u, patch]) => { const on = !!tileOn(k); return { key: k, l, v, u, on, go: () => set(patch), border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)' }; });
   const seg = (on) => ({ bg: on ? 'var(--bg-base)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 600 : 500, shadow: on ? '0 1px 2px rgba(16,24,40,.10), 0 0 0 1px var(--border-secondary)' : 'none' });
+  // Over time (2026-09-28): the same traffic, by day, week or month.
+  const otGrain = ['daily', 'weekly', 'monthly'].includes(s.otGrain) ? s.otGrain : 'daily';
+  const OT = F.overTime({ total: map.total, fab: map.fabV, egressMo: siteBucket.today || egSpend * 0.1, grain: otGrain, seed: est.id });
+  const otMax = Math.max(0.001, ...OT.bars.map(b => b.fab + b.out));
+  const otBars = map.total > 0.001 && !isEmpty ? OT.bars.map(b => { const tot = b.fab + b.out; return { key: 'ot' + b.i, fabH: (b.fab / otMax * 100).toFixed(2) + '%', outH: (b.out / otMax * 100).toFixed(2) + '%',
+    title: `${b.label} · ${gbpsW(tot)} · ${(b.fab / (tot || 1) * 100).toFixed(1)}% on AT&T · ${fmt(Math.round(b.egress))} egress` }; }) : [];
+  const otTot = OT.bars.map(b => b.fab + b.out), otFirst = otTot[0] || 0, otLast = otTot[otTot.length - 1] || 0;
+  const otTrend = otFirst ? Math.round((otLast - otFirst) / otFirst * 100) : 0;
+  const otTiles = [['Peak', gbpsW(Math.max(0, ...otTot))], ['Average', gbpsW(otTot.reduce((a, v) => a + v, 0) / (otTot.length || 1))], ['Trend', `${otTrend >= 0 ? '+' : ''}${otTrend}%`], ['Egress', fmt(Math.round(OT.bars.reduce((a, b) => a + b.egress, 0)))]].map(([l, v]) => ({ key: l, l, v }));
+  const otGrains = [['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly']].map(([k, l]) => { const on = otGrain === k; return { key: k, label: l, on, ...seg(on), go: () => set({ otGrain: k }) }; });
+  const otEnds = OT.bars.length ? [OT.bars[0].label, OT.bars[OT.bars.length - 1].label] : ['', ''];
   const flowViews = [['state', 'Traffic'], ['cost', 'Cost'], ['slo', 'Performance']].map(([k, l]) => { const on = mapMode === k || (k === 'state' && mapMode === 'delta'); return { key: k, label: l, on, ...seg(on), go: () => set({ mapMode: k }) }; });
   const flowPaths = [['all', 'All paths'], ['att', 'On AT&T'], ['out', 'Outside AT&T']].map(([k, l]) => { const on = mapPath === k; return { key: k, label: l, on, ...seg(on), go: () => set({ mapPath: k }) }; });
   const mapHeads = map.heads.map((h, i) => ({ ...h, key: 'h' + i,
@@ -1942,7 +1953,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const plNow = PERSONA_LENS[personaNow] || PERSONA_LENS['Executive'];
   const dash = { ...mixVals, ...insightVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: `${queueRows.length} open`, queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ queueOpen: true }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
-    flowTiles, flowViews, flowPaths, mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
+    flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0, scopeLabel,
     clearScope: () => set({ obScope: 'all', obDim: 'all' }), scopeIsAll: !obScope || obScope === 'all',
     mapFiltersOpen, mapFiltersShut: !mapFiltersOpen,

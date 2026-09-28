@@ -165,15 +165,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // map's middle says what it is doing on a second line: div 961 -> 962.
 // Cards that open carry a count pill that reads Open on hover, the folded
 // stacks a +, and a first visit one hint: span 730 -> 745, sc-if 336 -> 341,
-// button 271 -> 272.
+// button 271 -> 272. Traffic gained an Over time card (daily, weekly,
+// monthly): div 962 -> 970, span 745 -> 755, sc-if 341 -> 342,
+// sc-for 198 -> 201, button 272 -> 273.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 962],
-    ['span', /<span\b/g, /<\/span>/g, 745],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 341],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 198],
+    ['div', /<div\b/g, /<\/div>/g, 970],
+    ['span', /<span\b/g, /<\/span>/g, 755],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 342],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 201],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 272],
+    ['button', /<button\b/g, /<\/button>/g, 273],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];

@@ -416,3 +416,27 @@ export function patternLit(map, pattern) {
   // second hop: a destination lit by the pattern also lights the mid→dest ribbons of the same pattern (already tagged), and sources feeding a lit mid keep their own tag.
   return { ribbons: idx, keys };
 }
+
+/**
+ * Traffic over time (Micah, 2026-09-28: "daily, weekly, monthly"). Seeded
+ * history ending on what the map shows now: bars of on-AT&T under outside
+ * volume, and the egress the outside share bills in that period. Pure.
+ */
+const GRAINS = { daily: { n: 30, perMonth: 30, label: (i, n) => { const d = new Date(Date.UTC(2026, 8, 28 - (n - 1 - i))); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }); } },
+  weekly: { n: 12, perMonth: 30 / 7, label: (i, n) => { const d = new Date(Date.UTC(2026, 8, 28 - 7 * (n - 1 - i))); return 'Week of ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }); } },
+  monthly: { n: 12, perMonth: 1, label: (i, n) => { const d = new Date(Date.UTC(2026, 8 - (n - 1 - i), 1)); return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }); } } };
+export function overTime({ total, fab, egressMo, grain = 'daily', seed = '' }) {
+  const G = GRAINS[grain] || GRAINS.daily, n = G.n;
+  const outNow = Math.max(0, total - fab);
+  const bars = Array.from({ length: n }, (_, i) => {
+    const t = n > 1 ? i / (n - 1) : 1;
+    // Growth into today, a weekly rhythm on the daily grain, a little seeded noise; the last bar is now.
+    const grow = 0.78 + 0.22 * t, rhythm = grain === 'daily' ? 1 + 0.08 * Math.sin((i + (hash(seed) % 7)) * 0.9) : 1, noise = i === n - 1 ? 1 : 1 + ((hash(seed + grain + i) % 100) - 50) / 900;
+    const k = i === n - 1 ? 1 : grow * rhythm * noise;
+    // Outside AT&T shrinks as sites move on; it was a larger share earlier in the history.
+    const outK = i === n - 1 ? 1 : k * (1.35 - 0.35 * t);
+    const f = fab * k, o = outNow * outK;
+    return { i, label: G.label(i, n), fab: f, out: o, egress: egressMo / G.perMonth * (outNow ? o / outNow : k) };
+  });
+  return { grain, bars };
+}
