@@ -19,7 +19,7 @@ import * as V from './naas-volume.js';
 import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 
-const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product' };
+const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product', s9: 'Help' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
 
 // One layer for sub-content, shared by every page. Each page is a hero plus a
@@ -918,6 +918,58 @@ export function vals(c) {
     // department
     layerBar: D.LAYERS.map(l => ({ key: l.id, label: l.label, on: s.layer === l.id, go: () => { set({ layer: l.id, drill: [], regionDrill: null }); syncHash('s3', l.id, s.tab); scrollToResult('S3 Department'); }, bg: s.layer === l.id ? 'var(--cta)' : 'transparent', color: s.layer === l.id ? '#fff' : 'var(--text-heading)' })),
     backToPicture: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
+    // Help & Resources (2026-09-28), modelled on NetBond Advanced's /support page
+    // (att-netbond-sdci HelpResourcesPage.tsx): Andi in the hero, guides built
+    // from this estate, the seven resources, the storefront's own glossary.
+    ...(() => {
+      const q = (s.helpQ || '').trim().toLowerCase();
+      const iconDir = s.theme === 'dark' ? 'brand/icons-dark' : 'brand/icons-light';
+      const hit = (t) => !q || t.toLowerCase().includes(q);
+      const tpaN = (est.sites || []).filter(x => !x.priv && S.servicesOf(x).some(v => v.key === 'tpa')).length;
+      const pubR = est.regionsList.filter(r => !r.priv);
+      const bareTag = (est.policies || []).length < 8;
+      const guides = (est.stage === 'empty' ? [
+        { key: 'source', icon: 'lock', title: 'Add your first source', steps: ['Pick a cloud account', 'Give AT&T read-only access', 'Discovery draws your estate'], cta: 'Add a source', go: go('s1', { discoverView: 'sources' }) },
+        { key: 'first', icon: 'cloud', title: 'Connect your first cloud', steps: ['Choose the region', 'Pick NetBond or the on-ramp', 'Order and watch it come up'], cta: 'Open Connect', go: go('s3', { layer: 'cloud', tab: 'connect' }) },
+      ] : [
+        ...(tpaN ? [{ key: 'ipsec', icon: 'lock', title: `Move ${tpaN} IPsec ${tpaN === 1 ? 'site' : 'sites'} onto AT&T`, steps: ['Find the IPsec sites on Discover', 'Pick AVPN, ASE on Demand or ADI', 'Order and cut over'], cta: 'Start', go: go('s1') }] : []),
+        ...(pubR.length ? [{ key: 'attach', icon: 'cloud', title: `Attach ${pubR.length} ${pubR.length === 1 ? 'region' : 'regions'} privately`, steps: ['Open the region on Connect', 'Compare NetBond with the on-ramp', 'Attach and watch it on Observe'], cta: 'Open Connect', go: go('s3', { layer: 'cloud', tab: 'connect' }) }] : []),
+        { key: 'map', icon: 'hub', title: 'Read the Traffic map', steps: ['Sites on the left, by region', 'The path they take in the middle', 'Hover any path for Gbps and cost'], cta: 'Open Traffic', go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf' }) },
+        ...(bareTag ? [{ key: 'policy', icon: 'check-shield', title: 'Set a policy for a tag', steps: ['Open Tags on Observe', 'Pick a tag with no policy', 'Require a private path'], cta: 'Open Policies', go: go('s3', { layer: 'cloud', tab: 'govern' }) }] : []),
+      ]).slice(0, 4).map(g0 => ({ ...g0, steps: g0.steps.map((l, i) => ({ key: i, n: i + 1, label: l })), iconSrc: iconDir + '/' + g0.icon + '.svg' }))
+        .filter(g0 => hit(g0.title + ' ' + g0.steps.map(x => x.label).join(' ')));
+      const soon = { soon: true, go: () => {} };
+      const resources = [
+        { key: 'glossary', icon: 'grid', title: 'Network Glossary', desc: 'The words on these screens', tags: ['Access', 'Core', 'SLO'], cta: 'Open glossary', go: () => set({ scrollToSec: 'sec-help-glossary', scrollNonce: (s.scrollNonce || 0) + 1 }) },
+        { key: 'tickets', icon: 'checklist', title: 'Support Tickets', desc: 'Create and track tickets', tags: ['Trouble report', 'Change'], cta: 'View tickets', ...soon },
+        { key: 'tour', icon: 'hub', title: 'Interactive Tour', desc: 'A guided walk through the picture', tags: ['Overview', 'Navigation'], cta: 'Start tour', go: () => { set({ openHintSeen: false }); try { localStorage.removeItem('naas.openHint'); } catch (e) {} go('s3', { layer: 'cloud', tab: 'connect', drill: [], cloudPick: null })(); } },
+        { key: 'kb', icon: 'apps', title: 'Knowledge Base', desc: 'Articles and FAQs', tags: ['Common issues', 'Use cases'], cta: 'Browse articles', ...soon },
+        { key: 'video', icon: 'smart-meter', title: 'Video Tutorials', desc: 'Short how-to videos', tags: ['Quickstart', 'Troubleshooting'], cta: 'Watch videos', ...soon },
+        { key: 'docs', icon: 'download', title: 'Documentation', desc: 'Guides, APIs and best practice', tags: ['Getting started', 'API'], cta: 'Read docs', ...soon },
+        { key: 'contact', icon: 'person-group', title: 'Contact Support', desc: 'Talk to the AT&T team', tags: ['24/7', 'Billing'], cta: 'Ask Andi first', go: () => set({ andiOpen: true }) },
+      ].map(r0 => ({ ...r0, soon: !!r0.soon, live: !r0.soon, tagRows: r0.tags.map(t => ({ key: t, t })), iconSrc: iconDir + '/' + r0.icon + '.svg' }));
+      const TERMS = [
+        ['Access', 'The first mile: the circuit from a site, or a cloud\'s own port, into a network.'],
+        ['Edge', 'Where a circuit lands and gets its service: an AT&T PE, an ENNI, or an on-ramp.'],
+        ['Core', 'The backbone between edges. AT&T\'s, or a third party\'s.'],
+        ['NetBond', 'AT&T\'s private on-ramp into a cloud, ordered like any other AT&T port.'],
+        ['AVPN', 'AT&T VPN over MPLS: private, with classes of service.'],
+        ['ASE on Demand', 'AT&T Switched Ethernet you can turn up and resize from the portal.'],
+        ['ADI', 'AT&T Dedicated Internet. Internet, but it rides the AT&T core.'],
+        ['AIA-B', 'AT&T Internet Air for Business: fixed wireless that rides the AT&T core.'],
+        ['Third Party Access', 'Another carrier\'s circuit. Its traffic leaves the AT&T network.'],
+        ['IPsec', 'An encrypted tunnel over the public internet. Private payload, public path and bill.'],
+        ['Egress', 'What a cloud charges to send data out. Lower on a private on-ramp.'],
+        ['SLO', 'The latency or loss a path promises. Over SLO means it missed.'],
+        ['Hosted VPC', 'A VPC AT&T runs for you, with inspection and egress built in.'],
+        ['Cross-connect', 'A cable inside a colo between two networks. Yours if you ordered it.'],
+      ];
+      const asks = ['Where is my egress going?', 'Which sites are outside AT&T?', 'What is over its SLO?'].map(a0 => ({ key: a0, q: a0, go: () => set({ andiOpen: true, andiThread: [...(s.andiThread || []), { key: 'q' + Date.now(), screen: s.screen + (s.tab || ''), q: a0, a: answer(a0, est, ob, s) }] }) }));
+      return { sS9: s.screen === 's9', goHelp: go('s9'), helpCur: s.screen === 's9', helpQ: s.helpQ || '', setHelpQ: (e) => set({ helpQ: e.target.value }), clearHelpQ: () => set({ helpQ: '' }), hasHelpQ: !!q,
+        helpGuides: guides, hasHelpGuides: guides.length > 0, helpResources: resources, helpAsks: asks, askAndiHelp: () => set({ andiOpen: true }),
+        helpTerms: TERMS.filter(([t, d]) => hit(t + ' ' + d)).map(([term, def]) => ({ key: term, term, def })), hasHelpTerms: TERMS.some(([t, d]) => hit(t + ' ' + d)),
+        helpIcon: iconDir + '/question-circle.svg', helpSoonBg: s.theme === 'dark' ? 'rgba(209,143,224,.16)' : 'rgba(175,41,187,.12)', helpSoonInk: s.theme === 'dark' ? '#e2a6ee' : '#8f2199' };
+    })(),
     ...filterVals, showOpenHint: !s.openHintSeen && !s.drill.length && !cloudPick && !isEmpty, dismissOpenHint: () => { set({ openHintSeen: true }); try { localStorage.setItem('naas.openHint', 'seen'); } catch (e) {} },
     crumbs, verbTabs, cloudCrumbs, siteTrail, cloudTrail, sitesDrilled: s.drill.length > 0, cloudsDrilled: !!cloudPick, hasCloudCrumbs: cloudCrumbs.length > 0, showCrumbs: s.drill.length > 0 || cloudDrill.length > 0, drillLabel: [drillLabel, regionDrill ? `${regionDrill.label} · ${regionDrill.level}s` : ''].filter(Boolean).join(' · '), hasDrill: s.drill.length > 0 || cloudDrill.length > 0, drillUp: () => set({ drill: s.drill.slice(0, -1), cloudDrill: cloudDrill.slice(0, -1), cloudPick: cloudDrill.length ? cloudPick : null }), sitesHead: s.drill.length ? '‹ ' + S.labelOfKey(est, s.drill[s.drill.length - 1]) : 'Sites', sitesUp: () => set({ drill: s.drill.slice(0, -1) }), sitesHeadColor: s.drill.length ? 'var(--link)' : 'var(--text-light)', cloudsHead: regionDrill ? '‹ ' + (regionDrill.crumb || [cloudDrill[0]]).slice(-1)[0] : 'Clouds', cloudsUp: cloudsUpNow, cloudsHeadColor: regionDrill ? 'var(--link)' : 'var(--text-light)', cloudsHeadW, showWorkloadsHead: false, tConnect: s.tab === 'connect', tGovern: s.tab === 'govern', tObserve: s.tab === 'observe', tCost: s.tab === 'cost',
     ...connectVals(s, set, R.applyScope(est, obScope), go, ob),
@@ -2424,7 +2476,7 @@ function shellVals(s, set, go, est, c, sched) {
           }),
         ];
       })();
-  const pageTitle = s.screen === 's1' ? 'Discover' : s.screen === 's4' ? 'Compose' : s.screen === 's5' ? 'Recommend' : s.screen === 's6' ? 'Review order' : storeCur ? 'Marketplace'
+  const pageTitle = s.screen === 's9' ? 'Help & Resources' : s.screen === 's1' ? 'Discover' : s.screen === 's4' ? 'Compose' : s.screen === 's5' ? 'Recommend' : s.screen === 's6' ? 'Review order' : storeCur ? 'Marketplace'
     : s.screen === 's3' ? ({ connect: 'Connect', govern: 'Govern', observe: (obTabNow === logsTab ? 'Observe · Logs' : 'Observe'), cost: 'Cost' }[s.tab] || 'Connect')
     : 'Discover';
   // Re-discover keeps its one click and finally has somewhere to report: the

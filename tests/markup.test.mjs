@@ -167,17 +167,20 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // stacks a +, and a first visit one hint: span 730 -> 745, sc-if 336 -> 341,
 // button 271 -> 272. Traffic gained an Over time card (daily, weekly,
 // monthly): div 962 -> 970, span 745 -> 755, sc-if 341 -> 342,
-// sc-for 198 -> 201, button 272 -> 273.
+// sc-for 198 -> 201, button 272 -> 273. Help & Resources became a page with a
+// ? in the header (hero, guides, resources, glossary): div 970 -> 993,
+// span 755 -> 768, sc-if 342 -> 349, sc-for 201 -> 207, button 273 -> 279,
+// section 11 -> 12, label 27 -> 28.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 970],
-    ['span', /<span\b/g, /<\/span>/g, 755],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 342],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 201],
-    ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 273],
+    ['div', /<div\b/g, /<\/div>/g, 993],
+    ['span', /<span\b/g, /<\/span>/g, 768],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 349],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 207],
+    ['section', /<section\b/g, /<\/section>/g, 12],
+    ['button', /<button\b/g, /<\/button>/g, 279],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
-    ['label', /<label\b/g, /<\/label>/g, 27],
+    ['label', /<label\b/g, /<\/label>/g, 28],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

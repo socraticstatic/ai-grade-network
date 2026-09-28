@@ -258,6 +258,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <!-- Ask Andi: outlined pill with the Andi symbol (att_andi_sym). -->
     <button onClick="{{ toggleAndi }}" aria-label="Ask Andi" style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px 0 10px;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="border-color:var(--border-active)"><span aria-hidden="true" style="width:20px;height:20px;flex:none;background:url('{{ iconAndi }}') center / contain no-repeat"></span>Ask Andi</button>
     <!-- The bell: pending actions live in its name; a dot only while something is pending. -->
+    <button onClick="{{ goHelp }}" aria-label="Help and resources" title="Help and resources" aria-current="{{ helpCur }}" style="width:40px;height:40px;border:0;border-radius:9999px;background:transparent;cursor:pointer" style-hover="background:var(--bg-wash)"><span aria-hidden="true" style="display:block;width:22px;height:22px;margin:0 auto;background:url('{{ helpIcon }}') center / contain no-repeat"></span></button>
     <button onClick="{{ goFloor }}" aria-label="{{ bellLabel }}" style="position:relative;width:40px;height:40px;border:0;border-radius:9999px;background:transparent;cursor:pointer" style-hover="background:var(--bg-wash)"><span aria-hidden="true" style="display:block;width:22px;height:22px;margin:0 auto;background:url('{{ iconBell }}') center / contain no-repeat"></span><sc-if value="{{ hasTasks }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:9999px;background:var(--cta);box-shadow:0 0 0 2px var(--bg-base)"></span></sc-if></button>
     <!-- Avatar: the demo controls live behind it. -->
     <div style="position:relative">
@@ -1945,6 +1946,48 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 </sc-if>
 
 <!-- ===== S7 BROWSE ===== -->
+<!-- Help & Resources (2026-09-28): NetBond Advanced's information center, simpler. Andi, guides from this estate, seven resources, the glossary. -->
+<sc-if value="{{ sS9 }}" hint-placeholder-val="{{ false }}">
+<section data-screen-label="S9 Help" style="animation:fadeIn .3s;display:grid;gap:28px;grid-template-columns:minmax(0,1fr)">
+  <div style="display:grid;gap:16px;padding:28px 32px;border-radius:16px;background:linear-gradient(120deg,#0057b8 0%,#003d82 55%,#009fdb 100%);color:#fff">
+    <h1 style="margin:0;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.03em">How can we help?</h1>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <label style="flex:1 1 360px;display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:9999px;background:#fff;color:#13171b;min-width:0"><span aria-hidden="true" style="width:18px;height:18px;flex:none;background:url('brand/icons-light/search.svg') center / contain no-repeat"></span><input value="{{ helpQ }}" onChange="{{ setHelpQ }}" placeholder="Search guides and terms" aria-label="Search help" style="flex:1;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:15px;color:#13171b"></label>
+      <button onClick="{{ askAndiHelp }}" style="height:44px;padding:0 20px;border:0;border-radius:9999px;background:#fff;color:#0057b8;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Ask Andi</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ helpAsks }}" as="ha" hint-placeholder-count="3"><button onClick="{{ ha.go }}" style="height:30px;padding:0 12px;border:1px solid rgba(255,255,255,.35);border-radius:9999px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:rgba(255,255,255,.24)">{{ ha.q }}</button></sc-for></div>
+  </div>
+  <sc-if value="{{ hasHelpGuides }}" hint-placeholder-val="{{ true }}">
+  <div style="display:grid;gap:12px">
+    <div style="font-size:11px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--text-light)">Start here</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px">
+      <sc-for list="{{ helpGuides }}" as="hg" hint-placeholder-count="4"><div class="fx-card" style="gap:14px;padding:20px">
+        <div style="display:flex;align-items:center;gap:12px"><span aria-hidden="true" style="width:40px;height:40px;flex:none;border-radius:10px;background:var(--bg-accent);display:flex;align-items:center;justify-content:center"><span style="width:22px;height:22px;background:url('{{ hg.iconSrc }}') center / contain no-repeat"></span></span><h3 class="fx-card-title" style="margin:0;white-space:normal;line-height:21px">{{ hg.title }}</h3></div>
+        <div style="display:grid;gap:8px"><sc-for list="{{ hg.steps }}" as="st" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:10px"><span aria-hidden="true" style="width:22px;height:22px;flex:none;border-radius:9999px;background:var(--bg-neutral);color:var(--text-heading);font-size:12px;line-height:22px;font-weight:700;text-align:center">{{ st.n }}</span><span style="font-size:13px;line-height:18px;color:var(--text-body)">{{ st.label }}</span></div></sc-for></div>
+        <button onClick="{{ hg.go }}" style="justify-self:start;margin-top:auto;height:34px;padding:0 16px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--cta-hover)">{{ hg.cta }} →</button>
+      </div></sc-for>
+    </div>
+  </div>
+  </sc-if>
+  <div style="display:grid;gap:12px">
+    <div style="font-size:11px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--text-light)">Resources</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px">
+      <sc-for list="{{ helpResources }}" as="hr" hint-placeholder-count="7"><div class="fx-card" style="gap:10px;padding:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span aria-hidden="true" style="width:36px;height:36px;border-radius:8px;background:var(--bg-wash);border:1px solid var(--border-secondary);display:flex;align-items:center;justify-content:center"><span style="width:20px;height:20px;background:url('{{ hr.iconSrc }}') center / contain no-repeat"></span></span><sc-if value="{{ hr.soon }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 10px;border-radius:8px;background:{{ helpSoonBg }};color:{{ helpSoonInk }};font-size:12px;font-weight:600;white-space:nowrap">Coming soon</span></sc-if></div>
+        <div style="display:grid;gap:2px"><div style="font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ hr.title }}</div><div style="font-size:13px;line-height:18px;color:var(--text-body)">{{ hr.desc }}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ hr.tagRows }}" as="tg" hint-placeholder-count="2"><span style="padding:2px 8px;border-radius:8px;background:var(--bg-neutral);color:var(--text-body);font-size:12px;line-height:18px">{{ tg.t }}</span></sc-for></div>
+        <sc-if value="{{ hr.live }}" hint-placeholder-val="{{ true }}"><button onClick="{{ hr.go }}" style="margin-top:auto;height:34px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:13px;font-weight:600;cursor:pointer" style-hover="border-color:var(--border-active)">{{ hr.cta }} ›</button></sc-if>
+        <sc-if value="{{ hr.soon }}" hint-placeholder-val="{{ false }}"><span style="margin-top:auto;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-secondary);border-radius:9999px;color:var(--text-disabled);font-size:13px;font-weight:600">{{ hr.cta }}</span></sc-if>
+      </div></sc-for>
+    </div>
+  </div>
+  <div id="sec-help-glossary" style="display:grid;gap:12px">
+    <div style="font-size:11px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--text-light)">Glossary</div>
+    <sc-if value="{{ hasHelpTerms }}" hint-placeholder-val="{{ true }}"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:1px;background:var(--border-secondary);border:1px solid var(--border-secondary);border-radius:12px;overflow:hidden"><sc-for list="{{ helpTerms }}" as="gt" hint-placeholder-count="8"><div style="display:grid;gap:2px;padding:12px 16px;background:var(--bg-base)"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ gt.term }}</span><span style="font-size:13px;line-height:18px;color:var(--text-body)">{{ gt.def }}</span></div></sc-for></div></sc-if>
+    <sc-if value="{{ hasHelpQ }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearHelpQ }}" style="justify-self:start;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer">Clear the search</button></sc-if>
+  </div>
+</section>
+</sc-if>
 <sc-if value="{{ sS7 }}" hint-placeholder-val="{{ false }}">
 <section data-screen-label="S7 Browse the marketplace" style="animation:fadeIn .3s;display:grid;gap:32px;grid-template-columns:minmax(0,1fr)">
   <div>
