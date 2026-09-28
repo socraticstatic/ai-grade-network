@@ -12,11 +12,12 @@ import { mkC } from './harness.mjs';
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
-const panel = () => { const a = HTML.indexOf('<sc-if value="{{ subIsInsights }}"'); return HTML.slice(a, HTML.indexOf('<sc-if value="{{ subIsLogs }}"', a)); };
+// Insights became an Observe page on 2026-09-28 ("it needs to be a page").
+const panel = () => { const a = HTML.indexOf('<sc-if value="{{ obIsInsights }}"'); return HTML.slice(a, HTML.indexOf('<sc-if value="{{ obIsPerf }}"', a)); };
 const CARDS = ['Top talkers', 'New destinations', 'Shadow SaaS', 'Egress growth', 'Cloud-to-cloud paths', 'Latency over SLO'];
-const observe = (patch = {}) => mkC({ view: 'mature', screen: 's3', tab: 'observe', estateParam: null, sub: { page: 'observe', panel: 'insights' }, ...patch });
+const observe = (patch = {}) => mkC({ view: 'mature', screen: 's3', tab: 'observe', estateParam: null, obPage: 'insights', ...patch });
 
-test('the Insights panel carries the six cards, behind their own gate', () => {
+test('the Insights page carries the six cards, behind their own gate', () => {
   const p = panel();
   assert.match(p, /<sc-if value="\{\{ hasIw \}\}"/);
   for (const name of CARDS) assert.ok(p.includes(`aria-label="${name}"`), `${name} is missing from the panel`);
@@ -24,7 +25,7 @@ test('the Insights panel carries the six cards, behind their own gate', () => {
 
 test('every card has rows to show on a customer with traffic', () => {
   const v = vals(observe());
-  assert.equal(v.subIsInsights, true);
+  assert.equal(v.obIsInsights, true);
   assert.equal(v.hasIw, true);
   for (const k of ['talkers', 'newDest', 'shadow', 'slo']) assert.ok(v.iw[k].length > 0, k);
   assert.ok(v.iw.multi.rows.length > 0);
@@ -48,20 +49,21 @@ test('standing findings show even in a window with no events', () => {
   assert.doesNotMatch(p, /<sc-if value="\{\{ hasAnomalies \}\}"/, 'the findings card hides whenever the window is quiet');
 });
 
-test('Observe on the rail offers Insights, and it opens the panel', () => {
+test('Observe on the rail offers Insights, and it opens the page', () => {
   const c = mkC({ view: 'mature', screen: 's3', tab: 'observe', estateParam: null });
   const g = vals(c).railGroups.find(x => x.title === 'Observe');
   const link = g.items.find(i => i.label === 'Insights');
   assert.ok(link, `Observe offers ${g.items.map(i => i.label).join(', ')}`);
   link.go();
-  assert.equal(vals(c).subIsInsights, true);
+  assert.equal(vals(c).obIsInsights, true);
+  assert.equal(c.state.sub, null, 'a page, not a drawer');
 });
 
 // The Sep 8 buttons set obTab, which nothing has rendered since the Observe
 // rebuild: three dead doors. Each now lands somewhere, and leaving closes the drawer.
 test('every card button leads somewhere, and leaving closes the drawer', () => {
   const fire = (k) => { const c = observe(); vals(c).iw[k](); return { st: c.state, v: vals(c) }; };
-  assert.equal(fire('talkersGo').v.subIsLogs, true);
+  assert.equal(fire('talkersGo').st.obPage, 'logs');
   for (const [k, mode] of [['multiGo', 'state'], ['sloGo', 'slo']]) {
     const { st } = fire(k);
     assert.equal(st.sub, null, k); assert.equal(st.mapMode, mode, k); assert.equal(st.scrollToSec, 'sec-flow', k);
@@ -74,6 +76,23 @@ test('every card button leads somewhere, and leaving closes the drawer', () => {
   assert.equal(st.sub, null); assert.equal(st.tab, 'govern');
 });
 
-test('Records opens in the drawer under the rail\'s name', () => {
-  assert.equal(vals(observe({ sub: { page: 'observe', panel: 'logs' } })).subTitle, 'Records');
+test('Logs is a page of its own, named as the rail names it', () => {
+  const v = vals(observe({ obPage: 'logs' }));
+  assert.equal(v.obIsLogsPage, true);
+  assert.equal(v.obIsPerf, false);
+});
+
+// "It needs to be visualization drill to findings" (Micah, 2026-09-28).
+test('each card drills to the findings behind it, and the focus clears', () => {
+  const c = observe();
+  const v = vals(c);
+  assert.ok(v.insDrill.growth.n > 0);
+  v.insDrill.growth.go();
+  const f = vals(c);
+  assert.equal(f.hasInsFocus, true);
+  assert.equal(f.insFocusLabel, 'Egress growth');
+  assert.ok(f.insightRows.length === v.insDrill.growth.n && f.insightRows.every(r => /growth|egress/.test(r.key)), f.insightRows.map(r => r.key).join(','));
+  f.clearInsFocus();
+  assert.equal(vals(c).hasInsFocus, false);
+  for (const k of ['talkers', 'newdest', 'shadow', 'growth', 'multi', 'slo']) assert.match(HTML, new RegExp(`insDrill\\.${k}\\.go`));
 });

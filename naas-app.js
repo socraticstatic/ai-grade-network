@@ -42,10 +42,8 @@ export const SUB_PANELS = {
   // Insights | Policies | Tags (2026-09-28). Records opens here from the rail
   // and the "All records" doors, but holds no tab.
   observe: [
-    { key: 'insights', label: 'Insights', sec: 'sec-insights' },
     { key: 'policies', label: 'Policies', sec: 'sec-obs-policies' },
     { key: 'tags', label: 'Tags', sec: 'sec-obs-tags' },
-    { key: 'logs', label: 'Records', sec: 'sec-logs', tab: false },
   ],
   govern: [
     { key: 'templates', label: 'Templates', sec: 'sec-starting' },
@@ -100,8 +98,8 @@ export const SECTIONS = {
     // (2026-09-28): the six cards and the findings open in the layer, and with
     // no rail link they were reachable only through Records' tab strip.
     ['sec-flow', 'Traffic', 'hub'],
-    ['insights', 'Insights', 'question-circle'],
-    ['logs', 'Records', 'checklist'],
+    ['@insights', 'Insights', 'question-circle'],
+    ['@logs', 'Logs', 'checklist'],
   ],
   govern: [
     ['sec-policies', 'Violations', 'check-shield'],
@@ -954,7 +952,7 @@ export function vals(c) {
 function explainNav(c, ex) {
   return () => {
     c.setState({
-      screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', logTab: 'flow',
+      screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null, obTab: 'flow', logTab: 'flow',
       explain: ex, logQ: '', logPath: 'all', logAct: 'all',
       scrollToSec: 'sec-logs', scrollNonce: (c.state.scrollNonce || 0) + 1,
       drill: [], cloudDrill: [], cloudPick: null, fabDrill: [],
@@ -1171,13 +1169,13 @@ function iwVals(iw, s, set, go, winLabel) {
   if (!iw) return null;
   // Every door that leaves the drawer closes it; the drawer sits over every page.
   const govern = (name) => () => { set({ authoring: { match: 'destination ' + name, scope: 'any cloud', req: ['Inspection in path'] } }); go('s3', { layer: 'cloud', tab: 'govern', sub: null })(); };
-  const toMap = (mapMode) => () => { go('s3', { layer: 'cloud', tab: 'observe', sub: null })(); set({ mapMode, scrollToSec: 'sec-flow', scrollNonce: (s.scrollNonce || 0) + 1 }); };
+  const toMap = (mapMode) => () => { go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', sub: null })(); set({ mapMode, scrollToSec: 'sec-flow', scrollNonce: (s.scrollNonce || 0) + 1 }); };
   const andiFlow = (f) => () => set({ andiScope: { kind: 'flow', id: f.id, label: f.name }, andiOpen: true });
   const steer = (f) => () => set({ steered: [...(s.steered || []), f.id], events: [...(s.events || []), { key: 'e' + Date.now(), t: new Date().toLocaleTimeString('en-US', { hour12: false }), text: `Steered ${f.name} onto the AT&T network` }] });
   const flowRow = (f) => ({ ...f, go: f.steerable ? steer(f) : andiFlow(f), doorLabel: f.steerable ? 'Steer →' : 'Ask Andi →', doorColor: f.steerable ? 'var(--warning)' : 'var(--link)' });
   return {
     ...iw, winLabel,
-    talkers: iw.talkers.map(t => ({ ...t, go: () => set({ andiScope: { kind: 'region', id: t.region, label: t.label }, andiOpen: true }), doorLabel: 'Ask Andi →', enter: () => set({ hoverNode: 'reg' + t.region }), leave: () => set({ hoverNode: null }) })), talkersGo: () => set({ sub: { page: 'observe', panel: 'logs' } }),
+    talkers: iw.talkers.map(t => ({ ...t, go: () => set({ andiScope: { kind: 'region', id: t.region, label: t.label }, andiOpen: true }), doorLabel: 'Ask Andi →', enter: () => set({ hoverNode: 'reg' + t.region }), leave: () => set({ hoverNode: null }) })), talkersGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null }),
     newDest: iw.newDest.map(d => ({ ...d, go: govern(d.name), doorLabel: 'Set policy →' })), hasNewDest: iw.newDest.length > 0, newDestGo: go('s3', { layer: 'cloud', tab: 'govern', sub: null }),
     shadow: iw.shadow.map(d => ({ ...d, go: govern(d.name), doorLabel: d.covered ? 'Policy →' : 'Set policy →' })), shadowGo: go('s3', { layer: 'cloud', tab: 'govern', sub: null }),
     growthGo: go('s3', { layer: 'cloud', tab: 'cost', sub: null }),
@@ -1457,7 +1455,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   };
   const explainParts = explain && explain.parts ? explain.parts.map((x, i) => ({
     key: 'ep' + i, label: x.label, value: x.value, share: x.share, w: x.w,
-    go: () => set({ logQ: x.q || '', scrollToSec: 'sec-logs', scrollNonce: (s.scrollNonce || 0) + 1 }),
+    go: () => set({ logQ: x.q || '', obPage: 'logs', sub: null, scrollToSec: 'sec-logs', scrollNonce: (s.scrollNonce || 0) + 1 }),
   })) : [];
   const explainVals = {
     explainOn: !!explain, explainOff: !explain,
@@ -1651,7 +1649,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       explain: { label: b.label, value: b.v.toFixed(1) + ' Gbps', sub: `${Math.round(b.v / mixTotal * 100)}% of everything the estate carried in this window.`,
         cut: b.local ? 'Flow records that start and end inside one region.' : 'The flow records behind this figure.',
         parts: partsFor(b), ...(EXPLAIN_CUT[b.key] || {}) },
-      scrollToSec: 'sec-logs', scrollNonce: (s.scrollNonce || 0) + 1,
+      obPage: 'logs', sub: null, scrollToSec: 'sec-logs', scrollNonce: (s.scrollNonce || 0) + 1,
     }),
     gbps: b.v.toFixed(1), share: Math.round(b.v / mixTotal * 100) + '%',
     w: Math.max(3, b.v / mixTotal * 100).toFixed(2) + '%',
@@ -1866,14 +1864,24 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // The persona switch reaches here too: the cards for whoever is looking
   // come first. Sort is stable, so within a persona the original order holds.
   const personaSort = (rows) => rows.slice().sort((a, b) => ((b.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0) - ((a.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0));
-  const insightRowsShown = personaSort(insightTab === 'events' ? anomalyRows : insightTab === 'standing' ? insightRows : insightAll)
+  // The visualisations drill to their findings (2026-09-28): each card narrows
+  // the list below to the findings behind it.
+  const CARD_FINDS = { talkers: ['Top talkers', k => k === 'talkers' || k === 'idle'], newdest: ['New destinations', k => k === 'newdest' || k === 'an-dest'],
+    shadow: ['Shadow SaaS', k => k === 'shadow' || k === 'an-dest'], growth: ['Egress growth', k => k === 'growth' || k === 'an-egress'],
+    multi: ['Cloud-to-cloud paths', k => k === 'multi'], slo: ['Latency over SLO', k => /^an-/.test(k) && k !== 'an-dest' && k !== 'an-egress'] };
+  const insFocus = CARD_FINDS[s.insFocus] ? s.insFocus : null;
+  const insDrill = Object.fromEntries(Object.entries(CARD_FINDS).map(([k, [label, hit]]) => { const n0 = insightAll.filter(r => hit(r.key)).length, on = insFocus === k;
+    return [k, { n: n0, label: n0 ? `${n0} ${n0 === 1 ? 'finding' : 'findings'} ›` : 'No findings', on, border: on ? 'var(--border-active)' : 'var(--border-secondary)',
+      go: () => set({ insFocus: on ? null : k, insightTab: 'all', scrollToSec: on ? null : 'sec-insights', scrollNonce: (s.scrollNonce || 0) + 1 }) }]; }));
+  const insightRowsShown = personaSort((insightTab === 'events' ? anomalyRows : insightTab === 'standing' ? insightRows : insightAll).filter(r => !insFocus || CARD_FINDS[insFocus][1](r.key)))
     .map(r => ({ ...r, pFor: 'For ' + ({ 'Cloud & Platform Architect': 'Architect', 'Network Engineering': 'Network Eng', 'Security & Compliance': 'Security', 'FinOps & SRE': 'FinOps & SRE', 'Executive': 'Executive' }[r.persona] || r.persona), pInk: r.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect') ? 'var(--link)' : 'var(--text-disabled)' }));
   const insightVals = {
-    insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, insightFilters,
+    insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, insightFilters, insDrill,
+    hasInsFocus: !!insFocus, insFocusLabel: insFocus ? CARD_FINDS[insFocus][0] : '', clearInsFocus: () => set({ insFocus: null }),
     // Standing findings are true in a quiet window too; the card shows while either kind exists.
     hasFindings: insightAll.length > 0,
     insightCount: `${insightAll.length} open`,
-    insightSub: `${anomalyRows.length} ${anomalyRows.length === 1 ? 'event' : 'events'} in the window · ${insightRows.length} standing findings. Each one names the evidence and the next move.`,
+    insightSub: `${anomalyRows.length} ${anomalyRows.length === 1 ? 'event' : 'events'} · ${insightRows.length} standing`,
   };
   // Dev (2026-09-11): "drill down from it for different personas". The header
   // already knows who is looking; this hands each persona their entry point
@@ -1965,7 +1973,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           ? { sub: null, sourceEdit: null, srcCred: null }
           : { addedSources: [...(s.addedSources || []), prov ? `${tile} account` : 'AT&T inventory'], sub: null, sourceEdit: null, srcCred: null, screen: 's1', discoverView: 'sources' }),
       };
-    })(), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage === 'perf', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
+    })(), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage !== 'insights' && obPage !== 'logs', obIsInsights: obPage === 'insights', obIsLogsPage: obPage === 'logs', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
   // The Observe drawer's Policies and Tags (2026-09-28). The same policies
   // Govern lists and the same tags the inventory carries, read against each
   // other: what each policy caught, and which tags no policy covers yet.
@@ -2317,12 +2325,12 @@ function shellVals(s, set, go, est, c, sched) {
           const isView = id.startsWith('@');
           const isPanel = !isView && !id.startsWith('sec-');
           const view = isView ? id.slice(1) : '';
-          const cur = isView ? (view === 'estate' ? s.screen === 's1' && s.discoverView !== 'sources' : view === 'sources' ? s.screen === 's1' && s.discoverView === 'sources' : ['s4', 's5', 's6'].includes(s.screen))
+          const cur = isView ? (view === 'insights' || view === 'logs' ? onS3('cloud', 'observe') && s.obPage === view : view === 'estate' ? s.screen === 's1' && s.discoverView !== 'sources' : view === 'sources' ? s.screen === 's1' && s.discoverView === 'sources' : ['s4', 's5', 's6'].includes(s.screen))
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
             : (onS3('cloud', tab) && activeSec === id);
-          const goTo = isView ? (view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
+          const goTo = isView ? (view === 'insights' || view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
-            : () => { go('s3', { layer: 'cloud', tab })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
+            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
           return { ...item(label, ic, goTo, cur, false, sub, isPanel || isView), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };

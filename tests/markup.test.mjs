@@ -154,14 +154,19 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Estate's Act on it strip became two rows of insight widgets (2026-09-28), a
 // head with the window, two grids and their cards, rows and moves:
 // div 954 -> 967, span 726 -> 734, sc-for 193 -> 197, button 264 -> 265.
+// Observe Insights left the drawer for a page and its findings shed their
+// why, did and do lines (2026-09-28): div 967 -> 965. Logs followed it to a
+// page of its own, in a page wrapper: div 965 -> 966. Each insight card drills
+// to its findings (a link per card, a focus chip on Findings): sc-if 336 -> 337,
+// button 265 -> 272.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 967],
+    ['div', /<div\b/g, /<\/div>/g, 966],
     ['span', /<span\b/g, /<\/span>/g, 734],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 336],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 337],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 197],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 265],
+    ['button', /<button\b/g, /<\/button>/g, 272],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];

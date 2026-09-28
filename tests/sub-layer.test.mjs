@@ -115,14 +115,16 @@ test('AT&T inventory rows are live and never say scanning', () => {
 
 test('Observe and Cost declare their drill-downs as panels', () => {
   // Policies and Tags joined Observe's drawer on 2026-09-28; Records stays a panel without a tab.
-  assert.deepEqual(SUB_PANELS.observe.map(p => p.key), ['insights', 'policies', 'tags', 'logs']);
+  assert.deepEqual(SUB_PANELS.observe.map(p => p.key), ['policies', 'tags']); // Insights and Logs left for pages (2026-09-28)
   assert.deepEqual(SUB_PANELS.cost.map(p => p.key), ['forecast', 'charges']);
 });
 
-test('the Records and Forecast links open the layer instead of scrolling', () => {
+test('Logs opens its page and Forecast opens the layer, neither scrolls', () => {
   const c = mkC({ screen: 's3', tab: 'observe' });
-  vals(c).railGroups.flatMap(g => g.items).find(r => r.label === 'Records').go();
-  assert.deepEqual(c.state.sub, { page: 'observe', panel: 'logs' });
+  // Logs is a page of its own (2026-09-28); Forecast still opens the layer.
+  vals(c).railGroups.flatMap(g => g.items).find(r => r.label === 'Logs').go();
+  assert.equal(c.state.obPage, 'logs');
+  assert.equal(c.state.sub, null);
   const k = mkC({ screen: 's3', tab: 'cost' });
   vals(k).railGroups.flatMap(g => g.items).find(r => r.label === 'Forecast').go();
   assert.deepEqual(k.state.sub, { page: 'cost', panel: 'forecast' });
@@ -134,7 +136,7 @@ test('each drill-down section lives inside the layer, not on its page', async ()
   const a = HTML.indexOf('<aside aria-label="Discovery"');
   const z = HTML.indexOf('</aside>', a);
   const layer = HTML.slice(a, z);
-  for (const id of ['sec-insights', 'sec-logs', 'sec-forecast', 'sec-charges']) {
+  for (const id of ['sec-forecast', 'sec-charges']) {
     assert.ok(layer.includes(`id="${id}"`), `${id} is still stacked on its page`);
   }
 });
@@ -150,7 +152,6 @@ test('each section in the layer sits under its own panel gate and no other', asy
   const z = L.findIndex((l, i) => i > a && l.includes('</aside>'));
   const want = {
     'sec-gap': 'subIsFound', 'sec-paths': 'subIsFound',
-    'sec-insights': 'subIsInsights', 'sec-logs': 'subIsLogs',
     'sec-obs-policies': 'subIsPolicies', 'sec-obs-tags': 'subIsTags',
     'sec-forecast': 'subIsForecast', 'sec-charges': 'subIsCharges',
   };

@@ -14,18 +14,8 @@ const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url)
 const at = (panel, patch = {}) => mkC({ view: 'mature', screen: 's3', tab: 'observe', estateParam: null, sub: { page: 'observe', panel }, ...patch });
 const gate = (name) => { const a = HTML.indexOf(`<sc-if value="{{ ${name} }}"`); assert.ok(a > 0, `${name} gate missing`); return HTML.slice(a, a + 12000); };
 
-test('the Observe drawer tabs read Insights, Policies, Tags', () => {
-  assert.deepEqual(vals(at('insights')).subTabs.map(t => t.label), ['Insights', 'Policies', 'Tags']);
-});
-
-test('Records still opens in the drawer from the rail, without a tab of its own', () => {
-  const c = mkC({ view: 'mature', screen: 's3', tab: 'observe', estateParam: null });
-  const link = vals(c).railGroups.find(g => g.title === 'Observe').items.find(i => i.label === 'Records');
-  link.go();
-  const v = vals(c);
-  assert.equal(v.subIsLogs, true);
-  assert.equal(v.subTitle, 'Records');
-  assert.ok(!v.subTabs.some(t => t.on), 'no tab claims to be open while Records is');
+test('the Observe drawer tabs read Policies, Tags; Insights is a page of its own', () => {
+  assert.deepEqual(vals(at('policies')).subTabs.map(t => t.label), ['Policies', 'Tags']);
 });
 
 test('Policies lists the estate\'s own policies, with what each matched and broke', () => {

@@ -75,7 +75,9 @@ test('exposed is a filter on the estate, not a destination', () => {
 
 test('records are named once', () => {
   const l = linksOf(at('mature'));
-  assert.equal(l.filter(x => /record|evidence/i.test(x)).length, 1, `records appear ${l.filter(x => /record|evidence/i.test(x)).length} times`);
+  // Micah, 2026-09-28: "not records! logs!" The flow records are called Logs, once.
+  assert.equal(l.filter(x => /record|evidence|^logs$/i.test(x)).length, 1, `logs appear ${l.filter(x => /record|evidence|^logs$/i.test(x)).length} times`);
+  assert.ok(l.includes('Logs'));
 });
 
 // ---- railFor is pure, so the rule is testable without a component ----

@@ -1191,6 +1191,146 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <!-- Observe -->
   <sc-if value="{{ tObserve }}" hint-placeholder-val="{{ false }}">
   <sc-if value="{{ netObserve }}" hint-placeholder-val="{{ true }}">
+  <!-- Observe · Insights is a page, not a drawer (2026-09-28): the six cards and the findings, full width. -->
+  <sc-if value="{{ obIsInsights }}" hint-placeholder-val="{{ false }}">
+  <div style="display:grid;gap:16px">
+<!-- The six insight cards, back from iteration 1 (2026-09-28): "we had a fantastic Insights section". Two up in the drawer. -->
+<sc-if value="{{ hasIw }}" hint-placeholder-val="{{ true }}">
+<div aria-label="Insight cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">
+    <div class="fx-card sm" aria-label="Top talkers" style="border-color:{{ insDrill.talkers.border }}">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Top talkers</h3><div class="fx-card-sub" title="{{ iw.talkers.0.label }} carries {{ iw.talkers.0.share }} of all traffic">{{ iw.talkers.0.label }} · {{ iw.talkers.0.share }} of traffic</div></div><button class="fx-btn" onClick="{{ iw.talkersGo }}">Logs</button></div>
+      <div class="fx-rows"><sc-for list="{{ iw.talkers }}" as="t" hint-placeholder-count="5"><div class="fx-row door" role="button" tabindex="0" onClick="{{ t.go }}" aria-label="{{ t.label }} {{ t.v }} · {{ t.doorLabel }}"><span class="lbl"><b title="{{ t.label }}">{{ t.label }}</b><small>{{ t.sub }}</small></span><span class="bar"><span style="width:{{ t.w }};background:{{ t.fill }}"></span></span><span class="val">{{ t.share }}<small>{{ t.v }}</small></span></div></sc-for></div>
+      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On the fabric</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
+    <button onClick="{{ insDrill.talkers.go }}" aria-pressed="{{ insDrill.talkers.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.talkers.label }}</button>
+        </div>
+    <div class="fx-card sm" aria-label="New destinations" style="border-color:{{ insDrill.newdest.border }}">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">New destinations · {{ iw.winLabel }}</h3><div class="fx-card-sub" title="{{ iw.newDestN }} destinations not seen before the window, by volume">{{ iw.newDestN }} new, by volume</div></div><button class="fx-btn" onClick="{{ iw.newDestGo }}">Policies</button></div>
+      <sc-if value="{{ iw.hasNewDest }}" hint-placeholder-val="{{ true }}"><div class="fx-rows"><sc-for list="{{ iw.newDest }}" as="d" hint-placeholder-count="4"><div class="fx-row door" role="button" tabindex="0" onClick="{{ d.go }}" aria-label="{{ d.name }} · {{ d.doorLabel }}"><span class="lbl"><b title="{{ d.name }}">{{ d.name }}</b><small>{{ d.sub }}</small></span><span class="bar"><span style="width:{{ d.w }};background:{{ d.fill }}"></span></span><span class="val">{{ d.v }}<span class="door-l" style="color:var(--link)">{{ d.doorLabel }}</span></span></div></sc-for></div></sc-if>
+      <sc-if value="{{ iw.hasNewDest }}" hint-placeholder-val="{{ true }}"><div class="fx-legend"><span><i style="background:var(--viz-5)"></i>AI endpoint</span><span><i style="background:var(--viz-4)"></i>SaaS</span><span><i style="background:var(--viz-2)"></i>Object storage</span></div></sc-if>
+    <button onClick="{{ insDrill.newdest.go }}" aria-pressed="{{ insDrill.newdest.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.newdest.label }}</button>
+        </div>
+    <div class="fx-card sm" aria-label="Shadow SaaS" style="border-color:{{ insDrill.shadow.border }}">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Shadow SaaS</h3><div class="fx-card-sub" title="{{ iw.shadowN }} domains move {{ iw.shadowGb }} GB a day with no policy">{{ iw.shadowN }} with no policy · {{ iw.shadowGb }} GB/day</div></div><button class="fx-btn" onClick="{{ iw.shadowGo }}">Policies</button></div>
+      <div class="fx-rows"><sc-for list="{{ iw.shadow }}" as="d" hint-placeholder-count="5"><div class="fx-row door" role="button" tabindex="0" onClick="{{ d.go }}" aria-label="{{ d.name }} · {{ d.doorLabel }}"><span class="lbl"><b title="{{ d.name }}">{{ d.name }}</b><small>{{ d.sub }}</small></span><span class="bar"><span style="width:{{ d.w }};background:{{ d.fill }}"></span></span><span class="val">{{ d.v }}<span class="door-l" style="color:var(--link)">{{ d.doorLabel }}</span></span></div></sc-for></div>
+      <div class="fx-legend"><span><i style="background:var(--viz-4)"></i>No policy</span><span><i style="background:var(--viz-1)"></i>Covered</span></div>
+    <button onClick="{{ insDrill.shadow.go }}" aria-pressed="{{ insDrill.shadow.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.shadow.label }}</button>
+        </div>
+    <div class="fx-card sm" aria-label="Egress growth" style="border-color:{{ insDrill.growth.border }}">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Egress growth · 12 weeks</h3><div class="fx-card-sub" title="Public {{ iw.growth.pubThen }} → {{ iw.growth.pubNow }} Gbps · fabric {{ iw.growth.fabPctF }}">Public {{ iw.growth.pubPctF }} · fabric {{ iw.growth.fabPctF }}</div></div><button class="fx-btn" onClick="{{ iw.growthGo }}">Cost</button></div>
+      <div class="fx-cols" role="img" aria-label="Weekly egress, fabric under public"><sc-for list="{{ iw.growth.weeks }}" as="w" hint-placeholder-count="12"><div title="{{ w.title }}"><span style="height:{{ w.pubH }};background:var(--viz-6)"></span><span style="height:{{ w.fabH }};background:var(--viz-1)"></span></div></sc-for></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;line-height:12px;color:var(--text-light)"><span>12 weeks ago</span><span>this week</span></div>
+      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On the fabric</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
+    <button onClick="{{ insDrill.growth.go }}" aria-pressed="{{ insDrill.growth.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.growth.label }}</button>
+        </div>
+    <div class="fx-card sm" aria-label="Cloud-to-cloud paths" style="border-color:{{ insDrill.multi.border }}">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Cloud-to-cloud paths</h3><div class="fx-card-sub">{{ iw.multi.privN }} of {{ iw.multi.totalN }} on the fabric</div></div><button class="fx-btn" onClick="{{ iw.multiGo }}">Flow map</button></div>
+      <div class="fx-rows"><sc-for list="{{ iw.multi.rows }}" as="m" hint-placeholder-count="3"><div class="fx-row door" role="button" tabindex="0" onClick="{{ m.go }}" aria-label="{{ m.name }} · {{ m.doorLabel }}"><span class="lbl"><b title="{{ m.name }}">{{ m.name }}</b><small>{{ m.sub }}</small></span><span class="bar"><span style="width:{{ m.w }};background:{{ m.fill }}"></span></span><span class="val">{{ m.v }}<span class="door-l" style="color:{{ m.doorColor }}">{{ m.doorLabel }}</span></span></div></sc-for></div>
+      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On the fabric</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
+    <button onClick="{{ insDrill.multi.go }}" aria-pressed="{{ insDrill.multi.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.multi.label }}</button>
+        </div>
+    <div class="fx-card sm" aria-label="Latency over SLO" style="border-color:{{ insDrill.slo.border }}">
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Latency over SLO</h3><div class="fx-card-sub">{{ iw.sloN }} of {{ iw.sloTotal }} flows over {{ iw.SLO }} ms</div></div><button class="fx-btn" onClick="{{ iw.sloGo }}">Latency</button></div>
+      <sc-if value="{{ iw.hasSlo }}" hint-placeholder-val="{{ true }}"><div class="fx-rows"><sc-for list="{{ iw.slo }}" as="f" hint-placeholder-count="3"><div class="fx-row door" role="button" tabindex="0" onClick="{{ f.go }}" aria-label="{{ f.name }} {{ f.v }} · {{ f.doorLabel }}"><span class="lbl"><b title="{{ f.name }}">{{ f.name }}</b><small>{{ f.sub }}</small></span><span class="bar"><span style="width:{{ f.w }};background:{{ f.fill }}"></span></span><span class="val">{{ f.v }}<span class="door-l" style="color:{{ f.doorColor }}">{{ f.doorLabel }}</span></span></div></sc-for></div></sc-if>
+      <div class="fx-legend"><span><i style="background:var(--error)"></i>{{ iw.sloLegend }}</span></div>
+    <button onClick="{{ insDrill.slo.go }}" aria-pressed="{{ insDrill.slo.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.slo.label }}</button>
+        </div>
+</div>
+</sc-if>
+<sc-if value="{{ hasFindings }}" hint-placeholder-val="{{ true }}">
+<div id="sec-insights" class="fx-card" style="gap:12px;padding:16px 24px">
+  <div class="fx-card-head" style="align-items:flex-start"><div style="min-width:0"><h3 class="fx-card-title">Findings</h3><div class="fx-card-sub">{{ insightSub }}</div></div><sc-if value="{{ hasInsFocus }}" hint-placeholder-val="{{ false }}"><button class="fx-chip" onClick="{{ clearInsFocus }}" aria-label="Show every finding" style="cursor:pointer;margin-left:auto;background:var(--bg-accent);color:var(--link);border-color:var(--border-active);font-weight:600">{{ insFocusLabel }} ×</button></sc-if><span style="flex:none;font-size:12px;color:var(--text-light);white-space:nowrap">{{ insightCount }}</span></div>
+  <div class="fx-chips" style="gap:6px"><sc-for list="{{ insightFilters }}" as="if" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ if.on }}" onClick="{{ if.go }}" style="cursor:pointer;background:{{ if.bg }};color:{{ if.color }};border-color:{{ if.border }}">{{ if.label }}</button></sc-for></div>
+  <sc-if value="{{ hasInsights }}" hint-placeholder-val="{{ true }}">
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:stretch">
+    <sc-for list="{{ insightRows }}" as="ins" hint-placeholder-count="6">
+      <div style="display:flex;flex-direction:column;gap:6px;height:100%;box-sizing:border-box;padding:14px 16px;border:1px solid var(--border-secondary);border-left:3px solid {{ ins.tone }};border-radius:12px;background:{{ ins.toneBg }};min-width:0">
+        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--text-disabled);white-space:nowrap">{{ ins.kind }}</span><span style="font-size:11px;color:var(--text-disabled);white-space:nowrap">{{ ins.when }}</span><span style="margin-left:auto;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:{{ ins.pInk }};white-space:nowrap">{{ ins.pFor }}</span></div>
+        <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ ins.head }}</div>
+        <button onClick="{{ ins.go }}" style="align-self:flex-start;margin-top:auto;padding-top:0;height:28px;padding:0 14px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">{{ ins.cta }}</button>
+      </div>
+    </sc-for>
+  </div>
+  </sc-if>
+</div>
+</sc-if>
+  </div>
+  </sc-if>
+  <!-- Observe · Logs is a page of its own (2026-09-28, "not records! logs! its own page"). -->
+  <sc-if value="{{ obIsLogsPage }}" hint-placeholder-val="{{ false }}">
+  <div style="display:grid;gap:16px">
+<div id="sec-logs" class="fx-card" style="gap:12px;padding:16px 24px">
+  <div class="fx-card-head" style="align-items:flex-start"><div style="min-width:0"><h3 class="fx-card-title">Logs</h3><sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}"><div class="fx-card-sub">{{ logCount }} · {{ logNote }}</div></sc-if><sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}"><div class="fx-card-sub">{{ actCount }} · {{ actNote }}</div></sc-if></div><sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ clearLogs }}" style="flex:none;height:28px;padding:0 12px;font-size:12px">Clear filters</button></sc-if></div><sc-if value="{{ explainOn }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:10px;padding:14px 16px;border:1px solid var(--border-secondary);border-left:3px solid var(--cta);border-radius:12px;background:var(--bg-wash)"><div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-width:0"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--link);white-space:nowrap">Explaining</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ explainLabel }}</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap">{{ explainValue }}</span><button onClick="{{ clearExplain }}" style="margin-left:auto;flex:none;height:26px;padding:0 12px;border:1px solid var(--border-primary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Show every record</button></div><div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty">{{ explainSub }} {{ explainCut }} <b style="font-weight:600;color:var(--text-body)">{{ explainCount }}</b></div><sc-if value="{{ hasExplainParts }}" hint-placeholder-val="{{ true }}"><div style="display:grid;gap:2px"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled);padding-bottom:2px">What makes it up</span><sc-for list="{{ explainParts }}" as="ep" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:minmax(110px,1fr) minmax(50px,150px) 48px 74px;gap:16px;align-items:center;height:26px;font-size:12px;line-height:16px;min-width:0"><span style="color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ep.label }}</span><span aria-hidden="true" style="display:block;height:8px;border-radius:9999px;background:var(--bg-neutral);overflow:hidden"><span style="display:block;height:8px;border-radius:9999px;width:{{ ep.w }};background:#3374cc"></span></span><span style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--text-heading)">{{ ep.share }}</span><span style="text-align:right;font-variant-numeric:tabular-nums;color:var(--text-light);white-space:nowrap">{{ ep.value }}</span></div></sc-for></div></sc-if></div></sc-if><div role="tablist" aria-label="Log kind" style="display:flex;gap:4px"><sc-for list="{{ logTabs }}" as="lt" hint-placeholder-count="2"><button role="tab" aria-selected="{{ lt.on }}" onClick="{{ lt.go }}" style="height:28px;padding:0 12px;border:0;border-radius:8px;background:{{ lt.bg }};color:{{ lt.color }};font:inherit;font-size:13px;line-height:20px;letter-spacing:-.4px;font-weight:400;cursor:pointer;white-space:nowrap">{{ lt.label }}</button></sc-for></div>
+  <sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}">
+  <button onClick="{{ toggleLogFilters }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 0;border:0;border-top:1px solid var(--border-secondary);background:transparent;font:inherit;text-align:left;cursor:pointer"><span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Filters</span><span style="font-size:12px;color:var(--text-light)">{{ logFilterCount }}</span><span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--link)">{{ logFilterToggleWord }}</span></button>
+  <sc-if value="{{ logFiltersOpen }}" hint-placeholder-val="{{ true }}">
+  <div style="display:grid;grid-template-columns:58px minmax(0,1fr);gap:8px 12px;align-items:center;padding:2px 0 10px;border-bottom:1px solid var(--border-secondary)">
+    <span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Find</span>
+    <label class="fx-search" style="width:100%"><span aria-hidden="true"></span><input value="{{ logQ }}" onChange="{{ setLogQ }}" placeholder="Resource name, address, protocol" aria-label="Search the records"></input></label>
+    <span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Pattern</span>
+    <div class="fx-chips" style="gap:6px"><sc-for list="{{ logChips }}" as="lc" hint-placeholder-count="6"><button class="fx-chip" aria-pressed="{{ lc.on }}" onClick="{{ lc.go }}" style="cursor:pointer;background:{{ lc.bg }};color:{{ lc.color }};border-color:{{ lc.border }}">{{ lc.label }}</button></sc-for></div>
+    <span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Path</span>
+    <div class="fx-chips" style="gap:6px"><sc-for list="{{ logPathChips }}" as="lp" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ lp.on }}" onClick="{{ lp.go }}" style="cursor:pointer;background:{{ lp.bg }};color:{{ lp.color }};border-color:{{ lp.border }}">{{ lp.label }}</button></sc-for><span style="width:10px"></span><sc-for list="{{ logActChips }}" as="la" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ la.on }}" onClick="{{ la.go }}" style="cursor:pointer;background:{{ la.bg }};color:{{ la.color }};border-color:{{ la.border }}">{{ la.label }}</button></sc-for></div>
+  </div></sc-if>
+  <sc-if value="{{ hasLogs }}" hint-placeholder-val="{{ true }}">
+  <div>
+    <div class="dt">
+      <div class="dt-h"><div class="dt-r">
+        <div class="dt-c dt-th" style="width:9%">Time</div>
+        <div class="dt-c dt-th" style="width:24%">Source</div>
+        <div class="dt-c dt-th" style="width:24%">Destination</div>
+        <div class="dt-c dt-th" style="width:12%">Proto</div>
+        <div class="dt-c dt-th num" style="width:10%">Bytes</div>
+        <div class="dt-c dt-th" style="width:10%">Path</div>
+        <div class="dt-c dt-th" style="width:11%">Action</div>
+      </div></div>
+      <div class="dt-b"><sc-for list="{{ flowRecords }}" as="lr" hint-placeholder-count="10">
+        <div class="dt-r">
+          <div data-th="Time" class="dt-c mono" style="vertical-align:top;color:var(--text-light);white-space:nowrap">{{ lr.time }}</div>
+          <div data-th="Source" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ lr.srcName }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ lr.srcSub }}</div></div>
+          <div data-th="Destination" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ lr.dstName }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ lr.dstSub }}</div></div>
+          <div data-th="Proto" class="dt-c mono" style="vertical-align:top;white-space:nowrap">{{ lr.proto }}</div>
+          <div data-th="Bytes" class="dt-c num" style="vertical-align:top;color:var(--text-heading);white-space:nowrap">{{ lr.bytes }}</div>
+          <div data-th="Path" class="dt-c" style="vertical-align:top"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:{{ lr.pathInk }};white-space:nowrap"><i style="width:6px;height:6px;border-radius:9999px;background:{{ lr.pathInk }}"></i>{{ lr.pathWord }}</span></div>
+          <div data-th="Action" class="dt-c" style="vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ lr.actBg }};color:{{ lr.actColor }};font-size:11px;font-weight:700;white-space:nowrap">{{ lr.action }}</span></div>
+        </div>
+      </sc-for></div>
+    </div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ noLogs }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px">Nothing matches these filters.</div></sc-if>
+  </sc-if>
+  <sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}">
+  <label class="fx-search" style="width:100%"><span aria-hidden="true"></span><input value="{{ actQ }}" onChange="{{ setActQ }}" placeholder="Person, action, region, policy" aria-label="Search user activity"></input></label>
+  <sc-if value="{{ hasAct }}" hint-placeholder-val="{{ true }}">
+  <div>
+    <div class="dt">
+      <div class="dt-h"><div class="dt-r">
+        <div class="dt-c dt-th" style="width:9%">When</div>
+        <div class="dt-c dt-th" style="width:15%">Who</div>
+        <div class="dt-c dt-th" style="width:21%">Change</div>
+        <div class="dt-c dt-th" style="width:28%">What it touched</div>
+        <div class="dt-c dt-th" style="width:16%">From</div>
+        <div class="dt-c dt-th" style="width:11%">Result</div>
+      </div></div>
+      <div class="dt-b"><sc-for list="{{ actRows }}" as="ua" hint-placeholder-count="10">
+        <div class="dt-r">
+          <div data-th="When" class="dt-c mono" style="vertical-align:top;color:var(--text-light);white-space:nowrap">{{ ua.when }}</div>
+          <div data-th="Who" class="dt-c" style="vertical-align:top;font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ ua.who }}</div>
+          <div data-th="Change" class="dt-c" style="vertical-align:top;overflow-wrap:anywhere">{{ ua.verb }}</div>
+          <div data-th="What it touched" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ ua.target }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ ua.detail }}</div></div>
+          <div data-th="From" class="dt-c mono" style="vertical-align:top;color:var(--text-light);overflow-wrap:anywhere">{{ ua.from }}</div>
+          <div data-th="Result" class="dt-c" style="vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ ua.resBg }};color:{{ ua.resInk }};font-size:11px;font-weight:700;white-space:nowrap">{{ ua.result }}</span></div>
+        </div>
+      </sc-for></div>
+    </div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ noAct }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px">No changes match that search.</div></sc-if>
+  </sc-if>
+</div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ obIsPerf }}" hint-placeholder-val="{{ true }}">
   <div style="display:grid;gap:16px">
     <!-- Observe dashboard (2026-09-09, 14:30): fits the fold at 1440×900. Tiles · map + gauges left · queue + panel right. -->
     <sc-if value="{{ hasKpis }}" hint-placeholder-val="{{ true }}">
@@ -1297,6 +1437,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     </div>
     <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px;border:1px dashed var(--border-secondary);border-radius:16px;color:var(--text-light);font-size:14px;line-height:20px">No telemetry yet. It starts with the first attach.</div></sc-if>
   </div>
+  </sc-if>
   </sc-if>
   </sc-if>
 
@@ -1480,64 +1621,6 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     </div>
     </sc-if>
     </sc-if>
-    <sc-if value="{{ subIsInsights }}" hint-placeholder-val="{{ false }}">
-<!-- The six insight cards, back from iteration 1 (2026-09-28): "we had a fantastic Insights section". Two up in the drawer. -->
-<sc-if value="{{ hasIw }}" hint-placeholder-val="{{ true }}">
-<div aria-label="Insight cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px">
-    <div class="fx-card sm" aria-label="Top talkers">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Top talkers</h3><div class="fx-card-sub" title="{{ iw.talkers.0.label }} carries {{ iw.talkers.0.share }} of all traffic">{{ iw.talkers.0.label }} · {{ iw.talkers.0.share }} of traffic</div></div><button class="fx-btn" onClick="{{ iw.talkersGo }}">Records</button></div>
-      <div class="fx-rows"><sc-for list="{{ iw.talkers }}" as="t" hint-placeholder-count="5"><div class="fx-row door" role="button" tabindex="0" onClick="{{ t.go }}" aria-label="{{ t.label }} {{ t.v }} · {{ t.doorLabel }}"><span class="lbl"><b title="{{ t.label }}">{{ t.label }}</b><small>{{ t.sub }}</small></span><span class="bar"><span style="width:{{ t.w }};background:{{ t.fill }}"></span></span><span class="val">{{ t.share }}<small>{{ t.v }}</small></span></div></sc-for></div>
-      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On the fabric</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
-    </div>
-    <div class="fx-card sm" aria-label="New destinations">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">New destinations · {{ iw.winLabel }}</h3><div class="fx-card-sub" title="{{ iw.newDestN }} destinations not seen before the window, by volume">{{ iw.newDestN }} new, by volume</div></div><button class="fx-btn" onClick="{{ iw.newDestGo }}">Policies</button></div>
-      <sc-if value="{{ iw.hasNewDest }}" hint-placeholder-val="{{ true }}"><div class="fx-rows"><sc-for list="{{ iw.newDest }}" as="d" hint-placeholder-count="4"><div class="fx-row door" role="button" tabindex="0" onClick="{{ d.go }}" aria-label="{{ d.name }} · {{ d.doorLabel }}"><span class="lbl"><b title="{{ d.name }}">{{ d.name }}</b><small>{{ d.sub }}</small></span><span class="bar"><span style="width:{{ d.w }};background:{{ d.fill }}"></span></span><span class="val">{{ d.v }}<span class="door-l" style="color:var(--link)">{{ d.doorLabel }}</span></span></div></sc-for></div></sc-if>
-      <sc-if value="{{ iw.hasNewDest }}" hint-placeholder-val="{{ true }}"><div class="fx-legend"><span><i style="background:var(--viz-5)"></i>AI endpoint</span><span><i style="background:var(--viz-4)"></i>SaaS</span><span><i style="background:var(--viz-2)"></i>Object storage</span></div></sc-if>
-    </div>
-    <div class="fx-card sm" aria-label="Shadow SaaS">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Shadow SaaS</h3><div class="fx-card-sub" title="{{ iw.shadowN }} domains move {{ iw.shadowGb }} GB a day with no policy">{{ iw.shadowN }} with no policy · {{ iw.shadowGb }} GB/day</div></div><button class="fx-btn" onClick="{{ iw.shadowGo }}">Policies</button></div>
-      <div class="fx-rows"><sc-for list="{{ iw.shadow }}" as="d" hint-placeholder-count="5"><div class="fx-row door" role="button" tabindex="0" onClick="{{ d.go }}" aria-label="{{ d.name }} · {{ d.doorLabel }}"><span class="lbl"><b title="{{ d.name }}">{{ d.name }}</b><small>{{ d.sub }}</small></span><span class="bar"><span style="width:{{ d.w }};background:{{ d.fill }}"></span></span><span class="val">{{ d.v }}<span class="door-l" style="color:var(--link)">{{ d.doorLabel }}</span></span></div></sc-for></div>
-      <div class="fx-legend"><span><i style="background:var(--viz-4)"></i>No policy</span><span><i style="background:var(--viz-1)"></i>Covered</span></div>
-    </div>
-    <div class="fx-card sm" aria-label="Egress growth">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Egress growth · 12 weeks</h3><div class="fx-card-sub" title="Public {{ iw.growth.pubThen }} → {{ iw.growth.pubNow }} Gbps · fabric {{ iw.growth.fabPctF }}">Public {{ iw.growth.pubPctF }} · fabric {{ iw.growth.fabPctF }}</div></div><button class="fx-btn" onClick="{{ iw.growthGo }}">Cost</button></div>
-      <div class="fx-cols" role="img" aria-label="Weekly egress, fabric under public"><sc-for list="{{ iw.growth.weeks }}" as="w" hint-placeholder-count="12"><div title="{{ w.title }}"><span style="height:{{ w.pubH }};background:var(--viz-6)"></span><span style="height:{{ w.fabH }};background:var(--viz-1)"></span></div></sc-for></div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;line-height:12px;color:var(--text-light)"><span>12 weeks ago</span><span>this week</span></div>
-      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On the fabric</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
-    </div>
-    <div class="fx-card sm" aria-label="Cloud-to-cloud paths">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Cloud-to-cloud paths</h3><div class="fx-card-sub">{{ iw.multi.privN }} of {{ iw.multi.totalN }} on the fabric</div></div><button class="fx-btn" onClick="{{ iw.multiGo }}">Flow map</button></div>
-      <div class="fx-rows"><sc-for list="{{ iw.multi.rows }}" as="m" hint-placeholder-count="3"><div class="fx-row door" role="button" tabindex="0" onClick="{{ m.go }}" aria-label="{{ m.name }} · {{ m.doorLabel }}"><span class="lbl"><b title="{{ m.name }}">{{ m.name }}</b><small>{{ m.sub }}</small></span><span class="bar"><span style="width:{{ m.w }};background:{{ m.fill }}"></span></span><span class="val">{{ m.v }}<span class="door-l" style="color:{{ m.doorColor }}">{{ m.doorLabel }}</span></span></div></sc-for></div>
-      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On the fabric</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
-    </div>
-    <div class="fx-card sm" aria-label="Latency over SLO">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Latency over SLO</h3><div class="fx-card-sub">{{ iw.sloN }} of {{ iw.sloTotal }} flows over {{ iw.SLO }} ms</div></div><button class="fx-btn" onClick="{{ iw.sloGo }}">Latency</button></div>
-      <sc-if value="{{ iw.hasSlo }}" hint-placeholder-val="{{ true }}"><div class="fx-rows"><sc-for list="{{ iw.slo }}" as="f" hint-placeholder-count="3"><div class="fx-row door" role="button" tabindex="0" onClick="{{ f.go }}" aria-label="{{ f.name }} {{ f.v }} · {{ f.doorLabel }}"><span class="lbl"><b title="{{ f.name }}">{{ f.name }}</b><small>{{ f.sub }}</small></span><span class="bar"><span style="width:{{ f.w }};background:{{ f.fill }}"></span></span><span class="val">{{ f.v }}<span class="door-l" style="color:{{ f.doorColor }}">{{ f.doorLabel }}</span></span></div></sc-for></div></sc-if>
-      <div class="fx-legend"><span><i style="background:var(--error)"></i>{{ iw.sloLegend }}</span></div>
-    </div>
-</div>
-</sc-if>
-<sc-if value="{{ hasFindings }}" hint-placeholder-val="{{ true }}">
-<div id="sec-insights" class="fx-card" style="gap:12px;padding:16px 24px;margin-top:16px">
-  <div class="fx-card-head" style="align-items:flex-start"><div style="min-width:0"><h3 class="fx-card-title">Findings</h3><div class="fx-card-sub">{{ insightSub }}</div></div><span style="flex:none;font-size:12px;color:var(--text-light);white-space:nowrap">{{ insightCount }}</span></div>
-  <div class="fx-chips" style="gap:6px"><sc-for list="{{ insightFilters }}" as="if" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ if.on }}" onClick="{{ if.go }}" style="cursor:pointer;background:{{ if.bg }};color:{{ if.color }};border-color:{{ if.border }}">{{ if.label }}</button></sc-for></div>
-  <sc-if value="{{ hasInsights }}" hint-placeholder-val="{{ true }}">
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:stretch">
-    <sc-for list="{{ insightRows }}" as="ins" hint-placeholder-count="6">
-      <div style="display:flex;flex-direction:column;gap:6px;height:100%;box-sizing:border-box;padding:14px 16px;border:1px solid var(--border-secondary);border-left:3px solid {{ ins.tone }};border-radius:12px;background:{{ ins.toneBg }};min-width:0">
-        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--text-disabled);white-space:nowrap">{{ ins.kind }}</span><span style="font-size:11px;color:var(--text-disabled);white-space:nowrap">{{ ins.when }}</span><span style="margin-left:auto;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:{{ ins.pInk }};white-space:nowrap">{{ ins.pFor }}</span></div>
-        <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ ins.head }}</div>
-        <div style="font-size:12px;line-height:17px;color:var(--text-body);text-wrap:pretty">{{ ins.why }}</div>
-        <sc-if value="{{ ins.hasDid }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty"><b style="font-weight:700">AT&amp;T did</b> · {{ ins.did }}</div></sc-if>
-        <div style="font-size:12px;line-height:17px;color:var(--text-body);text-wrap:pretty"><b style="font-weight:700;color:var(--success)">Do</b> · {{ ins.act }}</div>
-        <button onClick="{{ ins.go }}" style="align-self:flex-start;margin-top:auto;padding-top:0;height:28px;padding:0 14px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">{{ ins.cta }}</button>
-      </div>
-    </sc-for>
-  </div>
-  </sc-if>
-</div>
-</sc-if>
-    </sc-if>
     <sc-if value="{{ subIsPolicies }}" hint-placeholder-val="{{ false }}">
 <!-- Observe drawer, Policies (2026-09-28): the estate's policies and what each one caught. -->
 <div id="sec-obs-policies" class="fx-card" style="gap:4px;padding:16px 24px">
@@ -1569,78 +1652,6 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </div></sc-for>
   </sc-if>
   <sc-if value="{{ hasDrawerTagsNot }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 0;font-size:13px;color:var(--text-body)">No tags yet. They arrive with the first discovery run.</div></sc-if>
-</div>
-    </sc-if>
-    <sc-if value="{{ subIsLogs }}" hint-placeholder-val="{{ false }}">
-<div id="sec-logs" class="fx-card" style="gap:12px;padding:16px 24px;margin-top:16px">
-  <div class="fx-card-head" style="align-items:flex-start"><div style="min-width:0"><h3 class="fx-card-title">Logs</h3><sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}"><div class="fx-card-sub">{{ logCount }} · {{ logNote }}</div></sc-if><sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}"><div class="fx-card-sub">{{ actCount }} · {{ actNote }}</div></sc-if></div><sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ clearLogs }}" style="flex:none;height:28px;padding:0 12px;font-size:12px">Clear filters</button></sc-if></div><sc-if value="{{ explainOn }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:10px;padding:14px 16px;border:1px solid var(--border-secondary);border-left:3px solid var(--cta);border-radius:12px;background:var(--bg-wash)"><div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-width:0"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--link);white-space:nowrap">Explaining</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ explainLabel }}</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap">{{ explainValue }}</span><button onClick="{{ clearExplain }}" style="margin-left:auto;flex:none;height:26px;padding:0 12px;border:1px solid var(--border-primary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Show every record</button></div><div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty">{{ explainSub }} {{ explainCut }} <b style="font-weight:600;color:var(--text-body)">{{ explainCount }}</b></div><sc-if value="{{ hasExplainParts }}" hint-placeholder-val="{{ true }}"><div style="display:grid;gap:2px"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled);padding-bottom:2px">What makes it up</span><sc-for list="{{ explainParts }}" as="ep" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:minmax(110px,1fr) minmax(50px,150px) 48px 74px;gap:16px;align-items:center;height:26px;font-size:12px;line-height:16px;min-width:0"><span style="color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ep.label }}</span><span aria-hidden="true" style="display:block;height:8px;border-radius:9999px;background:var(--bg-neutral);overflow:hidden"><span style="display:block;height:8px;border-radius:9999px;width:{{ ep.w }};background:#3374cc"></span></span><span style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--text-heading)">{{ ep.share }}</span><span style="text-align:right;font-variant-numeric:tabular-nums;color:var(--text-light);white-space:nowrap">{{ ep.value }}</span></div></sc-for></div></sc-if></div></sc-if><div role="tablist" aria-label="Log kind" style="display:flex;gap:4px"><sc-for list="{{ logTabs }}" as="lt" hint-placeholder-count="2"><button role="tab" aria-selected="{{ lt.on }}" onClick="{{ lt.go }}" style="height:28px;padding:0 12px;border:0;border-radius:8px;background:{{ lt.bg }};color:{{ lt.color }};font:inherit;font-size:13px;line-height:20px;letter-spacing:-.4px;font-weight:400;cursor:pointer;white-space:nowrap">{{ lt.label }}</button></sc-for></div>
-  <sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}">
-  <button onClick="{{ toggleLogFilters }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 0;border:0;border-top:1px solid var(--border-secondary);background:transparent;font:inherit;text-align:left;cursor:pointer"><span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Filters</span><span style="font-size:12px;color:var(--text-light)">{{ logFilterCount }}</span><span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--link)">{{ logFilterToggleWord }}</span></button>
-  <sc-if value="{{ logFiltersOpen }}" hint-placeholder-val="{{ true }}">
-  <div style="display:grid;grid-template-columns:58px minmax(0,1fr);gap:8px 12px;align-items:center;padding:2px 0 10px;border-bottom:1px solid var(--border-secondary)">
-    <span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Find</span>
-    <label class="fx-search" style="width:100%"><span aria-hidden="true"></span><input value="{{ logQ }}" onChange="{{ setLogQ }}" placeholder="Resource name, address, protocol" aria-label="Search the records"></input></label>
-    <span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Pattern</span>
-    <div class="fx-chips" style="gap:6px"><sc-for list="{{ logChips }}" as="lc" hint-placeholder-count="6"><button class="fx-chip" aria-pressed="{{ lc.on }}" onClick="{{ lc.go }}" style="cursor:pointer;background:{{ lc.bg }};color:{{ lc.color }};border-color:{{ lc.border }}">{{ lc.label }}</button></sc-for></div>
-    <span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Path</span>
-    <div class="fx-chips" style="gap:6px"><sc-for list="{{ logPathChips }}" as="lp" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ lp.on }}" onClick="{{ lp.go }}" style="cursor:pointer;background:{{ lp.bg }};color:{{ lp.color }};border-color:{{ lp.border }}">{{ lp.label }}</button></sc-for><span style="width:10px"></span><sc-for list="{{ logActChips }}" as="la" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ la.on }}" onClick="{{ la.go }}" style="cursor:pointer;background:{{ la.bg }};color:{{ la.color }};border-color:{{ la.border }}">{{ la.label }}</button></sc-for></div>
-  </div></sc-if>
-  <sc-if value="{{ hasLogs }}" hint-placeholder-val="{{ true }}">
-  <div>
-    <div class="dt">
-      <div class="dt-h"><div class="dt-r">
-        <div class="dt-c dt-th" style="width:9%">Time</div>
-        <div class="dt-c dt-th" style="width:24%">Source</div>
-        <div class="dt-c dt-th" style="width:24%">Destination</div>
-        <div class="dt-c dt-th" style="width:12%">Proto</div>
-        <div class="dt-c dt-th num" style="width:10%">Bytes</div>
-        <div class="dt-c dt-th" style="width:10%">Path</div>
-        <div class="dt-c dt-th" style="width:11%">Action</div>
-      </div></div>
-      <div class="dt-b"><sc-for list="{{ flowRecords }}" as="lr" hint-placeholder-count="10">
-        <div class="dt-r">
-          <div data-th="Time" class="dt-c mono" style="vertical-align:top;color:var(--text-light);white-space:nowrap">{{ lr.time }}</div>
-          <div data-th="Source" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ lr.srcName }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ lr.srcSub }}</div></div>
-          <div data-th="Destination" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ lr.dstName }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ lr.dstSub }}</div></div>
-          <div data-th="Proto" class="dt-c mono" style="vertical-align:top;white-space:nowrap">{{ lr.proto }}</div>
-          <div data-th="Bytes" class="dt-c num" style="vertical-align:top;color:var(--text-heading);white-space:nowrap">{{ lr.bytes }}</div>
-          <div data-th="Path" class="dt-c" style="vertical-align:top"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:{{ lr.pathInk }};white-space:nowrap"><i style="width:6px;height:6px;border-radius:9999px;background:{{ lr.pathInk }}"></i>{{ lr.pathWord }}</span></div>
-          <div data-th="Action" class="dt-c" style="vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ lr.actBg }};color:{{ lr.actColor }};font-size:11px;font-weight:700;white-space:nowrap">{{ lr.action }}</span></div>
-        </div>
-      </sc-for></div>
-    </div>
-  </div>
-  </sc-if>
-  <sc-if value="{{ noLogs }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px">Nothing matches these filters.</div></sc-if>
-  </sc-if>
-  <sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}">
-  <label class="fx-search" style="width:100%"><span aria-hidden="true"></span><input value="{{ actQ }}" onChange="{{ setActQ }}" placeholder="Person, action, region, policy" aria-label="Search user activity"></input></label>
-  <sc-if value="{{ hasAct }}" hint-placeholder-val="{{ true }}">
-  <div>
-    <div class="dt">
-      <div class="dt-h"><div class="dt-r">
-        <div class="dt-c dt-th" style="width:9%">When</div>
-        <div class="dt-c dt-th" style="width:15%">Who</div>
-        <div class="dt-c dt-th" style="width:21%">Change</div>
-        <div class="dt-c dt-th" style="width:28%">What it touched</div>
-        <div class="dt-c dt-th" style="width:16%">From</div>
-        <div class="dt-c dt-th" style="width:11%">Result</div>
-      </div></div>
-      <div class="dt-b"><sc-for list="{{ actRows }}" as="ua" hint-placeholder-count="10">
-        <div class="dt-r">
-          <div data-th="When" class="dt-c mono" style="vertical-align:top;color:var(--text-light);white-space:nowrap">{{ ua.when }}</div>
-          <div data-th="Who" class="dt-c" style="vertical-align:top;font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ ua.who }}</div>
-          <div data-th="Change" class="dt-c" style="vertical-align:top;overflow-wrap:anywhere">{{ ua.verb }}</div>
-          <div data-th="What it touched" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ ua.target }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ ua.detail }}</div></div>
-          <div data-th="From" class="dt-c mono" style="vertical-align:top;color:var(--text-light);overflow-wrap:anywhere">{{ ua.from }}</div>
-          <div data-th="Result" class="dt-c" style="vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ ua.resBg }};color:{{ ua.resInk }};font-size:11px;font-weight:700;white-space:nowrap">{{ ua.result }}</span></div>
-        </div>
-      </sc-for></div>
-    </div>
-  </div>
-  </sc-if>
-  <sc-if value="{{ noAct }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px">No changes match that search.</div></sc-if>
-  </sc-if>
 </div>
     </sc-if>
     <sc-if value="{{ subIsForecast }}" hint-placeholder-val="{{ false }}">
