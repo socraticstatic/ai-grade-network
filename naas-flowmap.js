@@ -10,6 +10,7 @@
 // Observe dashboard (Micah: "deep-drillable, with cutting edge UX").
 import * as S from './naas-sites.js';
 import * as P from './naas-paths.js';
+import { regionOf as siteRegion, regionRows } from './naas-logic.js';
 
 const PER_SITE = { 'Data center': 6, Campus: 2.5, Plant: 1.5, Office: 0.8, Branch: 0.04, Edge: 0.005, Field: 0.3 };
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -39,23 +40,18 @@ function shareFab(rows, fabTotal) {
 function invRegion(inv, name) { return inv.flatMap(c => c.regions).find(r => r.region === name); }
 function stateOfRegion(est, name) { const r = regionOf(est, name); if (!r) return 'ok'; if (r.link === 'degraded') return 'degraded'; if (!r.priv && (r.pub || 0) > SLO) return 'slo'; if (r.rel === 'warn') return 'slo'; return 'ok'; }
 
-/** Root nodes on the left: site classes, workload groups by tag, cloud-to-cloud regions. */
+/** A site that reaches the cloud over IPsec on someone else's internet. */
+const isTunnel = (x) => !x.priv && (!!x.tunnel || S.servicesOf(x).some(v => v.key === 'tpa'));
+/** Root nodes on the left: site regions, the grouping every other view uses (Micah, 2026-09-28). */
 export function leftRoots(est, flows) {
   const sg = {};
-  (est.sites || []).forEach(s => { const cls = S.accessOf(s); const c = S.ACCESS_CLASS[cls]; const count = S.countOf(s.name); const v = (PER_SITE[S.classOf(s)] || 0.5) * count; const g = sg[cls] = sg[cls] || { kind: 'site', key: 'site:' + cls, cls, unit: c.unit, plural: c.plural, count: 0, v: 0, fabV: 0 }; g.count += count; g.v += v; g.fabV += s.priv ? v : v * 0.1; });
-  const sites = Object.values(sg).map(g => ({ ...g, name: `${n(g.count)} ${g.count === 1 ? g.unit : g.plural}`, group: 'sites', hasChildren: true, state: 'ok' })).sort((a, b) => b.v - a.v);
-  const tg = {}; flows.filter(f => f.kind === 'App').forEach(f => { const g = tg[f.from] = tg[f.from] || { kind: 'tag', key: 'tag:' + f.from, name: f.from, v: 0, fabV: 0, regions: new Set() }; g.v += f.gbps; if (f.controlled) g.fabV += f.gbps; g.regions.add(f.region); });
-  const tags = Object.values(tg).map(g => ({ ...g, group: 'tags', hasChildren: true, state: [...g.regions].map(r => stateOfRegion(est, r.split(' ')[1] || r)).find(x => x !== 'ok') || 'ok' })).sort((a, b) => b.v - a.v);
-  const rg = {}; flows.filter(f => f.kind !== 'App').forEach(f => { const g = rg[f.from] = rg[f.from] || { kind: 'c2c', key: 'c2c:' + f.from, name: f.from, v: 0, fabV: 0 }; g.v += f.gbps; if (f.controlled) g.fabV += f.gbps; });
-  const c2c = Object.values(rg).map(g => ({ ...g, group: 'c2c', hasChildren: false, state: stateOfRegion(est, g.name.split(' ')[1] || g.name) })).sort((a, b) => b.v - a.v);
-  // Dev (2026-09-11), after Ramesh and Avshalom said the same thing in
-  // three different ways: the left column is network sites, full stop. The
-  // on-ramp row was a compromise to keep the bands balanced, and it was
-  // still a cloud thing standing on the network side. The map now tells the
-  // site-to-cloud story alone; cloud egress lives in the readout, the
-  // patterns and the records, which are computed from the flows directly.
-  void tags; void c2c;
-  return sites;
+  (est.sites || []).forEach(s => { const r = siteRegion(s); const count = S.countOf(s.name); const v = (PER_SITE[S.classOf(s)] || 0.5) * count;
+    const g = sg[r] = sg[r] || { kind: 'site', key: 'site:' + r, cls: 'region:' + r, region: r, count: 0, v: 0, fabV: 0, ipsecV: 0 };
+    g.count += count; g.v += v; g.fabV += s.priv ? v : v * 0.1; if (isTunnel(s)) g.ipsecV += v * 0.9; });
+  const order = regionRows(est).map(r => r.name);
+  void flows;
+  return Object.values(sg).map(g => ({ ...g, name: `${g.region} · ${n(g.count)} ${g.count === 1 ? 'site' : 'sites'}`, group: 'sites', hasChildren: true, state: 'ok' }))
+    .sort((a, b) => order.indexOf(a.region) - order.indexOf(b.region));
 }
 
 /**
@@ -94,28 +90,34 @@ export function onrampChildren(est, flows) {
   return [...tags, ...c2c];
 }
 
-/** Root nodes on the right: every cloud, then the egress classes (Ramesh: all clouds on the right). */
-export function rightRoots(est, flows) {
-  const dm = {}; flows.forEach(f => { const d = dm[f.to] = dm[f.to] || { kind: 'dest', key: 'dest:' + f.to, name: f.to, v: 0, fabV: 0 }; d.v += f.gbps; if (f.controlled) d.fabV += f.gbps; });
-  const left = leftRoots(est, flows); const sitesV = left.filter(x => x.kind === 'site').reduce((a, x) => a + x.v, 0), sitesFab = left.filter(x => x.kind === 'site').reduce((a, x) => a + x.fabV, 0);
-  // Site traffic lands on the cloud it actually reaches, split by where the
-  // workloads are; each cloud opens into its regions. The share that rides
-  // outside the fabric lands where it really goes - the public internet.
-  void dm;
-  // Only a region with a private path can take traffic off the fabric, so a
-  // cloud is sized from its private regions alone. Splitting by every region
-  // put fabric volume on clouds we have no on-ramp into, and the drill then
-  // printed "public path" on a ribbon coloured as fabric.
-  const onFab = est.regionsList.filter(r => r.priv);
-  const fabSrc = onFab.length ? onFab : est.regionsList;
-  const byCloud = {};
-  fabSrc.forEach(r => { const c = byCloud[r.cloud] = byCloud[r.cloud] || { cloud: r.cloud, wl: 0 }; c.wl += r.wl || 0; });
-  const wlTot = Object.values(byCloud).reduce((a, c) => a + c.wl, 0) || 1;
-  const clouds = Object.values(byCloud).map(c => ({ kind: 'cloud', key: 'cloud:' + c.cloud, name: c.cloud, cloud: c.cloud,
-    v: sitesFab * c.wl / wlTot, fabV: sitesFab * c.wl / wlTot, hasChildren: true, state: 'ok' })).filter(c => c.v > 0.001).sort((a, b) => b.v - a.v);
+export const RAMP_NAME = { NetBond: 'NetBond', ER: 'ExpressRoute', DX: 'Direct Connect', Interconnect: 'Interconnect', EQX: 'Equinix Fabric' };
+const rampOf = (r) => RAMP_NAME[r.ramp] || 'NetBond';
+/** Your own data centers take a share of what the other sites send, over the private WAN. */
+export const DC_SHARE = 0.15;
+const dcSites = (est) => (est.sites || []).filter(x => S.classOf(x) === 'Data center');
+/** How the site traffic splits, once, so the left, the middle and the right all agree. */
+export function flowSplit(est, flows) {
+  const left = leftRoots(est, flows);
+  const sitesV = left.reduce((a, x) => a + x.v, 0), sitesFab = left.reduce((a, x) => a + x.fabV, 0), ipsec = left.reduce((a, x) => a + x.ipsecV, 0);
+  const dc = dcSites(est).length ? DC_SHARE : 0;
   const pubV = Math.max(0, sitesV - sitesFab);
-  const inet = pubV > 0.001 ? [{ kind: 'dest', key: 'dest:public internet', name: 'Public internet', v: pubV, fabV: 0, hasChildren: est.regionsList.some(r => !r.priv), state: 'slo' }] : [];
-  return [...clouds, ...inet];
+  return { sitesV, sitesFab, ipsec, inet: Math.max(0, pubV - ipsec), pubV, dc, cloudFab: sitesFab * (1 - dc), dcV: sitesFab * dc };
+}
+/** Root nodes on the right: only destinations - clouds, neoclouds, your data centers (Micah, 2026-09-28). */
+export function rightRoots(est, flows) {
+  const sp = flowSplit(est, flows);
+  const priv = est.regionsList.filter(r => r.priv), pub = est.regionsList.filter(r => !r.priv);
+  const privWl = priv.reduce((a, r) => a + (r.wl || 0), 0) || 1, pubWl = pub.reduce((a, r) => a + (r.wl || 0), 0) || 1;
+  const byCloud = {};
+  const at = (c) => (byCloud[c] = byCloud[c] || { cloud: c, byRamp: {}, fabV: 0, pubV: 0 });
+  priv.forEach(r => { const c = at(r.cloud); const v = sp.cloudFab * (r.wl || 0) / privWl; c.byRamp[rampOf(r)] = (c.byRamp[rampOf(r)] || 0) + v; c.fabV += v; });
+  // What leaves AT&T lands on the regions it can reach: the public ones.
+  (pub.length ? pub : priv).forEach(r => { const c = at(r.cloud); c.pubV += sp.pubV * (r.wl || 0) / (pub.length ? pubWl : privWl); });
+  const clouds = Object.values(byCloud).map(c => ({ kind: 'cloud', key: 'cloud:' + c.cloud, name: c.cloud, cloud: c.cloud, v: c.fabV + c.pubV, fabV: c.fabV, pubV: c.pubV, byRamp: c.byRamp,
+    hasChildren: true, state: c.pubV > c.fabV ? 'slo' : 'ok' })).filter(c => c.v > 0.001).sort((a, b) => b.v - a.v);
+  const dcs = dcSites(est);
+  const dc = sp.dcV > 0.001 ? [{ kind: 'dc', key: 'dc:yours', name: `Your data centers · ${dcs.length}`, v: sp.dcV, fabV: sp.dcV, pubV: 0, byRamp: {}, wan: sp.dcV, hasChildren: dcs.length > 1, state: 'ok' }] : [];
+  return [...clouds, ...dc];
 }
 
 /** Children of a node, one level down. Every level is honest about what the data can name. */
@@ -125,7 +127,7 @@ export function childrenOf(node, est, inv, flows) {
     // Children of a first-mile group are the sites on it, by metro where a
     // metro holds more than one. siteTree groups by building class, which is
     // exactly the thing the network cannot see, so this descends on its own.
-    const mine = (est.sites || []).filter(x => S.accessOf(x) === node.cls);
+    const mine = (est.sites || []).filter(x => (node.region ? siteRegion(x) === node.region : S.accessOf(x) === node.cls));
     if (!mine.length) return [];
     // A row that stands for many sites ("Remote sites (212)") carries no real
     // metro; siteTree already splits those into the metros they are in, so
@@ -156,7 +158,7 @@ export function childrenOf(node, est, inv, flows) {
       if (g.count > count) g.only = null;
     });
     return Object.values(byMetro).map(g => g.only && g.count === 1
-      ? { kind: 'sitename', key: `${node.key}/${g.only.name}`, cls: node.cls, siteCls: g.cls, siteName: g.only.name, name: g.only.name, sub: g.only.access, v: g.v, fabV: g.fabV, hasChildren: true, state: g.only.priv ? 'ok' : 'slo', parentKey: node.key }
+      ? { kind: 'sitename', key: `${node.key}/${g.only.name}`, cls: node.cls, siteCls: g.cls, siteName: g.only.name, name: g.only.name, sub: S.servicesOf(g.only).map(v => v.label).join(' + '), v: g.v, fabV: g.fabV, ipsecV: isTunnel(g.only) ? g.v * 0.9 : 0, hasChildren: true, state: g.only.priv ? 'ok' : 'slo', parentKey: node.key }
       : { kind: 'metro', key: `${node.key}/${g.metro}`, cls: node.cls, siteCls: g.cls, metro: g.metro, count: g.count, name: `${g.metro} · ${n(g.count)}`, v: g.v, fabV: g.fabV, hasChildren: true, state: g.onFabric < g.count / 2 ? 'slo' : 'ok', parentKey: node.key }
     ).sort((a, b) => b.v - a.v);
   }
@@ -169,7 +171,7 @@ export function childrenOf(node, est, inv, flows) {
     const per = node.count ? node.v / node.count : (PER_SITE[bcls] || 0.5);
     const rows = m.sites.map(x => ({ kind: 'sitename', key: `${node.key}/${x.id}`, cls: node.cls, siteCls: bcls, siteName: x.id, name: x.id, sub: x.address, v: per, priv: !!x.priv, hasChildren: true, state: x.priv ? 'ok' : 'slo', parentKey: node.key }));
     const more = Math.max(0, node.count - rows.length);
-    if (more) rows.push({ kind: 'more', key: `${node.key}/more`, name: `+${n(more)} more`, v: per * more, priv: m.onFabric >= m.count, hasChildren: false, state: 'ok', parentKey: node.key });
+    if (more) rows.push({ kind: 'more', key: `${node.key}/more`, siteCls: bcls, metro: node.metro, name: `+${n(more)} more`, v: per * more, priv: m.onFabric >= m.count, hasChildren: false, state: 'ok', parentKey: node.key });
     return shareFab(rows, node.fabV);
   }
   if (node.kind === 'sitename') {
@@ -212,12 +214,15 @@ export function childrenOf(node, est, inv, flows) {
   if (node.kind === 'onramp') return onrampChildren(est, flows);
   if (node.kind === 'cloud') {
     const mine = est.regionsList.filter(r => r.cloud === node.cloud);
-    const rs = mine.some(r => r.priv) ? mine.filter(r => r.priv) : mine;
-    const tot = rs.reduce((a, r) => a + (r.wl || 0), 0) || 1;
-    return rs.map(r => ({ kind: 'endpoint', key: `${node.key}/${r.region}`, name: `${r.cloud} ${r.region}`,
-      sub: `${n(r.wl)} workloads · ${r.priv ? 'on the fabric' : 'public path'}`,
-      v: node.v * (r.wl || 0) / tot, fabV: node.fabV * (r.wl || 0) / tot,
-      hasChildren: false, state: stateOfRegion(est, r.region), parentKey: node.key })).sort((a, b) => b.v - a.v);
+    const pr = mine.filter(r => r.priv), pu = mine.filter(r => !r.priv);
+    const pw = pr.reduce((a, r) => a + (r.wl || 0), 0) || 1, uw = pu.reduce((a, r) => a + (r.wl || 0), 0) || 1;
+    return [...pr.map(r => { const v = node.fabV * (r.wl || 0) / pw; return { kind: 'endpoint', key: `${node.key}/${r.region}`, name: `${r.cloud} ${r.region}`, sub: `${rampOf(r)} · ${r.fab} ms`, v, fabV: v, pubV: 0, byRamp: { [rampOf(r)]: v }, hasChildren: false, state: stateOfRegion(est, r.region), parentKey: node.key, region: r.region }; }),
+      ...(pu.length ? pu : []).map(r => { const v = node.pubV * (r.wl || 0) / uw; return { kind: 'endpoint', key: `${node.key}/${r.region}`, name: `${r.cloud} ${r.region}`, sub: `internet · ${r.pub} ms`, v, fabV: 0, pubV: v, byRamp: {}, hasChildren: false, state: stateOfRegion(est, r.region), parentKey: node.key, region: r.region }; }),
+    ].filter(x => x.v > 0.0005).sort((a, b) => b.v - a.v);
+  }
+  if (node.kind === 'dc') {
+    const dcs = dcSites(est);
+    return dcs.map(x => ({ kind: 'endpoint', key: `${node.key}/${x.name}`, name: x.name, sub: S.servicesOf(x).map(v => v.label).join(' + '), v: node.v / dcs.length, fabV: node.v / dcs.length, pubV: 0, byRamp: {}, wan: node.v / dcs.length, hasChildren: false, state: 'ok', parentKey: node.key }));
   }
   if (node.key === 'dest:public internet') {
     // The band that misses the fabric used to dead-end. It lands somewhere,
@@ -255,7 +260,7 @@ function expand(list, open, est, inv, flows, depth = 0) {
     fold = ranked.slice(CAP);
   }
   const out = keep.flatMap(nd => { const node = { ...nd, depth, group: nd.group || rootGroup(nd) }; if (open.has(node.key) && node.hasChildren) { const kids = childrenOf(node, est, inv, flows).map(k => ({ ...k, group: node.group })); return kids.length ? expand(kids, open, est, inv, flows, depth + 1) : [node]; } return [node]; });
-  if (fold.length) { const first = openHere[0] || keep[0] || fold[0]; const kindWord = { metro: 'metros', sitename: 'sites', site: 'first miles', tag: 'workload tags', c2c: 'cloud pairs', tagregion: 'regions', vpc: 'VPCs', subnet: 'subnets', workload: 'workloads', endpoint: 'endpoints', dest: 'destinations' }[fold[0].kind] || ''; out.push({ kind: 'rollup', key: `${(fold[0].parentKey || (first && first.key ? first.key.split('/')[0] : 'lvl' + depth))}/rollup`, name: kindWord ? `+${fold.length} other ${kindWord}` : `+${fold.length} others`, sub: 'click to fold back', v: fold.reduce((a, x) => a + x.v, 0), fabV: fold.reduce((a, x) => a + x.fabV, 0), hasChildren: false, state: 'ok', depth, group: fold[0].group || rootGroup(fold[0]), parentKey: fold[0].parentKey, foldsKey: first && first.key ? first.key : null, tailOnly: !openHere.length , tagV: fold.reduce((a, x) => a + (x.kind === 'c2c' ? 0 : (x.tagV != null ? x.tagV : x.v)), 0)}); }
+  if (fold.length) { const first = openHere[0] || keep[0] || fold[0]; const kindWord = { metro: 'metros', sitename: 'sites', site: 'first miles', tag: 'workload tags', c2c: 'cloud pairs', tagregion: 'regions', vpc: 'VPCs', subnet: 'subnets', workload: 'workloads', endpoint: 'endpoints', dest: 'destinations' }[fold[0].kind] || ''; out.push({ kind: 'rollup', key: `${(fold[0].parentKey || (first && first.key ? first.key.split('/')[0] : 'lvl' + depth))}/rollup`, name: kindWord ? `+${fold.length} other ${kindWord}` : `+${fold.length} others`, sub: 'click to fold back', v: fold.reduce((a, x) => a + x.v, 0), fabV: fold.reduce((a, x) => a + x.fabV, 0), hasChildren: false, state: 'ok', depth, group: fold[0].group || rootGroup(fold[0]), parentKey: fold[0].parentKey, ipsecV: fold.reduce((a, x) => a + (x.ipsecV || 0), 0), pubV: fold.reduce((a, x) => a + (x.pubV || 0), 0), wan: fold.reduce((a, x) => a + (x.wan || 0), 0), byRamp: fold.reduce((m, x) => { Object.entries(x.byRamp || {}).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; }); return m; }, {}), foldsKey: first && first.key ? first.key : null, tailOnly: !openHere.length , tagV: fold.reduce((a, x) => a + (x.kind === 'c2c' ? 0 : (x.tagV != null ? x.tagV : x.v)), 0)}); }
   return out;
 }
 
@@ -279,10 +284,11 @@ export function buildMap(est, inv, flows0, opts = {}) {
     L0 = L0.map(x => x.kind === 'site' ? { ...x, v: x.v * share, fabV: x.fabV * share } : x);
     const sitesVs = L0.filter(x => x.kind === 'site').reduce((a, x) => a + x.v, 0);
     const sitesFabs = L0.filter(x => x.kind === 'site').reduce((a, x) => a + x.fabV, 0);
-    R0 = R0.filter(x => x.kind !== 'cloud' || matchWl[x.cloud])
-      .map(x => x.kind === 'cloud'
-        ? { ...x, v: sitesFabs * matchWl[x.cloud] / totMatch, fabV: sitesFabs * matchWl[x.cloud] / totMatch }
-        : x.key === 'dest:public internet' ? { ...x, v: Math.max(0, sitesVs - sitesFabs), fabV: 0 } : x);
+    const fab0 = R0.filter(x => x.kind === 'cloud').reduce((a, x) => a + x.fabV, 0) || 1, pub0 = R0.filter(x => x.kind === 'cloud').reduce((a, x) => a + x.pubV, 0) || 1;
+    L0 = L0.map(x => ({ ...x, ipsecV: (x.ipsecV || 0) * share }));
+    R0 = R0.filter(x => x.kind === 'cloud' && matchWl[x.cloud]).map(x => { const k = matchWl[x.cloud] / totMatch, f = sitesFabs * k, u = Math.max(0, sitesVs - sitesFabs) * k;
+      const rs = x.fabV ? f / x.fabV : 0; return { ...x, fabV: f, pubV: u, v: f + u, byRamp: Object.fromEntries(Object.entries(x.byRamp || {}).map(([r, v]) => [r, v * rs])) }; });
+    void fab0; void pub0;
   }
   const L = expand(L0, open, est, inv, flows), R = expand(R0, open, est, inv, flows);
   const scale = (nd) => opts.t == null ? nd : { ...nd, v: nd.v * shapeAt(nd.key, opts.t), fabV: nd.fabV * shapeAt(nd.key, opts.t) };
@@ -323,41 +329,56 @@ export function buildMap(est, inv, flows0, opts = {}) {
   const heads = []; const SS = []; let y = top + 20;
   // One column head for the left band, then a quieter head per group inside
   // it. Emitting three equal heads made the left band read as three columns.
-  heads.push({ x: 0, y: top - 4, anchor: 'start', kind: 'col', text: 'First mile · network sites' });
+  heads.push({ x: 0, y: top - 4, anchor: 'start', kind: 'col', text: 'Sites' });
   groups.forEach(g => { if (g.head) heads.push({ x: 0, y: y - 4, anchor: 'start', kind: 'group', text: g.head }); const mine = leftRows.filter(r => g.nodes.some(n0 => n0.key === r.key)); const placed = layout(mine, 0, y + headH - 6); SS.push(...placed); if (placed.length) y = placed[placed.length - 1].y + placed[placed.length - 1].h + gap; });
   const leftH = SS.length ? y - gap + 8 : top;
   heads.push({ x: W, y: top - 4, anchor: 'end', kind: 'col', text: 'Destinations' });
-  heads.push({ x: W / 2, y: top - 4, anchor: 'middle', kind: 'col', text: 'Mid mile' });
+  heads.push({ x: W / 2, y: top - 4, anchor: 'middle', kind: 'col', text: 'Path' });
   const DD = layout(heightsFor(Rs, rowsBudget(Rs.length, 1)), W - colW, top + headH - 6);
   const rightH = DD.length ? DD[DD.length - 1].y + DD[DD.length - 1].h + 8 : top;
   const H = Math.max(leftH, rightH, H0);
-  const midPct = (v) => T - localV > 0.001 ? ` · ${Math.round(v / (T - localV) * 100)}%` : '';
-  const mids = [{ kind: 'mid', key: 'mid:fabric', name: 'AT&T network', sub: midPct(fabV).replace(' · ', '') + ' of what sites send', v: fabV, fabV, priv: true, state: 'ok', hasChildren: false }, { kind: 'mid', key: 'mid:public', name: 'Outside the fabric', sub: midPct(T - fabV - localV).replace(' · ', '') + ' of what sites send', fabV: 0, v: T - fabV - localV, priv: false, state: 'ok', hasChildren: false }].filter(m => m.v > 0.001);
-  // The band carries only what crosses a mid mile, so it is scaled against
-  // that, not against the estate total. Scaling against T left the two nodes
-  // short and hanging in the middle of the column once region-local traffic
-  // stopped passing through them.
+  // The middle is the path the traffic actually takes (2026-09-28): each AT&T
+  // on-ramp, the private WAN to your own data centers, and outside AT&T the
+  // IPsec tunnels and the plain internet. Every mid adds up on both sides.
+  const rampT = {}; Rs.forEach(d => Object.entries(d.byRamp || {}).forEach(([r, v]) => { rampT[r] = (rampT[r] || 0) + v; }));
+  const rampSum = Object.values(rampT).reduce((a, v) => a + v, 0) || 1;
+  const wanT = Rs.reduce((a, d) => a + (d.wan || 0), 0);
+  const pubT = Rs.reduce((a, d) => a + (d.pubV || 0), 0);
+  const ipsecT = Ls.reduce((a, x) => a + (x.ipsecV || 0), 0), inetT = Math.max(0, T - fabV - ipsecT);
+  const cloudFabT = Math.max(0, fabV - wanT);
+  const mids = [
+    ...Object.entries(rampT).sort((a2, b2) => b2[1] - a2[1]).map(([r, v]) => ({ kind: 'mid', key: 'mid:' + r, name: r, ramp: r, v: cloudFabT * v / rampSum, fabV: cloudFabT * v / rampSum, priv: true, state: 'ok', hasChildren: false })),
+    ...(wanT > 0.001 ? [{ kind: 'mid', key: 'mid:wan', name: 'Private WAN', v: wanT, fabV: wanT, priv: true, wan: true, state: 'ok', hasChildren: false }] : []),
+    ...(ipsecT > 0.0005 ? [{ kind: 'mid', key: 'mid:ipsec', name: 'IPsec over internet', v: ipsecT, fabV: 0, priv: false, ipsec: true, state: 'slo', hasChildren: false }] : []),
+    ...(inetT > 0.0005 ? [{ kind: 'mid', key: 'mid:internet', name: 'Internet', v: inetT, fabV: 0, priv: false, state: 'slo', hasChildren: false }] : []),
+  ].filter(m => m.v > 0.0005);
   const crossedV = Math.max(0.0001, T - localV);
   const midBudget = rowsBudget(mids.length, 0) - 40;
   const MMh = mids.map(m => ({ ...m, tot: m.v, h: Math.max(minH, m.v / crossedV * midBudget) }));
   const midH = MMh.reduce((a, m) => a + m.h, 0) + pad * (MMh.length - 1);
   const MM = layout(MMh, W / 2 - colW / 2, Math.max(top, (H - midH) / 2));
   const ribbons = [];
-  const patternOf = (a, b) => { const g = a.group || rootGroup(a); if (b.key === 'dest:local') return 'region'; if (g === 'sites' || b.kind === 'cloud' || b.key === 'dest:regions') return 'inbound'; if (g === 'c2c' || /inter-cloud/.test(b.name || '')) return 'clouds'; if (/object storage/.test(b.name || '')) return 'regions'; if (/AI endpoints|public internet/.test(b.name || '')) return 'internet'; return a.side === 'l' || a.kind !== 'mid' ? 'mixed' : 'mixed'; };
-  const link = (a, b, v, priv, kindOverride) => { if (v <= 0.0005) return; const sa = a.h / (a.tot || a.v || 1), sb = b.h / (b.tot || b.v || 1); const ay = a.y + a.used * sa, by = b.y + b.used * sb, ah = v * sa, bh = v * sb; a.used += v; b.used += v; const mx = (a.x2 + b.x) / 2; ribbons.push({ d: `M${a.x2},${ay} C${mx},${ay} ${mx},${by} ${b.x},${by} L${b.x},${by + bh} C${mx},${by + bh} ${mx},${ay + ah} ${a.x2},${ay + ah} Z`, priv, local: !!kindOverride, v, from: a.key, to: b.key, state: kindOverride ? 'ok' : priv ? 'ok' : (a.state !== 'ok' ? a.state : b.state), delta: deltaOf(a.key + '>' + b.key), pattern: kindOverride || patternOf(a, b) }); };
-  const fab = MM.find(m => m.priv), pub = MM.find(m => !m.priv);
-  const localDest = DD.find(d => d.key === 'dest:local');
-  // Region-local traffic crosses no mid mile and, since the map became the
-  // site-to-cloud story (Dev, 2026-09-11), is not drawn here at all — the
-  // readout's "Cloud to cloud, inside one region" row carries that class.
-  // locV is zeroed above, so the localDest link below never fires; it stays
-  // as the seam if a future map wants the under-band line back.
-  SS.forEach(s => { if (fab) link(s, fab, s.fabV, true); if (pub) link(s, pub, s.v - s.fabV, false); if (localDest && s.locV) link(s, localDest, s.locV, false, 'region'); });
-  DD.forEach(d => { if (d.key === 'dest:local') return; if (fab) link(fab, d, d.fabV, true); if (pub) link(pub, d, d.v - d.fabV, false); });
+  const patternOf = (a, b) => { const g = a.group || rootGroup(a); if (b.key === 'dest:local') return 'region'; if (g === 'sites' || b.kind === 'cloud' || b.key === 'dest:regions') return 'inbound'; if (g === 'c2c' || /inter-cloud/.test(b.name || '')) return 'clouds'; if (/object storage/.test(b.name || '')) return 'regions'; if (/AI endpoints|public internet/.test(b.name || '')) return 'internet'; return 'mixed'; };
+  const link = (a, b, v, priv, kindOverride) => { if (v <= 0.0005) return; const sa = a.h / (a.tot || a.v || 1), sb = b.h / (b.tot || b.v || 1); const ay = a.y + a.used * sa, by = b.y + b.used * sb, ah = v * sa, bh = v * sb; a.used += v; b.used += v; const mx = (a.x2 + b.x) / 2; ribbons.push({ d: `M${a.x2},${ay} C${mx},${ay} ${mx},${by} ${b.x},${by} L${b.x},${by + bh} C${mx},${by + bh} ${mx},${ay + ah} ${a.x2},${ay + ah} Z`, priv, local: !!kindOverride, v, from: a.key, to: b.key, via: b.kind === 'mid' ? b.name : a.kind === 'mid' ? a.name : '', state: kindOverride ? 'ok' : priv ? 'ok' : (a.state !== 'ok' ? a.state : b.state), delta: deltaOf(a.key + '>' + b.key), pattern: kindOverride || patternOf(a, b) }); };
+  const mid = (k) => MM.find(m => m.key === k);
+  const wanShare = fabV ? wanT / fabV : 0;
+  SS.forEach(s0 => {
+    const f = s0.fabV || 0, ip = Math.min(s0.ipsecV || 0, Math.max(0, s0.v - f)), net = Math.max(0, s0.v - f - ip);
+    MM.filter(m => m.ramp).forEach(m => link(s0, m, f * (1 - wanShare) * (rampT[m.ramp] / rampSum), true));
+    if (mid('mid:wan')) link(s0, mid('mid:wan'), f * wanShare, true);
+    if (mid('mid:ipsec')) link(s0, mid('mid:ipsec'), ip, false);
+    if (mid('mid:internet')) link(s0, mid('mid:internet'), net, false);
+  });
+  DD.forEach(d => {
+    Object.entries(d.byRamp || {}).forEach(([r, v]) => { const m = mid('mid:' + r); if (m) link(m, d, cloudFabT * v / rampSum, true); });
+    if (d.wan && mid('mid:wan')) link(mid('mid:wan'), d, d.wan, true);
+    const pv = d.pubV || 0;
+    if (pv > 0 && pubT > 0) { const ipShare = ipsecT / Math.max(0.0001, ipsecT + inetT); if (mid('mid:ipsec')) link(mid('mid:ipsec'), d, pv * (pubT ? (ipsecT + inetT) / pubT : 1) * ipShare, false); if (mid('mid:internet')) link(mid('mid:internet'), d, pv * (pubT ? (ipsecT + inetT) / pubT : 1) * (1 - ipShare), false); }
+  });
   const nodes = [...SS.map(x => ({ ...x, side: 'l' })), ...MM.map(x => ({ ...x, side: 'm' })), ...DD.map(x => ({ ...x, side: 'r' }))].map(x => ({ ...x, delta: deltaOf(x.key), open: open.has(x.key) }));
   return { W, H, heads, nodes, ribbons, total: T, fabV, localV, open: [...open], zoom, zf };
 }
-function rootGroup(x) { return x.kind === 'site' || x.kind === 'metro' || x.kind === 'sitename' || x.kind === 'circuit' ? 'sites' : x.kind === 'cloud' || x.kind === 'dest' ? 'dest' : 'onramp'; }
+function rootGroup(x) { return x.kind === 'site' || x.kind === 'metro' || x.kind === 'sitename' || x.kind === 'circuit' ? 'sites' : x.kind === 'cloud' || x.kind === 'dest' || x.kind === 'dc' ? 'dest' : 'onramp'; }
 
 /** The trail for a key: every ancestor's name, root first. */
 export function trail(key, est, inv, flows) {

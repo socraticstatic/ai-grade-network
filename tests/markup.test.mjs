@@ -161,10 +161,11 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // button 265 -> 272. The map's head traded its subtitle, persona line and
 // pattern/colour blocks for six rollup tiles and two segmented controls, and
 // Health stopped describing itself: div 966 -> 961, span 734 -> 730,
-// sc-if 337 -> 336, sc-for 197 -> 198, button 272 -> 271.
+// sc-if 337 -> 336, sc-for 197 -> 198, button 272 -> 271. Each path in the
+// map's middle says what it is doing on a second line: div 961 -> 962.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 961],
+    ['div', /<div\b/g, /<\/div>/g, 962],
     ['span', /<span\b/g, /<\/span>/g, 730],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 336],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 198],

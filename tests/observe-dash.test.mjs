@@ -25,13 +25,14 @@ test('panel for a connection: overview, impact, records, actions', () => {
 // were testing a path nobody can click. This walks what the map now produces,
 // on both columns, and insists every node the map draws opens a panel.
 test('every node the map draws resolves to a panel, both columns, all the way down', () => {
-  const sd = leftRoots(est, flows).find(x => x.cls === 'sdwan');
+  // Left roots are site regions and the right is destinations only (2026-09-28).
+  const sd = leftRoots(est, flows).find(x => x.region === 'Nationwide');
   const metro = childrenOf(sd, est, inv, flows)[0];
   const site = childrenOf(metro, est, inv, flows)[0];
   const circuit = childrenOf(site, est, inv, flows)[0];
   const cloud = rightRoots(est, flows).find(x => x.kind === 'cloud');
   const endpoint = childrenOf(cloud, est, inv, flows)[0];
-  const inet = rightRoots(est, flows).find(x => x.key === 'dest:public internet');
+  const inet = rightRoots(est, flows).find(x => x.kind === 'dc');
   const m = buildMap(est, inv, flows, { open: [sd.key, metro.key, site.key, cloud.key, inet.key] });
   const seen = [];
   for (const node of [sd, metro, site, circuit, cloud, endpoint, inet]) {

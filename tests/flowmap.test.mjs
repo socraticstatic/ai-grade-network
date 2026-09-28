@@ -16,10 +16,14 @@ for (const id of ESTATES) {
     const { est, flows } = ctx(id);
     const L = leftRoots(est, flows), R = rightRoots(est, flows);
     assert.ok(near(sum(L), sum(R)), `left ${sum(L)} vs right ${sum(R)}`);
+    // Since 2026-09-28 the right is destinations only: clouds and your data
+    // centers. Fabric volume is the clouds' fabric plus the private WAN; what
+    // leaves AT&T lands on the clouds' public regions.
     const fab = sum(L, 'fabV'), pub = sum(L) - fab;
-    const clouds = R.filter(x => x.kind === 'cloud'), inet = R.filter(x => x.key === 'dest:public internet');
-    assert.ok(near(sum(clouds), fab), `clouds ${sum(clouds)} vs fabric ${fab}`);
-    assert.ok(near(sum(inet), pub), `public internet ${sum(inet)} vs off-fabric ${pub}`);
+    const clouds = R.filter(x => x.kind === 'cloud'), dc = R.filter(x => x.kind === 'dc');
+    assert.ok(near(sum(clouds, 'fabV') + sum(dc), fab), `clouds ${sum(clouds, 'fabV')} + data centers ${sum(dc)} vs fabric ${fab}`);
+    assert.ok(near(sum(clouds, 'pubV'), pub), `public ${sum(clouds, 'pubV')} vs off-fabric ${pub}`);
+    assert.ok(!R.some(x => x.key === 'dest:public internet'), 'the right is destinations, not the internet');
   });
 
   test(`${id}: every drill level conserves its parent's volume`, () => {
@@ -47,36 +51,33 @@ for (const id of ESTATES) {
     assert.equal(offenders.length, 0, '\n  ' + offenders.join('\n  '));
   });
 
-  test(`${id}: a cloud with no private region carries no site traffic`, () => {
+  test(`${id}: a cloud with no private region carries no fabric`, () => {
     const { est, flows } = ctx(id);
     const privClouds = new Set(est.regionsList.filter(r => r.priv).map(r => r.cloud));
-    rightRoots(est, flows).filter(x => x.kind === 'cloud')
-      .forEach(c => assert.ok(privClouds.has(c.cloud), `${c.cloud} has no private region but carries ${c.v.toFixed(2)} Gbps`));
+    rightRoots(est, flows).filter(x => x.kind === 'cloud' && !privClouds.has(x.cloud))
+      .forEach(c => assert.ok(c.fabV < 0.001, `${c.cloud} has no private region but carries ${c.fabV.toFixed(2)} Gbps of fabric`));
   });
 
-  test(`${id}: the off-fabric band opens to the regions it actually reaches`, () => {
+  test(`${id}: what leaves AT&T lands on the public regions it actually reaches`, () => {
     const { est, inv, flows } = ctx(id);
-    const inet = rightRoots(est, flows).find(x => x.key === 'dest:public internet');
-    if (!inet) return;
-    assert.equal(inet.hasChildren, true, 'public internet must open');
-    const kids = childrenOf(inet, est, inv, flows);
-    assert.ok(kids.length >= 1);
-    assert.ok(kids.every(k => k.fabV === 0), 'nothing under public internet is on the fabric');
     const pubRegions = new Set(est.regionsList.filter(r => !r.priv).map(r => `${r.cloud} ${r.region}`));
-    assert.ok(kids.every(k => pubRegions.has(k.name)), kids.map(k => k.name).join(', '));
+    if (!pubRegions.size) return;
+    const kids = rightRoots(est, flows).filter(x => x.kind === 'cloud').flatMap(c => childrenOf(c, est, inv, flows)).filter(k => k.pubV > 0.0005);
+    assert.ok(kids.length >= 1);
+    assert.ok(kids.every(k => pubRegions.has(k.name) && k.fabV === 0), kids.map(k => k.name).join(', '));
   });
 }
 
 test('a site group of mixed building classes prices each site by its own class', () => {
   // Acme's "2 sites on ADI" is a data center and a plant. Weighting the plant
   // as a data center inflated the drill by 60% against its own parent row.
-  // Fixture: partial's ADI pair from before its sites were rebuilt (2026-09-28).
+  // Fixture: a data center and a plant in one region (the map groups by region since 2026-09-28).
   const est = { ...D.ESTATES.partial, sites: [
     { name: 'Atlanta DC2', cls: 'Data center', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Atlanta' },
-    { name: 'Denver plant', cls: 'Plant', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Denver' },
+    { name: 'Denver plant', cls: 'Plant', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Ashburn' },
   ] };
   const inv = A.inventory(est), flows = A.observe(est, [], inv).flows;
-  const adi = leftRoots(est, flows).find(x => x.cls === 'adi');
+  const adi = leftRoots(est, flows).find(x => x.region === 'US East');
   const kids = childrenOf(adi, est, inv, flows);
   const dc = kids.find(k => /Atlanta/.test(k.name)), plant = kids.find(k => /Denver/.test(k.name));
   assert.ok(dc && plant);
@@ -86,7 +87,7 @@ test('a site group of mixed building classes prices each site by its own class',
 
 test('a site opens to the regions it reaches, and they add up to the site', () => {
   const { est, inv, flows } = ctx('mature');
-  const adi = leftRoots(est, flows).find(x => x.cls === 'adi');
+  const adi = leftRoots(est, flows).find(x => x.region === 'International');
   const sg = childrenOf(adi, est, inv, flows).find(k => /Singapore/.test(k.name));
   assert.ok(sg, 'Singapore DC');
   const circuits = childrenOf(sg, est, inv, flows);
@@ -98,7 +99,7 @@ test('a site opens to the regions it reaches, and they add up to the site', () =
 
 test('first mile drills class → metro → site → circuit, and folds nothing away', () => {
   const { est, inv, flows } = ctx('mature');
-  const sdwan = leftRoots(est, flows).find(x => x.cls === 'sdwan');
+  const sdwan = leftRoots(est, flows).find(x => x.region === 'Nationwide');
   const metros = childrenOf(sdwan, est, inv, flows);
   assert.equal(metros[0].kind, 'metro');
   const sites = childrenOf(metros[0], est, inv, flows);
@@ -110,7 +111,7 @@ test('first mile drills class → metro → site → circuit, and folds nothing 
 
 test('buildMap expands open keys in place and ribbons carry from/to', () => {
   const { est, inv, flows } = ctx('mature');
-  const root = leftRoots(est, flows)[0].key;
+  const root = leftRoots(est, flows).find(x => x.count > 2).key; // a region with several sites
   const m0 = buildMap(est, inv, flows, {});
   const m1 = buildMap(est, inv, flows, { open: [root] });
   assert.ok(m1.nodes.length > m0.nodes.length);
@@ -119,15 +120,20 @@ test('buildMap expands open keys in place and ribbons carry from/to', () => {
   assert.ok(m1.ribbons.some(r => r.from.startsWith(root + '/')));
 });
 
-test('the map totals what the sites send, and the mid band splits it in two', () => {
+test('the map totals what the sites send, and the paths in the middle carry all of it', () => {
   const { est, inv, flows } = ctx('mature');
   const m = buildMap(est, inv, flows, {});
   const L = leftRoots(est, flows);
   assert.ok(near(m.total, sum(L)), `${m.total} vs ${sum(L)}`);
   assert.ok(near(m.fabV, sum(L, 'fabV')));
   const mids = m.nodes.filter(x => x.side === 'm');
-  assert.equal(mids.length, 2);
+  assert.ok(mids.some(x => x.name === 'NetBond'), mids.map(x => x.name).join(', '));
   assert.ok(near(sum(mids), m.total), `mid band ${sum(mids)} vs total ${m.total}`);
+  // Every mid adds up on both sides.
+  for (const md of mids) {
+    const inV = m.ribbons.filter(r => r.to === md.key).reduce((a, r) => a + r.v, 0), outV = m.ribbons.filter(r => r.from === md.key).reduce((a, r) => a + r.v, 0);
+    assert.ok(near(inV, md.v, 0.01) && near(outV, md.v, 0.01), `${md.name}: in ${inV} out ${outV} of ${md.v}`);
+  }
 });
 
 test('filterRegion narrows, scrub scales, deltas and states exist', () => {
@@ -142,12 +148,12 @@ test('filterRegion narrows, scrub scales, deltas and states exist', () => {
 
 test('trail walks root to leaf; litFor lights ribbons through a node', () => {
   const { est, inv, flows } = ctx('mature');
-  const sdwan = leftRoots(est, flows).find(x => x.cls === 'sdwan');
+  const sdwan = leftRoots(est, flows).find(x => x.region === 'Nationwide');
   const metro = childrenOf(sdwan, est, inv, flows)[0];
   const site = childrenOf(metro, est, inv, flows)[0];
   assert.deepEqual(trail(site.key, est, inv, flows).map(x => x.kind), ['site', 'metro', 'sitename']);
   const lit = litFor(buildMap(est, inv, flows, {}), sdwan.key);
-  assert.ok(lit.keys.has(sdwan.key) && lit.keys.has('mid:fabric'));
+  assert.ok(lit.keys.has(sdwan.key) && [...lit.keys].some(k => k.startsWith('mid:')));
   assert.ok(lit.ribbons.size >= 1);
 });
 
@@ -162,7 +168,7 @@ test('every ribbon carries a pattern and every named pattern lights something', 
 
 test('below the roots, an open node folds its siblings into one row', () => {
   const { est, inv, flows } = ctx('mature');
-  const sdwan = leftRoots(est, flows).find(x => x.cls === 'sdwan');
+  const sdwan = leftRoots(est, flows).find(x => x.region === 'Nationwide');
   const metro = childrenOf(sdwan, est, inv, flows)[0];
   const m = buildMap(est, inv, flows, { open: [sdwan.key, metro.key] });
   const roll = m.nodes.filter(x => x.kind === 'rollup').find(x => /other metros/.test(x.name));
@@ -174,7 +180,7 @@ test('below the roots, an open node folds its siblings into one row', () => {
 
 test('zoom on click: the focused subtree inflates, ribbons still attach', () => {
   const { est, inv, flows } = ctx('mature');
-  const sdwan = leftRoots(est, flows).find(x => x.cls === 'sdwan');
+  const sdwan = leftRoots(est, flows).find(x => x.region === 'Nationwide');
   const metro = childrenOf(sdwan, est, inv, flows)[0];
   const flat = buildMap(est, inv, flows, { open: [sdwan.key, metro.key] });
   const zoomed = buildMap(est, inv, flows, { open: [sdwan.key, metro.key], zoom: metro.key });
