@@ -6,7 +6,8 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 // Layout and derivation helpers for the NaaS storefront. Pure functions, no DOM.
-import { siteChain, cloudEdgeThing, cloudAccessThing, coreThing, accessThing } from './naas-things.js';
+import { siteChain, cloudEdgeThing, cloudAccessThing, coreThing, accessThing, entersAtt } from './naas-things.js';
+import { servicesOf, stateOf } from './naas-sites.js';
 export const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
 export const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 /** "1 cloud" / "2 clouds" / "4,120 sites". Every count in the copy goes through this. */
@@ -50,6 +51,46 @@ export function regionOf(site) {
 // owner, or 'public' if it never enters a private network at all.
 const patternOf = (site) => (!site.priv ? 'public' : `${accessOwner(site)}>${site.core === 'third' ? 'third' : 'att'}`);
 const PATTERN_ORDER = ['att>att', 'third>att', 'third>third', 'public'];
+// A site as the paths it takes: one stand-in per service it declares, each on
+// that service's access, so a data center with AVPN and an ADI backup draws two
+// lines. A site that declares none is its own single line, as before.
+export const serviceSites = (site) => (Array.isArray(site.services) && site.services.length
+  ? servicesOf(site).map(v => ({ ...site, access: v.access, circuit: v.access, priv: v.onAtt, svc: v.key, role: v.role }))
+  : [site]);
+/** On AT&T: at least one service enters the AT&T network and no third party answers for its access. */
+export const onAtt = (site) => !!site.priv && site.accessSla !== 'third' && site.core !== 'third';
+/** The rollup a group card prints: total, AT&T, non-AT&T (Micah, 2026-09-28). */
+export function rollupLine(sites) {
+  const total = sites.reduce((a, x) => a + countOf(x.name), 0);
+  const att = sites.filter(onAtt).reduce((a, x) => a + countOf(x.name), 0);
+  return `${total.toLocaleString('en-US')} ${total === 1 ? 'site' : 'sites'} · ${att.toLocaleString('en-US')} AT&T · ${(total - att).toLocaleString('en-US')} non-AT&T`;
+}
+/** The distinct lines a group of sites draws: one per access thing, and one for the internet. */
+export function linesOf(sites, perService = true) {
+  const seen = {};
+  (perService ? sites.flatMap(serviceSites) : sites).forEach(site => { const t = accessThing(site); const k = t ? t.id + (site.core === 'third' ? '>third' : '') : 'public'; if (!seen[k]) seen[k] = site; });
+  return Object.entries(seen).map(([k, rep]) => ({ key: k, priv: !!rep.priv, access: rep.access, accessSla: rep.accessSla, carrier: rep.carrier, core: rep.core, via: rep.via, viaRamp: rep.viaRamp, xc: rep.xc }));
+}
+/**
+ * The filter row over the picture (2026-09-28): service type, location, reach.
+ * `svc` keeps a site that uses any of the chosen services; `loc` is
+ * 'region:<name>', 'state:<code>' or 'metro:<name>'; `reach` is 'att' or 'outside'.
+ */
+export function filterSites(sites, f = {}) {
+  const svc = f.svc || [];
+  return (sites || []).filter(x => {
+    if (svc.length && !servicesOf(x).some(v => svc.includes(v.key))) return false;
+    if (f.reach === 'att' && !onAtt(x)) return false;
+    if (f.reach === 'outside' && onAtt(x)) return false;
+    if (f.loc) {
+      const [kind, val] = [f.loc.slice(0, f.loc.indexOf(':')), f.loc.slice(f.loc.indexOf(':') + 1)];
+      if (kind === 'region' && regionOf(x) !== val) return false;
+      if (kind === 'state' && stateOf(x.metro) !== val) return false;
+      if (kind === 'metro' && x.metro !== val) return false;
+    }
+    return true;
+  });
+}
 export function regionRows(est) {
   const by = {};
   (est.sites || []).forEach(site => { (by[regionOf(site)] = by[regionOf(site)] || []).push(site); });
@@ -64,9 +105,7 @@ export function regionRows(est) {
     // The lines a region card draws: one per circuit its sites use (and one for
     // the internet), so the root shows which things a region runs through, not
     // just whose they are.
-    const lineSeen = {};
-    sites.forEach(site => { const t = accessThing(site); const k = t ? t.id + (site.core === 'third' ? '>third' : '') : 'public'; if (!lineSeen[k]) lineSeen[k] = site; });
-    const lines = Object.entries(lineSeen).map(([k, rep]) => ({ key: k, priv: !!rep.priv, access: rep.access, accessSla: rep.accessSla, carrier: rep.carrier, core: rep.core, via: rep.via, viaRamp: rep.viaRamp, xc: rep.xc }));
+    const lines = linesOf(sites, false);
     const count = sites.reduce((a, s2) => a + countOf(s2.name), 0);
     return { name, sites, patterns, lines, count };
   });
@@ -182,9 +221,10 @@ export function heroLayout(est, opts) {
       site: { ...p, name: `${s.name} · ${p.key}`, label: s.name, region: s.name } }))
       : [{ k: 0, n: 1, site: s }];
     lines.forEach(({ k, n: np, site }) => {
-      const viaLane = !site.priv && !site.ghost;
+      // ADI and AIA-B are internet, but AT&T's: they run through the core, not the lane.
+      const viaLane = !entersAtt(site) && !site.ghost;
       const fan = (k - (np - 1) / 2) * FAN;
-      out.edges.push({ id: 'in' + i + (np > 1 ? '.' + k : ''), kind: 'ingress', priv: !!site.priv, ghost: !!site.ghost, viaLane, x1: SITES_END, y1: y + HALF,
+      out.edges.push({ id: 'in' + i + (np > 1 ? '.' + k : ''), kind: 'ingress', priv: entersAtt(site), ghost: !!site.ghost, viaLane, x1: SITES_END, y1: y + HALF,
         x2: bandX, y2: viaLane ? clampLane(y + HALF) : enterBand(y + HALF) + fan, site });
     });
   });

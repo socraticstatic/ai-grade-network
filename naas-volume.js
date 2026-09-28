@@ -221,7 +221,8 @@ function labels(est, inv, col, trail) {
 // The root is regions. Once the trail is inside one, the rest of it is exactly
 // the site trail this module already understands, so the region is dropped for
 // the logic and kept for the breadcrumb.
-const pastRegion = (trail) => (trail.length > 1 && String(trail[0]).startsWith('region:') ? trail.slice(1) : trail);
+// A region of named sites keeps its region: the place drill (state, metro, site) is rooted there.
+const pastRegion = (trail) => (trail.length > 1 && String(trail[0]).startsWith('region:') && !String(trail[1]).startsWith('state:') ? trail.slice(1) : trail);
 
 function sitesHead(est, trail) {
   const tr = labels(est, null, 'sites', trail);

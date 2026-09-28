@@ -11,7 +11,7 @@
 // are the workloads that are impacted. These workloads are also talking to
 // these other workloads."
 import * as P from './naas-paths.js';
-import { regionRows } from './naas-logic.js';
+import { regionRows, rollupLine, linesOf, onAtt, serviceSites } from './naas-logic.js';
 
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const rnd = (seed) => { let x = seed || 1; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 10000) / 10000; }; };
@@ -166,6 +166,37 @@ function pathsOfSite(est, site) {
   return pathsOfAttSite(est, site);
 }
 function pathsOfAttSite(est, site) { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, accessSla: site.accessSla, carrier: site.carrier, circuit: site.access, xc: site.xc, gbps: x.gbps, leaf: true, region: x.region.region })) }; }
+
+const byName = (a, b) => a.name.localeCompare(b.name);
+const groupRow = (key, name, sites) => ({ key, name, access: rollupLine(sites), priv: sites.some(onAtt), drillKey: key, rollup: true, lines: linesOf(sites), cursor: 'pointer' });
+const siteCard = (x) => ({ key: 'site:' + x.name, name: x.name, access: S.servicesOf(x).map(v => v.label).join(' + '), metro: x.metro, priv: !!x.priv, drillKey: 'site:' + x.name,
+  // A site that declares its services fans one line per service; one that does not is its own line, as it always was.
+  ...(Array.isArray(x.services) && x.services.length ? { lines: linesOf([x]) } : {}), circuit: x.access, accessSla: x.accessSla, carrier: x.carrier, core: x.core, via: x.via, viaRamp: x.viaRamp, xc: x.xc, rollup: false, cursor: 'pointer' });
+/** Region → state → metro → site → services, for a region of named sites. The Estate page's tree (2026-09-28). */
+export function placeDrill(est, regionName, sites, rest) {
+  if (!rest.length) {
+    const by = {}; sites.forEach(x => { (by[S.stateOf(x.metro)] = by[S.stateOf(x.metro)] || []).push(x); });
+    return { level: 'state', label: regionName, rows: Object.entries(by).map(([code, xs]) => groupRow('state:' + code, S.placeName(code), xs)).sort(byName) };
+  }
+  const code = String(rest[0]).replace(/^state:/, '');
+  const inState = sites.filter(x => S.stateOf(x.metro) === code);
+  if (!inState.length) return null;
+  if (rest.length === 1) {
+    const by = {}; inState.forEach(x => { (by[x.metro] = by[x.metro] || []).push(x); });
+    return { level: 'metro', label: S.placeName(code), rows: Object.entries(by).map(([m, xs]) => groupRow('metro:' + m, m, xs)).sort(byName) };
+  }
+  const metro = String(rest[1]).replace(/^metro:/, '');
+  const inMetro = inState.filter(x => x.metro === metro);
+  if (!inMetro.length) return null;
+  if (rest.length === 2) return { level: 'site', label: metro, rows: inMetro.map(siteCard).sort(byName) };
+  const site = inMetro.find(x => x.name === String(rest[2]).replace(/^site:/, ''));
+  if (!site || rest.length > 3) return null;
+  return { level: 'service', label: site.name, rows: serviceSites(site).map((v, i) => {
+    const sv = S.servicesOf(site)[i] || S.servicesOf(site)[0];
+    return { key: 'svc:' + sv.key, name: sv.label, access: `${sv.role} · ${sv.onAtt ? 'AT&T core' : 'outside the AT&T network'}`, priv: sv.onAtt, leaf: true, rollup: false,
+      lines: [{ key: 'svc:' + sv.key, ...v }], title: sv.name };
+  }) };
+}
 
 /** Left column of the hero for a drill trail: [] → the estate's sites; [class] → metros or named sites; [class, metro] → sites; [class, metro, site] → the site's paths. */
 export function siteDrillRows(est, trail, opts = {}) {

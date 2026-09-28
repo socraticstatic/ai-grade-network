@@ -25,7 +25,12 @@ const STREETS = {
   Nashville: ['Broadway', 'West End Ave', 'Charlotte Ave', 'Nolensville Pike', 'Gallatin Pike', '8th Ave'],
 };
 const STATE = { Dallas: 'TX', Houston: 'TX', Austin: 'TX', Atlanta: 'GA', Chicago: 'IL', Phoenix: 'AZ', Denver: 'CO', Seattle: 'WA', Miami: 'FL', Charlotte: 'NC', Nashville: 'TN', Ashburn: 'VA', 'San Jose': 'CA', Frankfurt: 'DE', Singapore: 'SG',
-  'New York': 'NY', Boston: 'MA', Minneapolis: 'MN', 'Kansas City': 'MO', 'Los Angeles': 'CA', London: 'GB', Amsterdam: 'NL', Paris: 'FR', Dublin: 'IE', Madrid: 'ES', Tokyo: 'JP', Sydney: 'AU', Mumbai: 'IN', Seoul: 'KR', Manila: 'PH' };
+  'New York': 'NY', Boston: 'MA', 'Salt Lake City': 'UT', Minneapolis: 'MN', 'Kansas City': 'MO', 'Los Angeles': 'CA', London: 'GB', Amsterdam: 'NL', Paris: 'FR', Dublin: 'IE', Madrid: 'ES', Tokyo: 'JP', Sydney: 'AU', Mumbai: 'IN', Seoul: 'KR', Manila: 'PH' };
+// The second level under a region: a US state, or a country outside the US.
+const PLACE_NAME = { TX: 'Texas', GA: 'Georgia', IL: 'Illinois', AZ: 'Arizona', CO: 'Colorado', WA: 'Washington', FL: 'Florida', NC: 'North Carolina', TN: 'Tennessee', VA: 'Virginia', CA: 'California', NY: 'New York', MA: 'Massachusetts', MN: 'Minnesota', MO: 'Missouri', UT: 'Utah',
+  DE: 'Germany', SG: 'Singapore', GB: 'United Kingdom', NL: 'Netherlands', FR: 'France', IE: 'Ireland', ES: 'Spain', JP: 'Japan', AU: 'Australia', IN: 'India', KR: 'South Korea', PH: 'Philippines' };
+/** A state's or country's name from its code; the code itself when unknown. */
+export const placeName = (code) => PLACE_NAME[code] || code || 'Unplaced';
 /** Two-letter state (or country) for a metro; the auto-label on every site row. */
 export const stateOf = (metro) => STATE[metro] || '';
 const HOSTS = ['7-Eleven', 'Kroger', 'Walgreens', 'QuikTrip', 'Costco', 'Target', 'CVS', 'H-E-B'];
@@ -134,6 +139,36 @@ export function metroSites(m) {
  * attaches: AVPN, ASE, ADI, business fiber, SD-WAN, mobility. That is the
  * honest grouping, and the one an architect can act on.
  */
+/**
+ * What a site buys, as AT&T sells it (2026-09-28). Every service but Third
+ * Party Access enters the AT&T network: ADI and AIA-B are AT&T's own internet
+ * and run through the AT&T core. `access` is the canonical string the path
+ * model (naas-things accessThing) reads.
+ */
+export const SERVICE = {
+  avpn:  { key: 'avpn',  label: 'AVPN',               name: 'AT&T VPN (MPLS)',                 onAtt: true,  access: 'AVPN' },
+  aseod: { key: 'aseod', label: 'ASE on Demand',      name: 'AT&T Switched Ethernet on Demand', onAtt: true,  access: 'ASE on Demand' },
+  adi:   { key: 'adi',   label: 'ADI',                name: 'AT&T Dedicated Internet',          onAtt: true,  access: 'ADI' },
+  abf:   { key: 'abf',   label: 'Business Fiber',     name: 'AT&T Business Fiber',              onAtt: true,  access: 'Business Fiber' },
+  aiab:  { key: 'aiab',  label: 'AIA-B',              name: 'AT&T Internet Air for Business',   onAtt: true,  access: 'AIA-B' },
+  tpa:   { key: 'tpa',   label: 'Third Party Access', name: 'Another carrier\'s access',        onAtt: false, access: 'Third Party Access' },
+};
+const SERVICE_OF_ACCESS = { avpn: 'avpn', ase: 'aseod', adi: 'adi', abf: 'abf', sdwan: 'avpn', mobility: 'aiab', ipsec: 'tpa' };
+/**
+ * A site's services, primary first. Sites that declare them (Growing) keep
+ * theirs; the rest read one from their access string, so every estate answers.
+ * A third-party circuit (accessSla third) or a public site on an unknown first
+ * mile is Third Party Access.
+ */
+export function servicesOf(st) {
+  if (!st) return [];
+  if (Array.isArray(st.services) && st.services.length) return st.services.map((x, i) => ({ ...SERVICE[x.svc || x], role: x.role || (i ? 'backup' : 'primary') }));
+  const k = st.accessSla === 'third' ? 'tpa' : SERVICE_OF_ACCESS[accessOf(st)];
+  if (k) return [{ ...SERVICE[k], role: 'primary' }];
+  // A circuit the catalog does not name (Lumen off-net) keeps its own words.
+  return [{ key: 'other', label: st.access || 'Access', name: st.access || 'Access', onAtt: !!st.priv, access: st.access, role: 'primary' }];
+}
+
 export const ACCESS_CLASS = {
   avpn:     { label: 'AVPN (MPLS VPN)',     unit: 'site on AVPN',   plural: 'sites on AVPN' },
   ase:      { label: 'Switched Ethernet',   unit: 'site on ASE',    plural: 'sites on ASE' },
@@ -173,6 +208,9 @@ export function labelOfKey(est, key) {
     if (peers[ri]) return peers[ri].name.replace(/\s*\([\d,]+\)\s*$/, '');
     return (CLASS[cls] || {}).label || cls;
   }
+  // The place drill's keys (2026-09-28): a state reads as its name.
+  if (k.startsWith('state:')) return placeName(k.slice(6));
+  if (/^(metro|site|svc):/.test(k)) return k.slice(k.indexOf(':') + 1);
   const parts = k.split(':');
   if (parts.length >= 3) return parts.slice(2).join(':');
   if (parts.length === 2) return parts[1];

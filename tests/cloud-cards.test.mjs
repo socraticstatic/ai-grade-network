@@ -136,7 +136,12 @@ test('cards on both sides and the things between them sit on one set of rows', (
     const rowTop = l.bandY + 30, onRow = (y) => (y - rowTop) % 52 === 0;
     for (const s of l.sites) assert.ok(onRow(s.cy), `${k}: ${s.name} is off the rows at ${s.cy}`);
     for (const c of cards(l)) assert.ok(onRow(c.cy), `${k}: ${c.cloud} is off the rows at ${c.cy}`);
-    for (const n of l.nodes) assert.ok(onRow(n.y), `${k}: ${n.label} is off the rows at ${n.y}`);
+    // A segment holding more things than the band has rows packs them NODE_GAP
+    // apart by design (naas-logic "More things than rows"). Mature's Access
+    // reached eight when ADI began riding the AT&T core (2026-09-28); the row
+    // rule holds wherever a column fits.
+    const rows = Math.floor((l.bandY + l.bandH - 12 - rowTop) / 52) + 1;
+    for (const n of l.nodes) if (l.nodes.filter(m => m.seg === n.seg).length <= rows) assert.ok(onRow(n.y), `${k}: ${n.label} is off the rows at ${n.y}`);
   }
 });
 

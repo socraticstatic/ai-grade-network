@@ -21,14 +21,25 @@
 const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const T = (id, label, owner, name) => ({ id, label, owner, name: name || label });
 
-/** Site-side Access: the circuit from the site into a network. Null for a site on the public internet. */
+/**
+ * AT&T's own internet: ADI and AIA-B run through the AT&T core even though the
+ * traffic is internet, not a private path (Micah, 2026-09-28: "ADI always goes
+ * through AT&T core"). `priv` still means a private path everywhere else.
+ */
+export const attInternet = (site) => !!site && /\bADI\b|Dedicated Internet|AIA-B|Internet Air/i.test(site.circuit || site.access || '');
+/** Whether a site's traffic enters the AT&T network at all. */
+export const entersAtt = (site) => !!site && (!!site.priv || attInternet(site));
+/** Site-side Access: the circuit from the site into a network. Null for a site that never enters one. */
 export function accessThing(site) {
-  if (!site || !site.priv) return null;
+  if (!entersAtt(site)) return null;
   const a = site.circuit || site.access || '';
   const kind = (x) => { const k = String(x).replace(site.carrier || '', '').trim() || 'access'; return k[0].toUpperCase() + k.slice(1); };
   if (site.accessSla === 'third') return T('a:' + slug(a), `Third Party ${kind(a)}`, 'third', `${kind(a)} circuit bought from a third party`);
   if (site.carrier) return T('a:offnet-' + slug(site.carrier), 'AT&T off-net', 'att', 'Circuit AT&T ordered from another carrier (off-net)');
+  if (/ASE on Demand/i.test(a)) return T('a:aseod', 'ASE on Demand', 'att', 'AT&T Switched Ethernet on Demand');
   if (/ASE/.test(a)) return T('a:ase', 'ASE access', 'att', 'AT&T Switched Ethernet access');
+  // AT&T's own fixed-wireless internet rides the AT&T core, as ADI does (2026-09-28).
+  if (/AIA-B|Internet Air/i.test(a)) return T('a:aiab', 'Internet Air', 'att', 'AT&T Internet Air for Business');
   if (/AVPN/.test(a)) return T('a:avpn', 'AVPN access', 'att', 'AT&T VPN access circuit');
   if (/ABF|Business Fiber/.test(a)) return T('a:abf', 'Business Fiber', 'att', 'AT&T Business Fiber');
   if (/Mobility|wireless/i.test(a)) return T('a:wireless', 'AT&T wireless', 'att', 'AT&T wireless (Private Mobile Connection)');
@@ -38,7 +49,7 @@ export function accessThing(site) {
 
 /** Site-side Edge: where the circuit lands and the traffic gets its service. */
 export function edgeThing(site) {
-  if (!site || !site.priv) return null;
+  if (!entersAtt(site)) return null;
   if (site.core === 'third') { const c = site.carrier || site.viaRamp || 'third'; return T('e:' + slug(c), 'Third Party Edge', 'third', 'Third-party provider edge'); }
   if (site.carrier && site.accessSla !== 'third') return T('e:enni', 'ENNI', 'att', 'AT&T ENNI (where another carrier hands off to AT&T)');
   return T('e:pe', 'AT&T PE', 'att', 'AT&T provider edge router');
@@ -79,4 +90,4 @@ export function cloudAccessThing(region) {
 }
 
 /** The chain of things a site's traffic takes to Core. */
-export const siteChain = (site) => (site && site.priv ? [accessThing(site), edgeThing(site), coreThing(site)] : null);
+export const siteChain = (site) => (entersAtt(site) ? [accessThing(site), edgeThing(site), coreThing(site)] : null);
