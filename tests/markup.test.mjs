@@ -176,14 +176,21 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Coming soon cards folded into a line: div 993 -> 989, span 768 -> 756,
 // sc-if 349 -> 348, button 279 -> 271. The move cards got a row inside them:
 // div 989 -> 990.
+// No scrolling, part two (2026-09-28): Insights, Help and Govern got tab rows
+// (sc-for +2, button +2 net of the removed eyebrows and tag row), Logs tables
+// sit in capped frames, Govern's table in a gov-frame, Connect's Scope moved
+// beside "What you have" and its bottom row left, the empty front door lost
+// its second title (section 12 -> 11), the scan skeleton became a tab row and
+// three cards, and the title divider got a gate: div 966 -> 955,
+// span 734 -> 732, sc-if 357 -> 364, sc-for 208 -> 210, button 269 -> 271.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 966],
-    ['span', /<span\b/g, /<\/span>/g, 734],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 357],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 208],
-    ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 269],
+    ['div', /<div\b/g, /<\/div>/g, 955],
+    ['span', /<span\b/g, /<\/span>/g, 732],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 364],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 210],
+    ['section', /<section\b/g, /<\/section>/g, 11],
+    ['button', /<button\b/g, /<\/button>/g, 271],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 28],
   ];

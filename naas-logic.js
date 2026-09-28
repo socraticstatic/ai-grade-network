@@ -147,7 +147,7 @@ export function heroLayout(est, opts) {
   // so the picture never changes height under a click.
   const W = 1392, H_MAX = 560, BAND_H_MAX = 396, BAND_H_MIN = 336;
   const FAN = 18;
-  const LANE_GAP = 16, LANE_H = 76, FOOT = 44, COL_TOP = 30, CARD_H = 36, GAP_MAX = 66, INET_OVER_LANE = 60;
+  const LANE_GAP = 16, LANE_H = 76, FOOT = 16, COL_TOP = 30, CARD_H = 36, GAP_MAX = 66, INET_OVER_LANE = 60;
   // Cards are drawn CARD tall on rows ROW apart (2026-09-23: taller, so logos and
   // titles read larger). The canvas is still measured with CARD_H, so it did not grow.
   const CARD = 44, HALF = CARD / 2;

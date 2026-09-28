@@ -668,7 +668,8 @@ export function vals(c) {
   const heroScreen = ['s0', 's2'].includes(s.screen) || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect');
   const heroKey = s.screen === 's3' ? `s3/${s.layer}/${s.tab}` : s.screen;
   // One hero graph (Micah, 13:23): the picture is open on home and on all four pages.
-  const heroDefault = heroScreen;
+  // A new customer's picture is empty; the scan leads and the picture waits behind its strip (no-scroll pass, 2026-09-28).
+  const heroDefault = heroScreen && !isEmpty;
   const heroPref = (s.heroOpen || {})[heroKey];
   const heroOpen = heroPref === undefined ? heroDefault : !!heroPref;
   const toggleHero = () => { const next = { ...(s.heroOpen || {}), [heroKey]: !heroOpen }; set({ heroOpen: next }); try { localStorage.setItem('naas.hero', JSON.stringify(next)); } catch (e) {} };
@@ -892,7 +893,7 @@ export function vals(c) {
       if (blind) parts.push({ key: 'blind', dot: 'var(--text-disabled)', text: `${blind} sending no flow logs` });
       parts.push({ key: 'ok', dot: 'var(--success)', text: `${ok} of ${rows.length} healthy` });
       return parts;
-    })(), clearHover: () => set({ hoverNode: null, hoverRegion: null }), laneY: L.lane.y, laneH: L.lane.h, bandY: L.bandY, bandH: L.bandH, facH: L.H - L.bandY * 2, strataCardH, strataPadY: strataTight ? 6 : 10, strataRowGap: strataTight ? 3 : 6, footY: L.H - 54, footY2: L.H - 48, heroVisible: heroScreen && heroOpen, heroStrip: heroScreen && !heroOpen, heroCanHide: heroScreen && heroOpen && !heroDefault, toggleHero, heroStripText: `${est.attachedRegions} of ${est.regions} regions on AT&T · ${est.regions - est.attachedRegions} on the public internet · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`, inDept, overlayLegend: overlayLegend(s, R), hasOverlay: inDept, scrubT: s.scrubT == null ? 100 : s.scrubT, setScrub: (e) => set({ scrubT: +e.target.value }), showScrub: inDept && s.tab === 'observe', showForecast: inDept && s.tab === 'cost', fcT: s.fcT == null ? 0 : s.fcT, setFc: (e) => set({ fcT: +e.target.value }), fcLabel: (s.fcT || 0) === 0 ? 'today' : '+' + Math.round((s.fcT || 0) * 0.9) + ' days', heroRolled: s.screen === 's0', healthStrip: hp.strip, hasHealth: s.screen !== 's3', healthIncidents: hp.incidents.map((x, i) => ({ ...x, key: 'hi' + i, go: go('s3', { layer: 'cloud', tab: 'observe', mapSel: conns.rows.some(r => r.region === x.region) ? 'cx-' + x.region : null, mapRegion: x.region, panelTab: 'impact' }) })), hasIncidents: hp.incidents.length > 0 && s.screen !== 's3',
+    })(), clearHover: () => set({ hoverNode: null, hoverRegion: null }), laneY: L.lane.y, laneH: L.lane.h, bandY: L.bandY, bandH: L.bandH, facH: L.H - L.bandY * 2, strataCardH, strataPadY: strataTight ? 6 : 10, strataRowGap: strataTight ? 3 : 6, footY: L.H - 54, footY2: L.H - 48, heroVisible: heroScreen && heroOpen, heroStrip: heroScreen && !heroOpen, heroCanHide: heroScreen && heroOpen && !heroDefault, toggleHero, heroStripText: isEmpty ? 'Your sites, the AT&T network and your clouds, drawn after the first scan' : `${est.attachedRegions} of ${est.regions} regions on AT&T · ${est.regions - est.attachedRegions} on the public internet · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`, inDept, overlayLegend: overlayLegend(s, R), hasOverlay: inDept, scrubT: s.scrubT == null ? 100 : s.scrubT, setScrub: (e) => set({ scrubT: +e.target.value }), showScrub: inDept && s.tab === 'observe', showForecast: inDept && s.tab === 'cost', fcT: s.fcT == null ? 0 : s.fcT, setFc: (e) => set({ fcT: +e.target.value }), fcLabel: (s.fcT || 0) === 0 ? 'today' : '+' + Math.round((s.fcT || 0) * 0.9) + ' days', heroRolled: s.screen === 's0', healthStrip: hp.strip, hasHealth: s.screen !== 's3', healthIncidents: hp.incidents.map((x, i) => ({ ...x, key: 'hi' + i, go: go('s3', { layer: 'cloud', tab: 'observe', mapSel: conns.rows.some(r => r.region === x.region) ? 'cx-' + x.region : null, mapRegion: x.region, panelTab: 'impact' }) })), hasIncidents: hp.incidents.length > 0 && s.screen !== 's3',
     headStart: D.HEADSTART.map(h => ({ ...h, key: h.cat, go: go('s7', { browseCat: h.cat }) })), headStartVerdict: isEmpty ? 'AT&T already sees the metros, clouds and paths you could use. Tell us two things and the store composes the rest.' : `${est.name} is recognized. ${estatePhrase(est)} already visible.`,
     modeTabs: [{ key: 'foryou', label: 'For you', active: !['s7', 's8'].includes(s.screen), click: () => { set({ mode: 'foryou' }); go('s3', { layer: 'cloud', tab: 'connect' })(); } }, { key: 'browse', label: 'Browse the marketplace', active: ['s7', 's8'].includes(s.screen), click: () => { set({ mode: 'browse' }); go('s7')(); } }],
     // The Sources page (a customer with no source yet): each cloud by the
@@ -940,7 +941,7 @@ export function vals(c) {
         .filter(g0 => hit(g0.title + ' ' + g0.steps.map(x => x.label).join(' ')));
       const soon = { soon: true, go: () => {} };
       const resources = [
-        { key: 'glossary', icon: 'grid', title: 'Network Glossary', desc: 'The words on these screens', tags: ['Access', 'Core', 'SLO'], cta: 'Open glossary', go: () => set({ scrollToSec: 'sec-help-glossary', scrollNonce: (s.scrollNonce || 0) + 1 }) },
+        { key: 'glossary', icon: 'grid', title: 'Network Glossary', desc: 'The words on these screens', tags: ['Access', 'Core', 'SLO'], cta: 'Open glossary', go: () => set({ helpPanel: 'terms' }) },
         { key: 'tickets', icon: 'checklist', title: 'Support Tickets', desc: 'Create and track tickets', tags: ['Trouble report', 'Change'], cta: 'View tickets', ...soon },
         { key: 'tour', icon: 'hub', title: 'Interactive Tour', desc: 'A guided walk through the picture', tags: ['Overview', 'Navigation'], cta: 'Start tour', go: () => { set({ openHintSeen: false }); try { localStorage.removeItem('naas.openHint'); } catch (e) {} go('s3', { layer: 'cloud', tab: 'connect', drill: [], cloudPick: null })(); } },
         { key: 'kb', icon: 'apps', title: 'Knowledge Base', desc: 'Articles and FAQs', tags: ['Common issues', 'Use cases'], cta: 'Browse articles', ...soon },
@@ -965,7 +966,9 @@ export function vals(c) {
         ['Cross-connect', 'A cable inside a colo between two networks. Yours if you ordered it.'],
       ];
       const asks = ['Where is my egress going?', 'Which sites are outside AT&T?', 'What is over its SLO?'].map(a0 => ({ key: a0, q: a0, go: () => set({ andiOpen: true, andiThread: [...(s.andiThread || []), { key: 'q' + Date.now(), screen: s.screen + (s.tab || ''), q: a0, a: answer(a0, est, ob, s) }] }) }));
-      return { sS9: s.screen === 's9', goHelp: go('s9'), helpCur: s.screen === 's9', helpQ: s.helpQ || '', setHelpQ: (e) => set({ helpQ: e.target.value }), clearHelpQ: () => set({ helpQ: '' }), hasHelpQ: !!q,
+      const hk = s.helpPanel === 'terms' ? 'terms' : 'start';
+      return { helpPanels: [['start', 'Start here'], ['terms', 'Glossary']].map(([k, l]) => { const on = hk === k; return { key: k, label: l, on, go: () => set({ helpPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), helpPanelStart: hk === 'start', helpPanelTerms: hk === 'terms',
+        sS9: s.screen === 's9', goHelp: go('s9'), helpCur: s.screen === 's9', helpQ: s.helpQ || '', setHelpQ: (e) => set({ helpQ: e.target.value, helpPanel: e.target.value ? 'terms' : s.helpPanel }), clearHelpQ: () => set({ helpQ: '' }), hasHelpQ: !!q,
         helpGuides: guides, hasHelpGuides: guides.length > 0, helpResources: resources, helpLive: resources.filter(r0 => r0.live), helpSoonLine: 'Coming soon: ' + resources.filter(r0 => r0.soon).map(r0 => r0.title).join(' · '), helpAsks: asks, askAndiHelp: () => set({ andiOpen: true }),
         helpTerms: TERMS.filter(([t, d]) => hit(t + ' ' + d)).map(([term, def]) => ({ key: term, term, def })), hasHelpTerms: TERMS.some(([t, d]) => hit(t + ' ' + d)),
         helpIcon: iconDir + '/question-circle.svg', helpSoonBg: s.theme === 'dark' ? 'rgba(209,143,224,.16)' : 'rgba(175,41,187,.12)', helpSoonInk: s.theme === 'dark' ? '#e2a6ee' : '#8f2199' };
@@ -1233,9 +1236,9 @@ function iwVals(iw, s, set, go, winLabel) {
   const flowRow = (f) => ({ ...f, go: f.steerable ? steer(f) : andiFlow(f), doorLabel: f.steerable ? 'Steer →' : 'Ask Andi →', doorColor: f.steerable ? 'var(--warning)' : 'var(--link)' });
   return {
     ...iw, winLabel,
-    talkers: iw.talkers.map(t => ({ ...t, go: () => set({ andiScope: { kind: 'region', id: t.region, label: t.label }, andiOpen: true }), doorLabel: 'Ask Andi →', enter: () => set({ hoverNode: 'reg' + t.region }), leave: () => set({ hoverNode: null }) })), talkersGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null }),
-    newDest: iw.newDest.map(d => ({ ...d, go: govern(d.name), doorLabel: 'Set policy →' })), hasNewDest: iw.newDest.length > 0, newDestGo: go('s3', { layer: 'cloud', tab: 'govern', sub: null }),
-    shadow: iw.shadow.map(d => ({ ...d, go: govern(d.name), doorLabel: d.covered ? 'Policy →' : 'Set policy →' })), shadowGo: go('s3', { layer: 'cloud', tab: 'govern', sub: null }),
+    talkers: iw.talkers.slice(0, 4).map(t => ({ ...t, go: () => set({ andiScope: { kind: 'region', id: t.region, label: t.label }, andiOpen: true }), doorLabel: 'Ask Andi →', enter: () => set({ hoverNode: 'reg' + t.region }), leave: () => set({ hoverNode: null }) })), talkersGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null }),
+    newDest: iw.newDest.slice(0, 4).map(d => ({ ...d, go: govern(d.name), doorLabel: 'Set policy →' })), hasNewDest: iw.newDest.length > 0, newDestGo: go('s3', { layer: 'cloud', tab: 'govern', sub: null }),
+    shadow: iw.shadow.slice(0, 4).map(d => ({ ...d, go: govern(d.name), doorLabel: d.covered ? 'Policy →' : 'Set policy →' })), shadowGo: go('s3', { layer: 'cloud', tab: 'govern', sub: null }),
     growthGo: go('s3', { layer: 'cloud', tab: 'cost', sub: null }),
     multi: { ...iw.multi, rows: iw.multi.rows.map(flowRow), has: iw.multi.rows.length > 0 }, multiGo: toMap('state'),
     slo: iw.slo.map(flowRow), hasSlo: iw.slo.length > 0, sloGo: toMap('slo'), sloLegend: `Over ${iw.SLO} ms`,
@@ -1451,7 +1454,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const logPub = logMatch.filter(r => r.path === 'public').length;
   const flowRecords = logMatch.map(r => ({ ...r, key: r.id, actBg: r.deny ? (dark ? 'rgba(211,47,47,.2)' : '#fdecea') : 'var(--bg-wash)', actColor: r.deny ? 'var(--error)' : 'var(--text-body)',
     pathInk: r.path === 'public' ? 'var(--warning)' : 'var(--success)',
-    pathWord: r.path === 'public' ? 'outside' : 'fabric' }));
+    pathWord: r.path === 'public' ? 'outside AT&T' : 'on AT&T' }));
   // User activity: the other half of a log. Flow records say what the network
   // carried; these say who changed it. Every row is derived from something
   // that actually exists in the estate - a region that got attached, a policy
@@ -1985,11 +1988,13 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const insFocus = CARD_FINDS[s.insFocus] ? s.insFocus : null;
   const insDrill = Object.fromEntries(Object.entries(CARD_FINDS).map(([k, [label, hit]]) => { const n0 = insightAll.filter(r => hit(r.key)).length, on = insFocus === k;
     return [k, { n: n0, label: n0 ? `${n0} ${n0 === 1 ? 'finding' : 'findings'} ›` : 'No findings', on, border: on ? 'var(--border-active)' : 'var(--border-secondary)',
-      go: () => set({ insFocus: on ? null : k, insightTab: 'all', scrollToSec: on ? null : 'sec-insights', scrollNonce: (s.scrollNonce || 0) + 1 }) }]; }));
+      go: () => set({ insFocus: on ? null : k, insightTab: 'all', insPanel: on ? 'signals' : 'findings' }) }]; }));
   const insightRowsShown = personaSort((insightTab === 'events' ? anomalyRows : insightTab === 'standing' ? insightRows : insightAll).filter(r => !insFocus || CARD_FINDS[insFocus][1](r.key)))
     .map(r => ({ ...r, pFor: 'For ' + ({ 'Cloud & Platform Architect': 'Architect', 'Network Engineering': 'Network Eng', 'Security & Compliance': 'Security', 'FinOps & SRE': 'FinOps & SRE', 'Executive': 'Executive' }[r.persona] || r.persona), pInk: r.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect') ? 'var(--link)' : 'var(--text-disabled)' }));
   const insightVals = {
     insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, insightFilters, insDrill,
+    // Signals and Findings, one at a time (2026-09-28, no scrolling).
+    ...(() => { const ik = s.insPanel === 'findings' ? 'findings' : 'signals'; return { insPanels: [['signals', 'Signals'], ['findings', `Findings · ${insightAll.length}`]].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings' }; })(),
     hasInsFocus: !!insFocus, insFocusLabel: insFocus ? CARD_FINDS[insFocus][0] : '', clearInsFocus: () => set({ insFocus: null }),
     // Standing findings are true in a quiet window too; the card shows while either kind exists.
     hasFindings: insightAll.length > 0,
@@ -2088,7 +2093,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       };
     })(), ...dash, nextStop, connectNext, governNext, costNext,
     // Next stop is a button in the title row, not a strip (2026-09-28, no scrolling).
-    ...(() => { const nx = s.screen === 's3' ? { connect: connectNext, observe: nextStop, govern: governNext, cost: costNext }[s.tab] : null; return { hasPageNext: !!(nx && nx.title), pageNext: nx && nx.title ? { label: nx.title.replace(/^Next stop:\s*/, 'Next: '), text: nx.text || '', go: nx.go } : { label: '', text: '', go: () => {} } }; })(), obIsPerf: obPage !== 'insights' && obPage !== 'logs', obIsInsights: obPage === 'insights', obIsLogsPage: obPage === 'logs', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
+    ...(() => { const nx = s.screen === 's3' ? { connect: connectNext, observe: nextStop, govern: governNext, cost: costNext }[s.tab] : null; return { hasPageNext: !!(nx && nx.title), discDivider: !!(nx && nx.title) && s.tab === 'connect', pageNext: nx && nx.title ? { label: nx.title.replace(/^Next stop:\s*/, 'Next: '), text: nx.text || '', go: nx.go } : { label: '', text: '', go: () => {} } }; })(), obIsPerf: obPage !== 'insights' && obPage !== 'logs', obIsInsights: obPage === 'insights', obIsLogsPage: obPage === 'logs', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
   // The Observe drawer's Policies and Tags (2026-09-28). The same policies
   // Govern lists and the same tags the inventory carries, read against each
   // other: what each policy caught, and which tags no policy covers yet.
@@ -2309,6 +2314,9 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
     sent: sentence, slotSrc: slot(sentence.src, 1, 'a source'), slotDst: slot(sentence.dst, 2, 'a destination'), slotMetro: slot(sentence.metro, 3, 'a metro'), slotRes: slot(sentence.res, 4, 'resiliency'), slotCtl: slot(sentence.ctl, 5, 'a control'), slotOutcome: slot(outcome ? outcome.name.toLowerCase() : '', 0, 'an outcome'),
     polSent: policySentence, hasConstraintNow: !!constraint && step === 4,
     // govern
+    notAuthoring: !au,
+    // Two tabs, one at a time (2026-09-28, no scrolling).
+    ...(() => { const gk = s.govPanel === 'templates' ? 'templates' : 'policies'; return { govPanels: [['policies', 'Violations & policies'], ['templates', 'Templates']].map(([k, l]) => { const on = gk === k; return { key: k, label: l, on, go: () => set({ govPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), govPanelPolicies: gk === 'policies', govPanelTemplates: gk === 'templates' }; })(),
     authoring: !!au, openAuthor: openAuthor(), closeAuthor: () => set({ authoring: null }), aMatch: A_MATCH.map(v => aCard('match', v, true)), aScope: A_SCOPE.map(v => aCard('scope', v, true)), aReq: D.COMPOSE_CHIPS.control.map(v => aCard('req', v, false)),
     aSent: { match: au && au.match || 'something', scope: au && au.scope || 'somewhere', req: au && au.req && au.req.length ? au.req.map(x => x.toLowerCase()).join(' and ') : '…', matchOn: !!(au && au.match), scopeOn: !!(au && au.scope), reqOn: !!(au && au.req && au.req.length) },
     aSimulate: commit('simulated'), aEnforce: commit('enforced'), aReady, aBg: aReady ? 'var(--cta)' : 'var(--bg-neutral)', aColor: aReady ? '#fff' : 'var(--text-disabled)',
@@ -2445,11 +2453,12 @@ function shellVals(s, set, go, est, c, sched) {
           const view = isView ? id.slice(1) : '';
           const cur = isView ? (view === 'insights' || view === 'logs' ? onS3('cloud', 'observe') && s.obPage === view : view === 'estate' ? s.screen === 's1' && s.discoverView !== 'sources' : view === 'sources' ? s.screen === 's1' && s.discoverView === 'sources' : ['s4', 's5', 's6'].includes(s.screen))
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
+            : tab === 'govern' ? (onS3('cloud', tab) && (id === 'sec-starting' ? 'templates' : 'policies') === (s.govPanel || 'policies'))
             : tab === 'cost' ? (onS3('cloud', tab) && (({ 'sec-egress': 'dest', 'sec-arbitrage': 'money' })[id] || 'money') === (s.costPanel || 'money') && !(s.sub && s.sub.page === 'cost'))
             : (onS3('cloud', tab) && activeSec === id && (tab !== 'observe' || !['insights', 'logs'].includes(s.obPage)));
           const goTo = isView ? (view === 'insights' || view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
-            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: ({ 'sec-egress': 'dest', 'sec-arbitrage': 'money' })[id] || 'money' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
+            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: ({ 'sec-egress': 'dest', 'sec-arbitrage': 'money' })[id] || 'money' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
           return { ...item(label, ic, goTo, cur, false, sub, isPanel || isView), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };

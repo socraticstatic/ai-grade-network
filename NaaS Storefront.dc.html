@@ -213,6 +213,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 .fx-spacer{margin-left:auto}
 @keyframes bandBreathe{0%{opacity:.7}50%{opacity:1}100%{opacity:.92}}
 /* The band folds and unfolds with an ease and a slight overshoot. Geometry moves through CSS (x, width, d, transform) so the browser eases one state into the other. */
+.gov-frame{max-height:calc(100vh - 496px)}
+.log-frame{max-height:calc(100vh - 478px);overflow:auto}
+.log-frame .dt-th{position:sticky;top:0;z-index:1;background:var(--bg-base)}
 .est-frame{height:calc(100vh - 262px);min-height:0;overflow:auto;padding-right:4px;align-content:start}
 #sec-your-sites{max-height:calc(100vh - 250px);overflow:auto;padding-right:4px}
 .open-pill{display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 8px;border-radius:9999px;background:var(--bg-accent);color:var(--link);font-size:11px;line-height:20px;font-weight:700;letter-spacing:0;white-space:nowrap;transition:background .15s,color .15s}
@@ -323,7 +326,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <label class="sched-cadence" title="{{ schedTitle }}" style="position:relative;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer"><span id="sched-line">{{ schedLine }}</span><span aria-hidden="true" style="color:var(--link);font-weight:700">▾</span><select value="{{ cadenceValue }}" onChange="{{ setCadence }}" aria-label="Discovery cadence" aria-describedby="sched-line" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font:inherit"><option value="">Mixed</option><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></label>
     <button onClick="{{ rescan }}" title="Read every connected account again from scratch" style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap"><span aria-hidden="true">↻</span>Re-discover</button>
     <button onClick="{{ manageCreds }}" title="{{ credsTitle }}" style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:1px solid var(--border-primary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">{{ credsLabel }}</button>
-    <span aria-hidden="true" style="width:1px;height:16px;background:var(--border-secondary)"></span>
+    <sc-if value="{{ discDivider }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" style="width:1px;height:16px;background:var(--border-secondary)"></span></sc-if>
     </sc-if>
     <sc-if value="{{ ownsTelemetry }}" hint-placeholder-val="{{ true }}">
     <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--text-heading)"><span aria-hidden="true" style="width:16px;height:16px;background:url('{{ iconCalendar }}') center / contain no-repeat"></span><select value="{{ rangeValue }}" onChange="{{ setRange }}" aria-label="Date range" style="border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;color:var(--text-heading)"><option value="1h">Last hour</option><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option></select></label>
@@ -354,13 +357,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </section>
 </sc-if>
 
-<!-- ===== S0 FRONT DOOR: title, head start ===== -->
-<sc-if value="{{ sS0 }}" hint-placeholder-val="{{ true }}">
-<section data-screen-label="S0 Front door" style="animation:fadeIn .3s">
-  <div style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;color:var(--text-disabled)">Network as a service</div>
-  <h1 style="margin:4px 0 24px;font-size:26px;line-height:34px;font-weight:700;color:var(--text-heading)">AT&amp;T AI-grade network</h1>
-</section>
-</sc-if>
+<!-- S0 FRONT DOOR: its second title (Network as a service / AT&T AI-grade network) left; the page title and the header already say it (no-scroll pass, 2026-09-28) -->
 
 <!-- ===== S2 LAUNCH POINTS: above the hero ===== -->
 <sc-if value="{{ showLaunch }}" hint-placeholder-val="{{ false }}">
@@ -381,7 +378,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <div style="display:flex;align-items:center;gap:16px;padding:10px 16px;margin-bottom:24px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:12px"><span aria-hidden="true" style="width:16px;height:16px;flex:none;background:url('{{ iconFabric }}') center / contain no-repeat"></span><span style="flex:1;min-width:0;font-size:14px;line-height:20px;letter-spacing:-.4px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ heroStripText }}</span><button class="fx-btn" onClick="{{ toggleHero }}">Show the AT&amp;T network</button></div>
 </sc-if>
 <sc-if value="{{ heroVisible }}" hint-placeholder-val="{{ true }}">
-<div id="sec-fabric" style="display:grid;grid-template-columns:1fr;gap:12px;align-items:stretch;margin-bottom:24px"><div style="display:grid;gap:1px;margin-bottom:10px"><h3 style="margin:0;font-size:16px;line-height:22px;font-weight:600;color:var(--text-heading)">What you have</h3><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:12px;line-height:16px;color:var(--text-light)"><sc-for list="{{ fabricHealth }}" as="fh" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap"><i style="width:7px;height:7px;border-radius:9999px;background:{{ fh.dot }};flex:none"></i>{{ fh.text }}</span></sc-for></div></div>
+<div id="sec-fabric" style="display:grid;grid-template-columns:1fr;gap:12px;align-items:stretch;margin-bottom:{{ heroMb }}"><div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:10px"><div style="display:grid;gap:1px;min-width:0;flex:1"><h3 style="margin:0;font-size:16px;line-height:22px;font-weight:600;color:var(--text-heading)">What you have</h3><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:12px;line-height:16px;color:var(--text-light)"><sc-for list="{{ fabricHealth }}" as="fh" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap"><i style="width:7px;height:7px;border-radius:9999px;background:{{ fh.dot }};flex:none"></i>{{ fh.text }}</span></sc-for></div></div><sc-if value="{{ tConnect }}" hint-placeholder-val="{{ false }}"><label class="fx-filter"><span class="fx-label">Scope</span><select class="fx-select" value="{{ obScope }}" onChange="{{ setObScope }}" aria-label="Scope"><sc-for list="{{ obScopes }}" as="sc" hint-placeholder-count="4"><option value="{{ sc.key }}">{{ sc.label }}</option></sc-for></select></label></sc-if></div>
 <div style="position:relative;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;padding:10px 24px 12px;display:flex;align-items:stretch;min-height:{{ heroMinH }}">
 
 <div style="display:grid;gap:10px;width:100%;min-width:0">
@@ -676,10 +673,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         </div>
       </sc-for>
     </div>
-    <div class="sk" style="height:66px;border-radius:12px"></div>
-    <div style="display:flex;flex-wrap:wrap;gap:20px"><div class="sk" style="width:150px;height:36px"></div><div class="sk" style="width:140px;height:36px"></div><div class="sk" style="width:130px;height:36px"></div><div class="sk" style="width:150px;height:36px"></div><div class="sk" style="width:180px;height:36px"></div></div>
-    <div style="display:grid;gap:10px"><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div></div>
-    <div style="display:grid;gap:10px"><div class="sk" style="width:220px;height:22px"></div><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div><div class="sk" style="height:72px;border-radius:16px"></div></div>
+    <!-- The skeleton is the Estate it becomes: a tab row and three cards, inside the fold (no-scroll pass, 2026-09-28) -->
+    <div style="display:flex;gap:18px"><div class="sk" style="width:110px;height:28px"></div><div class="sk" style="width:90px;height:28px"></div><div class="sk" style="width:90px;height:28px"></div></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px"><div class="sk" style="height:calc(100vh - 500px);min-height:160px;border-radius:16px"></div><div class="sk" style="height:calc(100vh - 500px);min-height:160px;border-radius:16px"></div><div class="sk" style="height:calc(100vh - 500px);min-height:160px;border-radius:16px"></div></div>
   </div>
   </sc-if>
   <sc-if value="{{ cadenceAsk }}" hint-placeholder-val="{{ false }}">
@@ -1133,17 +1129,13 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <section data-screen-label="S3 Department" style="display:grid;gap:24px;margin-top:0;animation:fadeIn .3s;grid-template-columns:minmax(0,1fr)">
 
 
-  <!-- Connect -->
-  <sc-if value="{{ tConnect }}" hint-placeholder-val="{{ true }}">
-  <div style="display:grid;gap:32px;margin-top:24px">
-    <div class="fx-filters"><label class="fx-filter"><span class="fx-label">Scope</span><select class="fx-select" value="{{ obScope }}" onChange="{{ setObScope }}" aria-label="Scope"><sc-for list="{{ obScopes }}" as="sc" hint-placeholder-count="4"><option value="{{ sc.key }}">{{ sc.label }}</option></sc-for></select></label><span class="fx-spacer"></span><button class="fx-btn" onClick="{{ goDiscover }}">Explore the estate</button></div>
-  </div>
-  </sc-if>
+  <!-- Connect: Scope sits beside "What you have" over the picture (no-scroll pass, 2026-09-28) -->
 
   <!-- Govern -->
   <sc-if value="{{ tGovern }}" hint-placeholder-val="{{ false }}">
-  <div style="display:grid;gap:32px;margin-top:24px">
-    <div class="fx-filters"><label class="fx-filter"><span class="fx-label">Scope</span><select class="fx-select" value="{{ obScope }}" onChange="{{ setObScope }}" aria-label="Scope"><sc-for list="{{ obScopes }}" as="sc" hint-placeholder-count="4"><option value="{{ sc.key }}">{{ sc.label }}</option></sc-for></select></label><span class="fx-spacer"></span><button class="fx-btn" onClick="{{ goLogs }}">View logs</button></div>
+  <div style="display:grid;gap:16px">
+    <div class="fx-filters"><div role="tablist" aria-label="Govern views" style="display:flex;align-items:center;min-width:0"><sc-for list="{{ govPanels }}" as="gp" hint-placeholder-count="2"><button role="tab" aria-selected="{{ gp.on }}" onClick="{{ gp.go }}" style="border:0;border-bottom:2px solid {{ gp.line }};background:transparent;padding:6px 2px;margin-right:18px;font:inherit;font-size:15px;line-height:22px;font-weight:{{ gp.weight }};color:{{ gp.color }};cursor:pointer;white-space:nowrap">{{ gp.label }}</button></sc-for></div><span class="fx-spacer"></span><label class="fx-filter"><span class="fx-label">Scope</span><select class="fx-select" value="{{ obScope }}" onChange="{{ setObScope }}" aria-label="Scope"><sc-for list="{{ obScopes }}" as="sc" hint-placeholder-count="4"><option value="{{ sc.key }}">{{ sc.label }}</option></sc-for></select></label><button class="fx-btn" onClick="{{ goLogs }}">View logs</button></div>
+    <sc-if value="{{ govPanelPolicies }}" hint-placeholder-val="{{ true }}">
     <sc-if value="{{ hasGovernFindings }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:6px"><sc-for list="{{ governFindings }}" as="f" hint-placeholder-count="1"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:12px;color:var(--text-heading);font-size:14px"><span style="display:flex;align-items:center;gap:10px;min-width:0"><span aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;background:var(--warning);flex:none"></span><span style="font-weight:700;text-wrap:pretty">{{ f.head }}</span></span><span style="display:flex;align-items:center;gap:8px;white-space:nowrap"><button onClick="{{ f.rec.choose }}" style="height:32px;padding:0 14px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:var(--cta-hover)">{{ f.rec.name }}</button><button onClick="{{ f.askAndi }}" style="height:32px;padding:0 10px;border:0;border-radius:9999px;background:transparent;color:var(--link);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">Ask Andi</button></span></div></sc-for></div></sc-if>
     <div style="display:grid;gap:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
@@ -1178,8 +1170,8 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center"><span style="margin-right:auto"></span><button onClick="{{ aSimulate }}" disabled="{{ aNotReady }}" style="height:36px;padding:0 16px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">Simulate</button><button onClick="{{ aEnforce }}" disabled="{{ aNotReady }}" style="height:36px;padding:0 16px;border:0;border-radius:9999px;background:{{ aBg }};color:{{ aColor }};font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">Enforce</button></div>
       </div>
       </sc-if>
-      <sc-if value="{{ hasPolicies }}" hint-placeholder-val="{{ true }}">
-      <div style="background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;overflow:hidden">
+      <sc-if value="{{ notAuthoring }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ hasPolicies }}" hint-placeholder-val="{{ true }}">
+      <div class="gov-frame" style="background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;overflow:auto">
         <div style="display:grid;grid-template-columns:minmax(0,1fr) 96px 112px 108px 168px;gap:16px;align-items:center;padding:8px 20px;background:var(--bg-wash);border-bottom:1px solid var(--border-secondary);font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)"><span>Policy</span><span style="text-align:right">Matched</span><span style="text-align:right">Violations</span><span style="text-align:right">State</span><span style="text-align:right">Action</span></div>
         <sc-for list="{{ polRows }}" as="p" hint-placeholder-count="4">
           <div style="display:grid;grid-template-columns:minmax(0,1fr) 96px 112px 108px 168px;gap:16px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border-secondary)">
@@ -1191,8 +1183,10 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
           </div>
         </sc-for>
       </div>
-      </sc-if>
+      </sc-if></sc-if>
     </div>
+    </sc-if>
+    <sc-if value="{{ govPanelTemplates }}" hint-placeholder-val="{{ false }}">
     <div id="sec-starting" style="display:grid;gap:12px">
       <h3 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">{{ examplesTitle }}</h3>
       <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px">
@@ -1201,6 +1195,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         </sc-for>
       </div>
     </div>
+    </sc-if>
   </div>
   </sc-if>
 
@@ -1210,7 +1205,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <!-- Observe · Insights is a page, not a drawer (2026-09-28): the six cards and the findings, full width. -->
   <sc-if value="{{ obIsInsights }}" hint-placeholder-val="{{ false }}">
   <div style="display:grid;gap:16px">
+  <div role="tablist" aria-label="Insights views" style="display:flex;align-items:center;border-bottom:1px solid var(--border-secondary)"><sc-for list="{{ insPanels }}" as="ip" hint-placeholder-count="2"><button role="tab" aria-selected="{{ ip.on }}" onClick="{{ ip.go }}" style="border:0;border-bottom:2px solid {{ ip.line }};background:transparent;padding:6px 2px;margin-right:18px;font:inherit;font-size:15px;line-height:22px;font-weight:{{ ip.weight }};color:{{ ip.color }};cursor:pointer;white-space:nowrap">{{ ip.label }}</button></sc-for></div>
 <!-- The six insight cards, back from iteration 1 (2026-09-28): "we had a fantastic Insights section". Two up in the drawer. -->
+<sc-if value="{{ insPanelSignals }}" hint-placeholder-val="{{ true }}">
 <sc-if value="{{ hasIw }}" hint-placeholder-val="{{ true }}">
 <div aria-label="Insight cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">
     <div class="fx-card sm" aria-label="Top talkers" style="border-color:{{ insDrill.talkers.border }}">
@@ -1252,6 +1249,8 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         </div>
 </div>
 </sc-if>
+</sc-if>
+<sc-if value="{{ insPanelFindings }}" hint-placeholder-val="{{ false }}">
 <sc-if value="{{ hasFindings }}" hint-placeholder-val="{{ true }}">
 <div id="sec-insights" class="fx-card" style="gap:12px;padding:16px 24px">
   <div class="fx-card-head" style="align-items:flex-start"><div style="min-width:0"><h3 class="fx-card-title">Findings</h3><div class="fx-card-sub">{{ insightSub }}</div></div><sc-if value="{{ hasInsFocus }}" hint-placeholder-val="{{ false }}"><button class="fx-chip" onClick="{{ clearInsFocus }}" aria-label="Show every finding" style="cursor:pointer;margin-left:auto;background:var(--bg-accent);color:var(--link);border-color:var(--border-active);font-weight:600">{{ insFocusLabel }} ×</button></sc-if><span style="flex:none;font-size:12px;color:var(--text-light);white-space:nowrap">{{ insightCount }}</span></div>
@@ -1268,6 +1267,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </div>
   </sc-if>
 </div>
+</sc-if>
 </sc-if>
   </div>
   </sc-if>
@@ -1288,7 +1288,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <div class="fx-chips" style="gap:6px"><sc-for list="{{ logPathChips }}" as="lp" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ lp.on }}" onClick="{{ lp.go }}" style="cursor:pointer;background:{{ lp.bg }};color:{{ lp.color }};border-color:{{ lp.border }}">{{ lp.label }}</button></sc-for><span style="width:10px"></span><sc-for list="{{ logActChips }}" as="la" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ la.on }}" onClick="{{ la.go }}" style="cursor:pointer;background:{{ la.bg }};color:{{ la.color }};border-color:{{ la.border }}">{{ la.label }}</button></sc-for></div>
   </div></sc-if>
   <sc-if value="{{ hasLogs }}" hint-placeholder-val="{{ true }}">
-  <div>
+  <div class="log-frame">
     <div class="dt">
       <div class="dt-h"><div class="dt-r">
         <div class="dt-c dt-th" style="width:9%">Time</div>
@@ -1318,7 +1318,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}">
   <label class="fx-search" style="width:100%"><span aria-hidden="true"></span><input value="{{ actQ }}" onChange="{{ setActQ }}" placeholder="Person, action, region, policy" aria-label="Search user activity"></input></label>
   <sc-if value="{{ hasAct }}" hint-placeholder-val="{{ true }}">
-  <div>
+  <div class="log-frame">
     <div class="dt">
       <div class="dt-h"><div class="dt-r">
         <div class="dt-c dt-th" style="width:9%">When</div>
@@ -1928,8 +1928,8 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <!-- ===== S7 BROWSE ===== -->
 <!-- Help & Resources (2026-09-28): NetBond Advanced's information center, simpler. Andi, guides from this estate, seven resources, the glossary. -->
 <sc-if value="{{ sS9 }}" hint-placeholder-val="{{ false }}">
-<section data-screen-label="S9 Help" style="animation:fadeIn .3s;display:grid;gap:28px;grid-template-columns:minmax(0,1fr)">
-  <div style="display:grid;gap:16px;padding:28px 32px;border-radius:16px;background:linear-gradient(120deg,#0057b8 0%,#003d82 55%,#009fdb 100%);color:#fff">
+<section data-screen-label="S9 Help" style="animation:fadeIn .3s;display:grid;gap:18px;grid-template-columns:minmax(0,1fr)">
+  <div style="display:grid;gap:14px;padding:22px 28px;border-radius:16px;background:linear-gradient(120deg,#0057b8 0%,#003d82 55%,#009fdb 100%);color:#fff">
     <h1 style="margin:0;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.03em">How can we help?</h1>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <label style="flex:1 1 360px;display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:9999px;background:#fff;color:#13171b;min-width:0"><span aria-hidden="true" style="width:18px;height:18px;flex:none;background:url('brand/icons-light/search.svg') center / contain no-repeat"></span><input value="{{ helpQ }}" onChange="{{ setHelpQ }}" placeholder="Search guides and terms" aria-label="Search help" style="flex:1;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:15px;color:#13171b"></label>
@@ -1937,9 +1937,10 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ helpAsks }}" as="ha" hint-placeholder-count="3"><button onClick="{{ ha.go }}" style="height:30px;padding:0 12px;border:1px solid rgba(255,255,255,.35);border-radius:9999px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:rgba(255,255,255,.24)">{{ ha.q }}</button></sc-for></div>
   </div>
+  <div role="tablist" aria-label="Help views" style="display:flex;align-items:center;border-bottom:1px solid var(--border-secondary)"><sc-for list="{{ helpPanels }}" as="hp" hint-placeholder-count="2"><button role="tab" aria-selected="{{ hp.on }}" onClick="{{ hp.go }}" style="border:0;border-bottom:2px solid {{ hp.line }};background:transparent;padding:6px 2px;margin-right:18px;font:inherit;font-size:15px;line-height:22px;font-weight:{{ hp.weight }};color:{{ hp.color }};cursor:pointer;white-space:nowrap">{{ hp.label }}</button></sc-for></div>
+  <sc-if value="{{ helpPanelStart }}" hint-placeholder-val="{{ true }}">
   <sc-if value="{{ hasHelpGuides }}" hint-placeholder-val="{{ true }}">
   <div style="display:grid;gap:12px">
-    <div style="font-size:11px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--text-light)">Start here</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px">
       <sc-for list="{{ helpGuides }}" as="hg" hint-placeholder-count="4"><div class="fx-card" style="gap:14px;padding:20px">
         <div style="display:flex;align-items:center;gap:12px"><span aria-hidden="true" style="width:40px;height:40px;flex:none;border-radius:10px;background:var(--bg-accent);display:flex;align-items:center;justify-content:center"><span style="width:22px;height:22px;background:url('{{ hg.iconSrc }}') center / contain no-repeat"></span></span><h3 class="fx-card-title" style="margin:0;white-space:normal;line-height:21px">{{ hg.title }}</h3></div>
@@ -1955,18 +1956,19 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <sc-for list="{{ helpLive }}" as="hr" hint-placeholder-count="3"><div class="fx-card" style="gap:10px;padding:18px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span aria-hidden="true" style="width:36px;height:36px;border-radius:8px;background:var(--bg-wash);border:1px solid var(--border-secondary);display:flex;align-items:center;justify-content:center"><span style="width:20px;height:20px;background:url('{{ hr.iconSrc }}') center / contain no-repeat"></span></span><sc-if value="{{ hr.soon }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 10px;border-radius:8px;background:{{ helpSoonBg }};color:{{ helpSoonInk }};font-size:12px;font-weight:600;white-space:nowrap">Coming soon</span></sc-if></div>
         <div style="display:grid;gap:2px"><div style="font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ hr.title }}</div><div style="font-size:13px;line-height:18px;color:var(--text-body)">{{ hr.desc }}</div></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ hr.tagRows }}" as="tg" hint-placeholder-count="2"><span style="padding:2px 8px;border-radius:8px;background:var(--bg-neutral);color:var(--text-body);font-size:12px;line-height:18px">{{ tg.t }}</span></sc-for></div>
         <sc-if value="{{ hr.live }}" hint-placeholder-val="{{ true }}"><button onClick="{{ hr.go }}" style="margin-top:auto;height:34px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:13px;font-weight:600;cursor:pointer" style-hover="border-color:var(--border-active)">{{ hr.cta }} ›</button></sc-if>
         <sc-if value="{{ hr.soon }}" hint-placeholder-val="{{ false }}"><span style="margin-top:auto;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-secondary);border-radius:9999px;color:var(--text-disabled);font-size:13px;font-weight:600">{{ hr.cta }}</span></sc-if>
       </div></sc-for>
     </div>
     <div style="font-size:13px;line-height:18px;color:var(--text-light)">{{ helpSoonLine }}</div>
   </div>
+  </sc-if>
+  <sc-if value="{{ helpPanelTerms }}" hint-placeholder-val="{{ false }}">
   <div id="sec-help-glossary" style="display:grid;gap:12px">
-    <div style="font-size:11px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--text-light)">Glossary</div>
     <sc-if value="{{ hasHelpTerms }}" hint-placeholder-val="{{ true }}"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:1px;background:var(--border-secondary);border:1px solid var(--border-secondary);border-radius:12px;overflow:hidden"><sc-for list="{{ helpTerms }}" as="gt" hint-placeholder-count="8"><div style="display:grid;gap:2px;padding:12px 16px;background:var(--bg-base)"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ gt.term }}</span><span style="font-size:13px;line-height:18px;color:var(--text-body)">{{ gt.def }}</span></div></sc-for></div></sc-if>
     <sc-if value="{{ hasHelpQ }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearHelpQ }}" style="justify-self:start;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer">Clear the search</button></sc-if>
   </div>
+  </sc-if>
 </section>
 </sc-if>
 <sc-if value="{{ sS7 }}" hint-placeholder-val="{{ false }}">
@@ -2360,12 +2362,12 @@ class Component extends DCLogic {
   componentWillUnmount() { window.removeEventListener('scroll', this._onScroll); if (this._ro) this._ro.disconnect(); if (this._hdrPoll) clearInterval(this._hdrPoll); window.removeEventListener('resize', this._rs); document.removeEventListener('click', this._away); document.removeEventListener('keydown', this._esc); }
   componentWillUnmount() { window.removeEventListener('scroll', this._onScroll); if (this._ro) this._ro.disconnect(); if (this._hdrPoll) clearInterval(this._hdrPoll); window.removeEventListener('resize', this._rs); }
   renderVals() {
-    if (!this.app) return { theme: this.state.theme, sS0: true, heroVisible: true, heroCols: '300px 1fr', heroMinH: '0', heroSvgStyle: { display: 'block', width: '100%' } };
+    if (!this.app) return { theme: this.state.theme, sS0: true, heroVisible: true, heroCols: '300px 1fr', heroMinH: '0', heroMb: '24px', heroSvgStyle: { display: 'block', width: '100%' } };
     const v = this.app.vals(this);
     v.appReady = true;
     const s = this.state;
     // derived presentation values the template needs
-    v.heroMinH = s.screen === 's0' ? '0' : '0'; v.heroSvgStyle = s.screen === 's0' ? { display: 'block', overflow: 'visible', width: '100%', height: 'auto', maxHeight: '440px', alignSelf: 'stretch', minHeight: 0 } : { display: 'block', overflow: 'visible', width: '100%' };
+    v.heroMinH = s.screen === 's0' ? '0' : '0'; v.heroMb = s.screen === 's3' ? '0' : '24px'; v.heroSvgStyle = s.screen === 's0' ? { display: 'block', overflow: 'visible', width: '100%', height: 'auto', maxHeight: '440px', alignSelf: 'stretch', minHeight: 0 } : { display: 'block', overflow: 'visible', width: '100%' };
     v.inetOp = s.hoverNode && s.hoverNode !== 'inet' ? 0.3 : 1;
     v.noop = (e) => e.preventDefault();
     v.setSourceCred = () => this.setState({ intakeSource: 'credential' });

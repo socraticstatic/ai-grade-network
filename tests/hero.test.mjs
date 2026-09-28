@@ -43,7 +43,9 @@ test('the canvas a full estate needs does not move', () => {
   // Trust's root is four region cards rather than seven site groups, so its seven
   // cloud regions set the height: 4px under the tallest canvas. Height is still
   // measured from the root, so it never changes under a click.
-  const TALL = { partial: [560, 396, 440, 99], mature: [560, 396, 440, 99], trust: [556, 392, 436, 98] };
+  // The foot under the lane went from 44 to 16 units (no-scroll pass, 2026-09-28):
+  // nothing sat in it, and the page must fit 1440x900.
+  const TALL = { partial: [532, 396, 440, 99], mature: [532, 396, 440, 99], trust: [528, 392, 436, 98] };
   for (const id of ['partial', 'mature', 'trust']) {
     const L = heroLayout(D.ESTATES[id], {});
     const [H, bandH, laneY, strataH] = TALL[id];
@@ -58,7 +60,7 @@ test('the canvas a full estate needs does not move', () => {
   // canvas above still measures every region, so it did not move.
   // Cards then moved onto the shared row grid inside the band (2026-09-23).
   // Then taller cards on 52-unit rows that continue below the band (2026-09-23).
-  assert.equal(heroLayout(D.ESTATES.mature, {}).internet.y, 498);
+  assert.equal(heroLayout(D.ESTATES.mature, {}).internet.y, 496); // clamped 2 up by the shorter foot (2026-09-28)
   assert.equal(heroLayout(D.ESTATES.trust, {}).internet.y, 446);
   assert.equal(heroLayout(D.ESTATES.partial, {}).internet.y, 446);
   // Drilling must not resize the picture under the click.
@@ -73,7 +75,7 @@ test('the canvas a full estate needs does not move', () => {
 test('a small estate gets a canvas sized to it', () => {
   for (const id of ['empty', 'small']) {
     const L = heroLayout(D.ESTATES[id], {});
-    assert.equal(L.H, 500, id);
+    assert.equal(L.H, 472, id);
     assert.equal(L.bandH, 336, id);
     assert.equal(L.lane.y, 380, id);
     assert.equal(L.internet.y, 320, id);

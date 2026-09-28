@@ -16,8 +16,9 @@ export function connectVerdict(est, layer = 'cloud', items = []) {
     : ['site', 'sites', 'reach clouds over the public internet'];
   if (!exposedN) return `Every ${noun[0]} is on the AT&T network.`;
   const onFabric = totalN - exposedN;
-  const extra = cloud && est.regionsExtra ? `, plus ${est.regionsExtra} smaller regions rolled up` : '';
-  return `${exposedN} of ${totalN} ${noun[1]} ${noun[2]}. ${onFabric} ${onFabric === 1 ? 'is' : 'are'} on the AT&T network${extra}.`;
+  // The rollup clause left (2026-09-28, no scrolling): the picture already
+  // carries "N smaller regions rolled up", and the verdict holds to one line.
+  return `${exposedN} of ${totalN} ${noun[1]} ${noun[2]}. ${onFabric} ${onFabric === 1 ? 'is' : 'are'} on the AT&T network.`;
 }
 
 export function governVerdict(est) {
