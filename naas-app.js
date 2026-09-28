@@ -1346,9 +1346,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const eBars = (rows) => { const m = Math.max(1, ...rows.map(r => r.n)); return rows.map(r => ({ ...r, title: r.title || r.label, key: r.key || r.label, w: Math.max(4, Math.round(r.n / m * 100)) + '%' })); };
   const allSitesE = est.sites || [], eSiteN = ecnt(allSitesE), eAttN = ecnt(allSitesE.filter(onAtt));
   const eSvcTally = {}; allSitesE.forEach(x => S.servicesOf(x).forEach(v => { eSvcTally[v.key] = eSvcTally[v.key] || { v, n: 0 }; eSvcTally[v.key].n += S.countOf(x.name); }));
-  const eToSites = () => set({ scrollToSec: 'sec-your-sites', scrollNonce: (s.scrollNonce || 0) + 1 });
+  const eToSites = () => set({ estPanel: 'sites' });
   const eBwOf = (r) => { const u = (ob.utilRows || []).find(x => x.region === r.region); const p = u ? u.ports : 1; return p === 1 ? '10G' : `${p} × 10G`; };
   const eRegs = est.regionsList || [], ePrivRegs = eRegs.filter(r => r.priv), ePubRegs = eRegs.filter(r => !r.priv), pubWlE = ePubRegs.reduce((a, r) => a + (r.wl || 0), 0);
+  // Four rows a card, the rest counted, so two rows of cards fit the fold (2026-09-28).
+  const cap4 = (c0) => c0.rows.length <= 4 ? c0 : { ...c0, rows: [...c0.rows.slice(0, 3), { key: 'more', label: `+${c0.rows.length - 3} more`, sub: '', title: c0.rows.slice(3).map(r0 => r0.label).join(', '), w: '0%', fill: 'transparent', value: '' }] };
   const haveCards = [
     { title: 'Sites by service', soWhat: eAttN === eSiteN ? `All ${enf(eSiteN)} sites on AT&T.` : `${enf(eAttN)} of ${enf(eSiteN)} on AT&T · ${enf(eSiteN - eAttN)} on another carrier`,
       rows: eBars(Object.values(S.SERVICE).concat(Object.values(eSvcTally).map(t => t.v).filter(v => !S.SERVICE[v.key])).filter(v => eSvcTally[v.key]).map(v => ({ label: v.label, sub: '', title: v.name, n: eSvcTally[v.key].n, value: enf(eSvcTally[v.key].n), fill: v.onAtt ? 'var(--viz-1)' : 'var(--viz-4)' }))),
@@ -1360,6 +1362,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       rows: eBars([['VPCs', newVpcs.length], ['Workloads', newWls.length], ['Sites', newSites.length], ['No label yet', newUnlabeled], ['Reach the internet', newPublic]].map(([l, n]) => ({ label: l, sub: '', n, value: enf(n), fill: /label|internet/.test(l) ? 'var(--viz-4)' : 'var(--viz-1)' }))),
       cta: newStrip.cta, go: newN ? newStrip.toggle : eToSites },
   ];
+  haveCards.splice(0, haveCards.length, ...haveCards.map(cap4));
   const eOffAtt = allSitesE.filter(x => !onAtt(x));
   const eIpsecB = (est.buckets || []).find(b => b.id === 'ipsec');
   const eSingles = allSitesE.filter(x => onAtt(x) && Array.isArray(x.services) && S.servicesOf(x).length === 1);
@@ -1773,12 +1776,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // The head's rollups double as filters; the control is the view (2026-09-28).
   const kShort = (n) => (n >= 1000 ? '$' + (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'k' : '$' + n);
   const sloN = (ob.flows || []).filter(f => f.latency > F.SLO).length;
-  const tileOn = (k) => ({ traffic: mapMode === 'state' && mapPath === 'all', onatt: mapPath === 'att', egress: mapMode === 'cost' && mapPath === 'all', saving: false, could: mapMode === 'cost' && mapPath === 'out', slo: mapMode === 'slo' })[k];
+  const tileOn = (k) => ({ traffic: mapMode === 'state' && mapPath === 'all', onatt: mapPath === 'att', egress: mapMode === 'cost' && mapPath === 'all', p95: false, could: mapMode === 'cost' && mapPath === 'out', slo: mapMode === 'slo' })[k];
   const flowTiles = [
     ['traffic', 'Traffic', map.total.toFixed(1), 'Gbps', { mapMode: 'state', mapPath: 'all' }],
+    ['p95', 'P95 latency', String((ob.kpis || []).find(k => k.key === 'p95') ? ob.kpis.find(k => k.key === 'p95').v : '—'), 'ms', { mapMode: 'slo', mapPath: 'all' }],
     ['onatt', 'Sites on AT&T', (() => { const p = map.fabV / (map.total || 1) * 100; return p >= 99.95 ? '100%' : p >= 99 ? p.toFixed(1) + '%' : Math.round(p) + '%'; })(), '', { mapMode: 'state', mapPath: 'att' }],
     ['egress', 'Egress', kShort(egSpend), '/mo', { mapMode: 'cost', mapPath: 'all' }],
-    ['saving', 'Saving', kShort(ob.savingsMo || 0), '/mo', { mapMode: 'cost', mapPath: 'att' }],
     ['could', 'Could save', kShort(totalSave), '/mo', { mapMode: 'cost', mapPath: 'out' }],
     ['slo', 'Over SLO', String(sloN), sloN === 1 ? 'flow' : 'flows', { mapMode: 'slo', mapPath: 'all' }],
   ].map(([k, l, v, u, patch]) => { const on = !!tileOn(k); return { key: k, l, v, u, on, go: () => set(patch), border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)' }; });
@@ -1794,6 +1797,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const otTiles = [['Peak', gbpsW(Math.max(0, ...otTot))], ['Average', gbpsW(otTot.reduce((a, v) => a + v, 0) / (otTot.length || 1))], ['Trend', `${otTrend >= 0 ? '+' : ''}${otTrend}%`], ['Egress', fmt(Math.round(OT.bars.reduce((a, b) => a + b.egress, 0)))]].map(([l, v]) => ({ key: l, l, v }));
   const otGrains = [['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly']].map(([k, l]) => { const on = otGrain === k; return { key: k, label: l, on, ...seg(on), go: () => set({ otGrain: k }) }; });
   const otEnds = OT.bars.length ? [OT.bars[0].label, OT.bars[OT.bars.length - 1].label] : ['', ''];
+  // One panel at a time under the Traffic head (2026-09-28, "No scrolling").
+  const obPanel = ['map', 'time', 'where', 'conn'].includes(s.obPanel) ? s.obPanel : 'map';
+  const obPanels = [['map', 'Traffic'], ['time', 'Over time'], ['where', 'Where it goes'], ['conn', 'Connections']].map(([k, l]) => { const on = obPanel === k;
+    return { key: k, label: l, on, go: () => set({ obPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; });
   const flowViews = [['state', 'Traffic'], ['cost', 'Cost'], ['slo', 'Performance']].map(([k, l]) => { const on = mapMode === k || (k === 'state' && mapMode === 'delta'); return { key: k, label: l, on, ...seg(on), go: () => set({ mapMode: k }) }; });
   const flowPaths = [['all', 'All paths'], ['att', 'On AT&T'], ['out', 'Outside AT&T']].map(([k, l]) => { const on = mapPath === k; return { key: k, label: l, on, ...seg(on), go: () => set({ mapPath: k }) }; });
   const mapHeads = map.heads.map((h, i) => ({ ...h, key: 'h' + i,
@@ -2006,7 +2013,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const plNow = PERSONA_LENS[personaNow] || PERSONA_LENS['Executive'];
   const dash = { ...mixVals, ...insightVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: `${queueRows.length} open`, queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ queueOpen: true }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
-    flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
+    obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0, scopeLabel,
     clearScope: () => set({ obScope: 'all', obDim: 'all' }), scopeIsAll: !obScope || obScope === 'all',
     mapFiltersOpen, mapFiltersShut: !mapFiltersOpen,
@@ -2079,7 +2086,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           ? { sub: null, sourceEdit: null, srcCred: null }
           : { addedSources: [...(s.addedSources || []), prov ? `${tile} account` : 'AT&T inventory'], sub: null, sourceEdit: null, srcCred: null, screen: 's1', discoverView: 'sources' }),
       };
-    })(), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage !== 'insights' && obPage !== 'logs', obIsInsights: obPage === 'insights', obIsLogsPage: obPage === 'logs', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
+    })(), ...dash, nextStop, connectNext, governNext, costNext,
+    // Next stop is a button in the title row, not a strip (2026-09-28, no scrolling).
+    ...(() => { const nx = s.screen === 's3' ? { connect: connectNext, observe: nextStop, govern: governNext, cost: costNext }[s.tab] : null; return { hasPageNext: !!(nx && nx.title), pageNext: nx && nx.title ? { label: nx.title.replace(/^Next stop:\s*/, 'Next: '), text: nx.text || '', go: nx.go } : { label: '', text: '', go: () => {} } }; })(), obIsPerf: obPage !== 'insights' && obPage !== 'logs', obIsInsights: obPage === 'insights', obIsLogsPage: obPage === 'logs', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
   // The Observe drawer's Policies and Tags (2026-09-28). The same policies
   // Govern lists and the same tags the inventory carries, read against each
   // other: what each policy caught, and which tags no policy covers yet.
@@ -2169,7 +2178,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         else { set({ jumpHit: `Jumped to ${hit.label}`, tagView: false, treeOrMap: 'tree', inv: { ...(s.inv || {}), [hit.cloudId]: true, [hit.regionId]: true, [hit.vpcId]: true } }); after('vpc:' + hit.vpcId); }
       };
       return { jumpQ: s.jumpQ || '', setJumpQ: (e) => set({ jumpQ: e.target.value, jumpHit: '' }), jumpKey: (e) => { if (e.key === 'Enter') jumpTo(); }, jumpGo: jumpTo, jumpHit: s.jumpHit || '', hasJumpHit: !!s.jumpHit,
-        newStrip, newOnly, haveCards, lackCards, hasLackCards: lackCards.length > 0, siteTree: tree, hasSiteTree: tree.length > 0, siteCrumbs: crumbs, hasSiteCrumbs: crumbs.length > 1, cloudsLine: `${stats.clouds} ${stats.clouds === 1 ? 'cloud' : 'clouds'} · ${stats.regions} ${stats.regions === 1 ? 'region' : 'regions'} · ${stats.workloads.toLocaleString('en-US')} workloads`, siteCrumbTail: crumbs[crumbs.length - 1].label, collapseSites: () => set({ siteOpen: {} }), sitesLineTree: `${totalSites.toLocaleString('en-US')} sites · your own buildings, not a cloud` };
+        newStrip, newOnly, haveCards, lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
+        // Three tabs, one panel at a time (2026-09-28, no scrolling).
+        ...(() => { const ek = ['glance', 'clouds', 'sites'].includes(s.estPanel) ? s.estPanel : 'glance'; return { estPanels: [['glance', 'At a glance'], ['clouds', 'Your clouds'], ['sites', 'Your sites']].map(([k, l]) => { const on = ek === k; return { key: k, label: l, on, go: () => set({ estPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), estPanelGlance: ek === 'glance', estPanelClouds: ek === 'clouds', estPanelSites: ek === 'sites' }; })(),
+        siteTree: tree, hasSiteTree: tree.length > 0, siteCrumbs: crumbs, hasSiteCrumbs: crumbs.length > 1, cloudsLine: `${stats.clouds} ${stats.clouds === 1 ? 'cloud' : 'clouds'} · ${stats.regions} ${stats.regions === 1 ? 'region' : 'regions'} · ${stats.workloads.toLocaleString('en-US')} workloads`, siteCrumbTail: crumbs[crumbs.length - 1].label, collapseSites: () => set({ siteOpen: {} }), sitesLineTree: `${totalSites.toLocaleString('en-US')} sites · your own buildings, not a cloud` };
     })(),
     siteCards: est.sites.filter(st => !st.rollup).map((st, i) => ({ key: st.name, name: st.name, metro: st.metro, cidr: `10.${60 + i}.0.0/20`, selected: false })), siteRollups: est.sites.filter(st => st.rollup).map(st => ({ key: st.name, name: st.name, n: (st.name.match(/\(([\d,]+)\)/) || [])[1] || '', priv: st.priv, pctW: st.priv ? '100%' : '0%', fill: st.priv ? '#0057b8' : '#8a949c' })), hasSiteRollups: est.sites.some(st => st.rollup), sitesLine: `${stats.sites.toLocaleString('en-US')} premises · your own buildings, not a cloud`,
     discoverVerdictLine: isEmpty ? 'Nothing discovered yet. Connect an account or pick an inventory.' : `${est.regionsList.length - ob.pathsCovered} of your ${est.regionsList.length} cloud regions still ride the public internet. ${ob.pathsCovered} ${ob.pathsCovered === 1 ? 'is' : 'are'} on the AT&T network, across ${plural(inv.length, 'cloud', 'clouds')}.`,
@@ -2433,10 +2445,11 @@ function shellVals(s, set, go, est, c, sched) {
           const view = isView ? id.slice(1) : '';
           const cur = isView ? (view === 'insights' || view === 'logs' ? onS3('cloud', 'observe') && s.obPage === view : view === 'estate' ? s.screen === 's1' && s.discoverView !== 'sources' : view === 'sources' ? s.screen === 's1' && s.discoverView === 'sources' : ['s4', 's5', 's6'].includes(s.screen))
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
+            : tab === 'cost' ? (onS3('cloud', tab) && (({ 'sec-egress': 'dest', 'sec-arbitrage': 'money' })[id] || 'money') === (s.costPanel || 'money') && !(s.sub && s.sub.page === 'cost'))
             : (onS3('cloud', tab) && activeSec === id && (tab !== 'observe' || !['insights', 'logs'].includes(s.obPage)));
           const goTo = isView ? (view === 'insights' || view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
-            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
+            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: ({ 'sec-egress': 'dest', 'sec-arbitrage': 'money' })[id] || 'money' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
           return { ...item(label, ic, goTo, cur, false, sub, isPanel || isView), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };
@@ -2678,7 +2691,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
     R.donut([
       { label: 'On the AT&T network', v: fabPart, color: 'var(--viz-1)', sub: `${siteRows.filter(r => r.pubPart === 0).length} of ${siteRows.length} first miles` },
       { label: 'Public first mile', v: pubPart, color: 'var(--viz-4)', sub: 'no rate control' },
-    ], { key: 'path', title: 'How it leaves the building', sub: 'The same bill, split by first mile', centre: (bySiteTotal ? Math.round(fabPart / bySiteTotal * 100) : 0) + '%', centreSub: 'of egress on AT&T' }),
+    ], { key: 'path', title: 'How it leaves the building', sub: 'The same bill, split by first mile', centre: (bySiteTotal ? Math.round(fabPart / bySiteTotal * 100) : 0) + '%', centreSub: 'of egress' }),
     R.donut([
       { label: 'Already at AT&T rate', v: atRate, color: 'var(--viz-3)', sub: 'nothing to recover' },
       { label: 'Recoverable now', v: recover, color: 'var(--viz-4)', sub: 'the premium over $0.02/GB' },
@@ -2693,6 +2706,10 @@ function costVals(s, set, est, invAll, ob, go, c) {
       ...(pubSite ? [{ key: 'sites', l: `${pubSite.label} sites`, v: fmt(pubSite.pubPart), u: '/mo egress outside AT&T', cta: 'Move to AT&T', go: go('s1') }] : []),
     ],
     hasCostMoves: !!(top || pubSite),
+    // One panel at a time (2026-09-28, no scrolling).
+    ...(() => { const cpk = ['money', 'dest', 'mile', 'bucket'].includes(s.costPanel) ? s.costPanel : 'money';
+      return { costPanels: [['money', 'Where the money is'], ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
+        costPanelMoney: cpk === 'money', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
     costStrip: { has: !!(top || pubSite), title: 'Act on it', text: [pubSite ? `${fmt(pubSite.pubPart)}/mo of egress still leaves ${pubSite.label.toLowerCase()} on a public first mile.` : '', top ? `Attaching ${top.region} moves ${top.wl} workloads to $0.02/GB and saves ${fmt(top.saveN)}/mo, the largest single move on the table.` : 'Every region is attached; the remaining lever is the commit table below.'].filter(Boolean).join(' '), cta: top ? `Attach ${top.region}` : 'Drill sites', go: top ? go('s4', { ...newOrder(prefillAttach(top)) }) : go('s1') },
     bySite, hasBySite: bySite.length > 0, bySiteTotalF: fmt(bySiteTotal), bySiteNote: `${fmt(siteRows.reduce((a, r) => a + r.pubPart, 0))}/mo still on a public first mile`, goSites: go('s1'),
     costDonuts, hasCostDonuts: costDonuts.length > 0,

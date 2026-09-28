@@ -17,9 +17,10 @@ const card = () => { const a = HTML.indexOf('<div id="sec-flow"'); return HTML.s
 
 test('six rollups head the map, each a number with its unit', () => {
   const t = vals(obs()).flowTiles;
-  assert.deepEqual(t.map(x => x.l), ['Traffic', 'Sites on AT&T', 'Egress', 'Saving', 'Could save', 'Over SLO']);
+  // One tile row since the no-scroll ruling (2026-09-28): Saving lives in the headline, latency joins.
+  assert.deepEqual(t.map(x => x.l), ['Traffic', 'P95 latency', 'Sites on AT&T', 'Egress', 'Could save', 'Over SLO']);
   for (const x of t) assert.ok(x.v && x.v.length <= 7, `${x.l}: ${x.v}`);
-  assert.equal(t.find(x => x.l === 'Saving').v, '$36k');
+  assert.equal(t.find(x => x.l === 'Egress').v, '$89.6k');
 });
 
 test('a tile is a filter: it switches the view it belongs to', () => {
@@ -53,6 +54,5 @@ test('the head carries no sentences: no subtitle, no persona line, no pattern gl
   assert.doesNotMatch(h, /\{\{ mapSub \}\}|\{\{ plKicker \}\}|\{\{ patternWhy \}\}/);
   assert.match(h, /<sc-for list="\{\{ flowTiles \}\}"/);
   assert.match(h, /<sc-for list="\{\{ flowViews \}\}"/);
-  const health = HTML.slice(HTML.indexOf('id="sec-health"'), HTML.indexOf('id="sec-health"') + 600);
-  assert.doesNotMatch(health, /What is running|are <b|read<\/b> from/, 'Health still describes itself');
+  assert.equal(HTML.indexOf('id="sec-health"'), -1, 'the second tile row is back');
 });

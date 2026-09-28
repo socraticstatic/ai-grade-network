@@ -178,12 +178,12 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // div 989 -> 990.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 990],
-    ['span', /<span\b/g, /<\/span>/g, 756],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 348],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 207],
+    ['div', /<div\b/g, /<\/div>/g, 966],
+    ['span', /<span\b/g, /<\/span>/g, 734],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 357],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 208],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 271],
+    ['button', /<button\b/g, /<\/button>/g, 269],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 28],
   ];
@@ -193,14 +193,10 @@ test('every container the markup opens, it closes', () => {
   }
 });
 
-test('Observe closes the loop with a Next stop row', () => {
-  const start = HTML.indexOf('<sc-if value="{{ tObserve }}"');
-  const end = HTML.indexOf('<sc-if value="{{ tCost }}"');
-  assert.ok(start > 0 && end > start, 'the Observe tab block is gone');
-  const observe = HTML.slice(start, end);
-  for (const b of ['{{ nextStop.title }}', '{{ nextStop.text }}', '{{ nextStop.cta }}', '{{ nextStop.go }}']) {
-    assert.ok(observe.includes(b), `${b} is not bound inside the Observe tab`);
-  }
+test('every page closes the loop with a Next button in its title row', () => {
+  // A strip per page became one button beside the title (2026-09-28, no scrolling).
+  assert.equal(HTML.indexOf('aria-label="Next stop"'), -1, 'a Next stop strip is back');
+  for (const b of ['{{ pageNext.go }}', '{{ pageNext.label }}', '{{ pageNext.text }}']) assert.ok(HTML.includes(b), `${b} is not bound`);
 });
 
 test('the station CTA stays bound to the markup', () => {

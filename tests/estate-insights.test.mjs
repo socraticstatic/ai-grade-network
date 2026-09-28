@@ -32,8 +32,10 @@ test('every widget says so what, shows its evidence, and offers one move', () =>
 test('the IPsec sites name their egress bill and their exposure', () => {
   const ipsec = at().lackCards[0];
   assert.match(ipsec.soWhat, /\$8,600\/mo/);
-  assert.equal(ipsec.rows.length, 5);
-  assert.ok(ipsec.rows.every(r => r.value === 'IPsec'), ipsec.rows.map(r => r.value).join(', '));
+  // Four rows a card since the no-scroll ruling: three sites and the rest counted.
+  assert.equal(ipsec.rows.length, 4);
+  assert.ok(ipsec.rows.slice(0, 3).every(r => r.value === 'IPsec'), ipsec.rows.map(r => r.value).join(', '));
+  assert.equal(ipsec.rows[3].label, '+2 more');
 });
 
 test('connections carry their bandwidth, and a public region says it has none', () => {
@@ -51,8 +53,9 @@ test('an estate that declares no services drops the backup widget, not the row',
 test('the Act on it strip is gone from Estate; the window and Review new live in the insights head', () => {
   const a = HTML.indexOf('aria-label="Discovered in the window"');
   assert.equal(a, -1, 'the Estate still carries its Act on it strip');
+  const tabs = HTML.slice(HTML.indexOf('aria-label="Estate views"'), HTML.indexOf('aria-label="Estate views"') + 3000);
+  assert.match(tabs, /setRange/, 'the window left the Estate tab row');
   const ins = HTML.slice(HTML.indexOf('aria-label="Estate insights"'), HTML.indexOf('aria-label="Estate insights"') + 6000);
-  assert.match(ins, /setRange/);
   assert.match(ins, /<sc-for list="\{\{ haveCards \}\}"/);
   assert.match(ins, /<sc-for list="\{\{ lackCards \}\}"/);
 });
