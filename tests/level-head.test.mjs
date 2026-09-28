@@ -25,7 +25,7 @@ test('the sites column counts what the drawer will hold', () => {
   assert.equal(site.noun, 'paths');
 });
 
-test('the fabric column counts facilities, ports and circuits', () => {
+test('the AT&T network column counts facilities, ports and circuits', () => {
   assert.deepEqual(pick(head('fabric', [])), { total: 4, noun: 'facilities' });
   assert.deepEqual(pick(head('fabric', ['fab'])), { total: 4, noun: 'facilities' });
   assert.deepEqual(pick(head('fabric', ['fab', 'N. Virginia'])), { total: 21, noun: 'ports' });

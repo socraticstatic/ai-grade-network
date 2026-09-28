@@ -22,7 +22,7 @@ for (const id of ESTATES) {
     const fab = sum(L, 'fabV'), pub = sum(L) - fab;
     const clouds = R.filter(x => x.kind === 'cloud'), dc = R.filter(x => x.kind === 'dc');
     assert.ok(near(sum(clouds, 'fabV') + sum(dc), fab), `clouds ${sum(clouds, 'fabV')} + data centers ${sum(dc)} vs fabric ${fab}`);
-    assert.ok(near(sum(clouds, 'pubV'), pub), `public ${sum(clouds, 'pubV')} vs off-fabric ${pub}`);
+    assert.ok(near(sum(clouds, 'pubV'), pub), `public ${sum(clouds, 'pubV')} vs outside AT&T ${pub}`);
     assert.ok(!R.some(x => x.key === 'dest:public internet'), 'the right is destinations, not the internet');
   });
 

@@ -60,7 +60,7 @@ test('rows.length before paging equals levelHead.total, at every sites level', (
   }
 });
 
-test('the fabric column opens facilities, ports and circuits', () => {
+test('the AT&T network column opens facilities, ports and circuits', () => {
   assert.equal(list('fabric', []).rows.length, 4);
   assert.equal(list('fabric', ['fab']).rows[0].into, 'N. Virginia');
   const ports = list('fabric', ['fab', 'N. Virginia']);

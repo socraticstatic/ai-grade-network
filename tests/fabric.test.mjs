@@ -4,7 +4,7 @@ import * as D from '../naas-data.js';
 import * as A from '../naas-addendum.js';
 import { facilities, ports, circuits, fabricRows } from '../naas-fabric.js';
 const est = D.ESTATES.mature; const inv = A.inventory(est); const ob = A.observe(est, [], inv);
-test('the fabric opens to facilities, a facility to ports, a port to circuits that land on sites', () => {
+test('the AT&T network opens to facilities, a facility to ports, a port to circuits that land on sites', () => {
   const f = facilities(est, inv, ob); assert.ok(f.length >= 3); assert.ok(f.some(x => x.state === 'degraded'));
   const l1 = fabricRows(est, inv, ob, ['fab']); assert.equal(l1.level, 'facility'); assert.ok(l1.rows[0].drill);
   const l2 = fabricRows(est, inv, ob, ['fab', l1.rows[0].drill]); assert.equal(l2.level, 'port'); assert.ok(l2.rows.length >= 1); assert.match(l2.rows[0].name, /port 1/);

@@ -38,7 +38,7 @@ test('Tags lists every tag with its footprint, exposure and cover', () => {
   assert.match(t.sub, /VPC/);
   assert.equal(t.covered, true, 'tag PCI has a policy');
   assert.match(t.coverLabel, /PCI private path/);
-  assert.match(t.exposure, /on the fabric|public internet/);
+  assert.match(t.exposure, /on AT&T|public internet/);
   assert.ok(v.drawerTags.every((x, i, a) => i === 0 || a[i - 1].wl >= x.wl), 'largest footprint first');
 });
 

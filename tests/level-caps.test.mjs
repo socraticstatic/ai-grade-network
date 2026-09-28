@@ -102,7 +102,7 @@ test('the VPC subnet level: q narrows to a pinned count', () => {
   assert.equal(byQuery.rows[0].id, 'public-a');
 });
 
-test('the VPC subnet level: the state chip filters on the fabric|public vocabulary', () => {
+test('the VPC subnet level: the state chip filters on AT&T|public vocabulary', () => {
   const scope = { region: 'us-east-1', vpcId: 'vpc-0-0' };
   const all = workloadList(est, inv, scope);
   assert.deepEqual(all.rows.map(r => r.state).sort(), ['fabric', 'fabric', 'fabric', 'public', 'public', 'public']);

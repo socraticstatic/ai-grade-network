@@ -208,16 +208,16 @@ export function observe(est, steered, inv, split) {
     { key: 'p95', l: 'P95 latency', v: String(p95), u: 'ms', e: '' },
     { key: 'loss', l: 'Packet loss', v: loss.toFixed(2), u: '%', e: '' },
     { key: 'egr', l: 'Egress spend', v: short(egressMo), u: '', e: '/mo' },
-    { key: 'fab', l: 'On fabric', v: String(covPct), u: '%', e: '' },
+    { key: 'fab', l: 'All traffic on AT&T', v: String(covPct), u: '%', e: '' },
     { key: 'sav', l: 'Savings', v: short(savingsMo), u: '', e: '/mo' },
     ...(capTotal ? [{ key: 'util', l: 'Utilization', v: String(util), u: '%', e: 'of attached capacity' }] : []),
   ];
-  const verdict = total ? `${covPct}% of traffic on the AT&T network, saving ${short(savingsMo)}/mo. ${blind.length} ${blind.length === 1 ? 'region is' : 'regions are'} blind.` : 'No telemetry yet.';
+  const verdict = total ? `${covPct}% of all traffic on AT&T, saving ${short(savingsMo)}/mo. ${blind.length} ${blind.length === 1 ? 'region is' : 'regions are'} blind.` : 'No telemetry yet.';
   const coverage = `${covPct}% of traffic and ${Math.min(pathsCovered, est.regionsList.length)} of ${est.regionsList.length} paths are covered. ${blind.length} ${blind.length === 1 ? 'region is' : 'regions are'} blind.`;
   const subVerdict = { pub: pub.toFixed(1), total: total.toFixed(1), fab: fab.toFixed(1) };
   const briefing = total ? [
     `${pathsCovered} of ${est.regionsList.length} regions ride the private envelope, ${Math.min(...est.regionsList.filter(r => r.priv).map(r => r.fab), 99)}ms to the on-ramp serving each.`,
-    blind.length ? `${blind.length} still depend on public transit; ${worst ? worst.region.split(' ')[1] : blind[0].region} is the outlier at ${worst ? worst.latency : blind[0].pub}ms on the public path.` : 'Every region is on the fabric; no public transit remains in this window.',
+    blind.length ? `${blind.length} still depend on public transit; ${worst ? worst.region.split(' ')[1] : blind[0].region} is the outlier at ${worst ? worst.latency : blind[0].pub}ms on the public path.` : 'Every region is on AT&T; no public transit remains in this window.',
     `Egress is running ${short(egressMo)}/mo with ${short(pubRate)} still on public rates; private-path savings hold at ${short(savingsMo)}/mo.`,
     anomaly ? `One anomaly in the window: a transit-congestion spike on ${anomaly.region}. It remains exposed to that event class until attached.` : 'No anomalies in the window.',
   ].join(' ') : '';
@@ -298,9 +298,9 @@ export function trendBand(kind, ob) {
 export function observeFindings(est, ob) {
   if (!ob.total) return [];
   const out = [];
-  if (ob.covPct < 100 && ob.blind.length) out.push({ kind: 'blindspots', layer: 'cloud', tab: 'observe', pillar: 'Observability', persona: 'FinOps & SRE', head: `${ob.blind.length} ${ob.blind.length === 1 ? 'region sends' : 'regions send'} no flow logs. ${100 - ob.covPct}% of your traffic is unseen.`, ev: `${ob.blind.map(r => r.region).join(', ')} carry ${ob.pub.toFixed(1)} Gbps with no telemetry. Coverage starts with the first attach.`, priced: false, why: 'The coverage metric turned into a finding. Telemetry, inspection and steering all begin when the region is on the fabric.', ladder: ['Attach the region', 'Hosted VPC in the region', 'Managed NOC'] });
+  if (ob.covPct < 100 && ob.blind.length) out.push({ kind: 'blindspots', layer: 'cloud', tab: 'observe', pillar: 'Observability', persona: 'FinOps & SRE', head: `${ob.blind.length} ${ob.blind.length === 1 ? 'region sends' : 'regions send'} no flow logs. ${100 - ob.covPct}% of your traffic is unseen.`, ev: `${ob.blind.map(r => r.region).join(', ')} carry ${ob.pub.toFixed(1)} Gbps with no telemetry. Coverage starts with the first attach.`, priced: false, why: 'The coverage metric turned into a finding. Telemetry, inspection and steering all begin when the region is on AT&T.', ladder: ['Attach the region', 'Hosted VPC in the region', 'Managed NOC'] });
   const degraded = ob.flows.filter(f => !f.controlled && (f.latency > 120 || f.rel === 'warn'));
-  if (degraded.length) out.push({ kind: 'degraded', layer: 'cloud', tab: 'observe', pillar: 'Observability', persona: 'FinOps & SRE', head: `${degraded.length} ${degraded.length === 1 ? 'path runs' : 'paths run'} above the latency SLO or show loss.`, ev: `${degraded.slice(0, 2).map(f => `${f.name} at ${f.latency}ms`).join('; ')}${degraded.length > 2 ? ` and ${degraded.length - 2} more` : ''}. SLO is 100ms; loss is above zero on every public path.`, priced: false, why: 'Public transit has no latency floor. The fabric path to the same region is single digit milliseconds.', ladder: ['Steer the worst path onto the fabric', 'Latency SLO policy for the tag', 'Dual-attach for path diversity'] });
+  if (degraded.length) out.push({ kind: 'degraded', layer: 'cloud', tab: 'observe', pillar: 'Observability', persona: 'FinOps & SRE', head: `${degraded.length} ${degraded.length === 1 ? 'path runs' : 'paths run'} above the latency SLO or show loss.`, ev: `${degraded.slice(0, 2).map(f => `${f.name} at ${f.latency}ms`).join('; ')}${degraded.length > 2 ? ` and ${degraded.length - 2} more` : ''}. SLO is 100ms; loss is above zero on every public path.`, priced: false, why: 'Public transit has no latency floor. The AT&T network path to the same region is single digit milliseconds.', ladder: ['Steer the worst path onto the AT&T network', 'Latency SLO policy for the tag', 'Dual-attach for path diversity'] });
   return out;
 }
 

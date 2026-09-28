@@ -290,7 +290,7 @@ test('fix (Important 3): a row\'s own Attach action never prints "undefined" whe
   assert.doesNotMatch(c.state.compose.bulk, /undefined/);
   // the trail-derived place is the site's own id/drillKey - never empty here,
   // since the trail is three deep.
-  assert.match(c.state.compose.note, new RegExp(`^Attach ${attachRow.id} in \\S+: one circuit onto the fabric\\.$`));
+  assert.match(c.state.compose.note, new RegExp(`^Attach ${attachRow.id} in \\S+: one circuit onto the AT&T network\\.$`));
 
   // Bonus, same defect class: a clouds ROOT row (also frame()-built, also no
   // address/metro) must compose cleanly too - but at the root there is no
@@ -304,7 +304,7 @@ test('fix (Important 3): a row\'s own Attach action never prints "undefined" whe
   assert.ok(cloudsAttach);
   cloudsAttach.act();
   assert.doesNotMatch(c3.state.compose.note, /undefined/);
-  assert.equal(c3.state.compose.note, `Attach ${cloudsAttach.id}: one circuit onto the fabric.`);
+  assert.equal(c3.state.compose.note, `Attach ${cloudsAttach.id}: one circuit onto the AT&T network.`);
 });
 
 test('fix (Important 4): pinning a fabric circuit never writes s.drill, and the sites drawer still opens afterward', () => {

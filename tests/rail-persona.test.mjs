@@ -55,7 +55,7 @@ test('reading the estate opens the next steps', () => {
 
 // ---- the returning customer gets the five stops ----
 
-test('a customer with something on the fabric gets the five stops', () => {
+test('a customer with something on AT&T gets the five stops', () => {
   const v = at('mature');
   assert.equal(v.railIsSequence, false);
   assert.deepEqual(titlesOf(v), ['Discover', 'Connect', 'Observe', 'Govern', 'Cost']);

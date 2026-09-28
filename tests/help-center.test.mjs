@@ -34,6 +34,10 @@ test('the seven NetBond resources keep their names; the ones with nothing behind
   for (const x of r) assert.ok(x.soon || typeof x.go === 'function', x.title);
   assert.ok(r.filter(x => x.soon).length >= 3);
   assert.ok(r.every(x => x.desc.length < 48), 'one line each');
+  // The four with nothing behind them fold into one line (2026-09-28 review).
+  const v = vals(help());
+  assert.deepEqual(v.helpLive.map(x => x.title), ['Network Glossary', 'Interactive Tour', 'Contact Support']);
+  assert.match(v.helpSoonLine, /^Coming soon: Support Tickets · Knowledge Base · Video Tutorials · Documentation$/);
 });
 
 test('the glossary is the storefront\'s own words, one line each, and the search narrows it', () => {

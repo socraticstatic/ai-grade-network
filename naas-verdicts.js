@@ -28,10 +28,10 @@ export function governVerdict(est) {
 
 export function costVerdict(est, ob, totalSave, buckets = []) {
   if (est.stage === 'empty') return 'No egress seen yet.';
-  if (totalSave) return `${fmt(totalSave)}/mo on the table across ${plural(est.findings.filter(f => f.priced).length, 'priced finding', 'priced findings')}. ${fmt(ob.savingsMo)}/mo already saved on the fabric.`;
+  if (totalSave) return `${fmt(totalSave)}/mo on the table across ${plural(est.findings.filter(f => f.priced).length, 'priced finding', 'priced findings')}. ${fmt(ob.savingsMo)}/mo already saved on AT&T.`;
   const steerable = buckets.filter(b => b.today > b.fabric);
-  if (!steerable.length) return 'Every bucket is already on the fabric.';
-  return `${fmt(steerable.reduce((a, b) => a + b.today, 0))}/mo leaves through public egress that the fabric would carry for ${fmt(steerable.reduce((a, b) => a + b.fabric, 0))}.`;
+  if (!steerable.length) return 'Every bucket is already on AT&T.';
+  return `${fmt(steerable.reduce((a, b) => a + b.today, 0))}/mo leaves through public egress that the AT&T network would carry for ${fmt(steerable.reduce((a, b) => a + b.fabric, 0))}.`;
 }
 
 // The loop is Connect -> Observe -> Govern -> Cost -> Connect. Observe's stop is Govern,

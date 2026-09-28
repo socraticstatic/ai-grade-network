@@ -71,13 +71,13 @@ export function panelFor(sel, ctx) {
         name: c.kind === 'metro' ? `${n(c.count || 0) || c.metro} · ${c.metro}` : c.name,
         sub: c.sub || `${c.v >= 1 ? c.v.toFixed(1) + ' Gbps' : Math.round(c.v * 1000) + ' Mbps'}`,
         warn: c.state === 'slo' || c.state === 'degraded',
-        note: c.state === 'degraded' ? 'degraded' : c.state === 'slo' ? 'outside the fabric' : '',
+        note: c.state === 'degraded' ? 'degraded' : c.state === 'slo' ? 'outside AT&T' : '',
       })),
     };
   })();
   return { kind: node.kind, title: node.name, sub: node.sub || '', trail: tr, children: kids,
-    overview: [...(node.opened ? [['Opened', 'children shown in place']] : []), ['Traffic', `${node.v.toFixed(2)} Gbps`], ['On the fabric', `${node.v ? Math.round(node.fabV / node.v * 100) : 0}%`], ['Share of all traffic', `${share}%`], ['Change vs prior window', (node.delta >= 0 ? '+' : '') + node.delta + '%'], ['State', node.state === 'ok' ? 'Healthy' : node.state === 'degraded' ? 'Degraded' : 'Over SLO or public'], ...(resolved ? [['Resource', resolved.name], ['Address', resolved.sub]] : [])],
-    impact: imp, records: recs, actions: [...(node.state !== 'ok' && node.fabV < node.v ? [{ key: 'steer', label: 'Steer onto the fabric' }] : []), ...(region && !(row) ? [{ key: 'attach', label: `Attach ${region}`, region }] : []), ...(row && row.hot ? [{ key: 'port', label: 'Add a port', region }] : []), { key: 'policy', label: 'Author a policy here', region }] };
+    overview: [...(node.opened ? [['Opened', 'children shown in place']] : []), ['Traffic', `${node.v.toFixed(2)} Gbps`], ['On AT&T', `${node.v ? Math.round(node.fabV / node.v * 100) : 0}%`], ['Share of all traffic', `${share}%`], ['Change vs prior window', (node.delta >= 0 ? '+' : '') + node.delta + '%'], ['State', node.state === 'ok' ? 'Healthy' : node.state === 'degraded' ? 'Degraded' : 'Over SLO or public'], ...(resolved ? [['Resource', resolved.name], ['Address', resolved.sub]] : [])],
+    impact: imp, records: recs, actions: [...(node.state !== 'ok' && node.fabV < node.v ? [{ key: 'steer', label: 'Steer onto the AT&T network' }] : []), ...(region && !(row) ? [{ key: 'attach', label: `Attach ${region}`, region }] : []), ...(row && row.hot ? [{ key: 'port', label: 'Add a port', region }] : []), { key: 'policy', label: 'Author a policy here', region }] };
 }
 
 /** Find a site by id or name: a named site of the estate, or one generated inside a metro. */
@@ -98,7 +98,7 @@ export function sitePanel(id, ctx) {
   const talks = sr.rows.slice(0, 3).map(x => { const r = regionsOf.find(z => z.region === x.region.region); const v = r && r.vpcs[0]; const w = v && v.subnets.flatMap(sn => sn.workloads || [])[0]; return { key: x.region.region, label: `${x.region.cloud} ${x.region.region}`, what: v ? `${v.name}${w ? ' · ' + (w.tag || v.name) + '/' + w.name : ''}` : 'workloads', gbps: x.gbps }; });
   const recs = records(est, inv, { flows }, 'inbound').filter(r => r.srcName === site.name || r.srcName === site.id).slice(0, 8);
   const pub = !site.priv;
-  const state = site.state === 'degraded' ? 'Degraded' : pub ? 'Public first mile' : 'On the fabric';
+  const state = site.state === 'degraded' ? 'Degraded' : pub ? 'Public first mile' : 'On AT&T';
   return { kind: 'site', title: site.name || site.id, sub: `${site.clsLabel || site.cls} · ${site.metro}${site.address ? ' · ' + site.address : ''}`, trail: site.trail.map((t, i) => ({ key: 'st' + i, name: t })),
     overview: [['Class', site.clsLabel || site.cls], ['Metro', site.metro], ...(site.address ? [['Address', site.address]] : []), ['Access', site.access || 'Access'], ['First mile', pub ? 'Public internet' : 'AT&T private'], ['PoP', `${site.metro === 'Various' ? 'nearest' : site.metro} PoP · ${site.popMs || site.ms || 4} ms`], ['State', state], ['Traffic', (() => { const g = sr.rows.reduce((a, x) => a + x.gbps, 0); return g >= 1 ? g.toFixed(1) + ' Gbps' : Math.max(1, Math.round(g * 1000)) + ' Mbps'; })()], ['Reaches', `${sr.total} regions`], ['Discovered', `${site.since || 0} days ago`]],
     paths, talks, impact: null, records: recs,

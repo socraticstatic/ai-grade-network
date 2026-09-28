@@ -17,7 +17,7 @@ const card = () => { const a = HTML.indexOf('<div id="sec-flow"'); return HTML.s
 
 test('six rollups head the map, each a number with its unit', () => {
   const t = vals(obs()).flowTiles;
-  assert.deepEqual(t.map(x => x.l), ['Traffic', 'On AT&T', 'Egress', 'Saving', 'Could save', 'Over SLO']);
+  assert.deepEqual(t.map(x => x.l), ['Traffic', 'Sites on AT&T', 'Egress', 'Saving', 'Could save', 'Over SLO']);
   for (const x of t) assert.ok(x.v && x.v.length <= 7, `${x.l}: ${x.v}`);
   assert.equal(t.find(x => x.l === 'Saving').v, '$36k');
 });

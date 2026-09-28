@@ -421,7 +421,7 @@ test('finding H: switching the outcome after the drawer\'s bulk attach (no sourc
 // they never touched. Now that the note lives inside `compose`, these routes
 // are clean by construction - no per-writer clear was added to either.
 test('finding I: chooseTier (Steer tier) and steerBucket leave no note after a gap order', () => {
-  // chooseTier via a "Steer this bucket on the fabric" cost-tab tier.
+  // chooseTier via a "Steer this bucket on AT&T" cost-tab tier.
   {
     const c = mkC();
     let v = vals(c);

@@ -16,6 +16,8 @@ const PER_SITE = { 'Data center': 6, Campus: 2.5, Plant: 1.5, Office: 0.8, Branc
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const n = (x) => x.toLocaleString('en-US');
 export const SLO = 100;
+/** A private on-ramp promises far less than the internet does (2026-09-28): 20 ms p95. */
+export const SLO_PRIVATE = 20;
 const PUBLIC_IPS = ['104.18.32.7', '142.250.72.14', '3.5.140.2', '52.94.236.248', '20.60.132.10', '35.190.247.10'];
 const AI_HOSTS = ['api.openai.com', 'api.anthropic.com', 'bedrock-runtime', 'aiplatform.googleapis.com'];
 
@@ -183,7 +185,7 @@ export function childrenOf(node, est, inv, flows) {
     const tot = rows.reduce((a, x) => a + x.gbps, 0) || 1;
     return shareFab(rows.map(x => { const ms = P.path(site, x.region).ms; return {
       kind: 'circuit', key: `${node.key}/${x.region.region}`, name: `→ ${x.region.cloud} ${x.region.region}`,
-      sub: `${site.access || 'Access'} · ${x.region.priv ? 'on the fabric' : 'public path'} · ${ms} ms`,
+      sub: `${site.access || 'Access'} · ${x.region.priv ? 'on AT&T' : 'public path'} · ${ms} ms`,
       v: node.v * x.gbps / tot, priv: !!x.region.priv, hasChildren: false,
       state: x.region.priv ? 'ok' : (ms > SLO ? 'slo' : 'ok'), parentKey: node.key, region: x.region.region };
     }), node.fabV).sort((a, b) => b.v - a.v);
@@ -225,7 +227,7 @@ export function childrenOf(node, est, inv, flows) {
     return dcs.map(x => ({ kind: 'endpoint', key: `${node.key}/${x.name}`, name: x.name, sub: S.servicesOf(x).map(v => v.label).join(' + '), v: node.v / dcs.length, fabV: node.v / dcs.length, pubV: 0, byRamp: {}, wan: node.v / dcs.length, hasChildren: false, state: 'ok', parentKey: node.key }));
   }
   if (node.key === 'dest:public internet') {
-    // The band that misses the fabric used to dead-end. It lands somewhere,
+    // The band that misses the AT&T network used to dead-end. It lands somewhere,
     // and the somewhere is the regions we have no private path into.
     const rs = est.regionsList.filter(r => !r.priv);
     const tot = rs.reduce((a, r) => a + (r.wl || 0), 0) || 1;

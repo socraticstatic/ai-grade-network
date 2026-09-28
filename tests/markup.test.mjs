@@ -73,7 +73,7 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // (button +1). The three "refreshed daily" copy swaps add and remove no
 // tags. div 862 -> 867, span 642 -> 644, sc-if 299 -> 300, label 27 -> 28,
 // button 250 -> 251.
-// Wave 3 Task 4: the fabric band's empty state is a new sibling sc-if inside
+// Wave 3 Task 4: the AT&T network band's empty state is a new sibling sc-if inside
 // fabOpen, one card - a wrapper div, its head div, its copy div (div +3), a
 // foreignObject (not pinned here), and the "Attach a region" button
 // (button +1). div 867 -> 870, sc-if 300 -> 301, button 251 -> 252.
@@ -170,15 +170,20 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // sc-for 198 -> 201, button 272 -> 273. Help & Resources became a page with a
 // ? in the header (hero, guides, resources, glossary): div 970 -> 993,
 // span 755 -> 768, sc-if 342 -> 349, sc-for 201 -> 207, button 273 -> 279,
-// section 11 -> 12, label 27 -> 28.
+// section 11 -> 12, label 27 -> 28. The review pass (2026-09-28): Cost's
+// paragraph became two move cards, the Through AT&T column and its mislabelled
+// table left Traffic, the Insights cards kept one action each, and Help's four
+// Coming soon cards folded into a line: div 993 -> 989, span 768 -> 756,
+// sc-if 349 -> 348, button 279 -> 271. The move cards got a row inside them:
+// div 989 -> 990.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 993],
-    ['span', /<span\b/g, /<\/span>/g, 768],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 349],
+    ['div', /<div\b/g, /<\/div>/g, 990],
+    ['span', /<span\b/g, /<\/span>/g, 756],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 348],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 207],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 279],
+    ['button', /<button\b/g, /<\/button>/g, 271],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 28],
   ];

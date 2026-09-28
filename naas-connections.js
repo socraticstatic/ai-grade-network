@@ -51,7 +51,7 @@ export function impacted(est, inv, row) {
   const partners = (est.arcs || []).filter(a => a.from === row.region || a.to === row.region).map(a => a.from === row.region ? a.to : a.from);
   const downstream = partners.map(p => { const pr = est.regionsList.find(r => r.region === p); const pi = regionsOf.find(r => r.region === p); return pr ? { label: `${pr.cloud} ${pr.region}`, vpcs: (pi ? pi.vpcs : []).slice(0, 2).map(v => ({ name: v.name, wl: v.wl })) } : null; }).filter(Boolean);
   const wl = vpcs.reduce((a, v) => a + v.wl, 0);
-  if (!row.degraded) return { kind: 'none', certainty: `No impact. ${n(wl)} workloads reach the fabric through this connection at ${row.pct}% utilization.`, resilience: '', vpcs, downstream, wl };
+  if (!row.degraded) return { kind: 'none', certainty: `No impact. ${n(wl)} workloads reach the AT&T network through this connection at ${row.pct}% utilization.`, resilience: '', vpcs, downstream, wl };
   const direct = row.terminated === 'att';
   const certainty = direct ? 'Directly impacted. AT&T terminates this connection in your VPC.' : `Possible impact. Visibility ends at your gateway. ${row.cloud} ${row.acct || 'account'}.`;
   const resilience = row.paths >= 2 ? `Access holds: a second path carries ${row.gbps} Gbps at ${Math.min(99, row.pct * 2)}% while this one degrades.` : 'Single path. Access to these workloads is lost if this link fails.';
@@ -64,8 +64,8 @@ const G = (x) => x.toFixed(1) + ' Gbps';
 /** The five patterns most cloud conversations center on (Ramesh, 19:04). Each row is a door into Logs. */
 export function patterns(est, ob, inv) {
   const rs = est.regionsList, flows = ob.flows || [];
-  const legend = [{ label: 'On the fabric', fill: FAB }, { label: 'Public internet', fill: PUB }];
-  const pathWord = (c) => c ? 'on the fabric' : 'public internet';
+  const legend = [{ label: 'On AT&T', fill: FAB }, { label: 'Public internet', fill: PUB }];
+  const pathWord = (c) => c ? 'on AT&T' : 'public internet';
   const region = bar(rs.map(r => ({ key: r.region, name: `${r.cloud} ${r.region}`, sub: `${n(r.wl)} workloads · between VPCs`, gbps: +(r.wl * 0.14 * 0.6).toFixed(1), priv: r.priv, fill: r.priv ? FAB : PUB })).sort((a, b) => b.gbps - a.gbps).slice(0, 5)).map(r => ({ ...r, v: G(r.gbps) }));
   const regions = bar(flows.filter(f => f.to === 'object storage').map(f => ({ key: f.id, name: `${f.from} → object storage`, sub: `${f.region} · ${pathWord(f.controlled)} · ${f.latency} ms`, gbps: f.gbps, priv: f.controlled, fill: f.controlled ? FAB : PUB })).sort((a, b) => b.gbps - a.gbps).slice(0, 5)).map(r => ({ ...r, v: G(r.gbps) }));
   const clouds = bar(flows.filter(f => f.kind !== 'App').map(f => ({ key: f.id, name: f.name, sub: `${pathWord(f.controlled)} · ${f.latency} ms`, gbps: f.gbps, priv: f.controlled, fill: f.controlled ? FAB : PUB })).sort((a, b) => b.gbps - a.gbps).slice(0, 5)).map(r => ({ ...r, v: G(r.gbps) }));
@@ -77,7 +77,7 @@ export function patterns(est, ob, inv) {
     const onFab = rows.filter(r => r.priv).length, pub = rows.length - onFab;
     const gb = rows.reduce((a, r) => a + r.gbps, 0), pubGb = rows.filter(r => !r.priv).reduce((a, r) => a + r.gbps, 0);
     const perGb = gb ? ((pubGb * 0.09 + (gb - pubGb) * 0.02) / gb) : 0;
-    return { key, title, rows, legend, total: gb, sub: rows.length ? `${onFab} of ${rows.length} ${word} on the fabric · ${pub ? pub + ' uninspected' : 'all inspected'} · $${perGb.toFixed(2)}/GB` : 'Nothing in this window', connectivity: `${onFab} of ${rows.length} on the fabric`, security: pub ? `${pub} with no inspection point` : 'every path has an inspection point', cost: `$${perGb.toFixed(2)}/GB blended` };
+    return { key, title, rows, legend, total: gb, sub: rows.length ? `${onFab} of ${rows.length} ${word} on AT&T · ${pub ? pub + ' uninspected' : 'all inspected'} · $${perGb.toFixed(2)}/GB` : 'Nothing in this window', connectivity: `${onFab} of ${rows.length} on AT&T`, security: pub ? `${pub} with no inspection point` : 'every path has an inspection point', cost: `$${perGb.toFixed(2)}/GB blended` };
   };
   return [mk('region', 'Stays in the region', region, 'regions'), mk('regions', 'Across regions', regions, 'flows'), mk('clouds', 'Across clouds', clouds, 'paths'), mk('internet', 'Out to the internet', internet, 'flows'), mk('inbound', 'Coming in', inbound, 'sites')];
 }
@@ -93,22 +93,22 @@ const money = (x) => '$' + Math.round(x).toLocaleString('en-US');
 /** The four launch-off points (Ramesh, 23:09). New customers start at Connect; everyone else at Observe. */
 export function launchCards({ est, ob, conns, totalSave, violations, isEmpty }) {
   const rs = est.regionsList, pub = rs.filter(r => !r.priv).length;
-  // "Cold" is an estate with nothing on the fabric, discovered or not. It has
+  // "Cold" is an estate with nothing on AT&T, discovered or not. It has
   // no connections, no telemetry and no savings, so Observe cannot be the
   // start-here card and must not claim "you are connected".
   const cold = isEmpty || rs.filter(r => r.priv).length === 0;
   const degRow = conns.rows.find(r => r.degraded);
   return [
-    { key: 'connect', label: 'Connect', value: isEmpty ? 'Nothing connected yet' : `${pub} of ${rs.length} regions`, sub: isEmpty ? 'Start here' : pub ? 'still ride the public internet' : 'every region on the fabric', bar: isEmpty ? null : Math.round((rs.length - pub) / (rs.length || 1) * 100) },
-    { key: 'observe', label: 'Observe', value: cold ? 'No telemetry yet' : `${conns.degraded} of ${conns.total} connections`, sub: cold ? 'starts with the first attach' : degRow ? `degraded · ${n(degRow.wl)} workloads impacted` : `healthy · ${(ob.fab || 0).toFixed(1)} Gbps on the fabric`, bar: null },
+    { key: 'connect', label: 'Connect', value: isEmpty ? 'Nothing connected yet' : `${pub} of ${rs.length} regions`, sub: isEmpty ? 'Start here' : pub ? 'still ride the public internet' : 'every region on AT&T', bar: isEmpty ? null : Math.round((rs.length - pub) / (rs.length || 1) * 100) },
+    { key: 'observe', label: 'Observe', value: cold ? 'No telemetry yet' : `${conns.degraded} of ${conns.total} connections`, sub: cold ? 'starts with the first attach' : degRow ? `degraded · ${n(degRow.wl)} workloads impacted` : `healthy · ${(ob.fab || 0).toFixed(1)} Gbps on AT&T`, bar: null },
     { key: 'govern', label: 'Govern', value: isEmpty ? 'No policies yet' : n(violations), sub: isEmpty ? 'three starting points' : `policy violations across ${(est.policies || []).length} policies`, bar: null },
-    { key: 'cost', label: 'Cost', value: isEmpty ? 'No egress seen yet' : cold ? money(ob.egressMo || 0) + '/mo' : totalSave ? money(totalSave) + '/mo' : money(ob.savingsMo || 0) + '/mo', sub: isEmpty ? 'priced after the scan' : cold ? 'of egress, every byte on public rates' : totalSave ? `on the table across ${est.findings.filter(f => f.priced).length} findings` : 'already saved on the fabric', bar: null },
+    { key: 'cost', label: 'Cost', value: isEmpty ? 'No egress seen yet' : cold ? money(ob.egressMo || 0) + '/mo' : totalSave ? money(totalSave) + '/mo' : money(ob.savingsMo || 0) + '/mo', sub: isEmpty ? 'priced after the scan' : cold ? 'of egress, every byte on public rates' : totalSave ? `on the table across ${est.findings.filter(f => f.priced).length} findings` : 'already saved on AT&T', bar: null },
   ].map(c => {
     // A dashboard tile is a label and a number. The eyebrow, the sentence and
     // the link under each one were four fragments of copy per tile, sixteen
     // across the row, above every chart on every page.
     const primary = cold ? c.key === 'connect' : c.key === 'observe';
-    const door = { connect: isEmpty ? 'Connect a cloud' : pub ? `Attach the ${pub === 1 ? 'region' : pub + ' regions'}` : 'See the fabric', observe: cold ? 'Open Observe' : degRow ? 'What is impacted' : 'See the traffic', govern: isEmpty ? 'Start a policy' : violations ? 'Review violations' : 'Review policies', cost: cold ? 'Open Cost' : 'See the savings' }[c.key];
+    const door = { connect: isEmpty ? 'Connect a cloud' : pub ? `Attach the ${pub === 1 ? 'region' : pub + ' regions'}` : 'See the AT&T network', observe: cold ? 'Open Observe' : degRow ? 'What is impacted' : 'See the traffic', govern: isEmpty ? 'Start a policy' : violations ? 'Review violations' : 'Review policies', cost: cold ? 'Open Cost' : 'See the savings' }[c.key];
     return { ...c, primary, door, eyebrow: '' };
   });
 }
@@ -230,7 +230,7 @@ export function siteDrillRows(est, trail, opts = {}) {
   const _unused = (site) => { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; };
   if (trail.length === 1) {
     const rows = kids.map(ch => ch.kind === 'metro'
-      ? { key: 'metro:' + ch.key, name: `${ch.name} (${ch.count.toLocaleString('en-US')})`, access: `${ch.onFabric.toLocaleString('en-US')} of ${ch.count.toLocaleString('en-US')} on the fabric · ${ch.access}`, priv: ch.onFabric >= ch.count / 2, drillKey: ch.key, rollup: true, cursor: 'pointer' }
+      ? { key: 'metro:' + ch.key, name: `${ch.name} (${ch.count.toLocaleString('en-US')})`, access: `${ch.onFabric.toLocaleString('en-US')} of ${ch.count.toLocaleString('en-US')} on AT&T · ${ch.access}`, priv: ch.onFabric >= ch.count / 2, drillKey: ch.key, rollup: true, cursor: 'pointer' }
       : { key: 'site:' + ch.name, name: ch.name, access: ch.address || ch.access, priv: !!ch.priv, drillKey: ch.name, rollup: false, cursor: 'pointer' });
     return { level: kids[0] && kids[0].kind === 'metro' ? 'metro' : 'site', label: clsLabel, rows };
   }

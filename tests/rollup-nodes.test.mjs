@@ -99,7 +99,7 @@ test('the metro +N more row opens the sites level list, not the old volume short
   assert.equal(c.state.drawerOpen, true);
 });
 
-test('openBandLevel opens the drawer at the fabric level', () => {
+test('openBandLevel opens the drawer at the AT&T network level', () => {
   const c = mkC({ fabDrill: ['fab', 'N. Virginia'] });
   const v = vals(c);
   v.openBandLevel();

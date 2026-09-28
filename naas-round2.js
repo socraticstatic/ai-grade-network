@@ -42,9 +42,9 @@ export function lensVerdict(est, lens) {
   const gbPub = rs.filter(r => !r.priv).reduce((a, r) => a + r.wl * GB_PER_WL_MO, 0);
   return {
     security: `${poor.length} of ${rs.length} regions touch the public internet. ${rs.length - poor.length} never do.`,
-    performance: `${poor.length} ${poor.length === 1 ? 'region runs' : 'regions run'} above 100 ms or with loss; the fabric path to the same regions is ${Math.min(...rs.map(r => r.fab))}–${Math.max(...rs.map(r => r.fab))} ms, every hour.`,
+    performance: `${poor.length} ${poor.length === 1 ? 'region runs' : 'regions run'} above 100 ms or with loss; the AT&T network path to the same regions is ${Math.min(...rs.map(r => r.fab))}–${Math.max(...rs.map(r => r.fab))} ms, every hour.`,
     reliability: `${rs.length - poor.length - fair.length} regions at 99.99%, ${fair.length} at 99.9% on a single native circuit, ${poor.length} best-effort.`,
-    cost: `${gbPub.toLocaleString('en-US')} GB/mo leaves on public rates at $0.09. The same bytes on the fabric: $0.02, ${fmt(Math.round(gbPub * 0.07))}/mo less.`,
+    cost: `${gbPub.toLocaleString('en-US')} GB/mo leaves on public rates at $0.09. The same bytes on AT&T: $0.02, ${fmt(Math.round(gbPub * 0.07))}/mo less.`,
   }[lens];
 }
 
@@ -65,7 +65,7 @@ export function health(est, ob, steered) {
     { key: 'p95', l: 'P95 latency', v: ob.kpis[1].v + ' ms', tone: +ob.kpis[1].v > 100 ? 'var(--warning)' : 'var(--success)' },
     { key: 'loss', l: 'Packet loss', v: ob.kpis[2].v + '%', tone: +ob.kpis[2].v > 0.1 ? 'var(--warning)' : 'var(--success)' },
     { key: 'inc', l: 'Incidents', v: String(incidents.length), tone: incidents.length ? 'var(--warning)' : 'var(--success)' },
-    { key: 'ctl', l: 'On fabric', v: ob.covPct + '%', tone: 'var(--link)' },
+    { key: 'ctl', l: 'On AT&T', v: ob.covPct + '%', tone: 'var(--link)' },
   ] : [] };
 }
 
@@ -107,10 +107,10 @@ export function trends(ob, window) {
 }
 export function anomalies(est, ob) {
   const out = [];
-  est.regionsList.filter(r => r.rel === 'warn').forEach(r => out.push({ key: 'an-' + r.region, when: '02:14 today · 22 min', sev: 'amber', head: `Latency spike on ${r.cloud} ${r.region}`, cause: `Upstream transit congestion between the hyperscaler edge and your users; p95 rose from ${r.pub} to ${r.pub + 40} ms with 0.3% loss.`, did: 'AT&T flagged the event and confirmed the fabric path to the same region held at ' + r.fab + ' ms.', can: 'Attach the region and set a latency SLO; the fabric re-routes before the ceiling is hit.', region: r.region }));
+  est.regionsList.filter(r => r.rel === 'warn').forEach(r => out.push({ key: 'an-' + r.region, when: '02:14 today · 22 min', sev: 'amber', head: `Latency spike on ${r.cloud} ${r.region}`, cause: `Upstream transit congestion between the hyperscaler edge and your users; p95 rose from ${r.pub} to ${r.pub + 40} ms with 0.3% loss.`, did: 'AT&T flagged the event and confirmed the AT&T network path to the same region held at ' + r.fab + ' ms.', can: 'Attach the region and set a latency SLO; the AT&T network re-routes before the ceiling is hit.', region: r.region }));
   const newDest = est.regionsList.find(r => !r.priv && (r.tags || []).includes('Prod'));
   if (newDest) out.push({ key: 'an-dest', when: 'Yesterday', sev: 'amber', head: `New destination from ${newDest.region}: files.slack-edge.com`, cause: `Workloads tagged Prod began sending 3.1 GB/day to a destination not seen in the prior 30 days.`, did: 'Logged and classified as SaaS; no policy matched, so nothing was blocked.', can: 'Author a policy: when tag Prod reaches the Internet, require inline inspection.', region: newDest.region });
-  if (ob.pub > 0) out.push({ key: 'an-egress', when: 'This week', sev: 'info', head: `Public egress up ${Math.round(8 + ob.pub * 3)}% week over week`, cause: `Growth is concentrated in object-storage reads from ${est.regionsList.filter(r => !r.priv).map(r => r.region).slice(0, 2).join(' and ') || 'unattached regions'}.`, did: 'Priced the same bytes on the fabric.', can: `Steer the object-storage flow: ${fmt(Math.round(ob.pub * 1000 * 0.07 * 30 / 10) * 10)}/mo back.` });
+  if (ob.pub > 0) out.push({ key: 'an-egress', when: 'This week', sev: 'info', head: `Public egress up ${Math.round(8 + ob.pub * 3)}% week over week`, cause: `Growth is concentrated in object-storage reads from ${est.regionsList.filter(r => !r.priv).map(r => r.region).slice(0, 2).join(' and ') || 'unattached regions'}.`, did: 'Priced the same bytes on AT&T.', can: `Steer the object-storage flow: ${fmt(Math.round(ob.pub * 1000 * 0.07 * 30 / 10) * 10)}/mo back.` });
   return out;
 }
 export function insights(est, ob) {
@@ -118,11 +118,11 @@ export function insights(est, ob) {
   const top = rs.slice().sort((a, b) => b.wl - a.wl)[0];
   const pubRs = rs.filter(r => !r.priv);
   return [
-    { key: 'talkers', kicker: 'Top talkers', head: `${top.cloud} ${top.region} carries ${pct(top.wl, rs.reduce((a, r) => a + r.wl, 0))}% of all traffic`, body: `${top.wl} workloads; ${top.priv ? 'already on the fabric' : 'still on public transit'}. ${top.tags.join(', ') || 'Untagged'}.` },
+    { key: 'talkers', kicker: 'Top talkers', head: `${top.cloud} ${top.region} carries ${pct(top.wl, rs.reduce((a, r) => a + r.wl, 0))}% of all traffic`, body: `${top.wl} workloads; ${top.priv ? 'already on AT&T' : 'still on public transit'}. ${top.tags.join(', ') || 'Untagged'}.` },
     { key: 'newdest', kicker: 'New destinations · 30d', head: `${3 + pubRs.length} destinations not seen before`, body: 'Two SaaS (Slack edge, Datadog intake), one AI endpoint (api.anthropic.com), the rest object storage in other regions.' },
     { key: 'shadow', kicker: 'Shadow SaaS', head: `${2 + Math.round(pubRs.length / 2)} SaaS domains with no policy`, body: 'Reached directly from cloud workloads over the hyperscaler exit. No inspection, no owner recorded.' },
     { key: 'growth', kicker: 'Egress growth', head: `Public egress grows ${Math.round(6 + ob.pub * 2)}% a month`, body: `At this rate you add ${fmt(Math.round(ob.egressMo * 0.08))}/mo of egress spend each quarter unless the object-storage flow is steered.` },
-    { key: 'multi', kicker: 'Multi-cloud paths', head: `${(est.arcs || []).length} cloud-to-cloud paths, ${(est.arcs || []).filter(a => a.priv).length} on the fabric`, body: 'Cloud-to-cloud over the public internet pays egress twice, once out of each cloud.' },
+    { key: 'multi', kicker: 'Multi-cloud paths', head: `${(est.arcs || []).length} cloud-to-cloud paths, ${(est.arcs || []).filter(a => a.priv).length} on AT&T`, body: 'Cloud-to-cloud over the public internet pays egress twice, once out of each cloud.' },
     { key: 'idle', kicker: 'Idle capacity', head: `${Math.max(1, Math.round(rs.filter(r => r.priv).length / 3))} committed on-ramps under 30% utilised`, body: 'Consolidating two 5 Gbps ports into one 10 Gbps saves the second port fee; AT&T can re-home the VLANs.' },
   ];
 }
@@ -219,15 +219,15 @@ export function insightWidgets(est, ob, win = 30) {
   // 4. Egress growth: twelve weekly columns, fabric under public.
   const wk = Array.from({ length: 12 }, (_, i) => ({ pub: (ob.pub || 1) * Math.pow(1.02, i) * (0.9 + 0.1 * Math.sin(i)), fab: (ob.fab || 1) * (0.97 + 0.03 * Math.cos(i * 0.6)) }));
   const mx = Math.max(...wk.map(w => w.pub + w.fab)) || 1;
-  const weeks = wk.map((w, i) => ({ key: 'w' + i, fabH: Math.round(w.fab / mx * 100) + '%', pubH: Math.round(w.pub / mx * 100) + '%', title: `${i === 11 ? 'This week' : `${11 - i} weeks ago`} · fabric ${w.fab.toFixed(1)} Gbps · public ${w.pub.toFixed(1)} Gbps` }));
+  const weeks = wk.map((w, i) => ({ key: 'w' + i, fabH: Math.round(w.fab / mx * 100) + '%', pubH: Math.round(w.pub / mx * 100) + '%', title: `${i === 11 ? 'This week' : `${11 - i} weeks ago`} · AT&T ${w.fab.toFixed(1)} Gbps · public ${w.pub.toFixed(1)} Gbps` }));
   const sgn = (n) => (n >= 0 ? '+' : '') + n + '%';
   const growth = { weeks, pubPct: (Math.round((wk[11].pub / wk[0].pub - 1) * 100) || 0), fabPct: (Math.round((wk[11].fab / wk[0].fab - 1) * 100) || 0), pubNow: wk[11].pub.toFixed(1), fabNow: wk[11].fab.toFixed(1), pubThen: wk[0].pub.toFixed(1), pubPctF: sgn(Math.round((wk[11].pub / wk[0].pub - 1) * 100) || 0), fabPctF: sgn(Math.round((wk[11].fab / wk[0].fab - 1) * 100) || 0) };
   // 5. Multi-cloud paths: every cloud-to-cloud flow.
   const xflows = flows.filter(f => f.kind !== 'App'); const xMax = Math.max(1, ...xflows.map(f => f.gbps));
-  const multiRows = xflows.map(f => ({ key: f.id, id: f.id, name: f.name, sub: `${f.controlled ? 'on the fabric' : 'public internet'} · ${f.latency} ms`, v: f.gbps.toFixed(1) + ' Gbps', w: Math.round(f.gbps / xMax * 100) + '%', fill: f.controlled ? 'var(--viz-1)' : 'var(--viz-6)', controlled: f.controlled, steerable: !!f.steerable && !f.controlled }));
+  const multiRows = xflows.map(f => ({ key: f.id, id: f.id, name: f.name, sub: `${f.controlled ? 'on AT&T' : 'public internet'} · ${f.latency} ms`, v: f.gbps.toFixed(1) + ' Gbps', w: Math.round(f.gbps / xMax * 100) + '%', fill: f.controlled ? 'var(--viz-1)' : 'var(--viz-6)', controlled: f.controlled, steerable: !!f.steerable && !f.controlled }));
   const multi = { rows: multiRows, privN: multiRows.filter(m => m.controlled).length, totalN: multiRows.length };
   // 6. Latency over SLO: the flows above 100 ms, worst first.
   const SLO = 100; const over = flows.filter(f => f.latency > SLO).sort((a, b) => b.latency - a.latency).slice(0, 5); const lMax = Math.max(SLO, ...over.map(f => f.latency));
-  const slo = over.map(f => ({ key: f.id, id: f.id, name: f.name, sub: `${f.controlled ? 'on the fabric' : 'public internet'} · ${f.gbps.toFixed(1)} Gbps`, v: f.latency + ' ms', w: Math.round(f.latency / lMax * 100) + '%', fill: 'var(--error)', steerable: !!f.steerable && !f.controlled }));
+  const slo = over.map(f => ({ key: f.id, id: f.id, name: f.name, sub: `${f.controlled ? 'on AT&T' : 'public internet'} · ${f.gbps.toFixed(1)} Gbps`, v: f.latency + ' ms', w: Math.round(f.latency / lMax * 100) + '%', fill: 'var(--error)', steerable: !!f.steerable && !f.controlled }));
   return { talkers, newDest, newDestN: newDest.length, shadow, shadowN, shadowGb: shadowGb.toFixed(1), growth, multi, slo, sloN: slo.length, sloTotal: flows.length, SLO };
 }
