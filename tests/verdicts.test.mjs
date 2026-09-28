@@ -16,9 +16,10 @@ const EXPECT = {
   partial: {
     connect: '5 of 7 regions still ride the public internet. 2 are on the AT&T network, plus 5 smaller regions rolled up.',
     govern: '4 policies enforced. 11 PCI-tagged workloads reach the internet directly',
-    // The IPsec egress finding (2026-09-28) adds $5,500 and a third priced finding.
-    cost: '$41,500/mo on the table across 3 priced findings. $0/mo already saved on the fabric.',
-    observe: '40% of traffic on the AT&T network, saving $0/mo. 5 regions are blind.',
+    // The IPsec egress finding (2026-09-28) adds $5,500 and a third priced finding;
+    // saved money counts on any estate with something attached, not only mature.
+    cost: '$41,500/mo on the table across 3 priced findings. $36,000/mo already saved on the fabric.',
+    observe: '40% of traffic on the AT&T network, saving $36k/mo. 5 regions are blind.',
   },
   mature: {
     connect: '1 of 8 regions still ride the public internet. 7 are on the AT&T network, plus 10 smaller regions rolled up.',
@@ -29,8 +30,8 @@ const EXPECT = {
   trust: {
     connect: '2 of 6 regions still ride the public internet. 4 are on the AT&T network, plus 8 smaller regions rolled up.',
     govern: '9 policies enforced. 96 PCI-tagged workloads reach the internet directly',
-    cost: '$132,000/mo on the table across 2 priced findings. $0/mo already saved on the fabric.',
-    observe: '77% of traffic on the AT&T network, saving $0/mo. 2 regions are blind.',
+    cost: '$132,000/mo on the table across 2 priced findings. $148,000/mo already saved on the fabric.',
+    observe: '77% of traffic on the AT&T network, saving $148k/mo. 2 regions are blind.',
   },
 };
 

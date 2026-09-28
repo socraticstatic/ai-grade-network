@@ -56,3 +56,4 @@ test('the Act on it strip is gone from Estate; the window and Review new live in
   assert.match(ins, /<sc-for list="\{\{ haveCards \}\}"/);
   assert.match(ins, /<sc-for list="\{\{ lackCards \}\}"/);
 });
+
