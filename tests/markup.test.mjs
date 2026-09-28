@@ -163,14 +163,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Health stopped describing itself: div 966 -> 961, span 734 -> 730,
 // sc-if 337 -> 336, sc-for 197 -> 198, button 272 -> 271. Each path in the
 // map's middle says what it is doing on a second line: div 961 -> 962.
+// Cards that open carry a count pill that reads Open on hover, the folded
+// stacks a +, and a first visit one hint: span 730 -> 745, sc-if 336 -> 341,
+// button 271 -> 272.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 962],
-    ['span', /<span\b/g, /<\/span>/g, 730],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 336],
+    ['span', /<span\b/g, /<\/span>/g, 745],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 341],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 198],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 271],
+    ['button', /<button\b/g, /<\/button>/g, 272],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];
