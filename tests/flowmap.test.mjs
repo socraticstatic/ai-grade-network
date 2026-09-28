@@ -70,7 +70,12 @@ for (const id of ESTATES) {
 test('a site group of mixed building classes prices each site by its own class', () => {
   // Acme's "2 sites on ADI" is a data center and a plant. Weighting the plant
   // as a data center inflated the drill by 60% against its own parent row.
-  const { est, inv, flows } = ctx('partial');
+  // Fixture: partial's ADI pair from before its sites were rebuilt (2026-09-28).
+  const est = { ...D.ESTATES.partial, sites: [
+    { name: 'Atlanta DC2', cls: 'Data center', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Atlanta' },
+    { name: 'Denver plant', cls: 'Plant', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Denver' },
+  ] };
+  const inv = A.inventory(est), flows = A.observe(est, [], inv).flows;
   const adi = leftRoots(est, flows).find(x => x.cls === 'adi');
   const kids = childrenOf(adi, est, inv, flows);
   const dc = kids.find(k => /Atlanta/.test(k.name)), plant = kids.find(k => /Denver/.test(k.name));

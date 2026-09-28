@@ -24,7 +24,8 @@ const STREETS = {
   Charlotte: ['Tryon St', 'Trade St', 'Independence Blvd', 'South Blvd', 'Providence Rd', 'Park Rd'],
   Nashville: ['Broadway', 'West End Ave', 'Charlotte Ave', 'Nolensville Pike', 'Gallatin Pike', '8th Ave'],
 };
-const STATE = { Dallas: 'TX', Houston: 'TX', Austin: 'TX', Atlanta: 'GA', Chicago: 'IL', Phoenix: 'AZ', Denver: 'CO', Seattle: 'WA', Miami: 'FL', Charlotte: 'NC', Nashville: 'TN', Ashburn: 'VA', 'San Jose': 'CA', Frankfurt: 'DE', Singapore: 'SG' };
+const STATE = { Dallas: 'TX', Houston: 'TX', Austin: 'TX', Atlanta: 'GA', Chicago: 'IL', Phoenix: 'AZ', Denver: 'CO', Seattle: 'WA', Miami: 'FL', Charlotte: 'NC', Nashville: 'TN', Ashburn: 'VA', 'San Jose': 'CA', Frankfurt: 'DE', Singapore: 'SG',
+  'New York': 'NY', Boston: 'MA', Minneapolis: 'MN', 'Kansas City': 'MO', 'Los Angeles': 'CA', London: 'GB', Amsterdam: 'NL', Paris: 'FR', Dublin: 'IE', Madrid: 'ES', Tokyo: 'JP', Sydney: 'AU', Mumbai: 'IN', Seoul: 'KR', Manila: 'PH' };
 /** Two-letter state (or country) for a metro; the auto-label on every site row. */
 export const stateOf = (metro) => STATE[metro] || '';
 const HOSTS = ['7-Eleven', 'Kroger', 'Walgreens', 'QuikTrip', 'Costco', 'Target', 'CVS', 'H-E-B'];
@@ -139,6 +140,7 @@ export const ACCESS_CLASS = {
   adi:      { label: 'Dedicated Internet',  unit: 'site on ADI',    plural: 'sites on ADI' },
   abf:      { label: 'Business Fiber',      unit: 'site on fiber',  plural: 'sites on fiber' },
   sdwan:    { label: 'SD-WAN',              unit: 'SD-WAN site',    plural: 'SD-WAN sites' },
+  ipsec:    { label: 'IPsec over internet', unit: 'IPsec site',     plural: 'IPsec sites' },
   mobility: { label: 'Mobility first mile', unit: 'wireless site',  plural: 'wireless sites' },
   other:    { label: 'Other first mile',    unit: 'site',           plural: 'sites' },
 };
@@ -146,6 +148,7 @@ export const ACCESS_CLASS = {
 /** A site's first mile, read from its access string. */
 export function accessOf(st) {
   const a = String(st.access || '').toLowerCase();
+  if (/ipsec/.test(a)) return 'ipsec';
   if (/sd-wan|sdwan/.test(a)) return 'sdwan';
   if (/mobility|wireless/.test(a)) return 'mobility';
   if (/avpn|mpls/.test(a)) return 'avpn';

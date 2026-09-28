@@ -200,7 +200,7 @@ test('seeded runs read the whole estate shape when every account fires together'
   const runs = seedRuns(accts, NOW, 1).map(r => runRecord({ ...r, est: D.ESTATES.partial }));
   assert.deepEqual(runs[0].accountIds.slice().sort(), ['acc-aws', 'acc-azure', 'acc-gcp']);
   assert.equal(runs[0].regions, 7);
-  assert.equal(runs[0].sites, 5);
+  assert.equal(runs[0].sites, 25); // 25 named sites since 2026-09-28
 });
 
 test('a nightly estate seeds last night and the night before, newest first', () => {

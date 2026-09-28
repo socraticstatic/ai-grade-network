@@ -33,8 +33,14 @@ const METRO_REGION = {
   Austin: 'US Central', Chicago: 'US Central', Dallas: 'US Central', Houston: 'US Central',
   Denver: 'US West', Phoenix: 'US West', 'Salt Lake City': 'US West', 'San Jose': 'US West',
   Frankfurt: 'International', Singapore: 'International',
+  // The Growing estate's 25 sites (2026-09-28).
+  'New York': 'US East', Boston: 'US East', Charlotte: 'US East',
+  Minneapolis: 'US Central', 'Kansas City': 'US Central',
+  Seattle: 'US West', 'Los Angeles': 'US West',
+  London: 'Europe', Amsterdam: 'Europe', Paris: 'Europe', Dublin: 'Europe', Madrid: 'Europe',
+  Tokyo: 'Asia Pacific', Sydney: 'Asia Pacific', Mumbai: 'Asia Pacific', Seoul: 'Asia Pacific', Manila: 'Asia Pacific',
 };
-const REGION_ORDER = ['US East', 'US Central', 'US West', 'International', 'Nationwide'];
+const REGION_ORDER = ['US East', 'US Central', 'US West', 'Europe', 'Asia Pacific', 'International', 'Nationwide'];
 export function regionOf(site) {
   if (METRO_REGION[site.metro]) return METRO_REGION[site.metro];
   const m = /,\s*(East|Central|West)\b/.exec(site.name || '');
@@ -134,7 +140,7 @@ export function heroLayout(est, opts) {
     // A region card names who carries its traffic; the internet is a carrier here, not a verdict.
     const carriers = [...new Set(r.patterns.map(p => (p.key === 'public' ? 'internet' : p.key.startsWith('third') ? (p.carrier || 'third party') : 'AT&T')))];
     return { name: r.name, access: `${r.count.toLocaleString('en-US')} ${r.count === 1 ? 'site' : 'sites'} · ${carriers.join(', ')}`,
-      priv: r.patterns.some(p => p.priv), drillKey: 'region:' + r.name, rollup: true, region: true, patterns: r.patterns, lines: r.lines, groups: r.sites.length };
+      priv: r.patterns.some(p => p.priv), drillKey: 'region:' + r.name, rollup: true, region: true, patterns: r.patterns, lines: r.lines, groups: r.sites.length, count: r.count };
   }));
   const cap = opts.siteRows ? DRILL_SITES : ROOT_SITES;
   const sites = rawSites.length > cap ? [...rawSites.slice(0, cap - 1), { name: `+${fmtN(rawSites.length - (cap - 1))} more`, access: 'open the list ›', more: true, rollup: false }] : rawSites;

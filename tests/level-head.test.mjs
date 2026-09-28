@@ -41,8 +41,17 @@ test('the clouds column never claims regions it does not have', () => {
   assert.deepEqual(pick(head('clouds', ['us-east-1', 'vpc-0-0', 'vpc-0-0-pub-0'])), { total: 60, noun: 'workloads' });
 });
 
+// The rollup fixture: partial's sites before 2026-09-28, when a named class and
+// a rolled-up class sat side by side. The mechanism outlived the data.
+const ROLLUP_SITES = [
+  { name: 'Dallas DC1', cls: 'Data center', access: 'AVPN (MPLS VPN)', priv: true, metro: 'Dallas' },
+  { name: 'Atlanta DC2', cls: 'Data center', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Atlanta' },
+  { name: 'Chicago HQ', cls: 'Campus', access: 'ABF (Business Fiber)', priv: true, metro: 'Chicago' },
+  { name: 'Remote sites (38)', cls: 'Branch', access: 'SD-WAN', priv: false, metro: 'Various' },
+  { name: 'Denver plant', cls: 'Plant', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Denver' },
+];
 test('partial proves depth is not level', () => {
-  const p = D.ESTATES.partial;
+  const p = { ...D.ESTATES.partial, sites: ROLLUP_SITES };
   const pinv = A.inventory(p);
   const pob = A.observe(p, [], pinv);
   assert.equal(levelHead(p, pinv, pob, 'sites', ['Data center']).level, 'site');
@@ -187,7 +196,8 @@ test('the door opens the drawer on that column, in place', () => {
 
 test('on the empty estate the header prints the zero and opens nothing', () => {
   const v = vals(mkC({ view: 'empty' }));
-  const zeros = { sitesDoor: '0 site groups', bandDoor: '0 facilities', cloudsDoor: '0 regions' };
+  // A root of whole sites says sites (2026-09-28); none at all is 0 sites.
+  const zeros = { sitesDoor: '0 sites', bandDoor: '0 facilities', cloudsDoor: '0 regions' };
   for (const [k, label] of Object.entries(zeros)) {
     // Not a dead button; not a button at all. The words still print.
     assert.equal(v[k].label, label, k);
@@ -230,7 +240,8 @@ test('the band door opens the band with the drawer, in one frame', () => {
 test('the roots still read on partial and mature', () => {
   // Mature gained Denver branch and Phoenix DC, the two Lumen sites: 7 -> 9.
   // Then Salt Lake branch, a Lumen last mile the customer bought: 9 -> 10.
-  for (const [view, sites, fab, clouds] of [['partial', 5, 2, 7], ['mature', 10, 7, 8]]) {
+  // Partial became 25 named sites across five regions on 2026-09-28: 5 -> 25.
+  for (const [view, sites, fab, clouds] of [['partial', 25, 2, 7], ['mature', 10, 7, 8]]) {
     const v = vals(mkC({ view }));
     assert.ok(v.sitesDoor.label.startsWith(`All ${sites} `), `${view} sites: ${v.sitesDoor.label}`);
     assert.ok(v.bandDoor.label.startsWith(`All ${fab} `), `${view} fabric: ${v.bandDoor.label}`);

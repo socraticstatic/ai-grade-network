@@ -227,8 +227,11 @@ function sitesHead(est, trail) {
   const tr = labels(est, null, 'sites', trail);
   trail = pastRegion(trail);
   if (!trail.length) {
-    const total = (est.sites || []).length;
-    return { col: 'sites', level: 'group', noun: nounFor('group', total), total, title: 'Sites', sub: `${n(total)} groups · ${n(totalSites(est))} sites`, trail: tr };
+    // The door counts what the drawer holds, one row per site record. When every
+    // record is one site, they are sites, not "site groups" (2026-09-28: 25 named
+    // sites read "All 25 site groups" over five region cards).
+    const total = (est.sites || []).length, all = totalSites(est);
+    return { col: 'sites', level: 'group', noun: nounFor(all === total ? 'site' : 'group', total), total, title: 'Sites', sub: all === total ? `${n(all)} sites` : `${n(total)} groups · ${n(all)} sites`, trail: tr };
   }
   // Depth is not level: only a trail that STOPS on a metro node is the site
   // list. One hop deeper is that site's paths, which `siteDrillRows` answers.
