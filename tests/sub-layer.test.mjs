@@ -114,7 +114,8 @@ test('AT&T inventory rows are live and never say scanning', () => {
 // (358) under it. Those are drill-downs of the hero, not peers of it.
 
 test('Observe and Cost declare their drill-downs as panels', () => {
-  assert.deepEqual(SUB_PANELS.observe.map(p => p.key), ['insights', 'logs']);
+  // Policies and Tags joined Observe's drawer on 2026-09-28; Records stays a panel without a tab.
+  assert.deepEqual(SUB_PANELS.observe.map(p => p.key), ['insights', 'policies', 'tags', 'logs']);
   assert.deepEqual(SUB_PANELS.cost.map(p => p.key), ['forecast', 'charges']);
 });
 
@@ -150,6 +151,7 @@ test('each section in the layer sits under its own panel gate and no other', asy
   const want = {
     'sec-gap': 'subIsFound', 'sec-paths': 'subIsFound',
     'sec-insights': 'subIsInsights', 'sec-logs': 'subIsLogs',
+    'sec-obs-policies': 'subIsPolicies', 'sec-obs-tags': 'subIsTags',
     'sec-forecast': 'subIsForecast', 'sec-charges': 'subIsCharges',
   };
   const stack = [];

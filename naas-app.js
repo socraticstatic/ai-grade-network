@@ -39,9 +39,13 @@ export const SUB_PANELS = {
   connect: [
     { key: 'found', label: 'What we found', sec: 'sec-gap' },
   ],
+  // Insights | Policies | Tags (2026-09-28). Records opens here from the rail
+  // and the "All records" doors, but holds no tab.
   observe: [
     { key: 'insights', label: 'Insights', sec: 'sec-insights' },
-    { key: 'logs', label: 'Records', sec: 'sec-logs' },
+    { key: 'policies', label: 'Policies', sec: 'sec-obs-policies' },
+    { key: 'tags', label: 'Tags', sec: 'sec-obs-tags' },
+    { key: 'logs', label: 'Records', sec: 'sec-logs', tab: false },
   ],
   govern: [
     { key: 'templates', label: 'Templates', sec: 'sec-starting' },
@@ -1890,7 +1894,47 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           : { addedSources: [...(s.addedSources || []), prov ? `${tile} account` : 'AT&T inventory'], sub: null, sourceEdit: null, srcCred: null, screen: 's1', discoverView: 'sources' }),
       };
     })(), ...dash, nextStop, connectNext, governNext, costNext, obIsPerf: obPage === 'perf', obIsSec: false, obIsLogs: obTab === 'control', obTiles, connRows, hasConns: conns.rows.length > 0, connHead: `${conns.total} ${conns.total === 1 ? 'connection' : 'connections'}`, connSub: conns.degraded ? `${conns.degraded} degraded · ${conns.rows.filter(r => r.state === 'Saturating').length} saturating` : conns.rows.some(r => r.state === 'Saturating') ? `${conns.rows.filter(r => r.state === 'Saturating').length} saturating · none degraded` : 'all up', impact, patternCards, logChips, logPattern, flowRecords, flowRecordCount: `${flowRecords.length} records`, logsPatternLabel: (logChips.find(ch => ch.on) || {}).label || 'All', goGovern: go('s3', { layer: 'cloud', tab: 'govern' }), goPerf: () => set({ obPage: 'perf', obTab: 'flow' }), closeLogs: () => set({ obTab: 'flow' }) };
+  // The Observe drawer's Policies and Tags (2026-09-28). The same policies
+  // Govern lists and the same tags the inventory carries, read against each
+  // other: what each policy caught, and which tags no policy covers yet.
+  // Every door leaves for Govern and closes the drawer.
+  const toGovern = (extra) => () => { go('s3', { layer: 'cloud', tab: 'govern', sub: null })(); set({ ...(extra || {}), scrollToSec: 'sec-policies', scrollNonce: (s.scrollNonce || 0) + 1 }); };
+  const polAll = [...layerPolicies({ ...s, layer: 'cloud' }, est, obScope), ...(s.customPolicies || [])];
+  const POL_STATE = { enforced: ['Enforced', 'var(--success)'], simulated: ['Simulated', 'var(--warning)'] };
+  const drawerPolicies = polAll.map(p => ({ key: p.name, name: p.name, rule: `${p.match} · ${p.req}`,
+    stateWord: (POL_STATE[p.state] || ['Draft'])[0], dot: (POL_STATE[p.state] || [0, 'var(--text-disabled)'])[1],
+    matched: (p.matched || 0).toLocaleString('en-US'), viol: (p.viol || 0).toLocaleString('en-US'), violColor: p.viol ? 'var(--error)' : 'var(--text-light)',
+    go: toGovern() }));
+  const violTotal = polAll.reduce((a, p) => a + (p.viol || 0), 0);
+  const nOf = (n, one, many) => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
+  const tagKey = (x) => String(x).toLowerCase().replace(/\s+/g, '-');
+  const tagPolicy = (t) => polAll.find(p => /^tag /i.test(p.match) && tagKey(p.match.slice(4)) === tagKey(t));
+  const tagAgg = {};
+  inv.forEach(cl => cl.regions.forEach(rg => rg.vpcs.forEach(v => v.tags.forEach(t => {
+    const g = tagAgg[t] = tagAgg[t] || { name: t, vpcs: 0, wl: 0, pub: 0, regions: new Set(), clouds: new Set() };
+    g.vpcs++; g.wl += v.wl || 0; if (!v.priv) g.pub++; g.regions.add(rg.region); g.clouds.add(cl.name);
+  }))));
+  const drawerTags = Object.values(tagAgg).sort((a, b) => b.wl - a.wl || a.name.localeCompare(b.name)).map(g => {
+    const pol = tagPolicy(g.name);
+    const preset = ['tag PCI', 'tag Prod', 'tag Internet-facing', 'tag GPU'].find(m => tagKey(m.slice(4)) === tagKey(g.name));
+    return { key: g.name, name: g.name, chip: chip(g.name), wl: g.wl,
+      sub: `${nOf(g.vpcs, 'VPC', 'VPCs')} · ${nOf(g.wl, 'workload', 'workloads')} · ${nOf(g.regions.size, 'region', 'regions')} in ${nOf(g.clouds.size, 'cloud', 'clouds')}`,
+      exposure: g.pub ? `${nOf(g.pub, 'VPC', 'VPCs')} on the public internet` : 'All on the fabric', exposureColor: g.pub ? 'var(--warning)' : 'var(--text-light)',
+      covered: !!pol, coverLabel: pol ? pol.name : 'No policy', coverColor: pol ? 'var(--text-heading)' : 'var(--text-light)',
+      doorLabel: pol ? 'Open policy →' : 'Set policy →',
+      go: pol ? toGovern() : toGovern({ authoring: { match: preset || 'tag ' + g.name, scope: 'any cloud', req: ['Private path required'] } }),
+      askAndi: () => set({ andiScope: { kind: 'tag', id: g.name, label: 'tag ' + g.name }, andiOpen: true }) };
+  });
+  const bareTags = drawerTags.filter(t => !t.covered).length;
+  const drawerVals = {
+    drawerPolicies, hasDrawerPolicies: drawerPolicies.length > 0, hasDrawerPoliciesNot: !drawerPolicies.length,
+    drawerPolicySub: `${nOf(polAll.length, 'policy', 'policies')} · ${polAll.filter(p => p.state === 'enforced').length} enforced · ${violTotal ? nOf(violTotal, 'violation', 'violations') : 'no violations'}`,
+    drawerAuthor: toGovern({ authoring: { match: null, scope: 'any cloud', req: [] } }),
+    drawerTags, hasDrawerTags: drawerTags.length > 0, hasDrawerTagsNot: !drawerTags.length,
+    drawerTagSub: `${nOf(drawerTags.length, 'tag', 'tags')} · ${bareTags ? `${bareTags} with no policy` : 'every one covered by a policy'}`,
+  };
   return {
+    ...drawerVals,
     invTree: s.tagView ? tagTree(inv, tree, chip) : tree, tagView: !!s.tagView, cloudView: !s.tagView, toggleTagView: () => set({ tagView: !s.tagView }), tagViewUb: s.tagView ? 'var(--cta)' : 'transparent', tagViewColor: s.tagView ? 'var(--link)' : 'var(--text-body)', cloudViewUb: !s.tagView ? 'var(--cta)' : 'transparent', cloudViewColor: !s.tagView ? 'var(--link)' : 'var(--text-body)', hasTree: tree.length > 0, invStats: [{ key: 's', v: stats.sites, l: 'sites' }, { key: 'c', v: stats.clouds, l: 'clouds' }, { key: 'r', v: stats.regions, l: 'regions' }, { key: 'w', v: stats.workloads.toLocaleString('en-US'), l: 'workloads' }, { key: 'a', v: stats.attached, l: 'attached' }, { key: 'e', v: stats.exposed, l: 'exposed' }],
     expandAll: () => set({ inv: { ...openMap, ...Object.fromEntries(openKeys.map(k => [k, true])) } }), collapseAll: () => set({ inv: {} }), collapsedLabel: Object.values(openMap).some(Boolean) ? 'Expanded view' : 'Collapsed view',
     overflowRow: est.regionsExtra ? `${est.regionsExtra.toLocaleString('en-US')} smaller regions rolled up · ${Math.round(est.regionsExtra * 0.6)} on the fabric · ${Math.round(est.regionsExtra * 0.4)} public` : '', hasOverflow: !!est.regionsExtra, overflowW: est.regionsExtra ? '60%' : '0%',
@@ -2274,7 +2318,7 @@ function shellVals(s, set, go, est, c, sched) {
   const closeSub = () => set({ sub: null });
   const subOpen = !!s.sub;
   // The open panel's tab reads as chosen; two identical pills never said which was open.
-  const subTabs = subPanels.map(p => { const on = p.key === subPanelNow; return { key: p.key, label: p.label, on, go: openSub(subPage, p.key),
+  const subTabs = subPanels.filter(p => p.tab !== false).map(p => { const on = p.key === subPanelNow; return { key: p.key, label: p.label, on, go: openSub(subPage, p.key),
     bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', color: on ? 'var(--link)' : 'var(--text-body)', border: on ? 'var(--border-active)' : 'var(--border-secondary)', weight: on ? 600 : 400 }; });
   const subTitle = subPanelNow === 'add' && s.sourceEdit ? 'Edit a source' : (subPanels.find(p => p.key === subPanelNow) || {}).label || '';
   const openFindings = openSub('connect', 'found');
@@ -2315,7 +2359,7 @@ function shellVals(s, set, go, est, c, sched) {
   const subIsAdd = subPanelNow === 'add';
   const subIsRun = subPanelNow === 'run';
   const subIsFound = subPanelNow === 'found';
-  const subIsInsights = subPanelNow === 'insights', subIsLogs = subPanelNow === 'logs';
+  const subIsInsights = subPanelNow === 'insights', subIsLogs = subPanelNow === 'logs', subIsPolicies = subPanelNow === 'policies', subIsTags = subPanelNow === 'tags';
   const subIsForecast = subPanelNow === 'forecast', subIsCharges = subPanelNow === 'charges';
   // Manage credentials scrolled to a card that is now a panel. It opens it.
   const manageCreds = () => {
@@ -2333,7 +2377,7 @@ function shellVals(s, set, go, est, c, sched) {
     pills, railGroups, subNav, hasSubNav, pageTitle, credsLabel, credsTitle, manageCreds, showPageTitle, rangeValue, setRange, bellLabel, buildLabel: (typeof window !== 'undefined' && window.__naasVersion) ? `v${window.__naasVersion.build} · ${window.__naasVersion.date}` : '', hasBuildLabel: !!(typeof window !== 'undefined' && window.__naasVersion), railCollapsed, railExpanded: !railCollapsed, railToggleTitle: railCollapsed ? 'Expand navigation' : 'Collapse navigation', iconAndi: 'brand/andi-symbol.svg', iconCalendar: iconDir + '/checklist.svg', goBrowseClose: () => { go('s7')(); set({ demoOpen: false }); },
     topTabs, layerSubtitle, elevatorOpen: !!s.elevatorOpen, toggleElevator: () => set({ elevatorOpen: !s.elevatorOpen }), closeElevator: () => set(close), chevronRot: s.elevatorOpen ? 'rotate(180deg)' : 'rotate(0deg)', elevator,
     goDiscoverClose: goTab('s1'), goHomeClose: goTab('s3', { layer: 'cloud', tab: 'connect' }),
-    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, railIsSequence, needsYouLabel, estateExposedGo, ownsDiscovery, ownsTelemetry, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsAdd, subIsRun, subIsFound, subIsInsights, subIsLogs, subIsForecast, subIsCharges, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
+    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, railIsSequence, needsYouLabel, estateExposedGo, ownsDiscovery, ownsTelemetry, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsAdd, subIsRun, subIsFound, subIsInsights, subIsLogs, subIsPolicies, subIsTags, subIsForecast, subIsCharges, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
   };
 }
 

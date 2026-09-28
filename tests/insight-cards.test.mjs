@@ -74,6 +74,6 @@ test('every card button leads somewhere, and leaving closes the drawer', () => {
   assert.equal(st.sub, null); assert.equal(st.tab, 'govern');
 });
 
-test('the drawer names Records as the rail does', () => {
-  assert.deepEqual(vals(observe()).subTabs.map(t => t.label), ['Insights', 'Records']);
+test('Records opens in the drawer under the rail\'s name', () => {
+  assert.equal(vals(observe({ sub: { page: 'observe', panel: 'logs' } })).subTitle, 'Records');
 });
