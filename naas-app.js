@@ -6,7 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 import * as D from './naas-data.js';
-import { filterSites, regionOf, fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits } from './naas-logic.js';
+import { filterSites, regionOf, onAtt, fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits } from './naas-logic.js';
 import * as A from './naas-addendum.js';
 import * as R from './naas-round2.js';
 import * as S from './naas-sites.js';
@@ -1240,8 +1240,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const winDays = winDaysOf(s), winLabel = winLabelOf(s), newOnly = !!s.newOnly;
   const isNew = (x) => !!x && x.since != null && x.since <= winDays;
   const LK = labelKit(s, set);
+  // Each private connection's configured bandwidth, the ports Observe calls purchased (2026-09-28).
+  const portsOf = (region) => { const u = (ob.utilRows || []).find(x => x.region === region); return u ? u.ports : 1; };
+  const bwWord = (region) => { const p = portsOf(region); return p === 1 ? '10G' : `${p} × 10G`; };
+  const cloudBw = (cl) => { const pr = est.regionsList.filter(r => r.cloud === cl.name && r.priv); return pr.length ? ' · ' + pr.map(r => `${r.region} ${r.ramp || 'private'} ${bwWord(r.region)}`).join(', ') : ''; };
   const tree = inv.filter(cl => !newOnly || cl.regions.some(r => r.vpcs.some(isNew))).map(cl => ({
-    key: cl.id, name: cl.name, mark: cl.mark, hasMark: !!cl.mark, noMark: !cl.mark, notTag: true, isTag: false, initials: cl.initials, gpu: cl.gpu, sub: `${cl.regions.length} ${cl.regions.length === 1 ? 'region' : 'regions'} · ${cl.vpcs} VPC · ${cl.wl.toLocaleString('en-US')} workloads`,
+    key: cl.id, name: cl.name, mark: cl.mark, hasMark: !!cl.mark, noMark: !cl.mark, notTag: true, isTag: false, initials: cl.initials, gpu: cl.gpu, sub: `${cl.regions.length} ${cl.regions.length === 1 ? 'region' : 'regions'} · ${cl.vpcs} VPC · ${cl.wl.toLocaleString('en-US')} workloads${cloudBw(cl)}`,
     open: !!openMap[cl.id], toggle: toggle(cl.id), caret: openMap[cl.id] ? 'rotate(90deg)' : 'rotate(0deg)', badge: badge(cl.priv),
     regions: branchOpen(cl.id) ? cl.regions.filter(r => !newOnly || r.vpcs.some(isNew)).map(r => ({
       key: r.id, region: r.region, city: r.city, open: !!openMap[r.id], toggle: toggle(r.id), caret: openMap[r.id] ? 'rotate(90deg)' : 'rotate(0deg)', badge: badge(r.priv), jumpKey: 'reg:' + r.region,
@@ -1279,6 +1283,45 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     cta: newOnly ? 'Show everything' : 'Review new', hasNew: newN > 0, pill: newOnly ? `${newN} new · showing only these` : `${newN} new · ${winLabel}`,
     toggle: () => set({ newOnly: !newOnly, inv: newOnly ? openMap : { ...openMap, ...Object.fromEntries(inv.flatMap(cl => [cl.id, ...cl.regions.map(r => r.id)]).map(k => [k, true])) }, siteOpen: newOnly ? (s.siteOpen || {}) : Object.fromEntries(S.siteTree(est).flatMap(cl => [cl.key, ...cl.children.map(ch => ch.key)]).map(k => [k, true])) }),
   };
+  // Estate insights (2026-09-28): what you have and what you don't, each card
+  // leading with its so-what, its evidence as rows, and one move.
+  const enf = (n) => n.toLocaleString('en-US');
+  const ecnt = (xs) => xs.reduce((a, x) => a + S.countOf(x.name), 0);
+  const eBars = (rows) => { const m = Math.max(1, ...rows.map(r => r.n)); return rows.map(r => ({ ...r, title: r.title || r.label, key: r.key || r.label, w: Math.max(4, Math.round(r.n / m * 100)) + '%' })); };
+  const allSitesE = est.sites || [], eSiteN = ecnt(allSitesE), eAttN = ecnt(allSitesE.filter(onAtt));
+  const eSvcTally = {}; allSitesE.forEach(x => S.servicesOf(x).forEach(v => { eSvcTally[v.key] = eSvcTally[v.key] || { v, n: 0 }; eSvcTally[v.key].n += S.countOf(x.name); }));
+  const eToSites = () => set({ scrollToSec: 'sec-your-sites', scrollNonce: (s.scrollNonce || 0) + 1 });
+  const eBwOf = (r) => { const u = (ob.utilRows || []).find(x => x.region === r.region); const p = u ? u.ports : 1; return p === 1 ? '10G' : `${p} × 10G`; };
+  const eRegs = est.regionsList || [], ePrivRegs = eRegs.filter(r => r.priv), ePubRegs = eRegs.filter(r => !r.priv), pubWlE = ePubRegs.reduce((a, r) => a + (r.wl || 0), 0);
+  const haveCards = [
+    { title: 'Sites by service', soWhat: eAttN === eSiteN ? `All ${enf(eSiteN)} sites on AT&T.` : `${enf(eAttN)} of ${enf(eSiteN)} on AT&T · ${enf(eSiteN - eAttN)} on another carrier`,
+      rows: eBars(Object.values(S.SERVICE).concat(Object.values(eSvcTally).map(t => t.v).filter(v => !S.SERVICE[v.key])).filter(v => eSvcTally[v.key]).map(v => ({ label: v.label, sub: '', title: v.name, n: eSvcTally[v.key].n, value: enf(eSvcTally[v.key].n), fill: v.onAtt ? 'var(--viz-1)' : 'var(--viz-4)' }))),
+      cta: 'Your sites', go: eToSites },
+    { title: 'Cloud connections', soWhat: `${ePrivRegs.length} of ${eRegs.length} regions private${ePubRegs.length ? ` · ${enf(pubWlE)} workloads on the internet` : ''}`,
+      rows: eBars([...ePrivRegs, ...ePubRegs].slice(0, 6).map(r => ({ key: r.region, label: `${r.cloud} ${r.region}`, sub: r.priv ? (r.ramp || 'Private') : 'public internet', n: r.wl || 0, value: r.priv ? eBwOf(r) : 'Internet', fill: r.priv ? 'var(--viz-1)' : 'var(--viz-6)' }))),
+      cta: 'Connect', go: go('s3', { layer: 'cloud', tab: 'connect' }) },
+    { title: `New in the last ${winLabel}`, soWhat: newN ? `${enf(newUnlabeled)} unlabeled · ${enf(newPublic)} reach the internet` : 'Nothing new',
+      rows: eBars([['VPCs', newVpcs.length], ['Workloads', newWls.length], ['Sites', newSites.length], ['No label yet', newUnlabeled], ['Reach the internet', newPublic]].map(([l, n]) => ({ label: l, sub: '', n, value: enf(n), fill: /label|internet/.test(l) ? 'var(--viz-4)' : 'var(--viz-1)' }))),
+      cta: newStrip.cta, go: newN ? newStrip.toggle : eToSites },
+  ];
+  const eOffAtt = allSitesE.filter(x => !onAtt(x));
+  const eIpsecB = (est.buckets || []).find(b => b.id === 'ipsec');
+  const eSingles = allSitesE.filter(x => onAtt(x) && Array.isArray(x.services) && S.servicesOf(x).length === 1);
+  const eByRegion = (xs) => { const m = {}; xs.forEach(x => { const r = regionOf(x); (m[r] = m[r] || []).push(x); }); return Object.entries(m); };
+  const lackCards = [
+    ...(eOffAtt.length ? [{ title: `Private path for ${enf(ecnt(eOffAtt))} ${ecnt(eOffAtt) === 1 ? 'site' : 'sites'}`,
+      soWhat: eIpsecB ? `${fmt(eIpsecB.today)}/mo egress · ${enf(eOffAtt.length)} VPN endpoints exposed` : `${enf(ecnt(eOffAtt))} outside AT&T`,
+      rows: eOffAtt.map(x => ({ key: x.name, label: x.name, sub: regionOf(x), title: `${x.name} · ${x.metro} · ${S.servicesOf(x)[0].name}`, w: '0%', fill: 'transparent', value: x.tunnel || (S.countOf(x.name) > 1 ? enf(S.countOf(x.name)) : S.servicesOf(x)[0].label) })),
+      cta: 'Move to AT&T', go: go('s4') }] : []),
+    ...(ePubRegs.length ? [{ title: `Private connection in ${ePubRegs.length} ${ePubRegs.length === 1 ? 'region' : 'regions'}`,
+      soWhat: `${enf(pubWlE)} workloads on the internet${totalSave ? ` · ${fmt(totalSave)}/mo to save` : ''}`,
+      rows: eBars(ePubRegs.map(r => ({ key: r.region, label: `${r.cloud} ${r.region}`, sub: `${r.pub} ms`, n: r.wl || 0, value: enf(r.wl || 0), fill: 'var(--viz-6)' }))),
+      cta: `Attach ${ePubRegs.length}`, go: composeFor(go, ePubRegs[0]) }] : []),
+    ...(eSingles.length ? [{ title: `A backup path at ${enf(eSingles.length)} ${eSingles.length === 1 ? 'site' : 'sites'}`,
+      soWhat: 'One circuit failure takes a site offline',
+      rows: eBars(eByRegion(eSingles).map(([r, xs]) => ({ key: r, label: r, sub: '', title: xs.map(x => x.name).join(', '), n: xs.length, value: enf(xs.length), fill: 'var(--viz-4)' }))),
+      cta: 'Add a backup', go: go('s4') }] : []),
+  ];
   const stats = A.inventoryStats(est, inv);
   const selWl = inv.flatMap(cl => cl.regions.flatMap(r => r.vpcs)).filter(v => sel.includes(v.id)).reduce((a, v) => a + v.wl, 0);
   const pubWl = est.regionsList.filter(r => !r.priv).reduce((a, r) => a + r.wl, 0);
@@ -2012,7 +2055,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         else { set({ jumpHit: `Jumped to ${hit.label}`, tagView: false, treeOrMap: 'tree', inv: { ...(s.inv || {}), [hit.cloudId]: true, [hit.regionId]: true, [hit.vpcId]: true } }); after('vpc:' + hit.vpcId); }
       };
       return { jumpQ: s.jumpQ || '', setJumpQ: (e) => set({ jumpQ: e.target.value, jumpHit: '' }), jumpKey: (e) => { if (e.key === 'Enter') jumpTo(); }, jumpGo: jumpTo, jumpHit: s.jumpHit || '', hasJumpHit: !!s.jumpHit,
-        newStrip, newOnly, siteTree: tree, hasSiteTree: tree.length > 0, siteCrumbs: crumbs, hasSiteCrumbs: crumbs.length > 1, cloudsLine: `${stats.clouds} ${stats.clouds === 1 ? 'cloud' : 'clouds'} · ${stats.regions} ${stats.regions === 1 ? 'region' : 'regions'} · ${stats.workloads.toLocaleString('en-US')} workloads`, siteCrumbTail: crumbs[crumbs.length - 1].label, collapseSites: () => set({ siteOpen: {} }), sitesLineTree: `${totalSites.toLocaleString('en-US')} sites · your own buildings, not a cloud` };
+        newStrip, newOnly, haveCards, lackCards, hasLackCards: lackCards.length > 0, siteTree: tree, hasSiteTree: tree.length > 0, siteCrumbs: crumbs, hasSiteCrumbs: crumbs.length > 1, cloudsLine: `${stats.clouds} ${stats.clouds === 1 ? 'cloud' : 'clouds'} · ${stats.regions} ${stats.regions === 1 ? 'region' : 'regions'} · ${stats.workloads.toLocaleString('en-US')} workloads`, siteCrumbTail: crumbs[crumbs.length - 1].label, collapseSites: () => set({ siteOpen: {} }), sitesLineTree: `${totalSites.toLocaleString('en-US')} sites · your own buildings, not a cloud` };
     })(),
     siteCards: est.sites.filter(st => !st.rollup).map((st, i) => ({ key: st.name, name: st.name, metro: st.metro, cidr: `10.${60 + i}.0.0/20`, selected: false })), siteRollups: est.sites.filter(st => st.rollup).map(st => ({ key: st.name, name: st.name, n: (st.name.match(/\(([\d,]+)\)/) || [])[1] || '', priv: st.priv, pctW: st.priv ? '100%' : '0%', fill: st.priv ? '#0057b8' : '#8a949c' })), hasSiteRollups: est.sites.some(st => st.rollup), sitesLine: `${stats.sites.toLocaleString('en-US')} premises · your own buildings, not a cloud`,
     discoverVerdictLine: isEmpty ? 'Nothing discovered yet. Connect an account or pick an inventory.' : `${est.regionsList.length - ob.pathsCovered} of your ${est.regionsList.length} cloud regions still ride the public internet. ${ob.pathsCovered} ${ob.pathsCovered === 1 ? 'is' : 'are'} on the AT&T network, across ${plural(inv.length, 'cloud', 'clouds')}.`,

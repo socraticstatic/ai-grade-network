@@ -710,10 +710,29 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <sc-if value="{{ showEstateBody }}" hint-placeholder-val="{{ true }}">
   <div style="display:grid;gap:16px;animation:fadeIn .3s">
     <sc-if value="{{ anyFacetOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeFacets }}" style="position:fixed;inset:0;z-index:10"></div></sc-if>
-    <div class="fx-alert" role="status" aria-label="Discovered in the window">
-      <div class="fx-alert-body"><span class="fx-alert-icon" aria-hidden="true"></span><div style="display:grid;gap:2px;min-width:0"><div class="fx-alert-title">{{ newStrip.title }}</div><div class="fx-alert-text">{{ newStrip.text }}</div></div></div>
-      <label class="fx-filter"><span class="fx-label">Since</span><select class="fx-select" value="{{ rangeValue }}" onChange="{{ setRange }}" aria-label="Discovery window"><option value="1h">Last hour</option><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option></select></label>
-      <sc-if value="{{ newStrip.hasNew }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ newStrip.toggle }}">{{ newStrip.cta }}</button></sc-if>
+    <!-- Estate insights (2026-09-28): what you have and what you don't, each with its so-what and one move. Replaces the Act on it strip. -->
+    <div aria-label="Estate insights" style="display:grid;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Insights</h2><span style="flex:1"></span><label class="fx-filter"><span class="fx-label">Since</span><select class="fx-select" value="{{ rangeValue }}" onChange="{{ setRange }}" aria-label="Discovery window"><option value="1h">Last hour</option><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option></select></label></div>
+      <div style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">What you have</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+      <sc-for list="{{ haveCards }}" as="hc" hint-placeholder-count="3">
+        <div class="fx-card" aria-label="{{ hc.title }}" style="padding:20px;gap:12px">
+          <div class="fx-card-head" style="align-items:flex-start"><div style="min-width:0;display:grid;gap:4px"><h3 class="fx-card-title">{{ hc.title }}</h3><div style="font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);text-wrap:pretty">{{ hc.soWhat }}</div></div><button class="fx-btn" onClick="{{ hc.go }}">{{ hc.cta }}</button></div>
+          <div class="fx-rows"><sc-for list="{{ hc.rows }}" as="er" hint-placeholder-count="4"><div class="fx-row"><span class="lbl" title="{{ er.title }}"><b>{{ er.label }}</b><small>{{ er.sub }}</small></span><span class="bar"><span style="width:{{ er.w }};background:{{ er.fill }}"></span></span><span class="val">{{ er.value }}</span></div></sc-for></div>
+        </div>
+      </sc-for>
+    </div>
+      <sc-if value="{{ hasLackCards }}" hint-placeholder-val="{{ true }}">
+      <div style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled);margin-top:4px">What you don't have</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+      <sc-for list="{{ lackCards }}" as="lc" hint-placeholder-count="3">
+        <div class="fx-card" aria-label="{{ lc.title }}" style="padding:20px;gap:12px">
+          <div class="fx-card-head" style="align-items:flex-start"><div style="min-width:0;display:grid;gap:4px"><h3 class="fx-card-title">{{ lc.title }}</h3><div style="font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);text-wrap:pretty">{{ lc.soWhat }}</div></div><button class="fx-btn" onClick="{{ lc.go }}">{{ lc.cta }}</button></div>
+          <div class="fx-rows"><sc-for list="{{ lc.rows }}" as="er" hint-placeholder-count="4"><div class="fx-row"><span class="lbl" title="{{ er.title }}"><b>{{ er.label }}</b><small>{{ er.sub }}</small></span><span class="bar"><span style="width:{{ er.w }};background:{{ er.fill }}"></span></span><span class="val">{{ er.value }}</span></div></sc-for></div>
+        </div>
+      </sc-for>
+    </div>
+      </sc-if>
     </div>
     <button onClick="{{ toggleEstFilters }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 0;border:0;border-top:1px solid var(--border-secondary);background:transparent;font:inherit;text-align:left;cursor:pointer"><span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Filters</span><span style="font-size:12px;color:var(--text-light)">{{ estFilterCount }}</span><span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--link)">{{ estFilterWord }}</span></button>
     <div aria-label="Estate scope" class="fx-filters" style="display:{{ estFiltersDisplay }};position:relative;z-index:15">
@@ -935,7 +954,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     </sc-if>
     </div>
     <!-- Your sites, drilled like the clouds: class → metro → site. -->
-    <div style="display:grid;gap:12px">
+    <div id="sec-your-sites" style="display:grid;gap:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;font-weight:700;color:var(--text-heading)">Your sites</span><span style="font-size:12px;color:var(--text-light)">{{ sitesLineTree }}</span></div>
         <nav aria-label="Site drill" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-light)">

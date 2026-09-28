@@ -151,14 +151,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // two panels, each a gate, a card, a header row, a row loop and an empty state:
 // div 942 -> 956, span 705 -> 726, sc-if 330 -> 336, sc-for 191 -> 193, button 261 -> 264.
 // Their cards dropped the title the drawer already shows: div 956 -> 954.
+// Estate's Act on it strip became two rows of insight widgets (2026-09-28), a
+// head with the window, two grids and their cards, rows and moves:
+// div 954 -> 967, span 726 -> 734, sc-for 193 -> 197, button 264 -> 265.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 954],
-    ['span', /<span\b/g, /<\/span>/g, 726],
+    ['div', /<div\b/g, /<\/div>/g, 967],
+    ['span', /<span\b/g, /<\/span>/g, 734],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 336],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 193],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 197],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 264],
+    ['button', /<button\b/g, /<\/button>/g, 265],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];
