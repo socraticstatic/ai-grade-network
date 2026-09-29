@@ -7,7 +7,7 @@
  */
 // Layout and derivation helpers for the NaaS storefront. Pure functions, no DOM.
 import { siteChain, cloudEdgeThing, cloudAccessThing, coreThing, accessThing, entersAtt } from './naas-things.js';
-import { servicesOf, stateOf, SERVICE } from './naas-sites.js';
+import { servicesOf, stateOf, SERVICE, buOf, BU_DEFAULTS } from './naas-sites.js';
 export const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
 export const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 /** "1 cloud" / "2 clouds" / "4,120 sites". Every count in the copy goes through this. */
@@ -133,6 +133,19 @@ export function accessRows(est) {
       access: `${count.toLocaleString('en-US')} ${count === 1 ? 'site' : 'sites'} · ${metros} ${metros === 1 ? 'metro' : 'metros'}` };
   });
 }
+/** Sites by business unit: the customer's tags, then Untagged last. */
+export function buRows(est, tags = {}) {
+  const by = {};
+  (est.sites || []).forEach(site => { const b = buOf(site, tags); (by[b] = by[b] || []).push(site); });
+  const order = [...BU_DEFAULTS.filter(b => by[b]), ...Object.keys(by).filter(b => !BU_DEFAULTS.includes(b) && b !== 'Untagged').sort(), ...(by.Untagged ? ['Untagged'] : [])];
+  return order.map(name => {
+    const sites = by[name];
+    const count = sites.reduce((a, x) => a + countOf(x.name), 0);
+    const metros = new Set(sites.map(x => x.metro).filter(Boolean)).size || 1;
+    return { key: name, name, sites, count, metros, onAtt: sites.some(onAtt), lines: linesOf(sites, false),
+      access: `${count.toLocaleString('en-US')} ${count === 1 ? 'site' : 'sites'} · ${metros} ${metros === 1 ? 'metro' : 'metros'}` };
+  });
+}
 /** A region's card on the picture: who carries its traffic, and how many sites. */
 export const regionCard = r => {
     // A region card names who carries its traffic; the internet is a carrier here, not a verdict.
@@ -207,7 +220,7 @@ export function heroLayout(est, opts) {
   const clampLane = (y) => Math.round(Math.min(lane.y + lane.h - 14, Math.max(lane.y + 14, y)));
   out.ghost = empty;
 
-  const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || (opts.groupBy === 'access' ? accessRows(est).map(g => groupCard(g, 'access:' + g.key)) : null) || regionRows(est).map(regionCard));
+  const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || (opts.groupBy === 'access' ? accessRows(est).map(g => groupCard(g, 'access:' + g.key)) : opts.groupBy === 'bu' ? buRows(est, opts.tags).map(g => groupCard(g, 'bu:' + g.name)) : null) || regionRows(est).map(regionCard));
   const cap = opts.siteRows ? DRILL_SITES : ROOT_SITES;
   const sites = rawSites.length > cap ? [...rawSites.slice(0, cap - 1), { name: `+${fmtN(rawSites.length - (cap - 1))} more`, access: 'open the list ›', more: true, rollup: false }] : rawSites;
   const n = sites.length;

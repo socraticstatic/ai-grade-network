@@ -11,7 +11,7 @@
 // are the workloads that are impacted. These workloads are also talking to
 // these other workloads."
 import * as P from './naas-paths.js';
-import { regionRows, rollupLine, linesOf, onAtt, serviceSites, accessRows, regionCard } from './naas-logic.js';
+import { regionRows, rollupLine, linesOf, onAtt, serviceSites, accessRows, buRows, regionCard } from './naas-logic.js';
 
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const rnd = (seed) => { let x = seed || 1; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 10000) / 10000; }; };
@@ -203,8 +203,8 @@ export function siteDrillRows(est, trail, opts = {}) {
   if (!trail || !trail.length) return null;
   // Group: Access type, then region (notes, 2026-09-29). An access group opens to
   // the regions its sites sit in; past that it is the region drill, on those sites only.
-  if (String(trail[0]).startsWith('access:')) {
-    const g = accessRows(est).find(r => 'access:' + r.key === trail[0]);
+  if (String(trail[0]).startsWith('access:') || String(trail[0]).startsWith('bu:')) {
+    const g = String(trail[0]).startsWith('bu:') ? buRows(est, opts.tags).find(r => 'bu:' + r.name === trail[0]) : accessRows(est).find(r => 'access:' + r.key === trail[0]);
     if (!g) return null;
     const sub = { ...est, sites: g.sites };
     if (trail.length === 1) return { level: 'region', label: g.name, rows: regionRows(sub).map(regionCard) };

@@ -187,14 +187,15 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // One findings list with a life each, and the finding drawer (notes, 2026-09-29): div 971 -> 996, span 736 -> 758, sc-if 368 -> 376, sc-for 214 -> 217, button 273 -> 278, aside 10 -> 11.
 // Cost · Banked (notes, 2026-09-29): div 996 -> 1002, span 758 -> 765, sc-if 376 -> 377, sc-for 217 -> 219.
 // Group sites by access type (notes, 2026-09-29): span 765 -> 766, sc-if 377 -> 378, label 28 -> 29.
+// Business units: Estate tab, Group option (notes, 2026-09-29): div 1002 -> 1012, span 766 -> 773, sc-if 378 -> 381, sc-for 219 -> 221, button 278 -> 281.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1002],
-    ['span', /<span\b/g, /<\/span>/g, 766],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 378],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 219],
+    ['div', /<div\b/g, /<\/div>/g, 1012],
+    ['span', /<span\b/g, /<\/span>/g, 773],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 381],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 221],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 278],
+    ['button', /<button\b/g, /<\/button>/g, 281],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 29],
   ];

@@ -6,7 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 import * as D from './naas-data.js';
-import { filterSites, regionOf, onAtt, fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits } from './naas-logic.js';
+import { filterSites, buRows, regionOf, onAtt, fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits } from './naas-logic.js';
 import * as A from './naas-addendum.js';
 import * as R from './naas-round2.js';
 import * as S from './naas-sites.js';
@@ -156,6 +156,7 @@ export function init(c) {
   try { if (localStorage.getItem('naas.openHint') === 'seen') c.setState({ openHintSeen: true }); } catch (e) {}
   try { const h = localStorage.getItem('naas.hero'); if (h) c.setState({ heroOpen: JSON.parse(h) }); } catch (e) {}
   try { const fl = localStorage.getItem('naas.life'); if (fl) c.setState({ findingLife: JSON.parse(fl) }); } catch (e) {}
+  try { const tg = JSON.parse(localStorage.getItem('naas.tags') || 'null'); if (tg) c.setState({ siteTags: tg.siteTags || {}, buCustom: tg.buCustom || {} }); } catch (e) {}
   const q = new URLSearchParams(location.search);
   const hash = (location.hash || '').replace('#', '').split('/');
   const patch = {};
@@ -175,7 +176,7 @@ export function init(c) {
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -308,7 +309,7 @@ export function vals(c) {
   const siteF = s.siteFilter || {};
   const filterOn = !!((siteF.svc || []).length || siteF.loc || siteF.reach);
   const estF = filterOn ? { ...est, sites: filterSites(est.sites, siteF) } : est;
-  const siteDrill = s.drill.length ? X.siteDrillRows(est, s.drill, { pin: s.volPin }) : null;
+  const siteDrill = s.drill.length ? X.siteDrillRows(est, s.drill, { pin: s.volPin, tags: ((s.siteTags || {})[est.id]) || {} }) : null;
   const drillInfo = siteDrill ? { level: siteDrill.level, label: siteDrill.label, rows: siteDrill.rows } : null;
   const drillRows = drillInfo ? drillInfo.rows : null;
   const cloudDrill = s.cloudDrill || [];
@@ -325,7 +326,7 @@ export function vals(c) {
   // stacks at the ends of an empty stage.
   const folded = !s.bandUnfolded && !fabOpenNow;
   const bandW = folded ? 4 * FOLDED_SIDE + 260 : 580;
-  const L = heroLayout(est, { groupBy: s.siteGroup, siteRows: drillRows, regionRows: regionDrill ? regionDrill.rows : null, bandX: Math.round(SITES_END + (RX - SITES_END - bandW) / 2), bandW, folded });
+  const L = heroLayout(est, { groupBy: s.siteGroup, tags: ((s.siteTags || {})[est.id]) || {}, siteRows: drillRows, regionRows: regionDrill ? regionDrill.rows : null, bandX: Math.round(SITES_END + (RX - SITES_END - bandW) / 2), bandW, folded });
   const hoverKey = s.hoverNode;
   const dimFor = (keys) => hoverKey ? (keys.includes(hoverKey) ? 1 : 0.72) : 1;
   const layerEdgeKinds = { ai: ['egress'], cloud: ['egress', 'internet'], net: ['ingress', 'internet'], transport: ['ingress'] };
@@ -2281,10 +2282,27 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         newStrip, newOnly, haveCards, lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
         // Three tabs, one panel at a time (2026-09-28, no scrolling).
         // Group the picture's sites (notes, 2026-09-29): by region, or by how they attach.
-        siteGroupValue: s.siteGroup === 'access' ? 'access' : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
+        siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
         // Connect is two pages (notes, 2026-09-29): what you have, and the options for what is not on AT&T yet.
         ...(() => { const on3 = s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect'; const ck = s.cnPage === 'options' ? 'options' : 'picture'; return { cnIsOptions: on3 && ck === 'options', cnIsPicture: on3 && ck === 'picture', cnTabs: on3, heroHead: s.screen !== 's3', cnPanels: [['picture', 'What you have'], ['options', 'Options']].map(([k, l]) => { const on = ck === k; return { key: k, label: l, on, go: () => set({ cnPage: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }) }; })(),
-        ...(() => { const ek = ['glance', 'clouds', 'sites'].includes(s.estPanel) ? s.estPanel : 'glance'; return { estPanels: [['glance', 'At a glance'], ['clouds', 'Your clouds'], ['sites', 'Your sites']].map(([k, l]) => { const on = ek === k; return { key: k, label: l, on, go: () => set({ estPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), estPanelGlance: ek === 'glance', estPanelClouds: ek === 'clouds', estPanelSites: ek === 'sites' }; })(),
+        // Business units (notes, 2026-09-29): the customer tags sites, and every grouping reads the tags.
+        ...(() => {
+          const tags = ((s.siteTags || {})[est.id]) || {}, custom = ((s.buCustom || {})[est.id]) || [];
+          const save = (siteTags, buCustom) => { set({ siteTags, buCustom }); try { localStorage.setItem('naas.tags', JSON.stringify({ siteTags, buCustom })); } catch (e) {} };
+          const groups = buRows(est, tags);
+          const names = [...S.BU_DEFAULTS, ...custom.filter(b => !S.BU_DEFAULTS.includes(b))];
+          const known = [...names.filter(b => groups.some(g => g.name === b) || custom.includes(b)), ...groups.map(g => g.name).filter(b => !names.includes(b))];
+          const active = known.includes(s.buActive) ? s.buActive : null;
+          const maxN = Math.max(1, ...groups.map(g => g.count));
+          const buList = known.map(b => { const g = groups.find(x => x.name === b); const n = g ? g.count : 0; const on = active === b;
+            return { key: b, name: b, n, nF: n.toLocaleString('en-US'), w: Math.round(n / maxN * 100) + '%', on, all: false, go: () => set({ buActive: on ? null : b }), bg: on ? 'var(--bg-accent)' : 'transparent', border: on ? 'var(--border-active)' : 'var(--border-secondary)' }; });
+          const buSites = (est.sites || []).map(x => { const bu = S.buOf(x, tags); const target = active && bu !== active ? active : null;
+            return { key: x.name, name: x.name, metro: x.metro || 'various', access: x.access || '', count: S.countOf(x.name).toLocaleString('en-US'), bu, moveLabel: target ? `Move to ${target}` : active ? `In ${active}` : 'Pick a unit', canMove: !!target, noMove: !target,
+              move: () => { if (!target) return; save({ ...(s.siteTags || {}), [est.id]: { ...tags, [x.name]: target } }, s.buCustom || {}); } }; });
+          const addBu = () => { const nm = String(s.buNew || '').trim(); if (!nm) return; if (!known.includes(nm)) save(s.siteTags || {}, { ...(s.buCustom || {}), [est.id]: [...custom, nm] }); set({ buNew: '', buActive: nm }); };
+          return { buList, buSites, buActiveName: active || '', hasBuActive: !!active, buHint: active ? `Moving sites into ${active}` : 'Pick a business unit, then move sites into it', buNew: s.buNew || '', setBuNew: (e) => set({ buNew: e.target.value }), addBu };
+        })(),
+        ...(() => { const ek = ['glance', 'clouds', 'sites', 'bu'].includes(s.estPanel) ? s.estPanel : 'glance'; return { estPanels: [['glance', 'At a glance'], ['clouds', 'Your clouds'], ['sites', 'Your sites'], ['bu', 'Business units']].map(([k, l]) => { const on = ek === k; return { key: k, label: l, on, go: () => set({ estPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), estPanelGlance: ek === 'glance', estPanelClouds: ek === 'clouds', estPanelSites: ek === 'sites', estPanelBu: ek === 'bu' }; })(),
         siteTree: tree, hasSiteTree: tree.length > 0, siteCrumbs: crumbs, hasSiteCrumbs: crumbs.length > 1, cloudsLine: `${stats.clouds} ${stats.clouds === 1 ? 'cloud' : 'clouds'} · ${stats.regions} ${stats.regions === 1 ? 'region' : 'regions'} · ${stats.workloads.toLocaleString('en-US')} workloads`, siteCrumbTail: crumbs[crumbs.length - 1].label, collapseSites: () => set({ siteOpen: {} }), sitesLineTree: `${totalSites.toLocaleString('en-US')} sites · your own buildings, not a cloud` };
     })(),
     siteCards: est.sites.filter(st => !st.rollup).map((st, i) => ({ key: st.name, name: st.name, metro: st.metro, cidr: `10.${60 + i}.0.0/20`, selected: false })), siteRollups: est.sites.filter(st => st.rollup).map(st => ({ key: st.name, name: st.name, n: (st.name.match(/\(([\d,]+)\)/) || [])[1] || '', priv: st.priv, pctW: st.priv ? '100%' : '0%', fill: st.priv ? '#0057b8' : '#8a949c' })), hasSiteRollups: est.sites.some(st => st.rollup), sitesLine: `${stats.sites.toLocaleString('en-US')} premises · your own buildings, not a cloud`,

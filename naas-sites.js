@@ -195,6 +195,15 @@ export function accessOf(st) {
   return 'other';
 }
 
+/**
+ * A site's business unit (notes, 2026-09-29: "tag the sites so they can group
+ * by Business Unit like HQ, Remote office, Manufacturing Plant"). The
+ * customer's tag wins; before they tag anything, the class suggests one, and
+ * what no class can say stays Untagged.
+ */
+export const BU_DEFAULTS = ['HQ', 'Data center', 'Remote office', 'Manufacturing plant', 'Retail'];
+const BU_OF_CLASS = { Campus: 'HQ', 'Data center': 'Data center', Office: 'Remote office', Branch: 'Remote office', Plant: 'Manufacturing plant' };
+export const buOf = (st, tags = {}) => (tags && tags[st.name]) || BU_OF_CLASS[classOf(st)] || 'Untagged';
 /** A data center, from its declared class or its name. */
 export const isDataCenter = (st) => st.cls === 'Data center' || /\bDC\b|data cent/i.test(st.name || '');
 /**
@@ -239,6 +248,7 @@ export function labelOfKey(est, key) {
   // The place drill's keys (2026-09-28): a state reads as its name.
   if (k.startsWith('state:')) return placeName(k.slice(6));
   if (k.startsWith('access:')) return (SERVICE[k.slice(7)] || { label: 'Other access' }).label;
+  if (k.startsWith('bu:')) return k.slice(3);
   if (/^(metro|site|svc):/.test(k)) return k.slice(k.indexOf(':') + 1);
   const parts = k.split(':');
   if (parts.length >= 3) return parts.slice(2).join(':');
