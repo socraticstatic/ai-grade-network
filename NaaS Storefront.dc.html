@@ -213,6 +213,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 .fx-spacer{margin-left:auto}
 @keyframes bandBreathe{0%{opacity:.7}50%{opacity:1}100%{opacity:.92}}
 /* The band folds and unfolds with an ease and a slight overshoot. Geometry moves through CSS (x, width, d, transform) so the browser eases one state into the other. */
+.find-frame{max-height:calc(100vh - 430px);overflow:auto;padding-right:4px;align-content:start}
 .cand-frame{max-height:calc(100vh - 460px);overflow:auto;padding-right:4px}
 .gov-frame{max-height:calc(100vh - 496px)}
 .log-frame{max-height:calc(100vh - 478px);overflow:auto}
@@ -1282,18 +1283,20 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <sc-if value="{{ hasFindings }}" hint-placeholder-val="{{ true }}">
 <div id="sec-insights" class="fx-card" style="gap:12px;padding:16px 24px">
   <div class="fx-card-head" style="align-items:flex-start"><div style="min-width:0"><h3 class="fx-card-title">Findings</h3><div class="fx-card-sub">{{ insightSub }}</div></div><sc-if value="{{ hasInsFocus }}" hint-placeholder-val="{{ false }}"><button class="fx-chip" onClick="{{ clearInsFocus }}" aria-label="Show every finding" style="cursor:pointer;margin-left:auto;background:var(--bg-accent);color:var(--link);border-color:var(--border-active);font-weight:600">{{ insFocusLabel }} ×</button></sc-if><span style="flex:none;font-size:12px;color:var(--text-light);white-space:nowrap">{{ insightCount }}</span></div>
-  <div class="fx-chips" style="gap:6px"><sc-for list="{{ insightFilters }}" as="if" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ if.on }}" onClick="{{ if.go }}" style="cursor:pointer;background:{{ if.bg }};color:{{ if.color }};border-color:{{ if.border }}">{{ if.label }}</button></sc-for></div>
+  <div class="fx-chips" style="gap:6px"><sc-for list="{{ findChips }}" as="if" hint-placeholder-count="4"><button class="fx-chip" aria-pressed="{{ if.on }}" onClick="{{ if.go }}" style="cursor:pointer;background:{{ if.bg }};color:{{ if.color }};border-color:{{ if.border }}">{{ if.label }}</button></sc-for></div>
   <sc-if value="{{ hasInsights }}" hint-placeholder-val="{{ true }}">
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:stretch">
+  <div class="find-frame" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:stretch">
     <sc-for list="{{ insightRows }}" as="ins" hint-placeholder-count="6">
       <div style="display:flex;flex-direction:column;gap:6px;height:100%;box-sizing:border-box;padding:14px 16px;border:1px solid var(--border-secondary);border-left:3px solid {{ ins.tone }};border-radius:12px;background:{{ ins.toneBg }};min-width:0">
         <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--text-disabled);white-space:nowrap">{{ ins.kind }}</span><span style="font-size:11px;color:var(--text-disabled);white-space:nowrap">{{ ins.when }}</span><span style="margin-left:auto;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:{{ ins.pInk }};white-space:nowrap">{{ ins.pFor }}</span></div>
         <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ ins.head }}</div>
-        <button onClick="{{ ins.go }}" style="align-self:flex-start;margin-top:auto;padding-top:0;height:28px;padding:0 14px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">{{ ins.cta }}</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;line-height:16px;color:var(--text-light)"><span style="display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--text-heading);white-space:nowrap"><i style="width:7px;height:7px;border-radius:9999px;background:{{ ins.stateTone }}"></i>{{ ins.stateLabel }}</span><span style="white-space:nowrap">{{ ins.age }}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ins.owner }}</span><sc-if value="{{ ins.hasSave }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;font-weight:700;color:var(--success);white-space:nowrap">{{ ins.saveLine }}</span></sc-if></div>
+        <button onClick="{{ ins.open }}" style="align-self:flex-start;margin-top:auto;height:28px;padding:0 14px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">{{ ins.cta }}</button>
       </div>
     </sc-for>
   </div>
   </sc-if>
+  <sc-if value="{{ noInsights }}" hint-placeholder-val="{{ false }}"><div class="fx-card-sub">Nothing here.</div></sc-if>
 </div>
 </sc-if>
 </sc-if>
@@ -2230,6 +2233,43 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 </div>
 
     </sc-if>
+<!-- The finding drawer (notes, 2026-09-29): what AT&T saw, the change previewed, the evidence, the timeline, the moves. -->
+<sc-if value="{{ fdOpen }}" hint-placeholder-val="{{ false }}">
+<aside aria-label="Finding" style="position:fixed;top:var(--hdr,65px);right:0;width:min(480px,92vw);height:calc(100vh - var(--hdr,65px));z-index:47;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--bg-base);border-left:1px solid var(--border-secondary);box-shadow:-8px 0 24px rgba(0,0,0,.08);animation:drawerIn .34s cubic-bezier(.22,1.2,.36,1)">
+  <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 20px 12px;border-bottom:1px solid var(--border-secondary)">
+    <div style="min-width:0;flex:1;display:grid;gap:4px">
+      <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--text-disabled)">{{ fd.kind }}</div>
+      <div style="font-size:16px;line-height:22px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ fd.head }}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;line-height:16px;color:var(--text-light)"><span style="display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--text-heading);white-space:nowrap"><i style="width:7px;height:7px;border-radius:9999px;background:{{ fd.stateTone }}"></i>{{ fd.stateLabel }}</span><span>{{ fd.meta }}</span></div>
+    </div>
+    <button onClick="{{ closeFd }}" aria-label="Close" style="height:28px;padding:0 12px;border:0;border-radius:9999px;background:transparent;color:var(--link);font-size:13px;font-weight:500;cursor:pointer">Close</button>
+  </div>
+  <div style="overflow:auto;padding:16px 20px;display:grid;gap:18px;align-content:start">
+    <sc-if value="{{ fd.hasSaw }}" hint-placeholder-val="{{ true }}"><div style="display:grid;gap:4px"><div class="fx-label">What AT&amp;T saw</div><div style="font-size:13px;line-height:19px;color:var(--text-body);text-wrap:pretty">{{ fd.saw }}</div><sc-if value="{{ fd.hasWhy }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;line-height:19px;color:var(--text-light);text-wrap:pretty">{{ fd.why }}</div></sc-if></div></sc-if>
+    <sc-if value="{{ fd.hasPreview }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;gap:8px"><div style="display:flex;align-items:baseline;gap:8px"><div class="fx-label">Preview the change</div><span style="margin-left:auto;font-size:13px;font-weight:700;color:var(--success)">{{ fd.deltaLine }}</span></div>
+      <div style="display:grid;grid-template-columns:64px minmax(0,1fr) 96px;gap:8px 10px;align-items:center;font-size:12px;line-height:16px">
+        <span style="color:var(--text-light)">{{ fd.before.label }}</span><span style="height:10px;border-radius:9999px;background:var(--bg-neutral);overflow:hidden"><span style="display:block;height:100%;width:{{ fd.beforeW }};background:var(--warning)"></span></span><span style="text-align:right;font-weight:700;color:var(--text-heading)">{{ fd.before.money }}</span>
+        <span style="color:var(--text-light)">{{ fd.after.label }}</span><span style="height:10px;border-radius:9999px;background:var(--bg-neutral);overflow:hidden"><span style="display:block;height:100%;width:{{ fd.afterW }};background:var(--cta)"></span></span><span style="text-align:right;font-weight:700;color:var(--text-heading)">{{ fd.after.money }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-light)"><span>{{ fd.before.path }} → {{ fd.after.path }}</span><button class="fx-btn" onClick="{{ fd.showMap }}" style="margin-left:auto">Show it on the map</button></div>
+    </div>
+    </sc-if>
+    <sc-if value="{{ fd.hasEvidence }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;gap:6px"><div style="display:flex;align-items:baseline;gap:8px"><div class="fx-label">{{ fd.evidenceHead }}</div><button class="fx-btn" onClick="{{ fd.openLogs }}" style="margin-left:auto">Open in Logs</button></div>
+      <sc-for list="{{ fd.evidence }}" as="fe" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--border-secondary);font-size:12px;line-height:16px"><span style="font-family:ui-monospace,monospace;color:var(--text-light)">{{ fe.time }}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-heading)">{{ fe.src }} → {{ fe.dst }}</span><span style="white-space:nowrap;color:{{ fe.pathInk }};font-weight:600">{{ fe.bytes }} · {{ fe.path }}</span></div></sc-for>
+    </div>
+    </sc-if>
+    <div style="display:grid;gap:6px"><div class="fx-label">Timeline</div>
+      <sc-for list="{{ fd.timeline }}" as="tl" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:12px 52px minmax(0,1fr);gap:8px;align-items:baseline;font-size:12px;line-height:18px"><i style="width:7px;height:7px;border-radius:9999px;background:{{ tl.dot }}"></i><span style="color:var(--text-light);white-space:nowrap">{{ tl.date }}</span><span style="color:var(--text-body)"><b style="font-weight:600;color:var(--text-heading)">{{ tl.label }}</b> · {{ tl.by }} <span style="color:var(--text-light)">{{ tl.note }}</span></span></div></sc-for>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 20px 16px;border-top:1px solid var(--border-secondary)">
+    <sc-if value="{{ fd.hasPrimary }}" hint-placeholder-val="{{ true }}"><button onClick="{{ fd.primary.go }}" style="height:36px;padding:0 16px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:var(--cta-hover)">{{ fd.primary.label }}</button></sc-if>
+    <sc-for list="{{ fd.actions }}" as="fa" hint-placeholder-count="3"><button class="fx-btn" onClick="{{ fa.go }}">{{ fa.label }}</button></sc-for>
+  </div>
+</aside>
+</sc-if>
 <sc-if value="{{ queueOpen }}" hint-placeholder-val="{{ false }}">
 <aside aria-label="Queue" style="position:fixed;top:var(--hdr,65px);right:{{ drawerRight }};width:380px;height:calc(100vh - var(--hdr,65px));z-index:46;overflow-x:hidden;box-sizing:border-box;animation:drawerIn .34s cubic-bezier(.22,1.2,.36,1);display:grid;grid-template-rows:auto 1fr;background:var(--bg-base);border-left:1px solid var(--border-secondary);box-shadow:-8px 0 32px rgba(0,0,0,.14)">
   <div style="display:flex;align-items:flex-start;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--border-secondary)"><div style="min-width:0;flex:1"><div style="font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Queue</div><div style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ queueCount }} · worst first</div></div><button onClick="{{ closeQueue }}" aria-label="Close" style="border:0;background:transparent;font-size:18px;line-height:1;color:var(--text-light);cursor:pointer;padding:2px">×</button></div>
@@ -2311,7 +2351,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { screen: 's3', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36 }; }
+  constructor(p) { super(p); this.state = { screen: 's3', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', findingLife: {}, fdKey: null, findFilter: 'open', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36 }; }
   componentDidUpdate() {
     // Guarded on the instance, not on prevState: comparing against prevState
     // re-entered on the very setState this handler makes, and React counted

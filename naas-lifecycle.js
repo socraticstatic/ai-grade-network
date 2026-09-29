@@ -19,7 +19,7 @@ const MOVES = {
   snoozed: ['open', 'ack', 'progress', 'dismissed'],
   dismissed: ['open'],
 };
-const OWNER = { FinOps: 'FinOps · J. Rivera', 'Network Engineering': 'Network Eng · R. Patel', 'Security and Compliance': 'Security · M. Chen' };
+const OWNER = { FinOps: 'FinOps · J. Rivera', 'FinOps & SRE': 'FinOps · J. Rivera', 'Security & Compliance': 'Security · M. Chen', 'Network Engineering': 'Network Eng · R. Patel', 'Security and Compliance': 'Security · M. Chen' };
 // The day the demo's seeded history is written against.
 const ANCHOR = Date.UTC(2026, 8, 29);
 const DAY = 86400000;

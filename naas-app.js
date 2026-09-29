@@ -155,6 +155,7 @@ export function init(c) {
   try { const h = localStorage.getItem('naas.headOpen'); if (h === 'false') c.setState({ headOpen: false }); } catch (e) {}
   try { if (localStorage.getItem('naas.openHint') === 'seen') c.setState({ openHintSeen: true }); } catch (e) {}
   try { const h = localStorage.getItem('naas.hero'); if (h) c.setState({ heroOpen: JSON.parse(h) }); } catch (e) {}
+  try { const fl = localStorage.getItem('naas.life'); if (fl) c.setState({ findingLife: JSON.parse(fl) }); } catch (e) {}
   const q = new URLSearchParams(location.search);
   const hash = (location.hash || '').replace('#', '').split('/');
   const patch = {};
@@ -174,7 +175,7 @@ export function init(c) {
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', findingLife: {}, fdKey: null, findFilter: 'open',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -286,8 +287,9 @@ export function vals(c) {
   const isEmpty = est.stage === 'empty', isMature = est.stage === 'mature', isPartial = est.stage === 'partial';
   // A finding's life (notes, 2026-09-29): seeded history under what the customer did here.
   const lifeNow = new Date();
-  const life = { ...LC.lifeFor(est), ...(((s.findingLife || {})[est.id]) || {}) };
-  const openF = LC.openFindings(est, life, lifeNow);
+  const life = lifeState(s, est);
+  const findList = findingList(est, est0, ob, lifeNow);
+  const openF = findList.filter(f => OPEN_STATES.includes(LC.lifeOf(f, life, lifeNow).state));
   const openSave = openF.filter(f => f.priced).reduce((a, f) => a + f.save, 0);
   const observeHead = openF.length ? `${openF.length} ${openF.length === 1 ? 'finding' : 'findings'} open.${openSave ? ` ${fmt(openSave)}/mo potential savings.` : ''}` : '';
   const layer = D.LAYERS.find(l => l.id === s.layer) || D.LAYERS[1];
@@ -922,7 +924,7 @@ export function vals(c) {
     // The card anchors to the hovered region's row; at the provider level there is no row.
     perfCard: hr && hrNode ? { region: `${hr.cloud} ${hr.region}`, msLine: `${hr.priv ? hr.fab : hr.pub} ms ${hr.priv ? 'on AT&T' : 'public'}${hr.rel === 'warn' ? ' · degraded' : ''}`, pub: `Public today ${hr.pub} ms`, fab: `on AT&T ${hr.fab} ms`, rel: hr.rel === 'warn' ? 'Reliability: degraded' : 'Reliability: healthy', relFill: hr.rel === 'warn' ? 'var(--warning)' : 'var(--success)', top: Math.max(0, Math.min(340, hrNode.y - 70)) + 'px', left: 'calc(100% - 236px)', go: go('s3', { layer: 'cloud', tab: 'observe' }) } : null, hasPerf: !!hr,
     // floor
-    openFindingsN: openF.length, findingsAllN: est.findings.length,
+    openFindingsN: openF.length, findingsAllN: est.findings.length, eventsN: findList.filter(f => f.event).length,
     rollup, floorFindings, hasFloorFindings: floorFindings.length > 0, recFindings, hasRecFindings: recFindings.length > 0, packages, tailored, hasTailored: isMature, hasAddons: tailored.addons.length > 0, hasTermUps: tailored.terms.length > 0, hasHubs: tailored.hubs.length > 0,
     // department
     layerBar: D.LAYERS.map(l => ({ key: l.id, label: l.label, on: s.layer === l.id, go: () => { set({ layer: l.id, drill: [], regionDrill: null }); syncHash('s3', l.id, s.tab); scrollToResult('S3 Department'); }, bg: s.layer === l.id ? 'var(--cta)' : 'transparent', color: s.layer === l.id ? '#fff' : 'var(--text-heading)' })),
@@ -1267,6 +1269,22 @@ function prefillAttach(r) {
 function composeFor(go, r) {
   return go('s4', { ...newOrder(prefillAttach(r)) });
 }
+// One findings list (notes, 2026-09-29): what AT&T found to act on, plus the
+// events it saw, each with a life. The Observe head, the Findings tab and its
+// chips all count this list.
+function eventFound(when, now) {
+  const w = String(when || '').toLowerCase();
+  return new Date(+now - (/today/.test(w) ? 0 : /yesterday/.test(w) ? 1 : 3) * 86400000).toISOString().slice(0, 10);
+}
+export function findingList(est, est0, ob, now) {
+  const events = ob && ob.total ? R.anomalies(est0, ob) : [];
+  return [
+    ...(est.findings || []).map(f => ({ ...f, key: f.kind, event: false })),
+    ...events.map(a => ({ kind: a.key, key: a.key, event: true, head: a.head, priced: false, found: eventFound(a.when, now), persona: a.key === 'an-dest' ? 'Security and Compliance' : a.key === 'an-egress' ? 'FinOps' : 'Network Engineering', a })),
+  ];
+}
+const OPEN_STATES = ['open', 'ack', 'progress'];
+function lifeState(s, est) { return { ...LC.lifeFor(est), ...(((s.findingLife || {})[est.id]) || {}) }; }
 function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched) {
   const obScope = s.obScope || 'all';
   const egressBase = egressBaseFor(est0, ob);
@@ -1987,37 +2005,96 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           newdest: () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ explain: { label: 'Destinations not seen before', value: x.head.replace(/[^0-9]/g, '') + ' new', sub: 'Traffic to destinations that were absent from the prior 30 days.', cut: 'Records leaving the cloud.', pattern: 'internet', parts: [] }, scrollToSec: 'sec-logs', scrollNonce: (s.scrollNonce || 0) + 1 }); },
           shadow: go('s3', { layer: 'cloud', tab: 'govern' }) }[x.key] || go('s3', { layer: 'cloud', tab: 'cost' }),
   }));
-  const insightAll = [...anomalyRows, ...insightRows];
-  const insightFilters = [['all', 'Everything'], ['events', 'Events'], ['standing', 'Standing']].map(([k, l]) => ({
-    key: k, label: l, on: (s.insightTab || 'all') === k, go: () => set({ insightTab: k }),
-    bg: (s.insightTab || 'all') === k ? 'var(--cta)' : 'var(--bg-base)',
-    color: (s.insightTab || 'all') === k ? '#fff' : 'var(--text-heading)',
-    border: (s.insightTab || 'all') === k ? 'var(--cta)' : 'var(--border-secondary)',
-  }));
-  const insightTab = s.insightTab || 'all';
-  // The persona switch reaches here too: the cards for whoever is looking
-  // come first. Sort is stable, so within a persona the original order holds.
-  const personaSort = (rows) => rows.slice().sort((a, b) => ((b.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0) - ((a.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0));
-  // The visualisations drill to their findings (2026-09-28): each card narrows
-  // the list below to the findings behind it.
-  const CARD_FINDS = { talkers: ['Top talkers', k => k === 'talkers' || k === 'idle'], newdest: ['New destinations', k => k === 'newdest' || k === 'an-dest'],
-    shadow: ['Shadow SaaS', k => k === 'shadow' || k === 'an-dest'], growth: ['Egress growth', k => k === 'growth' || k === 'an-egress'],
-    multi: ['Cloud-to-cloud paths', k => k === 'multi'], slo: ['Latency over SLO', k => /^an-/.test(k) && k !== 'an-dest' && k !== 'an-egress'] };
+  // One findings list with a life each (notes, 2026-09-29). The events above
+  // are part of it; the standing insights are the Signals cards, so they are
+  // not repeated here.
+  const now = new Date();
+  const life = lifeState(s, est);
+  const PNAME = { FinOps: 'FinOps & SRE', 'Security and Compliance': 'Security & Compliance' };
+  const TONE = { open: 'var(--warning)', ack: 'var(--link)', progress: 'var(--link)', resolved: 'var(--success)', snoozed: 'var(--text-disabled)', dismissed: 'var(--text-disabled)' };
+  const list = findingList(est, est0, ob, now);
+  const lifeRows = list.map(f => ({ f, l: LC.lifeOf(f, life, now) }));
+  const history = LC.closedFindings(est).map(f => ({ f: { ...f, key: f.kind, history: true }, l: { state: 'resolved', label: 'Resolved', owner: f.owner, foundAt: f.found, ageDays: Math.max(0, Math.floor((+now - Date.parse(f.found)) / 86400000)), events: [{ at: f.found, state: 'open', by: 'Discovery' }, { at: f.resolvedAt, state: 'resolved', by: f.owner.split(' · ')[1] || f.owner }] } }));
+  const bucket = (st) => OPEN_STATES.includes(st) ? 'open' : st === 'snoozed' ? 'snoozed' : 'closed';
+  const every = [...lifeRows, ...history];
+  const openN = every.filter(x => bucket(x.l.state) === 'open').length;
+  const findFilter = ['open', 'snoozed', 'closed', 'all'].includes(s.findFilter) ? s.findFilter : 'open';
+  const findChips = [['open', 'Open'], ['snoozed', 'Snoozed'], ['closed', 'Closed'], ['all', 'All']].map(([k, l]) => {
+    const n = k === 'all' ? every.length : every.filter(x => bucket(x.l.state) === k).length;
+    const on = findFilter === k;
+    return { key: k, label: `${l} · ${n}`, on, go: () => set({ findFilter: k }), bg: on ? 'var(--cta)' : 'var(--bg-base)', color: on ? '#fff' : 'var(--text-heading)', border: on ? 'var(--cta)' : 'var(--border-secondary)' };
+  });
+  const toRow = ({ f, l }) => ({
+    key: f.key, persona: PNAME[f.persona] || f.persona || 'Network Engineering',
+    kind: f.event ? 'Event' : (D.KINDS[f.kind] || f.pillar || 'Finding'), when: f.event ? f.a.when : '', head: f.head,
+    stateLabel: l.label, stateTone: TONE[l.state], owner: l.owner, age: `${l.ageDays}d`,
+    saveLine: f.priced && f.save ? `${fmt(f.save)}/mo` : '', hasSave: !!(f.priced && f.save),
+    tone: f.event ? 'var(--warning)' : 'var(--link)', toneBg: 'var(--bg-base)',
+    cta: f.priced && !f.history ? 'Preview the change' : 'See the evidence',
+    open: () => set({ fdKey: f.key }),
+  });
+  // The Signals cards drill to the findings behind them (2026-09-28), now the actionable ones.
+  const CARD_FINDS = { talkers: ['Top talkers', k => ['ipsec', 'onecloud', 'single', 'nothub'].includes(k)], newdest: ['New destinations', k => k === 'an-dest'],
+    shadow: ['Shadow SaaS', k => ['uninspected', 'pci', 'unsegmented', 'an-dest'].includes(k)], growth: ['Egress growth', k => ['avoidable', 'ipsecegress', 'an-egress'].includes(k)],
+    multi: ['Cloud-to-cloud paths', k => k === 'crosscloud'], slo: ['Latency over SLO', k => ['degraded', 'blindspots', 'unmonitored'].includes(k) || (/^an-/.test(k) && k !== 'an-dest' && k !== 'an-egress')] };
   const insFocus = CARD_FINDS[s.insFocus] ? s.insFocus : null;
-  const insDrill = Object.fromEntries(Object.entries(CARD_FINDS).map(([k, [label, hit]]) => { const n0 = insightAll.filter(r => hit(r.key)).length, on = insFocus === k;
+  const insDrill = Object.fromEntries(Object.entries(CARD_FINDS).map(([k, [label, hit]]) => { const n0 = lifeRows.filter(x => hit(x.f.key) && bucket(x.l.state) === 'open').length, on = insFocus === k;
     return [k, { n: n0, label: n0 ? `${n0} ${n0 === 1 ? 'finding' : 'findings'} ›` : 'No findings', on, border: on ? 'var(--border-active)' : 'var(--border-secondary)',
-      go: () => set({ insFocus: on ? null : k, insightTab: 'all', insPanel: on ? 'signals' : 'findings' }) }]; }));
-  const insightRowsShown = personaSort((insightTab === 'events' ? anomalyRows : insightTab === 'standing' ? insightRows : insightAll).filter(r => !insFocus || CARD_FINDS[insFocus][1](r.key)))
+      go: () => set({ insFocus: on ? null : k, findFilter: 'open', insPanel: on ? 'signals' : 'findings' }) }]; }));
+  const personaSort = (rows) => rows.slice().sort((a, b) => ((b.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0) - ((a.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0));
+  const insightRowsShown = personaSort(every.filter(x => findFilter === 'all' || bucket(x.l.state) === findFilter).filter(x => !insFocus || CARD_FINDS[insFocus][1](x.f.key)).map(toRow))
     .map(r => ({ ...r, pFor: 'For ' + ({ 'Cloud & Platform Architect': 'Architect', 'Network Engineering': 'Network Eng', 'Security & Compliance': 'Security', 'FinOps & SRE': 'FinOps & SRE', 'Executive': 'Executive' }[r.persona] || r.persona), pInk: r.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect') ? 'var(--link)' : 'var(--text-disabled)' }));
+  // The finding drawer: what AT&T saw, a preview of the change, the evidence, the timeline, the moves.
+  const fdPick = every.find(x => x.f.key === s.fdKey) || null;
+  const fd = (() => {
+    if (!fdPick) return null;
+    const { f, l } = fdPick;
+    const persist = (next) => { const all = { ...(s.findingLife || {}), [est.id]: next }; set({ findingLife: all }); try { localStorage.setItem('naas.life', JSON.stringify(all)); } catch (e) {} };
+    const move = (to, extra) => () => { const next = LC.transition(life, f.key, to, { by: 'You', now, ...(extra || {}) }); if (next !== life) persist(next); };
+    const m = /\$([\d,]+)\/mo[^$]*\$([\d,]+)/.exec(f.head || '');
+    const beforeN = m ? +m[1].replace(/,/g, '') : f.priced ? Math.round(f.save / 0.78 / 100) * 100 : 0;
+    const afterN = m ? +m[2].replace(/,/g, '') : Math.max(0, beforeN - (f.save || 0));
+    const evidence = logAll.filter(r => f.event ? true : f.tab === 'govern' ? (r.deny || r.path === 'public') : f.tab === 'observe' ? true : r.path === 'public')
+      .slice().sort((x, y) => (+y.bytes || 0) - (+x.bytes || 0)).slice(0, 5)
+      .map(r => ({ key: r.id, time: r.time, src: r.srcName, dst: r.dstName, bytes: typeof r.bytes === 'number' ? r.bytes.toFixed(1) + ' GB' : String(r.bytes), path: r.path === 'public' ? 'outside AT&T' : 'on AT&T', pathInk: r.path === 'public' ? 'var(--warning)' : 'var(--success)' }));
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = (iso) => `${MON[+iso.slice(5, 7) - 1]} ${+iso.slice(8, 10)}`;
+    const closed = f.history;
+    const acts = closed ? [] : ({
+      open: [['Acknowledge', move('ack')], ['Snooze 7 days', move('snoozed', { snoozeDays: 7 })], ['Dismiss', move('dismissed')]],
+      ack: [['Snooze 7 days', move('snoozed', { snoozeDays: 7 })], ['Dismiss', move('dismissed')]],
+      progress: [['Mark resolved', move('resolved')], ['Snooze 7 days', move('snoozed', { snoozeDays: 7 })], ['Dismiss', move('dismissed')]],
+      snoozed: [['Reopen', move('open')], ['Dismiss', move('dismissed')]],
+      resolved: [['Reopen', move('open')]], dismissed: [['Reopen', move('open')]],
+    })[l.state] || [];
+    const rec = !f.event && !closed && OPEN_STATES.includes(l.state) && l.state !== 'progress' ? findingCard(f).rec : null;
+    const ev = f.event ? anomalyRows.find(r => r.key === f.key) : null;
+    const primary = rec ? { label: rec.name, go: () => { move('progress', { note: `${rec.name} ordered` })(); rec.choose(); } }
+      : ev && !closed ? { label: ev.cta, go: () => { set({ fdKey: null }); ev.go(); } } : null;
+    return {
+      key: f.key, head: f.head, kind: f.event ? `Event · ${f.a.when}` : (D.KINDS[f.kind] || f.pillar || 'Finding'),
+      stateLabel: l.label, stateTone: TONE[l.state], meta: `${l.owner} · found ${day(l.foundAt)} · ${l.ageDays}d`,
+      saw: f.event ? f.a.cause : (f.ev || ''), hasSaw: !!(f.event ? f.a.cause : f.ev), why: f.why || (f.event ? f.a.did || '' : ''), hasWhy: !!(f.why || (f.event && f.a.did)),
+      hasPreview: !!(f.priced && f.save), noPreview: !(f.priced && f.save),
+      before: { label: 'Today', path: 'Public internet', money: `${fmt(beforeN)}/mo` }, after: { label: 'After', path: 'On AT&T', money: `${fmt(afterN)}/mo` },
+      beforeW: '100%', afterW: beforeN ? Math.max(4, Math.round(afterN / beforeN * 100)) + '%' : '0%',
+      deltaLine: `Saves ${fmt(f.save || 0)}/mo`,
+      evidence, hasEvidence: evidence.length > 0, evidenceHead: `Evidence · ${evidence.length} of ${logAll.length} flow records`,
+      openLogs: () => { set({ fdKey: null }); go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null })(); set({ logPath: f.tab === 'govern' || f.event ? 'all' : 'public' }); },
+      showMap: () => { set({ fdKey: null }); go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'map', sub: null })(); },
+      timeline: l.events.map((e, i) => ({ key: 't' + i, date: day(e.at), label: LC.STATE_LABEL[e.state] === 'Open' ? 'Found' : LC.STATE_LABEL[e.state], by: e.by, note: e.note || (e.until ? `until ${day(e.until)}` : ''), dot: TONE[e.state] })),
+      primary, hasPrimary: !!primary,
+      actions: acts.map(([label, go2]) => ({ key: label, label, go: go2 })),
+    };
+  })();
   const insightVals = {
-    insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, insightFilters, insDrill,
-    // Signals and Findings, one at a time (2026-09-28, no scrolling).
-    ...(() => { const ik = s.insPanel === 'findings' ? 'findings' : 'signals'; return { insPanels: [['signals', 'Signals'], ['findings', `Findings · ${insightAll.length}`]].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings' }; })(),
+    insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, noInsights: insightRowsShown.length === 0, findChips, insDrill, findAll: every.map(toRow),
+    ...(() => { const ik = s.insPanel === 'findings' ? 'findings' : 'signals'; return { insPanels: [['signals', 'Signals'], ['findings', `Findings · ${openN}`]].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings' }; })(),
     hasInsFocus: !!insFocus, insFocusLabel: insFocus ? CARD_FINDS[insFocus][0] : '', clearInsFocus: () => set({ insFocus: null }),
-    // Standing findings are true in a quiet window too; the card shows while either kind exists.
-    hasFindings: insightAll.length > 0,
-    insightCount: `${insightAll.length} open`,
-    insightSub: `${anomalyRows.length} ${anomalyRows.length === 1 ? 'event' : 'events'} · ${insightRows.length} standing`,
+    hasFindings: every.length > 0,
+    insightCount: `${openN} open`,
+    insightSub: 'Found by AT&T, with what was done about each',
+    fd, fdOpen: !!fd, closeFd: () => set({ fdKey: null }),
   };
   // Dev (2026-09-11): "drill down from it for different personas". The header
   // already knows who is looking; this hands each persona their entry point

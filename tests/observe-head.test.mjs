@@ -15,8 +15,8 @@ test('Observe leads with findings open and potential savings', () => {
 
 test('the count and the dollars are the open findings, the same figure Cost puts on the table', () => {
   const v = vals(at('partial'));
-  // The app's estate adds Observe's own findings to the data's; one partial finding is snoozed.
-  assert.equal(v.findingsAllN - v.openFindingsN, 1);
+  // One list: the app's findings (data plus Observe's own) and the events; one partial finding is snoozed.
+  assert.equal(v.findingsAllN + v.eventsN - v.openFindingsN, 1);
   assert.equal(v.pageVerdict, `${v.openFindingsN} findings open. $41,500/mo potential savings.`);
   assert.match(vals(at('partial', { tab: 'cost' })).pageVerdict, /^\$41,500\/mo on the table/);
 });

@@ -91,7 +91,8 @@ test('each card drills to the findings behind it, and the focus clears', () => {
   const f = vals(c);
   assert.equal(f.hasInsFocus, true);
   assert.equal(f.insFocusLabel, 'Egress growth');
-  assert.ok(f.insightRows.length === v.insDrill.growth.n && f.insightRows.every(r => /growth|egress/.test(r.key)), f.insightRows.map(r => r.key).join(','));
+  // The drill lands on the actionable findings and events behind the card (notes, 2026-09-29).
+  assert.ok(f.insightRows.length === v.insDrill.growth.n && f.insightRows.every(r => ['avoidable', 'ipsecegress', 'an-egress'].includes(r.key)), f.insightRows.map(r => r.key).join(','));
   f.clearInsFocus();
   assert.equal(vals(c).hasInsFocus, false);
   for (const k of ['talkers', 'newdest', 'shadow', 'growth', 'multi', 'slo']) assert.match(HTML, new RegExp(`insDrill\\.${k}\\.go`));
