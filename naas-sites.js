@@ -195,6 +195,32 @@ export function accessOf(st) {
   return 'other';
 }
 
+/** A data center, from its declared class or its name. */
+export const isDataCenter = (st) => st.cls === 'Data center' || /\bDC\b|data cent/i.test(st.name || '');
+/**
+ * What a candidate should move to, and what else would do (notes, 2026-09-29:
+ * "options to connect to sites/DC which are candidates for different
+ * connectivity options"). A cloud region wants a private on-ramp; a data
+ * center wants dedicated Ethernet to the on-ramps; a site wants the private
+ * WAN, whatever first mile it rides today.
+ */
+const OPT = {
+  netbond: { key: 'netbond', name: 'NetBond', why: 'private on-ramp, $0.02/GB, from 10 business days' },
+  dx: { key: 'dx', name: 'Direct Connect / ExpressRoute', why: 'you run the routers, 4 to 8 weeks' },
+  avpn: { key: 'avpn', name: 'AVPN', why: 'private WAN to every site and cloud' },
+  aseod: { key: 'aseod', name: 'ASE on Demand', why: 'dedicated Ethernet to the cloud on-ramps, same day' },
+  adi: { key: 'adi', name: 'ADI', why: 'AT&T internet through the AT&T core' },
+  aiab: { key: 'aiab', name: 'AIA-B', why: 'wireless internet on AT&T, no trench' },
+};
+export function candidateOptions(c) {
+  const pick = (best, ...alts) => ({ best: OPT[best], alts: alts.map(k => OPT[k]) });
+  if (c.cloud && c.region) return pick('netbond', 'dx');
+  if (isDataCenter(c)) return pick('aseod', 'avpn');
+  const acc = accessOf(c);
+  if (acc === 'mobility' || acc === 'aiab') return pick('avpn', 'aiab');
+  return pick('avpn', 'aseod', 'adi');
+}
+
 /**
  * Display label for any drill key. The trail carries identity; the screen
  * carries names, so nothing ever prints "Branch:2:Chicago" at a user.

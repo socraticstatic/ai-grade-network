@@ -183,14 +183,15 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // its second title (section 12 -> 11), the scan skeleton became a tab row and
 // three cards, and the title divider got a gate: div 966 -> 955,
 // span 734 -> 732, sc-if 357 -> 364, sc-for 208 -> 210, button 269 -> 271.
+// Connect views and the Options page (notes, 2026-09-29): div 955 -> 971, span 732 -> 736, sc-if 364 -> 368, sc-for 210 -> 214, button 271 -> 273.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 955],
-    ['span', /<span\b/g, /<\/span>/g, 732],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 364],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 210],
+    ['div', /<div\b/g, /<\/div>/g, 971],
+    ['span', /<span\b/g, /<\/span>/g, 736],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 368],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 214],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 271],
+    ['button', /<button\b/g, /<\/button>/g, 273],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 28],
   ];

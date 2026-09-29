@@ -173,7 +173,7 @@ export function init(c) {
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -257,7 +257,7 @@ export function vals(c) {
   const hp = R.health(est0, obAll, steered);
   const conns = X.connections(est0, obAll);
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, ob), ...est0.findings] };
-  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
+  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -630,7 +630,7 @@ export function vals(c) {
   // Big to tiny (Micah, 14:11): a card lands you inside the picture or the map at the level it names.
   const degConn = conns.rows.find(r => r.degraded) || conns.rows.find(r => r.hot) || null;
   const firstPublic = est.regionsList.find(r => !r.priv) || null;
-  const launchGo = { connect: go('s3', { layer: 'cloud', tab: 'connect', cloudDrill: firstPublic ? [firstPublic.region] : [] }), observe: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', mapSel: degConn ? degConn.id : null, mapRegion: degConn ? degConn.region : null, panelTab: 'impact' }), govern: go('s3', { layer: 'cloud', tab: 'govern' }), cost: go('s3', { layer: 'cloud', tab: 'cost' }) };
+  const launchGo = { connect: go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' }), observe: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', mapSel: degConn ? degConn.id : null, mapRegion: degConn ? degConn.region : null, panelTab: 'impact' }), govern: go('s3', { layer: 'cloud', tab: 'govern' }), cost: go('s3', { layer: 'cloud', tab: 'cost' }) };
   const rollup = X.launchCards({ est, ob, conns, totalSave, violations: violationsN, isEmpty }).map(r => ({ ...r, go: launchGo[r.key], hasSub: !!r.sub, barVis: r.bar !== null ? 'visible' : 'hidden', alarm: r.bar !== null && r.bar < 50, barColor: r.bar !== null && r.bar < 50 ? 'var(--warning)' : 'var(--cta)', barW: (r.bar || 0) + '%', hasBar: r.bar !== null, border: r.primary ? 'var(--cta)' : 'var(--border-secondary)', borderW: r.primary ? '2px' : '1px', hasEyebrow: !!r.eyebrow, doorInk: r.primary ? 'var(--cta)' : 'var(--link)', doorBg: r.primary ? 'var(--cta)' : 'transparent', doorColor: r.primary ? '#fff' : 'var(--link)', doorPad: r.primary ? '0 14px' : '0', doorBorder: r.primary ? '0' : '0' }));
 
   // ---- findings ----
@@ -665,7 +665,7 @@ export function vals(c) {
   const costVerdict = VD.costVerdict(est, ob, totalSave, buckets);
   const kpis = isEmpty ? [] : kpiTiles(s, est);
   // The AT&T network picture opens on Home and Fabric; every other screen keeps a one-line strip and a "Show the AT&T network" door (audit finding 2).
-  const heroScreen = ['s0', 's2'].includes(s.screen) || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect');
+  const heroScreen = ['s0', 's2'].includes(s.screen) || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect' && s.cnPage !== 'options');
   const heroKey = s.screen === 's3' ? `s3/${s.layer}/${s.tab}` : s.screen;
   // One hero graph (Micah, 13:23): the picture is open on home and on all four pages.
   // A new customer's picture is empty; the scan leads and the picture waits behind its strip (no-scroll pass, 2026-09-28).
@@ -1581,6 +1581,16 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     };
   });
   const gapRows = [...gapRegions, ...gapSites];
+  // Connect · Options (notes, 2026-09-29): the same candidates as a page, split
+  // by what they are, each with its own best option and what else would do.
+  const candRow = (row, opt) => ({ ...row, qty: row.qty || 1, bestName: opt.best.name, bestWhy: opt.best.why, altLine: 'or ' + opt.alts.map(a => a.name).join(' · ') });
+  const pubSites = (est.sites || []).filter(x => !x.priv);
+  const candSiteRows = pubSites.map((x, i) => ({ row: candRow(gapSites[i], S.candidateOptions(x)), dc: S.isDataCenter(x) }));
+  const candGroups = [
+    ['sites', 'Sites', candSiteRows.filter(r => !r.dc).map(r => r.row)],
+    ['dcs', 'Data centers', candSiteRows.filter(r => r.dc).map(r => r.row)],
+    ['regions', 'Cloud regions', est.regionsList.filter(r => !r.priv).map((r, i) => candRow(gapRegions[i], S.candidateOptions(r)))],
+  ].filter(g => g[2].length).map(([key, label, rows]) => ({ key, label, rows, count: rows.reduce((a, r) => a + r.qty, 0).toLocaleString('en-US') }));
   const gapSiteN = S.gapSiteCount(est);
   const gapSummary = gapRows.length
     ? `${gapRegions.length} cloud ${gapRegions.length === 1 ? 'region' : 'regions'} and ${gapSiteN.toLocaleString('en-US')} ${gapSiteN === 1 ? 'site is' : 'sites are'} still on the public internet, in ${gapRows.length} ${gapRows.length === 1 ? 'group' : 'groups'}.`
@@ -2068,7 +2078,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     remove: () => set({ addedSources: (s.addedSources || []).filter(x => 'src:new' + (s.addedSources || []).indexOf(x) !== r.key) }),
     canRemove: r.key.startsWith('src:new') }));
   const credScanned = sources.filter(x => x.state === 'Connected').length;
-  const gapVals = { gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
+  const gapVals = { candGroups, hasCands: candGroups.length > 0, noCands: candGroups.length === 0, gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
   const obX = { sources, sourcesSub: `${credScanned} connected · ${sched.cadence.empty ? 'nothing on a schedule yet' : sched.cadence.label.toLowerCase()}`, ...(() => {
       // One drawer adds a source or edits one: which cloud (adding only), then its
       // credential, scope and schedule. AT&T inventory has nothing to manage.
@@ -2185,6 +2195,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       return { jumpQ: s.jumpQ || '', setJumpQ: (e) => set({ jumpQ: e.target.value, jumpHit: '' }), jumpKey: (e) => { if (e.key === 'Enter') jumpTo(); }, jumpGo: jumpTo, jumpHit: s.jumpHit || '', hasJumpHit: !!s.jumpHit,
         newStrip, newOnly, haveCards, lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
         // Three tabs, one panel at a time (2026-09-28, no scrolling).
+        // Connect is two pages (notes, 2026-09-29): what you have, and the options for what is not on AT&T yet.
+        ...(() => { const on3 = s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect'; const ck = s.cnPage === 'options' ? 'options' : 'picture'; return { cnIsOptions: on3 && ck === 'options', cnTabs: on3, heroHead: s.screen !== 's3', cnPanels: [['picture', 'What you have'], ['options', 'Options']].map(([k, l]) => { const on = ck === k; return { key: k, label: l, on, go: () => set({ cnPage: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }) }; })(),
         ...(() => { const ek = ['glance', 'clouds', 'sites'].includes(s.estPanel) ? s.estPanel : 'glance'; return { estPanels: [['glance', 'At a glance'], ['clouds', 'Your clouds'], ['sites', 'Your sites']].map(([k, l]) => { const on = ek === k; return { key: k, label: l, on, go: () => set({ estPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), estPanelGlance: ek === 'glance', estPanelClouds: ek === 'clouds', estPanelSites: ek === 'sites' }; })(),
         siteTree: tree, hasSiteTree: tree.length > 0, siteCrumbs: crumbs, hasSiteCrumbs: crumbs.length > 1, cloudsLine: `${stats.clouds} ${stats.clouds === 1 ? 'cloud' : 'clouds'} · ${stats.regions} ${stats.regions === 1 ? 'region' : 'regions'} · ${stats.workloads.toLocaleString('en-US')} workloads`, siteCrumbTail: crumbs[crumbs.length - 1].label, collapseSites: () => set({ siteOpen: {} }), sitesLineTree: `${totalSites.toLocaleString('en-US')} sites · your own buildings, not a cloud` };
     })(),
@@ -2453,11 +2465,13 @@ function shellVals(s, set, go, est, c, sched) {
           const view = isView ? id.slice(1) : '';
           const cur = isView ? (view === 'insights' || view === 'logs' ? onS3('cloud', 'observe') && s.obPage === view : view === 'estate' ? s.screen === 's1' && s.discoverView !== 'sources' : view === 'sources' ? s.screen === 's1' && s.discoverView === 'sources' : ['s4', 's5', 's6'].includes(s.screen))
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
+            : id === 'sec-paths' ? (onS3('cloud', 'connect') && s.cnPage === 'options')
             : tab === 'govern' ? (onS3('cloud', tab) && (id === 'sec-starting' ? 'templates' : 'policies') === (s.govPanel || 'policies'))
             : tab === 'cost' ? (onS3('cloud', tab) && (({ 'sec-egress': 'dest', 'sec-arbitrage': 'money' })[id] || 'money') === (s.costPanel || 'money') && !(s.sub && s.sub.page === 'cost'))
             : (onS3('cloud', tab) && activeSec === id && (tab !== 'observe' || !['insights', 'logs'].includes(s.obPage)));
           const goTo = isView ? (view === 'insights' || view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
+            : id === 'sec-paths' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })
             : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: ({ 'sec-egress': 'dest', 'sec-arbitrage': 'money' })[id] || 'money' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
           return { ...item(label, ic, goTo, cur, false, sub, isPanel || isView), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
@@ -2483,9 +2497,9 @@ function shellVals(s, set, go, est, c, sched) {
                 // after that, managing them sits in the drawer beside the picture.
                 if (st.key === 'sources') { go('s1', { discoverView: 'sources' })(); return; }
                 if (st.key === 'estate') { go('s1')(); return; }
-                if (st.key === 'options') { go('s3', { layer: 'cloud', tab: 'connect' })(); set({ scrollToSec: 'sec-paths', scrollNonce: (s.scrollNonce || 0) + 1 }); return; }
+                if (st.key === 'options') { go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })(); return; }
                 go('s4')();
-              }, st.key === 'sources' ? s.screen === 's1' && (s.discoverView === 'sources' || !sched.accounts.length) : st.key === 'estate' ? s.screen === 's1' && s.discoverView !== 'sources' : false, false, '', st.key === 'sources'), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px', ready: true }),
+              }, st.key === 'sources' ? s.screen === 's1' && (s.discoverView === 'sources' || !sched.accounts.length) : st.key === 'estate' ? s.screen === 's1' && s.discoverView !== 'sources' : st.key === 'options' ? s.screen === 's3' && s.tab === 'connect' && s.cnPage === 'options' : false, false, '', st.key === 'sources'), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px', ready: true }),
             ),
           }] : []),
           ...(seq ? [] : TABS).map(([tab, title]) => {
