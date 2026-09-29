@@ -7,7 +7,7 @@
  */
 // Layout and derivation helpers for the NaaS storefront. Pure functions, no DOM.
 import { siteChain, cloudEdgeThing, cloudAccessThing, coreThing, accessThing, entersAtt } from './naas-things.js';
-import { servicesOf, stateOf } from './naas-sites.js';
+import { servicesOf, stateOf, SERVICE } from './naas-sites.js';
 export const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
 export const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 /** "1 cloud" / "2 clouds" / "4,120 sites". Every count in the copy goes through this. */
@@ -111,6 +111,38 @@ export function regionRows(est) {
   });
 }
 
+/**
+ * Sites by how they attach (notes, 2026-09-29: "grouping for access side of
+ * the network"). A site counts once, under its primary service, so the groups
+ * add up to the estate. AT&T services lead in catalog order; Third Party
+ * Access, and any first mile the catalog does not name, sits outside AT&T.
+ */
+const ACCESS_ORDER = ['avpn', 'aseod', 'adi', 'abf', 'aiab', 'tpa', 'other'];
+export const primaryService = (site) => servicesOf(site)[0] || { key: 'other', label: 'Other access', onAtt: false };
+export function accessRows(est) {
+  const by = {};
+  (est.sites || []).forEach(site => { const v = primaryService(site); const k = v.onAtt || v.key !== 'other' ? v.key : 'other'; (by[k] = by[k] || { v, sites: [] }).sites.push(site); });
+  return ACCESS_ORDER.filter(k => by[k]).map(k => {
+    const { v, sites } = by[k];
+    const count = sites.reduce((a, x) => a + countOf(x.name), 0);
+    const metros = new Set(sites.map(x => x.metro).filter(Boolean)).size || 1;
+    const onAttK = k !== 'other' && !!(SERVICE[k] || v).onAtt;
+    const name = SERVICE[k] ? SERVICE[k].label : 'Other access';
+    return { key: k, name, onAtt: onAttK, sites, count, metros, lines: linesOf(sites, false),
+      // The card's own line and badge say whether it is on AT&T; the subtitle stays short enough to read.
+      access: `${count.toLocaleString('en-US')} ${count === 1 ? 'site' : 'sites'} · ${metros} ${metros === 1 ? 'metro' : 'metros'}` };
+  });
+}
+/** A region's card on the picture: who carries its traffic, and how many sites. */
+export const regionCard = r => {
+    // A region card names who carries its traffic; the internet is a carrier here, not a verdict.
+    const carriers = [...new Set(r.patterns.map(p => (p.key === 'public' ? 'internet' : p.key.startsWith('third') ? (p.carrier || 'third party') : 'AT&T')))];
+    return { name: r.name, access: `${r.count.toLocaleString('en-US')} ${r.count === 1 ? 'site' : 'sites'} · ${carriers.join(', ')}`,
+      priv: r.patterns.some(p => p.priv), drillKey: 'region:' + r.name, rollup: true, region: true, patterns: r.patterns, lines: r.lines, groups: r.sites.length, count: r.count };
+  };
+/** The card a group of sites draws on the picture: a region, or an access group. */
+export const groupCard = (g, drillKey) => ({ name: g.name, access: g.access, priv: g.onAtt != null ? g.onAtt : g.patterns.some(p => p.priv), drillKey, rollup: true, region: true, patterns: g.patterns || [], lines: g.lines, groups: g.sites.length, count: g.count });
+
 // A mixed-carrier estate needs its third-party sites on the picture, not folded
 // into "+N more", so the root shows up to nine. A drill level keeps its sample
 // of seven: the full list lives in the drawer, and the sample size is what the
@@ -175,12 +207,7 @@ export function heroLayout(est, opts) {
   const clampLane = (y) => Math.round(Math.min(lane.y + lane.h - 14, Math.max(lane.y + 14, y)));
   out.ghost = empty;
 
-  const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || regionRows(est).map(r => {
-    // A region card names who carries its traffic; the internet is a carrier here, not a verdict.
-    const carriers = [...new Set(r.patterns.map(p => (p.key === 'public' ? 'internet' : p.key.startsWith('third') ? (p.carrier || 'third party') : 'AT&T')))];
-    return { name: r.name, access: `${r.count.toLocaleString('en-US')} ${r.count === 1 ? 'site' : 'sites'} · ${carriers.join(', ')}`,
-      priv: r.patterns.some(p => p.priv), drillKey: 'region:' + r.name, rollup: true, region: true, patterns: r.patterns, lines: r.lines, groups: r.sites.length, count: r.count };
-  }));
+  const rawSites = empty ? [{ name: 'Your data centers', access: 'AVPN, ASE', ghost: true }, { name: 'Your sites', access: 'ADI, ABF, SD-WAN', ghost: true }, { name: 'Your internet sites', access: 'Internet first mile', ghost: true }] : (opts.siteRows || (opts.groupBy === 'access' ? accessRows(est).map(g => groupCard(g, 'access:' + g.key)) : null) || regionRows(est).map(regionCard));
   const cap = opts.siteRows ? DRILL_SITES : ROOT_SITES;
   const sites = rawSites.length > cap ? [...rawSites.slice(0, cap - 1), { name: `+${fmtN(rawSites.length - (cap - 1))} more`, access: 'open the list ›', more: true, rollup: false }] : rawSites;
   const n = sites.length;

@@ -238,6 +238,7 @@ export function labelOfKey(est, key) {
   }
   // The place drill's keys (2026-09-28): a state reads as its name.
   if (k.startsWith('state:')) return placeName(k.slice(6));
+  if (k.startsWith('access:')) return (SERVICE[k.slice(7)] || { label: 'Other access' }).label;
   if (/^(metro|site|svc):/.test(k)) return k.slice(k.indexOf(':') + 1);
   const parts = k.split(':');
   if (parts.length >= 3) return parts.slice(2).join(':');
