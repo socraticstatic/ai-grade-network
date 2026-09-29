@@ -18,6 +18,7 @@ import * as FB from './naas-fabric.js';
 import * as V from './naas-volume.js';
 import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
+import * as LC from './naas-lifecycle.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product', s9: 'Help' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
@@ -283,6 +284,12 @@ export function vals(c) {
     },
   };
   const isEmpty = est.stage === 'empty', isMature = est.stage === 'mature', isPartial = est.stage === 'partial';
+  // A finding's life (notes, 2026-09-29): seeded history under what the customer did here.
+  const lifeNow = new Date();
+  const life = { ...LC.lifeFor(est), ...(((s.findingLife || {})[est.id]) || {}) };
+  const openF = LC.openFindings(est, life, lifeNow);
+  const openSave = openF.filter(f => f.priced).reduce((a, f) => a + f.save, 0);
+  const observeHead = openF.length ? `${openF.length} ${openF.length === 1 ? 'finding' : 'findings'} open.${openSave ? ` ${fmt(openSave)}/mo potential savings.` : ''}` : '';
   const layer = D.LAYERS.find(l => l.id === s.layer) || D.LAYERS[1];
   const layerProducts = (id) => D.CATALOG.filter(p => p.layer === id);
   const findingsFor = (id, tab) => est.findings.filter(f => f.layer === id && (!tab || f.tab === tab));
@@ -872,7 +879,7 @@ export function vals(c) {
     ...shellVals(s, set, go, est, c, sched),
     headOpen: s.headOpen !== false, headClosed: s.headOpen === false, toggleHead: () => { const v = s.headOpen === false; set({ headOpen: v }); try { localStorage.setItem('naas.headOpen', String(v)); } catch (e) {} }, headRot: s.headOpen === false ? 'rotate(-90deg)' : 'rotate(0deg)',
     ...andiVals(s, set, go, est, ob, { conns, floorVerdict, connectVerdict, governVerdict, costVerdict, discoverVerdict, stageKicker, findingCard, sortF, findingsFor, isEmpty, totalSave, persona, personaTab }),
-    pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? ob.verdict : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on AT&T · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${est.policiesEnforced} of ${est.policiesAuthored} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
+    pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? (observeHead || ob.verdict) : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on AT&T · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${est.policiesEnforced} of ${est.policiesAuthored} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
     persona: s.persona || 'neteng', personaName: persona, setPersona: (e) => set({ persona: e.target.value }), personas: PERSONAS.map(p => ({ key: p, label: p })), moreByTab, hasMoreByTab: moreByTab.length > 0, pendingTitle: (s.order && s.order.title) || 'Hosted VPC order', dismissPending: () => set({ pendingDismissed: true }),
     estateName: est.name, isEmpty, isPartial, isMature, notEmpty: !isEmpty, stageKicker, floorVerdict,
     // Discover has two views: the estate, and its sources (source management).
@@ -915,6 +922,7 @@ export function vals(c) {
     // The card anchors to the hovered region's row; at the provider level there is no row.
     perfCard: hr && hrNode ? { region: `${hr.cloud} ${hr.region}`, msLine: `${hr.priv ? hr.fab : hr.pub} ms ${hr.priv ? 'on AT&T' : 'public'}${hr.rel === 'warn' ? ' · degraded' : ''}`, pub: `Public today ${hr.pub} ms`, fab: `on AT&T ${hr.fab} ms`, rel: hr.rel === 'warn' ? 'Reliability: degraded' : 'Reliability: healthy', relFill: hr.rel === 'warn' ? 'var(--warning)' : 'var(--success)', top: Math.max(0, Math.min(340, hrNode.y - 70)) + 'px', left: 'calc(100% - 236px)', go: go('s3', { layer: 'cloud', tab: 'observe' }) } : null, hasPerf: !!hr,
     // floor
+    openFindingsN: openF.length, findingsAllN: est.findings.length,
     rollup, floorFindings, hasFloorFindings: floorFindings.length > 0, recFindings, hasRecFindings: recFindings.length > 0, packages, tailored, hasTailored: isMature, hasAddons: tailored.addons.length > 0, hasTermUps: tailored.terms.length > 0, hasHubs: tailored.hubs.length > 0,
     // department
     layerBar: D.LAYERS.map(l => ({ key: l.id, label: l.label, on: s.layer === l.id, go: () => { set({ layer: l.id, drill: [], regionDrill: null }); syncHash('s3', l.id, s.tab); scrollToResult('S3 Department'); }, bg: s.layer === l.id ? 'var(--cta)' : 'transparent', color: s.layer === l.id ? '#fff' : 'var(--text-heading)' })),
@@ -2546,8 +2554,9 @@ function shellVals(s, set, go, est, c, sched) {
   const openFindings = openSub('connect', 'found');
   // The verdict sentence is the door to the findings, but only where the
   // findings exist. Elsewhere it carries no affordance rather than a dead one.
-  const verdictIsDoor = s.screen === 's3' && s.tab === 'connect';
-  const verdictGo = verdictIsDoor ? openFindings : () => {};
+  // Connect's opens its Options; Observe's opens the findings it counts (notes, 2026-09-29).
+  const verdictIsDoor = s.screen === 's3' && (s.tab === 'connect' || s.tab === 'observe');
+  const verdictGo = !verdictIsDoor ? () => {} : s.tab === 'observe' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', sub: null }) : () => set({ cnPage: 'options' });
   const verdictRole = verdictIsDoor ? 'button' : '';
   const verdictTab = verdictIsDoor ? '0' : '';
   const verdictCursor = verdictIsDoor ? 'pointer' : 'default';
