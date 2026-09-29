@@ -18,13 +18,14 @@ export function connectVerdict(est, layer = 'cloud', items = []) {
   const onFabric = totalN - exposedN;
   // The rollup clause left (2026-09-28, no scrolling): the picture already
   // carries "N smaller regions rolled up", and the verdict holds to one line.
-  return `${exposedN} of ${totalN} ${noun[1]} ${noun[2]}. ${onFabric} ${onFabric === 1 ? 'is' : 'are'} on the AT&T network.`;
+  return `${exposedN} of ${totalN} ${noun[1]} ${noun[2]}. ${onFabric ? `${onFabric} ${onFabric === 1 ? 'is' : 'are'} on the AT&T network.` : 'None is on the AT&T network yet.'}`;
 }
 
 export function governVerdict(est) {
   if (est.stage === 'empty') return 'No policies yet. Three starting points below.';
   const pci = (est.findings.find(f => f.kind === 'pci') || {}).head;
-  return `${est.policiesEnforced} policies enforced. ${pci || (est.policiesAuthored - est.policiesEnforced) + ' authored but not enforced.'}`;
+  const tail = pci || `${est.policiesAuthored - est.policiesEnforced} authored but not enforced`;
+  return `${est.policiesEnforced} policies enforced. ${tail.replace(/\.$/, '')}.`;
 }
 
 export function costVerdict(est, ob, totalSave, buckets = []) {

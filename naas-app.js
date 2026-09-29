@@ -886,7 +886,8 @@ export function vals(c) {
     persona: s.persona || 'neteng', personaName: persona, setPersona: (e) => set({ persona: e.target.value }), personas: PERSONAS.map(p => ({ key: p, label: p })), moreByTab, hasMoreByTab: moreByTab.length > 0, pendingTitle: (s.order && s.order.title) || 'Hosted VPC order', dismissPending: () => set({ pendingDismissed: true }),
     estateName: est.name, isEmpty, isPartial, isMature, notEmpty: !isEmpty, stageKicker, floorVerdict,
     // Discover has two views: the estate, and its sources (source management).
-    s1Title: s.discoverView === 'sources' ? 'Sources' : 'Discover',
+    // A page is titled by its group (2026-09-29 consistency pass); the rail says which view.
+    s1Title: 'Discover',
     showSourcesBody: !isEmpty && s.discoverView === 'sources', showEstateBody: !isEmpty && s.discoverView !== 'sources',
     showEstateStats: s.scanStep >= 4 && s.discoverView !== 'sources',
     sS0: s.screen === 's0' || (s.screen === 's2' && isEmpty), sS1: s.screen === 's1', sS2: s.screen === 's2' && !isEmpty, showLaunch: !isEmpty && (s.screen === 's2' || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect')), sS3: s.screen === 's3', sS4: s.screen === 's4', sS5: s.screen === 's5', sS6: s.screen === 's6', sS7: s.screen === 's7', sS8: s.screen === 's8',
@@ -898,10 +899,10 @@ export function vals(c) {
       const blind = (obAll.blind || []).length;
       const ok = rows.length - bad.length - hot.length;
       const parts = [];
-      if (bad.length) parts.push({ key: 'bad', dot: 'var(--error)', text: `${bad.length} degraded · ${bad.map(r => r.cloud + ' ' + r.region).join(', ')}` });
-      if (hot.length) parts.push({ key: 'hot', dot: 'var(--warning)', text: `${hot.length} saturating · ${hot.map(r => r.region + ' at ' + r.pct + '%').join(', ')}` });
-      if (blind) parts.push({ key: 'blind', dot: 'var(--text-disabled)', text: `${blind} sending no flow logs` });
-      parts.push({ key: 'ok', dot: 'var(--success)', text: `${ok} of ${rows.length} healthy` });
+      if (bad.length) parts.push({ key: 'bad', dot: 'var(--error)', text: `${bad.length} degraded`, title: bad.map(r => r.cloud + ' ' + r.region).join(', ') });
+      if (hot.length) parts.push({ key: 'hot', dot: 'var(--warning)', text: `${hot.length} saturating`, title: hot.map(r => r.region + ' at ' + r.pct + '%').join(', ') });
+      if (blind) parts.push({ key: 'blind', dot: 'var(--text-disabled)', text: `${blind} without flow logs`, title: 'Regions sending no flow logs' });
+      if (rows.length) parts.push({ key: 'ok', dot: 'var(--success)', text: `${ok} of ${rows.length} healthy`, title: 'Connections healthy' });
       return parts;
     })(), clearHover: () => set({ hoverNode: null, hoverRegion: null }), laneY: L.lane.y, laneH: L.lane.h, bandY: L.bandY, bandH: L.bandH, facH: L.H - L.bandY * 2, strataCardH, strataPadY: strataTight ? 6 : 10, strataRowGap: strataTight ? 3 : 6, footY: L.H - 54, footY2: L.H - 48, heroVisible: heroScreen && heroOpen, heroStrip: heroScreen && !heroOpen, heroCanHide: heroScreen && heroOpen && !heroDefault, toggleHero, heroStripText: isEmpty ? 'Your sites, the AT&T network and your clouds, drawn after the first scan' : `${est.attachedRegions} of ${est.regions} regions on AT&T · ${est.regions - est.attachedRegions} on the public internet · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`, inDept, overlayLegend: overlayLegend(s, R), hasOverlay: inDept, scrubT: s.scrubT == null ? 100 : s.scrubT, setScrub: (e) => set({ scrubT: +e.target.value }), showScrub: inDept && s.tab === 'observe', showForecast: inDept && s.tab === 'cost', fcT: s.fcT == null ? 0 : s.fcT, setFc: (e) => set({ fcT: +e.target.value }), fcLabel: (s.fcT || 0) === 0 ? 'today' : '+' + Math.round((s.fcT || 0) * 0.9) + ' days', heroRolled: s.screen === 's0', healthStrip: hp.strip, hasHealth: s.screen !== 's3', healthIncidents: hp.incidents.map((x, i) => ({ ...x, key: 'hi' + i, go: go('s3', { layer: 'cloud', tab: 'observe', mapSel: conns.rows.some(r => r.region === x.region) ? 'cx-' + x.region : null, mapRegion: x.region, panelTab: 'impact' }) })), hasIncidents: hp.incidents.length > 0 && s.screen !== 's3',
     headStart: D.HEADSTART.map(h => ({ ...h, key: h.cat, go: go('s7', { browseCat: h.cat }) })), headStartVerdict: isEmpty ? 'AT&T already sees the metros, clouds and paths you could use. Tell us two things and the store composes the rest.' : `${est.name} is recognized. ${estatePhrase(est)} already visible.`,
@@ -1534,8 +1535,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const logTabs = [['flow', 'Flow records'], ['user', 'User activity']].map(([k, l]) => ({
     key: k, label: k === 'flow' ? `${l} · ${logAll.length.toLocaleString('en-US')}` : `${l} · ${actAll.length}`,
     on: logTab === k, go: () => set({ logTab: k }),
-    bg: logTab === k ? 'var(--sidebar-accent)' : 'transparent',
-    color: logTab === k ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)',
+    line: logTab === k ? 'var(--cta)' : 'transparent', color: logTab === k ? 'var(--text-heading)' : 'var(--text-light)', weight: logTab === k ? 700 : 500,
   }));
   const actVals = {
     logTabs, onFlowTab: logTab === 'flow', onUserTab: logTab === 'user',
@@ -1821,8 +1821,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     ['traffic', 'Traffic', map.total.toFixed(1), 'Gbps', { mapMode: 'state', mapPath: 'all' }],
     ['p95', 'P95 latency', String((ob.kpis || []).find(k => k.key === 'p95') ? ob.kpis.find(k => k.key === 'p95').v : '—'), 'ms', { mapMode: 'slo', mapPath: 'all' }],
     ['onatt', 'Sites on AT&T', (() => { const p = map.fabV / (map.total || 1) * 100; return p >= 99.95 ? '100%' : p >= 99 ? p.toFixed(1) + '%' : Math.round(p) + '%'; })(), '', { mapMode: 'state', mapPath: 'att' }],
-    ['egress', 'Egress', kShort(egSpend), '/mo', { mapMode: 'cost', mapPath: 'all' }],
-    ['could', 'Could save', kShort(totalSave), '/mo', { mapMode: 'cost', mapPath: 'out' }],
+    ['egress', 'Egress', fmt(Math.round(egSpend / 100) * 100), '/mo', { mapMode: 'cost', mapPath: 'all' }],
+    ['could', 'Could save', fmt(totalSave), '/mo', { mapMode: 'cost', mapPath: 'out' }],
     ['slo', 'Over SLO', String(sloN), sloN === 1 ? 'flow' : 'flows', { mapMode: 'slo', mapPath: 'all' }],
   ].map(([k, l, v, u, patch]) => { const on = !!tileOn(k); return { key: k, l, v, u, on, go: () => set(patch), border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)' }; });
   const seg = (on) => ({ bg: on ? 'var(--bg-base)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 600 : 500, shadow: on ? '0 1px 2px rgba(16,24,40,.10), 0 0 0 1px var(--border-secondary)' : 'none' });
@@ -2112,7 +2112,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     'FinOps & SRE': { line: totalSave > 0 ? `${fmt(totalSave)}/mo is on the table — the same bytes at AT&T rates instead of public ones.` : `The AT&T network is saving ${fmt(ob.savingsMo || 0)}/mo against public rates; egress runs ${fmt(ob.egressMo || 0)}/mo.`, cta: 'Open Cost', go: () => { go('s3', { layer: 'cloud', tab: 'cost' })(); } },
   };
   const plNow = PERSONA_LENS[personaNow] || PERSONA_LENS['Executive'];
-  const dash = { ...mixVals, ...insightVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: `${queueRows.length} open`, queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ queueOpen: true }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
+  const dash = { ...mixVals, ...insightVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ queueOpen: true }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
     obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0, scopeLabel,
@@ -2618,7 +2618,7 @@ function shellVals(s, set, go, est, c, sched) {
           }),
         ];
       })();
-  const pageTitle = s.screen === 's9' ? 'Help & Resources' : s.screen === 's1' ? 'Discover' : s.screen === 's4' ? 'Compose' : s.screen === 's5' ? 'Recommend' : s.screen === 's6' ? 'Review order' : storeCur ? 'Marketplace'
+  const pageTitle = s.screen === 's9' ? 'Help & Resources' : s.screen === 's1' ? 'Discover' : ['s4', 's5', 's6'].includes(s.screen) ? 'Connect' : storeCur ? 'Marketplace'
     : s.screen === 's3' ? ({ connect: 'Connect', govern: 'Govern', observe: (obTabNow === logsTab ? 'Observe · Logs' : 'Observe'), cost: 'Cost' }[s.tab] || 'Connect')
     : 'Discover';
   // Re-discover keeps its one click and finally has somewhere to report: the

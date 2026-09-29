@@ -74,7 +74,8 @@ test('with a source, Sources is a page listing the connected accounts', () => {
   const v = vals(c);
   assert.equal(c.state.screen, 's1');
   assert.ok(!c.state.sub, 'a drawer opened over the page');
-  assert.equal(v.s1Title, 'Sources');
+  // Titled by its group, like every page (2026-09-29 consistency pass); the rail marks Sources.
+  assert.equal(v.s1Title, 'Discover');
   assert.equal(v.showSourcesBody, true);
   assert.equal(v.showEstateBody, false);
   assert.ok(v.sources.length > 0);

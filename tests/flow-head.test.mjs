@@ -20,7 +20,8 @@ test('six rollups head the map, each a number with its unit', () => {
   // One tile row since the no-scroll ruling (2026-09-28): Saving lives in the headline, latency joins.
   assert.deepEqual(t.map(x => x.l), ['Traffic', 'P95 latency', 'Sites on AT&T', 'Egress', 'Could save', 'Over SLO']);
   for (const x of t) assert.ok(x.v && x.v.length <= 7, `${x.l}: ${x.v}`);
-  assert.equal(t.find(x => x.l === 'Egress').v, '$89.6k');
+  // Whole dollars on every tile (2026-09-29 consistency pass).
+  assert.equal(t.find(x => x.l === 'Egress').v, '$89,600');
 });
 
 test('a tile is a filter: it switches the view it belongs to', () => {
