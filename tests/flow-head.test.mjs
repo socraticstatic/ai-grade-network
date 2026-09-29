@@ -18,19 +18,20 @@ const card = () => { const a = HTML.indexOf('<div id="sec-flow"'); return HTML.s
 test('six rollups head the map, each a number with its unit', () => {
   const t = vals(obs()).flowTiles;
   // One tile row since the no-scroll ruling (2026-09-28): Saving lives in the headline, latency joins.
-  assert.deepEqual(t.map(x => x.l), ['Traffic', 'P95 latency', 'Sites on AT&T', 'Egress', 'Could save', 'Over SLO']);
+  // Egress became Cost (2026-09-29): the tile is the map's own dollars, on AT&T and outside.
+  assert.deepEqual(t.map(x => x.l), ['Traffic', 'P95 latency', 'Sites on AT&T', 'Cost', 'Could save', 'Over SLO']);
   for (const x of t) assert.ok(x.v && x.v.length <= 12, `${x.l}: ${x.v}`);
   // Sites on AT&T counts sites (2026-09-29 audit), not a traffic share.
   assert.equal(t.find(x => x.l === 'Sites on AT&T').v, '20 of 25');
   // Since is the window the tiles compare against.
   assert.match(t.find(x => x.l === 'Traffic').d, /^[+-]\d+% vs prior 30 days$/);
   // Whole dollars on every tile (2026-09-29 consistency pass).
-  assert.equal(t.find(x => x.l === 'Egress').v, '$89,600');
+  for (const k of ['Cost', 'Could save']) assert.match(t.find(x => x.l === k).v, /^\$[\d,]+$/, k);
 });
 
 test('a tile is a filter: it switches the view it belongs to', () => {
   const c = obs();
-  vals(c).flowTiles.find(x => x.l === 'Egress').go();
+  vals(c).flowTiles.find(x => x.l === 'Cost').go();
   assert.equal(c.state.mapMode, 'cost');
   vals(c).flowTiles.find(x => x.l === 'Over SLO').go();
   assert.equal(c.state.mapMode, 'slo');

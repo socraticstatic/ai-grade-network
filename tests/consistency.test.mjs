@@ -70,8 +70,12 @@ test('the AT&T network is never "fabric", and rates name whose rate they are', (
 
 test('money on a tile is whole dollars, as on every other tile', () => {
   const v = vals(mkC({ view: 'partial', screen: 's3', tab: 'observe', estateParam: null }));
-  for (const k of ['egress', 'could']) assert.match(v.flowTiles.find(t => t.key === k).v, /^\$[\d,]+$/, k);
-  assert.equal(v.flowTiles.find(t => t.key === 'could').v, '$41,500');
+  for (const k of ['cost', 'could']) assert.match(v.flowTiles.find(t => t.key === k).v, /^\$[\d,]+$/, k);
+  // Could save is what the map's own outside paths could save (2026-09-29): the
+  // Cost view's "to save" lines add up to it.
+  const cv = vals(mkC({ view: 'partial', screen: 's3', tab: 'observe', estateParam: null, mapMode: 'cost' }));
+  const lines = cv.mapNodes.filter(n => n.side === 'm' && /to save/.test(n.pathSay)).reduce((a, n) => a + +n.pathSay.replace(/[^0-9]/g, ''), 0);
+  assert.ok(Math.abs(+v.flowTiles.find(t => t.key === 'could').v.replace(/[^0-9]/g, '') - lines) <= 100, `${v.flowTiles.find(t => t.key === 'could').v} vs ${lines}`);
 });
 
 test('the live alerts are called alerts, so "open" means findings', () => {

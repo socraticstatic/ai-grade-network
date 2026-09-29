@@ -110,16 +110,17 @@ const rampOf = (r) => RAMP_NAME[r.ramp] || 'NetBond';
 export const DC_SHARE = 0.15;
 const dcSites = (est) => (est.sites || []).filter(x => S.classOf(x) === 'Data center');
 /** How the site traffic splits, once, so the left, the middle and the right all agree. */
-export function flowSplit(est, flows) {
-  const left = leftRoots(est, flows);
+export function flowSplit(est, flows, left = leftRoots(est, flows)) {
   const sitesV = left.reduce((a, x) => a + x.v, 0), sitesFab = left.reduce((a, x) => a + x.fabV, 0), ipsec = left.reduce((a, x) => a + x.ipsecV, 0);
   const dc = dcSites(est).length ? DC_SHARE : 0;
   const pubV = Math.max(0, sitesV - sitesFab);
   return { sitesV, sitesFab, ipsec, inet: Math.max(0, pubV - ipsec), pubV, dc, cloudFab: sitesFab * (1 - dc), dcV: sitesFab * dc };
 }
 /** Root nodes on the right: only destinations - clouds, neoclouds, your data centers (Micah, 2026-09-28). */
-export function rightRoots(est, flows, by = 'cloud') {
-  const sp = flowSplit(est, flows);
+export function rightRoots(est, flows, by = 'cloud', left = null) {
+  // The right is derived from the left, so whatever scaled the sites (a window,
+  // a moment in a replay) scales the destinations with them.
+  const sp = left ? flowSplit(est, flows, left) : flowSplit(est, flows);
   const dests = destRoots(est.regionsList, sp.cloudFab, sp.pubV, by);
   const dcs = dcSites(est);
   const dc = sp.dcV > 0.001 ? [{ kind: 'dc', key: 'dc:yours', name: `Your data centers · ${dcs.length}`, v: sp.dcV, fabV: sp.dcV, pubV: 0, byRamp: {}, wan: sp.dcV, hasChildren: dcs.length > 1, state: 'ok' }] : [];
@@ -333,7 +334,17 @@ export function buildMap(est, inv, flows0, opts = {}) {
   const open = new Set(opts.open || []);
   const qs = opts.filterRegion ? [].concat(opts.filterRegion).map(String) : null;
   const flows = qs ? flows0.filter(f => qs.some(q => (f.region || '').includes(q) || f.name.includes(q))) : flows0;
-  let L0 = leftRoots(est, flows, opts.leftBy || 'region'), R0 = rightRoots(est, flows, opts.rightBy || 'cloud');
+  let L0 = leftRoots(est, flows, opts.leftBy || 'region');
+  // Since sets the window and Replay plays it (Micah, 2026-09-29: "replay and
+  // since are not connected on sankey"). Without a moment the map is the
+  // window's average; with one it is that moment. Growth is the window's own
+  // traffic trend. The sites move first and the destinations follow them.
+  if (opts.window || opts.t != null) {
+    const g = opts.window ? +opts.window.growth || 0 : 0;
+    const level = (t) => (1 + g * t) / (1 + g);
+    L0 = L0.map(x => { const k = opts.t == null ? level(0.5) : level(opts.t) * shapeAt(x.key, opts.t); return { ...x, v: x.v * k, fabV: x.fabV * k, ipsecV: (x.ipsecV || 0) * k }; });
+  }
+  let R0 = rightRoots(est, flows, opts.rightBy || 'cloud', L0);
   // The region filter shrank the egress classes (their volumes ride the flow
   // list) and left the site rows and cloud nodes at full size, because those
   // are sized from the estate. Filtering to eu-central-1 now scales the sites
@@ -357,8 +368,15 @@ export function buildMap(est, inv, flows0, opts = {}) {
     L0 = L0.map(x => x.kind === 'site' ? { ...x, fabV: x.fabV * kf, v: x.fabV * kf + (x.v - x.fabV) * ku, ipsecV: (x.ipsecV || 0) * ku } : x);
     R0 = keep;
   }
+  // The Cost view weighs the same map in dollars: on AT&T at the AT&T rate,
+  // outside at the egress rate (Micah, 2026-09-29: "cost and performance don't
+  // show cost and performance"). Children follow their parents (fitKids).
+  if (opts.weigh) { const a = +opts.weigh.fab || 0, b = +opts.weigh.pub || 0;
+    const w = (x) => { const f = (x.fabV || 0) * a, u = Math.max(0, x.v - (x.fabV || 0)) * b; return { ...x, fabV: f, v: f + u, ...(x.ipsecV != null ? { ipsecV: x.ipsecV * b } : {}), ...(x.pubV != null ? { pubV: x.pubV * b } : {}), ...(x.wan != null ? { wan: x.wan * a } : {}),
+      ...(x.byRamp ? { byRamp: Object.fromEntries(Object.entries(x.byRamp).map(([r, v]) => [r, v * a])) } : {}), ...(x.parts ? { parts: x.parts.map(pt => ({ ...pt, fab: pt.fab * a, pub: pt.pub * b })) } : {}) }; };
+    L0 = L0.map(w); R0 = R0.map(w); }
   const L = expand(L0, open, est, inv, flows), R = expand(R0, open, est, inv, flows);
-  const scale = (nd) => opts.t == null ? nd : { ...nd, v: nd.v * shapeAt(nd.key, opts.t), fabV: nd.fabV * shapeAt(nd.key, opts.t) };
+  const scale = (nd) => nd;
   // Ramesh's first pattern (19:09): what stays within the region. Workload groups carry east-west traffic that never leaves the region; it gets its own band.
   const LOCAL = 0.6;
   const Ls = L.map(scale).map(x => ({ ...x, locV: 0 }));
@@ -533,4 +551,69 @@ export function overTime({ total, fab, egressMo, grain = 'daily', seed = '' }) {
     return { i, label: G.label(i, n), fab: f, out: o, egress: egressMo / G.perMonth * (outNow ? o / outNow : k) };
   });
   return { grain, bars };
+}
+
+/** Each node and path on the map against its SLO (2026-09-29). A path's p95 is
+ *  its regions' measured p95 (on AT&T: the on-ramp's regions at their private
+ *  latency; outside: the public regions at theirs). A destination reads its
+ *  own regions; a site reads the paths it takes. Health: within 80% of the
+ *  SLO is ok, up to the SLO at risk, past it over. The map's p95 is the
+ *  latency 95% of its volume stays under. */
+export function perfOf(map, est) {
+  const regs = est.regionsList || [];
+  const wavg = (rs, f) => { const w = rs.reduce((a, r) => a + (r.wl || 1), 0); return w ? rs.reduce((a, r) => a + f(r) * (r.wl || 1), 0) / w : null; };
+  const pub = regs.filter(r => !r.priv);
+  const outMs = Math.round(wavg(pub.length ? pub : regs, r => r.pub) || SLO);
+  const rampMs = (name) => { const rs = regs.filter(r => r.priv && rampOf(r) === name); return rs.length ? Math.round(wavg(rs, r => r.fab)) : null; };
+  const ramps = map.nodes.filter(x => x.side === 'm' && x.ramp).map(x => rampMs(x.ramp)).filter(x => x != null);
+  // Your own private WAN is at least as good as the best on-ramp it rides beside.
+  const wanMs = ramps.length ? Math.min(...ramps) : Math.round(wavg(regs.filter(r => r.priv), r => r.fab) || SLO_PRIVATE / 2);
+  const healthOf = (ms, slo) => (ms > slo ? 'slo' : ms > slo * 0.8 ? 'risk' : 'ok');
+  const rank = { ok: 0, risk: 1, slo: 2 };
+  const worst = (parts, tot) => parts.filter(p => p.v >= tot * 0.05).reduce((w, p) => (rank[p.health] > rank[w] ? p.health : w), 'ok');
+  const one = (ms, slo) => ({ ms: Math.round(ms), slo, health: healthOf(ms, slo) });
+  const nodes = {};
+  const midOf = {};
+  map.nodes.filter(x => x.side === 'm').forEach(x => {
+    const q = x.ramp ? one(rampMs(x.ramp) ?? wanMs, SLO_PRIVATE) : x.wan ? one(wanMs, SLO_PRIVATE) : one(outMs, SLO);
+    nodes[x.key] = midOf[x.key] = q;
+  });
+  // A destination: its parts (or its own region), each at its own path's latency.
+  const destParts = (x) => {
+    if (x.parts) return x.parts.flatMap(pt => [...(pt.fab > 0 ? [{ v: pt.fab, ms: pt.r.fab, slo: SLO_PRIVATE, ramp: rampOf(pt.r) }] : []), ...(pt.pub > 0 ? [{ v: pt.pub, ms: pt.r.pub, slo: SLO }] : [])]);
+    if (x.kind === 'endpoint' && x.region) { const r = regs.find(g => g.region === x.region); if (r) return [...((x.fabV || 0) > 0 ? [{ v: x.fabV, ms: r.fab, slo: SLO_PRIVATE, ramp: rampOf(r) }] : []), ...(x.v - (x.fabV || 0) > 0.0005 ? [{ v: x.v - (x.fabV || 0), ms: r.pub, slo: SLO }] : [])]; }
+    if (x.kind === 'dc' || x.wan || (x.kind === 'endpoint' && !x.region)) return [{ v: x.v, ms: wanMs, slo: SLO_PRIVATE }];
+    return [];
+  };
+  const summarize = (parts, tot) => {
+    const ps = parts.map(p => ({ ...p, health: healthOf(p.ms, p.slo) }));
+    const v = ps.reduce((a, p) => a + p.v, 0) || 1;
+    // A node's p95 is its volume's 95th percentile, as the map's is: the
+    // latency 95% of what it carries stays under (a mean hid a slow region).
+    const byMs = ps.slice().sort((a, b) => a.ms - b.ms); let cum = 0, at = byMs[byMs.length - 1];
+    for (const p of byMs) { cum += p.v; if (cum >= v * 0.95) { at = p; break; } }
+    return { ms: Math.round(at ? at.ms : 0), slo: at ? at.slo : SLO, health: worst(ps, tot || v) };
+  };
+  const partsByDest = {};
+  map.nodes.filter(x => x.side === 'r').forEach(x => { const ps = destParts(x); partsByDest[x.key] = ps; if (ps.length) nodes[x.key] = summarize(ps, x.v); });
+  // Ribbons: into a path at the path's latency; out of it at the destination's
+  // latency on that path.
+  const ribbons = map.ribbons.map(r => {
+    const mid = midOf[r.from] ? map.nodes.find(x => x.key === r.from) : null;
+    if (!mid) { const q = midOf[r.to]; return q ? { ...q } : one(outMs, SLO); }
+    const ps = (partsByDest[r.to] || []).filter(p => (mid.ramp ? p.ramp === mid.ramp : mid.wan ? p.slo === SLO_PRIVATE && !p.ramp : p.slo === SLO));
+    return ps.length ? summarize(ps) : { ...midOf[r.from] };
+  });
+  // A site reads the paths it takes.
+  map.nodes.filter(x => x.side === 'l').forEach(x => {
+    const ps = map.ribbons.map((r, i) => (r.from === x.key ? { v: r.v, ms: ribbons[i].ms, slo: ribbons[i].slo } : null)).filter(Boolean);
+    if (ps.length) nodes[x.key] = summarize(ps, x.v);
+  });
+  map.nodes.forEach(x => { if (!nodes[x.key]) nodes[x.key] = x.kind === 'rollup' || x.kind === 'more' ? null : one(outMs, SLO); if (!nodes[x.key]) delete nodes[x.key]; });
+  // The map's p95: the latency 95% of the volume through the middle stays under.
+  const mids = map.nodes.filter(x => x.side === 'm').map(x => ({ v: x.v, ms: midOf[x.key].ms })).sort((a, b) => a.ms - b.ms);
+  const tot = mids.reduce((a, x) => a + x.v, 0); let cum = 0, p95 = mids.length ? mids[mids.length - 1].ms : 0;
+  for (const m of mids) { cum += m.v; if (cum >= tot * 0.95) { p95 = m.ms; break; } }
+  const over = map.nodes.filter(x => (x.side === 'm' || x.side === 'r') && nodes[x.key] && nodes[x.key].health === 'slo').map(x => x.key);
+  return { nodes, ribbons, p95, over, wanMs, outMs };
 }

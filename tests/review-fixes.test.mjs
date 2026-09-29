@@ -31,7 +31,9 @@ test('a dismissed or resolved finding leaves every "on the table" figure, not on
   const v = vals(c);
   assert.match(v.pageVerdict, /^\$18,300\/mo on the table across 2 priced findings\./);
   c.state.tab = 'observe';
-  assert.equal(vals(c).flowTiles.find(t => t.key === 'could').v, '$18,300');
+  // The Sankey's Could save tile is the map's own avoidable egress since 2026-09-29
+  // ("the sankey widgets and the sankey graphic doesn't really match"); the head keeps the findings.
+  assert.match(vals(c).pageVerdict, /\$18,300\/mo/);
   assert.equal(vals(c).rollup.find(r => r.key === 'cost').value, '$18,300/mo');
 });
 

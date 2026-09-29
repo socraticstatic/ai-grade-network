@@ -1749,8 +1749,26 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const mapDim = s.obDim && s.obDim !== 'all' ? s.obDim : (obScope && obScope !== 'all' ? String(obScope).split(':')[0] : 'all');
   const appRegions = scopeApp ? est0.regionsList.filter(r => (r.tags || []).some(t => String(t).toLowerCase() === scopeApp.toLowerCase())).map(r => r.region) : [];
   const mapEst = obScope && obScope !== 'all' && !scopeCloud && !scopeApp ? R.applyScope(est0, obScope) : est0;
-  const map = F.buildMap(mapEst, inv, ob.flows, { open: mapOpen, filterRegion: mapRegion || scopeCloud || (appRegions.length ? appRegions : null), t: mapT, zoom: mapZoom,
-    leftBy: mapDim === 'first' ? 'access' : mapDim === 'site' ? 'class' : 'region', rightBy: mapDim === 'app' ? 'app' : 'cloud', tag: scopeApp });
+  const mapOpts = { open: mapOpen, filterRegion: mapRegion || scopeCloud || (appRegions.length ? appRegions : null), t: mapT, zoom: mapZoom,
+    leftBy: mapDim === 'first' ? 'access' : mapDim === 'site' ? 'class' : 'region', rightBy: mapDim === 'app' ? 'app' : 'cloud', tag: scopeApp,
+    // Since sets the window the map averages; Replay plays it (2026-09-29).
+    window: { growth: R.growthOf(s.obWindow || '30d') } };
+  // The Cost view prices the map from the Cost page's own figures (2026-09-29):
+  // on AT&T at your AT&T charges per Gbps on AT&T, outside at the site egress
+  // bucket per Gbps outside. Its avoidable share is what could be saved.
+  const mapRates = (() => {
+    const bk = (est0.buckets || []), sb = bk.find(b => b.id === 'ipsec') || bk.find(b => b.id === 'misc') || { today: 0, fabric: 0 };
+    const sp0 = F.flowSplit(est0, ob.flows), attMo = attChargeRows(est0, inv).reduce((a, r) => a + r.v, 0);
+    return { att: sp0.sitesFab > 0 ? attMo / sp0.sitesFab : 0, out: sp0.pubV > 0 ? sb.today / sp0.pubV : 0, saveShare: sb.today > 0 ? Math.max(0, sb.today - sb.fabric) / sb.today : 0 };
+  })();
+  const mapG = F.buildMap(mapEst, inv, ob.flows, mapOpts);
+  const map = mapMode === 'cost' ? F.buildMap(mapEst, inv, ob.flows, { ...mapOpts, weigh: { fab: mapRates.att, pub: mapRates.out } }) : mapG;
+  // Latency against the SLO, node by node, from the Gbps map (the same keys in both).
+  const perf = F.perfOf(mapG, est0);
+  const mapHealth = ['ok', 'risk', 'slo'].includes(s.mapHealth) ? s.mapHealth : 'all';
+  const healthOfKey = (k) => (perf.nodes[k] || {}).health || null;
+  const rankH = { ok: 0, risk: 1, slo: 2 };
+  const ribHealth = (r, i) => (map === mapG && i != null && perf.ribbons[i] ? perf.ribbons[i].health : [healthOfKey(r.from), healthOfKey(r.to)].filter(Boolean).sort((a, b) => rankH[b] - rankH[a])[0] || 'ok');
   // Lighting order: hover, then the pattern lens, then the selection. A selected connection (cx-…) lights nothing on the map; the filter does that.
   const hovLit = F.litFor(map, mapHov); const selLit = mapSel && !mapSel.startsWith('cx-') ? F.litFor(map, mapSel) : null; const mapPattern = s.mapPattern || 'all'; const patLit = F.patternLit(map, mapPattern);
   // A drill traces its traffic across the map (2026-09-29): the branch, its
@@ -1758,12 +1776,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const tr = map.trace; const trOn = !!tr && !hovLit && !patLit && !selLit;
   const trAt = (nd) => !tr ? undefined : nd.side === 'm' ? tr.mid[nd.key] : nd.side === 'r' ? tr.dest[nd.key] : tr.src[nd.key];
   const trHas = (k) => !!tr && ((tr.mid[k] || 0) + (tr.dest[k] || 0) + (tr.src[k] || 0)) > 0.0005;
-  const nodeOp = (k) => hovLit ? (hovLit.keys.has(k) ? 1 : 0.3) : patLit ? (patLit.keys.has(k) ? 1 : 0.35) : selLit ? (selLit.keys.has(k) ? 1 : 0.6) : trOn ? (trHas(k) ? 1 : 0.4) : 1;
+  const nodeOp = (k) => hovLit ? (hovLit.keys.has(k) ? 1 : 0.3) : mapHealth !== 'all' && healthOfKey(k) ? (healthOfKey(k) === mapHealth ? 1 : 0.25) : patLit ? (patLit.keys.has(k) ? 1 : 0.35) : selLit ? (selLit.keys.has(k) ? 1 : 0.6) : trOn ? (trHas(k) ? 1 : 0.4) : 1;
   // The path filter dims what the viewer set aside (2026-09-28): On AT&T or Outside AT&T.
   const mapPath = s.mapPath || 'all';
   const pathOff = (priv) => (mapPath === 'att' && !priv) || (mapPath === 'out' && priv);
   // Sites fan into every path, so their ribbons rest lighter than the paths' own; hover isolates one region.
-  const ribOp = (i, priv, local) => { if (pathOff(priv)) return 0.1; const fromSite = !String((map.ribbons[i] || {}).from || '').startsWith('mid:'); const base = local ? 0.45 : priv ? (fromSite ? 0.4 : 0.6) : 0.36; return hovLit ? (hovLit.ribbons.has(i) ? 0.8 : 0.08) : patLit ? (patLit.ribbons.has(i) ? 0.8 : 0.07) : selLit ? (selLit.ribbons.has(i) ? 0.8 : 0.18) : trOn ? 0.1 : base; };
+  const ribOp = (i, priv, local) => { if (pathOff(priv)) return 0.1; if (!hovLit && mapHealth !== 'all' && ribHealth(map.ribbons[i] || {}, i) !== mapHealth) return 0.08; const fromSite = !String((map.ribbons[i] || {}).from || '').startsWith('mid:'); const base = local ? 0.45 : priv ? (fromSite ? 0.4 : 0.6) : 0.36; return hovLit ? (hovLit.ribbons.has(i) ? 0.8 : 0.08) : patLit ? (patLit.ribbons.has(i) ? 0.8 : 0.07) : selLit ? (selLit.ribbons.has(i) ? 0.8 : 0.18) : trOn ? 0.1 : base; };
   const closeBranch = (arr, key) => arr.filter(k => k !== key && !k.startsWith(key + '/'));
   const toggleOpen = (key, select) => { const isOpen = mapOpen.includes(key); set({ mapOpen: isOpen ? closeBranch(mapOpen, key) : [...mapOpen, key], ...(select ? { mapSel: key, panelTab: s.panelTab || 'overview' } : {}) }); };
   const STATE_FILL = { ok: dark ? '#c5cfd9' : '#1a2431', degraded: '#ff8500', slo: '#c9362c' };
@@ -1779,13 +1797,32 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const rampMs = (ramp) => { const rs = est.regionsList.filter(r => r.priv && (F.RAMP_NAME[r.ramp] || 'NetBond') === ramp); return rs.length ? Math.round(rs.reduce((a, r) => a + (r.fab || 0), 0) / rs.length) : null; };
   const pubMs = (() => { const rs = est.regionsList.filter(r => !r.priv); return rs.length ? Math.round(rs.reduce((a, r) => a + (r.pub || 0), 0) / rs.length) : null; })();
   const siteB = (est.buckets || []).find(b => b.id === 'ipsec') || (est.buckets || []).find(b => b.id === 'misc') || { today: 0, fabric: 0 };
+  const money = (v) => fmt(v >= 1000 ? Math.round(v / 100) * 100 : Math.round(v));
   const midSay = (nd) => {
-    if (nd.ramp) { const ms = rampMs(nd.ramp); return { sub: ms != null ? `p95 ${ms} ms · SLO ${F.SLO_PRIVATE} ms` : 'on AT&T', hover: `${nd.name}: ${gbpsW(nd.v)} on AT&T${ms != null ? ` · p95 ${ms} ms against a ${F.SLO_PRIVATE} ms SLO${ms > F.SLO_PRIVATE ? ', over' : ''}` : ''}` }; }
+    const q = perf.nodes[nd.key] || { ms: 0, slo: F.SLO, health: 'ok' };
+    // Cost: what the path costs a month, and what moving it would save.
+    if (mapMode === 'cost') {
+      // The legend says on-AT&T paths are at your AT&T rate; the line would only repeat it.
+      if (nd.priv) return { sub: '', hover: `${nd.name}: ${money(nd.v)}/mo on AT&T, priced from your AT&T charges` };
+      const save = nd.v * mapRates.saveShare;
+      return { sub: `${money(save)}/mo to save`, hover: `${nd.name}: ${money(nd.v)}/mo of egress outside AT&T · ${money(save)}/mo to save on AT&T` };
+    }
+    // Performance: the path's p95 against its SLO, in words.
+    if (mapMode === 'slo') return { sub: q.health === 'slo' ? `over the ${q.slo} ms SLO by ${q.ms - q.slo} ms` : q.health === 'risk' ? `near the ${q.slo} ms SLO` : `within the ${q.slo} ms SLO`, hover: `${nd.name}: p95 ${q.ms} ms against a ${q.slo} ms SLO` };
+    if (nd.ramp) return { sub: `p95 ${q.ms} ms · SLO ${q.slo} ms`, hover: `${nd.name}: ${gbpsW(nd.v)} on AT&T · p95 ${q.ms} ms against a ${q.slo} ms SLO${q.health === 'slo' ? ', over' : ''}` };
     if (nd.wan) return { sub: 'to your data centers', hover: `Private WAN: ${gbpsW(nd.v)} from your sites to your own data centers, on AT&T` };
     if (nd.ipsec) return { sub: `${fmt(siteB.today)}/mo egress`, hover: `IPsec over the internet: ${gbpsW(nd.v)} · ${fmt(siteB.today)}/mo egress · ${fmt(Math.max(0, siteB.today - siteB.fabric))}/mo to save on AT&T` };
-    return { sub: pubMs != null ? `p95 ${pubMs} ms · SLO ${F.SLO} ms` : 'outside AT&T', hover: `Internet: ${gbpsW(nd.v)} outside AT&T${pubMs != null ? ` · p95 ${pubMs} ms` : ''}` };
+    return { sub: `p95 ${q.ms} ms · SLO ${q.slo} ms`, hover: `Internet: ${gbpsW(nd.v)} outside AT&T · p95 ${q.ms} ms` };
   };
-  const mapNodes = map.nodes.map((nd, i) => { const left = nd.side === 'l'; const mid = nd.side === 'm'; const say = mid ? midSay(nd) : null; const selected = nd.key === mapSel; return { ...nd, key: 'n' + i, id: nd.key, label: nd.name, subLabel: say ? say.sub : nd.sub || '', hasSub: !!(say ? say.sub : nd.sub), pathSay: say ? say.sub : '', pathBg: say && say.sub ? 'var(--bg-base)' : 'transparent', pathPad: say && say.sub ? '0 5px' : '0', sy: nd.y + nd.h / 2 + 10, subPad: 26, subInk: say && !nd.priv ? (dark ? '#ffa25e' : '#b85f00') : 'var(--text-light)', vF: (() => { const tot = nd.tot || nd.v, t = trAt(nd), g = (v) => (v >= 1 ? v.toFixed(1) + ' Gbps' : Math.round(v * 1000) + ' Mbps'); if (t == null || t >= tot - 0.01) return g(tot); return (t >= 1) === (tot >= 1) ? `${g(t).replace(/ \S+$/, '')} of ${g(tot)}` : `${g(t)} of ${g(tot)}`; })(), lx: left || mid ? nd.x2 + 6 : nd.x - 236, ly: nd.y + nd.h / 2 - 10, lw: 230, justify: left || mid ? 'flex-start' : 'flex-end', fill: mid ? (nd.priv ? '#0057b8' : nd.local ? '#00838f' : (dark ? '#5d6f80' : '#8a949c')) : nd.key === 'dest:local' ? '#00838f' : nd.kind === 'rollup' ? (dark ? '#5d6f80' : '#b8c2cc') : STATE_FILL[nd.state] || STATE_FILL.ok, op: nodeOp(nd.key), stroke: selected ? 'var(--cta)' : 'transparent', caret: nd.hasChildren ? (nd.open ? '−' : '+') : nd.kind === 'rollup' ? '‹' : '', cursor: nd.hasChildren || !mid ? 'pointer' : 'default', deltaF: (nd.delta >= 0 ? '+' : '') + nd.delta + '%', deltaColor: nd.delta > 10 ? '#1e7a3c' : nd.delta < -10 ? '#c9362c' : 'var(--text-light)', showDelta: mapMode === 'delta', click: () => { if (nd.kind === 'rollup') { if (nd.foldsKey && !nd.tailOnly) set({ mapOpen: closeBranch(mapOpen, nd.foldsKey), mapSel: null }); return; } if (nd.kind === 'more') { const parts = (nd.parentKey || '').split('/'); if (parts.length >= 2) set({ vol: { kind: 'metro', cls: nd.siteCls || parts[0].replace(/^site:/, ''), metro: nd.metro || parts[1] }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [] }); return; } if (nd.kind === 'wlmore') { openWorkloads(nd.regionName, nd.vpcId, nd.subnetId); return; } if (nd.kind === 'workload' && nd.wlSel) { set({ mapSel: nd.wlSel, panelTab: 'overview' }); return; } if (nd.hasChildren) { if (mapOpen.includes(nd.key)) set({ mapSel: nd.panelSel || nd.key, panelTab: 'overview' }); else toggleOpen(nd.key); } else set({ mapSel: nd.panelSel || nd.key, panelTab: s.panelTab || 'overview' }); }, pin: () => set({ mapPins: (s.mapPins || []).includes(nd.key) ? (s.mapPins || []).filter(k => k !== nd.key) : [...(s.mapPins || []).slice(-1), nd.key] }), enter: () => set({ mapHov: nd.key }), leave: () => set({ mapHov: null }), title: say ? say.hover : nd.hasChildren ? (nd.open ? 'Click to close' : 'Click to open in place') : 'Click to select', depthPad: (nd.depth || 0) * 8 }; });
+  const HEALTH_FILL = { ok: dark ? '#4caf50' : '#1e7a3c', risk: dark ? '#ffa25e' : '#e07b00', slo: '#c9362c' };
+  const mapNodes = map.nodes.map((nd, i) => { const left = nd.side === 'l'; const mid = nd.side === 'm'; const say = mid ? midSay(nd) : null; const selected = nd.key === mapSel; return { ...nd, key: 'n' + i, id: nd.key, label: nd.name, subLabel: say ? say.sub : nd.sub || '', hasSub: !!(say ? say.sub : nd.sub), pathSay: say ? say.sub : '', pathBg: say && say.sub ? 'var(--bg-base)' : 'transparent', pathPad: say && say.sub ? '0 5px' : '0', sy: nd.y + nd.h / 2 + 10, subPad: 26, subInk: say && !nd.priv ? (dark ? '#ffa25e' : '#b85f00') : 'var(--text-light)', vF: (() => { const tot = nd.tot || nd.v, t = trAt(nd), q = perf.nodes[nd.key];
+      // Each view reads in its own unit (2026-09-29): Gbps, dollars a month, or p95.
+      if (mapMode === 'slo' && q) return `p95 ${q.ms} ms`;
+      if (mapMode === 'cost') return t == null || t >= tot - 0.5 ? `${money(tot)}/mo` : `${money(t)} of ${money(tot)}/mo`;
+      const g = (v) => (v >= 1 ? v.toFixed(1) + ' Gbps' : Math.round(v * 1000) + ' Mbps'); if (t == null || t >= tot - 0.01) return g(tot); return (t >= 1) === (tot >= 1) ? `${g(t).replace(/ \S+$/, '')} of ${g(tot)}` : `${g(t)} of ${g(tot)}`; })(),
+    health: (perf.nodes[nd.key] || {}).health || null, lx: left || mid ? nd.x2 + 6 : nd.x - 236, ly: nd.y + nd.h / 2 - 10, lw: 230, justify: left || mid ? 'flex-start' : 'flex-end', fill: mapMode === 'slo' && perf.nodes[nd.key] ? HEALTH_FILL[perf.nodes[nd.key].health]
+      : mapMode === 'cost' && nd.kind !== 'rollup' ? ((mid ? !nd.priv : (nd.v - (nd.fabV || 0)) > (nd.fabV || 0)) ? (dark ? '#ffa25e' : '#e07b00') : '#0057b8')
+      : mid ? (nd.priv ? '#0057b8' : nd.local ? '#00838f' : (dark ? '#5d6f80' : '#8a949c')) : nd.key === 'dest:local' ? '#00838f' : nd.kind === 'rollup' ? (dark ? '#5d6f80' : '#b8c2cc') : STATE_FILL[nd.state] || STATE_FILL.ok, op: nodeOp(nd.key), stroke: selected ? 'var(--cta)' : 'transparent', caret: nd.hasChildren ? (nd.open ? '−' : '+') : nd.kind === 'rollup' ? '‹' : '', cursor: nd.hasChildren || !mid ? 'pointer' : 'default', deltaF: (nd.delta >= 0 ? '+' : '') + nd.delta + '%', deltaColor: nd.delta > 10 ? '#1e7a3c' : nd.delta < -10 ? '#c9362c' : 'var(--text-light)', showDelta: mapMode === 'delta', click: () => { if (nd.kind === 'rollup') { if (nd.foldsKey && !nd.tailOnly) set({ mapOpen: closeBranch(mapOpen, nd.foldsKey), mapSel: null }); return; } if (nd.kind === 'more') { const parts = (nd.parentKey || '').split('/'); if (parts.length >= 2) set({ vol: { kind: 'metro', cls: nd.siteCls || parts[0].replace(/^site:/, ''), metro: nd.metro || parts[1] }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [] }); return; } if (nd.kind === 'wlmore') { openWorkloads(nd.regionName, nd.vpcId, nd.subnetId); return; } if (nd.kind === 'workload' && nd.wlSel) { set({ mapSel: nd.wlSel, panelTab: 'overview' }); return; } if (nd.hasChildren) { if (mapOpen.includes(nd.key)) set({ mapSel: nd.panelSel || nd.key, panelTab: 'overview' }); else toggleOpen(nd.key); } else set({ mapSel: nd.panelSel || nd.key, panelTab: s.panelTab || 'overview' }); }, pin: () => set({ mapPins: (s.mapPins || []).includes(nd.key) ? (s.mapPins || []).filter(k => k !== nd.key) : [...(s.mapPins || []).slice(-1), nd.key] }), enter: () => set({ mapHov: nd.key }), leave: () => set({ mapHov: null }), title: say ? say.hover : nd.hasChildren ? (nd.open ? 'Click to close' : 'Click to open in place') : 'Click to select', depthPad: (nd.depth || 0) * 8 }; });
   // The two questions the map has to answer without being read closely:
   // where does the traffic go, and how much of it rides AT&T. Both come out
   // of the ribbons already drawn - the destination leg carries the volume and
@@ -1876,23 +1913,28 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const outGbps = Math.max(0.001, map.ribbons.filter(r => !r.priv && !r.local && String(r.from).startsWith('mid:')).reduce((a, r) => a + r.v, 0));
   // The map draws what sites send, so its outside ribbons are priced against site egress: the IPsec bucket where there is one, else internet egress.
   const siteBucket = egBuckets.find(b => b.id === 'ipsec') || egBuckets.find(b => b.id === 'misc') || { today: 0, fabric: 0 };
-  const perGbps = siteBucket.today / outGbps, perSave = Math.max(0, siteBucket.today - siteBucket.fabric) / outGbps;
-  const ribFill = (r) => { const base = r.local ? '#4db6ac' : r.priv ? '#3374cc' : (dark ? '#5d6f80' : '#8a949c'); return mapMode === 'cost' ? (r.priv ? (dark ? '#3374cc' : '#6f9fd8') : (dark ? '#ffa25e' : '#e07b00')) : mapMode === 'delta' ? (r.delta > 10 ? '#1e7a3c' : r.delta < -10 ? '#c9362c' : (dark ? '#5d6f80' : '#b8c2cc')) : mapMode === 'slo' ? (r.state === 'slo' ? '#c9362c' : base) : base; };
+  void outGbps; const perGbps = mapRates.out, perSave = mapRates.out * mapRates.saveShare; void perGbps; void perSave;
+  const ribFill = (r, i) => { const base = r.local ? '#4db6ac' : r.priv ? '#3374cc' : (dark ? '#5d6f80' : '#8a949c'); if (mapMode === 'slo') return HEALTH_FILL[ribHealth(r, i)]; return mapMode === 'cost' ? (r.priv ? (dark ? '#3374cc' : '#6f9fd8') : (dark ? '#ffa25e' : '#e07b00')) : mapMode === 'delta' ? (r.delta > 10 ? '#1e7a3c' : r.delta < -10 ? '#c9362c' : (dark ? '#5d6f80' : '#b8c2cc')) : mapMode === 'slo' ? (r.state === 'slo' ? '#c9362c' : base) : base; };
   const mapTrace = tr ? tr.ribbons.map((r, i) => ({ key: 't' + i, d: r.d, fill: ribFill(r), op: trOn ? 0.85 : 0 })) : [];
-  const mapRibbons = map.ribbons.map((r, i) => { const fill = ribFill(r); return { key: 'r' + i, d: r.d, fill, op: ribOp(i, r.priv, r.local), pulse: mapMode === 'state' && r.state === 'degraded' ? 'skPulse 1.6s ease-in-out infinite' : 'none', sleeve: (mapMode === 'state' || mapMode === 'slo') && r.state === 'slo' ? '#c9362c' : 'transparent', title: mapMode === 'cost' ? `${r.v.toFixed(1)} Gbps · ${r.priv ? 'on AT&T, at the private rate' : `outside AT&T · ${fmt(Math.round(r.v * perGbps / 100) * 100)}/mo egress · ${fmt(Math.round(r.v * perSave / 100) * 100)}/mo to save on AT&T`}` : `${r.v.toFixed(2)} Gbps · ${r.local ? 'stays in the region' : r.priv ? 'AT&T network' : 'outside AT&T'} · ${(F.PATTERNS.find(x => x[0] === r.pattern) || ['', r.pattern])[1]} · ${(r.delta >= 0 ? '+' : '') + r.delta}% vs prior window` }; });
+  const mapRibbons = map.ribbons.map((r, i) => { const fill = ribFill(r, i); return { key: 'r' + i, d: r.d, fill, op: ribOp(i, r.priv, r.local), pulse: mapMode === 'state' && r.state === 'degraded' ? 'skPulse 1.6s ease-in-out infinite' : 'none', sleeve: (mapMode === 'state' || mapMode === 'slo') && r.state === 'slo' ? '#c9362c' : 'transparent', title: mapMode === 'cost' ? `${money(r.v)}/mo · ${r.priv ? 'on AT&T, at your AT&T rate' : `egress outside AT&T · ${money(r.v * mapRates.saveShare)}/mo to save on AT&T`}` : mapMode === 'slo' ? (() => { const q = perf.ribbons[i] || {}; return `${r.v.toFixed(2)} Gbps · p95 ${q.ms} ms against a ${q.slo} ms SLO${q.health === 'slo' ? ', over' : q.health === 'risk' ? ', near it' : ''}`; })() : `${r.v.toFixed(2)} Gbps · ${r.local ? 'stays in the region' : r.priv ? 'AT&T network' : 'outside AT&T'} · ${(F.PATTERNS.find(x => x[0] === r.pattern) || ['', r.pattern])[1]} · ${(r.delta >= 0 ? '+' : '') + r.delta}% vs prior window` }; });
   // The head's rollups double as filters; the control is the view (2026-09-28).
   const kShort = (n) => (n >= 1000 ? '$' + (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'k' : '$' + n);
   const sloN = (ob.flows || []).filter(f => f.latency > F.SLO).length;
-  const tileOn = (k) => ({ traffic: mapMode === 'state' && mapPath === 'all', onatt: mapPath === 'att', egress: mapMode === 'cost' && mapPath === 'all', p95: false, could: mapMode === 'cost' && mapPath === 'out', slo: mapMode === 'slo' })[k];
+  const tileOn = (k) => ({ traffic: mapMode === 'state' && mapPath === 'all', onatt: mapPath === 'att', cost: mapMode === 'cost' && mapPath === 'all', p95: mapMode === 'slo' && mapHealth === 'all', could: mapMode === 'cost' && mapPath === 'out', slo: mapMode === 'slo' && mapHealth === 'slo' })[k];
+  // The tiles read the map they sit on (Micah, 2026-09-29: "the sankey widgets
+  // and the sankey graphic doesn't really match"): its traffic, its p95, its
+  // dollars, what it could save, and what it draws red.
+  const outG = Math.max(0, mapG.total - mapG.fabV);
+  const costT = mapG.fabV * mapRates.att + outG * mapRates.out, couldT = outG * mapRates.out * mapRates.saveShare;
   const winTrends = R.trends(ob, s.obWindow || '30d');
   const flowTiles = [
-    ['traffic', 'Traffic', map.total.toFixed(1), 'Gbps', { mapMode: 'state', mapPath: 'all' }],
-    ['p95', 'P95 latency', String((ob.kpis || []).find(k => k.key === 'p95') ? ob.kpis.find(k => k.key === 'p95').v : '—'), 'ms', { mapMode: 'slo', mapPath: 'all' }],
+    ['traffic', 'Traffic', mapG.total.toFixed(1), 'Gbps', { mapMode: 'state', mapPath: 'all', mapHealth: 'all' }],
+    ['p95', 'P95 latency', String(perf.p95), 'ms', { mapMode: 'slo', mapPath: 'all', mapHealth: 'all' }],
     // Sites, counted as sites (2026-09-29 audit: a traffic share wore a sites label).
     ['onatt', 'Sites on AT&T', (() => { const all = (mapEst.sites || []).reduce((a, x) => a + S.countOf(x.name), 0), att = (mapEst.sites || []).filter(onAtt).reduce((a, x) => a + S.countOf(x.name), 0); return `${att.toLocaleString('en-US')} of ${all.toLocaleString('en-US')}`; })(), '', { mapMode: 'state', mapPath: 'att' }],
-    ['egress', 'Egress', fmt(Math.round(egSpend / 100) * 100), '/mo', { mapMode: 'cost', mapPath: 'all' }],
-    ['could', 'Could save', fmt(totalSave), '/mo', { mapMode: 'cost', mapPath: 'out' }],
-    ['slo', 'Over SLO', String(sloN), sloN === 1 ? 'flow' : 'flows', { mapMode: 'slo', mapPath: 'all' }],
+    ['cost', 'Cost', money(costT), '/mo', { mapMode: 'cost', mapPath: 'all', mapHealth: 'all' }],
+    ['could', 'Could save', money(couldT), '/mo', { mapMode: 'cost', mapPath: 'out', mapHealth: 'all' }],
+    ['slo', 'Over SLO', String(perf.over.length), 'on the map', { mapMode: 'slo', mapPath: 'all', mapHealth: 'slo' }],
   ].map(([k, l, v, u, patch]) => { const on = !!tileOn(k);
     // Since is the window the tiles compare against (2026-09-29 audit): now vs the prior window.
     const tr = ({ traffic: 'thr', p95: 'p95' })[k] ? (winTrends.find(x => x.key === ({ traffic: 'thr', p95: 'p95' })[k]) || null) : null;
@@ -1917,6 +1959,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const flowViews = [['state', 'Traffic'], ['cost', 'Cost'], ['slo', 'Performance']].map(([k, l]) => { const on = mapMode === k || (k === 'state' && mapMode === 'delta'); return { key: k, label: l, on, ...seg(on), go: () => set({ mapMode: k }) }; });
   const flowPaths = [['all', 'All paths'], ['att', 'On AT&T'], ['out', 'Outside AT&T']].map(([k, l]) => { const on = mapPath === k; return { key: k, label: l, on, ...seg(on), go: () => set({ mapPath: k }) }; });
   const mapHeads = map.heads.map((h, i) => ({ ...h, key: 'h' + i,
+    // A column says what its figures are in: dollars a month, or p95.
+    text: h.kind === 'col' && mapMode === 'cost' ? `${h.text} · $/mo` : h.kind === 'col' && mapMode === 'slo' ? `${h.text} · p95` : h.text,
     // A centred head gets no trailing rule: the rule is 240px wide and would
     // run straight through the head to its right.
     fx: h.anchor === 'end' ? h.x - 240 : h.anchor === 'middle' ? h.x - 120 : h.x, fy: h.y - 14,
@@ -2195,7 +2239,17 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const dash = { ...mixVals, ...insightVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ queueOpen: true }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
     obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
-    scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0 && !!s.obPickOpen, scopeLabel, mapTotal: map.total,
+    scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0 && !!s.obPickOpen, scopeLabel, mapTotal: mapG.total, mapP95: perf.p95,
+    // The legend says what the colors mean in the view you are in.
+    mapLegend: (mapMode === 'cost' ? [['#0057b8', 'On AT&T, at your AT&T rate'], [dark ? '#ffa25e' : '#e07b00', 'Outside AT&T, at egress rates']]
+      : mapMode === 'slo' ? [[HEALTH_FILL.ok, 'Within SLO'], [HEALTH_FILL.risk, 'Near SLO'], [HEALTH_FILL.slo, 'Over SLO']]
+      : [['#3374cc', 'On AT&T'], ['#8a949c', 'Outside AT&T'], ['#ff8500', 'Degraded'], ['#c9362c', 'Over SLO']]).map(([color, label]) => ({ key: label, color, label })),
+    // Health filters the map (Micah, 2026-09-29: "on observe, add a 'health' filter").
+    healthChips: [['all', 'All'], ['ok', 'Healthy'], ['risk', 'At risk'], ['slo', 'Over SLO']].map(([k, l]) => { const on = mapHealth === k; return { key: k, label: l, on, ...seg(on), go: () => set({ mapHealth: k }) }; }),
+    // Replay plays the Since window, not a fixed 24 hours (2026-09-29).
+    replayLabel: (s.obWindow || '30d') === '1h' ? 'Replay the last hour' : `Replay ${winLabelOf(s)}`,
+    replayFrom: (s.obWindow || '30d') === '1h' ? '1 hour ago' : `${winLabelOf(s)} ago`,
+    mapMoment: mapT == null ? winLabelOf(s) : (() => { const d = (1 - mapT) * winDaysOf(s); return d <= 0.001 ? 'now' : d >= 2 ? `${Math.round(d)} days ago` : d * 24 >= 2 ? `${Math.round(d * 24)} hours ago` : `${Math.max(1, Math.round(d * 1440))} minutes ago`; })(),
     clearScope: () => set({ obScope: 'all', obDim: 'all', obPickOpen: false, mapOpen: [], mapSel: null }), scopeIsAll: !obScope || obScope === 'all',
     mapFiltersOpen, mapFiltersShut: !mapFiltersOpen,
     toggleMapFilters: () => set({ mapFiltersOpen: !mapFiltersOpen }),
@@ -2897,6 +2951,20 @@ function connectVals(s, set, est, go, ob) {
   return { lenses, lens, lensQ, lensVerdict: R.lensVerdict(est, lens), matrix, pathsSub, matrixHeads: R.LENSES.map(l => ({ key: l.id, label: l.label, hi: l.id === lens, color: l.id === lens ? 'var(--link)' : 'var(--text-light)' })), lensRegions, hasLensRegions: rs.length > 0, isCloudLayer: s.layer === 'cloud', notCloudLayer: s.layer !== 'cloud' };
 }
 function egressBaseFor(est, ob) { const bucketToday = (est.buckets || []).reduce((a, b) => a + b.today, 0); return bucketToday || ob.egressMo || 0; }
+/** AT&T's own monthly charges for an estate: on-ramps, hosted VPCs, L3
+ *  attaches. Cost › AT&T charges lists them; the Sankey's Cost view prices
+ *  the on-AT&T paths with them, so the two agree (2026-09-29). */
+function attChargeRows(est, invAll) {
+  const attached = est.regionsList.filter(r => r.priv);
+  const inScope = new Set(est.regionsList.map(r => r.region));
+  const vpcsAll = (invAll || []).flatMap(c => (c.regions || []).filter(r => inScope.has(r.region)).flatMap(r => r.vpcs || []));
+  const hostedN = vpcsAll.filter(v => v.managed).length, l3N = vpcsAll.filter(v => v.priv && !v.managed).length;
+  return [
+    { key: 'nb', label: 'NetBond on-ramps', sub: `${attached.length} ${attached.length === 1 ? 'region' : 'regions'} × $1,800`, v: attached.length * 1800 },
+    { key: 'hv', label: 'Hosted VPC / VNet', sub: `${hostedN} × $2,400`, v: hostedN * 2400 },
+    { key: 'l3', label: 'Customer L3 attach', sub: `${l3N} × $400`, v: l3N * 400 },
+  ].filter(r => r.v > 0);
+}
 function costVals(s, set, est, invAll, ob, go, c) {
   const base = egressBaseFor(est, ob);
   const bT = (est.buckets || []).reduce((a, b) => a + b.today, 0), bF = (est.buckets || []).reduce((a, b) => a + b.fabric, 0);
@@ -2921,11 +2989,8 @@ function costVals(s, set, est, invAll, ob, go, c) {
   const inScope = new Set(est.regionsList.map(r => r.region));
   const vpcsAll = invAll.flatMap(c => c.regions.filter(r => inScope.has(r.region)).flatMap(r => r.vpcs));
   const hostedN = vpcsAll.filter(v => v.managed).length, l3N = vpcsAll.filter(v => v.priv && !v.managed).length;
-  const chargeRows = [
-    { key: 'nb', label: 'NetBond on-ramps', sub: `${attached.length} ${attached.length === 1 ? 'region' : 'regions'} × $1,800`, v: attached.length * 1800 },
-    { key: 'hv', label: 'Hosted VPC / VNet', sub: `${hostedN} × $2,400`, v: hostedN * 2400 },
-    { key: 'l3', label: 'Customer L3 attach', sub: `${l3N} × $400`, v: l3N * 400 },
-  ].filter(r => r.v > 0);
+  void hostedN; void l3N;
+  const chargeRows = attChargeRows(est, invAll);
   const chargeMax = Math.max(1, ...chargeRows.map(r => r.v));
   const attTotal = chargeRows.reduce((a, r) => a + r.v, 0);
   const attCharges = chargeRows.map(r => ({ ...r, vF: fmt(r.v), w: Math.round(r.v / chargeMax * 100) + '%' }));

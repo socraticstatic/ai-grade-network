@@ -100,10 +100,13 @@ export function applyScope(est, scope) {
   }
   return est;
 }
+// Every window Since offers compares (2026-09-29 audit): the hour and day barely move, the year a lot.
+const TREND = { '1h': [0.01, -0.01, 0, 0.01, 0, 0.01, 0], '24h': [0.02, -0.02, 0.01, 0.03, 0.01, 0.02, 0.01], '7d': [0.04, -0.03, 0.01, 0.06, 0.02, 0.05, 0.03], '30d': [0.11, -0.08, -0.02, 0.18, 0.06, 0.14, 0.09], '90d': [0.31, -0.19, -0.05, 0.42, 0.15, 0.36, 0.22], '6m': [0.52, -0.24, -0.07, 0.66, 0.21, 0.55, 0.34], '12m': [0.88, -0.31, -0.1, 1.05, 0.33, 0.9, 0.51] };
+/** How much traffic grew across a Since window: the Sankey averages and replays it. */
+export const growthOf = (window) => (TREND[window] || [0])[0];
 export function trends(ob, window) {
   const f = { '7d': 1, '30d': 1, '90d': 1 }[window] || 1;
-  // Every window Since offers compares (2026-09-29 audit): the hour and day barely move, the year a lot.
-  const d = { '1h': [0.01, -0.01, 0, 0.01, 0, 0.01, 0], '24h': [0.02, -0.02, 0.01, 0.03, 0.01, 0.02, 0.01], '7d': [0.04, -0.03, 0.01, 0.06, 0.02, 0.05, 0.03], '30d': [0.11, -0.08, -0.02, 0.18, 0.06, 0.14, 0.09], '90d': [0.31, -0.19, -0.05, 0.42, 0.15, 0.36, 0.22], '6m': [0.52, -0.24, -0.07, 0.66, 0.21, 0.55, 0.34], '12m': [0.88, -0.31, -0.1, 1.05, 0.33, 0.9, 0.51] }[window] || [0, 0, 0, 0, 0, 0, 0];
+  const d = TREND[window] || [0, 0, 0, 0, 0, 0, 0];
   return ob.kpis.map((k, i) => { const delta = d[i] || 0; const good = (i === 1 || i === 2 || i === 3) ? delta <= 0 : delta >= 0; return { ...k, delta: (delta >= 0 ? '+' : '') + Math.round(delta * 100) + '%', deltaTone: good ? 'var(--success)' : 'var(--warning)', arrow: delta >= 0 ? '↑' : '↓', vs: `vs prior ${window}`, vsShort: `vs ${window}` }; });
 }
 export function anomalies(est, ob) {

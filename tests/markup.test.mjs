@@ -210,14 +210,15 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Explain parts as one line of chips (2026-09-29 audit): div 884 -> 883, span 607 -> 604, button 254 -> 255.
 // The drill traces through the map (2026-09-29): sc-for 182 -> 183.
 // Map values and path lines sit on a backing (2026-09-29): span 604 -> 605.
+// Sankey views, legend and Health (2026-09-29): div 883 -> 884, span 605 -> 602, sc-for 183 -> 185, button 255 -> 256.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 883],
-    ['span', /<span\b/g, /<\/span>/g, 605],
+    ['div', /<div\b/g, /<\/div>/g, 884],
+    ['span', /<span\b/g, /<\/span>/g, 602],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 344],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 183],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 185],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 255],
+    ['button', /<button\b/g, /<\/button>/g, 256],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];
