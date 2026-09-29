@@ -2020,7 +2020,29 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     stateInk: g.degraded ? 'var(--error)' : g.hot ? 'var(--warning)' : 'var(--success)',
     stateWord: g.degraded ? 'Degraded' : g.hot ? 'Saturating' : 'Healthy',
     capacity: `${g.used} of ${g.purchased}`,
-    rowBg: mapSel === g.id ? 'var(--bg-accent)' : 'transparent', click: () => set({ mapSel: g.id, mapRegion: mapRegion === g.region ? null : g.region, panelTab: 'impact' }), port: composeFor(go, est0.regionsList.find(x => x.region === g.region) || {}) }));
+    rowBg: mapSel === g.id ? 'var(--bg-accent)' : 'transparent', click: () => set({ mapSel: g.id, mapRegion: mapRegion === g.region ? null : g.region, panelTab: 'impact' }), port: composeFor(go, est0.regionsList.find(x => x.region === g.region) || {}),
+    // Bandwidth in the open (Micah, 2026-09-29: "more transparency into bandwidth
+    // capacity and utilization"): what you bought, average and peak, what is
+    // left, the window's run, and when the port fills at the window's growth.
+    ...(() => { const row = (conns.rows || []).find(r => r.id === g.id) || {}; const capG = row.cap || 10, peakG = +(capG * g.pct / 100).toFixed(1), avgG = +(peakG * 0.82).toFixed(1);
+      const grow = R.growthOf(s.obWindow || '30d'), days = winDaysOf(s), perDay = grow > 0 ? Math.log(1 + grow) / days : 0;
+      const toFull = peakG >= capG * 0.99 ? 0 : perDay > 0 ? Math.log(capG / peakG) / perDay : Infinity;
+      const fullIn = toFull === 0 ? 'Now' : !isFinite(toFull) || toFull > 365 ? 'Over a year' : toFull < 63 ? `in ${Math.max(1, Math.round(toFull / 7))} ${Math.round(toFull / 7) === 1 ? 'week' : 'weeks'}` : `in ${Math.round(toFull / 30)} months`;
+      const series = X.utilSeries(g.id + ':' + (s.obWindow || '30d'), 24, g.pct, grow);
+      return { capG, peakG, avgG, headG: +(capG - peakG).toFixed(1), toFull, portsF: row.bwShort || '10G', rampName: F.RAMP_NAME[g.ramp] || g.ramp,
+        avgF: `${avgG} Gbps`, peakF: `${peakG} Gbps`, headF: `${+(capG - peakG).toFixed(1)} Gbps`, avgW: Math.min(100, avgG / capG * 100).toFixed(1) + '%', peakX: Math.min(100, g.pct).toFixed(1) + '%',
+        fullIn, fullInk: toFull < 63 ? 'var(--warning)' : 'var(--text-light)',
+        spark: series.map((v, i) => ({ key: 'b' + i, h: v.toFixed(1) + '%', bg: v >= 80 ? 'var(--warning)' : 'var(--viz-1)' })) }; })() }));
+  const bwTiles = (() => { const rows = gaugeRows; if (!rows.length) return [];
+    const cap = rows.reduce((a, g) => a + g.capG, 0), avg = rows.reduce((a, g) => a + g.avgG, 0), peak = rows.reduce((a, g) => a + g.peakG, 0);
+    const busiest = rows.slice().sort((a, b) => b.pct - a.pct)[0], first = rows.slice().sort((a, b) => a.toFull - b.toFull)[0];
+    const ports = (conns.rows || []).reduce((a, r) => a + (r.ports || 1), 0);
+    return [
+      { key: 'cap', l: 'Capacity bought', v: `${Math.round(cap)} Gbps`, sub: `${ports} ${ports === 1 ? 'port' : 'ports'} on ${rows.length} ${rows.length === 1 ? 'connection' : 'connections'}` },
+      { key: 'avg', l: 'Carrying', v: `${avg.toFixed(1)} Gbps`, sub: `${Math.round(avg / cap * 100)}% of capacity on average` },
+      { key: 'peak', l: 'Peak', v: `${peak.toFixed(1)} Gbps`, sub: `busiest ${busiest.label} at ${busiest.pct}%` },
+      { key: 'head', l: 'Headroom', v: `${Math.round(cap - peak)} Gbps`, sub: `${first.label} fills first, ${first.fullIn.toLowerCase()}` },
+    ]; })();
   const queueRows = OD.queue(est0, ob, conns, null).map(q => ({ ...q, tone: q.sev >= 2 ? 'var(--error)' : 'var(--warning)', go: () => { if (q.action === 'impact') set({ mapSel: q.connId, mapRegion: q.region, panelTab: 'impact' }); else if (q.action === 'port' || q.action === 'attach') composeFor(go, est0.regionsList.find(x => x.region === q.region) || {})(); else if (q.action === 'steer') set({ steered: [...(s.steered || []), q.flowId] }); }, select: () => set({ mapSel: q.connId || (q.region ? null : null), mapRegion: q.region || null, panelTab: 'impact' }), wlF: q.wl ? q.wl.toLocaleString('en-US') + ' workloads' : '' }));
   const panel0 = OD.panelFor(mapSel, { est: est0, inv, flows: ob.flows, map, conns });
   const panelTab = s.panelTab || 'overview';
@@ -2318,6 +2340,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     mapFilterCount: mapFiltersOn ? `${mapFiltersOn} filter${mapFiltersOn === 1 ? '' : 's'}` : 'No filters',
     mapFilterToggleWord: mapFiltersOpen ? 'Hide' : 'Show', mapZoomLabel: map.zoom ? `zoomed ×${map.zf.toFixed(1)}` : '', hasMapZoom: !!map.zoom, mapSub: `${map.total.toFixed(1)} Gbps now, compared with ${winLabelOf(s)} · what the sites send, ${MIX.crossed > 0.001 ? Math.round(map.total / MIX.crossed * 100) : 0}% of everything that crosses a mid mile · ${Math.round(map.fabV / (map.total || 1) * 100)}% of it on AT&T${mapRegion ? ' · filtered to ' + mapRegion : ''}${mapT != null ? ' · ' + Math.round(24 - mapT * 24) + 'h ago' : ''}`, mapTrail, hasMapTrail: mapTrail.length > 0,
     // The trail sits over the column that was drilled: a cloud's never over the sites (2026-09-29).
+    bwTiles, hasBwTiles: bwTiles.length > 0,
     mapTrailSide: /^(cloud|dc|dest):/.test(trailKey || '') ? 'r' : 'l', mapTrailPos: /^(cloud|dc|dest):/.test(trailKey || '') ? 'right:132px' : 'left:72px', mapUp: climb, canClimb: !!mapSel, mapKey, modes, hasMapRegion: !!mapRegion, mapRegion: mapRegion || '', clearMapRegion: () => set({ mapRegion: null }), mapT: mapT == null ? 100 : Math.round(mapT * 100), setMapT: (e) => set({ mapT: +e.target.value / 100 }), mapPlaying: !!s.mapPlay, playLabel: s.mapPlay ? '❚❚' : '▶', playMap, resetMapT: () => set({ mapT: null }), replayOpen: !!s.replayOpen, toggleReplay: () => set({ replayOpen: !s.replayOpen, mapPlay: false, mapT: s.replayOpen ? null : s.mapT }), wholeWindow: () => set({ mapT: null, mapPlay: false }), gaugeRows, hasGauges: gaugeRows.length > 0, panel, hasPanel: !!panel, hasPanelOverlay: !!panel, drawerRight: panel ? '380px' : '0px', noPanel: !panel, dashCols: 'minmax(0,1fr)', mapJumpOpen: !!s.mapJumpOpen, mapJumpQ: s.mapJumpQ || '', setMapJumpQ: (e) => set({ mapJumpQ: e.target.value }), mapJumpKey: (e) => { if (e.key === 'Enter') jumpTo(s.mapJumpQ); if (e.key === 'Escape') set({ mapJumpOpen: false }); }, openJump: () => set({ mapJumpOpen: !s.mapJumpOpen }), pins: (s.mapPins || []).map(k => ({ key: k, name: (map.nodes.find(x => x.key === k) || { name: k }).name, v: ((map.nodes.find(x => x.key === k) || { v: 0 }).v).toFixed(1) + ' Gbps', unpin: () => set({ mapPins: (s.mapPins || []).filter(x => x !== k) }) })), hasPins: (s.mapPins || []).length > 0 };
   // Sources (Micah, 14:33: "where can I connect to my current ecosystem?"): what feeds the
   // picture, and the door to add more. The cloud rows are a read of est.accounts through

@@ -217,12 +217,13 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Findings: pictures and a table (2026-09-29): div 884 -> 894, span 604 -> 623, sc-if 344 -> 345, sc-for 190 -> 195, button 256 -> 258.
 // At a glance: rings and apps (2026-09-29): div 894 -> 889, span 623 -> 643, sc-if 345 -> 346, button 258 -> 261.
 // At a glance: rings and apps (2026-09-29): span 643 -> 644.
+// Connections: bandwidth in the open, in the Observe card (2026-09-29): span 644 -> 660, sc-for 195 -> 197.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 889],
-    ['span', /<span\b/g, /<\/span>/g, 644],
+    ['span', /<span\b/g, /<\/span>/g, 660],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 346],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 195],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 197],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 261],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],

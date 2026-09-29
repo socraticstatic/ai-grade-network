@@ -20,6 +20,15 @@ const FAB = '#0057b8', PUB = '#8a949c';
 const n = (x) => x.toLocaleString('en-US');
 
 /** 24-point utilization line in a 100x24 box, seeded so it never jitters between renders. */
+/** A connection's utilization across the Since window, one value per step
+ *  (2026-09-29): it grows by the window's growth to where it is now, with
+ *  seeded day-to-day noise, and its highest point is the peak the row reports. */
+export function utilSeries(seed, points, peakPct, growth) {
+  const r = rnd(hash(seed) || 1), start = peakPct / (1 + Math.max(0, growth || 0));
+  const raw = Array.from({ length: points }, (_, i) => Math.max(1, (start + (peakPct - start) * i / Math.max(1, points - 1)) * (0.86 + r() * 0.14)));
+  const mx = Math.max(...raw) || 1;
+  return raw.map(v => Math.max(1, Math.min(99, v / mx * peakPct)));
+}
 export function sparkline(seed, points = 24, base = 50, amp = 20) {
   const r = rnd(hash(seed) || 1); let v = base;
   const pts = Array.from({ length: points }, (_, i) => { v = Math.max(2, Math.min(98, v + (r() - 0.5) * amp)); return [i / (points - 1) * 100, 24 - v / 100 * 22 - 1]; });
