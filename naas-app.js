@@ -20,6 +20,7 @@ import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
 import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER } from './naas-policy-layers.js';
+import { appsOf } from './naas-apps.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product', s9: 'Help' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
@@ -1032,7 +1033,7 @@ export function pageRows(rows, size, page, setPage) {
   return { rows: rows.slice(p * size, p * size + size), pager: { label: n ? `${p * size + 1}–${Math.min(n, (p + 1) * size)} of ${n}` : '0 of 0', many: pages > 1,
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
-const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
+const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
   saveRows: ['savePage', 5, 'savePager', 'savePageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 function pageLists(out, s, set) {
   for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
@@ -1451,6 +1452,27 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       cta: 'Add a backup', go: go('s4') }] : []),
   ];
   const stats = A.inventoryStats(est, inv);
+  // At a glance with oomph, down to the app level (Micah, 2026-09-29): four
+  // rings whose centres are the header's counts, then the apps themselves.
+  const apps = appsOf(est, inv, ob.flows);
+  const privWlN = Math.round(apps.reduce((a, x) => a + x.wl * x.onAtt, 0)), pubWlN = Math.max(0, stats.workloads - privWlN);
+  const ringOf = (key, title, rows, centre, centreSub, head, cta, go2) => { const d = R.donut(rows); return { key, title, ring: d.ring, centre, centreSub, head, cta, go: go2,
+    legend: d.rows.slice(0, 4).map(r => ({ key: r.label, color: r.color, label: r.label, n: enf(r.v) })) }; };
+  const byCloudRegs = {}; eRegs.forEach(r => { byCloudRegs[r.cloud] = (byCloudRegs[r.cloud] || 0) + 1; });
+  const glanceRings = [
+    ringOf('sites', 'Sites', Object.values(eSvcTally).sort((a, b) => b.n - a.n).map((t, i) => ({ label: t.v.label, v: t.n, color: t.v.onAtt ? `var(--viz-${[1, 2, 3, 5][i % 4]})` : 'var(--viz-4)' })), enf(eSiteN), 'sites', eAttN === eSiteN ? 'All on AT&T' : `${enf(eAttN)} on AT&T`, 'Your sites', eToSites),
+    ringOf('clouds', 'Clouds', Object.entries(byCloudRegs).sort((a, b) => b[1] - a[1]).map(([c, n]) => ({ label: c, v: n })), enf(eRegs.length), eRegs.length === 1 ? 'region' : 'regions', `${ePrivRegs.length} private`, 'Your clouds', () => set({ estPanel: 'clouds' })),
+    ringOf('workloads', 'Workloads', [{ label: 'On AT&T', v: privWlN, color: 'var(--viz-1)' }, { label: 'On the internet', v: pubWlN, color: 'var(--viz-6)' }], enf(stats.workloads), 'workloads', pubWlN ? `${enf(pubWlN)} on the internet` : 'None on the internet', 'Connect them', go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })),
+    ringOf('apps', 'Apps', apps.map(x => ({ label: x.tag, v: x.wl })), enf(apps.length), apps.length === 1 ? 'app' : 'apps', `${enf(apps.reduce((a, x) => a + x.exposed, 0))} workloads exposed`, 'Tags', go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'tags' })),
+  ];
+  const wlMax = Math.max(1, ...apps.map(x => x.wl));
+  const H_INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: 'var(--error)' };
+  const appAll = apps.map(x => ({ key: x.tag, name: x.tag, sub: x.topApps.join(', '), wl: x.wl, exposed: x.exposed, wlF: enf(x.wl), wlW: Math.max(3, Math.round(x.wl / wlMax * 100)) + '%',
+    runsIn: x.regions.slice(0, 2).join(', ') + (x.regions.length > 2 ? ` +${x.regions.length - 2}` : ''), runsTitle: x.regions.join(', '),
+    onAttF: Math.round(x.onAtt * 100) + '%', onAttW: Math.round(x.onAtt * 100) + '%', exposedF: x.exposed ? enf(x.exposed) : 'None', exposedInk: x.exposed ? 'var(--error)' : 'var(--text-light)',
+    gbpsF: x.gbps >= 1 ? x.gbps.toFixed(1) + ' Gbps' : Math.round(x.gbps * 1000) + ' Mbps', p95F: `${x.p95} ms`, healthInk: H_INK[x.health], healthTitle: `p95 ${x.p95} ms against a ${x.slo} ms SLO`,
+    // An app opens its own records: the Logs filtered to its tag.
+    go: () => { go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null })(); set({ logQ: x.tag, logPage: 0 }); } }));
   const selWl = inv.flatMap(cl => cl.regions.flatMap(r => r.vpcs)).filter(v => sel.includes(v.id)).reduce((a, v) => a + v.wl, 0);
   const pubWl = est.regionsList.filter(r => !r.priv).reduce((a, r) => a + r.wl, 0);
   const attachN = selWl || pubWl;
@@ -2404,7 +2426,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   };
   return {
     ...drawerVals,
-    invTree: s.tagView ? tagTree(inv, tree, chip) : tree, tagView: !!s.tagView, cloudView: !s.tagView, toggleTagView: () => set({ tagView: !s.tagView }), tagViewUb: s.tagView ? 'var(--cta)' : 'transparent', tagViewColor: s.tagView ? 'var(--link)' : 'var(--text-body)', cloudViewUb: !s.tagView ? 'var(--cta)' : 'transparent', cloudViewColor: !s.tagView ? 'var(--link)' : 'var(--text-body)', hasTree: tree.length > 0, invStats: [{ key: 's', v: stats.sites, l: 'sites' }, { key: 'c', v: stats.clouds, l: 'clouds' }, { key: 'r', v: stats.regions, l: 'regions' }, { key: 'w', v: stats.workloads.toLocaleString('en-US'), l: 'workloads' }, { key: 'a', v: stats.attached, l: 'attached' }, { key: 'e', v: stats.exposed, l: 'exposed' }],
+    invTree: s.tagView ? tagTree(inv, tree, chip) : tree, tagView: !!s.tagView, cloudView: !s.tagView, toggleTagView: () => set({ tagView: !s.tagView }), tagViewUb: s.tagView ? 'var(--cta)' : 'transparent', tagViewColor: s.tagView ? 'var(--link)' : 'var(--text-body)', cloudViewUb: !s.tagView ? 'var(--cta)' : 'transparent', cloudViewColor: !s.tagView ? 'var(--link)' : 'var(--text-body)', hasTree: tree.length > 0, invStats: [{ key: 's', v: stats.sites.toLocaleString('en-US'), l: 'sites' }, { key: 'c', v: stats.clouds, l: 'clouds' }, { key: 'r', v: stats.regions, l: 'regions' }, { key: 'w', v: stats.workloads.toLocaleString('en-US'), l: 'workloads' }, { key: 'a', v: stats.attached, l: 'attached' }, { key: 'e', v: stats.exposed.toLocaleString('en-US'), l: 'exposed workloads' }],
     expandAll: () => set({ inv: { ...openMap, ...Object.fromEntries(openKeys.map(k => [k, true])) } }), collapseAll: () => set({ inv: {} }), collapsedLabel: Object.values(openMap).some(Boolean) ? 'Expanded view' : 'Collapsed view',
     // No invented split (2026-09-29 audit): nothing in the data says which of these are on AT&T.
     overflowRow: est.regionsExtra ? `${est.regionsExtra.toLocaleString('en-US')} smaller regions rolled up · no traffic data yet` : '', hasOverflow: !!est.regionsExtra, overflowW: est.regionsExtra ? '60%' : '0%',
@@ -2456,7 +2478,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         else { set({ jumpHit: `Jumped to ${hit.label}`, tagView: false, treeOrMap: 'tree', inv: { ...(s.inv || {}), [hit.cloudId]: true, [hit.regionId]: true, [hit.vpcId]: true } }); after('vpc:' + hit.vpcId); }
       };
       return { jumpQ: s.jumpQ || '', setJumpQ: (e) => set({ jumpQ: e.target.value, jumpHit: '' }), jumpKey: (e) => { if (e.key === 'Enter') jumpTo(); }, jumpGo: jumpTo, jumpHit: s.jumpHit || '', hasJumpHit: !!s.jumpHit,
-        newStrip, newOnly, haveCards, lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
+        newStrip, newOnly, haveCards, glanceRings, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
         // Three tabs, one panel at a time (2026-09-28, no scrolling).
         // Group the picture's sites (notes, 2026-09-29): by region, or by how they attach.
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),

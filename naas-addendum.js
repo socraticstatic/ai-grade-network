@@ -172,7 +172,10 @@ export function inventoryStats(est, clouds) {
   const vpcs = clouds.flatMap(c => c.regions.flatMap(r => r.vpcs));
   const regions = clouds.reduce((a, c) => a + c.regions.length, 0);
   const workloads = clouds.reduce((a, c) => a + c.wl, 0);
-  return { sites: est.sitesCount || est.sites.length, clouds: clouds.length, regions, workloads, attached: vpcs.filter(v => v.priv).length, exposed: vpcs.filter(v => v.tags.includes('internet-facing')).length };
+  // Sites are buildings, as everywhere else ("Remote sites (212)" is 212); exposed counts
+  // workloads, as the app level does (2026-09-29).
+  const exposed = vpcs.reduce((a, v) => a + v.subnets.reduce((b, sn) => b + (sn.workloads || []).filter(w => w.exposed).length, 0), 0);
+  return { sites: (est.sites || []).reduce((a, x) => a + S.countOf(x.name), 0) || est.sitesCount || 0, clouds: clouds.length, regions, workloads, attached: vpcs.filter(v => v.priv).length, exposed };
 }
 
 // ---------- Observe ----------

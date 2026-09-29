@@ -55,8 +55,9 @@ test('the Act on it strip is gone from Estate; the window and Review new live in
   assert.equal(a, -1, 'the Estate still carries its Act on it strip');
   const tabs = HTML.slice(HTML.indexOf('aria-label="Estate views"'), HTML.indexOf('aria-label="Estate views"') + 3000);
   assert.match(tabs, /setRange/, 'the window left the Estate tab row');
-  const ins = HTML.slice(HTML.indexOf('aria-label="Estate insights"'), HTML.indexOf('aria-label="Estate insights"') + 6000);
-  assert.match(ins, /<sc-for list="\{\{ haveCards \}\}"/);
-  assert.match(ins, /<sc-for list="\{\{ lackCards \}\}"/);
+  // The insight cards became rings, apps and a gap line each (Micah, 2026-09-29: "at a glance needs more oomph").
+  const ins = HTML.slice(HTML.indexOf('aria-label="Estate at a glance"'), HTML.indexOf('aria-label="Estate at a glance"') + 12000);
+  assert.match(ins, /<sc-for list="\{\{ glanceRings \}\}"/);
+  assert.match(ins, /<sc-for list="\{\{ glanceGaps \}\}"/);
 });
 

@@ -215,14 +215,16 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Spend joins Savings and Forecast; charges in two columns (2026-09-29): div 878 -> 880.
 // Policies by layer (2026-09-29): div 880 -> 884, span 597 -> 604, sc-if 343 -> 344, sc-for 186 -> 190.
 // Findings: pictures and a table (2026-09-29): div 884 -> 894, span 604 -> 623, sc-if 344 -> 345, sc-for 190 -> 195, button 256 -> 258.
+// At a glance: rings and apps (2026-09-29): div 894 -> 889, span 623 -> 643, sc-if 345 -> 346, button 258 -> 261.
+// At a glance: rings and apps (2026-09-29): span 643 -> 644.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 894],
-    ['span', /<span\b/g, /<\/span>/g, 623],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 345],
+    ['div', /<div\b/g, /<\/div>/g, 889],
+    ['span', /<span\b/g, /<\/span>/g, 644],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 346],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 195],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 258],
+    ['button', /<button\b/g, /<\/button>/g, 261],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];
