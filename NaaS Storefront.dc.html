@@ -1324,7 +1324,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <sc-if value="{{ obIsLogsPage }}" hint-placeholder-val="{{ false }}">
   <div style="display:grid;gap:16px">
 <div role="tablist" aria-label="Log kind" style="display:flex;align-items:center;border-bottom:1px solid var(--border-secondary)"><sc-for list="{{ logTabs }}" as="lt" hint-placeholder-count="2"><button role="tab" aria-selected="{{ lt.on }}" onClick="{{ lt.go }}" style="border:0;border-bottom:2px solid {{ lt.line }};background:transparent;padding:6px 2px;margin-right:18px;font:inherit;font-size:15px;line-height:22px;font-weight:{{ lt.weight }};color:{{ lt.color }};cursor:pointer;white-space:nowrap">{{ lt.label }}</button></sc-for></div>
-<div id="sec-logs" class="fx-card" style="gap:12px;padding:16px 24px">
+<div id="sec-logs" style="display:grid;gap:12px">
   <div class="fx-card-head" style="align-items:center"><div style="min-width:0"><sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}"><div class="fx-card-sub">{{ logCount }} · {{ logNote }}</div></sc-if><sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}"><div class="fx-card-sub">{{ actCount }} · {{ actNote }}</div></sc-if></div><sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ clearLogs }}" style="flex:none;height:28px;padding:0 12px;font-size:12px">Clear filters</button></sc-if></div><sc-if value="{{ explainOn }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:10px;padding:14px 16px;border:1px solid var(--border-secondary);border-left:3px solid var(--cta);border-radius:12px;background:var(--bg-wash)"><div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-width:0"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--link);white-space:nowrap">Explaining</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ explainLabel }}</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap">{{ explainValue }}</span><button onClick="{{ clearExplain }}" style="margin-left:auto;flex:none;height:26px;padding:0 12px;border:1px solid var(--border-primary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Show every record</button></div><div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty">{{ explainSub }} {{ explainCut }} <b style="font-weight:600;color:var(--text-body)">{{ explainCount }}</b></div><sc-if value="{{ hasExplainParts }}" hint-placeholder-val="{{ true }}"><div style="display:grid;gap:2px"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled);padding-bottom:2px">What makes it up</span><sc-for list="{{ explainParts }}" as="ep" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:minmax(110px,1fr) minmax(50px,150px) 48px 74px;gap:16px;align-items:center;height:26px;font-size:12px;line-height:16px;min-width:0"><span style="color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ep.label }}</span><span aria-hidden="true" style="display:block;height:8px;border-radius:9999px;background:var(--bg-neutral);overflow:hidden"><span style="display:block;height:8px;border-radius:9999px;width:{{ ep.w }};background:#3374cc"></span></span><span style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--text-heading)">{{ ep.share }}</span><span style="text-align:right;font-variant-numeric:tabular-nums;color:var(--text-light);white-space:nowrap">{{ ep.value }}</span></div></sc-for></div></sc-if></div></sc-if>
   <sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}">
   <button onClick="{{ toggleLogFilters }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 0;border:0;border-top:1px solid var(--border-secondary);background:transparent;font:inherit;text-align:left;cursor:pointer"><span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-disabled)">Filters</span><span style="font-size:12px;color:var(--text-light)">{{ logFilterCount }}</span><span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--link)">{{ logFilterToggleWord }}</span></button>
@@ -1338,7 +1338,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <div class="fx-chips" style="gap:6px"><sc-for list="{{ logPathChips }}" as="lp" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ lp.on }}" onClick="{{ lp.go }}" style="cursor:pointer;background:{{ lp.bg }};color:{{ lp.color }};border-color:{{ lp.border }}">{{ lp.label }}</button></sc-for><span style="width:10px"></span><sc-for list="{{ logActChips }}" as="la" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ la.on }}" onClick="{{ la.go }}" style="cursor:pointer;background:{{ la.bg }};color:{{ la.color }};border-color:{{ la.border }}">{{ la.label }}</button></sc-for></div>
   </div></sc-if>
   <sc-if value="{{ hasLogs }}" hint-placeholder-val="{{ true }}">
-  <div class="log-frame">
+  <div>
     <div class="dt">
       <div class="dt-h"><div class="dt-r">
         <div class="dt-c dt-th" style="width:9%">Time</div>
@@ -1362,13 +1362,14 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       </sc-for></div>
     </div>
   </div>
+  <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ logPager.label }}</span><button class="fx-btn" onClick="{{ logPager.prev }}" aria-label="Previous page" style="opacity:{{ logPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ logPager.next }}" aria-label="Next page" style="opacity:{{ logPager.nextOp }}">›</button></div>
   </sc-if>
   <sc-if value="{{ noLogs }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px">Nothing matches these filters.</div></sc-if>
   </sc-if>
   <sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}">
   <label class="fx-search" style="width:100%"><span aria-hidden="true"></span><input value="{{ actQ }}" onChange="{{ setActQ }}" placeholder="Person, action, region, policy" aria-label="Search user activity"></input></label>
   <sc-if value="{{ hasAct }}" hint-placeholder-val="{{ true }}">
-  <div class="log-frame">
+  <div>
     <div class="dt">
       <div class="dt-h"><div class="dt-r">
         <div class="dt-c dt-th" style="width:9%">When</div>
@@ -1390,6 +1391,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       </sc-for></div>
     </div>
   </div>
+  <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ actPager.label }}</span><button class="fx-btn" onClick="{{ actPager.prev }}" aria-label="Previous page" style="opacity:{{ actPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ actPager.next }}" aria-label="Next page" style="opacity:{{ actPager.nextOp }}">›</button></div>
   </sc-if>
   <sc-if value="{{ noAct }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px">No changes match that search.</div></sc-if>
   </sc-if>
@@ -1495,6 +1497,26 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <sc-if value="{{ hasCostMoves }}" hint-placeholder-val="{{ true }}">
     <div aria-label="Moves" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
       <sc-for list="{{ costMoves }}" as="cm" hint-placeholder-count="2"><div class="fx-card" style="padding:14px 18px"><div style="display:flex;align-items:center;gap:16px"><div style="display:grid;gap:2px;flex:1;min-width:0"><span style="font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cm.l }}</span><span style="display:flex;align-items:baseline;gap:6px;white-space:nowrap"><span style="font-size:22px;line-height:28px;font-weight:700;color:var(--text-heading)">{{ cm.v }}</span><span style="font-size:12px;color:var(--text-light)">{{ cm.u }}</span></span></div><button onClick="{{ cm.go }}" style="flex:none;height:36px;padding:0 18px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--cta-hover)">{{ cm.cta }}</button></div></div></sc-for>
+    </div>
+    </sc-if>
+    <!-- Forecast is a Cost view like Spend and Savings, not a drawer (Micah, 2026-09-29). -->
+    <sc-if value="{{ costPanelForecast }}" hint-placeholder-val="{{ false }}">
+    <div id="sec-forecast" class="fx-card" aria-label="90-day forecast" style="padding:16px 24px">
+      <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start">
+        <div style="display:grid;gap:12px;min-width:0">
+          <div class="fx-card-sub">Egress over the next 90 days: as is, against the moves above</div>
+          <div style="display:flex;gap:8px 16px;flex-wrap:wrap;font-size:12px;color:var(--text-body)"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:2px;background:var(--text-disabled)"></span>As is · {{ forecast.asIsQ }}/mo avg</span><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:2px;background:var(--cta)"></span>With the moves above · {{ forecast.movedQ }}/mo avg</span></div>
+          <svg viewBox="{{ fcVB }}" width="100%" preserveAspectRatio="none" role="img" aria-label="Egress forecast" style="display:block;height:calc(100vh - 560px);min-height:160px"><path d="{{ forecast.asIs }}" fill="none" stroke="var(--text-disabled)" stroke-width="2" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"></path><path d="{{ forecast.moved }}" fill="none" stroke="var(--cta)" stroke-width="2.5" vector-effect="non-scaling-stroke"></path></svg>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-light)"><span>Today</span><span style="font-weight:700;color:var(--success)">{{ forecast.diffQ }}/mo difference by day 90</span><span>+90 days</span></div>
+        </div>
+        <sc-if value="{{ hasCommitments }}" hint-placeholder-val="{{ true }}">
+        <div id="sec-commit" aria-label="Committed vs metered on-ramps" style="display:grid;gap:4px;min-width:0;padding-left:24px;border-left:1px solid var(--border-secondary)">
+          <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Committed vs metered on-ramps</div>
+          <div class="fx-card-sub" style="margin-bottom:6px">Commit where the metered bill already pays for it</div>
+          <sc-for list="{{ commitments }}" as="cm" hint-placeholder-count="2"><div onClick="{{ cm.explainGo }}" role="button" tabindex="0" style="cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border-secondary);font-size:12px;line-height:16px"><div style="min-width:0"><div style="font-weight:700;color:var(--text-heading)">{{ cm.region }}</div><div style="color:var(--text-light)">{{ cm.gbF }} GB/mo · metered {{ cm.metered }} · committed {{ cm.committed }}</div></div><div style="font-weight:700;color:{{ cm.tone }};white-space:nowrap">{{ cm.short }}</div></div></sc-for>
+        </div>
+        </sc-if>
+      </div>
     </div>
     </sc-if>
     <!-- Banked (notes, 2026-09-29): what acting saved, month by month, as a running total. -->
@@ -1720,21 +1742,6 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </sc-if>
   <sc-if value="{{ hasDrawerTagsNot }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 0;font-size:13px;color:var(--text-body)">No tags yet. They arrive with the first discovery run.</div></sc-if>
 </div>
-    </sc-if>
-    <sc-if value="{{ subIsForecast }}" hint-placeholder-val="{{ false }}">
-    <div id="sec-forecast" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;align-items:start">
-      <div class="fx-card" aria-label="90-day forecast">
-        <div class="fx-card-head"><div><h3 class="fx-card-title">90-day forecast</h3><div class="fx-card-sub">As is against the moves above</div></div></div>
-        <div style="display:grid;gap:12px">
-          <div style="display:flex;gap:8px 16px;flex-wrap:wrap;font-size:12px;color:var(--text-body)"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:2px;background:var(--text-disabled)"></span>As is · {{ forecast.asIsQ }}/mo avg</span><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:2px;background:var(--cta)"></span>With the moves above · {{ forecast.movedQ }}/mo avg</span></div>
-          <svg viewBox="{{ fcVB }}" width="100%" preserveAspectRatio="none" role="img" aria-label="Egress forecast" style="display:block;height:160px"><path d="{{ forecast.asIs }}" fill="none" stroke="var(--text-disabled)" stroke-width="2" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"></path><path d="{{ forecast.moved }}" fill="none" stroke="var(--cta)" stroke-width="2.5" vector-effect="non-scaling-stroke"></path></svg>
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-light)"><span>Today</span><span style="font-weight:700;color:var(--success)">{{ forecast.diffQ }}/mo difference by day 90</span><span>+90 days</span></div>
-        </div>
-        <sc-if value="{{ hasCommitments }}" hint-placeholder-val="{{ true }}">
-        <div class="fx-card" style="gap:0;padding:24px 24px 4px" aria-label="Committed vs metered on-ramps"><div class="fx-card-head" style="padding-bottom:8px"><div id="sec-commit"><h3 class="fx-card-title">Committed vs metered on-ramps</h3><div class="fx-card-sub">Commit where the metered bill already pays for it</div></div></div><sc-for list="{{ commitments }}" as="cm" hint-placeholder-count="2"><div onClick="{{ cm.explainGo }}" role="button" tabindex="0" style="cursor:pointer" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border-secondary);font-size:12px"><div><div style="font-weight:700;color:var(--text-heading)">{{ cm.region }}</div><div style="color:var(--text-light)">{{ cm.gbF }} GB/mo · metered {{ cm.metered }} · committed {{ cm.committed }}</div></div><div style="font-weight:700;color:{{ cm.tone }};text-align:right;white-space:nowrap">{{ cm.short }}</div></div></sc-for></div>
-        </sc-if>
-      </div>
-    </div>
     </sc-if>
     <sc-if value="{{ subIsCharges }}" hint-placeholder-val="{{ false }}">
       <sc-if value="{{ hasAttCharges }}" hint-placeholder-val="{{ true }}">
@@ -2388,7 +2395,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { screen: 's3', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36 }; }
+  constructor(p) { super(p); this.state = { screen: 's3', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36 }; }
   componentDidUpdate() {
     // Guarded on the instance, not on prevState: comparing against prevState
     // re-entered on the very setState this handler makes, and React counted

@@ -50,7 +50,6 @@ export const SUB_PANELS = {
     { key: 'templates', label: 'Templates', sec: 'sec-starting' },
   ],
   cost: [
-    { key: 'forecast', label: '90-day forecast', sec: 'sec-forecast' },
     { key: 'charges', label: 'AT&T charges', sec: 'sec-charges' },
   ],
 };
@@ -109,7 +108,7 @@ export const SECTIONS = {
   cost: [
     ['sec-egress', 'Spend', 'cloud'],
     ['sec-arbitrage', 'Savings', 'bill'],
-    ['forecast', 'Forecast', 'pie-chart'],
+    ['sec-forecast', 'Forecast', 'pie-chart'],
   ],
 };
 const TAB_LABEL = { connect: 'Connect', govern: 'Govern', observe: 'Observe', cost: 'Cost' };
@@ -176,7 +175,7 @@ export function init(c) {
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -1483,15 +1482,21 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     if (logQ && !`${r.srcName} ${r.srcSub} ${r.dstName} ${r.dstSub} ${r.proto}`.toLowerCase().includes(logQ)) return false;
     return true;
   });
-  const chipRow = (cur, opts, key) => opts.map(([k, l]) => ({ key: k, label: l, on: cur === k, go: () => set({ [key]: k }),
+  const chipRow = (cur, opts, key) => opts.map(([k, l]) => ({ key: k, label: l, on: cur === k, go: () => set({ [key]: k, logPage: 0 }),
     bg: cur === k ? 'var(--cta)' : 'var(--bg-base)', color: cur === k ? '#fff' : 'var(--text-heading)', border: cur === k ? 'var(--cta)' : 'var(--border-secondary)' }));
   const logPathChips = chipRow(logPath, [['all', 'Any path'], ['private', 'On AT&T'], ['public', 'Outside AT&T']], 'logPath');
   const logActChips = chipRow(logAct, [['all', 'Any action'], ['allow', 'Allowed'], ['deny', 'Denied']], 'logAct');
   const logDeny = logMatch.filter(r => r.deny).length;
   const logPub = logMatch.filter(r => r.path === 'public').length;
-  const flowRecords = logMatch.map(r => ({ ...r, key: r.id, actBg: r.deny ? (dark ? 'rgba(211,47,47,.2)' : '#fdecea') : 'var(--bg-wash)', actColor: r.deny ? 'var(--error)' : 'var(--text-body)',
+  // Logs is the page, and it pages to fit the fold rather than scrolling inside a box (Micah, 2026-09-29).
+  const pageOf = (rows, size, key) => { const n = rows.length, pages = Math.max(1, Math.ceil(n / size)), p = Math.min(Math.max(0, s[key] || 0), pages - 1);
+    return { rows: rows.slice(p * size, p * size + size), pager: { label: n ? `${p * size + 1}–${Math.min(n, (p + 1) * size)} of ${n}` : '0 of 0', hasPrev: p > 0, hasNext: p < pages - 1, prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) set({ [key]: p - 1 }); }, next: () => { if (p < pages - 1) set({ [key]: p + 1 }); } } }; };
+  const logPageSize = (s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen) ? 6 : 9;
+  const flowAll = logMatch.map(r => ({ ...r, key: r.id, actBg: r.deny ? (dark ? 'rgba(211,47,47,.2)' : '#fdecea') : 'var(--bg-wash)', actColor: r.deny ? 'var(--error)' : 'var(--text-body)',
     pathInk: r.path === 'public' ? 'var(--warning)' : 'var(--success)',
     pathWord: r.path === 'public' ? 'outside AT&T' : 'on AT&T' }));
+  const flowPage = pageOf(flowAll, logPageSize, 'logPage');
+  const flowRecords = flowPage.rows, logPager = flowPage.pager;
   // User activity: the other half of a log. Flow records say what the network
   // carried; these say who changed it. Every row is derived from something
   // that actually exists in the estate - a region that got attached, a policy
@@ -1534,12 +1539,15 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const ago = (m) => m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
   const actQ = (s.actQ || '').toLowerCase();
   const actMatch = actAll.filter(a => !actQ || (a.who + ' ' + a.verb + ' ' + a.target + ' ' + a.detail).toLowerCase().includes(actQ));
-  const actRows = actMatch.map((a, i) => ({
+  const actPageSize = 9;
+  const actAllRows = actMatch.map((a, i) => ({
     key: 'ua' + i, when: ago(a.mins), who: a.who, verb: a.verb, target: a.target, detail: a.detail,
     from: FROM[i % FROM.length], result: a.ok ? 'Applied' : 'Denied',
     resBg: a.ok ? 'var(--bg-wash)' : (dark ? 'rgba(211,47,47,.2)' : '#fdecea'),
     resInk: a.ok ? 'var(--text-body)' : 'var(--error)',
   }));
+  const actPage = pageOf(actAllRows, actPageSize, 'actPage');
+  const actRows = actPage.rows, actPager = actPage.pager;
   const logTab = s.logTab || 'flow';
   const logTabs = [['flow', 'Flow records'], ['user', 'User activity']].map(([k, l]) => ({
     key: k, label: k === 'flow' ? `${l} · ${logAll.length.toLocaleString('en-US')}` : `${l} · ${actAll.length}`,
@@ -1548,8 +1556,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   }));
   const actVals = {
     logTabs, onFlowTab: logTab === 'flow', onUserTab: logTab === 'user',
-    actRows, hasAct: actRows.length > 0, noAct: actRows.length === 0,
-    actQ: s.actQ || '', setActQ: (e) => set({ actQ: e.target.value }),
+    actRows, actPager, actPageSize, logPager, logPageSize, hasAct: actRows.length > 0, noAct: actRows.length === 0,
+    actQ: s.actQ || '', setActQ: (e) => set({ actQ: e.target.value, actPage: 0 }),
     actCount: `${actMatch.length} of ${actAll.length} changes`,
     actNote: `Who changed the network, from where, and whether it applied. Last 7 days.`,
   };
@@ -1570,7 +1578,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const logVals = {
     ...actVals, ...explainVals,
     flowRecords, logChips, logPathChips, logActChips,
-    logQ: s.logQ || '', setLogQ: (e) => set({ logQ: e.target.value }),
+    logQ: s.logQ || '', setLogQ: (e) => set({ logQ: e.target.value, logPage: 0 }),
     logCount: `${logMatch.length.toLocaleString('en-US')} of ${logAll.length.toLocaleString('en-US')} records`,
     logNote: logMatch.length ? `${logDeny} denied · ${logPub} outside AT&T · public destinations stay unresolved` : 'Nothing matches these filters.',
     hasLogs: logMatch.length > 0, noLogs: logMatch.length === 0,
@@ -1579,7 +1587,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     toggleLogFilters: () => set({ logFiltersOpen: !(s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen) }),
     logFilterCount: (() => { const k = (logQ ? 1 : 0) + (logPath !== 'all' ? 1 : 0) + (logAct !== 'all' ? 1 : 0) + (logPattern !== 'all' ? 1 : 0); return k ? `${k} filter${k === 1 ? '' : 's'}` : 'No filters'; })(),
     logFilterToggleWord: (s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen) ? 'Hide' : 'Show',
-    clearLogs: () => set({ logQ: '', logPath: 'all', logAct: 'all', logPattern: 'all' }),
+    clearLogs: () => set({ logQ: '', logPath: 'all', logAct: 'all', logPattern: 'all', logPage: 0 }),
   };
   const nextStop = { ...VD.observeNext(conns), go: go('s3', { layer: 'cloud', tab: 'govern' }) };
   // The gap, itemised. The page could show what you have and what the three
@@ -2587,12 +2595,12 @@ function shellVals(s, set, go, est, c, sched) {
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
             : id === 'sec-paths' ? (onS3('cloud', 'connect') && s.cnPage === 'options')
             : tab === 'govern' ? (onS3('cloud', tab) && (id === 'sec-starting' ? 'templates' : 'policies') === (s.govPanel || 'policies'))
-            : tab === 'cost' ? (onS3('cloud', tab) && (({ 'sec-egress': 'dest', 'sec-arbitrage': 'banked' })[id] || 'money') === (s.costPanel || 'money') && !(s.sub && s.sub.page === 'cost'))
+            : tab === 'cost' ? (onS3('cloud', tab) && (({ 'sec-egress': 'dest', 'sec-arbitrage': 'banked', 'sec-forecast': 'forecast' })[id] || 'money') === (s.costPanel || 'money') && !(s.sub && s.sub.page === 'cost'))
             : (onS3('cloud', tab) && activeSec === id && (tab !== 'observe' || !['insights', 'logs'].includes(s.obPage)));
           const goTo = isView ? (view === 'insights' || view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
             : id === 'sec-paths' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })
-            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: ({ 'sec-egress': 'dest', 'sec-arbitrage': 'banked' })[id] || 'money' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
+            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: ({ 'sec-egress': 'dest', 'sec-arbitrage': 'banked', 'sec-forecast': 'forecast' })[id] || 'money' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
           return { ...item(label, ic, goTo, cur, false, sub, isPanel || isView), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };
@@ -2703,7 +2711,7 @@ function shellVals(s, set, go, est, c, sched) {
   const subIsRun = subPanelNow === 'run';
   const subIsFound = subPanelNow === 'found';
   const subIsInsights = subPanelNow === 'insights', subIsLogs = subPanelNow === 'logs', subIsPolicies = subPanelNow === 'policies', subIsTags = subPanelNow === 'tags';
-  const subIsForecast = subPanelNow === 'forecast', subIsCharges = subPanelNow === 'charges';
+  const subIsCharges = subPanelNow === 'charges';
   // Manage credentials scrolled to a card that is now a panel. It opens it.
   const manageCreds = () => {
     go('s1', { discoverView: 'sources' })();
@@ -2720,7 +2728,7 @@ function shellVals(s, set, go, est, c, sched) {
     pills, railGroups, subNav, hasSubNav, pageTitle, credsLabel, credsTitle, manageCreds, showPageTitle, rangeValue, setRange, bellLabel, buildLabel: (typeof window !== 'undefined' && window.__naasVersion) ? `v${window.__naasVersion.build} · ${window.__naasVersion.date}` : '', hasBuildLabel: !!(typeof window !== 'undefined' && window.__naasVersion), railCollapsed, railExpanded: !railCollapsed, railToggleTitle: railCollapsed ? 'Expand navigation' : 'Collapse navigation', iconAndi: 'brand/andi-symbol.svg', iconCalendar: iconDir + '/checklist.svg', goBrowseClose: () => { go('s7')(); set({ demoOpen: false }); },
     topTabs, layerSubtitle, elevatorOpen: !!s.elevatorOpen, toggleElevator: () => set({ elevatorOpen: !s.elevatorOpen }), closeElevator: () => set(close), chevronRot: s.elevatorOpen ? 'rotate(180deg)' : 'rotate(0deg)', elevator,
     goDiscoverClose: goTab('s1'), goHomeClose: goTab('s3', { layer: 'cloud', tab: 'connect' }),
-    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, railIsSequence, needsYouLabel, estateExposedGo, ownsDiscovery, ownsTelemetry, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsAdd, subIsRun, subIsFound, subIsInsights, subIsLogs, subIsPolicies, subIsTags, subIsForecast, subIsCharges, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
+    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, railIsSequence, needsYouLabel, estateExposedGo, ownsDiscovery, ownsTelemetry, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsAdd, subIsRun, subIsFound, subIsInsights, subIsLogs, subIsPolicies, subIsTags, subIsCharges, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
   };
 }
 
@@ -2875,9 +2883,9 @@ function costVals(s, set, est, invAll, ob, go, c) {
     ],
     hasCostMoves: !!(top || pubSite),
     // One panel at a time (2026-09-28, no scrolling).
-    ...(() => { const cpk = ['money', 'dest', 'mile', 'bucket', ...(hasBank ? ['banked'] : [])].includes(s.costPanel) ? s.costPanel : 'money';
-      return { costPanels: [['money', 'Where the money is'], ...(hasBank ? [['banked', 'Banked']] : []), ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
-        costPanelMoney: cpk === 'money', costPanelBanked: cpk === 'banked', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
+    ...(() => { const cpk = ['money', 'dest', 'mile', 'bucket', 'forecast', ...(hasBank ? ['banked'] : [])].includes(s.costPanel) ? s.costPanel : 'money';
+      return { costPanels: [['money', 'Where the money is'], ...(hasBank ? [['banked', 'Banked']] : []), ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['forecast', 'Forecast']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
+        costPanelMoney: cpk === 'money', costPanelBanked: cpk === 'banked', costPanelForecast: cpk === 'forecast', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
     costStrip: { has: !!(top || pubSite), title: 'Act on it', text: [pubSite ? `${fmt(pubSite.pubPart)}/mo of egress still leaves ${pubSite.label.toLowerCase()} on a public first mile.` : '', top ? `Attaching ${top.region} moves ${top.wl} workloads to $0.02/GB and saves ${fmt(top.saveN)}/mo, the largest single move on the table.` : 'Every region is attached; the remaining lever is the commit table below.'].filter(Boolean).join(' '), cta: top ? `Attach ${top.region}` : 'Drill sites', go: top ? go('s4', { ...newOrder(prefillAttach(top)) }) : go('s1') },
     bySite, hasBySite: bySite.length > 0, bySiteTotalF: fmt(bySiteTotal), bySiteNote: `${fmt(siteRows.reduce((a, r) => a + r.pubPart, 0))}/mo still on a public first mile`, goSites: go('s1'),
     costDonuts, hasCostDonuts: costDonuts.length > 0,

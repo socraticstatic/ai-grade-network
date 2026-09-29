@@ -116,18 +116,20 @@ test('AT&T inventory rows are live and never say scanning', () => {
 test('Observe and Cost declare their drill-downs as panels', () => {
   // Policies and Tags joined Observe's drawer on 2026-09-28; Records stays a panel without a tab.
   assert.deepEqual(SUB_PANELS.observe.map(p => p.key), ['policies', 'tags']); // Insights and Logs left for pages (2026-09-28)
-  assert.deepEqual(SUB_PANELS.cost.map(p => p.key), ['forecast', 'charges']);
+  // Forecast left the drawer for a Cost tab (Micah, 2026-09-29: "why is forecast in a drawer").
+  assert.deepEqual(SUB_PANELS.cost.map(p => p.key), ['charges']);
 });
 
-test('Logs opens its page and Forecast opens the layer, neither scrolls', () => {
+test('Logs opens its page and Forecast opens its Cost tab, neither in a drawer', () => {
   const c = mkC({ screen: 's3', tab: 'observe' });
-  // Logs is a page of its own (2026-09-28); Forecast still opens the layer.
+  // Logs is a page of its own (2026-09-28); Forecast is a Cost tab (2026-09-29).
   vals(c).railGroups.flatMap(g => g.items).find(r => r.label === 'Logs').go();
   assert.equal(c.state.obPage, 'logs');
   assert.equal(c.state.sub, null);
   const k = mkC({ screen: 's3', tab: 'cost' });
   vals(k).railGroups.flatMap(g => g.items).find(r => r.label === 'Forecast').go();
-  assert.deepEqual(k.state.sub, { page: 'cost', panel: 'forecast' });
+  assert.equal(k.state.sub, null);
+  assert.equal(k.state.costPanel, 'forecast');
 });
 
 test('each drill-down section lives inside the layer, not on its page', async () => {
@@ -136,7 +138,7 @@ test('each drill-down section lives inside the layer, not on its page', async ()
   const a = HTML.indexOf('<aside aria-label="Discovery"');
   const z = HTML.indexOf('</aside>', a);
   const layer = HTML.slice(a, z);
-  for (const id of ['sec-forecast', 'sec-charges']) {
+  for (const id of ['sec-charges']) {
     assert.ok(layer.includes(`id="${id}"`), `${id} is still stacked on its page`);
   }
 });
@@ -153,7 +155,7 @@ test('each section in the layer sits under its own panel gate and no other', asy
   const want = {
     'sec-gap': 'subIsFound', 'sec-paths': 'subIsFound',
     'sec-obs-policies': 'subIsPolicies', 'sec-obs-tags': 'subIsTags',
-    'sec-forecast': 'subIsForecast', 'sec-charges': 'subIsCharges',
+    'sec-charges': 'subIsCharges',
   };
   const stack = [];
   const seen = new Set();
