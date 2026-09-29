@@ -11,7 +11,8 @@ import { defaults } from '../naas-app.js';
 // as well as a plain object patch, because naas-app.js uses both forms
 // internally (tests/gap-count.test.mjs's copy already had to grow this).
 export function mkC(extra = {}, base = {}) {
-  const state = { ...defaults(), view: 'trust', screen: 's3', layer: 'cloud', tab: 'connect', ...base, ...extra };
+  // The day is pinned (review, 2026-09-29): findings age and savings bank by the clock.
+  const state = { ...defaults(), nowIso: '2026-09-29T12:00:00Z', view: 'trust', screen: 's3', layer: 'cloud', tab: 'connect', ...base, ...extra };
   return {
     state,
     setState: (p) => { const patch = typeof p === 'function' ? p(state) : p; if (patch) Object.assign(state, patch); },

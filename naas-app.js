@@ -176,7 +176,7 @@ export function init(c) {
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -260,7 +260,7 @@ export function vals(c) {
   const hp = R.health(est0, obAll, steered);
   const conns = X.connections(est0, obAll);
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, ob), ...est0.findings] };
-  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
+  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -287,7 +287,8 @@ export function vals(c) {
   };
   const isEmpty = est.stage === 'empty', isMature = est.stage === 'mature', isPartial = est.stage === 'partial';
   // A finding's life (notes, 2026-09-29): seeded history under what the customer did here.
-  const lifeNow = new Date();
+  // One clock (review, 2026-09-29): state carries the day when given, so tests and demos do not drift.
+  const lifeNow = s.nowIso ? new Date(s.nowIso) : new Date();
   const life = lifeState(s, est);
   const findList = findingList(est, est0, ob, lifeNow);
   const openF = findList.filter(f => OPEN_STATES.includes(LC.lifeOf(f, life, lifeNow).state));
@@ -300,7 +301,9 @@ export function vals(c) {
   const pMatch = (f) => (f.persona || '').toLowerCase().startsWith(pKey) ? 1 : 0;
   const sortF = (arr) => arr.slice().sort((a, b) => (pMatch(b) - pMatch(a)) || ((b.save || 0) - (a.save || 0)));
   const personaTab = PERSONA_TAB[persona] || 'connect';
-  const totalSave = est.findings.filter(f => f.priced).reduce((a, f) => a + f.save, 0);
+  // What is on the table is what is still open: a dismissed or resolved finding leaves every figure (review, 2026-09-29).
+  const totalSave = openSave;
+  const estOpen = { ...est, findings: openF.filter(f => !f.event) };
 
   // ---- hero ----
   // Drills in place (2026-09-09): the left column explodes class → metro → site → paths, the right column region → VPC → subnet → workload. The band, the lane and the other column stay.
@@ -641,7 +644,7 @@ export function vals(c) {
   const degConn = conns.rows.find(r => r.degraded) || conns.rows.find(r => r.hot) || null;
   const firstPublic = est.regionsList.find(r => !r.priv) || null;
   const launchGo = { connect: go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' }), observe: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', mapSel: degConn ? degConn.id : null, mapRegion: degConn ? degConn.region : null, panelTab: 'impact' }), govern: go('s3', { layer: 'cloud', tab: 'govern' }), cost: go('s3', { layer: 'cloud', tab: 'cost' }) };
-  const rollup = X.launchCards({ est, ob, conns, totalSave, violations: violationsN, isEmpty }).map(r => ({ ...r, go: launchGo[r.key], hasSub: !!r.sub, barVis: r.bar !== null ? 'visible' : 'hidden', alarm: r.bar !== null && r.bar < 50, barColor: r.bar !== null && r.bar < 50 ? 'var(--warning)' : 'var(--cta)', barW: (r.bar || 0) + '%', hasBar: r.bar !== null, border: r.primary ? 'var(--cta)' : 'var(--border-secondary)', borderW: r.primary ? '2px' : '1px', hasEyebrow: !!r.eyebrow, doorInk: r.primary ? 'var(--cta)' : 'var(--link)', doorBg: r.primary ? 'var(--cta)' : 'transparent', doorColor: r.primary ? '#fff' : 'var(--link)', doorPad: r.primary ? '0 14px' : '0', doorBorder: r.primary ? '0' : '0' }));
+  const rollup = X.launchCards({ est: estOpen, ob, conns, totalSave, violations: violationsN, isEmpty }).map(r => ({ ...r, go: launchGo[r.key], hasSub: !!r.sub, barVis: r.bar !== null ? 'visible' : 'hidden', alarm: r.bar !== null && r.bar < 50, barColor: r.bar !== null && r.bar < 50 ? 'var(--warning)' : 'var(--cta)', barW: (r.bar || 0) + '%', hasBar: r.bar !== null, border: r.primary ? 'var(--cta)' : 'var(--border-secondary)', borderW: r.primary ? '2px' : '1px', hasEyebrow: !!r.eyebrow, doorInk: r.primary ? 'var(--cta)' : 'var(--link)', doorBg: r.primary ? 'var(--cta)' : 'transparent', doorColor: r.primary ? '#fff' : 'var(--link)', doorPad: r.primary ? '0 14px' : '0', doorBorder: r.primary ? '0' : '0' }));
 
   // ---- findings ----
   const findingCard = (f) => {
@@ -672,7 +675,7 @@ export function vals(c) {
       pattern: /internet|saas/i.test(b.name || '') ? 'internet' : /cross-cloud|inter/i.test(b.name || '') ? 'clouds' : /gpu|inference/i.test(b.name || '') ? 'internet' : null, parts: [] }), savedF: b.today > b.fabric ? fmt(b.today - b.fabric) : 'On AT&T', saved: b.today - b.fabric, action: b.today > b.fabric ? 'Steer this bucket' : 'Already steered', canSteer: b.today > b.fabric, steer: () => steerBucket(c, b, est), arb: `${fmt(b.today)}/mo today on ${b.cloud} · ${fmt(b.fabric)}/mo on AT&T · save ${fmt(b.today - b.fabric)}/mo` }));
   const steerable = buckets.filter(b => b.canSteer);
   const bTotal = buckets.reduce((a, b) => a + b.today, 0), bFab = buckets.reduce((a, b) => a + b.fabric, 0);
-  const costVerdict = VD.costVerdict(est, ob, totalSave, buckets);
+  const costVerdict = VD.costVerdict(estOpen, ob, totalSave, buckets);
   const kpis = isEmpty ? [] : kpiTiles(s, est);
   // The AT&T network picture opens on Home and Fabric; every other screen keeps a one-line strip and a "Show the AT&T network" door (audit finding 2).
   const heroScreen = ['s0', 's2'].includes(s.screen) || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect' && s.cnPage !== 'options');
@@ -868,7 +871,7 @@ export function vals(c) {
 
   return {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', themeTitle: s.theme === 'light' ? 'Dark mode' : 'Light mode', themeIsLight: s.theme !== 'dark', themeIsDark: s.theme === 'dark', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
-    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep }),
+    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep }),
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
     // which nulled s.order even when the live compose had not started an
     // outcome yet - exactly the state right after a marketplace product
@@ -2015,7 +2018,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // One findings list with a life each (notes, 2026-09-29). The events above
   // are part of it; the standing insights are the Signals cards, so they are
   // not repeated here.
-  const now = new Date();
+  const now = s.nowIso ? new Date(s.nowIso) : new Date();
   const life = lifeState(s, est);
   const PNAME = { FinOps: 'FinOps & SRE', 'Security and Compliance': 'Security & Compliance' };
   const TONE = { open: 'var(--warning)', ack: 'var(--link)', progress: 'var(--link)', resolved: 'var(--success)', snoozed: 'var(--text-disabled)', dismissed: 'var(--text-disabled)' };
@@ -2058,12 +2061,18 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const { f, l } = fdPick;
     const persist = (next) => { const all = { ...(s.findingLife || {}), [est.id]: next }; set({ findingLife: all }); try { localStorage.setItem('naas.life', JSON.stringify(all)); } catch (e) {} };
     const move = (to, extra) => () => { const next = LC.transition(life, f.key, to, { by: 'You', now, ...(extra || {}) }); if (next !== life) persist(next); };
-    const m = /\$([\d,]+)\/mo[^$]*\$([\d,]+)/.exec(f.head || '');
-    const beforeN = m ? +m[1].replace(/,/g, '') : f.priced ? Math.round(f.save / 0.78 / 100) * 100 : 0;
+    // The preview starts from the headline's own figures (review, 2026-09-29): two figures are today and after; one is today.
+    const m = /\$([\d,]+)\/mo[^$]*\$([\d,]+)/.exec(f.head || ''), m1 = /\$([\d,]+)\/mo/.exec(f.head || '');
+    const beforeN = m ? +m[1].replace(/,/g, '') : m1 ? +m1[1].replace(/,/g, '') : f.priced ? Math.round(f.save / 0.78 / 100) * 100 : 0;
     const afterN = m ? +m[2].replace(/,/g, '') : Math.max(0, beforeN - (f.save || 0));
-    const evidence = logAll.filter(r => f.event ? true : f.tab === 'govern' ? (r.deny || r.path === 'public') : f.tab === 'observe' ? true : r.path === 'public')
+    // The records behind this finding, not the page's busiest (review, 2026-09-29).
+    const EV = { crosscloud: r => r.pattern === 'clouds', ipsecegress: r => r.pattern === 'internet' && r.path === 'public', avoidable: r => r.pattern === 'internet' && r.path === 'public',
+      onecloud: r => r.path === 'public', ipsec: r => r.path === 'public', pci: r => r.pattern === 'internet', uninspected: r => r.pattern === 'internet', unsegmented: r => r.pattern === 'regions' || r.pattern === 'region' };
+    const evRegion = f.event && f.a && f.a.region;
+    const evHit = EV[f.kind] || (evRegion ? (r => `${r.srcSub} ${r.dstSub}`.includes(evRegion)) : f.tab === 'govern' ? (r => r.deny || r.path === 'public') : (() => true));
+    const evidence = logAll.filter(evHit)
       .slice().sort((x, y) => (+y.bytes || 0) - (+x.bytes || 0)).slice(0, 5)
-      .map(r => ({ key: r.id, time: r.time, src: r.srcName, dst: r.dstName, bytes: typeof r.bytes === 'number' ? r.bytes.toFixed(1) + ' GB' : String(r.bytes), path: r.path === 'public' ? 'outside AT&T' : 'on AT&T', pathInk: r.path === 'public' ? 'var(--warning)' : 'var(--success)' }));
+      .map(r => ({ key: r.id, pattern: r.pattern, time: r.time, src: r.srcName, dst: r.dstName, bytes: typeof r.bytes === 'number' ? r.bytes.toFixed(1) + ' GB' : String(r.bytes), path: r.path === 'public' ? 'outside AT&T' : 'on AT&T', pathInk: r.path === 'public' ? 'var(--warning)' : 'var(--success)' }));
     const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const day = (iso) => `${MON[+iso.slice(5, 7) - 1]} ${+iso.slice(8, 10)}`;
     const closed = f.history;
@@ -2076,7 +2085,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     })[l.state] || [];
     const rec = !f.event && !closed && OPEN_STATES.includes(l.state) && l.state !== 'progress' ? findingCard(f).rec : null;
     const ev = f.event ? anomalyRows.find(r => r.key === f.key) : null;
-    const primary = rec ? { label: rec.name, go: () => { move('progress', { note: `Ordered ${rec.name}` })(); set({ fdKey: null }); rec.choose(); } }
+    const primary = rec ? { label: rec.name, go: () => { move('progress', { note: `Started an order: ${rec.name}` })(); set({ fdKey: null }); rec.choose(); } }
       : ev && !closed ? { label: ev.cta, go: () => { set({ fdKey: null }); ev.go(); } } : null;
     return {
       key: f.key, head: f.head, kind: f.event ? `Event · ${f.a.when}` : (D.KINDS[f.kind] || f.pillar || 'Finding'),
@@ -2088,7 +2097,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       deltaLine: `Saves ${fmt(f.save || 0)}/mo`,
       evidence, hasEvidence: evidence.length > 0, evidenceHead: `Evidence · ${evidence.length} of ${logAll.length} flow records`,
       openLogs: () => { set({ fdKey: null }); go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null })(); set({ logPath: f.tab === 'govern' || f.event ? 'all' : 'public' }); },
-      showMap: () => { set({ fdKey: null }); go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'map', sub: null })(); },
+      showMap: () => { set({ fdKey: null }); go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'map', sub: null, ...(evRegion ? { mapRegion: evRegion } : {}) })(); },
       timeline: l.events.map((e, i) => ({ key: 't' + i, date: day(e.at), label: LC.STATE_LABEL[e.state] === 'Open' ? 'Found' : LC.STATE_LABEL[e.state], by: e.by, note: e.note ? `· ${e.note}` : e.until ? `· until ${day(e.until)}` : '', dot: TONE[e.state] })),
       primary, hasPrimary: !!primary,
       actions: acts.map(([label, go2]) => ({ key: label, label, go: go2 })),
@@ -2313,7 +2322,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     })(),
     siteCards: est.sites.filter(st => !st.rollup).map((st, i) => ({ key: st.name, name: st.name, metro: st.metro, cidr: `10.${60 + i}.0.0/20`, selected: false })), siteRollups: est.sites.filter(st => st.rollup).map(st => ({ key: st.name, name: st.name, n: (st.name.match(/\(([\d,]+)\)/) || [])[1] || '', priv: st.priv, pctW: st.priv ? '100%' : '0%', fill: st.priv ? '#0057b8' : '#8a949c' })), hasSiteRollups: est.sites.some(st => st.rollup), sitesLine: `${stats.sites.toLocaleString('en-US')} premises · your own buildings, not a cloud`,
     discoverVerdictLine: isEmpty ? 'Nothing discovered yet. Connect an account or pick an inventory.' : `${est.regionsList.length - ob.pathsCovered} of your ${est.regionsList.length} cloud regions still ride the public internet. ${ob.pathsCovered} ${ob.pathsCovered === 1 ? 'is' : 'are'} on the AT&T network, across ${plural(inv.length, 'cloud', 'clouds')}.`,
-    advisorSave: fmt(totalSave || ob.savingsMo || 0) + '/mo', advisorSub: totalSave ? `on the table across ${plural(est.findings.filter(f => f.priced).length, 'finding', 'findings')}` : `already saved on AT&T · ${plural(est.findings.length, 'open finding', 'open findings')}`, askAdvisor: go('s3', { layer: 'cloud', tab: 'connect' }), hasAdvisor: !isEmpty && (totalSave > 0 || ob.savingsMo > 0), discoverHeadCols: !isEmpty && (totalSave > 0 || ob.savingsMo > 0) ? 'minmax(0,1fr) 300px' : 'minmax(0,1fr)',
+    advisorSave: fmt(totalSave || ob.savingsMo || 0) + '/mo', advisorSub: totalSave ? `on the table across ${plural(lifeRows.filter(x => x.f.priced && bucket(x.l.state) === 'open').length, 'finding', 'findings')}` : `already saved on AT&T · ${plural(est.findings.length, 'open finding', 'open findings')}`, askAdvisor: go('s3', { layer: 'cloud', tab: 'connect' }), hasAdvisor: !isEmpty && (totalSave > 0 || ob.savingsMo > 0), discoverHeadCols: !isEmpty && (totalSave > 0 || ob.savingsMo > 0) ? 'minmax(0,1fr) 300px' : 'minmax(0,1fr)',
     breakdownOpen: !!s.breakdownOpen, toggleBreakdown: () => set({ breakdownOpen: !s.breakdownOpen }), breakdownCaret: s.breakdownOpen ? 'rotate(90deg)' : 'rotate(0deg)',
     stationCta,
     obScope, setObScope: (e) => set({ obScope: e.target.value }),
@@ -2809,7 +2818,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
   const pubSite = siteRows.filter(r => r.pubPart > 0).sort((a, b) => b.pubPart - a.pubPart)[0];
   const top = arb[0];
   // Banked (notes, 2026-09-29): what acting actually saved, as a running total, beside what is still open.
-  const bNow = new Date();
+  const bNow = s.nowIso ? new Date(s.nowIso) : new Date();
   const bLife = lifeState(s, est);
   const bankSeries = LC.banked(est, bLife, bNow);
   const bankTo = bankSeries.length ? bankSeries[bankSeries.length - 1] : { saved: 0, cumulative: 0 };

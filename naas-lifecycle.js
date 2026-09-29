@@ -108,14 +108,17 @@ export function banked(est, life, now) {
   const base = Math.max(0, (est.savedMo || 0) - closed.reduce((a, f) => a + f.save, 0));
   const first = FIRST[est.id];
   const end = new Date(+now);
-  const months = Array.from({ length: 12 }, (_, i) => ym(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 11 + i, 1)));
+  // Every month since the first attach counts toward the running total; the chart shows the last twelve (review, 2026-09-29).
+  const since = first ? (end.getUTCFullYear() - +first.slice(0, 4)) * 12 + end.getUTCMonth() - (+first.slice(5, 7) - 1) + 1 : 0;
+  const n = Math.max(12, since);
+  const months = Array.from({ length: n }, (_, i) => ym(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - (n - 1) + i, 1)));
   let cumulative = 0;
   return months.map(month => {
     const saved = (first && month >= first ? base : 0)
       + [...closed, ...resolvedNow].filter(x => x.resolvedAt.slice(0, 7) <= month).reduce((a, x) => a + x.save, 0);
     cumulative += saved;
     return { month, saved, cumulative };
-  });
+  }).slice(-12);
 }
 
 // Split `total` across weights, to the dollar (largest remainder).

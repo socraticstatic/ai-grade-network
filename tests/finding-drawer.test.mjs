@@ -106,5 +106,6 @@ test('placing the order closes the drawer, and the timeline says who did what', 
   c.state.screen = 's3'; c.state.tab = 'observe'; c.state.fdKey = 'ipsecegress';
   const last = vals(c).fd.timeline.at(-1);
   assert.equal(last.label, 'In progress');
-  assert.equal(last.note, `· Ordered ${label}`);
+  // Starting an order is not placing one (review, 2026-09-29).
+  assert.equal(last.note, `· Started an order: ${label}`);
 });

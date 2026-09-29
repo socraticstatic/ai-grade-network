@@ -126,7 +126,8 @@ export function accessRows(est) {
     const { v, sites } = by[k];
     const count = sites.reduce((a, x) => a + countOf(x.name), 0);
     const metros = new Set(sites.map(x => x.metro).filter(Boolean)).size || 1;
-    const onAttK = k !== 'other' && !!(SERVICE[k] || v).onAtt;
+    // A first mile the catalog does not name is on AT&T when its sites are (review, 2026-09-29: Lumen off-net under AT&T).
+    const onAttK = k === 'other' ? sites.every(onAtt) : !!(SERVICE[k] || v).onAtt;
     const name = SERVICE[k] ? SERVICE[k].label : 'Other access';
     return { key: k, name, onAtt: onAttK, sites, count, metros, lines: linesOf(sites, false),
       // The card's own line and badge say whether it is on AT&T; the subtitle stays short enough to read.

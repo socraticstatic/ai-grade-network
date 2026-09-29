@@ -1,6 +1,7 @@
 # Demo: the notes, built (2026-09-29)
 
 Estate: **Growing** (default). Persona: **Network Eng**. 1440×900, no scrolling anywhere on the path.
+Figures are as of Sep 29, 2026: findings age and savings bank by the calendar, so later runs show older findings and larger totals.
 Reset between runs: open the page with a fresh profile, or clear `naas.life` and `naas.tags` in local storage.
 
 ## 1. Connect is attached
@@ -25,11 +26,11 @@ The Observe head reads **"12 findings open. $41,500/mo potential savings."** Cli
 ## 4. Preview before acting
 **Preview the change** on "$8,600/mo of egress rides IPsec tunnels":
 - **What AT&T saw.**
-- **Preview:** Today $7,100 → After $1,600, saves $5,500/mo. **Show it on the map** is one click away.
+- **Preview:** Today $8,600 → After $3,100, saves $5,500/mo. **Show it on the map** is one click away.
 - **Evidence:** the five flow records behind it, with **Open in Logs**.
 - **Timeline:** Found Aug 25 · Discovery.
 
-Click **Acknowledge**, then the primary move. The order opens, and the finding is now In progress, owned by you, with the order on its timeline.
+Click **Acknowledge**, then the primary move. The order opens, the drawer closes, and the finding is now In progress, owned by you. Its timeline reads "Started an order".
 
 **Proves:** simulate, show where and how, then act. Lifecycle, owner and age.
 
