@@ -205,7 +205,9 @@ export function heroLayout(est, opts) {
   // so shrinking the picture never re-spaces a full estate's rows.
   const pitch = (k) => k > 1 ? Math.min(GAP_MAX, (H_MAX - 120) / (k - 1)) : 0;
 
-  const rootN = empty ? 3 : Math.min(ROOT_SITES, regionRows(est).length);
+  // Measured on the unfiltered estate when a filter narrows the sites, so filtering never resizes the picture.
+  const mEst = opts.measure || est;
+  const rootN = empty ? 3 : Math.min(ROOT_SITES, regionRows(mEst).length);
   const sitesEnd = rootN ? COL_TOP + (rootN - 1) * pitch(rootN) + CARD_H : 0;
   const rootRegs = empty ? 2 : (est.regionsList || []).length;
   const rootClouds = empty ? 2 : new Set((est.regionsList || []).map(r => r.cloud)).size;

@@ -198,16 +198,20 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Ways to connect unboxed; Lens in the tab row (2026-09-29): div 1001 -> 996, span 777 -> 776, sc-if 384 -> 385, sc-for 220 -> 219, button 295 -> 294, label 30 -> 31.
 // Your sites drill by place (Micah, 2026-09-29): div 996 -> 975, span 776 -> 716, sc-if 385 -> 366, sc-for 219 -> 205, button 294 -> 273.
 // Your clouds drill + rollup, tree and filters row retired (audit, 2026-09-29): div 975 -> 881, span 716 -> 608, sc-if 366 -> 331, sc-for 205 -> 182, button 273 -> 245, aside 11 -> 10, label 31 -> 30.
+// The site filter row over the picture (2026-09-29 audit): div 881 -> 884, span 608 -> 613, sc-if 331 -> 334, sc-for 182 -> 185, button 245 -> 252.
+// Scope dropdowns off Connect, Govern, Cost (2026-09-29 audit): span 613 -> 610, sc-for 185 -> 182, label 30 -> 27.
+// Window badges on the Traffic tiles (2026-09-29 audit): span 610 -> 611, sc-if 334 -> 335.
+// Clear filters only with filters (2026-09-29 audit): sc-if 335 -> 336.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 881],
-    ['span', /<span\b/g, /<\/span>/g, 608],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 331],
+    ['div', /<div\b/g, /<\/div>/g, 884],
+    ['span', /<span\b/g, /<\/span>/g, 611],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 336],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 182],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 245],
+    ['button', /<button\b/g, /<\/button>/g, 252],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
-    ['label', /<label\b/g, /<\/label>/g, 30],
+    ['label', /<label\b/g, /<\/label>/g, 27],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

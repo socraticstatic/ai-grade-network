@@ -9,7 +9,7 @@
 // asset behind a rolled-up count, searchable, sortable worst first, filterable,
 // selectable in bulk. Pure data. Added 2026-09-09.
 import * as S from './naas-sites.js';
-import { regionRows } from './naas-logic.js';
+import { regionRows, accessRows, buRows } from './naas-logic.js';
 import * as P from './naas-paths.js';
 import * as C from './naas-connections.js';
 import * as FB from './naas-fabric.js';
@@ -193,8 +193,8 @@ const totalSites = (est) => (est.sites || []).reduce((a, x) => a + S.countOf(x.n
  * resolves the node, never the rows, so the three headers can ask on every
  * render. `levelList` asks the same question, so the number cannot drift.
  */
-export function levelHead(est, inv, ob, col, trail = [], flat = false) {
-  if (col === 'sites') return sitesHead(est, trail);
+export function levelHead(est, inv, ob, col, trail = [], flat = false, group = {}) {
+  if (col === 'sites') return sitesHead(est, trail, group);
   if (col === 'fabric') return fabHead(est, inv, ob, trail);
   if (col === 'clouds') return cloudsHead(est, inv, trail, flat);
   return null;
@@ -227,8 +227,14 @@ function labels(est, inv, col, trail) {
 // A region of named sites keeps its region: the place drill (state, metro, site) is rooted there.
 const pastRegion = (trail) => (trail.length > 1 && String(trail[0]).startsWith('region:') && !String(trail[1]).startsWith('state:') ? trail.slice(1) : trail);
 
-function sitesHead(est, trail) {
+// The root follows the picture's Group (2026-09-29 audit): regions, access types or business units.
+const groupRows = (est, group) => group.by === 'access' ? accessRows(est).map(g => ({ id: g.name, into: 'access:' + g.key, count: g.count, priv: g.onAtt }))
+  : group.by === 'bu' ? buRows(est, group.tags || {}).map(g => ({ id: g.name, into: 'bu:' + g.name, count: g.count, priv: g.onAtt })) : null;
+function sitesHead(est, trail, group = {}) {
   const tr = labels(est, null, 'sites', trail);
+  const gr = !trail.length ? groupRows(est, group) : null;
+  if (gr) { const nounG = group.by === 'access' ? ['access type', 'access types'] : ['business unit', 'business units'];
+    return { col: 'sites', level: 'group', noun: gr.length === 1 ? nounG[0] : nounG[1], total: gr.length, title: 'Sites', sub: `${n(totalSites(est))} sites`, trail: tr }; }
   // The root is regions, and a region drills by place: state, metro, site,
   // services (Micah, 2026-09-29). It never opens into clouds.
   if (!trail.length) {
@@ -320,15 +326,17 @@ const labelOfPriv = (priv) => (priv ? 'On the AT&T network' : 'Public first mile
  * else, off the `level` string each row producer returns.
  */
 export function levelList(est, inv, ob, col, trail = [], opts = {}) {
-  if (col === 'sites') return sitesLevel(est, trail, opts);
+  if (col === 'sites') return sitesLevel(est, trail, opts, opts.group || {});
   if (col === 'fabric') return fabricLevel(est, inv, ob, trail, opts);
   if (col === 'clouds') return cloudsLevel(est, inv, trail, opts);
   return null;
 }
 
-function sitesLevel(est, trail, opts) {
-  const head = sitesHead(est, trail);
+function sitesLevel(est, trail, opts, group = {}) {
+  const head = sitesHead(est, trail, group);
   if (!head) return null;
+  const gr = !trail.length ? groupRows(est, group) : null;
+  if (gr) return frame(head, gr.map(g => ({ id: g.id, into: g.into, state: stateOfPriv(g.priv), stateLabel: labelOfPriv(g.priv), sub: `${n(g.count)} ${g.count === 1 ? 'site' : 'sites'}`, action: '' })), opts);
   if (!trail.length) {
     const rows = regionRows(est).map(r => ({ id: r.name, into: 'region:' + r.name, state: stateOfPriv(r.sites.some(x => x.priv)), stateLabel: labelOfPriv(r.sites.some(x => x.priv)),
       sub: `${n(r.count)} ${r.count === 1 ? 'site' : 'sites'}`, action: '' }));

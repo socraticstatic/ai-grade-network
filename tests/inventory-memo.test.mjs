@@ -106,10 +106,13 @@ test('two different site scopes on one estate id yield two different trees', () 
 // never allowed. Fixed by handing `costVals` the unscoped, unfiltered tree
 // and intersecting it down to the scoped estate's own region list inside
 // the function (`naas-app.js:1814-1836`).
-test('a cloud scope on Cost reads the scoped charge rows, not the whole estate\'s', () => {
-  const v = vals(mkC({ view: 'mature', obScope: 'cloud:AWS' }));
-  assert.equal(v.attTotalF, '$13,800', 'AWS-only VPC counts (3/3/3), not mature\'s whole 7/7/7');
-  assert.equal(v.attNetF, '+$47,600');
+// Scope lives on Traffic only (2026-09-29 audit): the Cost Scope dropdown reallocated
+// the totals, so Cost reads the whole estate whatever Traffic is scoped to.
+test('a scope set on Traffic never moves Cost', () => {
+  const scoped = vals(mkC({ view: 'mature', obScope: 'cloud:AWS' }));
+  const whole = vals(mkC({ view: 'mature', obScope: 'all' }));
+  assert.equal(scoped.attTotalF, whole.attTotalF);
+  assert.equal(scoped.attNetF, whole.attNetF);
 });
 
 test('a Discover facet chip never moves the Cost card', () => {

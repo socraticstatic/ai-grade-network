@@ -165,7 +165,7 @@ export function init(c) {
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -301,7 +301,8 @@ export function vals(c) {
   const siteF = s.siteFilter || {};
   const filterOn = !!((siteF.svc || []).length || siteF.loc || siteF.reach);
   const estF = filterOn ? { ...est, sites: filterSites(est.sites, siteF) } : est;
-  const siteDrill = s.drill.length ? X.siteDrillRows(est, s.drill, { pin: s.volPin, tags: ((s.siteTags || {})[est.id]) || {} }) : null;
+  // The filter row narrows the picture's sites (2026-09-29 audit: it was computed and never applied).
+  const siteDrill = s.drill.length ? X.siteDrillRows(estF, s.drill, { pin: s.volPin, tags: ((s.siteTags || {})[est.id]) || {} }) : null;
   const drillInfo = siteDrill ? { level: siteDrill.level, label: siteDrill.label, rows: siteDrill.rows } : null;
   const drillRows = drillInfo ? drillInfo.rows : null;
   const cloudDrill = s.cloudDrill || [];
@@ -318,7 +319,7 @@ export function vals(c) {
   // stacks at the ends of an empty stage.
   const folded = !s.bandUnfolded && !fabOpenNow;
   const bandW = folded ? 4 * FOLDED_SIDE + 260 : 580;
-  const L = heroLayout(est, { groupBy: s.siteGroup, tags: ((s.siteTags || {})[est.id]) || {}, siteRows: drillRows, regionRows: regionDrill ? regionDrill.rows : null, bandX: Math.round(SITES_END + (RX - SITES_END - bandW) / 2), bandW, folded });
+  const L = heroLayout(estF, { measure: est, groupBy: s.siteGroup, tags: ((s.siteTags || {})[est.id]) || {}, siteRows: drillRows, regionRows: regionDrill ? regionDrill.rows : null, bandX: Math.round(SITES_END + (RX - SITES_END - bandW) / 2), bandW, folded });
   const hoverKey = s.hoverNode;
   const dimFor = (keys) => hoverKey ? (keys.includes(hoverKey) ? 1 : 0.72) : 1;
   const layerEdgeKinds = { ai: ['egress'], cloud: ['egress', 'internet'], net: ['ingress', 'internet'], transport: ['ingress'] };
@@ -416,7 +417,7 @@ export function vals(c) {
   const pillOf = (st) => (st.region ? String(st.count || st.groups || '') : st.rollup && S.countOf(st.name) > 1 ? S.countOf(st.name).toLocaleString('en-US') : '');
   // A region card counts its places the way every level under it does (2026-09-29):
   // "1,640 sites · 154 AT&T" inside must not read "internet · Attach" outside.
-  const placeCount = (st) => { if (!String(st.drillKey || '').startsWith('region:') || s.drill.length) return st; const lv = X.siteDrillRows(est, [st.drillKey]); if (!lv) return st;
+  const placeCount = (st) => { if (!String(st.drillKey || '').startsWith('region:') || s.drill.length) return st; const lv = X.siteDrillRows(estF, [st.drillKey]); if (!lv) return st;
     const total = lv.rows.reduce((a, r) => a + (r.count || 0), 0), att = lv.rows.reduce((a, r) => a + (r.att || 0), 0);
     return { ...st, priv: att > 0, access: `${total.toLocaleString('en-US')} ${total === 1 ? 'site' : 'sites'} · ${att.toLocaleString('en-US')} AT&T · ${(total - att).toLocaleString('en-US')} non-AT&T` }; };
   const heroSites = L.sites.map(placeCount).map(st => ({ ...st, key: st.key, hasPill: !st.ghost && !st.leaf && !st.more, pillN: pillOf(st), textW: (SITES_END - 24 - 24 - (!st.ghost && !st.more && !st.priv && !st.leaf ? 86 : !st.ghost && !st.leaf ? 44 : 18)) + 'px', op: dimFor(['site' + st.name]), ty: st.y + 15, ty2: st.y + 29, dash: st.ghost || st.more ? '4 4' : 'none', color: st.ghost ? 'var(--text-disabled)' : st.more ? 'var(--link)' : 'var(--text-heading)', click: () => { if (st.ghost || st.leaf) return; if (st.more) { openLevel('sites'); return; } seenHint(); const place = /^(state|metro):/.test(String(st.drillKey || '')); const isSite = !place && ((s.drill.length >= 2 && st.drillKey) || (st.drillKey && /^(site:|(DC|CAM|OFF|PLT|BR|ATM|FLD)-)/.test(String(st.drillKey))) || (!st.rollup && S.countOf(st.name) === 1 && !st.drillKey && !/\(/.test(st.name))); if (isSite) set({ mapSel: 'asset:' + String(st.drillKey || st.name).replace(/^site:/, ''), panelTab: 'overview' }); const key = st.drillKey || S.rollupKeyOf(est, st) || (S.countOf(st.name) > 1 || st.rollup ? S.classOf(st) : st.name); set({ drill: [...s.drill, key] }); }, enter: () => set({ hoverNode: 'site' + st.name }), leave: () => set({ hoverNode: null }), cursor: st.ghost || st.leaf ? 'default' : 'pointer', caret: st.ghost || st.leaf || st.more ? '' : '›', hasAction: !st.ghost && !st.more && !st.priv && !st.leaf, action: 'Attach', act: () => { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); syncHash('s4', s.layer, s.tab); } }));
@@ -481,7 +482,7 @@ export function vals(c) {
           if (pm) return { region: '', vpcId: '', cls: pm.cls, metro: pm.metroKey, metroLabel: pm.name };
           return { region: '', vpcId: '', cls: String(tr[0] || '').split('#')[0], metro: tr[1], metroLabel: S.labelOfKey(est, tr[1]) }; })())
     : { ...(s.vol || {}), metroLabel: (s.vol && s.vol.metro) ? S.labelOfKey(est, s.vol.metro) : '' };
-  const volList = vol ? (vol.kind === 'level' ? V.levelList(est, inv, obAll, vol.col, colTrail(vol.col), { ...volOpts, flat: !!s.volFlat })
+  const volList = vol ? (vol.kind === 'level' ? V.levelList(vol.col === 'sites' ? estF : est, inv, obAll, vol.col, colTrail(vol.col), { ...volOpts, flat: !!s.volFlat, group: { by: s.siteGroup || 'region', tags: ((s.siteTags || {})[est.id]) || {} } })
     : vol.kind === 'workloads' ? V.workloadList(est0, inv, vol, volOpts) : V.volumeList(est0, vol, volOpts)) : null;
   /** The column's handoff: every workload in a VPC, or in one subnet of it. */
   const openWorkloads = (region, vpcId, snId) => set({ vol: { kind: 'workloads', region, vpcId, snId: snId || null }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [], volSlide: 0 });
@@ -606,8 +607,9 @@ export function vals(c) {
   const bandGutter = EDGE;                                  // the header IS the band: same edges
   // `shown` is how many of them the canvas is drawing right now, or null when
   // the canvas is drawing none of them - a closed band is not "4 hidden".
+  const siteGroupOpt = { by: s.siteGroup || 'region', tags: ((s.siteTags || {})[est.id]) || {} };
   const doorFor = (col, shown, gutter, open) => {
-    const h = V.levelHead(est, inv, obAll, col, colTrail(col));
+    const h = col === 'sites' ? V.levelHead(estF, inv, obAll, col, colTrail(col), false, siteGroupOpt) : V.levelHead(est, inv, obAll, col, colTrail(col));
     if (!h) return { has: false, hasNot: true, label: '', title: '', color: 'var(--text-disabled)', gutter, open: () => {} };
     // Zero children still print. A level that holds nothing says so in
     // disabled ink with no caret and no handler: not a dead button, not a
@@ -628,7 +630,8 @@ export function vals(c) {
   // fewer hidden workload than the drawer holds.
   // A region card stands for every site group in it. Grouping is not hiding, so
   // the door counts the groups the cards carry, not the cards.
-  const sitesDoor = doorFor('sites', L.sites.filter(x => !x.more && !x.ghost).reduce((a, x) => a + (x.region ? x.groups : 1), 0), sitesGutter, () => openLevel('sites'));
+  // The canvas draws one card per region, group or site at this level; the door counts the same things (2026-09-29 audit).
+  const sitesDoor = doorFor('sites', L.sites.filter(x => !x.more && !x.ghost).length, sitesGutter, () => openLevel('sites'));
   // A provider card shows every region it holds, so it counts as that many.
   const cloudsDoor = doorFor('clouds', L.regions.filter(x => !x.rollup && !x.other && !x.pinned && !x.ghost && !x.seeAll).reduce((a, x) => a + (x.card ? x.count : 1), 0), cloudsGutter, () => openLevel('clouds'));
   // A closed band has to open with its drawer, or the picture sits on the
@@ -662,7 +665,7 @@ export function vals(c) {
   const connectEmptyHead = isEmpty ? 'Nothing connected yet' : connectVerdict;
   const catalogRow = layerProducts(s.layer).sort((a, b) => (a.id === 'hosted-vpc' ? -1 : b.id === 'hosted-vpc' ? 1 : b.popular - a.popular)).map(p => productCard(c, p, est));
   const visionRow = D.VISION.filter(v => v.layer === s.layer).map(v => ({ key: v.name, name: v.name }));
-  const policies = [...layerPolicies(s, est, obScope), ...(s.layer === 'cloud' ? (s.customPolicies || []) : [])].map(p => ({ ...p, key: p.name, dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-body)', matched: p.matched.toLocaleString('en-US'), viol: p.viol.toLocaleString('en-US') }));
+  const policies = [...layerPolicies(s, est, 'all'), ...(s.layer === 'cloud' ? (s.customPolicies || []) : [])].map(p => ({ ...p, key: p.name, dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-body)', matched: p.matched.toLocaleString('en-US'), viol: p.viol.toLocaleString('en-US') }));
   const pciViol = (est.findings.find(f => f.kind === 'pci') || {}).head;
   const governVerdict = VD.governVerdict(est);
   const buckets = layerBuckets(s, est).map(b => ({ ...b, key: b.id, todayF: fmt(b.today), fabricF: fmt(b.fabric),
@@ -729,11 +732,14 @@ export function vals(c) {
     return withStates; })();
   const locLabel = siteF.loc ? (places.find(p => p.key === siteF.loc) || { label: siteF.loc }).label : 'All locations';
   const siteTotal = (est.sites || []).reduce((a, x) => a + S.countOf(x.name), 0), siteShown = (estF.sites || []).reduce((a, x) => a + S.countOf(x.name), 0);
+  const nSvc = (siteF.svc || []).length;
   const filterVals = { svcChips, reachChips, filterOn, filterOff: !filterOn, hasSvcChips: svcChips.length > 1,
-    filterCount: `${siteShown.toLocaleString('en-US')} of ${siteTotal.toLocaleString('en-US')} sites`,
+    svcLabel: nSvc ? (nSvc === 1 ? (S.SERVICE[siteF.svc[0]] || {}).label : `${nSvc} services`) : 'All services', svcOn: nSvc > 0, svcMenu: !!s.svcMenu, toggleSvcMenu: () => set({ svcMenu: !s.svcMenu, locMenu: false }), closeSvcMenu: () => set({ svcMenu: false }),
+    svcBorder: nSvc ? 'var(--border-active)' : 'var(--border-secondary)', svcColor: nSvc ? 'var(--link)' : 'var(--text-body)', locBorder2: siteF.loc ? 'var(--border-active)' : 'var(--border-secondary)', locColor2: siteF.loc ? 'var(--link)' : 'var(--text-body)',
+    siteFilterCount: `${siteShown.toLocaleString('en-US')} of ${siteTotal.toLocaleString('en-US')} sites`,
     clearFilters: () => set({ siteFilter: {}, drill: [], locMenu: false }),
     locLabel, locOn: !!siteF.loc, ...Object.fromEntries(Object.entries(chipInk(!!siteF.loc)).map(([k, v]) => ['loc' + k[0].toUpperCase() + k.slice(1), v])),
-    locMenu: !!s.locMenu, toggleLocMenu: () => set({ locMenu: !s.locMenu }),
+    locMenu: !!s.locMenu, toggleLocMenu: () => set({ locMenu: !s.locMenu, svcMenu: false }),
     locOptions: [{ key: 'all', label: 'All locations', depth: 0 }, ...places].map(p => { const on = (siteF.loc || 'all') === p.key;
       return { ...p, on, pad: p.depth ? '6px 12px 6px 28px' : '6px 12px', weight: on ? 600 : p.depth ? 400 : 600, color: on ? 'var(--link)' : p.depth ? 'var(--text-body)' : 'var(--text-heading)', go: () => setF({ loc: p.key === 'all' ? undefined : p.key }) }; }),
   };
@@ -927,6 +933,7 @@ export function vals(c) {
     perfCard: hr && hrNode ? { region: `${hr.cloud} ${hr.region}`, msLine: `${hr.priv ? hr.fab : hr.pub} ms ${hr.priv ? 'on AT&T' : 'public'}${hr.rel === 'warn' ? ' · degraded' : ''}`, pub: `Public today ${hr.pub} ms`, fab: `on AT&T ${hr.fab} ms`, rel: hr.rel === 'warn' ? 'Reliability: degraded' : 'Reliability: healthy', relFill: hr.rel === 'warn' ? 'var(--warning)' : 'var(--success)', top: Math.max(0, Math.min(340, hrNode.y - 70)) + 'px', left: 'calc(100% - 236px)', go: go('s3', { layer: 'cloud', tab: 'observe' }) } : null, hasPerf: !!hr,
     // floor
     openFindingsN: openF.length, findingsAllN: est.findings.length, eventsN: findList.filter(f => f.event).length,
+    obWinWords: winLabelOf(s),
     rollup, floorFindings, hasFloorFindings: floorFindings.length > 0, recFindings, hasRecFindings: recFindings.length > 0, packages, tailored, hasTailored: isMature, hasAddons: tailored.addons.length > 0, hasTermUps: tailored.terms.length > 0, hasHubs: tailored.hubs.length > 0,
     // department
     layerBar: D.LAYERS.map(l => ({ key: l.id, label: l.label, on: s.layer === l.id, go: () => { set({ layer: l.id, drill: [], regionDrill: null }); syncHash('s3', l.id, s.tab); scrollToResult('S3 Department'); }, bg: s.layer === l.id ? 'var(--cta)' : 'transparent', color: s.layer === l.id ? '#fff' : 'var(--text-heading)' })),
@@ -987,12 +994,13 @@ export function vals(c) {
     })(),
     ...filterVals, showOpenHint: !s.openHintSeen && !s.drill.length && !cloudPick && !isEmpty, dismissOpenHint: () => { set({ openHintSeen: true }); try { localStorage.setItem('naas.openHint', 'seen'); } catch (e) {} },
     crumbs, verbTabs, cloudCrumbs, siteTrail, cloudTrail, sitesDrilled: s.drill.length > 0, cloudsDrilled: !!cloudPick, hasCloudCrumbs: cloudCrumbs.length > 0, showCrumbs: s.drill.length > 0 || cloudDrill.length > 0, drillLabel: [drillLabel, regionDrill ? `${regionDrill.label} · ${regionDrill.level}s` : ''].filter(Boolean).join(' · '), hasDrill: s.drill.length > 0 || cloudDrill.length > 0, drillUp: () => set({ drill: s.drill.slice(0, -1), cloudDrill: cloudDrill.slice(0, -1), cloudPick: cloudDrill.length ? cloudPick : null }), sitesHead: s.drill.length ? '‹ ' + S.labelOfKey(est, s.drill[s.drill.length - 1]) : 'Sites', sitesUp: () => set({ drill: s.drill.slice(0, -1) }), sitesHeadColor: s.drill.length ? 'var(--link)' : 'var(--text-light)', cloudsHead: regionDrill ? '‹ ' + (regionDrill.crumb || [cloudDrill[0]]).slice(-1)[0] : 'Clouds', cloudsUp: cloudsUpNow, cloudsHeadColor: regionDrill ? 'var(--link)' : 'var(--text-light)', cloudsHeadW, showWorkloadsHead: false, tConnect: s.tab === 'connect', tGovern: s.tab === 'govern', tObserve: s.tab === 'observe', tCost: s.tab === 'cost',
-    ...connectVals(s, set, R.applyScope(est, obScope), go, ob),
+    // Scope lives on Traffic; Connect, Govern and Cost read the whole estate (2026-09-29 audit).
+    ...connectVals(s, set, est, go, ob),
     connectFindings: deptFindings('connect'), hasConnectFindings: deptFindings('connect').length > 0, tabLabel: TAB_LABEL[s.tab] || 'Connect', noConnectFindings: deptFindings('connect').length === 0, connectOthers: ['govern', 'observe', 'cost'].map(t => ({ key: t, n: findingsFor(s.layer, t).length, label: `${findingsFor(s.layer, t).length} close on ${TAB_LABEL[t]}`, go: () => { set({ tab: t }); syncHash('s3', s.layer, t); scrollToResult('S3 Department'); } })).filter(x => x.n > 0), hasConnectOthers: ['govern', 'observe', 'cost'].some(t => findingsFor(s.layer, t).length > 0), mostChosen, levelTiles: sorted, levelCount: levelItems.length, levelSort: s.levelSort, setLevelSort: (e) => set({ levelSort: e.target.value }), levelQuery: s.levelQuery, setLevelQuery: (e) => set({ levelQuery: e.target.value }), levelTitle: drillInfo ? drillInfo.label : levelMapTitle(layer), levelMore: Math.max(0, levelItems.length - 60), hasLevelMore: levelItems.length > 60, catalogRow, visionRow, hasVision: visionRow.length > 0,
     hasSim: !!s.simulated || (s.customPolicies || []).some(p => p.state === 'simulated'),
     governVerdict, governFindings: deptFindings('govern'), policies, hasPolicies: policies.length > 0, examplePolicies0: [{ key: 'a', t: 'Tag PCI forces a private path', m: 'tag PCI', r: 'Private path required' }, { key: 'b', t: 'Tag Internet-facing gets NGFW plus AT&T egress', m: 'tag Internet-facing', r: 'Inline security inspection' }, { key: 'c', t: 'Branch Finance reaches only finance-tagged workloads', m: 'branch Finance', r: 'Segment intra-tag only' }], authorPolicy: go('s4', { ...newOrder({ ...cleanCompose(cp), outcome: 'u1', control: ['Private path required'], source: ['Data center'], dest: ['Clouds'] }) }), simulate: () => set({ simulated: true, enforced: false }), enforce: () => set({ enforced: true }), undo: () => set({ simulated: false, enforced: false }), simulated: s.simulated, enforced: s.enforced, canEnforce: s.simulated && !s.enforced, simulateText: s.enforced ? 'Enforced. Paths rerouted onto the AT&T network.' : s.simulated ? `Simulated: ${pciViol ? pciViol.split(' ')[0] : 0} paths reroute onto the AT&T network, 2 flows denied. Drawn dashed until enforced.` : 'Simulate shows what changes before enforce is enabled.', enforceBg: s.simulated && !s.enforced ? 'var(--cta)' : 'var(--bg-neutral)', enforceColor: s.simulated && !s.enforced ? '#fff' : 'var(--text-disabled)',
     kpis, hasKpis: kpis.length > 0, sankeyNodes, sankeyRibbons, sankeyW: sk ? sk.W : 900, sankeyH: sk ? sk.H : 260, sankeyVB: `0 0 ${sk ? sk.W : 900} ${sk ? sk.H : 260}`, flows, observeFindings: deptFindings('observe'), seeSavings: () => { set({ tab: 'cost' }); syncHash('s3', s.layer, 'cost'); }, observeVerdict: isEmpty ? 'No telemetry yet. It starts with the first attach.' : `${est.observedPct}% of paths send telemetry. ${flows.filter(f => f.deny).length} flows denied in the last minute by the vSRX pair.`, chipScope,
-    ...costVals(s, set, R.applyScope(est, obScope), A.inventory(est), ob, go, c),
+    ...costVals(s, set, est, A.inventory(est), ob, go, c),
     costVerdict, buckets, steerRecs: steerable, costFindings: deptFindings('cost'), hasBuckets: buckets.length > 0, bTotalF: fmt(bTotal), bFabF: fmt(bFab), bSaveF: fmt(bTotal - bFab),
     // compose
     ...wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c),
@@ -1580,7 +1588,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     actRows, actPager, actPageSize, logPager, logPageSize, hasAct: actRows.length > 0, noAct: actRows.length === 0,
     actQ: s.actQ || '', setActQ: (e) => set({ actQ: e.target.value, actPage: 0 }),
     actCount: `${actMatch.length} of ${actAll.length} changes`,
-    actNote: `Who changed the network, from where, and whether it applied. Last 7 days.`,
+    actNote: `Who changed the network, from where, and whether it applied, over ${winLabelOf(s)}.`,
   };
   const explainParts = explain && explain.parts ? explain.parts.map((x, i) => ({
     key: 'ep' + i, label: x.label, value: x.value, share: x.share, w: x.w,
@@ -1609,6 +1617,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     logFilterCount: (() => { const k = (logQ ? 1 : 0) + (logPath !== 'all' ? 1 : 0) + (logAct !== 'all' ? 1 : 0) + (logPattern !== 'all' ? 1 : 0); return k ? `${k} filter${k === 1 ? '' : 's'}` : 'No filters'; })(),
     logFilterToggleWord: (s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen) ? 'Hide' : 'Show',
     clearLogs: () => set({ logQ: '', logPath: 'all', logAct: 'all', logPattern: 'all', logPage: 0 }),
+    logHasFilters: !!(logQ || logPath !== 'all' || logAct !== 'all' || logPattern !== 'all'),
   };
   const nextStop = { ...VD.observeNext(conns), go: go('s3', { layer: 'cloud', tab: 'govern' }) };
   // The gap, itemised. The page could show what you have and what the three
@@ -1728,7 +1737,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // ---------- Observe dashboard (2026-09-09): the live flow map, gauges, queue, panel ----------
   const mapOpen = s.mapOpen || []; const mapSel = s.mapSel || null; const mapHov = s.mapHov || null; const mapMode = s.mapMode || 'state'; const mapRegion = s.mapRegion || null; const mapT = (s.mapT == null || s.mapT === '') ? null : +s.mapT;
   const mapZoom = mapOpen.length ? mapOpen[mapOpen.length - 1] : null;
-  const map = F.buildMap(est0, inv, ob.flows, { open: mapOpen, filterRegion: mapRegion, t: mapT, zoom: mapZoom });
+  // The scope chips narrow the picture, not only the tiles (2026-09-29 audit).
+  // A cloud scope rides the region matcher, which scales the sites to the share that reaches it;
+  // a site, first-mile or app scope narrows the sites themselves, and the right side follows them.
+  const scopeCloud = /^cloud:/.test(obScope) ? obScope.slice(6) : null;
+  const mapEst = obScope && obScope !== 'all' && !scopeCloud ? R.applyScope(est0, obScope) : est0;
+  const map = F.buildMap(mapEst, inv, ob.flows, { open: mapOpen, filterRegion: mapRegion || scopeCloud, t: mapT, zoom: mapZoom });
   // Lighting order: hover, then the pattern lens, then the selection. A selected connection (cx-…) lights nothing on the map; the filter does that.
   const hovLit = F.litFor(map, mapHov); const selLit = mapSel && !mapSel.startsWith('cx-') ? F.litFor(map, mapSel) : null; const mapPattern = s.mapPattern || 'all'; const patLit = F.patternLit(map, mapPattern);
   const nodeOp = (k) => hovLit ? (hovLit.keys.has(k) ? 1 : 0.3) : patLit ? (patLit.keys.has(k) ? 1 : 0.35) : selLit ? (selLit.keys.has(k) ? 1 : 0.6) : 1;
@@ -1855,14 +1869,20 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const kShort = (n) => (n >= 1000 ? '$' + (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'k' : '$' + n);
   const sloN = (ob.flows || []).filter(f => f.latency > F.SLO).length;
   const tileOn = (k) => ({ traffic: mapMode === 'state' && mapPath === 'all', onatt: mapPath === 'att', egress: mapMode === 'cost' && mapPath === 'all', p95: false, could: mapMode === 'cost' && mapPath === 'out', slo: mapMode === 'slo' })[k];
+  const winTrends = R.trends(ob, s.obWindow || '30d');
   const flowTiles = [
     ['traffic', 'Traffic', map.total.toFixed(1), 'Gbps', { mapMode: 'state', mapPath: 'all' }],
     ['p95', 'P95 latency', String((ob.kpis || []).find(k => k.key === 'p95') ? ob.kpis.find(k => k.key === 'p95').v : '—'), 'ms', { mapMode: 'slo', mapPath: 'all' }],
-    ['onatt', 'Sites on AT&T', (() => { const p = map.fabV / (map.total || 1) * 100; return p >= 99.95 ? '100%' : p >= 99 ? p.toFixed(1) + '%' : Math.round(p) + '%'; })(), '', { mapMode: 'state', mapPath: 'att' }],
+    // Sites, counted as sites (2026-09-29 audit: a traffic share wore a sites label).
+    ['onatt', 'Sites on AT&T', (() => { const all = (mapEst.sites || []).reduce((a, x) => a + S.countOf(x.name), 0), att = (mapEst.sites || []).filter(onAtt).reduce((a, x) => a + S.countOf(x.name), 0); return `${att.toLocaleString('en-US')} of ${all.toLocaleString('en-US')}`; })(), '', { mapMode: 'state', mapPath: 'att' }],
     ['egress', 'Egress', fmt(Math.round(egSpend / 100) * 100), '/mo', { mapMode: 'cost', mapPath: 'all' }],
     ['could', 'Could save', fmt(totalSave), '/mo', { mapMode: 'cost', mapPath: 'out' }],
     ['slo', 'Over SLO', String(sloN), sloN === 1 ? 'flow' : 'flows', { mapMode: 'slo', mapPath: 'all' }],
-  ].map(([k, l, v, u, patch]) => { const on = !!tileOn(k); return { key: k, l, v, u, on, go: () => set(patch), border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)' }; });
+  ].map(([k, l, v, u, patch]) => { const on = !!tileOn(k);
+    // Since is the window the tiles compare against (2026-09-29 audit): now vs the prior window.
+    const tr = ({ traffic: 'thr', p95: 'p95' })[k] ? (winTrends.find(x => x.key === ({ traffic: 'thr', p95: 'p95' })[k]) || null) : null;
+    return { key: k, l, v, u, on, go: () => set(patch), border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)',
+      d: tr ? `${tr.delta} vs prior ${winLabelOf(s)}` : '', dShort: tr ? tr.delta : '', hasD: !!tr, dTone: tr ? tr.deltaTone : 'var(--text-light)' }; });
   const seg = (on) => ({ bg: on ? 'var(--bg-base)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 600 : 500, shadow: on ? '0 1px 2px rgba(16,24,40,.10), 0 0 0 1px var(--border-secondary)' : 'none' });
   // Over time (2026-09-28): the same traffic, by day, week or month.
   const otGrain = ['daily', 'weekly', 'monthly'].includes(s.otGrain) ? s.otGrain : 'daily';
@@ -2167,7 +2187,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       ? `${(patterns.find(p => p.on) || {}).label} · ${(modes.find(m => m.on) || {}).label}${mapRegion ? ' · ' + mapRegion : ''}`
       : 'All flows · coloured by state',
     mapFilterCount: mapFiltersOn ? `${mapFiltersOn} filter${mapFiltersOn === 1 ? '' : 's'}` : 'No filters',
-    mapFilterToggleWord: mapFiltersOpen ? 'Hide' : 'Show', mapZoomLabel: map.zoom ? `zoomed ×${map.zf.toFixed(1)}` : '', hasMapZoom: !!map.zoom, mapSub: `${map.total.toFixed(1)} Gbps in the last 24h · what the sites send, ${MIX.crossed > 0.001 ? Math.round(map.total / MIX.crossed * 100) : 0}% of everything that crosses a mid mile · ${Math.round(map.fabV / (map.total || 1) * 100)}% of it on AT&T${mapRegion ? ' · filtered to ' + mapRegion : ''}${mapT != null ? ' · ' + Math.round(24 - mapT * 24) + 'h ago' : ''}`, mapTrail, hasMapTrail: mapTrail.length > 0, mapUp: climb, canClimb: !!mapSel, mapKey, modes, hasMapRegion: !!mapRegion, mapRegion: mapRegion || '', clearMapRegion: () => set({ mapRegion: null }), mapT: mapT == null ? 100 : Math.round(mapT * 100), setMapT: (e) => set({ mapT: +e.target.value / 100 }), mapPlaying: !!s.mapPlay, playLabel: s.mapPlay ? '❚❚' : '▶', playMap, resetMapT: () => set({ mapT: null }), replayOpen: !!s.replayOpen, toggleReplay: () => set({ replayOpen: !s.replayOpen, mapPlay: false, mapT: s.replayOpen ? null : s.mapT }), wholeWindow: () => set({ mapT: null, mapPlay: false }), gaugeRows, hasGauges: gaugeRows.length > 0, panel, hasPanel: !!panel, hasPanelOverlay: !!panel, drawerRight: panel ? '380px' : '0px', noPanel: !panel, dashCols: 'minmax(0,1fr)', mapJumpOpen: !!s.mapJumpOpen, mapJumpQ: s.mapJumpQ || '', setMapJumpQ: (e) => set({ mapJumpQ: e.target.value }), mapJumpKey: (e) => { if (e.key === 'Enter') jumpTo(s.mapJumpQ); if (e.key === 'Escape') set({ mapJumpOpen: false }); }, openJump: () => set({ mapJumpOpen: !s.mapJumpOpen }), pins: (s.mapPins || []).map(k => ({ key: k, name: (map.nodes.find(x => x.key === k) || { name: k }).name, v: ((map.nodes.find(x => x.key === k) || { v: 0 }).v).toFixed(1) + ' Gbps', unpin: () => set({ mapPins: (s.mapPins || []).filter(x => x !== k) }) })), hasPins: (s.mapPins || []).length > 0 };
+    mapFilterToggleWord: mapFiltersOpen ? 'Hide' : 'Show', mapZoomLabel: map.zoom ? `zoomed ×${map.zf.toFixed(1)}` : '', hasMapZoom: !!map.zoom, mapSub: `${map.total.toFixed(1)} Gbps now, compared with ${winLabelOf(s)} · what the sites send, ${MIX.crossed > 0.001 ? Math.round(map.total / MIX.crossed * 100) : 0}% of everything that crosses a mid mile · ${Math.round(map.fabV / (map.total || 1) * 100)}% of it on AT&T${mapRegion ? ' · filtered to ' + mapRegion : ''}${mapT != null ? ' · ' + Math.round(24 - mapT * 24) + 'h ago' : ''}`, mapTrail, hasMapTrail: mapTrail.length > 0, mapUp: climb, canClimb: !!mapSel, mapKey, modes, hasMapRegion: !!mapRegion, mapRegion: mapRegion || '', clearMapRegion: () => set({ mapRegion: null }), mapT: mapT == null ? 100 : Math.round(mapT * 100), setMapT: (e) => set({ mapT: +e.target.value / 100 }), mapPlaying: !!s.mapPlay, playLabel: s.mapPlay ? '❚❚' : '▶', playMap, resetMapT: () => set({ mapT: null }), replayOpen: !!s.replayOpen, toggleReplay: () => set({ replayOpen: !s.replayOpen, mapPlay: false, mapT: s.replayOpen ? null : s.mapT }), wholeWindow: () => set({ mapT: null, mapPlay: false }), gaugeRows, hasGauges: gaugeRows.length > 0, panel, hasPanel: !!panel, hasPanelOverlay: !!panel, drawerRight: panel ? '380px' : '0px', noPanel: !panel, dashCols: 'minmax(0,1fr)', mapJumpOpen: !!s.mapJumpOpen, mapJumpQ: s.mapJumpQ || '', setMapJumpQ: (e) => set({ mapJumpQ: e.target.value }), mapJumpKey: (e) => { if (e.key === 'Enter') jumpTo(s.mapJumpQ); if (e.key === 'Escape') set({ mapJumpOpen: false }); }, openJump: () => set({ mapJumpOpen: !s.mapJumpOpen }), pins: (s.mapPins || []).map(k => ({ key: k, name: (map.nodes.find(x => x.key === k) || { name: k }).name, v: ((map.nodes.find(x => x.key === k) || { v: 0 }).v).toFixed(1) + ' Gbps', unpin: () => set({ mapPins: (s.mapPins || []).filter(x => x !== k) }) })), hasPins: (s.mapPins || []).length > 0 };
   // Sources (Micah, 14:33: "where can I connect to my current ecosystem?"): what feeds the
   // picture, and the door to add more. The cloud rows are a read of est.accounts through
   // scheduleView; the AT&T rows are inventory AT&T keeps live, not a credential the customer
@@ -2239,7 +2259,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // other: what each policy caught, and which tags no policy covers yet.
   // Every door leaves for Govern and closes the drawer.
   const toGovern = (extra) => () => { go('s3', { layer: 'cloud', tab: 'govern', sub: null })(); set({ ...(extra || {}), scrollToSec: 'sec-policies', scrollNonce: (s.scrollNonce || 0) + 1 }); };
-  const polAll = [...layerPolicies({ ...s, layer: 'cloud' }, est, obScope), ...(s.customPolicies || [])];
+  const polAll = [...layerPolicies({ ...s, layer: 'cloud' }, est, 'all'), ...(s.customPolicies || [])];
   const POL_STATE = { enforced: ['Enforced', 'var(--success)'], simulated: ['Simulated', 'var(--warning)'] };
   const drawerPolicies = polAll.map(p => ({ key: p.name, name: p.name, rule: `${p.match} · ${p.req}`,
     stateWord: (POL_STATE[p.state] || ['Draft'])[0], dot: (POL_STATE[p.state] || [0, 'var(--text-disabled)'])[1],
@@ -2548,7 +2568,7 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
     authoring: !!au, openAuthor: openAuthor(), closeAuthor: () => set({ authoring: null }), aMatch: A_MATCH.map(v => aCard('match', v, true)), aScope: A_SCOPE.map(v => aCard('scope', v, true)), aReq: D.COMPOSE_CHIPS.control.map(v => aCard('req', v, false)),
     aSent: { match: au && au.match || 'something', scope: au && au.scope || 'somewhere', req: au && au.req && au.req.length ? au.req.map(x => x.toLowerCase()).join(' and ') : '…', matchOn: !!(au && au.match), scopeOn: !!(au && au.scope), reqOn: !!(au && au.req && au.req.length) },
     aSimulate: commit('simulated'), aEnforce: commit('enforced'), aReady, aBg: aReady ? 'var(--cta)' : 'var(--bg-neutral)', aColor: aReady ? '#fff' : 'var(--text-disabled)',
-    polRows: (s.layer === 'cloud' ? [...layerPolicies(s, est, s.obScope || 'all'), ...(s.customPolicies || [])] : layerPolicies(s, est, s.obScope || 'all')).map((p, i) => ({ ...p, key: 'pr' + i, sent: polSentence(p), dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-light)', hasViol: p.viol > 0, violLabel: p.viol ? `${p.viol} violations` : 'no violations', matchedLabel: `${p.matched} matched`,
+    polRows: (s.layer === 'cloud' ? [...layerPolicies(s, est, 'all'), ...(s.customPolicies || [])] : layerPolicies(s, est, 'all')).map((p, i) => ({ ...p, key: 'pr' + i, sent: polSentence(p), dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-light)', hasViol: p.viol > 0, violLabel: p.viol ? `${p.viol} violations` : 'no violations', matchedLabel: `${p.matched} matched`,
       // A violation you cannot act on is a number on a wall. Every violating
       // policy opens the workloads breaking it, on the map, filtered to them.
       act: p.viol ? (p.state === 'simulated' ? 'Enforce' : 'See what is breaking it') : (p.state === 'simulated' ? 'Enforce' : ''),
@@ -2782,7 +2802,8 @@ function shellVals(s, set, go, est, c, sched) {
   // title row skips s1 entirely, so the controls have nowhere to land there.
   // They stay on Connect until s1's header can carry them.
   const ownsDiscovery = s.screen === 's0' || (s.screen === 's3' && s.tab === 'connect');
-  const ownsTelemetry = s.screen === 's3' && (s.tab === 'observe' || s.tab === 'cost');
+  // Cost's figures are monthly rates a window cannot change, so Since lives on Observe only (2026-09-29 audit).
+  const ownsTelemetry = s.screen === 's3' && s.tab === 'observe';
   const railIsSequence = railFor(est).sequence;
   const rl = est.regionsList || [];
   const needsYou = [];
