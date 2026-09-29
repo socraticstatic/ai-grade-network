@@ -176,7 +176,7 @@ export function init(c) {
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', cnPage: 'picture', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -2846,6 +2846,12 @@ function costVals(s, set, est, invAll, ob, go, c) {
       { key: 'open', l: 'Still open', v: fmt(stillOpen), u: '/mo', tone: 'var(--text-heading)' },
       { key: 'pct', l: 'Realised', v: `${Math.round(bankTo.saved / ((bankTo.saved + stillOpen) || 1) * 100)}%`, u: 'of what is on the table', tone: 'var(--text-heading)' },
     ],
+    // Savings by region, business unit or cloud (notes, 2026-09-29): this month's banked and what is still open, split.
+    ...(() => { const dim = ['region', 'bu', 'cloud'].includes(s.saveGroup) ? s.saveGroup : 'region';
+      const rows = LC.savingsBy(est, dim, { banked: bankTo.saved, open: stillOpen }, ((s.siteTags || {})[est.id]) || {});
+      const mx = Math.max(1, ...rows.map(r => r.banked + r.open));
+      return { saveGroupValue: dim, setSaveGroup: (e) => set({ saveGroup: e.target.value }),
+        saveRows: rows.map(r => ({ key: r.key, label: r.label, bankedN: r.banked, openN: r.open, bankedF: fmt(r.banked), openF: fmt(r.open), bw: (r.banked / mx * 100).toFixed(1) + '%', ow: (r.open / mx * 100).toFixed(1) + '%' })) }; })(),
     bankBars: bankSeries.map(b => ({ key: b.month, h: (b.cumulative / bankMax * 100).toFixed(2) + '%', title: `${monthName(b.month)} · ${fmt(b.saved)} banked · ${fmt(b.cumulative)} to date` })),
     bankFrom: bankSeries.length ? monthName(bankSeries[0].month) : '', bankTo: bankSeries.length ? monthName(bankSeries[bankSeries.length - 1].month) : '',
     costMoves: [

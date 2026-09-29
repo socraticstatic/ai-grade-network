@@ -9,6 +9,9 @@
 // was done, and what acting on it actually banked (notes, 2026-09-29). Pure:
 // `now` is always passed in, so the tests pin dates.
 
+import { regionOf, onAtt } from './naas-logic.js';
+import { buOf, countOf } from './naas-sites.js';
+
 export const STATES = ['open', 'ack', 'progress', 'resolved', 'snoozed', 'dismissed'];
 export const STATE_LABEL = { open: 'Open', ack: 'Acknowledged', progress: 'In progress', resolved: 'Resolved', snoozed: 'Snoozed', dismissed: 'Dismissed' };
 const MOVES = {
@@ -113,4 +116,28 @@ export function banked(est, life, now) {
     cumulative += saved;
     return { month, saved, cumulative };
   });
+}
+
+// Split `total` across weights, to the dollar (largest remainder).
+function split(total, weights) {
+  const w = weights.some(x => x > 0) ? weights : weights.map(() => 1);
+  const sum = w.reduce((a, x) => a + x, 0) || 1;
+  const raw = w.map(x => total * x / sum), floor = raw.map(Math.floor);
+  let left = total - floor.reduce((a, x) => a + x, 0);
+  raw.map((x, i) => [x - floor[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { floor[i] += 1; left -= 1; } });
+  return floor;
+}
+/**
+ * Savings by region, business unit or cloud (notes, 2026-09-29). What was
+ * banked follows what is on AT&T; what is still open follows what is not.
+ * Sites weigh by count for region and business unit; clouds by workloads.
+ */
+export function savingsBy(est, dim, totals, tags = {}) {
+  const groups = {};
+  const add = (label, on, off) => { const g = groups[label] = groups[label] || { label, on: 0, off: 0 }; g.on += on; g.off += off; };
+  if (dim === 'cloud') (est.regionsList || []).forEach(r => add(r.cloud, r.priv ? (r.wl || 1) : 0, r.priv ? 0 : (r.wl || 1)));
+  else (est.sites || []).forEach(x => { const n = countOf(x.name), k = dim === 'bu' ? buOf(x, tags) : regionOf(x); add(k, onAtt(x) ? n : 0, onAtt(x) ? 0 : n); });
+  const rows = Object.values(groups);
+  const b = split(Math.round(totals.banked || 0), rows.map(g => g.on)), o = split(Math.round(totals.open || 0), rows.map(g => g.off));
+  return rows.map((g, i) => ({ key: g.label, label: g.label, banked: b[i], open: o[i] })).sort((x, y) => (y.banked + y.open) - (x.banked + x.open));
 }

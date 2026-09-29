@@ -188,16 +188,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Cost · Banked (notes, 2026-09-29): div 996 -> 1002, span 758 -> 765, sc-if 376 -> 377, sc-for 217 -> 219.
 // Group sites by access type (notes, 2026-09-29): span 765 -> 766, sc-if 377 -> 378, label 28 -> 29.
 // Business units: Estate tab, Group option (notes, 2026-09-29): div 1002 -> 1012, span 766 -> 773, sc-if 378 -> 381, sc-for 219 -> 221, button 278 -> 281.
+// Savings grouped by region, business unit, cloud (notes, 2026-09-29): div 1012 -> 1019, span 773 -> 783, sc-for 221 -> 222, label 29 -> 30.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1012],
-    ['span', /<span\b/g, /<\/span>/g, 773],
+    ['div', /<div\b/g, /<\/div>/g, 1019],
+    ['span', /<span\b/g, /<\/span>/g, 783],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 381],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 221],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 222],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 281],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
-    ['label', /<label\b/g, /<\/label>/g, 29],
+    ['label', /<label\b/g, /<\/label>/g, 30],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);
