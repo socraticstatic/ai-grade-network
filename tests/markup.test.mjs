@@ -208,12 +208,14 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // NaaS home is Your network; Connect is its own page (Micah, 2026-09-29): sc-if 341 -> 342.
 // Logs pagers only with more than one page (2026-09-29 audit): sc-if 342 -> 344.
 // Explain parts as one line of chips (2026-09-29 audit): div 884 -> 883, span 607 -> 604, button 254 -> 255.
+// The drill traces through the map (2026-09-29): sc-for 182 -> 183.
+// Map values and path lines sit on a backing (2026-09-29): span 604 -> 605.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 883],
-    ['span', /<span\b/g, /<\/span>/g, 604],
+    ['span', /<span\b/g, /<\/span>/g, 605],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 344],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 182],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 183],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 255],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],

@@ -199,3 +199,62 @@ test('zoom on click: the focused subtree inflates, ribbons still attach', () => 
   assert.ok(h(zoomed) > h(flat) * 1.5, `${h(zoomed)} vs ${h(flat)}`);
   assert.ok(zoomed.ribbons.every(r => r.d.startsWith('M')));
 });
+
+// "cloud provider direct connect - use that instead of expressroute on the
+// sankey middle part" (Micah, 2026-09-29). The cloud's own private link is one
+// path in the middle, whichever cloud sells it; the product names stay off it.
+for (const id of ['partial', 'mature', 'trust', 'small']) {
+  test(`${id}: the middle names the cloud's own link once, as Cloud provider direct connect`, () => {
+    const est = D.ESTATES[id]; if (!est) return;
+    const inv = A.inventory(est); const flows = A.observe(est, [], inv).flows;
+    const m = buildMap(est, inv, flows, { open: [] });
+    const mids = m.nodes.filter(x => x.side === 'm').map(x => x.name);
+    const endpoints = [];
+    for (const r of m.nodes.filter(x => x.kind === 'cloud')) endpoints.push(...buildMap(est, inv, flows, { open: [r.key] }).nodes.filter(x => x.kind === 'endpoint').map(x => x.sub || ''));
+    for (const word of ['ExpressRoute', 'Direct Connect', 'Interconnect', 'FastConnect']) {
+      assert.ok(!mids.some(n => n.includes(word)), `${word} in the middle: ${mids.join(', ')}`);
+      assert.ok(!endpoints.some(n => n.includes(word)), `${word} under a destination: ${endpoints.join(', ')}`);
+    }
+    assert.equal(new Set(mids).size, mids.length, 'one node per path');
+    const native = est.regionsList.some(r => r.priv && ['DX', 'ER', 'Interconnect'].includes(r.ramp));
+    assert.equal(mids.includes('Cloud provider direct connect'), native, mids.join(', '));
+  });
+}
+
+// "when i click on sankey to drill, why can't i see the right side?" (Micah,
+// 2026-09-29). A drilled branch's traffic ran into the middle and stopped; the
+// right kept showing the whole estate. The drill now traces through: the
+// focused volume follows its paths to its destinations, and back again.
+for (const id of ['partial', 'mature', 'trust']) {
+  test(`${id}: drilling a site traces its traffic through to the destinations`, () => {
+    const { est, inv, flows } = ctx(id);
+    const root = leftRoots(est, flows).filter(x => x.kind === 'site').sort((a, b) => b.v - a.v)[0];
+    const state = childrenOf(root, est, inv, flows)[0];
+    const open = [root.key, state.key];
+    const m = buildMap(est, inv, flows, { open, zoom: state.key });
+    assert.ok(m.trace, 'a drill carries a trace');
+    const focusV = m.nodes.filter(x => x.side === 'l' && (x.key === state.key || x.key.startsWith(state.key + '/'))).reduce((a, x) => a + x.v, 0);
+    const out = Object.values(m.trace.dest).reduce((a, v) => a + v, 0);
+    assert.ok(near(out, focusV, 0.01), `traced ${out} of a focused ${focusV}`);
+    const through = Object.values(m.trace.mid).reduce((a, v) => a + v, 0);
+    assert.ok(near(through, focusV, 0.01), `through the middle ${through} of ${focusV}`);
+    for (const [k, v] of Object.entries(m.trace.dest)) { const d = m.nodes.find(x => x.key === k); assert.ok(d && d.side === 'r' && v <= (d.tot || d.v) + 1e-6, k); }
+    assert.ok(m.trace.ribbons.length > 0 && m.trace.ribbons.every(r => r.d.startsWith('M')));
+    assert.ok(m.trace.ribbons.some(r => String(r.from).startsWith('mid:')), 'the trace reaches the right');
+  });
+
+  test(`${id}: drilling a destination traces back to the sites that feed it`, () => {
+    const { est, inv, flows } = ctx(id);
+    const cloud = rightRoots(est, flows).filter(x => x.kind === 'cloud').sort((a, b) => b.v - a.v)[0];
+    const m = buildMap(est, inv, flows, { open: [cloud.key], zoom: cloud.key });
+    assert.ok(m.trace);
+    const focusV = m.nodes.filter(x => x.side === 'r' && x.key.startsWith(cloud.key + '/')).reduce((a, x) => a + x.v, 0);
+    const back = Object.values(m.trace.src).reduce((a, v) => a + v, 0);
+    assert.ok(near(back, focusV, 0.01), `traced back ${back} of ${focusV}`);
+  });
+}
+
+test('no drill, no trace', () => {
+  const { est, inv, flows } = ctx('partial');
+  assert.equal(buildMap(est, inv, flows, { open: [] }).trace, null);
+});

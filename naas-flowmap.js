@@ -92,7 +92,10 @@ export function onrampChildren(est, flows) {
   return [...tags, ...c2c];
 }
 
-export const RAMP_NAME = { NetBond: 'NetBond', ER: 'ExpressRoute', DX: 'Direct Connect', Interconnect: 'Interconnect', EQX: 'Equinix Fabric' };
+// The cloud's own private link is one path, whichever cloud sells it (Micah,
+// 2026-09-29: "cloud provider direct connect - use that instead of expressroute").
+const NATIVE = 'Cloud provider direct connect';
+export const RAMP_NAME = { NetBond: 'NetBond', ER: NATIVE, DX: NATIVE, Interconnect: NATIVE, EQX: 'Equinix Fabric' };
 const rampOf = (r) => RAMP_NAME[r.ramp] || 'NetBond';
 /** Your own data centers take a share of what the other sites send, over the private WAN. */
 export const DC_SHARE = 0.15;
@@ -374,7 +377,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
   const MM = layout(MMh, W / 2 - colW / 2, Math.max(top, (H - midH) / 2));
   const ribbons = [];
   const patternOf = (a, b) => { const g = a.group || rootGroup(a); if (b.key === 'dest:local') return 'region'; if (g === 'sites' || b.kind === 'cloud' || b.key === 'dest:regions') return 'inbound'; if (g === 'c2c' || /inter-cloud/.test(b.name || '')) return 'clouds'; if (/object storage/.test(b.name || '')) return 'regions'; if (/AI endpoints|public internet/.test(b.name || '')) return 'internet'; return 'mixed'; };
-  const link = (a, b, v, priv, kindOverride) => { if (v <= 0.0005) return; const sa = a.h / (a.tot || a.v || 1), sb = b.h / (b.tot || b.v || 1); const ay = a.y + a.used * sa, by = b.y + b.used * sb, ah = v * sa, bh = v * sb; a.used += v; b.used += v; const mx = (a.x2 + b.x) / 2; ribbons.push({ d: `M${a.x2},${ay} C${mx},${ay} ${mx},${by} ${b.x},${by} L${b.x},${by + bh} C${mx},${by + bh} ${mx},${ay + ah} ${a.x2},${ay + ah} Z`, priv, local: !!kindOverride, v, from: a.key, to: b.key, via: b.kind === 'mid' ? b.name : a.kind === 'mid' ? a.name : '', state: kindOverride ? 'ok' : priv ? 'ok' : (a.state !== 'ok' ? a.state : b.state), delta: deltaOf(a.key + '>' + b.key), pattern: kindOverride || patternOf(a, b) }); };
+  const link = (a, b, v, priv, kindOverride) => { if (v <= 0.0005) return; const sa = a.h / (a.tot || a.v || 1), sb = b.h / (b.tot || b.v || 1); const ay = a.y + a.used * sa, by = b.y + b.used * sb, ah = v * sa, bh = v * sb; a.used += v; b.used += v; const g = [a.x2, ay, ah, b.x, by, bh]; ribbons.push({ d: ribbonPath(g, 1), g, priv, local: !!kindOverride, v, from: a.key, to: b.key, via: b.kind === 'mid' ? b.name : a.kind === 'mid' ? a.name : '', state: kindOverride ? 'ok' : priv ? 'ok' : (a.state !== 'ok' ? a.state : b.state), delta: deltaOf(a.key + '>' + b.key), pattern: kindOverride || patternOf(a, b) }); };
   const mid = (k) => MM.find(m => m.key === k);
   const wanShare = fabV ? wanT / fabV : 0;
   SS.forEach(s0 => {
@@ -391,7 +394,34 @@ export function buildMap(est, inv, flows0, opts = {}) {
     if (pv > 0 && pubT > 0) { const ipShare = ipsecT / Math.max(0.0001, ipsecT + inetT); if (mid('mid:ipsec')) link(mid('mid:ipsec'), d, pv * (pubT ? (ipsecT + inetT) / pubT : 1) * ipShare, false); if (mid('mid:internet')) link(mid('mid:internet'), d, pv * (pubT ? (ipsecT + inetT) / pubT : 1) * (1 - ipShare), false); }
   });
   const nodes = [...SS.map(x => ({ ...x, side: 'l' })), ...MM.map(x => ({ ...x, side: 'm' })), ...DD.map(x => ({ ...x, side: 'r' }))].map(x => ({ ...x, delta: deltaOf(x.key), open: open.has(x.key) }));
-  return { W, H, heads, nodes, ribbons, total: T, fabV, localV, open: [...open], zoom, zf };
+  return { W, H, heads, nodes, ribbons, total: T, fabV, localV, open: [...open], zoom, zf, trace: traceOf(ribbons, zoom ? inZoom : null, SS, DD) };
+}
+/** A ribbon's outline; k draws only the top share of it, at both ends. */
+function ribbonPath([x1, ay, ah, x2, by, bh], k) {
+  const mx = (x1 + x2) / 2, a2 = ah * k, b2 = bh * k;
+  return `M${x1},${ay} C${mx},${ay} ${mx},${by} ${x2},${by} L${x2},${by + b2} C${mx},${by + b2} ${mx},${ay + a2} ${x1},${ay + a2} Z`;
+}
+/** A drill carries its traffic across the middle (Micah, 2026-09-29: "when i
+ *  click on sankey to drill, why can't i see the right side?"). A drilled site
+ *  branch follows its paths to the destinations; a drilled destination follows
+ *  them back to the sites. Each path passes on the focus's share of it. */
+function traceOf(ribbons, inZoom, SS, DD) {
+  if (!inZoom) return null;
+  const isMid = (k) => String(k).startsWith('mid:');
+  const leftZ = SS.some(x => inZoom(x.key)), rightZ = !leftZ && DD.some(x => inZoom(x.key));
+  if (!leftZ && !rightZ) return null;
+  const inTot = {}, outTot = {};
+  ribbons.forEach(r => { if (isMid(r.to)) inTot[r.to] = (inTot[r.to] || 0) + r.v; if (isMid(r.from)) outTot[r.from] = (outTot[r.from] || 0) + r.v; });
+  const part = (r, k) => ({ from: r.from, to: r.to, priv: r.priv, state: r.state, v: r.v * k, d: ribbonPath(r.g, k) });
+  const mid = {}, dest = {}, src = {}, out = [];
+  if (leftZ) {
+    ribbons.filter(r => isMid(r.to) && inZoom(r.from)).forEach(r => { mid[r.to] = (mid[r.to] || 0) + r.v; out.push(part(r, 1)); src[r.from] = (src[r.from] || 0) + r.v; });
+    ribbons.filter(r => isMid(r.from) && mid[r.from]).forEach(r => { const k = mid[r.from] / (inTot[r.from] || 1); out.push(part(r, k)); dest[r.to] = (dest[r.to] || 0) + r.v * k; });
+  } else {
+    ribbons.filter(r => isMid(r.from) && inZoom(r.to)).forEach(r => { mid[r.from] = (mid[r.from] || 0) + r.v; out.push(part(r, 1)); dest[r.to] = (dest[r.to] || 0) + r.v; });
+    ribbons.filter(r => isMid(r.to) && mid[r.to]).forEach(r => { const k = mid[r.to] / (outTot[r.to] || 1); out.push(part(r, k)); src[r.from] = (src[r.from] || 0) + r.v * k; });
+  }
+  return { side: leftZ ? 'l' : 'r', mid, dest, src, ribbons: out.filter(r => r.v > 0.0005) };
 }
 function rootGroup(x) { return x.kind === 'site' || x.kind === 'metro' || x.kind === 'sitename' || x.kind === 'circuit' ? 'sites' : x.kind === 'cloud' || x.kind === 'dest' || x.kind === 'dc' ? 'dest' : 'onramp'; }
 
