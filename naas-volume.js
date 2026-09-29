@@ -9,6 +9,7 @@
 // asset behind a rolled-up count, searchable, sortable worst first, filterable,
 // selectable in bulk. Pure data. Added 2026-09-09.
 import * as S from './naas-sites.js';
+import { regionRows } from './naas-logic.js';
 import * as P from './naas-paths.js';
 import * as C from './naas-connections.js';
 import * as FB from './naas-fabric.js';
@@ -168,6 +169,8 @@ export function workloadList(est, inv, scope, opts = {}) {
 
 const NOUN = {
   group: ['site group', 'site groups'],
+  state: ['state', 'states'],
+  service: ['service', 'services'],
   metro: ['metro', 'metros'],
   site: ['site', 'sites'],
   path: ['path', 'paths'],
@@ -226,6 +229,15 @@ const pastRegion = (trail) => (trail.length > 1 && String(trail[0]).startsWith('
 
 function sitesHead(est, trail) {
   const tr = labels(est, null, 'sites', trail);
+  // The root is regions, and a region drills by place: state, metro, site,
+  // services (Micah, 2026-09-29). It never opens into clouds.
+  if (!trail.length) {
+    const regs = regionRows(est), all = totalSites(est);
+    if (!regs.length) return { col: 'sites', level: 'site', noun: nounFor('site', 0), total: 0, title: 'Sites', sub: 'no sites yet', trail: tr };
+    return { col: 'sites', level: 'region', noun: nounFor('region', regs.length), total: regs.length, title: 'Sites', sub: `${n(regs.length)} regions · ${n(all)} sites`, trail: tr };
+  }
+  const pm = C.placeMetroScope(est, trail);
+  if (pm) return { col: 'sites', level: 'site', noun: nounFor('site', pm.count), total: pm.count, title: pm.name, sub: `${n(pm.onFabric)} on AT&T · ${n(pm.count - pm.onFabric)} public`, trail: tr };
   trail = pastRegion(trail);
   if (!trail.length) {
     // The door counts what the drawer holds, one row per site record. When every
@@ -316,8 +328,18 @@ export function levelList(est, inv, ob, col, trail = [], opts = {}) {
 
 function sitesLevel(est, trail, opts) {
   const head = sitesHead(est, trail);
-  trail = pastRegion(trail);
   if (!head) return null;
+  if (!trail.length) {
+    const rows = regionRows(est).map(r => ({ id: r.name, into: 'region:' + r.name, state: stateOfPriv(r.sites.some(x => x.priv)), stateLabel: labelOfPriv(r.sites.some(x => x.priv)),
+      sub: `${n(r.count)} ${r.count === 1 ? 'site' : 'sites'}`, action: '' }));
+    return frame(head, rows, opts);
+  }
+  const pm = C.placeMetroScope(est, trail);
+  if (pm) {
+    const v = volumeList(est, { cls: pm.cls, metro: pm.metroKey }, opts);
+    if (v) return { ...v, col: 'sites', level: head.level, noun: head.noun, total: head.total, trail: head.trail, caps: capsFor(head.total, true), rows: v.rows.map(r => ({ ...r, into: 'site:' + r.id })) };
+  }
+  trail = pastRegion(trail);
   if (!trail.length) {
     const rows = (est.sites || []).map((st) => {
       const c = S.countOf(st.name);

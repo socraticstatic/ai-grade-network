@@ -14,8 +14,12 @@ import { mkC } from './harness.mjs';
 // read the things per region, so they lay the regions out as the drill does.
 const REGIONS = D.ESTATES.mature.regionsList;
 const L = () => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, regionRows: REGIONS });
-// The left root is regions; drilled into US West, Denver and Phoenix are themselves.
-const West = () => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, regionRows: REGIONS, siteRows: siteDrillRows(D.ESTATES.mature, ['region:US West']).rows });
+// The site side drills by place (2026-09-29): US West → state → metro → site.
+// The Lumen stories live on each site's own line at the site level.
+const westSites = () => siteDrillRows(D.ESTATES.mature, ['region:US West']).rows.flatMap(st => siteDrillRows(D.ESTATES.mature, ['region:US West', st.drillKey]).rows.flatMap(m => siteDrillRows(D.ESTATES.mature, ['region:US West', st.drillKey, m.drillKey]).rows));
+const metroOfSite = (name) => { for (const st of siteDrillRows(D.ESTATES.mature, ['region:US West']).rows) for (const m of siteDrillRows(D.ESTATES.mature, ['region:US West', st.drillKey]).rows) { const rows = siteDrillRows(D.ESTATES.mature, ['region:US West', st.drillKey, m.drillKey]).rows; if (rows.some(r => r.name === name)) return rows; } return []; };
+// The left root is regions; at the site level Denver, Salt Lake and Phoenix are themselves.
+const West = () => heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, regionRows: REGIONS, siteRows: westSites() });
 
 test('the middle is five segments, in path order', () => {
   assert.deepEqual(L().segments.map(s => s.label), ['Access', 'Edge', 'Core', 'Edge', 'Access']);
@@ -266,11 +270,11 @@ test('Phoenix lands on the same AWS gateway as the AT&T routes, and reaches us-w
   assert.ok(out, 'nothing carries us-west-2 out of the band');
 });
 
-test('the SLA owner survives the drill to a site\'s paths', () => {
+test('the SLA owner rides the site\'s own line at the site level', () => {
   for (const [site, owner, label] of [['Denver branch', 'att', 'AT&T off-net'], ['Salt Lake branch', 'third', 'Third Party Ethernet']]) {
-    const rows = siteDrillRows(D.ESTATES.mature, ['region:US West', site]).rows;
+    const rows = metroOfSite(site);
     const l = heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, regionRows: REGIONS, siteRows: rows });
-    const firsts = l.routes.filter(r => r.side === 'site').map(r => node(l, r.nodes[0]));
+    const firsts = l.routes.filter(r => r.side === 'site' && (r.label || '').startsWith(site)).map(r => node(l, r.nodes[0]));
     assert.ok(firsts.length > 0, `${site}: no paths drawn`);
     for (const n of firsts) assert.deepEqual([n.label, n.owner], [label, owner], site);
   }

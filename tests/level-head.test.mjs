@@ -16,13 +16,17 @@ const inv = A.inventory(est);
 const ob = A.observe(est, [], inv);
 const head = (col, trail) => levelHead(est, inv, ob, col, trail);
 
+// The site side drills by place (Micah, 2026-09-29): regions, states, metros,
+// sites, services. Never clouds.
 test('the sites column counts what the drawer will hold', () => {
-  assert.deepEqual(pick(head('sites', [])), { total: 7, noun: 'site groups' });
-  assert.deepEqual(pick(head('sites', ['Branch'])), { total: 19, noun: 'metros' });
-  assert.deepEqual(pick(head('sites', ['Branch#1'])), { total: 6, noun: 'metros' });
-  assert.deepEqual(pick(head('sites', ['Branch', 'Branch:1:Atlanta'])), { total: 588, noun: 'remote sites' });
-  const site = head('sites', ['Branch', 'Branch:1:Atlanta', 'RS-ATL-0100']);
-  assert.equal(site.noun, 'paths');
+  assert.deepEqual(pick(head('sites', [])), { total: 4, noun: 'regions' });
+  assert.deepEqual(pick(head('sites', ['region:US East'])), { total: 4, noun: 'states' });
+  assert.deepEqual(pick(head('sites', ['region:US East', 'state:GA'])), { total: 1, noun: 'metro' });
+  assert.deepEqual(pick(head('sites', ['region:US East', 'state:GA', 'metro:Atlanta'])), { total: 292, noun: 'sites' });
+  const site = head('sites', ['region:US East', 'state:GA', 'metro:Atlanta', 'site:RS-ATL-0100']);
+  assert.equal(site.noun, 'service');
+  // The old class trail still resolves for callers that hold one.
+  assert.deepEqual(pick(head('sites', ['Branch#1'])), { total: 4, noun: 'metros' });
 });
 
 test('the AT&T network column counts facilities, ports and circuits', () => {
@@ -79,7 +83,8 @@ test('sites: the root conserves - every group, drilled to its sites, sums to sit
 });
 
 test('sites: one level down, Branch#1 (Remote sites, East) conserves the same way', () => {
-  assert.deepEqual(pick(head('sites', ['Branch#1'])), { total: 6, noun: 'metros' });
+  // East's rollup splits only into East metros (2026-09-29): Atlanta, Charlotte, Miami, Nashville.
+  assert.deepEqual(pick(head('sites', ['Branch#1'])), { total: 4, noun: 'metros' });
   assert.equal(siteCountOfGroup('Branch#1'), 1640);
 });
 
@@ -108,10 +113,9 @@ const door = (col, extra) => vals(mkC(extra))[col];
 
 test('the three doors read the spec table on trust, level by level', () => {
   // SITES
-  assert.equal(door('sitesDoor').label, 'All 7 site groups ›');
-  assert.equal(door('sitesDoor', { drill: ['Branch'] }).label, 'All 19 metros · 13 hidden ›');
-  assert.equal(door('sitesDoor', { drill: ['Branch', 'Branch:1:Atlanta'] }).label, 'All 588 remote sites · 582 hidden ›');
-  assert.equal(door('sitesDoor', { drill: ['Branch', 'Branch:1:Atlanta', 'RS-ATL-0100'] }).label, 'All 6 paths ›');
+  assert.equal(door('sitesDoor').label, 'All 4 regions ›');
+  assert.equal(door('sitesDoor', { drill: ['region:US East'] }).label, 'All 4 states ›');
+  assert.equal(door('sitesDoor', { drill: ['region:US East', 'state:GA', 'metro:Atlanta'] }).label, 'All 292 sites · 286 hidden ›');
   // FABRIC
   assert.equal(door('bandDoor').label, 'All 4 facilities ›');
   assert.equal(door('bandDoor', { fabDrill: ['fab', 'N. Virginia'] }).label, 'All 21 ports · 13 hidden ›');
@@ -124,18 +128,16 @@ test('the three doors read the spec table on trust, level by level', () => {
 });
 
 test('hidden is the drawer total less what the canvas is actually drawing', () => {
-  // 19 metros at the CLASS level, 6 on the canvas.
-  assert.equal(door('sitesDoor', { drill: ['Branch'] }).label, 'All 19 metros · 13 hidden ›');
-  // The East rollup GROUP is a real level too, and it hides nothing.
-  assert.equal(door('sitesDoor', { drill: ['Branch#1'] }).label, 'All 6 metros ›');
-  // 588 remote sites in Atlanta, 6 on the canvas.
-  assert.equal(door('sitesDoor', { drill: ['Branch', 'Branch:1:Atlanta'] }).label, 'All 588 remote sites · 582 hidden ›');
+  // A region's states all fit; it hides nothing.
+  assert.equal(door('sitesDoor', { drill: ['region:US East'] }).label, 'All 4 states ›');
+  // 292 sites in Atlanta, 6 on the canvas.
+  assert.equal(door('sitesDoor', { drill: ['region:US East', 'state:GA', 'metro:Atlanta'] }).label, 'All 292 sites · 286 hidden ›');
   // 21 ports at N. Virginia, the band draws 8.
   assert.equal(door('bandDoor', { fabDrill: ['fab', 'N. Virginia'] }).label, 'All 21 ports · 13 hidden ›');
 });
 
 test('an accent door means something is hidden; a plain one means nothing is', () => {
-  assert.equal(door('sitesDoor', { drill: ['Branch'] }).color, 'var(--link)');
+  assert.equal(door('sitesDoor', { drill: ['region:US East', 'state:GA', 'metro:Atlanta'] }).color, 'var(--link)');
   assert.equal(door('sitesDoor').color, 'var(--text-light)');
   assert.equal(door('bandDoor', { fabDrill: ['fab', 'N. Virginia'] }).color, 'var(--link)');
   assert.equal(door('bandDoor').color, 'var(--text-light)');
@@ -187,11 +189,11 @@ test('the gutter clears each column card edge by 16 viewBox units', () => {
 });
 
 test('the door opens the drawer on that column, in place', () => {
-  const c = mkC({ drill: ['Branch'] });
+  const c = mkC({ drill: ['region:US East', 'state:GA', 'metro:Atlanta'] });
   vals(c).sitesDoor.open();
   assert.deepEqual(c.state.vol, { kind: 'level', col: 'sites' });
   assert.equal(c.state.drawerOpen, true);
-  assert.equal(vals(c).drawer.total, 19, 'the door total is the drawer total');
+  assert.equal(vals(c).drawer.total, 292, 'the door total is the drawer total');
 });
 
 test('on the empty estate the header prints the zero and opens nothing', () => {
@@ -215,7 +217,7 @@ test('on the empty estate the header prints the zero and opens nothing', () => {
 });
 
 test('the title names the level the door opens', () => {
-  assert.equal(door('sitesDoor', { drill: ['Branch', 'Branch:1:Atlanta'] }).title, 'Open the list: Atlanta');
+  assert.equal(door('sitesDoor', { drill: ['region:US East', 'state:GA', 'metro:Atlanta'] }).title, 'Open the list: Atlanta');
   assert.equal(door('cloudsDoor').title, 'Open the list: Clouds');
   assert.equal(vals(mkC({ view: 'empty' })).sitesDoor.title, 'Sites: nothing to open yet');
 });
@@ -241,7 +243,8 @@ test('the roots still read on partial and mature', () => {
   // Mature gained Denver branch and Phoenix DC, the two Lumen sites: 7 -> 9.
   // Then Salt Lake branch, a Lumen last mile the customer bought: 9 -> 10.
   // Partial became 25 named sites across five regions on 2026-09-28: 5 -> 25.
-  for (const [view, sites, fab, clouds] of [['partial', 25, 2, 7], ['mature', 10, 7, 8]]) {
+  // The sites root is regions since 2026-09-29: five on partial, five on mature.
+  for (const [view, sites, fab, clouds] of [['partial', 5, 2, 7], ['mature', 5, 7, 8]]) {
     const v = vals(mkC({ view }));
     assert.ok(v.sitesDoor.label.startsWith(`All ${sites} `), `${view} sites: ${v.sitesDoor.label}`);
     assert.ok(v.bandDoor.label.startsWith(`All ${fab} `), `${view} fabric: ${v.bandDoor.label}`);

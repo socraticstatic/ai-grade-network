@@ -55,14 +55,18 @@ export const countOf = (name) => { const m = /\(([\d,]+)\)/.exec(name); return m
 const isRollup = (st) => countOf(st.name) > 1;
 
 /** Deterministic split of n sites across k metros, largest first. */
-function splitMetros(n, seed) {
-  const k = Math.max(1, Math.min(6, Math.min(n, Math.round(n / 40) || 2)));
+// A rollup that names its region ("Remote sites, East") splits only into that
+// region's metros, so a region never drills into a state it does not contain.
+const REGION_METROS = { East: ['Atlanta', 'Charlotte', 'Miami', 'Nashville'], Central: ['Dallas', 'Houston', 'Chicago'], West: ['Phoenix', 'Denver', 'Seattle'] };
+const metroPool = (st) => { const m = /,\s*(East|Central|West)\b/.exec(st.name || ''); return m ? REGION_METROS[m[1]] : METROS; };
+function splitMetros(n, seed, pool = METROS) {
+  const k = Math.max(1, Math.min(6, pool.length, Math.min(n, Math.round(n / 40) || 2)));
   const weights = Array.from({ length: k }, (_, i) => 1 / (i + 1.4));
   const total = weights.reduce((a, b) => a + b, 0);
   const counts = weights.map(w => Math.max(1, Math.floor(n * w / total)));
   let left = n - counts.reduce((a, b) => a + b, 0);
   for (let i = 0; left > 0; i = (i + 1) % k) { counts[i] += 1; left -= 1; }
-  return counts.map((c, i) => ({ metro: METROS[(i + seed) % METROS.length], count: c }));
+  return counts.map((c, i) => ({ metro: pool[(i + seed) % pool.length], count: c }));
 }
 
 /** One site row. Private share follows the class; latency and address are seeded. */
@@ -98,7 +102,8 @@ export function siteTree(est) {
     let children = [];
     if (g.rollups.length) {
       let seed = gi;
-      children = g.rollups.flatMap((r, ri) => splitMetros(r.n, seed++).map((m, mi) => {
+      // Each rollup carries its own share on AT&T (2026-09-29): "Remote sites, West" is on AT&T and "East" is not.
+      children = g.rollups.flatMap((r, ri) => { const privShare = r.priv ? 1 : 0; return splitMetros(r.n, seed++, metroPool(r)).map((m, mi) => {
         const sites = Array.from({ length: Math.min(m.count, 6) }, (_, i) => siteRow(g.cls, m.metro, i + mi * 6, ((i * 7 + mi * 3) % 10) / 10 < privShare + 0.05));
         const onFabric = privShare >= 1 ? m.count : privShare <= 0 ? 0 : Math.round(m.count * (privShare + ((mi % 3) - 1) * 0.08));
         return {
@@ -106,7 +111,7 @@ export function siteTree(est) {
           access: r.access, ramp: `${m.metro} PoP`, ms: 4 + (mi * 3) % 9, sites, more: Math.max(0, m.count - sites.length),
           gen: { cls: g.cls, mi, privShare },
         };
-      }));
+      }); });
     }
     // Named sites stand beside a class's rollups, never instead of them: a class
     // holding one rollup used to drop every named site in it, which is how Denver

@@ -122,10 +122,8 @@ export function rightRoots(est, flows) {
   return [...clouds, ...dc];
 }
 
-/** Children of a node, one level down. Every level is honest about what the data can name. */
-export function childrenOf(node, est, inv, flows) {
-  const parts = node.key.split('/');
-  if (node.kind === 'site') {
+/** A site region's places, one level down, before they group by state. */
+function siteRegionRows(node, est) {
     // Children of a first-mile group are the sites on it, by metro where a
     // metro holds more than one. siteTree groups by building class, which is
     // exactly the thing the network cannot see, so this descends on its own.
@@ -144,7 +142,9 @@ export function childrenOf(node, est, inv, flows) {
       const count = S.countOf(x.name);
       const cls = S.classOf(x);
       const per = PER_SITE[cls] || 0.5;
-      const kids = count > 1 ? ((tree.find(c => c.cls === cls) || {}).children || []).filter(k => k.kind === 'metro') : [];
+      // Only this rollup's own metros: "Remote sites, East" never borrows Dallas from Central.
+      const rix = String(S.rollupKeyOf(est, x) || '').split('#')[1];
+      const kids = count > 1 ? ((tree.find(c => c.cls === cls) || {}).children || []).filter(k => k.kind === 'metro' && (rix == null || String(k.key).startsWith(`${cls}:${rix}:`))) : [];
       if (kids.length) {
         kids.forEach(k => {
           const g = byMetro[k.name] = byMetro[k.name] || { metro: k.name, count: 0, onFabric: 0, only: null, cls, per, v: 0, fabV: 0 };
@@ -160,9 +160,27 @@ export function childrenOf(node, est, inv, flows) {
       if (g.count > count) g.only = null;
     });
     return Object.values(byMetro).map(g => g.only && g.count === 1
-      ? { kind: 'sitename', key: `${node.key}/${g.only.name}`, cls: node.cls, siteCls: g.cls, siteName: g.only.name, name: g.only.name, sub: S.servicesOf(g.only).map(v => v.label).join(' + '), v: g.v, fabV: g.fabV, ipsecV: isTunnel(g.only) ? g.v * 0.9 : 0, hasChildren: true, state: g.only.priv ? 'ok' : 'slo', parentKey: node.key }
+      ? { kind: 'sitename', key: `${node.key}/${g.only.name}`, metro: g.metro, cls: node.cls, siteCls: g.cls, siteName: g.only.name, name: g.only.name, sub: S.servicesOf(g.only).map(v => v.label).join(' + '), v: g.v, fabV: g.fabV, ipsecV: isTunnel(g.only) ? g.v * 0.9 : 0, hasChildren: true, state: g.only.priv ? 'ok' : 'slo', parentKey: node.key }
       : { kind: 'metro', key: `${node.key}/${g.metro}`, cls: node.cls, siteCls: g.cls, metro: g.metro, count: g.count, name: `${g.metro} · ${n(g.count)}`, v: g.v, fabV: g.fabV, hasChildren: true, state: g.onFabric < g.count / 2 ? 'slo' : 'ok', parentKey: node.key }
     ).sort((a, b) => b.v - a.v);
+  }
+/** Children of a node, one level down. Every level is honest about what the data can name. */
+export function childrenOf(node, est, inv, flows) {
+  const parts = node.key.split('/');
+  if (node.kind === 'site') {
+    // The site side drills by place: region, state, metro, site, services. It
+    // never turns into clouds (Micah, 2026-09-29).
+    const rows = siteRegionRows(node, est);
+    const by = {};
+    rows.forEach(r => { const k = S.stateOf(r.metro) || '—'; (by[k] = by[k] || []).push(r); });
+    return Object.entries(by).map(([code, rs]) => { const count = rs.reduce((a, r) => a + (r.count || 1), 0);
+      return { kind: 'placestate', key: `${node.key}/state:${code}`, region: node.region, cls: node.cls, stateCode: code, parentSite: { kind: 'site', key: node.key, region: node.region, cls: node.cls, v: node.v, fabV: node.fabV },
+        name: `${S.placeName(code === '—' ? '' : code)} · ${n(count)} ${count === 1 ? 'site' : 'sites'}`, count, v: rs.reduce((a, r) => a + r.v, 0), fabV: rs.reduce((a, r) => a + r.fabV, 0), priv: rs.some(r => r.priv),
+        hasChildren: true, state: rs.map(r => r.state).find(x => x && x !== 'ok') || 'ok', parentKey: node.key }; }).sort((a, b) => b.v - a.v);
+  }
+  if (node.kind === 'placestate') {
+    return siteRegionRows(node.parentSite, est).filter(r => (S.stateOf(r.metro) || '—') === node.stateCode)
+      .map(r => ({ ...r, key: `${node.key}/${r.key.split('/').pop()}`, parentKey: node.key }));
   }
   if (node.kind === 'metro') {
     // node.cls is the first mile (adi, sdwan). siteTree is keyed by building
@@ -177,18 +195,13 @@ export function childrenOf(node, est, inv, flows) {
     return shareFab(rows, node.fabV);
   }
   if (node.kind === 'sitename') {
-    const site = P.allSites(est).find(x => x.id === node.siteName || x.name === node.siteName); if (!site) return [];
-    // gbps() adds a cross-geography share on top of the class weight, so a
-    // site's regions summed to 124% of the site and the level overshot its
-    // own parent. The shape of the split is right; the scale is the row above.
-    const rows = P.siteRegions(est, site, est.regionsList.length).rows;
-    const tot = rows.reduce((a, x) => a + x.gbps, 0) || 1;
-    return shareFab(rows.map(x => { const ms = P.path(site, x.region).ms; return {
-      kind: 'circuit', key: `${node.key}/${x.region.region}`, name: `→ ${x.region.cloud} ${x.region.region}`,
-      sub: `${site.access || 'Access'} · ${x.region.priv ? 'on AT&T' : 'public path'} · ${ms} ms`,
-      v: node.v * x.gbps / tot, priv: !!x.region.priv, hasChildren: false,
-      state: x.region.priv ? 'ok' : (ms > SLO ? 'slo' : 'ok'), parentKey: node.key, region: x.region.region };
-    }), node.fabV).sort((a, b) => b.v - a.v);
+    // A site opens to the services it buys, never to the clouds it reaches:
+    // clouds are the right-hand side (Micah, 2026-09-29).
+    const site = P.allSites(est).find(x => x.id === node.siteName || x.name === node.siteName) || (est.sites || []).find(x => x.name === node.siteName); if (!site) return [];
+    const svcs = S.servicesOf(site);
+    const w = svcs.map((_, i) => svcs.length === 1 ? 1 : i === 0 ? 0.7 : 0.3 / (svcs.length - 1));
+    return shareFab(svcs.map((sv, i) => ({ kind: 'service', key: `${node.key}/svc:${sv.key}`, name: sv.label, sub: `${sv.role} · ${sv.onAtt ? 'AT&T core' : 'outside the AT&T network'}`,
+      v: node.v * w[i], priv: !!sv.onAtt, hasChildren: false, state: node.state || 'ok', parentKey: node.key })), node.fabV);
   }
   if (node.kind === 'tag') {
     const m = {}; flows.filter(f => f.kind === 'App' && f.from === node.name).forEach(f => { const rn = f.region; const g = m[rn] = m[rn] || { kind: 'tagregion', key: `${node.key}/${rn}`, tag: node.name, regionName: rn, name: rn, v: 0, fabV: 0 }; g.v += f.gbps; if (f.controlled) g.fabV += f.gbps; });
@@ -262,7 +275,7 @@ function expand(list, open, est, inv, flows, depth = 0) {
     fold = ranked.slice(CAP);
   }
   const out = keep.flatMap(nd => { const node = { ...nd, depth, group: nd.group || rootGroup(nd) }; if (open.has(node.key) && node.hasChildren) { const kids = childrenOf(node, est, inv, flows).map(k => ({ ...k, group: node.group })); return kids.length ? expand(kids, open, est, inv, flows, depth + 1) : [node]; } return [node]; });
-  if (fold.length) { const first = openHere[0] || keep[0] || fold[0]; const kindWord = { metro: 'metros', sitename: 'sites', site: 'first miles', tag: 'workload tags', c2c: 'cloud pairs', tagregion: 'regions', vpc: 'VPCs', subnet: 'subnets', workload: 'workloads', endpoint: 'endpoints', dest: 'destinations' }[fold[0].kind] || ''; out.push({ kind: 'rollup', key: `${(fold[0].parentKey || (first && first.key ? first.key.split('/')[0] : 'lvl' + depth))}/rollup`, name: kindWord ? `+${fold.length} other ${kindWord}` : `+${fold.length} others`, sub: 'click to fold back', v: fold.reduce((a, x) => a + x.v, 0), fabV: fold.reduce((a, x) => a + x.fabV, 0), hasChildren: false, state: 'ok', depth, group: fold[0].group || rootGroup(fold[0]), parentKey: fold[0].parentKey, ipsecV: fold.reduce((a, x) => a + (x.ipsecV || 0), 0), pubV: fold.reduce((a, x) => a + (x.pubV || 0), 0), wan: fold.reduce((a, x) => a + (x.wan || 0), 0), byRamp: fold.reduce((m, x) => { Object.entries(x.byRamp || {}).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; }); return m; }, {}), foldsKey: first && first.key ? first.key : null, tailOnly: !openHere.length , tagV: fold.reduce((a, x) => a + (x.kind === 'c2c' ? 0 : (x.tagV != null ? x.tagV : x.v)), 0)}); }
+  if (fold.length) { const first = openHere[0] || keep[0] || fold[0]; const kindWord = { placestate: 'states', metro: 'metros', sitename: 'sites', service: 'services', site: 'regions', tag: 'workload tags', c2c: 'cloud pairs', tagregion: 'regions', vpc: 'VPCs', subnet: 'subnets', workload: 'workloads', endpoint: 'endpoints', dest: 'destinations' }[fold[0].kind] || ''; out.push({ kind: 'rollup', key: `${(fold[0].parentKey || (first && first.key ? first.key.split('/')[0] : 'lvl' + depth))}/rollup`, name: kindWord ? `+${fold.length} other ${kindWord}` : `+${fold.length} others`, sub: 'click to fold back', v: fold.reduce((a, x) => a + x.v, 0), fabV: fold.reduce((a, x) => a + x.fabV, 0), hasChildren: false, state: 'ok', depth, group: fold[0].group || rootGroup(fold[0]), parentKey: fold[0].parentKey, ipsecV: fold.reduce((a, x) => a + (x.ipsecV || 0), 0), pubV: fold.reduce((a, x) => a + (x.pubV || 0), 0), wan: fold.reduce((a, x) => a + (x.wan || 0), 0), byRamp: fold.reduce((m, x) => { Object.entries(x.byRamp || {}).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; }); return m; }, {}), foldsKey: first && first.key ? first.key : null, tailOnly: !openHere.length , tagV: fold.reduce((a, x) => a + (x.kind === 'c2c' ? 0 : (x.tagV != null ? x.tagV : x.v)), 0)}); }
   return out;
 }
 

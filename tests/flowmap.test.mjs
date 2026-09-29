@@ -78,29 +78,35 @@ test('a site group of mixed building classes prices each site by its own class',
   ] };
   const inv = A.inventory(est), flows = A.observe(est, [], inv).flows;
   const adi = leftRoots(est, flows).find(x => x.region === 'US East');
-  const kids = childrenOf(adi, est, inv, flows);
+  // A region opens to its states first (2026-09-29); the sites sit one level down.
+  const kids = childrenOf(adi, est, inv, flows).flatMap(st => childrenOf(st, est, inv, flows));
   const dc = kids.find(k => /Atlanta/.test(k.name)), plant = kids.find(k => /Denver/.test(k.name));
   assert.ok(dc && plant);
   assert.ok(near(dc.v, 6), `data center ${dc.v}`);
   assert.ok(near(plant.v, 1.5), `plant ${plant.v}`);
 });
 
-test('a site opens to the regions it reaches, and they add up to the site', () => {
+// "When you drill down, you get to clouds" (Micah, 2026-09-29): a site opens to
+// the services it buys, never to the clouds it reaches. Clouds are the right side.
+test('a site opens to the services it buys, and they add up to the site', () => {
   const { est, inv, flows } = ctx('mature');
-  const adi = leftRoots(est, flows).find(x => x.region === 'International');
-  const sg = childrenOf(adi, est, inv, flows).find(k => /Singapore/.test(k.name));
+  const intl = leftRoots(est, flows).find(x => x.region === 'International');
+  const sg = childrenOf(intl, est, inv, flows).flatMap(st => childrenOf(st, est, inv, flows)).find(k => /Singapore/.test(k.name));
   assert.ok(sg, 'Singapore DC');
-  const circuits = childrenOf(sg, est, inv, flows);
-  assert.ok(circuits.length >= 2);
-  assert.equal(circuits[0].kind, 'circuit');
-  assert.ok(near(sum(circuits), sg.v, 0.01), `${sum(circuits)} vs ${sg.v}`);
-  assert.match(circuits[0].name, /ap-southeast-1/);
+  const svcs = childrenOf(sg, est, inv, flows);
+  assert.ok(svcs.length >= 1);
+  assert.ok(svcs.every(x => x.kind === 'service' && !x.hasChildren));
+  assert.ok(svcs.every(x => !/^(AWS|Azure|GCP|Google|Oracle)\b|→/.test(x.name)), svcs.map(x => x.name).join(', '));
+  assert.ok(near(sum(svcs), sg.v, 0.01), `${sum(svcs)} vs ${sg.v}`);
 });
 
-test('first mile drills class → metro → site → circuit, and folds nothing away', () => {
+test('a region drills state → metro → site → service, and folds nothing away', () => {
   const { est, inv, flows } = ctx('mature');
   const sdwan = leftRoots(est, flows).find(x => x.region === 'Nationwide');
-  const metros = childrenOf(sdwan, est, inv, flows);
+  const states = childrenOf(sdwan, est, inv, flows);
+  assert.equal(states[0].kind, 'placestate');
+  assert.ok(near(sum(states), sdwan.v, 0.01), `${sum(states)} vs ${sdwan.v}`);
+  const metros = childrenOf(states[0], est, inv, flows);
   assert.equal(metros[0].kind, 'metro');
   const sites = childrenOf(metros[0], est, inv, flows);
   assert.equal(sites[0].kind, 'sitename');
@@ -149,9 +155,10 @@ test('filterRegion narrows, scrub scales, deltas and states exist', () => {
 test('trail walks root to leaf; litFor lights ribbons through a node', () => {
   const { est, inv, flows } = ctx('mature');
   const sdwan = leftRoots(est, flows).find(x => x.region === 'Nationwide');
-  const metro = childrenOf(sdwan, est, inv, flows)[0];
+  const state = childrenOf(sdwan, est, inv, flows)[0];
+  const metro = childrenOf(state, est, inv, flows)[0];
   const site = childrenOf(metro, est, inv, flows)[0];
-  assert.deepEqual(trail(site.key, est, inv, flows).map(x => x.kind), ['site', 'metro', 'sitename']);
+  assert.deepEqual(trail(site.key, est, inv, flows).map(x => x.kind), ['site', 'placestate', 'metro', 'sitename']);
   const lit = litFor(buildMap(est, inv, flows, {}), sdwan.key);
   assert.ok(lit.keys.has(sdwan.key) && [...lit.keys].some(k => k.startsWith('mid:')));
   assert.ok(lit.ribbons.size >= 1);
@@ -169,10 +176,12 @@ test('every ribbon carries a pattern and every named pattern lights something', 
 test('below the roots, an open node folds its siblings into one row', () => {
   const { est, inv, flows } = ctx('mature');
   const sdwan = leftRoots(est, flows).find(x => x.region === 'Nationwide');
-  const metro = childrenOf(sdwan, est, inv, flows)[0];
-  const m = buildMap(est, inv, flows, { open: [sdwan.key, metro.key] });
-  const roll = m.nodes.filter(x => x.kind === 'rollup').find(x => /other metros/.test(x.name));
-  assert.equal(m.nodes.filter(x => x.kind === 'metro').length, 0);
+  const state = childrenOf(sdwan, est, inv, flows).find(st => childrenOf(st, est, inv, flows).length > 1) || childrenOf(sdwan, est, inv, flows)[0];
+  const metro = childrenOf(state, est, inv, flows)[0];
+  const m = buildMap(est, inv, flows, { open: [sdwan.key, state.key, metro.key] });
+  // The open state's siblings fold into one row (2026-09-29: a region opens to states first).
+  const roll = m.nodes.filter(x => x.kind === 'rollup').find(x => /other states/.test(x.name));
+  assert.equal(m.nodes.filter(x => x.kind === 'placestate').length, 0);
   assert.ok(roll, m.nodes.filter(x => x.kind === 'rollup').map(x => x.name).join(', '));
   assert.ok(m.nodes.some(x => x.kind === 'sitename'));
   assert.ok(!buildMap(est, inv, flows, { open: [sdwan.key] }).nodes.some(x => x.kind === 'rollup'), 'roots do not fold');
@@ -181,9 +190,10 @@ test('below the roots, an open node folds its siblings into one row', () => {
 test('zoom on click: the focused subtree inflates, ribbons still attach', () => {
   const { est, inv, flows } = ctx('mature');
   const sdwan = leftRoots(est, flows).find(x => x.region === 'Nationwide');
-  const metro = childrenOf(sdwan, est, inv, flows)[0];
-  const flat = buildMap(est, inv, flows, { open: [sdwan.key, metro.key] });
-  const zoomed = buildMap(est, inv, flows, { open: [sdwan.key, metro.key], zoom: metro.key });
+  const state = childrenOf(sdwan, est, inv, flows)[0];
+  const metro = childrenOf(state, est, inv, flows)[0];
+  const flat = buildMap(est, inv, flows, { open: [sdwan.key, state.key, metro.key] });
+  const zoomed = buildMap(est, inv, flows, { open: [sdwan.key, state.key, metro.key], zoom: metro.key });
   const h = (m) => m.nodes.filter(x => x.kind === 'sitename').reduce((a, x) => a + x.h, 0);
   assert.ok(zoomed.zf > 1);
   assert.ok(h(zoomed) > h(flat) * 1.5, `${h(zoomed)} vs ${h(flat)}`);

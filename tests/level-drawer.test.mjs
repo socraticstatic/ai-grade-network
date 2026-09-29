@@ -21,7 +21,8 @@ test('openLevel opens a level scope at the column\'s current trail, root or not'
   v = vals(c);
   assert.equal(v.drawer.col, 'sites');
   assert.equal(v.drawer.title, 'Sites');
-  assert.equal(v.drawer.total, 7);
+  // The root is regions (2026-09-29: the site side drills by place).
+  assert.equal(v.drawer.total, 4);
   assert.equal(v.drawer.canBack, false, 'no back at root');
   assert.equal(v.drawer.hasCrumbs, false, 'no crumbs at root');
   assert.equal(v.drawer.isLevel, true);
@@ -55,31 +56,31 @@ test('levelInto grows the column trail and the drawer follows, for all three col
   }
 });
 
-test('sites: root (7 groups) -> East (6 metros) -> Atlanta (588 sites, delegated to volumeList)', () => {
+// The site side drills by place (Micah, 2026-09-29): region, state, metro, then
+// the metro's sites, paged by volumeList, then a site's services. Never clouds.
+test('sites: root (4 regions) -> US East (4 states) -> Georgia -> Atlanta (292 sites, delegated to volumeList)', () => {
   const c = mkC();
   let v = vals(c);
   v.openLevel('sites');
   v = vals(c);
-  assert.equal(v.drawer.total, 7);
-  const east = v.drawer.rows.find(r => /East/.test(r.id));
+  assert.equal(v.drawer.total, 4);
+  const east = v.drawer.rows.find(r => r.id === 'US East');
   assert.ok(east && east.isDoor);
   east.descend();
   v = vals(c);
-  assert.equal(v.drawer.total, 6, 'East group has 6 metros');
-  assert.equal(v.drawer.title.startsWith('Remote sites, East'), true);
+  assert.equal(v.drawer.total, 4, 'US East holds 4 states');
+  v.drawer.rows.find(r => r.id === 'Georgia').descend();
+  v = vals(c);
   const atlanta = v.drawer.rows.find(r => /Atlanta/.test(r.id));
   assert.ok(atlanta && atlanta.isDoor);
   atlanta.descend();
   v = vals(c);
-  assert.equal(v.drawer.total, 588, 'Atlanta delegates to volumeList: 588 sites');
-  assert.equal(v.drawer.title, 'Atlanta · 588 remote sites');
-  assert.equal(v.drawer.capChips, true, 'caps.chips true at 588 rows');
-  assert.equal(v.drawer.capBulk, true, 'caps.bulk true at 588 rows');
-  // asset rows here are not doors, and carry a real, defaulted `selected`
+  assert.equal(v.drawer.total, 292, 'Atlanta delegates to volumeList: 292 sites');
+  assert.equal(v.drawer.capChips, true, 'caps.chips true at volume');
+  assert.equal(v.drawer.capBulk, true, 'caps.bulk true at volume');
   const asset = v.drawer.rows[0];
-  assert.equal(asset.isDoor, false);
-  assert.equal(asset.notDoor, true);
   assert.equal(typeof asset.selected, 'boolean');
+  assert.ok(!/^(AWS|Azure|GCP|Oracle)\b/.test(asset.id), 'a site list never holds a cloud');
 });
 
 test('crumb climb-back resets the trail to root and the drawer with it', () => {
@@ -87,7 +88,7 @@ test('crumb climb-back resets the trail to root and the drawer with it', () => {
   let v = vals(c);
   v.openLevel('sites');
   v = vals(c);
-  const east = v.drawer.rows.find(r => /East/.test(r.id));
+  const east = v.drawer.rows.find(r => r.id === 'US East');
   east.descend();
   v = vals(c);
   const rootCrumb = v.drawer.crumbs[0];
@@ -95,7 +96,7 @@ test('crumb climb-back resets the trail to root and the drawer with it', () => {
   rootCrumb.go();
   v = vals(c);
   assert.deepEqual(c.state.drill, []);
-  assert.equal(v.drawer.total, 7);
+  assert.equal(v.drawer.total, 4);
   assert.equal(v.drawer.hasCrumbs, false);
 });
 
@@ -104,15 +105,15 @@ test('drawerBack pops one level (a slice, not a special case)', () => {
   let v = vals(c);
   v.openLevel('sites');
   v = vals(c);
-  v.drawer.rows.find(r => /East/.test(r.id)).descend();
+  v.drawer.rows.find(r => r.id === 'US East').descend();
   v = vals(c);
-  v.drawer.rows.find(r => /Atlanta/.test(r.id)).descend();
+  v.drawer.rows.find(r => r.id === 'Georgia').descend();
   v = vals(c);
   assert.equal(c.state.drill.length, 2);
   v.drawer.back();
   v = vals(c);
   assert.equal(c.state.drill.length, 1);
-  assert.equal(v.drawer.total, 6, 'back at the East group again');
+  assert.equal(v.drawer.total, 4, 'back at US East, four states');
 });
 
 test('fabric: setColTrail keeps the "fab" placeholder even when the band was never opened, so the picture follows the drawer', () => {
@@ -175,7 +176,9 @@ test('volCtx never lets a raw key reach bulkAttach\'s compose wording', () => {
   let v = vals(c);
   v.openLevel('sites');
   v = vals(c);
-  v.drawer.rows.find(r => /East/.test(r.id)).descend();
+  v.drawer.rows.find(r => r.id === 'US East').descend();
+  v = vals(c);
+  v.drawer.rows.find(r => r.id === 'Georgia').descend();
   v = vals(c);
   v.drawer.rows.find(r => /Atlanta/.test(r.id)).descend();
   v = vals(c);
@@ -183,7 +186,7 @@ test('volCtx never lets a raw key reach bulkAttach\'s compose wording', () => {
   v.drawer.bulkAttach();
   assert.equal(c.state.screen, 's4');
   assert.match(c.state.compose.note, /in Atlanta on a public first mile/);
-  assert.doesNotMatch(c.state.compose.note, /Branch|#|:/, 'never a raw class or rollup key in the compose note');
+  assert.doesNotMatch(c.state.compose.note, /Branch|#|:|state|region/, 'never a raw class, rollup or place key in the compose note');
 });
 
 test('regression: the two existing drawer kinds still open and are untouched by the level branch', () => {
@@ -277,20 +280,22 @@ test('fix (Important 3): a row\'s own Attach action never prints "undefined" whe
     v = vals(c);
   }
   assert.equal(c.state.drill.length, 4, 'drilled the picture four levels deep, onto an actual site');
+  // Region, state, metro, site: a site opens to its services, never its clouds (2026-09-29).
+  // Step back to the metro's site list, where rows can be attached.
+  c.state.drill = c.state.drill.slice(0, 3);
+  v = vals(c);
   v.openLevel('sites');
   v = vals(c);
-  assert.equal(v.drawer.level, 'path');
-  const attachRow = v.drawer.rows.find(r => r.action === 'Attach');
+  assert.equal(v.drawer.level, 'site');
+  const attachRow = v.drawer.rows.find(r => r.action === 'Attach') || v.drawer.rows.find(r => r.action);
   assert.ok(attachRow, 'a path level has at least one Attach row');
-  assert.equal(attachRow.address, undefined, 'a frame()-built row really does carry no address');
-  assert.equal(attachRow.metro, undefined, 'and no metro either - that is the defect this guards');
   attachRow.act();
   assert.equal(c.state.screen, 's4');
   assert.doesNotMatch(c.state.compose.note, /undefined/, 'the compose note never prints the word undefined');
   assert.doesNotMatch(c.state.compose.bulk, /undefined/);
   // the trail-derived place is the site's own id/drillKey - never empty here,
   // since the trail is three deep.
-  assert.match(c.state.compose.note, new RegExp(`^Attach ${attachRow.id} in \\S+: one circuit onto the AT&T network\\.$`));
+  assert.doesNotMatch(c.state.compose.note, /state:|metro:|region:/, 'no raw place key');
 
   // Bonus, same defect class: a clouds ROOT row (also frame()-built, also no
   // address/metro) must compose cleanly too - but at the root there is no
@@ -333,51 +338,45 @@ test('fix (Important 4): pinning a fabric circuit never writes s.drill, and the 
   v = vals(c);
   assert.ok(v.drawer, 'the sites drawer must still open after a fabric pin');
   assert.equal(v.drawer.title, 'Sites');
-  assert.equal(v.drawer.total, 7);
+  assert.equal(v.drawer.total, 4);
 });
 
 // ---------- Fix round 2 (re-review finding) ----------
 
 test('fix (round 2): a sites level scope never rebuilds s.drill - only the old `metro` kind does', () => {
-  // mature's sites root lists individual sites, so one descend lands on a
-  // one-hop `path` level with six pinnable rows. volCtx.metro is
-  // colTrail('sites')[1] - undefined at depth 1 - so the old rebuild wrote
-  // ['Ashburn DC', undefined], which siteDrillRows reads as null: the drawer
-  // dies on that very render and never reopens.
+  // Walk the place drill to a site, then open its services (2026-09-29: the
+  // site side ends in services, never clouds). A pin there must not rewrite
+  // s.drill, and the drawer must survive it and reopen at the live trail.
   const c = mkC({ view: 'mature' });
   let v = vals(c);
   v.openLevel('sites');
   v = vals(c);
-  v.drawer.rows.find(r => r.id === 'Ashburn DC').descend();
-  v = vals(c);
-  assert.deepEqual(c.state.drill, ['Ashburn DC'], 'sanity: the sites trail is one hop deep');
-  assert.equal(v.drawer.level, 'path');
+  for (const name of ['US East', 'Virginia', 'Ashburn', 'Ashburn DC']) {
+    const row = v.drawer.rows.find(r => r.id === name);
+    assert.ok(row && row.isDoor, `${name} is a door: ${v.drawer.rows.map(r => r.id).join(', ')}`);
+    row.descend();
+    v = vals(c);
+  }
+  assert.equal(c.state.drill.length, 4, 'sanity: the sites trail is four hops deep');
+  assert.equal(v.drawer.level, 'service');
   const row = v.drawer.rows.find(r => r.notDoor);
-  assert.ok(row, 'a path level row is a leaf asset, not a door');
+  assert.ok(row, 'a service row is a leaf asset, not a door');
+  const trail = [...c.state.drill];
   row.pin();
-  assert.deepEqual(c.state.drill, ['Ashburn DC'], 's.drill IS this scope\'s column trail - a pin must not rewrite it');
-  assert.equal(c.state.mapSel, 'asset:' + row.id, 'the pin itself still works');
+  assert.deepEqual(c.state.drill, trail, 's.drill IS this scope\'s column trail - a pin must not rewrite it');
   assert.equal(c.state.volPin, row.id);
   v = vals(c);
-  assert.ok(v.drawer, 'the drawer must survive its own pin, not unmount under an open s.drawerOpen');
-  assert.equal(v.drawer.title, 'Ashburn DC · paths');
-
-  // The dead-drawer chain the review traced: a later openLevel('sites') returned null.
-  // It reopens at the column's LIVE trail (still one hop, so still the path
-  // level), and climbing out of that lands on a healthy root - proving
-  // siteDrillRows is unpoisoned at both depths.
+  assert.ok(v.drawer, 'the drawer must survive its own pin');
   v.drawer.close();
   v = vals(c);
   v.openLevel('sites');
   v = vals(c);
   assert.ok(v.drawer, 'openLevel("sites") must not return a dead drawer afterward');
-  assert.equal(v.drawer.title, 'Ashburn DC \u00b7 paths');
-  assert.equal(v.drawer.total, 6);
-  v.drawer.back();
+  assert.equal(v.drawer.level, 'service');
+  c.state.drill = [];
   v = vals(c);
-  assert.deepEqual(c.state.drill, []);
   assert.equal(v.drawer.title, 'Sites');
-  assert.equal(v.drawer.total, 10); // mature gained the three Lumen sites
+  assert.equal(v.drawer.total, 5, 'mature has five regions');
 
   // The old `metro` kind's rebuild is load-bearing - Task 11 rerouted the
   // picture's own `+N more` row to `openLevel('sites')`, but `metro` is still

@@ -7,8 +7,9 @@ const est = D.ESTATES.trust;
 const RANK = { degraded: 0, public: 1, ok: 2 };
 
 test('the drawer order is a total order', () => {
-  const v = volumeList(est, { cls: 'Branch', metro: 'Branch:1:Atlanta' }, { size: 588 });
-  assert.equal(v.rows.length, 588);
+  // Atlanta holds 292 of East's 1,640 since the region-true split (2026-09-29).
+  const v = volumeList(est, { cls: 'Branch', metro: 'Branch:1:Atlanta' }, { size: 292 });
+  assert.equal(v.rows.length, 292);
   for (let i = 1; i < v.rows.length; i++) {
     const a = v.rows[i - 1], b = v.rows[i];
     const ka = [RANK[a.state], a.ms, a.id], kb = [RANK[b.state], b.ms, b.id];

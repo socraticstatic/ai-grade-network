@@ -27,15 +27,17 @@ test('panel for a connection: overview, impact, records, actions', () => {
 test('every node the map draws resolves to a panel, both columns, all the way down', () => {
   // Left roots are site regions and the right is destinations only (2026-09-28).
   const sd = leftRoots(est, flows).find(x => x.region === 'Nationwide');
-  const metro = childrenOf(sd, est, inv, flows)[0];
+  // Region, state, metro, site, service (2026-09-29): the left never turns into clouds.
+  const state = childrenOf(sd, est, inv, flows)[0];
+  const metro = childrenOf(state, est, inv, flows)[0];
   const site = childrenOf(metro, est, inv, flows)[0];
   const circuit = childrenOf(site, est, inv, flows)[0];
   const cloud = rightRoots(est, flows).find(x => x.kind === 'cloud');
   const endpoint = childrenOf(cloud, est, inv, flows)[0];
   const inet = rightRoots(est, flows).find(x => x.kind === 'dc');
-  const m = buildMap(est, inv, flows, { open: [sd.key, metro.key, site.key, cloud.key, inet.key] });
+  const m = buildMap(est, inv, flows, { open: [sd.key, state.key, metro.key, site.key, cloud.key, inet.key] });
   const seen = [];
-  for (const node of [sd, metro, site, circuit, cloud, endpoint, inet]) {
+  for (const node of [sd, state, metro, site, circuit, cloud, endpoint, inet]) {
     const p = panelFor(node.key, { ...ctx, map: m });
     assert.ok(p, `no panel for ${node.kind} ${node.key}`);
     assert.ok(p.overview && p.overview.length >= 4, `${node.kind} panel is thin`);
@@ -44,9 +46,9 @@ test('every node the map draws resolves to a panel, both columns, all the way do
   }
   // The trail has to deepen as you descend, or the panel is describing the
   // wrong node.
-  const depths = [sd, metro, site, circuit].map(n => panelFor(n.key, { ...ctx, map: m }).trail.length);
-  assert.deepEqual(depths, [1, 2, 3, 4], `left-column trail depths were ${depths}`);
-  assert.deepEqual(seen.slice(0, 4), ['site', 'metro', 'site', 'circuit']);
+  const depths = [sd, state, metro, site, circuit].map(n => panelFor(n.key, { ...ctx, map: m }).trail.length);
+  assert.deepEqual(depths, [1, 2, 3, 4, 5], `left-column trail depths were ${depths}`);
+  assert.equal(circuit.kind, 'service', 'a site opens to its services, never to clouds');
 });
 test('panel for nothing is null', () => { assert.equal(panelFor(null, ctx), null); assert.equal(panelFor('nope', ctx), null); });
 test('panel describes an opened node from its trail', () => {

@@ -62,7 +62,7 @@ export function panelFor(sel, ctx) {
     try { ch = F.childrenOf(node, est, inv, flows) || []; } catch (e) { ch = []; }
     ch = ch.filter(c => c.kind !== 'rollup' && c.kind !== 'more' && c.kind !== 'wlmore');
     if (!ch.length) return null;
-    const noun = { metro: 'metros', sitename: 'sites', tagregion: 'regions', vpc: 'VPCs', subnet: 'subnets', workload: 'workloads', endpoint: 'endpoints' }[ch[0].kind] || 'items';
+    const noun = { placestate: 'states', metro: 'metros', sitename: 'sites', service: 'services', tagregion: 'regions', vpc: 'VPCs', subnet: 'subnets', workload: 'workloads', endpoint: 'endpoints' }[ch[0].kind] || 'items';
     const shown = ch.slice(0, 12);
     return {
       title: `${n(ch.length)} ${ch.length === 1 ? noun.replace(/s$/, '') : noun}${ch.length > shown.length ? ` · showing ${shown.length}` : ''}`,

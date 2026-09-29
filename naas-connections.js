@@ -172,24 +172,72 @@ const groupRow = (key, name, sites) => ({ key, name, access: rollupLine(sites), 
 const siteCard = (x) => ({ key: 'site:' + x.name, name: x.name, access: S.servicesOf(x).map(v => v.label).join(' + '), metro: x.metro, priv: !!x.priv, drillKey: 'site:' + x.name,
   // A site that declares its services fans one line per service; one that does not is its own line, as it always was.
   ...(Array.isArray(x.services) && x.services.length ? { lines: linesOf([x]) } : {}), circuit: x.access, accessSla: x.accessSla, carrier: x.carrier, core: x.core, via: x.via, viaRamp: x.viaRamp, xc: x.xc, rollup: false, cursor: 'pointer' });
-/** Region → state → metro → site → services, for a region of named sites. The Estate page's tree (2026-09-28). */
+/**
+ * The places a set of sites sits in. A named site is one unit at its metro; a
+ * rollup ("Remote sites, East (1,640)") has no metro of its own, so it splits
+ * into the metros siteTree already gives it, each carrying a sample of sites.
+ */
+function placeUnits(est, sites) {
+  const tree = S.siteTree(est);
+  return sites.flatMap(x => {
+    const count = S.countOf(x.name);
+    if (count > 1 || !x.metro || x.metro === 'Various') {
+      const cls = S.classOf(x), node = tree.find(c => c.cls === cls);
+      const ix = String(S.rollupKeyOf(est, x) || '').split('#')[1];
+      const kids = node ? node.children.filter(ch => ch.kind === 'metro' && (ix == null || String(ch.key).startsWith(`${cls}:${ix}:`))) : [];
+      if (kids.length) return kids.map(m => ({ metro: m.name, count: m.count, att: m.onFabric, from: x, sample: m.sites, more: m.more || 0 }));
+    }
+    return [{ metro: x.metro, count, att: onAtt(x) ? count : 0, from: x, site: x }];
+  });
+}
+const unitRow = (key, name, units) => {
+  const total = units.reduce((a, u) => a + u.count, 0), att = units.reduce((a, u) => a + u.att, 0);
+  const from = [...new Set(units.map(u => u.from))];
+  return { key, name, access: `${total.toLocaleString('en-US')} ${total === 1 ? 'site' : 'sites'} · ${att.toLocaleString('en-US')} AT&T · ${(total - att).toLocaleString('en-US')} non-AT&T`,
+    priv: att > 0, drillKey: key, rollup: true, lines: linesOf(from), count: total, att, cursor: 'pointer' };
+};
+/** A place trail that stops on a metro holding a rollup: the class and metro key the volume list pages through. */
+export function placeMetroScope(est, trail) {
+  if (!trail || trail.length !== 3 || !String(trail[0]).startsWith('region:')) return null;
+  const region = regionRows(est).find(r => 'region:' + r.name === trail[0]); if (!region) return null;
+  const metro = String(trail[2]).replace(/^metro:/, ''), code = String(trail[1]).replace(/^state:/, '');
+  const units = placeUnits(est, region.sites).filter(u => u.metro === metro && (S.stateOf(u.metro) || '—') === code);
+  const roll = units.find(u => u.sample);
+  if (!roll) return null;
+  const cls = S.classOf(roll.from), ix = String(S.rollupKeyOf(est, roll.from) || '').split('#')[1];
+  return { cls, metroKey: `${cls}:${ix}:${metro}`, name: metro, count: units.reduce((a, u) => a + u.count, 0), onFabric: units.reduce((a, u) => a + u.att, 0) };
+}
+/**
+ * The site side of every picture drills by place (Micah, 2026-09-28 and again
+ * 2026-09-29: "regions to states then to metros then to sites"): region, state,
+ * metro, site, then the site's services. It never turns into clouds; clouds are
+ * where the traffic goes, on the right.
+ */
 export function placeDrill(est, regionName, sites, rest) {
+  const units = placeUnits(est, sites);
   if (!rest.length) {
-    const by = {}; sites.forEach(x => { (by[S.stateOf(x.metro)] = by[S.stateOf(x.metro)] || []).push(x); });
-    return { level: 'state', label: regionName, rows: Object.entries(by).map(([code, xs]) => groupRow('state:' + code, S.placeName(code), xs)).sort(byName) };
+    const by = {}; units.forEach(u => { const k = S.stateOf(u.metro) || '—'; (by[k] = by[k] || []).push(u); });
+    return { level: 'state', label: regionName, rows: Object.entries(by).map(([code, us]) => unitRow('state:' + code, S.placeName(code === '—' ? '' : code), us)).sort(byName) };
   }
   const code = String(rest[0]).replace(/^state:/, '');
-  const inState = sites.filter(x => S.stateOf(x.metro) === code);
+  const inState = units.filter(u => (S.stateOf(u.metro) || '—') === code);
   if (!inState.length) return null;
   if (rest.length === 1) {
-    const by = {}; inState.forEach(x => { (by[x.metro] = by[x.metro] || []).push(x); });
-    return { level: 'metro', label: S.placeName(code), rows: Object.entries(by).map(([m, xs]) => groupRow('metro:' + m, m, xs)).sort(byName) };
+    const by = {}; inState.forEach(u => { (by[u.metro] = by[u.metro] || []).push(u); });
+    return { level: 'metro', label: S.placeName(code === '—' ? '' : code), rows: Object.entries(by).map(([m, us]) => unitRow('metro:' + m, m, us)).sort(byName) };
   }
   const metro = String(rest[1]).replace(/^metro:/, '');
-  const inMetro = inState.filter(x => x.metro === metro);
+  const inMetro = inState.filter(u => u.metro === metro);
   if (!inMetro.length) return null;
-  if (rest.length === 2) return { level: 'site', label: metro, rows: inMetro.map(siteCard).sort(byName) };
-  const site = inMetro.find(x => x.name === String(rest[2]).replace(/^site:/, ''));
+  const named = inMetro.filter(u => u.site).map(u => u.site);
+  const sampled = inMetro.filter(u => u.sample).flatMap(u => u.sample.map(sx => ({ ...sx, name: sx.name || sx.id, access: u.from.access, accessSla: u.from.accessSla, carrier: u.from.carrier, core: u.from.core, via: u.from.via, viaRamp: u.from.viaRamp, metro })));
+  const more = inMetro.reduce((a, u) => a + (u.more || 0), 0);
+  if (rest.length === 2) return { level: 'site', label: metro, rows: [...named.map(siteCard).sort(byName), ...sampled.map(siteCard), ...(more ? [{ key: 'more:' + metro, name: `+${more.toLocaleString('en-US')} more`, access: 'open the list ›', more: true, rollup: false, count: more }] : [])] };
+  const want = String(rest[2]).replace(/^site:/, '');
+  // A site from the full list of a rolled-up metro is one of the rollup's own sites.
+  const roll = inMetro.find(u => u.sample);
+  const site = named.find(x => x.name === want) || sampled.find(x => x.name === want)
+    || (roll && new RegExp(`^[A-Z]+-${String(metro).slice(0, 3).toUpperCase()}|^[A-Z]+-`).test(want) ? { name: want, metro, access: roll.from.access, accessSla: roll.from.accessSla, carrier: roll.from.carrier, core: roll.from.core, priv: roll.from.priv } : null);
   if (!site || rest.length > 3) return null;
   return { level: 'service', label: site.name, rows: serviceSites(site).map((v, i) => {
     const sv = S.servicesOf(site)[i] || S.servicesOf(site)[0];
@@ -217,15 +265,7 @@ export function siteDrillRows(est, trail, opts = {}) {
     const name = String(trail[0]).slice('region:'.length);
     const region = regionRows(est).find(r => r.name === name);
     if (!region) return null;
-    if (trail.length === 1) {
-      // No drillKey: the card's click turns a rollup into its class key and a named
-      // site into its name, exactly as it did when these sat at the root. A name
-      // the drill cannot resolve returned null and dropped the picture back to
-      // the regions, so the region reappeared and was appended to the trail again.
-      return { level: 'site', label: name, rows: region.sites.map(x => ({ key: 'site:' + x.name, name: x.name, access: x.access, metro: x.metro,
-        priv: !!x.priv, core: x.core, via: x.via, viaRamp: x.viaRamp, accessSla: x.accessSla, carrier: x.carrier, xc: x.xc, rollup: !!x.rollup, cursor: 'pointer' })) };
-    }
-    return siteDrillRows(est, trail.slice(1), opts);
+    return placeDrill(est, name, region.sites, trail.slice(1));
   }
   const tree = S.siteTree(est);
   const all = P.allSites(est);

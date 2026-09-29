@@ -992,97 +992,21 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     </div>
     </sc-if>
     <sc-if value="{{ estPanelSites }}" hint-placeholder-val="{{ false }}">
-    <!-- Your sites, drilled like the clouds: class → metro → site. -->
-    <div id="sec-your-sites" style="display:grid;gap:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;font-weight:700;color:var(--text-heading)">Your sites</span><span style="font-size:12px;color:var(--text-light)">{{ sitesLineTree }}</span></div>
-        <nav aria-label="Site drill" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-light)">
-          <sc-if value="{{ hasSiteCrumbs }}" hint-placeholder-val="{{ false }}"><sc-for list="{{ siteCrumbs }}" as="cb" hint-placeholder-count="1"><span style="font-weight:{{ cb.last }}">{{ cb.label }}</span><sc-if value="{{ cb.notLast }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true">›</span></sc-if></sc-for></sc-if>
-          <button onClick="{{ collapseSites }}" class="fx-btn" style="margin-left:8px">Collapse all</button>
-        </nav>
+    <!-- Your sites drill by place, like every picture (Micah, 2026-09-29): region, state, metro, site, services. Never clouds. -->
+    <div id="sec-your-sites" style="display:grid;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <nav aria-label="Site drill" style="display:flex;align-items:center;gap:6px;font-size:14px;line-height:20px;min-width:0"><sc-for list="{{ placeCrumbs }}" as="pc" hint-placeholder-count="2"><button onClick="{{ pc.go }}" style="border:0;background:transparent;padding:0;font:inherit;font-weight:{{ pc.weight }};color:{{ pc.color }};cursor:pointer;white-space:nowrap">{{ pc.label }}</button><sc-if value="{{ pc.notLast }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" style="color:var(--text-disabled)">›</span></sc-if></sc-for></nav>
+        <span style="font-size:12px;color:var(--text-light)">{{ placeLine }}</span>
       </div>
-      <sc-for list="{{ siteTree }}" as="sl" hint-placeholder-count="3">
-        <div style="background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;overflow:hidden">
-          <button onClick="{{ sl.toggle }}" aria-expanded="{{ sl.open }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:0;background:transparent;text-align:left;cursor:pointer;color:var(--text-heading);white-space:nowrap" style-hover="background:var(--bg-wash)">
-            <span aria-hidden="true" style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:var(--text-light);transform:{{ sl.caret }};transition:transform .15s;font-size:14px">›</span>
-            <span style="width:32px;height:32px;border-radius:8px;background:var(--bg-wash);border:1px solid var(--border-secondary);display:flex;align-items:center;justify-content:center;flex:none"><span aria-hidden="true" style="display:block;width:18px;height:18px;background:url('{{ sl.mark }}') center / contain no-repeat"></span></span>
-            <span style="display:grid;gap:2px;flex:1;min-width:0"><span style="font-size:16px;line-height:22px;font-weight:700">{{ sl.label }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sl.sub }}</span></span>
-            <span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;background:{{ sl.badge.bg }};border:1px solid {{ sl.badge.border }};color:{{ sl.badge.color }};font-size:12px;font-weight:500;white-space:nowrap"><span aria-hidden="true" style="width:7px;height:7px;border-radius:9999px;background:currentColor"></span>{{ sl.badge.label }}</span>
-          </button>
-          <sc-if value="{{ sl.open }}" hint-placeholder-val="{{ false }}">
-          <div style="display:grid;gap:8px;padding:0 16px 16px 40px;animation:fadeIn .2s">
-            <sc-for list="{{ sl.metros }}" as="mt" hint-placeholder-count="0">
-              <div style="background:var(--bg-wash);border:1px solid var(--border-secondary);border-radius:12px;overflow:hidden">
-                <button onClick="{{ mt.toggle }}" aria-expanded="{{ mt.open }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border:0;background:transparent;text-align:left;cursor:pointer;color:var(--text-heading);white-space:nowrap" style-hover="background:var(--bg-neutral)">
-                  <span aria-hidden="true" style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:var(--text-light);transform:{{ mt.caret }};transition:transform .15s;font-size:14px">›</span>
-                  <span style="display:grid;gap:2px;flex:1;min-width:0"><span style="font-size:14px;line-height:20px;font-weight:700">{{ mt.name }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mt.sub }}</span></span>
-                  <span style="display:flex;gap:8px"><sc-for list="{{ mt.stats }}" as="stt" hint-placeholder-count="3"><span style="display:grid;gap:2px;min-width:64px;padding:6px 10px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:8px;text-align:center"><span style="font-size:14px;line-height:18px;font-weight:700;color:var(--text-heading)">{{ stt.v }}</span><span style="font-size:10px;line-height:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-light)">{{ stt.l }}</span></span></sc-for></span>
-                  <span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;background:{{ mt.badge.bg }};border:1px solid {{ mt.badge.border }};color:{{ mt.badge.color }};font-size:12px;font-weight:500;white-space:nowrap"><span aria-hidden="true" style="width:7px;height:7px;border-radius:9999px;background:currentColor"></span>{{ mt.badge.label }}</span>
-                </button>
-                <div style="display:flex;gap:8px;padding:0 16px 10px 48px"><button onClick="{{ mt.ctl }}" style="height:26px;padding:0 10px;border:0;border-radius:9999px;background:var(--bg-accent);color:var(--link);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Control →</button><button onClick="{{ mt.askAndi }}" style="height:26px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-heading);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="border-color:var(--border-active)">Ask Andi →</button></div>
-                <sc-if value="{{ mt.open }}" hint-placeholder-val="{{ false }}">
-                <div style="display:grid;gap:6px;padding:0 12px 12px 48px;animation:fadeIn .2s">
-                  <sc-for list="{{ mt.sites }}" as="st" hint-placeholder-count="0">
-                    <div data-jump="{{ st.jumpKey }}" style="display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:8px 12px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:10px">
-                      <span aria-hidden="true" title="{{ st.dotLabel }}" style="width:8px;height:8px;border-radius:9999px;background:{{ st.dot }}"></span>
-                      <span style="display:grid;gap:1px;min-width:0"><span style="font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0">{{ st.name }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ st.sub }}</span><span class="fx-chips" style="margin-top:4px"><sc-if value="{{ st.isNew }}" hint-placeholder-val="{{ false }}"><span class="fx-badge new" style="height:20px">New · {{ st.sinceLabel }}</span></sc-if><sc-for list="{{ st.autos }}" as="al" hint-placeholder-count="0"><span class="fx-chip auto">{{ al.label }}</span></sc-for><sc-for list="{{ st.labels }}" as="ul" hint-placeholder-count="0"><span class="fx-chip user">{{ ul.label }}<button class="fx-chip-x" onClick="{{ ul.remove }}" aria-label="Remove label {{ ul.label }}">×</button></span></sc-for><sc-if value="{{ st.labelOpen }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;gap:4px;align-items:center"><input class="fx-label-input" value="{{ st.labelDraft }}" onChange="{{ st.setLabelDraft }}" onKeyDown="{{ st.labelKey }}" placeholder="Label, e.g. drive-through" aria-label="New label for {{ st.name }}"></input><button class="fx-btn" style="height:24px;padding:0 8px;font-size:11px" onClick="{{ st.commitLabel }}">Add</button><button class="fx-chip-x" onClick="{{ st.cancelLabel }}" aria-label="Cancel">×</button></span></sc-if><sc-if value="{{ st.labelClosed }}" hint-placeholder-val="{{ true }}"><button class="fx-chip add" onClick="{{ st.startLabel }}">+ Label</button></sc-if></span></span>
-                      <span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:9999px;background:{{ st.pill.bg }};border:1px solid {{ st.pill.border }};color:{{ st.pill.color }};font-size:11px;font-weight:600">{{ st.pill.label }}</span>
-                      <span style="display:flex;gap:6px"><button onClick="{{ st.togglePaths }}" aria-expanded="{{ st.pathsOpen }}" style="height:26px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-heading);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Paths</button><button onClick="{{ st.ctl }}" style="height:26px;padding:0 10px;border:0;border-radius:9999px;background:var(--bg-accent);color:var(--link);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Control →</button><button onClick="{{ st.askAndi }}" style="height:26px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-heading);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Ask Andi →</button></span>
-                    </div>
-
-                    <sc-if value="{{ st.pathsOpen }}" hint-placeholder-val="{{ false }}">
-                    <div class="fx-paths" aria-label="Paths">
-                      <div class="fx-paths-head"><b>{{ st.reachLine }}</b><small>ranked by traffic · open a row for the hops · the tinted hop is the one to fix</small></div>
-                      <sc-for list="{{ st.reachRegions }}" as="p" hint-placeholder-count="3">
-                        <div class="fx-path">
-                          <button class="fx-path-row" onClick="{{ p.toggleTrace }}" aria-expanded="{{ p.traceOpen }}" title="{{ p.name }} · {{ p.stateWord }} · {{ p.msF }}"><span class="dot" style="background:{{ p.dot }}"></span><span class="who"><b>{{ p.name }}</b><small>{{ p.sub }}</small></span><span class="trail"><sc-for list="{{ p.trail }}" as="h" hint-placeholder-count="4"><span class="{{ h.cls }}">{{ h.name }}</span><sc-if value="{{ h.notLast }}" hint-placeholder-val="{{ true }}"><span class="sep" aria-hidden="true">›</span></sc-if></sc-for></span><span class="num">{{ p.gbpsF }}<small>{{ p.msF }}</small></span></button>
-                          <sc-if value="{{ p.traceOpen }}" hint-placeholder-val="{{ false }}">
-                          <div class="fx-trace">
-                            <sc-for list="{{ p.hops }}" as="h" hint-placeholder-count="6"><div class="fx-hop"><span class="dot" style="background:{{ h.dot }}"></span><span class="n"><b style="font-weight:{{ h.weight }}">{{ h.name }}</b><small>{{ h.sub }}</small></span><span class="ms">{{ h.msF }}</span><span><sc-if value="{{ h.hasDoor }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ h.go }}">{{ h.doorLabel }}</button></sc-if></span></div></sc-for>
-                            <div class="fx-trace-foot"><span>Cumulative latency, site to region.</span><button class="fx-btn" style="height:24px;padding:0 8px;font-size:11px;margin-left:auto" onClick="{{ p.askAndi }}">Ask Andi about this path</button></div>
-                          </div>
-                          </sc-if>
-                        </div>
-                      </sc-for>
-                      <sc-if value="{{ st.reachHasMore }}" hint-placeholder-val="{{ false }}"><div class="fx-paths-head"><small>{{ st.reachMoreLabel }}</small></div></sc-if>
-                    </div>
-                    </sc-if>
-                  </sc-for>
-                  <sc-if value="{{ mt.hasMore }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--text-light);padding:2px 12px">{{ mt.moreLabel }}</div></sc-if>
-                </div>
-                </sc-if>
-              </div>
-            </sc-for>
-            <sc-for list="{{ sl.named }}" as="st" hint-placeholder-count="0">
-              <div data-jump="{{ st.jumpKey }}" style="display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:10px 16px;background:var(--bg-wash);border:1px solid var(--border-secondary);border-radius:12px">
-                <span aria-hidden="true" title="{{ st.dotLabel }}" style="width:8px;height:8px;border-radius:9999px;background:{{ st.dot }}"></span>
-                <span style="display:grid;gap:1px;min-width:0"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ st.name }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ st.sub }}</span><span class="fx-chips" style="margin-top:4px"><sc-if value="{{ st.isNew }}" hint-placeholder-val="{{ false }}"><span class="fx-badge new" style="height:20px">New · {{ st.sinceLabel }}</span></sc-if><sc-for list="{{ st.autos }}" as="al" hint-placeholder-count="0"><span class="fx-chip auto">{{ al.label }}</span></sc-for><sc-for list="{{ st.labels }}" as="ul" hint-placeholder-count="0"><span class="fx-chip user">{{ ul.label }}<button class="fx-chip-x" onClick="{{ ul.remove }}" aria-label="Remove label {{ ul.label }}">×</button></span></sc-for><sc-if value="{{ st.labelOpen }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;gap:4px;align-items:center"><input class="fx-label-input" value="{{ st.labelDraft }}" onChange="{{ st.setLabelDraft }}" onKeyDown="{{ st.labelKey }}" placeholder="Label, e.g. drive-through" aria-label="New label for {{ st.name }}"></input><button class="fx-btn" style="height:24px;padding:0 8px;font-size:11px" onClick="{{ st.commitLabel }}">Add</button><button class="fx-chip-x" onClick="{{ st.cancelLabel }}" aria-label="Cancel">×</button></span></sc-if><sc-if value="{{ st.labelClosed }}" hint-placeholder-val="{{ true }}"><button class="fx-chip add" onClick="{{ st.startLabel }}">+ Label</button></sc-if></span></span>
-                <span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:9999px;background:{{ st.pill.bg }};border:1px solid {{ st.pill.border }};color:{{ st.pill.color }};font-size:11px;font-weight:600">{{ st.pill.label }}</span>
-                <span style="display:flex;gap:6px"><button onClick="{{ st.togglePaths }}" aria-expanded="{{ st.pathsOpen }}" style="height:26px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-heading);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Paths</button><button onClick="{{ st.ctl }}" style="height:26px;padding:0 10px;border:0;border-radius:9999px;background:var(--bg-accent);color:var(--link);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Control →</button><button onClick="{{ st.askAndi }}" style="height:26px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-heading);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Ask Andi →</button></span>
-              </div>
-
-              <sc-if value="{{ st.pathsOpen }}" hint-placeholder-val="{{ false }}">
-              <div class="fx-paths" aria-label="Paths">
-                <div class="fx-paths-head"><b>{{ st.reachLine }}</b><small>ranked by traffic · open a row for the hops · the tinted hop is the one to fix</small></div>
-                <sc-for list="{{ st.reachRegions }}" as="p" hint-placeholder-count="3">
-                  <div class="fx-path">
-                    <button class="fx-path-row" onClick="{{ p.toggleTrace }}" aria-expanded="{{ p.traceOpen }}" title="{{ p.name }} · {{ p.stateWord }} · {{ p.msF }}"><span class="dot" style="background:{{ p.dot }}"></span><span class="who"><b>{{ p.name }}</b><small>{{ p.sub }}</small></span><span class="trail"><sc-for list="{{ p.trail }}" as="h" hint-placeholder-count="4"><span class="{{ h.cls }}">{{ h.name }}</span><sc-if value="{{ h.notLast }}" hint-placeholder-val="{{ true }}"><span class="sep" aria-hidden="true">›</span></sc-if></sc-for></span><span class="num">{{ p.gbpsF }}<small>{{ p.msF }}</small></span></button>
-                    <sc-if value="{{ p.traceOpen }}" hint-placeholder-val="{{ false }}">
-                    <div class="fx-trace">
-                      <sc-for list="{{ p.hops }}" as="h" hint-placeholder-count="6"><div class="fx-hop"><span class="dot" style="background:{{ h.dot }}"></span><span class="n"><b style="font-weight:{{ h.weight }}">{{ h.name }}</b><small>{{ h.sub }}</small></span><span class="ms">{{ h.msF }}</span><span><sc-if value="{{ h.hasDoor }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ h.go }}">{{ h.doorLabel }}</button></sc-if></span></div></sc-for>
-                      <div class="fx-trace-foot"><span>Cumulative latency, site to region.</span><button class="fx-btn" style="height:24px;padding:0 8px;font-size:11px;margin-left:auto" onClick="{{ p.askAndi }}">Ask Andi about this path</button></div>
-                    </div>
-                    </sc-if>
-                  </div>
-                </sc-for>
-                <sc-if value="{{ st.reachHasMore }}" hint-placeholder-val="{{ false }}"><div class="fx-paths-head"><small>{{ st.reachMoreLabel }}</small></div></sc-if>
-              </div>
-              </sc-if>
-            </sc-for>
-          </div>
-          </sc-if>
-        </div>
-      </sc-for>
+      <div style="border-top:1px solid var(--border-secondary)"><sc-for list="{{ placeRows }}" as="pr" hint-placeholder-count="6">
+        <button onClick="{{ pr.go }}" style="display:grid;grid-template-columns:10px minmax(0,1fr) auto 16px;gap:12px;align-items:center;width:100%;padding:10px 0;border:0;border-bottom:1px solid var(--border-secondary);background:transparent;font:inherit;text-align:left;cursor:{{ pr.cursor }};color:var(--text-heading)" style-hover="background:var(--bg-wash)">
+          <i aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;background:{{ pr.dot }}"></i>
+          <span style="min-width:0;display:grid;gap:1px"><b style="font-size:14px;line-height:20px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pr.name }}</b><small style="font-size:12px;line-height:16px;color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pr.access }}</small></span>
+          <span style="font-size:12px;color:var(--text-light);white-space:nowrap">{{ pr.level }}</span>
+          <span aria-hidden="true" style="color:var(--text-light)">{{ pr.caret }}</span>
+        </button>
+      </sc-for></div>
+      <sc-if value="{{ placePager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ placePager.label }}</span><button class="fx-btn" onClick="{{ placePager.prev }}" aria-label="Previous page" style="opacity:{{ placePager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ placePager.next }}" aria-label="Next page" style="opacity:{{ placePager.nextOp }}">›</button></div></sc-if>
     </div>
     </sc-if>
   </div>
@@ -2354,7 +2278,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { screen: 's3', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36 }; }
+  constructor(p) { super(p); this.state = { screen: 's3', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36 }; }
   componentDidUpdate() {
     // Guarded on the instance, not on prevState: comparing against prevState
     // re-entered on the very setState this handler makes, and React counted

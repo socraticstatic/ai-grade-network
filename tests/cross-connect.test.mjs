@@ -38,8 +38,10 @@ test('the cross-connect is marked on the handoff into the cloud\'s edge, not dra
   assert.equal(l.nodes.some(n => /cross-connect/i.test(n.label)), false, 'a cross-connect was drawn as a thing in a segment');
 });
 
+// The site side drills by place (2026-09-29); these read the sites at the site level.
+const westSites = () => siteDrillRows(D.ESTATES.mature, ['region:US West']).rows.flatMap(st => siteDrillRows(D.ESTATES.mature, ['region:US West', st.drillKey]).rows.flatMap(m => siteDrillRows(D.ESTATES.mature, ['region:US West', st.drillKey, m.drillKey]).rows));
 test('Salt Lake\'s own cross-connect sits on its handoff to AT&T', () => {
-  const l = heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, siteRows: siteDrillRows(D.ESTATES.mature, ['region:US West']).rows });
+  const l = heroLayout(D.ESTATES.mature, { bandX: 300, bandW: 500, siteRows: westSites() });
   const xc = l.xconnects.find(x => x.site === 'Salt Lake branch');
   assert.ok(xc, 'Salt Lake lost its cross-connect');
   assert.equal(xc.x, l.segments[1].x, 'the mark is not on the Access-to-Edge boundary');
@@ -53,8 +55,8 @@ test('no cross-connect is invented: NetBond and unstated regions carry none', ()
   for (const k of ['small', 'partial', 'trust']) assert.equal(heroLayout(D.ESTATES[k], {}).xconnects.length, 0, k);
 });
 
-test('the mark survives the drill into a site', () => {
-  const rows = siteDrillRows(D.ESTATES.mature, ['region:US West', 'Denver branch']).rows;
+test('the mark survives the drill to a site', () => {
+  const rows = siteDrillRows(D.ESTATES.mature, ['region:US West', 'state:CO', 'metro:Denver']).rows;
   assert.equal(L({ siteRows: rows }).xconnects.filter(x => x.region === 'us-west-2').length, 1);
 });
 

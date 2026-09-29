@@ -9,24 +9,25 @@ const inv = A.inventory(est);
 const ob = A.observe(est, [], inv);
 const list = (col, trail, opts) => levelList(est, inv, ob, col, trail, opts);
 
-test('the sites root lists every group, each a door', () => {
+test('the sites root lists every region, each a door', () => {
+  // The root is regions since 2026-09-29 (the site side drills by place).
   const lv = list('sites', []);
-  assert.equal(lv.rows.length, 7);
-  assert.equal(lv.total, 7);
-  assert.ok(lv.rows.every(r => r.into), 'every group row is a door');
-  assert.equal(lv.rows.find(r => /East/.test(r.id)).into, 'Branch#1');
+  assert.equal(lv.total, 4);
+  assert.ok(lv.rows.every(r => r.into && r.into.startsWith('region:')), 'every region row is a door');
+  assert.equal(lv.rows.find(r => r.id === 'US East').into, 'region:US East');
 });
 
-test('a class lists all 19 metros, not the canvas six', () => {
+// 2026-09-29: rollups split only into their own region's metros (East: Atlanta, Charlotte, Miami, Nashville), so the class and group counts moved.
+test('a class lists all 11 metros, not the canvas six', () => {
   const lv = list('sites', ['Branch']);
-  assert.equal(lv.rows.length, 19);
+  assert.equal(lv.rows.length, 11);
   assert.ok(lv.rows.every(r => r.into && r.into.startsWith('Branch:')));
   assert.ok(!lv.rows.some(r => /more/.test(r.id)), 'the overflow row is never a drawer row');
 });
 
 test('a metro delegates to volumeList and pages', () => {
   const lv = list('sites', ['Branch', 'Branch:1:Atlanta']);
-  assert.equal(lv.total, 588);
+  assert.equal(lv.total, 292);
   assert.equal(lv.shownCount, 60);
   assert.ok(lv.hasMore);
   assert.ok(lv.rows.every(r => !r.into), 'a site is an asset, not a door');
@@ -35,7 +36,7 @@ test('a metro delegates to volumeList and pages', () => {
 
 test('a group node lists only its own metros', () => {
   const lv = list('sites', ['Branch#1']);
-  assert.equal(lv.rows.length, 6);
+  assert.equal(lv.rows.length, 4);
   assert.equal(lv.title, 'Remote sites, East');
 });
 

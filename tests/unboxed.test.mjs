@@ -50,16 +50,21 @@ test('paging moves, and a new filter starts at the first page', () => {
   assert.match(vals(c).findPager.label, /^1–/);
 });
 
-test('Your sites drills in place: opening a class or a metro sets its siblings aside', () => {
-  const c = at({ screen: 's1', estPanel: 'sites' });
-  const v = vals(c);
-  assert.ok(v.siteTree.length > 1);
-  v.siteTree[0].toggle();
-  const w = vals(c);
-  assert.equal(w.siteTree.length, 1);
-  if (w.siteTree[0].metros.length > 1) { w.siteTree[0].metros[0].toggle(); assert.equal(vals(c).siteTree[0].metros.length, 1); }
-  vals(c).siteTree[0].toggle();
-  assert.equal(vals(c).siteTree.length, v.siteTree.length, 'closing brings them back');
+test('Your sites drills by place, in place: region, state, metro, site, services', () => {
+  const c = at({ view: 'trust', screen: 's1', estPanel: 'sites' });
+  const names = [];
+  for (let i = 0; i < 5; i++) {
+    const v = vals(c);
+    names.push(v.placeRows.map(r => r.name));
+    const next = v.placeRows.find(r => r.caret);
+    if (!next) break;
+    next.go();
+  }
+  assert.deepEqual(names[0], ['US East', 'US Central', 'US West', 'Nationwide']);
+  assert.ok(names.flat().every(n => !/^(AWS|Azure|GCP|Google|Oracle)\b/.test(n)), 'the site side opened into clouds');
+  assert.equal(vals(c).placeCrumbs.length, 5, 'All regions › region › state › metro › site');
+  vals(c).placeCrumbs[0].go();
+  assert.equal(vals(c).placeRows.length, 4, 'the root crumb climbs back out');
 });
 
 test('no page view lives in a drawer; the drawer only adds or edits a source', () => {

@@ -88,23 +88,44 @@ test('the facts that make a site third party survive the site tree', async () =>
   assert.equal(phoenix.viaRamp, 'Lumen');
 });
 
-test('drilling to Denver shows Denver, not the regions', async () => {
+// The site side drills by place and never turns into clouds (Micah, 2026-09-29:
+// "when you drill down, you get to clouds ... regions to states then to metros then to sites").
+test('drilling to Denver shows Denver, not the regions, and never a cloud', async () => {
   const C = await import('../naas-connections.js');
-  const r = C.siteDrillRows(D.ESTATES.mature, ['region:US West', 'Denver branch']);
+  const r = C.siteDrillRows(D.ESTATES.mature, ['region:US West', 'state:CO', 'metro:Denver']);
   assert.ok(r, 'the drill returned nothing, so the picture fell back to the regions');
-  assert.equal(r.level, 'path');
-  for (const row of r.rows) {
-    assert.match(row.access, /Lumen/, `${row.name} lost its Lumen access`);
-    assert.equal(row.accessSla, 'att', `${row.name} forgot that AT&T answers for Denver's off-net circuit`);
-  }
+  assert.equal(r.level, 'site');
+  const den = r.rows.find(x => x.name === 'Denver branch');
+  assert.ok(den, r.rows.map(x => x.name).join(', '));
+  assert.equal(den.accessSla, 'att', 'Denver forgot that AT&T answers for its off-net circuit');
+  const next = C.siteDrillRows(D.ESTATES.mature, ['region:US West', 'state:CO', 'metro:Denver', 'site:Denver branch']);
+  assert.equal(next.level, 'service');
+  assert.ok(next.rows.every(x => !/^(AWS|Azure|GCP|Google|Oracle)\b/.test(x.name)), 'a site opened into clouds');
 });
 
-test('drilling to Phoenix shows only where Lumen goes, and never says AT&T', async () => {
+test('Phoenix, at the site level, still rides Lumen end to end and never says AT&T', async () => {
   const C = await import('../naas-connections.js');
-  const r = C.siteDrillRows(D.ESTATES.mature, ['region:US West', 'Phoenix DC']);
-  assert.deepEqual(r.rows.map(x => x.name), ['AWS us-west-2'], 'Phoenix has one on-ramp; the others were invented');
-  const row = r.rows[0];
+  const r = C.siteDrillRows(D.ESTATES.mature, ['region:US West', 'state:AZ', 'metro:Phoenix']);
+  const row = r.rows.find(x => x.name === 'Phoenix DC');
+  assert.ok(row);
   assert.equal(row.core, 'third');
   assert.equal(row.via, 'us-west-2');
   assert.doesNotMatch(row.access, /AT&T/, 'a Lumen end-to-end path is labelled AT&T');
+});
+
+test('at no depth, on no estate, does the site column hold a cloud', async () => {
+  const C = await import('../naas-connections.js');
+  const cloud = /^(AWS|Azure|GCP|Google|Oracle|OCI|CoreWeave)\b|^→/;
+  for (const id of ['partial', 'mature', 'trust', 'small']) {
+    const est = D.ESTATES[id];
+    const walk = (trail, depth) => {
+      const r = C.siteDrillRows(est, trail);
+      if (!r || depth > 5) return;
+      for (const row of r.rows) {
+        assert.ok(!cloud.test(row.name), `${id} ${trail.join(' › ')}: ${row.name}`);
+        if (row.drillKey && !row.leaf && !row.more) walk([...trail, row.drillKey], depth + 1);
+      }
+    };
+    for (const reg of regionRows(est)) walk(['region:' + reg.name], 1);
+  }
 });

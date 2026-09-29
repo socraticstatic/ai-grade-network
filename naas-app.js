@@ -6,7 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 import * as D from './naas-data.js';
-import { filterSites, buRows, regionOf, onAtt, fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits } from './naas-logic.js';
+import { filterSites, buRows, regionRows, regionOf, onAtt, fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits } from './naas-logic.js';
 import * as A from './naas-addendum.js';
 import * as R from './naas-round2.js';
 import * as S from './naas-sites.js';
@@ -165,7 +165,7 @@ export function init(c) {
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -414,7 +414,12 @@ export function vals(c) {
   // and the first open retires the hint for good.
   const seenHint = () => { if (!s.openHintSeen) { set({ openHintSeen: true }); try { localStorage.setItem('naas.openHint', 'seen'); } catch (e) {} } };
   const pillOf = (st) => (st.region ? String(st.count || st.groups || '') : st.rollup && S.countOf(st.name) > 1 ? S.countOf(st.name).toLocaleString('en-US') : '');
-  const heroSites = L.sites.map(st => ({ ...st, key: st.key, hasPill: !st.ghost && !st.leaf && !st.more, pillN: pillOf(st), textW: (SITES_END - 24 - 24 - (!st.ghost && !st.more && !st.priv && !st.leaf ? 86 : !st.ghost && !st.leaf ? 44 : 18)) + 'px', op: dimFor(['site' + st.name]), ty: st.y + 15, ty2: st.y + 29, dash: st.ghost || st.more ? '4 4' : 'none', color: st.ghost ? 'var(--text-disabled)' : st.more ? 'var(--link)' : 'var(--text-heading)', click: () => { if (st.ghost || st.leaf) return; if (st.more) { openLevel('sites'); return; } seenHint(); const place = /^(state|metro):/.test(String(st.drillKey || '')); const isSite = !place && ((s.drill.length >= 2 && st.drillKey) || (st.drillKey && /^(site:|(DC|CAM|OFF|PLT|BR|ATM|FLD)-)/.test(String(st.drillKey))) || (!st.rollup && S.countOf(st.name) === 1 && !st.drillKey && !/\(/.test(st.name))); if (isSite) set({ mapSel: 'asset:' + String(st.drillKey || st.name).replace(/^site:/, ''), panelTab: 'overview' }); const key = st.drillKey || S.rollupKeyOf(est, st) || (S.countOf(st.name) > 1 || st.rollup ? S.classOf(st) : st.name); set({ drill: [...s.drill, key] }); }, enter: () => set({ hoverNode: 'site' + st.name }), leave: () => set({ hoverNode: null }), cursor: st.ghost || st.leaf ? 'default' : 'pointer', caret: st.ghost || st.leaf || st.more ? '' : '›', hasAction: !st.ghost && !st.more && !st.priv && !st.leaf, action: 'Attach', act: () => { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); syncHash('s4', s.layer, s.tab); } }));
+  // A region card counts its places the way every level under it does (2026-09-29):
+  // "1,640 sites · 154 AT&T" inside must not read "internet · Attach" outside.
+  const placeCount = (st) => { if (!String(st.drillKey || '').startsWith('region:') || s.drill.length) return st; const lv = X.siteDrillRows(est, [st.drillKey]); if (!lv) return st;
+    const total = lv.rows.reduce((a, r) => a + (r.count || 0), 0), att = lv.rows.reduce((a, r) => a + (r.att || 0), 0);
+    return { ...st, priv: att > 0, access: `${total.toLocaleString('en-US')} ${total === 1 ? 'site' : 'sites'} · ${att.toLocaleString('en-US')} AT&T · ${(total - att).toLocaleString('en-US')} non-AT&T` }; };
+  const heroSites = L.sites.map(placeCount).map(st => ({ ...st, key: st.key, hasPill: !st.ghost && !st.leaf && !st.more, pillN: pillOf(st), textW: (SITES_END - 24 - 24 - (!st.ghost && !st.more && !st.priv && !st.leaf ? 86 : !st.ghost && !st.leaf ? 44 : 18)) + 'px', op: dimFor(['site' + st.name]), ty: st.y + 15, ty2: st.y + 29, dash: st.ghost || st.more ? '4 4' : 'none', color: st.ghost ? 'var(--text-disabled)' : st.more ? 'var(--link)' : 'var(--text-heading)', click: () => { if (st.ghost || st.leaf) return; if (st.more) { openLevel('sites'); return; } seenHint(); const place = /^(state|metro):/.test(String(st.drillKey || '')); const isSite = !place && ((s.drill.length >= 2 && st.drillKey) || (st.drillKey && /^(site:|(DC|CAM|OFF|PLT|BR|ATM|FLD)-)/.test(String(st.drillKey))) || (!st.rollup && S.countOf(st.name) === 1 && !st.drillKey && !/\(/.test(st.name))); if (isSite) set({ mapSel: 'asset:' + String(st.drillKey || st.name).replace(/^site:/, ''), panelTab: 'overview' }); const key = st.drillKey || S.rollupKeyOf(est, st) || (S.countOf(st.name) > 1 || st.rollup ? S.classOf(st) : st.name); set({ drill: [...s.drill, key] }); }, enter: () => set({ hoverNode: 'site' + st.name }), leave: () => set({ hoverNode: null }), cursor: st.ghost || st.leaf ? 'default' : 'pointer', caret: st.ghost || st.leaf || st.more ? '' : '›', hasAction: !st.ghost && !st.more && !st.priv && !st.leaf, action: 'Attach', act: () => { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); syncHash('s4', s.layer, s.tab); } }));
   // Workload counts live on hover, not in a column beside the picture (Micah, 2026-09-23).
   const wlTip = (name, r) => (r.wl || r.wlLabel ? `${name} · ${r.wlLabel || plural(r.wl, 'workload', 'workloads')}` : name);
   const heroRegions = L.regions.filter(r => !r.card).map(r => ({ ...r, key: r.key, pillN: '', hasPill: !(r.ghost || r.rollup || r.other || r.pinned || r.leaf), noPill: !!(r.ghost || r.rollup || r.other || r.pinned || r.leaf), tip: wlTip(r.cloud && !r.child ? `${r.cloud} ${r.region}` : r.region, r), op: dimFor(['reg' + r.region]), ty: r.y + 19, dash: r.seeAll ? '3 3' : r.ghost ? '4 4' : 'none', stroke: r.seeAll ? 'var(--cta)' : 'var(--border-primary)', color: r.seeAll ? 'var(--link)' : (r.ghost || r.muted) ? 'var(--text-disabled)' : 'var(--text-heading)', cursor: r.ghost || r.muted ? 'default' : 'pointer', relFill: r.ghost ? 'transparent' : hp.regionHealth[r.region] === 'amber' ? 'var(--warning)' : 'var(--success)', relTitle: r.link === 'degraded' ? `Degraded: BGP flapping on ${r.ramp || 'NetBond'}` : hp.regionHealth[r.region] === 'amber' ? 'Degraded: latency spike on the public path' : 'Healthy', rx: L.rightX + (r.indent || 0), dotX: L.rightX + 214, rw: 240 - (r.indent || 0), rh: r.child ? 26 : 28, caret: r.seeAll ? '›' : r.ghost || r.rollup || r.other ? (r.other ? '‹' : '') : (r.pinned ? '‹' : r.leaf ? '' : '›'), action: r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : ''), hasAction: !!(r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : '')), act: () => { if (r.link === 'degraded') { go('s3', { layer: 'cloud', tab: 'observe', mapSel: 'cx-' + r.region, mapRegion: r.region, panelTab: 'impact' })(); return; } composeFor(go, r)(); }, actionBg: r.link === 'degraded' ? 'var(--warning)' : 'var(--cta)', rectFill: r.seeAll ? 'var(--bg-accent)' : r.pinned ? 'var(--bg-accent)' : r.child ? 'var(--bg-wash)' : 'var(--bg-base)', relOp: r.child || r.other ? 0 : 1, click: () => { if (r.ghost) return; if (r.seeAll) { openWorkloads(r.wlScope.region, r.wlScope.vpcId, r.wlScope.snId); return; } if (r.wlSel) { set({ mapSel: r.wlSel, panelTab: 'overview' }); return; } if (r.toRoot) { set(r.toProvider ? { cloudDrill: [], cloudPick } : { cloudDrill: [], cloudPick: null }); return; } if (r.pinned) { set({ cloudDrill: cloudDrill.slice(0, -1), cloudPick }); return; } if (r.rollup) return; if (r.child) { if (r.drill) set({ cloudDrill: [...cloudDrill, r.drill] }); return; } set({ cloudDrill: [r.region], cloudPick: r.cloud, andiScope: { kind: 'region', id: r.region, label: r.cloud + ' ' + r.region } }); }, enter: () => set({ hoverNode: 'reg' + r.region, hoverRegion: r.ghost || r.rollup ? null : r.region }), leave: () => set({ hoverNode: null, hoverRegion: null }) }));
@@ -471,7 +476,10 @@ export function vals(c) {
   const volCtx = (s.vol && s.vol.kind === 'level')
     ? (s.vol.col === 'clouds'
       ? { region: colTrail('clouds')[0], vpcId: colTrail('clouds')[1], snId: colTrail('clouds')[2] || null, cls: '', metro: '', metroLabel: '' }
-      : { region: '', vpcId: '', cls: String(colTrail('sites')[0] || '').split('#')[0], metro: colTrail('sites')[1], metroLabel: S.labelOfKey(est, colTrail('sites')[1]) })
+      : (() => { const tr = colTrail('sites'); const pm = X.placeMetroScope(est, tr);
+          // A place trail (region, state, metro) names its metro and the rollup behind it (2026-09-29).
+          if (pm) return { region: '', vpcId: '', cls: pm.cls, metro: pm.metroKey, metroLabel: pm.name };
+          return { region: '', vpcId: '', cls: String(tr[0] || '').split('#')[0], metro: tr[1], metroLabel: S.labelOfKey(est, tr[1]) }; })())
     : { ...(s.vol || {}), metroLabel: (s.vol && s.vol.metro) ? S.labelOfKey(est, s.vol.metro) : '' };
   const volList = vol ? (vol.kind === 'level' ? V.levelList(est, inv, obAll, vol.col, colTrail(vol.col), { ...volOpts, flat: !!s.volFlat })
     : vol.kind === 'workloads' ? V.workloadList(est0, inv, vol, volOpts) : V.volumeList(est0, vol, volOpts)) : null;
@@ -1016,7 +1024,7 @@ export function pageRows(rows, size, page, setPage) {
   return { rows: rows.slice(p * size, p * size + size), pager: { label: n ? `${p * size + 1}–${Math.min(n, (p + 1) * size)} of ${n}` : '0 of 0', many: pages > 1,
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
-const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'],
+const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'],
   saveRows: ['savePage', 5, 'savePager', 'savePageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 function pageLists(out, s, set) {
   for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
@@ -2323,6 +2331,27 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
         // Connect is two pages (notes, 2026-09-29): what you have, and the options for what is not on AT&T yet.
         ...(() => { const on3 = s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect'; const ck = ['options', 'ways'].includes(s.cnPage) ? s.cnPage : 'picture'; return { cnIsOptions: on3 && ck === 'options', cnIsWays: on3 && ck === 'ways', cnIsPicture: on3 && ck === 'picture', cnShowLens: on3 && ck !== 'options', lensValue: s.lens || 'security', setLens: (e) => set({ lens: e.target.value }), cnTabs: on3, heroHead: s.screen !== 's3', cnPanels: [['picture', 'What you have'], ['options', 'Options'], ['ways', 'Ways to connect']].map(([k, l]) => { const on = ck === k; return { key: k, label: l, on, go: () => set({ cnPage: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }) }; })(),
+        // Your sites drill by place (Micah, 2026-09-29): region, state, metro, site, services.
+        ...(() => {
+          const trail = Array.isArray(s.placeTrail) ? s.placeTrail : [];
+          const lvl = trail.length ? X.siteDrillRows(est, trail) : null;
+          const rows0 = lvl ? lvl.rows : regionRows(est).map(r => { const st = X.siteDrillRows(est, ['region:' + r.name]); const att = st ? st.rows.reduce((a, x) => a + (x.att || 0), 0) : r.sites.filter(onAtt).reduce((a, x) => a + S.countOf(x.name), 0);
+            return { key: 'region:' + r.name, name: r.name, drillKey: 'region:' + r.name, count: r.count, priv: att > 0, access: `${r.count.toLocaleString('en-US')} ${r.count === 1 ? 'site' : 'sites'} · ${att.toLocaleString('en-US')} AT&T · ${(r.count - att).toLocaleString('en-US')} non-AT&T` }; });
+          const level = !trail.length ? 'region' : lvl ? lvl.level : 'region';
+          const usRegion = (k) => /^region:US /.test(String(k || ''));
+          const NEXT = { region: 'states', state: 'metros', metro: 'sites', site: 'services', service: '' };
+          const nextOf = (r) => level === 'region' && !usRegion(r.drillKey) ? 'countries' : NEXT[level] || '';
+          const placeRows = rows0.map(r => { const can = !!r.drillKey && !r.leaf && !r.more;
+            return { key: r.key || r.name, name: r.name, access: r.access || '', dot: r.priv ? 'var(--success)' : 'var(--warning)', level: can ? nextOf(r) : '', caret: can ? '›' : '', cursor: can ? 'pointer' : 'default',
+              go: can ? () => set({ placeTrail: [...trail, r.drillKey], placePage: 0 }) : () => {} }; });
+          const crumbs = [{ key: 'root', label: 'All regions', to: [] }, ...trail.map((k, i) => ({ key: k, label: S.labelOfKey(est, k), to: trail.slice(0, i + 1) }))]
+            .map((c, i, a) => ({ ...c, notLast: i < a.length - 1, weight: i === a.length - 1 ? 700 : 500, color: i === a.length - 1 ? 'var(--text-heading)' : 'var(--link)', go: () => set({ placeTrail: c.to, placePage: 0 }) }));
+          const total = rows0.reduce((a, r) => a + (r.count || 1), 0);
+          const nounOf = { region: ['region', 'regions'], state: [usRegion(trail[0]) ? 'state' : 'country', usRegion(trail[0]) ? 'states' : 'countries'], metro: ['metro', 'metros'], site: ['site', 'sites'], service: ['service', 'services'] }[level] || ['row', 'rows'];
+          const shown = rows0.filter(r => !r.more).length;
+          const sitesN = `${total.toLocaleString('en-US')} ${total === 1 ? 'site' : 'sites'}`;
+          return { placeRows, placeCrumbs: crumbs, placeLine: level === 'service' || level === 'site' ? (level === 'site' ? sitesN : `${shown} ${shown === 1 ? nounOf[0] : nounOf[1]}`) : `${shown} ${shown === 1 ? nounOf[0] : nounOf[1]} · ${sitesN}` };
+        })(),
         // Business units (notes, 2026-09-29): the customer tags sites, and every grouping reads the tags.
         ...(() => {
           const tags = ((s.siteTags || {})[est.id]) || {}, custom = ((s.buCustom || {})[est.id]) || [];

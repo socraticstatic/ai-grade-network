@@ -196,14 +196,15 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Nothing boxed: lists page on the page, drawer views became tabs (Micah, 2026-09-29): div 1014 -> 1000, span 784 -> 776, sc-if 382 -> 383, sc-for 223 -> 220, button 286 -> 293.
 // Tags pager (2026-09-29): div 1000 -> 1001, span 776 -> 777, sc-if 383 -> 384, button 293 -> 295.
 // Ways to connect unboxed; Lens in the tab row (2026-09-29): div 1001 -> 996, span 777 -> 776, sc-if 384 -> 385, sc-for 220 -> 219, button 295 -> 294, label 30 -> 31.
+// Your sites drill by place (Micah, 2026-09-29): div 996 -> 975, span 776 -> 716, sc-if 385 -> 366, sc-for 219 -> 205, button 294 -> 273.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 996],
-    ['span', /<span\b/g, /<\/span>/g, 776],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 385],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 219],
+    ['div', /<div\b/g, /<\/div>/g, 975],
+    ['span', /<span\b/g, /<\/span>/g, 716],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 366],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 205],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 294],
+    ['button', /<button\b/g, /<\/button>/g, 273],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

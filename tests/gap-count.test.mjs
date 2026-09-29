@@ -138,7 +138,10 @@ test('the drawer bulk attach clears the gap route\'s source label (the reviewer\
   v = vals(c);
   v.openLevel('sites');
   v = vals(c);
-  v.drawer.rows.find(r => /East/.test(r.id)).descend();
+  // Region, state, metro (2026-09-29: the site side drills by place).
+  v.drawer.rows.find(r => r.id === 'US East').descend();
+  v = vals(c);
+  v.drawer.rows.find(r => r.id === 'Georgia').descend();
   v = vals(c);
   v.drawer.rows.find(r => /Atlanta/.test(r.id)).descend();
   v = vals(c);
@@ -159,7 +162,10 @@ test('the reverse order is fine: drawer bulk attach, then the gap row', () => {
   let v = vals(c);
   v.openLevel('sites');
   v = vals(c);
-  v.drawer.rows.find(r => /East/.test(r.id)).descend();
+  // Region, state, metro (2026-09-29: the site side drills by place).
+  v.drawer.rows.find(r => r.id === 'US East').descend();
+  v = vals(c);
+  v.drawer.rows.find(r => r.id === 'Georgia').descend();
   v = vals(c);
   v.drawer.rows.find(r => /Atlanta/.test(r.id)).descend();
   v = vals(c);
@@ -385,15 +391,18 @@ test('finding H: switching the outcome after the drawer\'s bulk attach (no sourc
   let v = vals(c);
   v.openLevel('sites');
   v = vals(c);
-  v.drawer.rows.find(r => /East/.test(r.id)).descend();
+  // Region, state, metro (2026-09-29: the site side drills by place).
+  v.drawer.rows.find(r => r.id === 'US East').descend();
+  v = vals(c);
+  v.drawer.rows.find(r => r.id === 'Georgia').descend();
   v = vals(c);
   v.drawer.rows.find(r => /Atlanta/.test(r.id)).descend();
   v = vals(c);
   v.drawer.bulkAttach();
 
-  assert.equal(c.state.compose.qty, 353);
+  assert.equal(c.state.compose.qty, 263); // Atlanta's public sites: East's own rollup is off AT&T (2026-09-29)
   assert.equal(c.state.compose.sourceLabel, undefined, 'the drawer never writes a label - this is the gap the round-2 guard missed');
-  assert.equal(vals(c).pricedTotalF, '$637,800/mo');
+  assert.equal(vals(c).pricedTotalF, '$475,800/mo');
 
   v = vals(c);
   const u3 = v.outcomeCards.find(o => o.key === 'u3');

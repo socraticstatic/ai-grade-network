@@ -24,9 +24,10 @@ test('the count a user clicks is the count they land on', () => {
   const total = east.rows.reduce((a, r) => a + parseInt(r.name.replace(/.*\(([\d,]+)\).*/, '$1').replace(/,/g, ''), 10), 0);
   assert.equal(total, 1640);
   assert.equal(east.label, 'Remote sites, East');
+  // Region-true splits (2026-09-29): 11 Branch metros, East's four.
   const cls = siteDrillRows(est, ['Branch']);
-  assert.equal(cls.rows.length, 19);
-  assert.equal(east.rows.length, 6);
+  assert.equal(cls.rows.length, 11);
+  assert.equal(east.rows.length, 4);
 });
 
 test('a group trail still drills through to sites', () => {

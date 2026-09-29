@@ -35,7 +35,7 @@ const METRO_REGION = {
   Denver: 'US West', Phoenix: 'US West', 'Salt Lake City': 'US West', 'San Jose': 'US West',
   Frankfurt: 'International', Singapore: 'International',
   // The Growing estate's 25 sites (2026-09-28).
-  'New York': 'US East', Boston: 'US East', Charlotte: 'US East',
+  'New York': 'US East', Boston: 'US East', Charlotte: 'US East', Miami: 'US East', Nashville: 'US East',
   Minneapolis: 'US Central', 'Kansas City': 'US Central',
   Seattle: 'US West', 'Los Angeles': 'US West',
   London: 'Europe', Amsterdam: 'Europe', Paris: 'Europe', Dublin: 'Europe', Madrid: 'Europe',

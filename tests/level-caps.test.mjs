@@ -19,7 +19,7 @@ test('a level with a handful of rows shows no search and no chips', () => {
 });
 
 test('a level at volume earns search, chips and bulk', () => {
-  assert.deepEqual(list('sites', ['Branch']).caps, { search: true, chips: false, bulk: false });
+  assert.deepEqual(list('sites', ['region:US East', 'state:GA', 'metro:Atlanta']).caps, { search: true, chips: true, bulk: true });
   assert.deepEqual(list('sites', ['Branch', 'Branch:1:Atlanta']).caps, { search: true, chips: true, bulk: true });
   assert.deepEqual(list('fabric', ['fab', 'N. Virginia']).caps, { search: true, chips: false, bulk: false });
   assert.deepEqual(list('clouds', ['us-east-1', 'vpc-0-0', 'vpc-0-0-pub-0']).caps, { search: true, chips: true, bulk: true });
@@ -42,11 +42,12 @@ test('the VPC level applies the filters it renders', () => {
 
 const TABLE = [
   // col,      trail,                                                  level,      rows, caps
-  ['sites',    [],                                                     'group',    7,    { search: false, chips: false, bulk: false }],
-  ['sites',    ['Branch'],                                             'metro',    19,   { search: true,  chips: false, bulk: false }],
-  ['sites',    ['Branch#1'],                                           'metro',    6,    { search: false, chips: false, bulk: false }],
-  ['sites',    ['Branch', 'Branch:1:Atlanta'],                         'site',     60,   { search: true,  chips: true,  bulk: true }],
-  ['sites',    ['Branch', 'Branch:1:Atlanta', 'RS-ATL-0594'],          'path',     6,    { search: false, chips: false, bulk: false }],
+  // The site side drills by place since 2026-09-29: regions, states, metros, sites, services.
+  ['sites',    [],                                                     'region',   4,    { search: false, chips: false, bulk: false }],
+  ['sites',    ['region:US East'],                                     'state',    4,    { search: false, chips: false, bulk: false }],
+  ['sites',    ['region:US East', 'state:GA'],                         'metro',    1,    { search: false, chips: false, bulk: false }],
+  ['sites',    ['region:US East', 'state:GA', 'metro:Atlanta'],        'site',     60,   { search: true,  chips: true,  bulk: true }],
+  ['sites',    ['region:US East', 'state:GA', 'metro:Atlanta', 'site:RS-ATL-0100'], 'service', 1, { search: false, chips: false, bulk: false }],
   ['fabric',   [],                                                     'facility', 4,    { search: false, chips: false, bulk: false }],
   ['fabric',   ['fab', 'N. Virginia'],                                 'port',     21,   { search: true,  chips: false, bulk: false }],
   ['fabric',   ['fab', 'N. Virginia', 'port:us-east-1:1'],             'circuit',  3,    { search: false, chips: false, bulk: false }],
@@ -83,9 +84,9 @@ test('every level under 12 rows is gated off, even the ones a real builder backs
 // Task 6 does not wire them in (that would be fixing frame(), out of scope).
 
 test('a frame()-built level over 12 rows gets search only, never chips or bulk', () => {
-  // sites Branch (19 metros) and fabric N. Virginia (21 ports) are both
-  // frame()-built - neither delegates to volumeList/workloadList.
-  assert.deepEqual(list('sites', ['Branch']).caps, { search: true, chips: false, bulk: false });
+  // fabric N. Virginia (21 ports) is frame()-built and does not delegate. The
+  // sites class level fell to 11 metros on 2026-09-29, under the threshold.
+  assert.deepEqual(list('sites', ['Branch']).caps, { search: false, chips: false, bulk: false });
   assert.deepEqual(list('fabric', ['fab', 'N. Virginia']).caps, { search: true, chips: false, bulk: false });
 });
 
@@ -116,7 +117,7 @@ test('the VPC subnet level: the state chip filters on AT&T|public vocabulary', (
 
 test('volumeList carries caps directly, not only via sitesLevel', () => {
   const v = volumeList(est, { cls: 'Branch', metro: 'Branch:1:Atlanta' });
-  assert.equal(v.counts.total, 588);
+  assert.equal(v.counts.total, 292);
   assert.deepEqual(v.caps, { search: true, chips: true, bulk: true });
 });
 

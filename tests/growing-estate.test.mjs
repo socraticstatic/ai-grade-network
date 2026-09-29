@@ -48,7 +48,8 @@ test('a fresh visitor lands on Network Engineering and the Growing estate', () =
 });
 
 test('the sites door names what the region cards hold', () => {
-  assert.equal(vals(mkC({ view: 'partial' })).sitesDoor.label, 'All 25 sites ›');
+  // The sites root is its five regions since 2026-09-29, the same cards the picture draws.
+  assert.equal(vals(mkC({ view: 'partial' })).sitesDoor.label, 'All 5 regions ›');
 });
 
 // The markup keeps its own constructor, and it is what a browser boots from:

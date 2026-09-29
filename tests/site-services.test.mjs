@@ -65,8 +65,8 @@ test('a group of sites fans one line per service it uses, and Third Party Access
   assert.ok(keys.includes('a:avpn') && keys.includes('a:adi'), keys.join(','));
 });
 
-// Ruled 2026-09-28: the drill belongs to Discover → Estate's "Your sites"; the
-// Connect picture stays as it was.
+// 2026-09-29: the place drill is the site side of every picture, the Connect
+// picture and the Traffic map included; it never turns into clouds.
 const drill = (region, rest = []) => placeDrill(est, region, regionRows(est).find(r => r.name === region).sites, rest);
 test('the drill is region, state, metro, site, then the site\'s services', () => {
   const r = drill('US Central');
