@@ -45,15 +45,24 @@ function stateOfRegion(est, name) { const r = regionOf(est, name); if (!r) retur
 /** A site that reaches the cloud over IPsec on someone else's internet. */
 const isTunnel = (x) => !x.priv && (!!x.tunnel || S.servicesOf(x).some(v => v.key === 'tpa'));
 /** Root nodes on the left: site regions, the grouping every other view uses (Micah, 2026-09-28). */
-export function leftRoots(est, flows) {
+export function leftRoots(est, flows, by = 'region') {
+  // The site side groups by region (the default), by first mile, or by site
+  // type (Micah, 2026-09-29: "by first mile ... on sankey, it doesn't work").
+  // Every grouping holds the same sites, so every grouping holds the same traffic.
   const sg = {};
-  (est.sites || []).forEach(s => { const r = siteRegion(s); const count = S.countOf(s.name); const v = (PER_SITE[S.classOf(s)] || 0.5) * count;
-    const g = sg[r] = sg[r] || { kind: 'site', key: 'site:' + r, cls: 'region:' + r, region: r, count: 0, v: 0, fabV: 0, ipsecV: 0 };
+  const tree = by === 'class' ? S.siteTree(est) : [];
+  const group = (s) => {
+    if (by === 'access') { const k = S.accessOf(s); return { id: k, node: { kind: 'site', key: 'site:access:' + k, cls: k, access: k, label: (S.ACCESS_CLASS[k] || { label: k }).label } }; }
+    if (by === 'class') { const k = S.classOf(s); return { id: k, node: { kind: 'site', key: 'site:class:' + k, cls: 'class:' + k, bcls: k, label: (tree.find(c => c.cls === k) || { label: k }).label } }; }
+    const r = siteRegion(s); return { id: r, node: { kind: 'site', key: 'site:' + r, cls: 'region:' + r, region: r, label: r } };
+  };
+  (est.sites || []).forEach(s => { const { id, node } = group(s); const count = S.countOf(s.name); const v = (PER_SITE[S.classOf(s)] || 0.5) * count;
+    const g = sg[id] = sg[id] || { ...node, count: 0, v: 0, fabV: 0, ipsecV: 0 };
     g.count += count; g.v += v; g.fabV += s.priv ? v : v * 0.1; if (isTunnel(s)) g.ipsecV += v * 0.9; });
   const order = regionRows(est).map(r => r.name);
   void flows;
-  return Object.values(sg).map(g => ({ ...g, name: `${g.region} · ${n(g.count)} ${g.count === 1 ? 'site' : 'sites'}`, group: 'sites', hasChildren: true, state: 'ok' }))
-    .sort((a, b) => order.indexOf(a.region) - order.indexOf(b.region));
+  const rows = Object.values(sg).map(({ label, ...g }) => ({ ...g, name: `${label} · ${n(g.count)} ${g.count === 1 ? 'site' : 'sites'}`, group: 'sites', hasChildren: true, state: 'ok' }));
+  return by === 'region' ? rows.sort((a, b) => order.indexOf(a.region) - order.indexOf(b.region)) : rows.sort((a, b) => b.v - a.v);
 }
 
 /**
@@ -109,20 +118,41 @@ export function flowSplit(est, flows) {
   return { sitesV, sitesFab, ipsec, inet: Math.max(0, pubV - ipsec), pubV, dc, cloudFab: sitesFab * (1 - dc), dcV: sitesFab * dc };
 }
 /** Root nodes on the right: only destinations - clouds, neoclouds, your data centers (Micah, 2026-09-28). */
-export function rightRoots(est, flows) {
+export function rightRoots(est, flows, by = 'cloud') {
   const sp = flowSplit(est, flows);
-  const priv = est.regionsList.filter(r => r.priv), pub = est.regionsList.filter(r => !r.priv);
-  const privWl = priv.reduce((a, r) => a + (r.wl || 0), 0) || 1, pubWl = pub.reduce((a, r) => a + (r.wl || 0), 0) || 1;
-  const byCloud = {};
-  const at = (c) => (byCloud[c] = byCloud[c] || { cloud: c, byRamp: {}, fabV: 0, pubV: 0 });
-  priv.forEach(r => { const c = at(r.cloud); const v = sp.cloudFab * (r.wl || 0) / privWl; c.byRamp[rampOf(r)] = (c.byRamp[rampOf(r)] || 0) + v; c.fabV += v; });
-  // What leaves AT&T lands on the regions it can reach: the public ones.
-  (pub.length ? pub : priv).forEach(r => { const c = at(r.cloud); c.pubV += sp.pubV * (r.wl || 0) / (pub.length ? pubWl : privWl); });
-  const clouds = Object.values(byCloud).map(c => ({ kind: 'cloud', key: 'cloud:' + c.cloud, name: c.cloud, cloud: c.cloud, v: c.fabV + c.pubV, fabV: c.fabV, pubV: c.pubV, byRamp: c.byRamp,
-    hasChildren: true, state: c.pubV > c.fabV ? 'slo' : 'ok' })).filter(c => c.v > 0.001).sort((a, b) => b.v - a.v);
+  const dests = destRoots(est.regionsList, sp.cloudFab, sp.pubV, by);
   const dcs = dcSites(est);
   const dc = sp.dcV > 0.001 ? [{ kind: 'dc', key: 'dc:yours', name: `Your data centers · ${dcs.length}`, v: sp.dcV, fabV: sp.dcV, pubV: 0, byRamp: {}, wan: sp.dcV, hasChildren: dcs.length > 1, state: 'ok' }] : [];
-  return [...clouds, ...dc];
+  return [...dests, ...dc];
+}
+/** The destinations a volume lands on, grouped by cloud or by app (2026-09-29).
+ *  On-AT&T traffic lands on the private regions, the rest on the public ones,
+ *  each by its workload share. An app spans regions; a region with several
+ *  apps splits evenly between them. tag keeps one app whole. */
+export function destRoots(regions, fabT, pubT, by = 'cloud', tag = null) {
+  const priv = regions.filter(r => r.priv), pub = regions.filter(r => !r.priv);
+  const fabTo = priv.length ? priv : regions, pubTo = pub.length ? pub : (priv.length ? priv : regions);
+  const wl = (rs) => rs.reduce((a, r) => a + (r.wl || 0), 0) || 1;
+  const fw = wl(fabTo), pw = wl(pubTo);
+  const part = {};
+  const at = (r) => (part[r.region] = part[r.region] || { r, fab: 0, pub: 0 });
+  fabTo.forEach(r => { at(r).fab += fabT * (r.wl || 0) / fw; });
+  pubTo.forEach(r => { at(r).pub += pubT * (r.wl || 0) / pw; });
+  const groups = {};
+  const into = (key, name, extra, p, k) => {
+    const g = groups[key] = groups[key] || { key, name, ...extra, byRamp: {}, fabV: 0, pubV: 0, parts: [] };
+    const f = p.fab * k, u = p.pub * k;
+    g.fabV += f; g.pubV += u; if (f) g.byRamp[rampOf(p.r)] = (g.byRamp[rampOf(p.r)] || 0) + f;
+    g.parts.push({ r: p.r, fab: f, pub: u });
+  };
+  Object.values(part).forEach(p => {
+    if (by === 'app') {
+      const tags = tag ? [tag] : ((p.r.tags || []).length ? p.r.tags : ['Untagged']);
+      tags.forEach(t => into('app:' + t, t, { kind: 'app', tag: t }, p, 1 / tags.length));
+    } else into('cloud:' + p.r.cloud, p.r.cloud, { kind: 'cloud', cloud: p.r.cloud }, p, 1);
+  });
+  return Object.values(groups).map(g => ({ ...g, v: g.fabV + g.pubV, hasChildren: true, state: g.pubV > g.fabV ? 'slo' : 'ok' }))
+    .filter(g => g.v > 0.001).sort((a, b) => b.v - a.v);
 }
 
 /** A site region's places, one level down, before they group by state. */
@@ -130,7 +160,7 @@ function siteRegionRows(node, est) {
     // Children of a first-mile group are the sites on it, by metro where a
     // metro holds more than one. siteTree groups by building class, which is
     // exactly the thing the network cannot see, so this descends on its own.
-    const mine = (est.sites || []).filter(x => (node.region ? siteRegion(x) === node.region : S.accessOf(x) === node.cls));
+    const mine = (est.sites || []).filter(x => (node.region ? siteRegion(x) === node.region : node.bcls ? S.classOf(x) === node.bcls : S.accessOf(x) === (node.access || node.cls)));
     if (!mine.length) return [];
     // A row that stands for many sites ("Remote sites (212)") carries no real
     // metro; siteTree already splits those into the metros they are in, so
@@ -177,7 +207,7 @@ export function childrenOf(node, est, inv, flows) {
     const by = {};
     rows.forEach(r => { const k = S.stateOf(r.metro) || '—'; (by[k] = by[k] || []).push(r); });
     return Object.entries(by).map(([code, rs]) => { const count = rs.reduce((a, r) => a + (r.count || 1), 0);
-      return { kind: 'placestate', key: `${node.key}/state:${code}`, region: node.region, cls: node.cls, stateCode: code, parentSite: { kind: 'site', key: node.key, region: node.region, cls: node.cls, v: node.v, fabV: node.fabV },
+      return { kind: 'placestate', key: `${node.key}/state:${code}`, region: node.region, cls: node.cls, stateCode: code, parentSite: { kind: 'site', key: node.key, region: node.region, cls: node.cls, bcls: node.bcls, access: node.access, v: node.v, fabV: node.fabV },
         name: `${S.placeName(code === '—' ? '' : code)} · ${n(count)} ${count === 1 ? 'site' : 'sites'}`, count, v: rs.reduce((a, r) => a + r.v, 0), fabV: rs.reduce((a, r) => a + r.fabV, 0), priv: rs.some(r => r.priv),
         hasChildren: true, state: rs.map(r => r.state).find(x => x && x !== 'ok') || 'ok', parentKey: node.key }; }).sort((a, b) => b.v - a.v);
   }
@@ -230,6 +260,11 @@ export function childrenOf(node, est, inv, flows) {
     return rows;
   }
   if (node.kind === 'onramp') return onrampChildren(est, flows);
+  if ((node.kind === 'cloud' || node.kind === 'app') && node.parts) {
+    return node.parts.map(({ r, fab, pub }) => ({ kind: 'endpoint', key: `${node.key}/${r.region}`, name: `${r.cloud} ${r.region}`, sub: r.priv ? `${rampOf(r)} · ${r.fab} ms` : `internet · ${r.pub} ms`,
+      v: fab + pub, fabV: fab, pubV: pub, byRamp: fab ? { [rampOf(r)]: fab } : {}, hasChildren: false, state: stateOfRegion(est, r.region), parentKey: node.key, region: r.region }))
+      .filter(x => x.v > 0.0005).sort((a, b) => b.v - a.v);
+  }
   if (node.kind === 'cloud') {
     const mine = est.regionsList.filter(r => r.cloud === node.cloud);
     const pr = mine.filter(r => r.priv), pu = mine.filter(r => !r.priv);
@@ -264,6 +299,17 @@ export function childrenOf(node, est, inv, flows) {
 }
 
 /** Replace every open node by its children, recursively. */
+/** An opened node hands its children exactly its own volume, on AT&T and
+ *  outside kept apart. Children sized from the estate are already whole; a
+ *  pick scales the roots, and this carries the scale down (2026-09-29). */
+function fitKids(p, kids) {
+  const kf = kids.reduce((a, k) => a + (k.fabV || 0), 0), ku = kids.reduce((a, k) => a + Math.max(0, k.v - (k.fabV || 0)), 0);
+  const pf = p.fabV || 0, pu = Math.max(0, p.v - pf);
+  const ff = kf > 1e-9 ? pf / kf : 1, fu = ku > 1e-9 ? pu / ku : 1;
+  if (Math.abs(ff - 1) < 0.005 && Math.abs(fu - 1) < 0.005) return kids;
+  return kids.map(k => { const f = (k.fabV || 0) * ff, u = Math.max(0, k.v - (k.fabV || 0)) * fu;
+    return { ...k, fabV: f, v: f + u, ...(k.ipsecV != null ? { ipsecV: k.ipsecV * fu } : {}), ...(k.pubV != null ? { pubV: k.pubV * fu } : {}), ...(k.wan != null ? { wan: k.wan * ff } : {}), ...(k.byRamp ? { byRamp: Object.fromEntries(Object.entries(k.byRamp).map(([r, v]) => [r, v * ff])) } : {}) }; });
+}
 function expand(list, open, est, inv, flows, depth = 0) {
   // Below the roots, an open node's siblings fold into one row so the map's height stays bounded at volume (Micah, 16:23).
   const CAP = 6;
@@ -277,7 +323,7 @@ function expand(list, open, est, inv, flows, depth = 0) {
     keep = ranked.slice(0, CAP);
     fold = ranked.slice(CAP);
   }
-  const out = keep.flatMap(nd => { const node = { ...nd, depth, group: nd.group || rootGroup(nd) }; if (open.has(node.key) && node.hasChildren) { const kids = childrenOf(node, est, inv, flows).map(k => ({ ...k, group: node.group })); return kids.length ? expand(kids, open, est, inv, flows, depth + 1) : [node]; } return [node]; });
+  const out = keep.flatMap(nd => { const node = { ...nd, depth, group: nd.group || rootGroup(nd) }; if (open.has(node.key) && node.hasChildren) { const kids = fitKids(node, childrenOf(node, est, inv, flows)).map(k => ({ ...k, group: node.group })); return kids.length ? expand(kids, open, est, inv, flows, depth + 1) : [node]; } return [node]; });
   if (fold.length) { const first = openHere[0] || keep[0] || fold[0]; const kindWord = { placestate: 'states', metro: 'metros', sitename: 'sites', service: 'services', site: 'regions', tag: 'workload tags', c2c: 'cloud pairs', tagregion: 'regions', vpc: 'VPCs', subnet: 'subnets', workload: 'workloads', endpoint: 'endpoints', dest: 'destinations' }[fold[0].kind] || ''; out.push({ kind: 'rollup', key: `${(fold[0].parentKey || (first && first.key ? first.key.split('/')[0] : 'lvl' + depth))}/rollup`, name: kindWord ? `+${fold.length} other ${kindWord}` : `+${fold.length} others`, sub: 'click to fold back', v: fold.reduce((a, x) => a + x.v, 0), fabV: fold.reduce((a, x) => a + x.fabV, 0), hasChildren: false, state: 'ok', depth, group: fold[0].group || rootGroup(fold[0]), parentKey: fold[0].parentKey, ipsecV: fold.reduce((a, x) => a + (x.ipsecV || 0), 0), pubV: fold.reduce((a, x) => a + (x.pubV || 0), 0), wan: fold.reduce((a, x) => a + (x.wan || 0), 0), byRamp: fold.reduce((m, x) => { Object.entries(x.byRamp || {}).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; }); return m; }, {}), foldsKey: first && first.key ? first.key : null, tailOnly: !openHere.length , tagV: fold.reduce((a, x) => a + (x.kind === 'c2c' ? 0 : (x.tagV != null ? x.tagV : x.v)), 0)}); }
   return out;
 }
@@ -285,28 +331,31 @@ function expand(list, open, est, inv, flows, depth = 0) {
 /** The map. open: keys to expand. filterRegion: keep only what touches a region. t: 0..1 scrubber, null = window. */
 export function buildMap(est, inv, flows0, opts = {}) {
   const open = new Set(opts.open || []);
-  const flows = opts.filterRegion ? flows0.filter(f => (f.region || '').includes(opts.filterRegion) || f.name.includes(opts.filterRegion)) : flows0;
-  let L0 = leftRoots(est, flows), R0 = rightRoots(est, flows);
+  const qs = opts.filterRegion ? [].concat(opts.filterRegion).map(String) : null;
+  const flows = qs ? flows0.filter(f => qs.some(q => (f.region || '').includes(q) || f.name.includes(q))) : flows0;
+  let L0 = leftRoots(est, flows, opts.leftBy || 'region'), R0 = rightRoots(est, flows, opts.rightBy || 'cloud');
   // The region filter shrank the egress classes (their volumes ride the flow
   // list) and left the site rows and cloud nodes at full size, because those
   // are sized from the estate. Filtering to eu-central-1 now scales the sites
   // to the share of traffic that touches the matched regions, keeps only the
   // clouds that own one, and re-splits the site traffic across them.
-  if (opts.filterRegion) {
-    const q = String(opts.filterRegion);
-    const match = est.regionsList.filter(r => r.region.includes(q) || `${r.cloud} ${r.region}`.includes(q));
-    const wlTot = est.regionsList.reduce((a, r) => a + (r.wl || 0), 0) || 1;
-    const share = match.reduce((a, r) => a + (r.wl || 0), 0) / wlTot;
-    const matchWl = {}; match.forEach(r => { matchWl[r.cloud] = (matchWl[r.cloud] || 0) + (r.wl || 0); });
-    const totMatch = Object.values(matchWl).reduce((a, v) => a + v, 0) || 1;
-    L0 = L0.map(x => x.kind === 'site' ? { ...x, v: x.v * share, fabV: x.fabV * share } : x);
-    const sitesVs = L0.filter(x => x.kind === 'site').reduce((a, x) => a + x.v, 0);
-    const sitesFabs = L0.filter(x => x.kind === 'site').reduce((a, x) => a + x.fabV, 0);
-    const fab0 = R0.filter(x => x.kind === 'cloud').reduce((a, x) => a + x.fabV, 0) || 1, pub0 = R0.filter(x => x.kind === 'cloud').reduce((a, x) => a + x.pubV, 0) || 1;
-    L0 = L0.map(x => ({ ...x, ipsecV: (x.ipsecV || 0) * share }));
-    R0 = R0.filter(x => x.kind === 'cloud' && matchWl[x.cloud]).map(x => { const k = matchWl[x.cloud] / totMatch, f = sitesFabs * k, u = Math.max(0, sitesVs - sitesFabs) * k;
-      const rs = x.fabV ? f / x.fabV : 0; return { ...x, fabV: f, pubV: u, v: f + u, byRamp: Object.fromEntries(Object.entries(x.byRamp || {}).map(([r, v]) => [r, v * rs])) }; });
-    void fab0; void pub0;
+  if (qs || opts.tag) {
+    // A pick carves its own traffic out of the grouped view, region by region,
+    // so the picked map carries exactly what its row showed (2026-09-29). The
+    // sites keep their on-AT&T and outside shares of it, so the middle balances.
+    const hit = (r) => !qs || qs.some(q => r.region.includes(q) || `${r.cloud} ${r.region}`.includes(q));
+    const keep = R0.filter(x => x.parts && (!opts.tag || x.tag === opts.tag)).map(x => {
+      const parts = x.parts.filter(pt => hit(pt.r)); const byRamp = {};
+      parts.forEach(pt => { if (pt.fab) byRamp[rampOf(pt.r)] = (byRamp[rampOf(pt.r)] || 0) + pt.fab; });
+      const fabV = parts.reduce((a, pt) => a + pt.fab, 0), pubV = parts.reduce((a, pt) => a + pt.pub, 0);
+      return { ...x, parts, byRamp, fabV, pubV, v: fabV + pubV, state: pubV > fabV ? 'slo' : 'ok' };
+    }).filter(x => x.v > 0.001);
+    const F1 = keep.reduce((a, x) => a + x.fabV, 0), U1 = keep.reduce((a, x) => a + x.pubV, 0);
+    const sites = L0.filter(x => x.kind === 'site');
+    const sF = sites.reduce((a, x) => a + x.fabV, 0), sU = sites.reduce((a, x) => a + x.v - x.fabV, 0);
+    const kf = sF ? F1 / sF : 0, ku = sU ? U1 / sU : 0;
+    L0 = L0.map(x => x.kind === 'site' ? { ...x, fabV: x.fabV * kf, v: x.fabV * kf + (x.v - x.fabV) * ku, ipsecV: (x.ipsecV || 0) * ku } : x);
+    R0 = keep;
   }
   const L = expand(L0, open, est, inv, flows), R = expand(R0, open, est, inv, flows);
   const scale = (nd) => opts.t == null ? nd : { ...nd, v: nd.v * shapeAt(nd.key, opts.t), fabV: nd.fabV * shapeAt(nd.key, opts.t) };
@@ -428,7 +477,7 @@ function rootGroup(x) { return x.kind === 'site' || x.kind === 'metro' || x.kind
 /** The trail for a key: every ancestor's name, root first. */
 export function trail(key, est, inv, flows) {
   const parts = key.split('/'); const out = []; let acc = '';
-  const roots = [...leftRoots(est, flows), ...rightRoots(est, flows)];
+  const roots = [...leftRoots(est, flows), ...leftRoots(est, flows, 'access'), ...leftRoots(est, flows, 'class'), ...rightRoots(est, flows), ...rightRoots(est, flows, 'app')];
   let node = null;
   for (let i = 0; i < parts.length; i++) { acc = i ? acc + '/' + parts[i] : parts[i]; node = i === 0 ? roots.find(r => r.key === acc) : (node ? childrenOf(node, est, inv, flows).find(c => c.key === acc) : null); if (!node) break; out.push({ key: acc, name: node.name, kind: node.kind, node }); }
   return out;

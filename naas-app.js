@@ -1742,8 +1742,15 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // A cloud scope rides the region matcher, which scales the sites to the share that reaches it;
   // a site, first-mile or app scope narrows the sites themselves, and the right side follows them.
   const scopeCloud = /^cloud:/.test(obScope) ? obScope.slice(6) : null;
-  const mapEst = obScope && obScope !== 'all' && !scopeCloud ? R.applyScope(est0, obScope) : est0;
-  const map = F.buildMap(mapEst, inv, ob.flows, { open: mapOpen, filterRegion: mapRegion || scopeCloud, t: mapT, zoom: mapZoom });
+  // The By chips regroup the map (Micah, 2026-09-29: "by first mile ... on sankey,
+  // it doesn't work"): sites by first mile or by type, destinations by app. A
+  // pick narrows it; an app narrows to its own regions, scaled like a cloud.
+  const scopeApp = /^app:/.test(obScope) ? obScope.slice(4) : null;
+  const mapDim = s.obDim && s.obDim !== 'all' ? s.obDim : (obScope && obScope !== 'all' ? String(obScope).split(':')[0] : 'all');
+  const appRegions = scopeApp ? est0.regionsList.filter(r => (r.tags || []).some(t => String(t).toLowerCase() === scopeApp.toLowerCase())).map(r => r.region) : [];
+  const mapEst = obScope && obScope !== 'all' && !scopeCloud && !scopeApp ? R.applyScope(est0, obScope) : est0;
+  const map = F.buildMap(mapEst, inv, ob.flows, { open: mapOpen, filterRegion: mapRegion || scopeCloud || (appRegions.length ? appRegions : null), t: mapT, zoom: mapZoom,
+    leftBy: mapDim === 'first' ? 'access' : mapDim === 'site' ? 'class' : 'region', rightBy: mapDim === 'app' ? 'app' : 'cloud', tag: scopeApp });
   // Lighting order: hover, then the pattern lens, then the selection. A selected connection (cx-…) lights nothing on the map; the filter does that.
   const hovLit = F.litFor(map, mapHov); const selLit = mapSel && !mapSel.startsWith('cx-') ? F.litFor(map, mapSel) : null; const mapPattern = s.mapPattern || 'all'; const patLit = F.patternLit(map, mapPattern);
   // A drill traces its traffic across the map (2026-09-29): the branch, its
@@ -1778,7 +1785,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     if (nd.ipsec) return { sub: `${fmt(siteB.today)}/mo egress`, hover: `IPsec over the internet: ${gbpsW(nd.v)} · ${fmt(siteB.today)}/mo egress · ${fmt(Math.max(0, siteB.today - siteB.fabric))}/mo to save on AT&T` };
     return { sub: pubMs != null ? `p95 ${pubMs} ms · SLO ${F.SLO} ms` : 'outside AT&T', hover: `Internet: ${gbpsW(nd.v)} outside AT&T${pubMs != null ? ` · p95 ${pubMs} ms` : ''}` };
   };
-  const mapNodes = map.nodes.map((nd, i) => { const left = nd.side === 'l'; const mid = nd.side === 'm'; const say = mid ? midSay(nd) : null; const selected = nd.key === mapSel; return { ...nd, key: 'n' + i, id: nd.key, label: nd.name, subLabel: say ? say.sub : nd.sub || '', hasSub: !!(say ? say.sub : nd.sub), pathSay: say ? say.sub : '', sy: nd.y + nd.h / 2 + 10, subPad: 26, subInk: say && !nd.priv ? (dark ? '#ffa25e' : '#b85f00') : 'var(--text-light)', vF: (() => { const tot = nd.tot || nd.v, t = trAt(nd), g = (v) => (v >= 1 ? v.toFixed(1) + ' Gbps' : Math.round(v * 1000) + ' Mbps'); if (t == null || t >= tot - 0.01) return g(tot); return (t >= 1) === (tot >= 1) ? `${g(t).replace(/ \S+$/, '')} of ${g(tot)}` : `${g(t)} of ${g(tot)}`; })(), lx: left || mid ? nd.x2 + 6 : nd.x - 236, ly: nd.y + nd.h / 2 - 10, lw: 230, justify: left || mid ? 'flex-start' : 'flex-end', fill: mid ? (nd.priv ? '#0057b8' : nd.local ? '#00838f' : (dark ? '#5d6f80' : '#8a949c')) : nd.key === 'dest:local' ? '#00838f' : nd.kind === 'rollup' ? (dark ? '#5d6f80' : '#b8c2cc') : STATE_FILL[nd.state] || STATE_FILL.ok, op: nodeOp(nd.key), stroke: selected ? 'var(--cta)' : 'transparent', caret: nd.hasChildren ? (nd.open ? '−' : '+') : nd.kind === 'rollup' ? '‹' : '', cursor: nd.hasChildren || !mid ? 'pointer' : 'default', deltaF: (nd.delta >= 0 ? '+' : '') + nd.delta + '%', deltaColor: nd.delta > 10 ? '#1e7a3c' : nd.delta < -10 ? '#c9362c' : 'var(--text-light)', showDelta: mapMode === 'delta', click: () => { if (nd.kind === 'rollup') { if (nd.foldsKey && !nd.tailOnly) set({ mapOpen: closeBranch(mapOpen, nd.foldsKey), mapSel: null }); return; } if (nd.kind === 'more') { const parts = (nd.parentKey || '').split('/'); if (parts.length >= 2) set({ vol: { kind: 'metro', cls: nd.siteCls || parts[0].replace(/^site:/, ''), metro: nd.metro || parts[1] }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [] }); return; } if (nd.kind === 'wlmore') { openWorkloads(nd.regionName, nd.vpcId, nd.subnetId); return; } if (nd.kind === 'workload' && nd.wlSel) { set({ mapSel: nd.wlSel, panelTab: 'overview' }); return; } if (nd.hasChildren) { if (mapOpen.includes(nd.key)) set({ mapSel: nd.panelSel || nd.key, panelTab: 'overview' }); else toggleOpen(nd.key); } else set({ mapSel: nd.panelSel || nd.key, panelTab: s.panelTab || 'overview' }); }, pin: () => set({ mapPins: (s.mapPins || []).includes(nd.key) ? (s.mapPins || []).filter(k => k !== nd.key) : [...(s.mapPins || []).slice(-1), nd.key] }), enter: () => set({ mapHov: nd.key }), leave: () => set({ mapHov: null }), title: say ? say.hover : nd.hasChildren ? (nd.open ? 'Click to close' : 'Click to open in place') : 'Click to select', depthPad: (nd.depth || 0) * 8 }; });
+  const mapNodes = map.nodes.map((nd, i) => { const left = nd.side === 'l'; const mid = nd.side === 'm'; const say = mid ? midSay(nd) : null; const selected = nd.key === mapSel; return { ...nd, key: 'n' + i, id: nd.key, label: nd.name, subLabel: say ? say.sub : nd.sub || '', hasSub: !!(say ? say.sub : nd.sub), pathSay: say ? say.sub : '', pathBg: say && say.sub ? 'var(--bg-base)' : 'transparent', pathPad: say && say.sub ? '0 5px' : '0', sy: nd.y + nd.h / 2 + 10, subPad: 26, subInk: say && !nd.priv ? (dark ? '#ffa25e' : '#b85f00') : 'var(--text-light)', vF: (() => { const tot = nd.tot || nd.v, t = trAt(nd), g = (v) => (v >= 1 ? v.toFixed(1) + ' Gbps' : Math.round(v * 1000) + ' Mbps'); if (t == null || t >= tot - 0.01) return g(tot); return (t >= 1) === (tot >= 1) ? `${g(t).replace(/ \S+$/, '')} of ${g(tot)}` : `${g(t)} of ${g(tot)}`; })(), lx: left || mid ? nd.x2 + 6 : nd.x - 236, ly: nd.y + nd.h / 2 - 10, lw: 230, justify: left || mid ? 'flex-start' : 'flex-end', fill: mid ? (nd.priv ? '#0057b8' : nd.local ? '#00838f' : (dark ? '#5d6f80' : '#8a949c')) : nd.key === 'dest:local' ? '#00838f' : nd.kind === 'rollup' ? (dark ? '#5d6f80' : '#b8c2cc') : STATE_FILL[nd.state] || STATE_FILL.ok, op: nodeOp(nd.key), stroke: selected ? 'var(--cta)' : 'transparent', caret: nd.hasChildren ? (nd.open ? '−' : '+') : nd.kind === 'rollup' ? '‹' : '', cursor: nd.hasChildren || !mid ? 'pointer' : 'default', deltaF: (nd.delta >= 0 ? '+' : '') + nd.delta + '%', deltaColor: nd.delta > 10 ? '#1e7a3c' : nd.delta < -10 ? '#c9362c' : 'var(--text-light)', showDelta: mapMode === 'delta', click: () => { if (nd.kind === 'rollup') { if (nd.foldsKey && !nd.tailOnly) set({ mapOpen: closeBranch(mapOpen, nd.foldsKey), mapSel: null }); return; } if (nd.kind === 'more') { const parts = (nd.parentKey || '').split('/'); if (parts.length >= 2) set({ vol: { kind: 'metro', cls: nd.siteCls || parts[0].replace(/^site:/, ''), metro: nd.metro || parts[1] }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [] }); return; } if (nd.kind === 'wlmore') { openWorkloads(nd.regionName, nd.vpcId, nd.subnetId); return; } if (nd.kind === 'workload' && nd.wlSel) { set({ mapSel: nd.wlSel, panelTab: 'overview' }); return; } if (nd.hasChildren) { if (mapOpen.includes(nd.key)) set({ mapSel: nd.panelSel || nd.key, panelTab: 'overview' }); else toggleOpen(nd.key); } else set({ mapSel: nd.panelSel || nd.key, panelTab: s.panelTab || 'overview' }); }, pin: () => set({ mapPins: (s.mapPins || []).includes(nd.key) ? (s.mapPins || []).filter(k => k !== nd.key) : [...(s.mapPins || []).slice(-1), nd.key] }), enter: () => set({ mapHov: nd.key }), leave: () => set({ mapHov: null }), title: say ? say.hover : nd.hasChildren ? (nd.open ? 'Click to close' : 'Click to open in place') : 'Click to select', depthPad: (nd.depth || 0) * 8 }; });
   // The two questions the map has to answer without being read closely:
   // where does the traffic go, and how much of it rides AT&T. Both come out
   // of the ribbons already drawn - the destination leg carries the volume and
@@ -1977,10 +1984,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     ['site', 'By site'],
     ['first', 'By first mile'],
     ['app', 'By app'],
-  ].map(([k, l]) => ({ key: k, label: l, on: scopeDim === k,
-    go: () => { if (k === 'all') { set({ obScope: 'all', obDim: 'all' }); return; } set({ obDim: k }); },
-    bg: scopeDim === k ? 'var(--cta)' : 'var(--bg-base)', color: scopeDim === k ? '#fff' : 'var(--text-heading)',
-    border: scopeDim === k ? 'var(--cta)' : 'var(--border-secondary)' }));
+  ].map(([k, l]) => { const on = mapDim === k; const pick = on && scopeDim === k && scopeName ? (k === 'first' ? (S.ACCESS_CLASS[scopeName] || {}).label || scopeName : scopeName) : ''; return { key: k, label: pick ? `${l} · ${pick}` : l, on,
+    // Pressing a By chip regroups at once and opens its picker; pressing it again toggles the picker.
+    go: () => { if (k === 'all') { set({ obScope: 'all', obDim: 'all', obPickOpen: false, mapOpen: [], mapSel: null }); return; } if (on) { set({ obPickOpen: !s.obPickOpen }); return; } set({ obDim: k, obScope: 'all', obPickOpen: true, mapOpen: [], mapSel: null }); },
+    bg: on ? 'var(--cta)' : 'var(--bg-base)', color: on ? '#fff' : 'var(--text-heading)',
+    border: on ? 'var(--cta)' : 'var(--border-secondary)' }; });
   const obDim = s.obDim || scopeDim;
   const memberList = (() => {
     if (obDim === 'cloud') return [...new Set(est0.regionsList.map(r => r.cloud))];
@@ -1994,7 +2002,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       ? Object.keys(S.ACCESS_CLASS).find(k => S.ACCESS_CLASS[k].label === nameOf) || 'other'
       : nameOf;
     const sel = `${obDim}:${key}`;
-    return { key: sel, label: nameOf, on: obScope === sel, go: () => set({ obScope: sel }),
+    return { key: sel, label: nameOf, on: obScope === sel, go: () => set({ obScope: sel, obPickOpen: false, mapOpen: [], mapSel: null }),
       bg: obScope === sel ? 'var(--bg-accent)' : 'transparent', color: obScope === sel ? 'var(--link)' : 'var(--text-heading)',
       border: obScope === sel ? 'var(--cta)' : 'var(--border-secondary)' };
   });
@@ -2187,8 +2195,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const dash = { ...mixVals, ...insightVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ queueOpen: true }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
     obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
-    scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0, scopeLabel,
-    clearScope: () => set({ obScope: 'all', obDim: 'all' }), scopeIsAll: !obScope || obScope === 'all',
+    scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0 && !!s.obPickOpen, scopeLabel, mapTotal: map.total,
+    clearScope: () => set({ obScope: 'all', obDim: 'all', obPickOpen: false, mapOpen: [], mapSel: null }), scopeIsAll: !obScope || obScope === 'all',
     mapFiltersOpen, mapFiltersShut: !mapFiltersOpen,
     toggleMapFilters: () => set({ mapFiltersOpen: !mapFiltersOpen }),
     mapFilterSummary: mapFiltersOn

@@ -63,3 +63,9 @@ test('a cloud drill keeps its trail over the destinations, a site drill over the
   assert.match(v.mapTrailPos, /left:/);
   assert.ok(HTML.includes('{{ mapTrailPos }}'));
 });
+
+test('a node with no path line draws no empty backing', () => {
+  const v = vals(at());
+  for (const n of v.mapNodes) if (!n.pathSay) { assert.equal(n.pathBg, 'transparent', n.label); assert.equal(n.pathPad, '0'); }
+  assert.ok(v.mapNodes.some(n => n.pathSay && n.pathBg === 'var(--bg-base)'));
+});

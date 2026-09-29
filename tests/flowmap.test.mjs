@@ -258,3 +258,95 @@ test('no drill, no trace', () => {
   const { est, inv, flows } = ctx('partial');
   assert.equal(buildMap(est, inv, flows, { open: [] }).trace, null);
 });
+
+// "by first mile, for example, on sankey, it doesn't work" (Micah, 2026-09-29).
+// The By chips regroup the map: the left by region, first mile or site type;
+// the right by cloud or app. Every grouping carries the same traffic.
+import * as S2 from '../naas-sites.js';
+for (const id of ['partial', 'mature', 'trust']) {
+  test(`${id}: the left groups by first mile and by site type, and the volume holds`, () => {
+    const { est, inv, flows } = ctx(id);
+    const base = buildMap(est, inv, flows, {});
+    for (const by of ['access', 'class']) {
+      const m = buildMap(est, inv, flows, { leftBy: by });
+      const L = m.nodes.filter(x => x.side === 'l');
+      assert.ok(near(sum(L), sum(base.nodes.filter(x => x.side === 'l'))), by);
+      assert.ok(near(sum(L), sum(m.nodes.filter(x => x.side === 'r'))), `${by} balances`);
+      if (by === 'access') assert.ok(L.every(x => Object.values(S2.ACCESS_CLASS).some(a => x.name.startsWith(a.label + ' · '))), L.map(x => x.name).join(', '));
+      if (by === 'class') assert.ok(L.every(x => /^(Data centers|Campuses|Offices|Remote sites|Field \(wireless\)|Edge devices|Regional hubs|Trading floors) · /.test(x.name)), L.map(x => x.name).join(', '));
+      // A group opens to the states its own sites are in, and only those.
+      const g = L.slice().sort((a, b) => b.v - a.v)[0];
+      const kids = childrenOf(g, est, inv, flows);
+      assert.ok(kids.length && kids.every(k => k.kind === 'placestate'), kids.map(k => k.kind).join(','));
+      assert.equal(kids.reduce((a, k) => a + k.count, 0), g.count, `${g.name} opens to its own sites`);
+      assert.ok(near(sum(kids), g.v), `${g.name} conserves`);
+    }
+  });
+
+  test(`${id}: the right groups by app, and each app opens to its regions`, () => {
+    const { est, inv, flows } = ctx(id);
+    const base = buildMap(est, inv, flows, {});
+    const m = buildMap(est, inv, flows, { rightBy: 'app' });
+    const R = m.nodes.filter(x => x.side === 'r');
+    assert.ok(near(sum(R), sum(base.nodes.filter(x => x.side === 'r'))), 'same traffic');
+    const tags = new Set(est.regionsList.flatMap(r => r.tags || []));
+    const apps = R.filter(x => x.kind === 'app');
+    assert.ok(apps.length && apps.every(x => tags.has(x.name) || x.name === 'Untagged'), apps.map(x => x.name).join(', '));
+    const top = apps.sort((a, b) => b.v - a.v)[0];
+    const kids = childrenOf(top, est, inv, flows);
+    assert.ok(kids.length && kids.every(k => k.kind === 'endpoint' && est.regionsList.find(r => r.region === k.region && ((r.tags || []).includes(top.name) || top.name === 'Untagged'))), kids.map(k => k.name).join(', '));
+    assert.ok(near(sum(kids), top.v), 'an app conserves');
+  });
+}
+
+test('picking one app keeps only its regions, and the sites scale to their share', () => {
+  const { est, inv, flows } = ctx('partial');
+  const tag = 'PCI';
+  const regions = est.regionsList.filter(r => (r.tags || []).includes(tag)).map(r => r.region);
+  const all = buildMap(est, inv, flows, {});
+  const m = buildMap(est, inv, flows, { rightBy: 'app', filterRegion: regions, tag });
+  assert.ok(m.total < all.total, `${m.total} vs ${all.total}`);
+  assert.deepEqual(m.nodes.filter(x => x.side === 'r').map(x => x.name), [tag]);
+  const kids = childrenOf(m.nodes.find(x => x.side === 'r'), est, inv, flows);
+  assert.ok(kids.every(k => regions.includes(k.region)));
+});
+
+test('a cloud filter opens only to that cloud\'s matched regions', () => {
+  const { est, inv, flows } = ctx('partial');
+  const m = buildMap(est, inv, flows, { filterRegion: 'AWS' });
+  const aws = m.nodes.find(x => x.side === 'r' && x.name === 'AWS');
+  assert.ok(aws && m.nodes.filter(x => x.side === 'r').every(x => x.name === 'AWS'));
+  assert.ok(near(sum(m.nodes.filter(x => x.side === 'l')), sum(m.nodes.filter(x => x.side === 'r'))));
+});
+
+test('a pick keeps exactly the traffic its row showed in the grouped view', () => {
+  for (const id of ['partial', 'mature', 'trust']) {
+    const { est, inv, flows } = ctx(id);
+    const byApp = buildMap(est, inv, flows, { rightBy: 'app' }).nodes.filter(x => x.kind === 'app');
+    for (const a of byApp) {
+      const regions = est.regionsList.filter(r => (r.tags || []).includes(a.name)).map(r => r.region);
+      if (!regions.length) continue;
+      const m = buildMap(est, inv, flows, { rightBy: 'app', filterRegion: regions, tag: a.name });
+      assert.ok(near(m.total, a.v, 0.01), `${id} ${a.name}: picked ${m.total} vs grouped ${a.v}`);
+      assert.ok(near(sum(m.nodes.filter(x => x.side === 'l')), sum(m.nodes.filter(x => x.side === 'r'))), `${id} ${a.name} balances`);
+    }
+    for (const c of buildMap(est, inv, flows, {}).nodes.filter(x => x.kind === 'cloud')) {
+      const m = buildMap(est, inv, flows, { filterRegion: c.name });
+      assert.ok(near(m.total, c.v, 0.01), `${id} ${c.name}: picked ${m.total} vs grouped ${c.v}`);
+      const mid = m.nodes.filter(x => x.side === 'm');
+      assert.ok(near(sum(mid), m.total), `${id} ${c.name}: the middle carries it all`);
+    }
+  }
+});
+
+test('under a pick, an opened node still hands its volume to its children', () => {
+  const { est, inv, flows } = ctx('mature');
+  for (const opts of [{ filterRegion: 'AWS' }, { leftBy: 'access', filterRegion: 'Azure' }, { rightBy: 'app', filterRegion: est.regionsList.filter(r => (r.tags || []).includes('Prod')).map(r => r.region), tag: 'Prod' }]) {
+    const m0 = buildMap(est, inv, flows, opts);
+    const root = m0.nodes.filter(x => x.side === 'l').sort((a, b) => b.v - a.v)[0];
+    const m1 = buildMap(est, inv, flows, { ...opts, open: [root.key] });
+    const kids = m1.nodes.filter(x => x.side === 'l' && x.key.startsWith(root.key + '/'));
+    assert.ok(near(sum(kids), root.v, 0.01), `${JSON.stringify(opts).slice(0, 40)}: ${sum(kids)} under ${root.v}`);
+    assert.ok(near(m1.total, m0.total, 0.01), `total ${m1.total} vs ${m0.total}`);
+  }
+});
