@@ -1004,6 +1004,12 @@ export function vals(c) {
     lmccHero: productCard(c, D.CATALOG.find(p => p.id === 'lmcc'), est), catalogAll: D.CATALOG,
     // product
     product: productDetail,
+    // One section at a time (no-scroll pass, 2026-09-29): what you get, term pricing, what it runs with.
+    ...(() => { const pd = productDetail || { terms: [], runsWith: [] };
+      const avail = [['get', 'What you get'], ...((pd.terms || []).length ? [['terms', 'Term pricing']] : []), ...((pd.runsWith || []).length ? [['runs', 'Runs with']] : [])];
+      const pk = avail.some(a => a[0] === s.prodPanel) ? s.prodPanel : 'get';
+      return { prodPanels: avail.map(([k, l]) => { const on = pk === k; return { key: k, label: l, on, go: () => set({ prodPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
+        prodPanelGet: pk === 'get', prodPanelTerms: pk === 'terms', prodPanelRuns: pk === 'runs' }; })(),
     // discover
     allRegions: est.regionsList, scanSteps, scanLine: s.scanStep < 4 ? `${scanSteps[Math.min(3, s.scanStep)].label} · ${Math.min(4, s.scanStep + 1)} of 4` : '', scanDone: s.scanStep >= 4, scanning: s.scanStep < 4, intakeCadence, setIntakeCadence, intakeCadenceLabel, intakeCadenceLower, cadenceAsk, cadenceAskText, confirmCadence, discoverVerdict, discoverKpis, estateChips, treeOrMap: s.treeOrMap, isTree: s.treeOrMap === 'tree', isMap: s.treeOrMap === 'map', treeBg: s.treeOrMap === 'tree' ? 'var(--bg-accent)' : 'transparent', treeColor: s.treeOrMap === 'tree' ? 'var(--link)' : 'var(--text-body)', mapBg: s.treeOrMap === 'map' ? 'var(--bg-accent)' : 'transparent', mapColor: s.treeOrMap === 'map' ? 'var(--link)' : 'var(--text-body)', showTree: () => set({ treeOrMap: 'tree' }), showMap: () => set({ treeOrMap: 'map' }), tree, mapRows, mapSites, mapH, mapVB: `0 0 1000 ${mapH}`, bigEstate, sitesCountLabel: est.sitesCount ? `${est.sitesCount.toLocaleString('en-US')} sites, grouped` : plural(est.sites.length, 'site', 'sites'), chain, chainPolicies, hasChain: !!ow, chainRegion: ow ? `${ow.cloud} ${ow.region}` : '', closeChain: () => set({ openWorkload: null }),
     ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched),
@@ -2070,7 +2076,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     })[l.state] || [];
     const rec = !f.event && !closed && OPEN_STATES.includes(l.state) && l.state !== 'progress' ? findingCard(f).rec : null;
     const ev = f.event ? anomalyRows.find(r => r.key === f.key) : null;
-    const primary = rec ? { label: rec.name, go: () => { move('progress', { note: `${rec.name} ordered` })(); rec.choose(); } }
+    const primary = rec ? { label: rec.name, go: () => { move('progress', { note: `Ordered ${rec.name}` })(); set({ fdKey: null }); rec.choose(); } }
       : ev && !closed ? { label: ev.cta, go: () => { set({ fdKey: null }); ev.go(); } } : null;
     return {
       key: f.key, head: f.head, kind: f.event ? `Event · ${f.a.when}` : (D.KINDS[f.kind] || f.pillar || 'Finding'),
@@ -2083,7 +2089,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       evidence, hasEvidence: evidence.length > 0, evidenceHead: `Evidence · ${evidence.length} of ${logAll.length} flow records`,
       openLogs: () => { set({ fdKey: null }); go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null })(); set({ logPath: f.tab === 'govern' || f.event ? 'all' : 'public' }); },
       showMap: () => { set({ fdKey: null }); go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'map', sub: null })(); },
-      timeline: l.events.map((e, i) => ({ key: 't' + i, date: day(e.at), label: LC.STATE_LABEL[e.state] === 'Open' ? 'Found' : LC.STATE_LABEL[e.state], by: e.by, note: e.note || (e.until ? `until ${day(e.until)}` : ''), dot: TONE[e.state] })),
+      timeline: l.events.map((e, i) => ({ key: 't' + i, date: day(e.at), label: LC.STATE_LABEL[e.state] === 'Open' ? 'Found' : LC.STATE_LABEL[e.state], by: e.by, note: e.note ? `· ${e.note}` : e.until ? `· until ${day(e.until)}` : '', dot: TONE[e.state] })),
       primary, hasPrimary: !!primary,
       actions: acts.map(([label, go2]) => ({ key: label, label, go: go2 })),
     };

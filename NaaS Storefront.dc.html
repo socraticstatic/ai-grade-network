@@ -1755,7 +1755,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 
 <!-- ===== S4 COMPOSE ===== -->
 <sc-if value="{{ sS4 }}" hint-placeholder-val="{{ false }}">
-<section data-screen-label="S4 Compose" style="animation:fadeIn .3s;display:grid;gap:24px;grid-template-columns:minmax(0,1fr)">
+<section data-screen-label="S4 Compose" style="animation:fadeIn .3s;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)">
   <div>
     <h1 style="margin:0;font-size:26px;line-height:32px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)">Connect</h1>
     <div style="font-size:14px;line-height:20px;font-weight:500;color:var(--text-heading)">Compose an order. Describe the outcome; AT&amp;T composes the connection.</div>
@@ -2169,23 +2169,24 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         <div style="display:flex;align-items:center;gap:16px"><span style="font-size:18px;font-weight:700;color:var(--text-heading)">{{ product.priceLine }}</span><button onClick="{{ product.choose }}" style="height:36px;padding:0 16px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:var(--cta-hover)">Add</button></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px"><sc-for list="{{ product.proof }}" as="pr" hint-placeholder-count="3"><div style="padding:16px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:8px"><div style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-disabled);font-weight:500">{{ pr.head }}</div><div style="font-size:18px;line-height:26px;color:var(--text-heading);font-weight:700">{{ pr.label }}</div></div></sc-for></div>
+      <div role="tablist" aria-label="Product views" style="display:flex;align-items:center;border-bottom:1px solid var(--border-secondary)"><sc-for list="{{ prodPanels }}" as="pp" hint-placeholder-count="3"><button role="tab" aria-selected="{{ pp.on }}" onClick="{{ pp.go }}" style="border:0;border-bottom:2px solid {{ pp.line }};background:transparent;padding:6px 2px;margin-right:18px;font:inherit;font-size:15px;line-height:22px;font-weight:{{ pp.weight }};color:{{ pp.color }};cursor:pointer;white-space:nowrap">{{ pp.label }}</button></sc-for></div>
+      <sc-if value="{{ prodPanelGet }}" hint-placeholder-val="{{ true }}">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
-        <div style="display:grid;gap:8px"><h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">What's included</h2><ul style="margin:0;padding:0 0 0 16px;color:var(--text-body);display:grid;gap:4px"><sc-for list="{{ product.included }}" as="i" hint-placeholder-count="3"><li>{{ i.label }}</li></sc-for></ul></div>
+        <div style="display:grid;gap:8px"><h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Included</h2><ul style="margin:0;padding:0 0 0 16px;color:var(--text-body);display:grid;gap:4px"><sc-for list="{{ product.included }}" as="i" hint-placeholder-count="3"><li>{{ i.label }}</li></sc-for></ul></div>
         <div style="display:grid;gap:8px"><h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Limits</h2><ul style="margin:0;padding:0 0 0 16px;color:var(--text-body);display:grid;gap:4px"><sc-for list="{{ product.limits }}" as="i" hint-placeholder-count="2"><li>{{ i.label }}</li></sc-for></ul></div>
       </div>
       <div style="display:inline-flex;align-items:center;gap:8px;justify-self:start;height:32px;padding:0 14px;border-radius:9999px;background:var(--bg-accent);color:var(--link);font-size:13px;font-weight:500">{{ product.evidence }}<span style="font-weight:400;color:var(--text-light);font-size:12px">· anonymized AT&amp;T Business customer data</span></div>
-      <sc-if value="{{ hasTerms }}" hint-placeholder-val="{{ false }}">
+      </sc-if>
+      <sc-if value="{{ prodPanelTerms }}" hint-placeholder-val="{{ false }}">
       <div style="display:grid;gap:12px">
-        <h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Term pricing</h2>
         <div class="dt" style="max-width:560px">
           <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th">Term</div><div class="dt-c dt-th num">Monthly</div><div class="dt-c dt-th num">Saving</div></div></div>
           <div class="dt-b"><div class="dt-r"><div data-th="Term" class="dt-c" style="color:var(--text-heading);font-weight:500">On-demand</div><div data-th="Monthly" class="dt-c num">{{ product.odPrice }}</div><div data-th="Saving" class="dt-c num" style="color:var(--text-light)">Base</div></div><sc-for list="{{ product.terms }}" as="t" hint-placeholder-count="3"><div class="dt-r"><div data-th="Term" class="dt-c" style="color:var(--text-heading);font-weight:500">{{ t.term }}</div><div data-th="Monthly" class="dt-c num">{{ t.price }}</div><div data-th="Saving" class="dt-c num" style="color:var(--success);font-weight:500">{{ t.save }}</div></div></sc-for></div>
         </div>
       </div>
       </sc-if>
-      <sc-if value="{{ hasRunsWith }}" hint-placeholder-val="{{ false }}">
+      <sc-if value="{{ prodPanelRuns }}" hint-placeholder-val="{{ false }}">
       <div style="display:grid;gap:16px">
-        <h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Runs with</h2>
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px"><sc-for list="{{ product.runsWith }}" as="p" hint-placeholder-count="2"><button onClick="{{ p.open }}" style="text-align:left;padding:20px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;cursor:pointer;display:grid;gap:6px;white-space:normal;min-width:0;font:inherit" style-hover="border-color:var(--border-primary)"><span style="font-weight:700;color:var(--text-heading)">{{ p.name }}</span><span style="font-size:12px;color:var(--text-light)">{{ p.promise }}</span><span style="font-size:12px;font-weight:500;color:var(--text-heading)">{{ p.priceLine }}</span></button></sc-for></div>
       </div>
       </sc-if>

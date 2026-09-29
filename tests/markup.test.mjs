@@ -190,14 +190,15 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Business units: Estate tab, Group option (notes, 2026-09-29): div 1002 -> 1012, span 766 -> 773, sc-if 378 -> 381, sc-for 219 -> 221, button 278 -> 281.
 // Savings grouped by region, business unit, cloud (notes, 2026-09-29): div 1012 -> 1019, span 773 -> 783, sc-for 221 -> 222, label 29 -> 30.
 // Consistency pass: one tab style, one time control, no repeated headers (2026-09-29): div 1019 -> 1014, span 783 -> 782.
+// Product views tab row (no-scroll, 2026-09-29): div 1014 -> 1015, sc-if 381 -> 382, sc-for 222 -> 223, button 281 -> 282.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1014],
+    ['div', /<div\b/g, /<\/div>/g, 1015],
     ['span', /<span\b/g, /<\/span>/g, 782],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 381],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 222],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 382],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 223],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 281],
+    ['button', /<button\b/g, /<\/button>/g, 282],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 30],
   ];

@@ -96,3 +96,15 @@ test('a Signals card drills to the actionable findings behind it', () => {
   const keys = v.insightRows.map(r => r.key);
   assert.ok(keys.includes('avoidable') && keys.includes('an-egress'), keys.join(','));
 });
+
+test('placing the order closes the drawer, and the timeline says who did what', () => {
+  const c = at();
+  row(vals(c), 'ipsecegress').open();
+  const label = vals(c).fd.primary.label;
+  vals(c).fd.primary.go();
+  assert.equal(c.state.fdKey, null, 'the drawer stays open over the order');
+  c.state.screen = 's3'; c.state.tab = 'observe'; c.state.fdKey = 'ipsecegress';
+  const last = vals(c).fd.timeline.at(-1);
+  assert.equal(last.label, 'In progress');
+  assert.equal(last.note, `· Ordered ${label}`);
+});
