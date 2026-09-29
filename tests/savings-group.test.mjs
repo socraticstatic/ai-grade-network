@@ -39,8 +39,13 @@ test('the Banked view groups its figures, and the rows add up to its tiles', () 
     const v = vals(c);
     assert.equal(v.saveGroupValue, dim);
     const tiles = Object.fromEntries(v.bankTiles.map(t => [t.l, money(t.v)]));
-    assert.equal(v.saveRows.reduce((a, r) => a + r.bankedN, 0), tiles['This month'], dim);
-    assert.equal(v.saveRows.reduce((a, r) => a + r.openN, 0), tiles['Still open'], dim);
+    // The list pages (2026-09-29): sum every page.
+    let rows = [], guard = 0;
+    c.state.savePage = 0;
+    for (;;) { const w = vals(c); rows = rows.concat(w.saveRows); if (w.savePager.nextOp < 1 || ++guard > 20) break; w.savePager.next(); }
+    c.state.savePage = 0;
+    assert.equal(rows.reduce((a, r) => a + r.bankedN, 0), tiles['This month'], dim);
+    assert.equal(rows.reduce((a, r) => a + r.openN, 0), tiles['Still open'], dim);
   }
   assert.match(HTML, /aria-label="Group savings by"/);
   assert.match(HTML, /<option value="bu">Business unit<\/option><option value="cloud">Cloud<\/option>/);

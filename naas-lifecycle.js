@@ -10,7 +10,8 @@
 // `now` is always passed in, so the tests pin dates.
 
 import { regionOf, onAtt } from './naas-logic.js';
-import { buOf, countOf } from './naas-sites.js';
+import { buOf, countOf, classOf } from './naas-sites.js';
+const SITE_W = { 'Data center': 6, Campus: 2.5, Plant: 1.5, Office: 0.8, Branch: 0.4, Edge: 0.05, Field: 0.1 };
 
 export const STATES = ['open', 'ack', 'progress', 'resolved', 'snoozed', 'dismissed'];
 export const STATE_LABEL = { open: 'Open', ack: 'Acknowledged', progress: 'In progress', resolved: 'Resolved', snoozed: 'Snoozed', dismissed: 'Dismissed' };
@@ -83,7 +84,9 @@ export function transition(life, kind, to, { by, note, now, snoozeDays } = {}) {
   if (!(MOVES[cur.state] || []).includes(to)) return life;
   const ev = { at: ymd(+now), state: to, by: by || 'You', ...(note ? { note } : {}), ...(to === 'snoozed' ? { until: ymd(+now + (snoozeDays || 7) * DAY) } : {}) };
   const rec = (life || {})[kind] || {};
-  return { ...life, [kind]: { ...rec, events: [...cur.events, ev] } };
+  // Whoever acknowledges or starts it owns it (2026-09-29 audit).
+  const owner = ['ack', 'progress'].includes(to) && by === 'You' ? 'You' : rec.owner;
+  return { ...life, [kind]: { ...rec, ...(owner ? { owner } : {}), events: [...cur.events, ev] } };
 }
 
 /** Findings still asking for something: open, acknowledged, in progress, or back from a snooze. */
@@ -139,7 +142,10 @@ export function savingsBy(est, dim, totals, tags = {}) {
   const groups = {};
   const add = (label, on, off) => { const g = groups[label] = groups[label] || { label, on: 0, off: 0 }; g.on += on; g.off += off; };
   if (dim === 'cloud') (est.regionsList || []).forEach(r => add(r.cloud, r.priv ? (r.wl || 1) : 0, r.priv ? 0 : (r.wl || 1)));
-  else (est.sites || []).forEach(x => { const n = countOf(x.name), k = dim === 'bu' ? buOf(x, tags) : regionOf(x); add(k, onAtt(x) ? n : 0, onAtt(x) ? 0 : n); });
+  // Savings live where the egress bills: cloud regions, as the Cost page lists them (2026-09-29 audit).
+  else if (dim === 'region') (est.regionsList || []).forEach(r => add(`${r.cloud} ${r.region}`, r.priv ? (r.wl || 1) : 0, r.priv ? 0 : (r.wl || 1)));
+  // Sites weigh by what they carry (class weight × count), so a data center outweighs a branch (2026-09-29 audit: not an even split).
+  else (est.sites || []).forEach(x => { const n = countOf(x.name) * (SITE_W[classOf(x)] || 1), k = dim === 'bu' ? buOf(x, tags) : regionOf(x); add(k, onAtt(x) ? n : 0, onAtt(x) ? 0 : n); });
   const rows = Object.values(groups);
   const b = split(Math.round(totals.banked || 0), rows.map(g => g.on)), o = split(Math.round(totals.open || 0), rows.map(g => g.off));
   return rows.map((g, i) => ({ key: g.label, label: g.label, banked: b[i], open: o[i] })).sort((x, y) => (y.banked + y.open) - (x.banked + x.open));

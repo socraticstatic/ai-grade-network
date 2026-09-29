@@ -26,7 +26,8 @@ const T = (id, label, owner, name) => ({ id, label, owner, name: name || label }
  * traffic is internet, not a private path (Micah, 2026-09-28: "ADI always goes
  * through AT&T core"). `priv` still means a private path everywhere else.
  */
-export const attInternet = (site) => !!site && /\bADI\b|Dedicated Internet|AIA-B|Internet Air/i.test(site.circuit || site.access || '');
+// Every AT&T service enters the AT&T network: ADI, Business Fiber and AIA-B (wireless) are AT&T's own internet (2026-09-29, the service catalog).
+export const attInternet = (site) => !!site && site.accessSla !== 'third' && /\bADI\b|Dedicated Internet|AIA-B|Internet Air|Business Fiber|\bABF\b|Mobility|wireless/i.test(site.circuit || site.access || '');
 /** Whether a site's traffic enters the AT&T network at all. */
 export const entersAtt = (site) => !!site && (!!site.priv || attInternet(site));
 /** Site-side Access: the circuit from the site into a network. Null for a site that never enters one. */

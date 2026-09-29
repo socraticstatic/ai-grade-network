@@ -27,7 +27,7 @@ The Observe head reads **"12 findings open. $41,500/mo potential savings."** Cli
 **Preview the change** on "$8,600/mo of egress rides IPsec tunnels":
 - **What AT&T saw.**
 - **Preview:** Today $8,600 → After $3,100, saves $5,500/mo. **Show it on the map** is one click away.
-- **Evidence:** the five flow records behind it, with **Open in Logs**.
+- **Evidence:** the flow records behind it (internet egress from the IPsec sites), with **Open in Logs**.
 - **Timeline:** Found Aug 25 · Discovery.
 
 Click **Acknowledge**, then the primary move. The order opens, the drawer closes, and the finding is now In progress, owned by you. Its timeline reads "Started an order".

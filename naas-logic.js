@@ -58,7 +58,8 @@ export const serviceSites = (site) => (Array.isArray(site.services) && site.serv
   ? servicesOf(site).map(v => ({ ...site, access: v.access, circuit: v.access, priv: v.onAtt, svc: v.key, role: v.role }))
   : [site]);
 /** On AT&T: at least one service enters the AT&T network and no third party answers for its access. */
-export const onAtt = (site) => !!site.priv && site.accessSla !== 'third' && site.core !== 'third';
+// On AT&T means an AT&T service carries it (2026-09-29): private (AVPN, ASE) or AT&T's own internet (ADI, Business Fiber, AIA-B).
+export const onAtt = (site) => entersAtt(site) && site.accessSla !== 'third' && site.core !== 'third';
 /** The rollup a group card prints: total, AT&T, non-AT&T (Micah, 2026-09-28). */
 export function rollupLine(sites) {
   const total = sites.reduce((a, x) => a + countOf(x.name), 0);

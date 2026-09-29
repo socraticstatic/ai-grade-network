@@ -165,7 +165,7 @@ export function init(c) {
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -1024,7 +1024,7 @@ export function pageRows(rows, size, page, setPage) {
   return { rows: rows.slice(p * size, p * size + size), pager: { label: n ? `${p * size + 1}–${Math.min(n, (p + 1) * size)} of ${n}` : '0 of 0', many: pages > 1,
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
-const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'],
+const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
   saveRows: ['savePage', 5, 'savePager', 'savePageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 function pageLists(out, s, set) {
   for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
@@ -1358,7 +1358,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const LK = labelKit(s, set);
   // Each private connection's configured bandwidth, the ports Observe calls purchased (2026-09-28).
   const portsOf = (region) => { const u = (ob.utilRows || []).find(x => x.region === region); return u ? u.ports : 1; };
-  const bwWord = (region) => { const p = portsOf(region); return p === 1 ? '10G' : `${p} × 10G`; };
+  const bwWord = (region) => { const u = (ob.utilRows || []).find(x => x.region === region); return u ? u.bwShort : '1G'; };
   const cloudBw = (cl) => { const pr = est.regionsList.filter(r => r.cloud === cl.name && r.priv); return pr.length ? ' · ' + pr.map(r => `${r.region} ${r.ramp || 'private'} ${bwWord(r.region)}`).join(', ') : ''; };
   const tree = inv.filter(cl => !newOnly || cl.regions.some(r => r.vpcs.some(isNew))).map(cl => ({
     key: cl.id, name: cl.name, mark: cl.mark, hasMark: !!cl.mark, noMark: !cl.mark, notTag: true, isTag: false, initials: cl.initials, gpu: cl.gpu, sub: `${cl.regions.length} ${cl.regions.length === 1 ? 'region' : 'regions'} · ${cl.vpcs} VPC · ${cl.wl.toLocaleString('en-US')} workloads${cloudBw(cl)}`,
@@ -1405,9 +1405,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const ecnt = (xs) => xs.reduce((a, x) => a + S.countOf(x.name), 0);
   const eBars = (rows) => { const m = Math.max(1, ...rows.map(r => r.n)); return rows.map(r => ({ ...r, title: r.title || r.label, key: r.key || r.label, w: Math.max(4, Math.round(r.n / m * 100)) + '%' })); };
   const allSitesE = est.sites || [], eSiteN = ecnt(allSitesE), eAttN = ecnt(allSitesE.filter(onAtt));
-  const eSvcTally = {}; allSitesE.forEach(x => S.servicesOf(x).forEach(v => { eSvcTally[v.key] = eSvcTally[v.key] || { v, n: 0 }; eSvcTally[v.key].n += S.countOf(x.name); }));
+  // A site counts once, under its primary service: the same count the access grouping and Cost use (2026-09-29).
+  const eSvcTally = {}; allSitesE.forEach(x => { const v = S.servicesOf(x)[0]; if (!v) return; eSvcTally[v.key] = eSvcTally[v.key] || { v, n: 0 }; eSvcTally[v.key].n += S.countOf(x.name); });
   const eToSites = () => set({ estPanel: 'sites' });
-  const eBwOf = (r) => { const u = (ob.utilRows || []).find(x => x.region === r.region); const p = u ? u.ports : 1; return p === 1 ? '10G' : `${p} × 10G`; };
+  const eBwOf = (r) => { const u = (ob.utilRows || []).find(x => x.region === r.region); return u ? u.bwShort : '1G'; };
   const eRegs = est.regionsList || [], ePrivRegs = eRegs.filter(r => r.priv), ePubRegs = eRegs.filter(r => !r.priv), pubWlE = ePubRegs.reduce((a, r) => a + (r.wl || 0), 0);
   // Four rows a card, the rest counted, so two rows of cards fit the fold (2026-09-28).
   const cap4 = (c0) => c0.rows.length <= 4 ? c0 : { ...c0, rows: [...c0.rows.slice(0, 3), { key: 'more', label: `+${c0.rows.length - 3} more`, sub: '', title: c0.rows.slice(3).map(r0 => r0.label).join(', '), w: '0%', fill: 'transparent', value: '' }] };
@@ -1471,7 +1472,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const conns = X.connections(est0, ob);
   const obConn = s.obConn && conns.rows.some(r => r.id === s.obConn) ? s.obConn : (conns.rows[0] || {}).id;
   const connRow = conns.rows.find(r => r.id === obConn) || null;
-  const connRows = conns.rows.map(r => ({ ...r, key: r.id, label: `${r.cloud} ${r.region}`, sub: `${r.ramp} · ${r.ports} × 10 Gbps purchased`, pctF: r.pct + '%', curAvg: `cur ${r.gbps} · avg ${r.avg} Gbps`, on: r.id === obConn, rowBg: r.id === obConn ? 'var(--bg-accent)' : 'transparent', stateColor: r.state === 'Up' ? 'var(--success)' : 'var(--warning)', lineColor: r.degraded ? '#ff8500' : '#009fdb', select: () => set({ obConn: r.id, cloudDrill: [r.region] }), hasDoor: r.hot, doorLabel: 'Add a port', go: composeFor(go, est0.regionsList.find(x => x.region === r.region) || {}) }));
+  const connRows = conns.rows.map(r => ({ ...r, key: r.id, label: `${r.cloud} ${r.region}`, sub: `${r.ramp} · ${r.bw || r.ports + ' × 10 Gbps'} purchased`, pctF: r.pct + '%', curAvg: `cur ${r.gbps} · avg ${r.avg} Gbps`, on: r.id === obConn, rowBg: r.id === obConn ? 'var(--bg-accent)' : 'transparent', stateColor: r.state === 'Up' ? 'var(--success)' : 'var(--warning)', lineColor: r.degraded ? '#ff8500' : '#009fdb', select: () => set({ obConn: r.id, cloudDrill: [r.region] }), hasDoor: r.hot, doorLabel: 'Add a port', go: composeFor(go, est0.regionsList.find(x => x.region === r.region) || {}) }));
   const impact0 = X.impacted(est0, inv, connRow);
   const impact = { ...impact0, isNone: impact0.kind === 'none', isHit: impact0.kind !== 'none', hasDown: impact0.downstream.length > 0, hasVpcs: impact0.vpcs.length > 0, vpcs: impact0.vpcs.map(v => ({ ...v, key: v.name, wlF: v.wl.toLocaleString('en-US') + ' workloads', tagsF: v.tags.join(' · ') || 'untagged' })), downstream: impact0.downstream.map(d => ({ ...d, key: d.label, vpcsF: d.vpcs.map(v => v.name).join(', ') })), tone: impact0.kind === 'direct' ? 'var(--error)' : impact0.kind === 'possible' ? 'var(--warning)' : 'var(--success)', title: connRow ? `${connRow.cloud} ${connRow.region} · ${connRow.ramp}` : 'No connection selected', openLogs: () => toLogs({ logPattern: 'all', obScope: connRow ? 'cloud:' + connRow.cloud : obScope }), askAndi: () => set({ andiScope: connRow ? { kind: 'region', id: connRow.region, label: `${connRow.cloud} ${connRow.region}` } : null, andiOpen: true }) };
   const logPattern = s.logPattern || 'all';
@@ -1537,7 +1538,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       push(12 + i * 61, WHO[i % 3], 'Added a credential', `${nm} account`, `${cred} · read-only, all regions`, true);
     });
     (conns.rows || []).filter(r => r.hot || r.degraded).forEach((r, i) => {
-      push(24 + i * 133, WHO[i % 3], r.degraded ? 'Opened an impact view' : 'Ordered a port', `${r.cloud} ${r.region}`, r.degraded ? `${r.wl} workloads behind a degraded link` : `${r.ports} × 10 Gbps in place, ${r.pct}% used`, true);
+      push(24 + i * 133, WHO[i % 3], r.degraded ? 'Opened an impact view' : 'Ordered a port', `${r.cloud} ${r.region}`, r.degraded ? `${r.wl} workloads behind a degraded link` : `${r.bw || r.ports + ' × 10 Gbps'} in place, ${r.pct}% used`, true);
     });
     (s.steered || []).forEach((f, i) => push(8 + i * 47, WHO[i % 3], 'Steered a flow', String(f), 'moved off the public path', true));
     (sched.runs || []).forEach(r => {
@@ -2276,7 +2277,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     ...drawerVals,
     invTree: s.tagView ? tagTree(inv, tree, chip) : tree, tagView: !!s.tagView, cloudView: !s.tagView, toggleTagView: () => set({ tagView: !s.tagView }), tagViewUb: s.tagView ? 'var(--cta)' : 'transparent', tagViewColor: s.tagView ? 'var(--link)' : 'var(--text-body)', cloudViewUb: !s.tagView ? 'var(--cta)' : 'transparent', cloudViewColor: !s.tagView ? 'var(--link)' : 'var(--text-body)', hasTree: tree.length > 0, invStats: [{ key: 's', v: stats.sites, l: 'sites' }, { key: 'c', v: stats.clouds, l: 'clouds' }, { key: 'r', v: stats.regions, l: 'regions' }, { key: 'w', v: stats.workloads.toLocaleString('en-US'), l: 'workloads' }, { key: 'a', v: stats.attached, l: 'attached' }, { key: 'e', v: stats.exposed, l: 'exposed' }],
     expandAll: () => set({ inv: { ...openMap, ...Object.fromEntries(openKeys.map(k => [k, true])) } }), collapseAll: () => set({ inv: {} }), collapsedLabel: Object.values(openMap).some(Boolean) ? 'Expanded view' : 'Collapsed view',
-    overflowRow: est.regionsExtra ? `${est.regionsExtra.toLocaleString('en-US')} smaller regions rolled up · ${Math.round(est.regionsExtra * 0.6)} on AT&T · ${Math.round(est.regionsExtra * 0.4)} public` : '', hasOverflow: !!est.regionsExtra, overflowW: est.regionsExtra ? '60%' : '0%',
+    // No invented split (2026-09-29 audit): nothing in the data says which of these are on AT&T.
+    overflowRow: est.regionsExtra ? `${est.regionsExtra.toLocaleString('en-US')} smaller regions rolled up · no traffic data yet` : '', hasOverflow: !!est.regionsExtra, overflowW: est.regionsExtra ? '60%' : '0%',
     // Sites drilled like clouds: class → metro → site (naas-sites.js). Open state lives in s.siteOpen.
     ...(() => {
       const so = s.siteOpen || {};
@@ -2331,6 +2333,47 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
         // Connect is two pages (notes, 2026-09-29): what you have, and the options for what is not on AT&T yet.
         ...(() => { const on3 = s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect'; const ck = ['options', 'ways'].includes(s.cnPage) ? s.cnPage : 'picture'; return { cnIsOptions: on3 && ck === 'options', cnIsWays: on3 && ck === 'ways', cnIsPicture: on3 && ck === 'picture', cnShowLens: on3 && ck !== 'options', lensValue: s.lens || 'security', setLens: (e) => set({ lens: e.target.value }), cnTabs: on3, heroHead: s.screen !== 's3', cnPanels: [['picture', 'What you have'], ['options', 'Options'], ['ways', 'Ways to connect']].map(([k, l]) => { const on = ck === k; return { key: k, label: l, on, go: () => set({ cnPage: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }) }; })(),
+        // Your clouds drill like Your sites (2026-09-29): clouds, regions with their bandwidth,
+        // VPCs, subnets, workloads. The rollup on top counts the sites that reach them.
+        ...(() => {
+          const trail = Array.isArray(s.cloudTrailE) ? s.cloudTrailE : [];
+          const invAll = inv || [];
+          const utilOf = (r) => (ob.utilRows || []).find(u => u.region === r.region);
+          const regsOf = (cl) => est.regionsList.filter(r => r.cloud === cl);
+          const ir = (reg) => invAll.flatMap(c => c.regions || []).find(x => x.region === reg);
+          const nf = (x) => Number(x || 0).toLocaleString('en-US');
+          let level = 'cloud', rows = [];
+          if (!trail.length) {
+            rows = [...new Set(est.regionsList.map(r => r.cloud))].map(cl => { const rs = regsOf(cl), pr = rs.filter(r => r.priv);
+              return { key: 'cloud:' + cl, name: cl, sub: `${rs.length} ${rs.length === 1 ? 'region' : 'regions'} · ${pr.length} private · ${rs.length - pr.length} on the internet`, bw: pr.map(r => (utilOf(r) || {}).bwShort).filter(Boolean).join(' + '), priv: pr.length > 0, into: 'cloud:' + cl, next: 'regions' }; });
+          } else if (trail.length === 1) {
+            level = 'region';
+            rows = regsOf(String(trail[0]).slice(6)).map(r => { const u = utilOf(r);
+              return { key: r.region, name: `${r.cloud} ${r.region}`, sub: r.priv ? `${r.ramp || 'NetBond'} · ${nf(r.wl)} workloads · ${u ? u.gbps + ' Gbps now' : ''}` : `public internet · ${nf(r.wl)} workloads`, bw: r.priv && u ? u.bwShort : r.priv ? '' : 'Internet', priv: !!r.priv, into: ir(r.region) ? 'region:' + r.region : null, next: 'VPCs' }; });
+          } else {
+            const reg = ir(String(trail[1]).slice(7));
+            if (trail.length === 2) { level = 'vpc'; rows = reg ? reg.vpcs.map(v => ({ key: v.id, name: v.name, sub: `${v.purpose || 'VPC'} · ${nf(v.wl)} workloads`, bw: '', priv: !!v.priv, into: 'vpc:' + v.id, next: 'subnets' })) : []; }
+            else { const vpc = reg && reg.vpcs.find(v => 'vpc:' + v.id === trail[2]);
+              if (trail.length === 3) { level = 'subnet'; rows = vpc ? vpc.subnets.map(sn => ({ key: sn.id, name: sn.name, sub: `${sn.cidr || ''} · ${nf((sn.workloads || []).length)} workloads`, bw: '', priv: !/pub/.test(sn.id), into: 'sn:' + sn.id, next: 'workloads' })) : []; }
+              else { level = 'workload'; const sn = vpc && vpc.subnets.find(x => 'sn:' + x.id === trail[3]); rows = sn ? (sn.workloads || []).map(w => ({ key: w.id, name: w.name || w.id, sub: [w.ip, w.tag].filter(Boolean).join(' · '), bw: '', priv: !w.public, into: null, next: '' })) : []; } }
+          }
+          const LV = { cloud: ['cloud', 'clouds'], region: ['region', 'regions'], vpc: ['VPC', 'VPCs'], subnet: ['subnet', 'subnets'], workload: ['workload', 'workloads'] }[level];
+          const cloudRows = rows.map(r => ({ ...r, dot: r.priv ? 'var(--success)' : 'var(--warning)', level: r.into ? r.next : '', caret: r.into ? '›' : '', cursor: r.into ? 'pointer' : 'default',
+            go: r.into ? () => set({ cloudTrailE: [...trail, r.into], cloudPage: 0 }) : () => {} }));
+          const labelOf = (k) => { const id = String(k).replace(/^(cloud|region|vpc|sn):/, ''); const reg2 = trail[1] ? ir(String(trail[1]).slice(7)) : null;
+            if (String(k).startsWith('vpc:') && reg2) return (reg2.vpcs.find(v => v.id === id) || {}).name || id;
+            if (String(k).startsWith('sn:') && reg2) { for (const v of reg2.vpcs) { const sn = v.subnets.find(x => x.id === id); if (sn) return sn.name; } }
+            return id; };
+          const cloudCrumbsE = [{ key: 'root', label: 'All clouds', to: [] }, ...trail.map((k, i) => ({ key: k, label: labelOf(k), to: trail.slice(0, i + 1) }))]
+            .map((c, i, a) => ({ ...c, notLast: i < a.length - 1, weight: i === a.length - 1 ? 700 : 500, color: i === a.length - 1 ? 'var(--text-heading)' : 'var(--link)', go: () => set({ cloudTrailE: c.to, cloudPage: 0 }) }));
+          const sitesAll = (est.sites || []).reduce((a, x) => a + S.countOf(x.name), 0), sitesAtt = (est.sites || []).filter(onAtt).reduce((a, x) => a + S.countOf(x.name), 0);
+          const privN = est.regionsList.filter(r => r.priv).length;
+          const cloudTiles = [
+            { key: 's', l: 'Sites', v: nf(sitesAll), tone: 'var(--text-heading)' }, { key: 'a', l: 'On AT&T', v: nf(sitesAtt), tone: 'var(--success)' }, { key: 'n', l: 'Not on AT&T', v: nf(sitesAll - sitesAtt), tone: sitesAll - sitesAtt ? 'var(--warning)' : 'var(--text-heading)' },
+            { key: 'r', l: 'Cloud regions', v: nf(est.regionsList.length), tone: 'var(--text-heading)' }, { key: 'p', l: 'Private connections', v: `${privN} of ${est.regionsList.length}`, tone: 'var(--text-heading)' },
+          ];
+          return { cloudRows, cloudCrumbsE, cloudTiles, cloudLine: `${rows.length} ${rows.length === 1 ? LV[0] : LV[1]}` };
+        })(),
         // Your sites drill by place (Micah, 2026-09-29): region, state, metro, site, services.
         ...(() => {
           const trail = Array.isArray(s.placeTrail) ? s.placeTrail : [];
@@ -2358,7 +2401,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           const save = (siteTags, buCustom) => { set({ siteTags, buCustom }); try { localStorage.setItem('naas.tags', JSON.stringify({ siteTags, buCustom })); } catch (e) {} };
           const groups = buRows(est, tags);
           const names = [...S.BU_DEFAULTS, ...custom.filter(b => !S.BU_DEFAULTS.includes(b))];
-          const known = [...names.filter(b => groups.some(g => g.name === b) || custom.includes(b)), ...groups.map(g => g.name).filter(b => !names.includes(b))];
+          // Every default unit is offered, empty or not, so Manufacturing plant never has to be typed (2026-09-29 audit).
+          const known = [...names, ...groups.map(g => g.name).filter(b => !names.includes(b))];
           const active = known.includes(s.buActive) ? s.buActive : null;
           const maxN = Math.max(1, ...groups.map(g => g.count));
           const buList = known.map(b => { const g = groups.find(x => x.name === b); const n = g ? g.count : 0; const on = active === b;
@@ -2381,7 +2425,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     obScopes: R.scopes(est0).map(sc => ({ ...sc, on: sc.key === obScope, go: () => set({ obScope: sc.key }), ub: sc.key === obScope ? 'var(--cta)' : 'transparent', uc: sc.key === obScope ? 'var(--link)' : 'var(--text-body)', uw: sc.key === obScope ? 700 : 500 })), obScopeLabel: (R.scopes(est0).find(x => x.key === obScope) || {}).label || 'Whole estate',
     obWindows: ['7d', '30d', '90d'].map(w => ({ key: w, label: w, on: (s.obWindow || '30d') === w, go: () => set({ obWindow: w }), ub: (s.obWindow || '30d') === w ? 'var(--cta)' : 'transparent', uc: (s.obWindow || '30d') === w ? 'var(--link)' : 'var(--text-body)', uw: (s.obWindow || '30d') === w ? 700 : 500 })),
     obTrends: R.trends(ob, s.obWindow || '30d').map(k => ({ ...k, hasUnit: !!k.u, badge: `${k.arrow} ${k.delta}`, go: ({ thr: () => set({ obTab: 'throughput' }), p95: () => set({ obTab: 'latency' }), loss: () => set({ obTab: 'loss' }), egr: () => set({ obTab: 'egress' }), fab: () => set({ obTab: 'flow' }), sav: go('s3', { layer: 'cloud', tab: 'cost' }), util: () => set({ obTab: 'flow' }) })[k.key] || (() => {}) })),
-    utilRows: (ob.utilRows || []).map(u => { const hot = u.pct >= 80; const r = est0.regionsList.find(x => x.region === u.region) || { region: u.region, wl: 0 }; return { ...u, key: u.id, label: `${u.cloud} ${u.region}`, sub: `${u.ramp} · ${u.ports} × 10 Gbps`, w: u.pct + '%', v: `${u.gbps} Gbps`, pctF: u.pct + '%', fill: hot ? '#ff8500' : '#009fdb', doorLabel: hot ? 'Add a port →' : 'Ask Andi →', doorColor: hot ? 'var(--warning)' : 'var(--link)', go: hot ? composeFor(go, r) : () => set({ andiScope: { kind: 'region', id: u.region, label: `${u.cloud} ${u.region}` }, andiOpen: true }) }; }),
+    utilRows: (ob.utilRows || []).map(u => { const hot = u.pct >= 80; const r = est0.regionsList.find(x => x.region === u.region) || { region: u.region, wl: 0 }; return { ...u, key: u.id, label: `${u.cloud} ${u.region}`, sub: `${u.ramp} · ${u.bw || u.ports + ' × 10 Gbps'}`, w: u.pct + '%', v: `${u.gbps} Gbps`, pctF: u.pct + '%', fill: hot ? '#ff8500' : '#009fdb', doorLabel: hot ? 'Add a port →' : 'Ask Andi →', doorColor: hot ? 'var(--warning)' : 'var(--link)', go: hot ? composeFor(go, r) : () => set({ andiScope: { kind: 'region', id: u.region, label: `${u.cloud} ${u.region}` }, andiOpen: true }) }; }),
     obStrip: (() => { const rows = ob.utilRows || []; const hot = rows.filter(u => u.pct >= 80 && !(connRow && connRow.region === u.region && connRow.degraded)); const blind = ob.blind || []; const parts = []; const deg = conns.rows.find(r => r.degraded); if (deg) parts.push(`${deg.cloud} ${deg.region} is degraded on ${deg.ramp}: BGP flapping, ${deg.drops} drops, ${deg.wl.toLocaleString('en-US')} workloads behind it.`); if (hot.length) parts.push(`${hot.map(u => `${u.cloud} ${u.region}`).join(', ')} ${hot.length === 1 ? 'runs' : 'run'} above 80% of ${hot.length === 1 ? 'its' : 'their'} ports.`); if (blind.length) parts.push(`${blind.length} ${blind.length === 1 ? 'region sends' : 'regions send'} no flow logs, so ${ob.pub.toFixed(1)} Gbps is unseen.`); if (ob.worst && !blind.length) parts.push(`${ob.worst.name} is the slowest public flow at ${ob.worst.latency} ms.`); const first = hot[0] ? est0.regionsList.find(x => x.region === hot[0].region) : blind[0]; return { has: parts.length > 0, title: 'Act on it', text: parts.join(' ') + (hot.length ? ' Add a port before it saturates.' : blind.length ? ' Attach it to bring the traffic under control.' : ''), cta: hot.length ? `Add a port on ${hot[0].region}` : blind.length ? `Attach ${blind[0].region}` : 'Steer worst offender', go: first ? composeFor(go, first) : (ob.worst ? () => set({ steered: [...(s.steered || []), ob.worst.id] }) : () => {}) }; })(), hasUtil: (ob.utilRows || []).length > 0, utilLine: `${ob.util}% of ${ob.capGbps} Gbps in use · ${(ob.utilRows || []).length} ${(ob.utilRows || []).length === 1 ? 'connection' : 'connections'}`, utilHot: (ob.utilRows || []).filter(u => u.pct >= 80).length, anomalies: R.anomalies(R.applyScope(est0, obScope), ob).map(a => ({ ...a, dot: a.sev === 'amber' ? 'var(--warning)' : 'var(--link)', go: a.region ? () => set({ obScope: 'cloud:' + (est0.regionsList.find(r => r.region === a.region) || {}).cloud }) : () => {} })), hasAnomalies: R.anomalies(R.applyScope(est0, obScope), ob).length > 0, insights: R.insights(R.applyScope(est0, obScope), ob), hasInsights: !isEmpty, iw: iwVals(R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s)), s, set, go, winLabelOf(s)) || {}, hasIw: !!R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s)),
     obVerdict: ob.verdict, obCoverage: ob.coverage, obKpis: ob.kpis.map(k => ({ ...k, hasUnit: !!k.u, hasE: !!k.e })), obTabs, obIsFlow: obTab === 'flow', trend, hasTrend: !!trend,
     ...logVals, ...gapVals, ...stepVals,
@@ -2846,16 +2890,17 @@ function costVals(s, set, est, invAll, ob, go, c) {
   const SITE_W = { 'Data center': 120, Campus: 20, Plant: 10, Office: 3, Branch: 1, Edge: 0.1, Field: 0.3 };
   const accGroups = {};
   (est.sites || []).forEach(x => {
-    const k = S.accessOf(x), c = S.ACCESS_CLASS[k], count = S.countOf(x.name);
-    const g = accGroups[k] = accGroups[k] || { key: k, label: c.label, unit: c.unit, plural: c.plural, count: 0, onFabric: 0, w: 0 };
-    g.count += count; g.onFabric += x.priv ? count : 0; g.w += (SITE_W[S.classOf(x)] || 1) * count;
+    // By the service the site buys, in the catalog's words, as every other view counts them (2026-09-29).
+    const sv = S.servicesOf(x)[0] || { key: 'other', label: 'Other access' }, k = sv.key, count = S.countOf(x.name);
+    const g = accGroups[k] = accGroups[k] || { key: k, label: sv.label, unit: 'site', plural: 'sites', count: 0, onFabric: 0, w: 0 };
+    g.count += count; g.onFabric += onAtt(x) ? count : 0; g.w += (SITE_W[S.classOf(x)] || 1) * count;
   });
   const siteCls = Object.values(accGroups);
   const wSum = siteCls.reduce((a, c) => a + c.w, 0) || 1;
   // Where the estate names what its IPsec sites bill (the ipsec bucket), that row
   // carries that figure and the rest of the base splits by weight, so Cost, the
   // Sankey and the savings table all say the same thing (2026-09-28).
-  const ipB = (est.buckets || []).find(b => b.id === 'ipsec'); const ipCls = ipB && siteCls.find(c => c.key === 'ipsec');
+  const ipB = (est.buckets || []).find(b => b.id === 'ipsec'); const ipCls = ipB && siteCls.find(c => c.key === 'tpa');
   const wRest = siteCls.filter(c => c !== ipCls).reduce((a, c) => a + c.w, 0) || 1, baseRest = ipCls ? Math.max(0, base - ipB.today) : base;
   const siteRows = siteCls.map(c => { const today = c === ipCls ? ipB.today : Math.round(baseRest * c.w / (ipCls ? wRest : wSum)); const fabPart = Math.round(today * c.onFabric / Math.max(1, c.count)); return { key: c.key, label: c.label, sub: `${c.count.toLocaleString('en-US')} ${c.count === 1 ? c.unit : c.plural} · ${c.onFabric.toLocaleString('en-US')} on AT&T`, today, fabPart, pubPart: today - fabPart }; }).sort((a, b) => b.today - a.today);
   { const drift = base - siteRows.reduce((a, r) => a + r.today, 0); const big = siteRows.filter(r => r.key !== 'ipsec').sort((a, b) => b.today - a.today)[0]; if (big && drift) { big.today += drift; big.fabPart = big.today - big.pubPart; } }

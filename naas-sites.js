@@ -168,7 +168,9 @@ const SERVICE_OF_ACCESS = { avpn: 'avpn', ase: 'aseod', adi: 'adi', abf: 'abf', 
 export function servicesOf(st) {
   if (!st) return [];
   if (Array.isArray(st.services) && st.services.length) return st.services.map((x, i) => ({ ...SERVICE[x.svc || x], role: x.role || (i ? 'backup' : 'primary') }));
-  const k = st.accessSla === 'third' ? 'tpa' : SERVICE_OF_ACCESS[accessOf(st)];
+  // SD-WAN over someone else's internet is Third Party Access; over AVPN it is AVPN (2026-09-29).
+  const acc = accessOf(st);
+  const k = st.accessSla === 'third' || (acc === 'sdwan' && !st.priv) || (acc === 'ipsec') ? 'tpa' : SERVICE_OF_ACCESS[acc];
   if (k) return [{ ...SERVICE[k], role: 'primary' }];
   // A circuit the catalog does not name (Lumen off-net) keeps its own words.
   return [{ key: 'other', label: st.access || 'Access', name: st.access || 'Access', onAtt: !!st.priv, access: st.access, role: 'primary' }];
@@ -220,7 +222,7 @@ export const isDataCenter = (st) => st.cls === 'Data center' || /\bDC\b|data cen
  */
 const OPT = {
   netbond: { key: 'netbond', name: 'NetBond', why: 'private on-ramp, $0.02/GB, from 10 business days' },
-  dx: { key: 'dx', name: 'Direct Connect / ExpressRoute', why: 'you run the routers, 4 to 8 weeks' },
+  dx: { key: 'dx', name: 'Direct Connect', why: 'you run the routers, 4 to 8 weeks' },
   avpn: { key: 'avpn', name: 'AVPN', why: 'private WAN to every site and cloud' },
   aseod: { key: 'aseod', name: 'ASE on Demand', why: 'dedicated Ethernet to the cloud on-ramps, same day' },
   adi: { key: 'adi', name: 'ADI', why: 'AT&T internet through the AT&T core' },
@@ -228,7 +230,8 @@ const OPT = {
 };
 export function candidateOptions(c) {
   const pick = (best, ...alts) => ({ best: OPT[best], alts: alts.map(k => OPT[k]) });
-  if (c.cloud && c.region) return pick('netbond', 'dx');
+  // The cloud's own interconnect, by its own name (2026-09-29 audit).
+  if (c.cloud && c.region) { const own = { AWS: 'Direct Connect', Azure: 'ExpressRoute', GCP: 'Cloud Interconnect', 'Google Cloud': 'Cloud Interconnect', Oracle: 'FastConnect', OCI: 'FastConnect' }[c.cloud] || 'the cloud\'s own interconnect'; const r = pick('netbond', 'dx'); return { ...r, alts: [{ ...OPT.dx, name: own }] }; }
   if (isDataCenter(c)) return pick('aseod', 'avpn');
   const acc = accessOf(c);
   if (acc === 'mobility' || acc === 'aiab') return pick('avpn', 'aiab');

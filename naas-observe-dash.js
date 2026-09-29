@@ -17,14 +17,14 @@ const R = 22, C = 2 * Math.PI * R;
 
 /** One ring per connection: used against purchased, the 24h line inside, a state dot. */
 export function gauges(conns) {
-  return conns.rows.map(r => ({ id: r.id, region: r.region, cloud: r.cloud, label: `${r.cloud} ${r.region}`, ramp: r.ramp, pct: r.pct, pctF: r.pct + '%', purchased: `${r.ports} × 10 Gbps`, used: `${r.gbps} Gbps`, dash: `${(C * r.pct / 100).toFixed(1)} ${C.toFixed(1)}`, circ: C.toFixed(1), r: R, state: r.state, bgp: r.bgp, drops: r.drops, inD: r.inD, outD: r.outD, degraded: r.degraded, hot: r.hot, wl: r.wl, color: r.state === 'Degraded' ? '#ff8500' : r.state === 'Saturating' ? '#e5a100' : '#009fdb' }));
+  return conns.rows.map(r => ({ id: r.id, region: r.region, cloud: r.cloud, label: `${r.cloud} ${r.region}`, ramp: r.ramp, pct: r.pct, pctF: r.pct + '%', purchased: `${r.bw || r.ports + ' × 10 Gbps'}`, used: `${r.gbps} Gbps`, dash: `${(C * r.pct / 100).toFixed(1)} ${C.toFixed(1)}`, circ: C.toFixed(1), r: R, state: r.state, bgp: r.bgp, drops: r.drops, inD: r.inD, outD: r.outD, degraded: r.degraded, hot: r.hot, wl: r.wl, color: r.state === 'Degraded' ? '#ff8500' : r.state === 'Saturating' ? '#e5a100' : '#009fdb' }));
 }
 
 /** The operator's morning: what, where, how long, one action. Worst first. */
 export function queue(est, ob, conns, hp) {
   const rows = [];
   conns.rows.filter(r => r.degraded).forEach(r => rows.push({ key: 'deg:' + r.region, sev: 2, state: 'Degraded', what: `BGP flapping on ${r.ramp}, ${r.drops} drops`, where: `${r.cloud} ${r.region}`, age: '22 min', wl: r.wl, action: 'impact', actionLabel: 'See impact', connId: r.id, region: r.region }));
-  conns.rows.filter(r => r.hot && !r.degraded).forEach(r => rows.push({ key: 'sat:' + r.region, sev: 1, state: 'Saturating', what: `${r.pct}% of ${r.ports} × 10 Gbps purchased`, where: `${r.cloud} ${r.region}`, age: '3 h', wl: r.wl, action: 'port', actionLabel: 'Add a port', connId: r.id, region: r.region }));
+  conns.rows.filter(r => r.hot && !r.degraded).forEach(r => rows.push({ key: 'sat:' + r.region, sev: 1, state: 'Saturating', what: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'} purchased`, where: `${r.cloud} ${r.region}`, age: '3 h', wl: r.wl, action: 'port', actionLabel: 'Add a port', connId: r.id, region: r.region }));
   (ob.blind || []).forEach(r => rows.push({ key: 'blind:' + r.region, sev: 1, state: 'Blind', what: 'no flow logs, traffic unseen', where: `${r.cloud} ${r.region}`, age: 'since discovery', wl: r.wl, action: 'attach', actionLabel: 'Attach', region: r.region }));
   (ob.flows || []).filter(f => !f.controlled && f.latency > F.SLO).slice(0, 3).forEach(f => rows.push({ key: 'slo:' + f.id, sev: 1, state: 'Over SLO', what: `${f.latency} ms on the public path`, where: f.name, age: '22 min', wl: 0, action: 'steer', actionLabel: 'Steer', flowId: f.id, region: (f.region || '').split(' ')[1] }));
   return rows.sort((a, b) => b.sev - a.sev);
@@ -38,8 +38,8 @@ export function panelFor(sel, ctx) {
     const row = conns.rows.find(r => r.id === sel); if (!row) return null;
     const imp = impacted(est, inv, row);
     const recs = records(est, inv, { flows }, 'all').filter(r => (r.srcSub + ' ' + r.dstSub).includes(row.region)).slice(0, 8);
-    return { kind: 'connection', title: `${row.cloud} ${row.region}`, sub: `${row.ramp} · ${row.ports} × 10 Gbps purchased`, trail: [{ key: sel, name: `${row.cloud} ${row.region}` }],
-      overview: [['Current · in / out', `${row.gbps} / ${(row.gbps * 0.62).toFixed(1)} Gbps`], ['Average · in / out', `${row.avg} / ${(row.avg * 0.62).toFixed(1)} Gbps`], ['Purchased', `${row.ports} × 10 Gbps`], ['Utilization', `${row.pct}% of ${row.cap} Gbps`], ['State', row.state], ['BGP', row.bgp], ['Drops', row.drops], ['Workloads behind it', n(row.wl)]],
+    return { kind: 'connection', title: `${row.cloud} ${row.region}`, sub: `${row.ramp} · ${row.bw || row.ports + ' × 10 Gbps'} purchased`, trail: [{ key: sel, name: `${row.cloud} ${row.region}` }],
+      overview: [['Current · in / out', `${row.gbps} / ${(row.gbps * 0.62).toFixed(1)} Gbps`], ['Average · in / out', `${row.avg} / ${(row.avg * 0.62).toFixed(1)} Gbps`], ['Purchased', `${row.bw || row.ports + ' × 10 Gbps'}`], ['Utilization', `${row.pct}% of ${row.cap} Gbps`], ['State', row.state], ['BGP', row.bgp], ['Drops', row.drops], ['Workloads behind it', n(row.wl)]],
       impact: imp, records: recs, actions: [...(row.hot ? [{ key: 'port', label: 'Add a port', region: row.region }] : []), { key: 'policy', label: 'Author a policy for these workloads', region: row.region }, { key: 'logs', label: 'All records for this connection', region: row.region }] };
   }
   // An opened node is replaced by its children on the map; its trail still knows it.

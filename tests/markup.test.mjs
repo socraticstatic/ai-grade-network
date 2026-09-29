@@ -197,16 +197,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Tags pager (2026-09-29): div 1000 -> 1001, span 776 -> 777, sc-if 383 -> 384, button 293 -> 295.
 // Ways to connect unboxed; Lens in the tab row (2026-09-29): div 1001 -> 996, span 777 -> 776, sc-if 384 -> 385, sc-for 220 -> 219, button 295 -> 294, label 30 -> 31.
 // Your sites drill by place (Micah, 2026-09-29): div 996 -> 975, span 776 -> 716, sc-if 385 -> 366, sc-for 219 -> 205, button 294 -> 273.
+// Your clouds drill + rollup, tree and filters row retired (audit, 2026-09-29): div 975 -> 881, span 716 -> 608, sc-if 366 -> 331, sc-for 205 -> 182, button 273 -> 245, aside 11 -> 10, label 31 -> 30.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 975],
-    ['span', /<span\b/g, /<\/span>/g, 716],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 366],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 205],
+    ['div', /<div\b/g, /<\/div>/g, 881],
+    ['span', /<span\b/g, /<\/span>/g, 608],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 331],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 182],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 273],
-    ['aside', /<aside\b/g, /<\/aside>/g, 11],
-    ['label', /<label\b/g, /<\/label>/g, 31],
+    ['button', /<button\b/g, /<\/button>/g, 245],
+    ['aside', /<aside\b/g, /<\/aside>/g, 10],
+    ['label', /<label\b/g, /<\/label>/g, 30],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

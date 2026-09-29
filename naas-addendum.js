@@ -200,7 +200,7 @@ export function observe(est, steered, inv, split) {
   const anomaly = est.regionsList.find(r => r.rel === 'warn');
   // Utilization: attached regions each ride a 10 Gbps NetBond port; fabric traffic against that capacity.
   const attachedRs = est.regionsList.filter(r => r.priv);
-  const utilRows = attachedRs.map(r => { const i = est.regionsList.indexOf(r); const gbps = +flows.filter(f => f.id.startsWith(`f-${i}-`) && f.controlled).reduce((a, f) => a + f.gbps, 0).toFixed(1); const ports = Math.max(1, Math.ceil(gbps / 10 / (0.55 + ((i * 7) % 4) * 0.1))); const cap = ports * 10; return { id: 'u-' + r.region, region: r.region, cloud: r.cloud, ramp: r.ramp || 'NetBond', gbps, ports, cap, pct: Math.min(99, Math.round(gbps / cap * 100)) }; }).sort((a, b) => b.pct - a.pct);
+  const utilRows = attachedRs.map(r => { const i = est.regionsList.indexOf(r); const gbps = +flows.filter(f => f.id.startsWith(`f-${i}-`) && f.controlled).reduce((a, f) => a + f.gbps, 0).toFixed(1); const head = 0.55 + ((i * 7) % 4) * 0.1; const portG = gbps / head <= 1 ? 1 : gbps / head <= 5 ? 5 : 10; const ports = portG < 10 ? 1 : Math.max(1, Math.ceil(gbps / 10 / head)); const cap = ports * portG; /* NetBond sells 1G, 5G and 10G ports (2026-09-29): the port fits what the connection carries. */ return { id: 'u-' + r.region, region: r.region, cloud: r.cloud, ramp: r.ramp || 'NetBond', gbps, ports, portG, cap, bw: `${ports} × ${portG} Gbps`, bwShort: ports > 1 ? `${ports} × ${portG}G` : `${portG}G`, pct: Math.min(99, Math.round(gbps / cap * 100)) }; }).sort((a, b) => b.pct - a.pct);
   const capTotal = utilRows.reduce((a, u) => a + u.cap, 0);
   const util = capTotal ? Math.min(99, Math.round(utilRows.reduce((a, u) => a + u.gbps, 0) / capTotal * 100)) : 0;
   const kpis = [

@@ -32,12 +32,12 @@ const ORDER = { Degraded: 0, Saturating: 1, Up: 2 };
 export function connections(est, ob) {
   const util = ob.utilRows || [];
   const rows = est.regionsList.filter(r => r.priv).map(r => {
-    const u = util.find(x => x.region === r.region) || { gbps: 0, ports: 1, cap: 10, pct: 0 };
+    const u = util.find(x => x.region === r.region) || { gbps: 0, ports: 1, cap: 1, pct: 0, bw: '1 × 1 Gbps', bwShort: '1G' };
     const degraded = r.link === 'degraded';
     const pct = degraded ? Math.max(u.pct, 62) : u.pct;
     const state = degraded ? 'Degraded' : pct >= 80 ? 'Saturating' : 'Up';
     const ramp = r.ramp || 'NetBond';
-    return { id: 'cx-' + r.region, cloud: r.cloud, region: r.region, ramp, ports: u.ports, cap: u.cap, gbps: u.gbps, avg: +(u.gbps * 0.82).toFixed(1), pct, state, bgp: degraded ? 'Flapping' : 'Established', drops: degraded ? '0.31%' : state === 'Saturating' ? '0.04%' : '0.00%', inD: sparkline(r.region + ':in', 24, pct, degraded ? 34 : 12), outD: sparkline(r.region + ':out', 24, Math.max(4, pct - 18), degraded ? 30 : 10), wl: r.wl, terminated: ATT_TERMINATED.has(ramp) ? 'att' : 'own', paths: r.paths || 1, acct: r.acct || null, hot: pct >= 80, degraded };
+    return { id: 'cx-' + r.region, cloud: r.cloud, region: r.region, ramp, ports: u.ports, cap: u.cap, bw: u.bw || `${u.ports} × 10 Gbps`, bwShort: u.bwShort || '10G', gbps: u.gbps, avg: +(u.gbps * 0.82).toFixed(1), pct, state, bgp: degraded ? 'Flapping' : 'Established', drops: degraded ? '0.31%' : state === 'Saturating' ? '0.04%' : '0.00%', inD: sparkline(r.region + ':in', 24, pct, degraded ? 34 : 12), outD: sparkline(r.region + ':out', 24, Math.max(4, pct - 18), degraded ? 30 : 10), wl: r.wl, terminated: ATT_TERMINATED.has(ramp) ? 'att' : 'own', paths: r.paths || 1, acct: r.acct || null, hot: pct >= 80, degraded };
   }).sort((a, b) => ORDER[a.state] - ORDER[b.state] || b.pct - a.pct);
   return { rows, degraded: rows.filter(r => r.degraded).length, total: rows.length };
 }
@@ -185,7 +185,7 @@ function placeUnits(est, sites) {
       const cls = S.classOf(x), node = tree.find(c => c.cls === cls);
       const ix = String(S.rollupKeyOf(est, x) || '').split('#')[1];
       const kids = node ? node.children.filter(ch => ch.kind === 'metro' && (ix == null || String(ch.key).startsWith(`${cls}:${ix}:`))) : [];
-      if (kids.length) return kids.map(m => ({ metro: m.name, count: m.count, att: m.onFabric, from: x, sample: m.sites, more: m.more || 0 }));
+      if (kids.length) return kids.map(m => ({ metro: m.name, count: m.count, att: onAtt(x) ? m.count : 0, from: x, sample: m.sites, more: m.more || 0 }));
     }
     return [{ metro: x.metro, count, att: onAtt(x) ? count : 0, from: x, site: x }];
   });
