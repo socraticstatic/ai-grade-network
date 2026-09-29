@@ -61,8 +61,9 @@ test('every estate: the candidates count every public site and region, nothing d
   for (const view of ['partial', 'mature', 'trust', 'small']) {
     const est = D.ESTATES[view];
     const v = vals(mkC({ view, screen: 's3', tab: 'connect', cnPage: 'options', estateParam: null }));
-    const sites = v.candGroups.filter(g => g.label !== 'Cloud regions').flatMap(g => g.rows).reduce((a, r) => a + r.qty, 0);
-    const regions = (v.candGroups.find(g => g.label === 'Cloud regions') || { rows: [] }).rows.length;
+    // Each column pages (2026-09-29); its count is the whole column, not the page.
+    const sites = v.candGroups.filter(g => g.label !== 'Cloud regions').reduce((a, g) => a + +g.count.replace(/,/g, ''), 0);
+    const regions = +(((v.candGroups.find(g => g.label === 'Cloud regions') || { count: '0' }).count).replace(/,/g, ''));
     assert.equal(sites, gapSiteCount(est), view);
     assert.equal(regions, est.regionsList.filter(r => !r.priv).length, view);
   }

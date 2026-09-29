@@ -193,16 +193,19 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Product views tab row (no-scroll, 2026-09-29): div 1014 -> 1015, sc-if 381 -> 382, sc-for 222 -> 223, button 281 -> 282.
 // Forecast a Cost tab; Logs uncontained, paged (Micah, 2026-09-29): span 782 -> 784, button 282 -> 286.
 // Forecast: one card, two columns (2026-09-29): div 1015 -> 1014.
+// Nothing boxed: lists page on the page, drawer views became tabs (Micah, 2026-09-29): div 1014 -> 1000, span 784 -> 776, sc-if 382 -> 383, sc-for 223 -> 220, button 286 -> 293.
+// Tags pager (2026-09-29): div 1000 -> 1001, span 776 -> 777, sc-if 383 -> 384, button 293 -> 295.
+// Ways to connect unboxed; Lens in the tab row (2026-09-29): div 1001 -> 996, span 777 -> 776, sc-if 384 -> 385, sc-for 220 -> 219, button 295 -> 294, label 30 -> 31.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1014],
-    ['span', /<span\b/g, /<\/span>/g, 784],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 382],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 223],
+    ['div', /<div\b/g, /<\/div>/g, 996],
+    ['span', /<span\b/g, /<\/span>/g, 776],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 385],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 219],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 286],
+    ['button', /<button\b/g, /<\/button>/g, 294],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
-    ['label', /<label\b/g, /<\/label>/g, 30],
+    ['label', /<label\b/g, /<\/label>/g, 31],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

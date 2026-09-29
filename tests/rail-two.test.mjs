@@ -6,8 +6,10 @@ import { SUB_PANELS } from '../naas-app.js';
 
 
 test('every page that declares sub-content declares it the same way', () => {
+  // Only Discover keeps a drawer (2026-09-29); the rest of the views are tabs.
+  assert.ok(SUB_PANELS.discover.length > 0);
   for (const [page, panels] of Object.entries(SUB_PANELS)) {
-    assert.ok(Array.isArray(panels) && panels.length > 0, `${page} declares no panels`);
+    assert.ok(Array.isArray(panels), `${page} declares no panel list`);
     for (const p of panels) {
       assert.ok(p.key && p.label, `${page} has an incomplete panel`);
       assert.ok(p.sec === undefined || typeof p.sec === 'string', `${page}:${p.key} has a bad section id`);

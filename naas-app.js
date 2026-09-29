@@ -37,21 +37,11 @@ export const SUB_PANELS = {
     { key: 'add', label: 'Add a source' },
     { key: 'run', label: 'Discovery run' },
   ],
-  connect: [
-    { key: 'found', label: 'What we found', sec: 'sec-gap' },
-  ],
-  // Insights | Policies | Tags (2026-09-28). Records opens here from the rail
-  // and the "All records" doors, but holds no tab.
-  observe: [
-    { key: 'policies', label: 'Policies', sec: 'sec-obs-policies' },
-    { key: 'tags', label: 'Tags', sec: 'sec-obs-tags' },
-  ],
-  govern: [
-    { key: 'templates', label: 'Templates', sec: 'sec-starting' },
-  ],
-  cost: [
-    { key: 'charges', label: 'AT&T charges', sec: 'sec-charges' },
-  ],
+  connect: [],
+  // Every page view is a tab on its page (Micah, 2026-09-29: "what else is boxed?"): the drawer only adds or edits a source.
+  observe: [],
+  govern: [],
+  cost: [],
 };
 
 // The lifecycle, in the order the work happens. Discover is the inventory: what
@@ -677,7 +667,7 @@ export function vals(c) {
   const costVerdict = VD.costVerdict(estOpen, ob, totalSave, buckets);
   const kpis = isEmpty ? [] : kpiTiles(s, est);
   // The AT&T network picture opens on Home and Fabric; every other screen keeps a one-line strip and a "Show the AT&T network" door (audit finding 2).
-  const heroScreen = ['s0', 's2'].includes(s.screen) || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect' && s.cnPage !== 'options');
+  const heroScreen = ['s0', 's2'].includes(s.screen) || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect' && (s.cnPage || 'picture') === 'picture');
   const heroKey = s.screen === 's3' ? `s3/${s.layer}/${s.tab}` : s.screen;
   // One hero graph (Micah, 13:23): the picture is open on home and on all four pages.
   // A new customer's picture is empty; the scan leads and the picture waits behind its strip (no-scroll pass, 2026-09-28).
@@ -868,7 +858,7 @@ export function vals(c) {
   const landedAll = !!s.landed;
   const pendingStages = D.LIFECYCLE.map((l, i) => landedAll ? ({ key: l, label: l, fill: 'var(--success)', ring: 'var(--success)', color: 'var(--text-heading)', line: 'var(--success)' }) : ({ key: l, label: l, fill: i < 2 ? 'var(--success)' : i === 2 ? 'var(--cta)' : 'var(--bg-base)', ring: i < 2 ? 'var(--success)' : i === 2 ? 'var(--cta)' : 'var(--border-primary)', color: i <= 2 ? 'var(--text-heading)' : 'var(--text-disabled)', line: i < 2 ? 'var(--success)' : 'var(--border-secondary)' }));
 
-  return {
+  const out = {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', themeTitle: s.theme === 'light' ? 'Dark mode' : 'Light mode', themeIsLight: s.theme !== 'dark', themeIsDark: s.theme === 'dark', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
     view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep }),
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
@@ -1016,6 +1006,29 @@ export function vals(c) {
     allRegions: est.regionsList, scanSteps, scanLine: s.scanStep < 4 ? `${scanSteps[Math.min(3, s.scanStep)].label} · ${Math.min(4, s.scanStep + 1)} of 4` : '', scanDone: s.scanStep >= 4, scanning: s.scanStep < 4, intakeCadence, setIntakeCadence, intakeCadenceLabel, intakeCadenceLower, cadenceAsk, cadenceAskText, confirmCadence, discoverVerdict, discoverKpis, estateChips, treeOrMap: s.treeOrMap, isTree: s.treeOrMap === 'tree', isMap: s.treeOrMap === 'map', treeBg: s.treeOrMap === 'tree' ? 'var(--bg-accent)' : 'transparent', treeColor: s.treeOrMap === 'tree' ? 'var(--link)' : 'var(--text-body)', mapBg: s.treeOrMap === 'map' ? 'var(--bg-accent)' : 'transparent', mapColor: s.treeOrMap === 'map' ? 'var(--link)' : 'var(--text-body)', showTree: () => set({ treeOrMap: 'tree' }), showMap: () => set({ treeOrMap: 'map' }), tree, mapRows, mapSites, mapH, mapVB: `0 0 1000 ${mapH}`, bigEstate, sitesCountLabel: est.sitesCount ? `${est.sitesCount.toLocaleString('en-US')} sites, grouped` : plural(est.sites.length, 'site', 'sites'), chain, chainPolicies, hasChain: !!ow, chainRegion: ow ? `${ow.cloud} ${ow.region}` : '', closeChain: () => set({ openWorkload: null }),
     ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched),
   };
+  return pageLists(out, s, set);
+}
+
+// A list longer than the fold pages; it never scrolls in a box and never sits
+// in a card (Micah, 2026-09-29: "why are you containerizing things like logs").
+export function pageRows(rows, size, page, setPage) {
+  const n = rows.length, pages = Math.max(1, Math.ceil(n / size)), p = Math.min(Math.max(0, page || 0), pages - 1);
+  return { rows: rows.slice(p * size, p * size + size), pager: { label: n ? `${p * size + 1}–${Math.min(n, (p + 1) * size)} of ${n}` : '0 of 0', many: pages > 1,
+    prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
+}
+const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'],
+  saveRows: ['savePage', 5, 'savePager', 'savePageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
+function pageLists(out, s, set) {
+  for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
+    if (!Array.isArray(out[list])) continue;
+    const pg = pageRows(out[list], size, s[key], (n) => set({ [key]: n }));
+    out[list] = pg.rows; out[pagerName] = pg.pager; out[sizeName] = size;
+  }
+  if (Array.isArray(out.candGroups)) {
+    out.candPageSize = 4;
+    out.candGroups = out.candGroups.map(g => { const pg = pageRows(g.rows, 4, (s.candPage || {})[g.key], (n) => set({ candPage: { ...(s.candPage || {}), [g.key]: n } })); return { ...g, rows: pg.rows, pager: pg.pager }; });
+  }
+  return out;
 }
 
 /**
@@ -1489,8 +1502,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const logDeny = logMatch.filter(r => r.deny).length;
   const logPub = logMatch.filter(r => r.path === 'public').length;
   // Logs is the page, and it pages to fit the fold rather than scrolling inside a box (Micah, 2026-09-29).
-  const pageOf = (rows, size, key) => { const n = rows.length, pages = Math.max(1, Math.ceil(n / size)), p = Math.min(Math.max(0, s[key] || 0), pages - 1);
-    return { rows: rows.slice(p * size, p * size + size), pager: { label: n ? `${p * size + 1}–${Math.min(n, (p + 1) * size)} of ${n}` : '0 of 0', hasPrev: p > 0, hasNext: p < pages - 1, prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) set({ [key]: p - 1 }); }, next: () => { if (p < pages - 1) set({ [key]: p + 1 }); } } }; };
+  const pageOf = (rows, size, key) => pageRows(rows, size, s[key], (n) => set({ [key]: n }));
   const logPageSize = (s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen) ? 6 : 9;
   const flowAll = logMatch.map(r => ({ ...r, key: r.id, actBg: r.deny ? (dark ? 'rgba(211,47,47,.2)' : '#fdecea') : 'var(--bg-wash)', actColor: r.deny ? 'var(--error)' : 'var(--text-body)',
     pathInk: r.path === 'public' ? 'var(--warning)' : 'var(--success)',
@@ -1539,7 +1551,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const ago = (m) => m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
   const actQ = (s.actQ || '').toLowerCase();
   const actMatch = actAll.filter(a => !actQ || (a.who + ' ' + a.verb + ' ' + a.target + ' ' + a.detail).toLowerCase().includes(actQ));
-  const actPageSize = 9;
+  const actPageSize = 8;
   const actAllRows = actMatch.map((a, i) => ({
     key: 'ua' + i, when: ago(a.mins), who: a.who, verb: a.verb, target: a.target, detail: a.detail,
     from: FROM[i % FROM.length], result: a.ok ? 'Applied' : 'Denied',
@@ -2040,7 +2052,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const findChips = [['open', 'Open'], ['snoozed', 'Snoozed'], ['closed', 'Closed'], ['all', 'All']].map(([k, l]) => {
     const n = k === 'all' ? every.length : every.filter(x => bucket(x.l.state) === k).length;
     const on = findFilter === k;
-    return { key: k, label: `${l} · ${n}`, on, go: () => set({ findFilter: k }), bg: on ? 'var(--cta)' : 'var(--bg-base)', color: on ? '#fff' : 'var(--text-heading)', border: on ? 'var(--cta)' : 'var(--border-secondary)' };
+    return { key: k, label: `${l} · ${n}`, on, go: () => set({ findFilter: k, findPage: 0 }), bg: on ? 'var(--cta)' : 'var(--bg-base)', color: on ? '#fff' : 'var(--text-heading)', border: on ? 'var(--cta)' : 'var(--border-secondary)' };
   });
   const toRow = ({ f, l }) => ({
     key: f.key, persona: PNAME[f.persona] || f.persona || 'Network Engineering',
@@ -2058,7 +2070,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const insFocus = CARD_FINDS[s.insFocus] ? s.insFocus : null;
   const insDrill = Object.fromEntries(Object.entries(CARD_FINDS).map(([k, [label, hit]]) => { const n0 = lifeRows.filter(x => hit(x.f.key) && bucket(x.l.state) === 'open').length, on = insFocus === k;
     return [k, { n: n0, label: n0 ? `${n0} ${n0 === 1 ? 'finding' : 'findings'} ›` : 'No findings', on, border: on ? 'var(--border-active)' : 'var(--border-secondary)',
-      go: () => set({ insFocus: on ? null : k, findFilter: 'open', insPanel: on ? 'signals' : 'findings' }) }]; }));
+      go: () => set({ insFocus: on ? null : k, findFilter: 'open', findPage: 0, insPanel: on ? 'signals' : 'findings' }) }]; }));
   const personaSort = (rows) => rows.slice().sort((a, b) => ((b.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0) - ((a.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0));
   const insightRowsShown = personaSort(every.filter(x => findFilter === 'all' || bucket(x.l.state) === findFilter).filter(x => !insFocus || CARD_FINDS[insFocus][1](x.f.key)).map(toRow))
     .map(r => ({ ...r, pFor: 'For ' + ({ 'Cloud & Platform Architect': 'Architect', 'Network Engineering': 'Network Eng', 'Security & Compliance': 'Security', 'FinOps & SRE': 'FinOps & SRE', 'Executive': 'Executive' }[r.persona] || r.persona), pInk: r.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect') ? 'var(--link)' : 'var(--text-disabled)' }));
@@ -2114,7 +2126,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const insightVals = {
     insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, noInsights: insightRowsShown.length === 0, findChips, insDrill, findAll: every.map(toRow),
     ...(() => { const ik = s.insPanel === 'findings' ? 'findings' : 'signals'; return { insPanels: [['signals', 'Signals'], ['findings', `Findings · ${openN}`]].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings' }; })(),
-    hasInsFocus: !!insFocus, insFocusLabel: insFocus ? CARD_FINDS[insFocus][0] : '', clearInsFocus: () => set({ insFocus: null }),
+    hasInsFocus: !!insFocus, insFocusLabel: insFocus ? CARD_FINDS[insFocus][0] : '', clearInsFocus: () => set({ insFocus: null, findPage: 0 }),
     hasFindings: every.length > 0,
     insightCount: `${openN} open`,
     insightSub: 'Found by AT&T, with what was done about each',
@@ -2278,18 +2290,21 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         const open = !!so[cl.key];
         const metros = cl.children.filter(ch => ch.kind === 'metro' && (!newOnly || ch.sites.some(isNew)) && ch.sites.some(x => reachesScope(x, cl.cls))).map(m => {
           const mo = !!so[m.key];
-          return { ...m, open: mo, caret: mo ? 'rotate(90deg)' : 'rotate(0deg)', toggle: () => set({ siteOpen: { ...so, [m.key]: !mo } }),
+          return { ...m, open: mo, caret: mo ? 'rotate(90deg)' : 'rotate(0deg)', toggle: () => set({ siteOpen: mo ? { [cl.key]: true } : { [cl.key]: true, [m.key]: true } }),
             sub: `${m.count.toLocaleString('en-US')} ${m.count === 1 ? cl.unit : cl.plural} · ${m.access} · nearest on-ramp ${m.ramp}`,
             stats: [{ key: 'n', v: m.count.toLocaleString('en-US'), l: cl.plural }, { key: 'f', v: Math.round(100 * m.onFabric / Math.max(1, m.count)) + '%', l: 'on AT&T' }, { key: 'p', v: m.ms + ' ms', l: 'p95' }],
             badge: badgeOf(m.onFabric, m.count, cl.unit, cl.plural), sites: m.sites.filter(x => (!newOnly || isNew(x)) && reachesScope(x, cl.cls)).map(x => site({ ...x, access: m.access }, cl)), moreLabel: m.more ? `+${m.more.toLocaleString('en-US')} more` : '', hasMore: m.more > 0,
             ctl: door('Control', 'site ' + m.name), askAndi: ask('metro', m.key, `${cl.label} · ${m.name}`) };
         });
         const named = cl.children.filter(ch => ch.kind === 'site' && (!newOnly || isNew(ch)) && reachesScope(ch, cl.cls)).map(x => site(x, cl));
-        return { ...cl, open, caret: open ? 'rotate(90deg)' : 'rotate(0deg)', toggle: () => set({ siteOpen: { ...so, [cl.key]: !open } }), mark: ico(cl.icon),
+        // Your sites drills in place like the picture (2026-09-29): an open class or metro sets its siblings aside.
+        const openM = metros.find(m => m.open);
+        return { ...cl, open, caret: open ? 'rotate(90deg)' : 'rotate(0deg)', toggle: () => set({ siteOpen: open ? {} : { [cl.key]: true } }), mark: ico(cl.icon),
           sub: `${cl.count.toLocaleString('en-US')} ${cl.count === 1 ? cl.unit : cl.plural} · ${cl.access.join(' · ')}`, badge: badgeOf(cl.onFabric, cl.count, cl.unit, cl.plural),
-          hasMetros: metros.length > 0, metros, hasNamed: named.length > 0, named };
+          hasMetros: metros.length > 0, metros: openM ? [openM] : metros, hasNamed: named.length > 0 && !openM, named };
       }).filter(cl => (!newOnly && !regionChips.length) || cl.metros.length || cl.named.length);
-      const openCls = tree.find(cl => cl.open);
+      const treeAll = tree;
+      const openCls = treeAll.find(cl => cl.open);
       const openMetro = openCls && openCls.metros.find(m => m.open);
       const crumbs = [{ key: 'root', label: 'Sites', last: !openCls }, ...(openCls ? [{ key: openCls.key, label: openCls.label, last: !openMetro }] : []), ...(openMetro ? [{ key: openMetro.key, label: openMetro.name, last: true }] : [])].map(cb => ({ ...cb, notLast: !cb.last, last: cb.last ? 700 : 400 }));
       const totalSites = tree.reduce((n, cl) => n + cl.count, 0);
@@ -2307,7 +2322,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         // Group the picture's sites (notes, 2026-09-29): by region, or by how they attach.
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
         // Connect is two pages (notes, 2026-09-29): what you have, and the options for what is not on AT&T yet.
-        ...(() => { const on3 = s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect'; const ck = s.cnPage === 'options' ? 'options' : 'picture'; return { cnIsOptions: on3 && ck === 'options', cnIsPicture: on3 && ck === 'picture', cnTabs: on3, heroHead: s.screen !== 's3', cnPanels: [['picture', 'What you have'], ['options', 'Options']].map(([k, l]) => { const on = ck === k; return { key: k, label: l, on, go: () => set({ cnPage: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }) }; })(),
+        ...(() => { const on3 = s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect'; const ck = ['options', 'ways'].includes(s.cnPage) ? s.cnPage : 'picture'; return { cnIsOptions: on3 && ck === 'options', cnIsWays: on3 && ck === 'ways', cnIsPicture: on3 && ck === 'picture', cnShowLens: on3 && ck !== 'options', lensValue: s.lens || 'security', setLens: (e) => set({ lens: e.target.value }), cnTabs: on3, heroHead: s.screen !== 's3', cnPanels: [['picture', 'What you have'], ['options', 'Options'], ['ways', 'Ways to connect']].map(([k, l]) => { const on = ck === k; return { key: k, label: l, on, go: () => set({ cnPage: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }) }; })(),
         // Business units (notes, 2026-09-29): the customer tags sites, and every grouping reads the tags.
         ...(() => {
           const tags = ((s.siteTags || {})[est.id]) || {}, custom = ((s.buCustom || {})[est.id]) || [];
@@ -2326,7 +2341,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           return { buList, buSites, buActiveName: active || '', hasBuActive: !!active, buHint: active ? `Moving sites into ${active}` : 'Pick a business unit, then move sites into it', buNew: s.buNew || '', setBuNew: (e) => set({ buNew: e.target.value }), addBu };
         })(),
         ...(() => { const ek = ['glance', 'clouds', 'sites', 'bu'].includes(s.estPanel) ? s.estPanel : 'glance'; return { estPanels: [['glance', 'At a glance'], ['clouds', 'Your clouds'], ['sites', 'Your sites'], ['bu', 'Business units']].map(([k, l]) => { const on = ek === k; return { key: k, label: l, on, go: () => set({ estPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), estPanelGlance: ek === 'glance', estPanelClouds: ek === 'clouds', estPanelSites: ek === 'sites', estPanelBu: ek === 'bu' }; })(),
-        siteTree: tree, hasSiteTree: tree.length > 0, siteCrumbs: crumbs, hasSiteCrumbs: crumbs.length > 1, cloudsLine: `${stats.clouds} ${stats.clouds === 1 ? 'cloud' : 'clouds'} · ${stats.regions} ${stats.regions === 1 ? 'region' : 'regions'} · ${stats.workloads.toLocaleString('en-US')} workloads`, siteCrumbTail: crumbs[crumbs.length - 1].label, collapseSites: () => set({ siteOpen: {} }), sitesLineTree: `${totalSites.toLocaleString('en-US')} sites · your own buildings, not a cloud` };
+        siteTree: openCls ? [openCls] : treeAll, hasSiteTree: treeAll.length > 0, siteCrumbs: crumbs, hasSiteCrumbs: crumbs.length > 1, cloudsLine: `${stats.clouds} ${stats.clouds === 1 ? 'cloud' : 'clouds'} · ${stats.regions} ${stats.regions === 1 ? 'region' : 'regions'} · ${stats.workloads.toLocaleString('en-US')} workloads`, siteCrumbTail: crumbs[crumbs.length - 1].label, collapseSites: () => set({ siteOpen: {} }), sitesLineTree: `${totalSites.toLocaleString('en-US')} sites · your own buildings, not a cloud` };
     })(),
     siteCards: est.sites.filter(st => !st.rollup).map((st, i) => ({ key: st.name, name: st.name, metro: st.metro, cidr: `10.${60 + i}.0.0/20`, selected: false })), siteRollups: est.sites.filter(st => st.rollup).map(st => ({ key: st.name, name: st.name, n: (st.name.match(/\(([\d,]+)\)/) || [])[1] || '', priv: st.priv, pctW: st.priv ? '100%' : '0%', fill: st.priv ? '#0057b8' : '#8a949c' })), hasSiteRollups: est.sites.some(st => st.rollup), sitesLine: `${stats.sites.toLocaleString('en-US')} premises · your own buildings, not a cloud`,
     discoverVerdictLine: isEmpty ? 'Nothing discovered yet. Connect an account or pick an inventory.' : `${est.regionsList.length - ob.pathsCovered} of your ${est.regionsList.length} cloud regions still ride the public internet. ${ob.pathsCovered} ${ob.pathsCovered === 1 ? 'is' : 'are'} on the AT&T network, across ${plural(inv.length, 'cloud', 'clouds')}.`,
@@ -2456,7 +2471,7 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
     // govern
     notAuthoring: !au,
     // Two tabs, one at a time (2026-09-28, no scrolling).
-    ...(() => { const gk = s.govPanel === 'templates' ? 'templates' : 'policies'; return { govPanels: [['policies', 'Violations & policies'], ['templates', 'Templates']].map(([k, l]) => { const on = gk === k; return { key: k, label: l, on, go: () => set({ govPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), govPanelPolicies: gk === 'policies', govPanelTemplates: gk === 'templates' }; })(),
+    ...(() => { const gk = ['templates', 'tags'].includes(s.govPanel) ? s.govPanel : 'policies'; return { govPanels: [['policies', 'Violations & policies'], ['templates', 'Templates'], ['tags', 'Tags']].map(([k, l]) => { const on = gk === k; return { key: k, label: l, on, go: () => set({ govPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), govPanelPolicies: gk === 'policies', govPanelTemplates: gk === 'templates', govPanelTags: gk === 'tags' }; })(),
     authoring: !!au, openAuthor: openAuthor(), closeAuthor: () => set({ authoring: null }), aMatch: A_MATCH.map(v => aCard('match', v, true)), aScope: A_SCOPE.map(v => aCard('scope', v, true)), aReq: D.COMPOSE_CHIPS.control.map(v => aCard('req', v, false)),
     aSent: { match: au && au.match || 'something', scope: au && au.scope || 'somewhere', req: au && au.req && au.req.length ? au.req.map(x => x.toLowerCase()).join(' and ') : '…', matchOn: !!(au && au.match), scopeOn: !!(au && au.scope), reqOn: !!(au && au.req && au.req.length) },
     aSimulate: commit('simulated'), aEnforce: commit('enforced'), aReady, aBg: aReady ? 'var(--cta)' : 'var(--bg-neutral)', aColor: aReady ? '#fff' : 'var(--text-disabled)',
@@ -2671,7 +2686,7 @@ function shellVals(s, set, go, est, c, sched) {
   const subTabs = subPanels.filter(p => p.tab !== false).map(p => { const on = p.key === subPanelNow; return { key: p.key, label: p.label, on, go: openSub(subPage, p.key),
     bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', color: on ? 'var(--link)' : 'var(--text-body)', border: on ? 'var(--border-active)' : 'var(--border-secondary)', weight: on ? 600 : 400 }; });
   const subTitle = subPanelNow === 'add' && s.sourceEdit ? 'Edit a source' : (subPanels.find(p => p.key === subPanelNow) || {}).label || '';
-  const openFindings = openSub('connect', 'found');
+  const openFindings = go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options', sub: null });
   // The verdict sentence is the door to the findings, but only where the
   // findings exist. Elsewhere it carries no affordance rather than a dead one.
   // Connect's opens its Options; Observe's opens the findings it counts (notes, 2026-09-29).
@@ -2709,9 +2724,7 @@ function shellVals(s, set, go, est, c, sched) {
   const estateExposedGo = () => { go('s1')(); set({ chips: ['exposed'] }); };
   const subIsAdd = subPanelNow === 'add';
   const subIsRun = subPanelNow === 'run';
-  const subIsFound = subPanelNow === 'found';
-  const subIsInsights = subPanelNow === 'insights', subIsLogs = subPanelNow === 'logs', subIsPolicies = subPanelNow === 'policies', subIsTags = subPanelNow === 'tags';
-  const subIsCharges = subPanelNow === 'charges';
+  const subIsInsights = subPanelNow === 'insights', subIsLogs = subPanelNow === 'logs';
   // Manage credentials scrolled to a card that is now a panel. It opens it.
   const manageCreds = () => {
     go('s1', { discoverView: 'sources' })();
@@ -2728,7 +2741,7 @@ function shellVals(s, set, go, est, c, sched) {
     pills, railGroups, subNav, hasSubNav, pageTitle, credsLabel, credsTitle, manageCreds, showPageTitle, rangeValue, setRange, bellLabel, buildLabel: (typeof window !== 'undefined' && window.__naasVersion) ? `v${window.__naasVersion.build} · ${window.__naasVersion.date}` : '', hasBuildLabel: !!(typeof window !== 'undefined' && window.__naasVersion), railCollapsed, railExpanded: !railCollapsed, railToggleTitle: railCollapsed ? 'Expand navigation' : 'Collapse navigation', iconAndi: 'brand/andi-symbol.svg', iconCalendar: iconDir + '/checklist.svg', goBrowseClose: () => { go('s7')(); set({ demoOpen: false }); },
     topTabs, layerSubtitle, elevatorOpen: !!s.elevatorOpen, toggleElevator: () => set({ elevatorOpen: !s.elevatorOpen }), closeElevator: () => set(close), chevronRot: s.elevatorOpen ? 'rotate(180deg)' : 'rotate(0deg)', elevator,
     goDiscoverClose: goTab('s1'), goHomeClose: goTab('s3', { layer: 'cloud', tab: 'connect' }),
-    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, railIsSequence, needsYouLabel, estateExposedGo, ownsDiscovery, ownsTelemetry, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsAdd, subIsRun, subIsFound, subIsInsights, subIsLogs, subIsPolicies, subIsTags, subIsCharges, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
+    showRail, showHeader, schedLine, subOpen, subPage, subPanelNow, subTabs, subTitle, closeSub, openFindings, railIsSequence, needsYouLabel, estateExposedGo, ownsDiscovery, ownsTelemetry, verdictGo, verdictRole, verdictTab, verdictCursor, verdictLine, subIsAdd, subIsRun, subIsInsights, subIsLogs, schedTitle, cadenceValue, setCadence, rescan, windowLabel, iconFabric: iconDir + '/cable.svg', toggleRail: () => set({ railCollapsed: !railCollapsed }), railW: railCollapsed ? '64px' : '240px', railPad: railCollapsed ? '16px 12px' : '16px', railJustify: railCollapsed ? 'center' : 'flex-start', railBtnPad, railToggleLabel: railCollapsed ? '›' : '‹', shellCols: (showRail ? (railCollapsed ? '64px ' : '240px ') : '') + 'minmax(0,1fr)' + (andiDocked ? ' 340px' : ''), shellPadRight: '0px', andiOpen, andiClosed: !andiOpen, andiDocked, andiFloating: andiOpen && !andiDocked, andiPos: andiDocked ? 'sticky' : 'fixed', andiRight: andiDocked ? 'auto' : '0', andiShadow: andiDocked ? 'none' : '-8px 0 32px rgba(0,0,0,.14)', andiZ: andiDocked ? '1' : '45', andiW: andiDocked ? 'auto' : '340px', toggleAndi: () => set({ andiOpen: !andiOpen }), shellBg: 'none', railTitle: top === 'ai' ? 'AI Fabric' : 'Network services', rail, storeCur, storeBg: storeCur ? 'var(--bg-accent)' : 'transparent', storeColor: storeCur ? 'var(--link)' : 'var(--text-heading)', storeIcon: (storeCur ? iconLink : iconDir) + '/shopping-bag.svg', iconSearch: iconDir + '/search.svg', iconBell: iconDir + '/bell.svg', iconPerson: iconDir + '/person.svg', iconGear: iconDir + '/gear.svg',
   };
 }
 
@@ -2883,9 +2896,9 @@ function costVals(s, set, est, invAll, ob, go, c) {
     ],
     hasCostMoves: !!(top || pubSite),
     // One panel at a time (2026-09-28, no scrolling).
-    ...(() => { const cpk = ['money', 'dest', 'mile', 'bucket', 'forecast', ...(hasBank ? ['banked'] : [])].includes(s.costPanel) ? s.costPanel : 'money';
-      return { costPanels: [['money', 'Where the money is'], ...(hasBank ? [['banked', 'Banked']] : []), ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['forecast', 'Forecast']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
-        costPanelMoney: cpk === 'money', costPanelBanked: cpk === 'banked', costPanelForecast: cpk === 'forecast', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
+    ...(() => { const cpk = ['money', 'dest', 'mile', 'bucket', 'forecast', 'charges', ...(hasBank ? ['banked'] : [])].includes(s.costPanel) ? s.costPanel : 'money';
+      return { costPanels: [['money', 'Where the money is'], ...(hasBank ? [['banked', 'Banked']] : []), ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['forecast', 'Forecast'], ['charges', 'AT&T charges']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
+        costPanelMoney: cpk === 'money', costPanelBanked: cpk === 'banked', costPanelForecast: cpk === 'forecast', costPanelCharges: cpk === 'charges', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
     costStrip: { has: !!(top || pubSite), title: 'Act on it', text: [pubSite ? `${fmt(pubSite.pubPart)}/mo of egress still leaves ${pubSite.label.toLowerCase()} on a public first mile.` : '', top ? `Attaching ${top.region} moves ${top.wl} workloads to $0.02/GB and saves ${fmt(top.saveN)}/mo, the largest single move on the table.` : 'Every region is attached; the remaining lever is the commit table below.'].filter(Boolean).join(' '), cta: top ? `Attach ${top.region}` : 'Drill sites', go: top ? go('s4', { ...newOrder(prefillAttach(top)) }) : go('s1') },
     bySite, hasBySite: bySite.length > 0, bySiteTotalF: fmt(bySiteTotal), bySiteNote: `${fmt(siteRows.reduce((a, r) => a + r.pubPart, 0))}/mo still on a public first mile`, goSites: go('s1'),
     costDonuts, hasCostDonuts: costDonuts.length > 0,

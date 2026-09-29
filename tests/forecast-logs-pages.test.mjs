@@ -41,7 +41,7 @@ test('the flow records page to fit the fold, and say where you are', () => {
   let v = vals(c);
   assert.ok(v.flowRecords.length > 0 && v.flowRecords.length <= v.logPageSize);
   assert.equal(v.logPager.label, `1–${v.logPageSize} of 20`);
-  assert.equal(v.logPager.hasPrev, false);
+  assert.equal(v.logPager.prevOp, 0.4, 'no page before the first');
   v.logPager.next();
   v = vals(c);
   assert.equal(v.logPager.label, `${v.logPageSize + 1}–${v.logPageSize * 2} of 20`);

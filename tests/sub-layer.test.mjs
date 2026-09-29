@@ -19,8 +19,11 @@ const stopScan = (c) => runScan(c, D.ESTATES.empty);
 // ---- the mechanism ----
 
 test('every page that declares sub-content declares it the same way', () => {
+  // Only Discover keeps a drawer, to add or edit a source; every other view is a
+  // tab on its page (Micah, 2026-09-29: "what else is boxed? ... go").
+  assert.deepEqual(Object.keys(SUB_PANELS).filter(k => SUB_PANELS[k].length), ['discover']);
   for (const [page, panels] of Object.entries(SUB_PANELS)) {
-    assert.ok(Array.isArray(panels) && panels.length > 0, `${page} declares no panels`);
+    assert.ok(Array.isArray(panels), `${page} declares no panel list`);
     for (const p of panels) {
       assert.ok(p.key, `${page} has a panel with no key`);
       assert.ok(p.label, `${page}:${p.key} has no label`);
@@ -37,7 +40,7 @@ test('the sub layer is shut on arrival', () => {
 });
 
 test('closing the sub layer leaves nothing open', () => {
-  const c = on({ sub: { page: 'connect', panel: 'found' } });
+  const c = on({ sub: { page: 'discover', panel: 'add' } });
   vals(c).closeSub();
   assert.equal(c.state.sub, null);
   assert.equal(vals(c).subOpen, false);
@@ -71,10 +74,11 @@ test('Re-discover opens the layer on the run, and still starts the scan', () => 
   stopScan(c);
 });
 
-test('the verdict line opens the layer at what was found', () => {
+test('the verdict line opens Options, the page that replaced what was found', () => {
   const c = on();
   vals(c).openFindings();
-  assert.equal(c.state.sub.panel, 'found');
+  assert.equal(c.state.sub, null);
+  assert.equal(c.state.cnPage, 'options');
 });
 
 // ---- the run hands over to its own result ----
@@ -115,9 +119,9 @@ test('AT&T inventory rows are live and never say scanning', () => {
 
 test('Observe and Cost declare their drill-downs as panels', () => {
   // Policies and Tags joined Observe's drawer on 2026-09-28; Records stays a panel without a tab.
-  assert.deepEqual(SUB_PANELS.observe.map(p => p.key), ['policies', 'tags']); // Insights and Logs left for pages (2026-09-28)
-  // Forecast left the drawer for a Cost tab (Micah, 2026-09-29: "why is forecast in a drawer").
-  assert.deepEqual(SUB_PANELS.cost.map(p => p.key), ['charges']);
+  // Every drill-down is a tab on its page now (2026-09-29): Forecast and AT&T charges on Cost, Tags on Govern.
+  assert.deepEqual(SUB_PANELS.observe, []);
+  assert.deepEqual(SUB_PANELS.cost, []);
 });
 
 test('Logs opens its page and Forecast opens its Cost tab, neither in a drawer', () => {
@@ -132,43 +136,29 @@ test('Logs opens its page and Forecast opens its Cost tab, neither in a drawer',
   assert.equal(k.state.costPanel, 'forecast');
 });
 
-test('each drill-down section lives inside the layer, not on its page', async () => {
+test('each former drill-down section lives on its page, not in the layer', async () => {
   const { readFileSync } = await import('node:fs');
   const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
   const a = HTML.indexOf('<aside aria-label="Discovery"');
-  const z = HTML.indexOf('</aside>', a);
-  const layer = HTML.slice(a, z);
-  for (const id of ['sec-charges']) {
-    assert.ok(layer.includes(`id="${id}"`), `${id} is still stacked on its page`);
-  }
+  const layer = HTML.slice(a, HTML.indexOf('</aside>', a));
+  for (const id of ['sec-charges', 'sec-forecast', 'sec-obs-tags', 'sec-paths', 'sec-gap', 'sec-obs-policies']) assert.ok(!layer.includes(`id="${id}"`), `${id} is still in the drawer`);
 });
 
-// A balanced census is not a correct structure. The first cut of this move put
-// Insights inside the What we found gate (so it could never render) and let
-// Ways to connect escape it (so it rendered on every page), and every tag still
-// balanced. This walks the gates and pins each section to its own panel.
-test('each section in the layer sits under its own panel gate and no other', async () => {
+// A balanced census is not a correct structure: this walks the gates and pins
+// each section under its own page tab.
+test('each section sits under its own tab gate and no other', async () => {
   const { readFileSync } = await import('node:fs');
   const L = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8').split('\n');
-  const a = L.findIndex(l => l.includes('<aside aria-label="Discovery"'));
-  const z = L.findIndex((l, i) => i > a && l.includes('</aside>'));
-  const want = {
-    'sec-gap': 'subIsFound', 'sec-paths': 'subIsFound',
-    'sec-obs-policies': 'subIsPolicies', 'sec-obs-tags': 'subIsTags',
-    'sec-charges': 'subIsCharges',
-  };
+  const want = { 'sec-paths': 'cnIsWays', 'sec-obs-tags': 'govPanelTags', 'sec-charges': 'costPanelCharges', 'sec-forecast': 'costPanelForecast' };
+  const tabGate = /^(cnIs|govPanel|costPanel|estPanel|insPanel|obPanel)/;
   const stack = [];
   const seen = new Set();
-  for (let n = a; n <= z; n++) {
-    // Gates may be dotted (iw.hasNewDest); a walker that skipped their opens still popped their closes.
-    for (const m of L[n].matchAll(/<sc-if value="\{\{ ([\w.]+) \}\}"|<\/sc-if>/g)) {
-      if (m[1]) stack.push(m[1]); else stack.pop();
-    }
-    const id = (L[n].match(/id="(sec-[\w-]+)"/) || [])[1];
+  for (const line of L) {
+    for (const m of line.matchAll(/<sc-if value="\{\{ ([\w.]+) \}\}"|<\/sc-if>/g)) { if (m[1]) stack.push(m[1]); else stack.pop(); }
+    const id = (line.match(/id="(sec-[\w-]+)"/) || [])[1];
     if (!id || !want[id]) continue;
-    const panels = stack.filter(g => g.startsWith('subIs'));
-    assert.deepEqual(panels, [want[id]], `${id} sits under ${JSON.stringify(panels)}`);
+    assert.deepEqual(stack.filter(g => tabGate.test(g)), [want[id]], `${id} sits under ${JSON.stringify(stack)}`);
     seen.add(id);
   }
-  assert.deepEqual([...seen].sort(), Object.keys(want).sort(), 'a section is missing from the layer, so the check above passed on nothing');
+  assert.deepEqual([...seen].sort(), Object.keys(want).sort());
 });
