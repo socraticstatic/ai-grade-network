@@ -1,3 +1,18 @@
+/** Split a whole number by weights into whole parts that add back up to it
+ *  (largest remainder), each at least min when the total allows. */
+export function apportion(total, weights, min = 0) {
+  const n = weights.length, sw = weights.reduce((a, w) => a + w, 0) || 1;
+  if (!n) return [];
+  const raw = weights.map(w => total * w / sw);
+  const out = raw.map(x => Math.floor(x));
+  let left = total - out.reduce((a, x) => a + x, 0);
+  raw.map((x, i) => [x - Math.floor(x), i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { out[i]++; left--; } });
+  // A part under its minimum borrows from the largest, so the sum holds.
+  const floorMin = Math.min(min, Math.floor(total / n));
+  for (let i = 0; i < n; i++) while (out[i] < floorMin) { const j = out.indexOf(Math.max(...out)); if (j === i || out[j] <= floorMin) break; out[j]--; out[i]++; }
+  return out;
+}
+
 /*
  * AT&T AI-grade Network — NaaS storefront prototype
  * Copyright (c) 2026 AT&T Intellectual Property. All rights reserved.
@@ -84,9 +99,11 @@ function region(r, i, est) {
   const azs = [3, 2, 2];
   const base = 10 + i * 3;
   const tagsFor = (k) => k === 0 ? [...r.tags.map(t => t.toLowerCase()), 'shared-services'] : k === 1 ? (r.tags.includes('PCI') ? ['finance-invoices', 'pci', 'finance'] : ['analytics', ...r.tags.slice(0, 1).map(t => t.toLowerCase())]) : ['internet-facing'];
+  // Shares are apportioned whole, so VPCs add up to their region exactly (2026-09-29).
+  const vpcWl = apportion(r.wl, [0.55, 0.3, 0.15].slice(0, n), Math.min(4, Math.floor(r.wl / n)));
   const vpcs = Array.from({ length: n }, (_, k) => {
     const cidrBase = `10.${base + k}`;
-    const wl = Math.max(4, Math.round(r.wl * [0.55, 0.3, 0.15][k] / (n === 1 ? 0.55 : n === 2 ? 0.85 : 1)));
+    const wl = vpcWl[k];
     const priv = r.priv && k < 2;
     const azList = Array.from({ length: azs[k] }, (_, a) => r.region + 'abc'[a]);
     const WL_TYPES = { pub: [['alb', 'Load balancer'], ['api', 'API gateway'], ['web', 'Web tier'], ['nat', 'Bastion']], prv: [['app', 'App server'], ['db', 'Database'], ['cache', 'Cache'], ['worker', 'Batch worker'], ['gpu', 'GPU inference'], ['queue', 'Message queue']] };
@@ -120,8 +137,10 @@ const WL_APPS = {
   queue: [['rabbitmq', '3.13', '5672/tcp', 'broker'], ['shovel', '3.13', '15672/tcp', 'federation and console']],
 };
     const mkWl = (pub, a, n, cidr, tag) => Array.from({ length: Math.min(n, 300) }, (_, w) => { const t = WL_TYPES[pub ? 'pub' : 'prv'][(w + a) % WL_TYPES[pub ? 'pub' : 'prv'].length]; const ip = cidr.replace(/0\/24$/, String(10 + w * 7)); return { id: `${cidr}-${w}`, since: (w * 37 + a * 53 + n * 11) % 365, name: `${t[0]}-${'abc'[a]}${String(w + 1).padStart(2, '0')}`, type: t[1], ip, tag, exposed: pub && w < 2, endpoints: (WL_APPS[t[0]] || []).map(([app, ver, port, note]) => ({ id: `${ip}:${app}`, app, ver, port, note })) }; });
+    // Public 40, private 60 in every AZ, apportioned whole so subnets add up to their VPC.
+    const snWl = apportion(wl, azList.flatMap(() => [0.4, 0.6]), Math.min(2, Math.floor(wl / (azList.length * 2))));
     const subnets = azList.flatMap((az, a) => {
-      const pubN = Math.max(2, Math.round(wl / azs[k] * 0.4)), prvN = Math.max(2, Math.round(wl / azs[k] * 0.6));
+      const pubN = snWl[a * 2], prvN = snWl[a * 2 + 1];
       const pubC = `${cidrBase}.${a}.0/24`, prvC = `${cidrBase}.${10 + a}.0/24`;
       return [
         { id: `${pfx}-${i}-${k}-pub-${a}`, name: 'public-' + 'abc'[a], az, pub: true, cidr: pubC, wl: pubN, tags: tagsFor(k).slice(0, 1), workloads: mkWl(true, a, pubN, pubC, tagsFor(k)[0]) },
