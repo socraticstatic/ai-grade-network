@@ -19,6 +19,7 @@ import * as V from './naas-volume.js';
 import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
+import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER } from './naas-policy-layers.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product', s9: 'Help' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
@@ -2620,7 +2621,9 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
   const aSet = (p) => set({ authoring: { ...(au || { match: null, scope: null, req: [] }), ...p } });
   const aCard = (field, v, single) => { const cur = au ? au[field] : (single ? null : []); const on = single ? cur === v : (cur || []).includes(v); return { key: v, label: v, desc: field === 'req' ? CARD_DESC.control[v] : '', on, click: () => { if (single) return aSet({ [field]: v }); aSet({ [field]: on ? cur.filter(x => x !== v) : [...(cur || []), v] }); }, border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', check: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)' }; };
   const aReady = !!(au && au.match && au.scope && au.req && au.req.length);
-  const commit = (state) => () => { if (!aReady) return; const matched = { 'tag PCI': 34, 'tag Prod': 478, 'tag Internet-facing': 19, 'branch Finance': 228, 'tag GPU': 174, 'region ap-*': 52 }[au.match] || (est.regionsList.find(r => 'region ' + r.region === au.match) || {}).wl || 40; const viol = state === 'simulated' ? Math.round(matched * 0.18) : 0; const pol = { name: `${au.match.replace(/^tag |^branch |^region /, '')} · ${au.req[0]}`, match: au.match, scope: au.scope, req: au.req.join(' and '), matched, viol, state, custom: true }; set({ customPolicies: [...(s.customPolicies || []), pol], authoring: null, simulated: state === 'simulated' ? true : s.simulated }); };
+  const commit = (state) => () => { if (!aReady) return; const matched = { 'tag PCI': 34, 'tag Prod': 478, 'tag Internet-facing': 19, 'branch Finance': 228, 'tag GPU': 174, 'region ap-*': 52 }[au.match] || (est.regionsList.find(r => 'region ' + r.region === au.match) || {}).wl || 40; const viol = state === 'simulated' ? Math.round(matched * 0.18) : 0; const pol = { name: au.templateName || `${au.match.replace(/^tag |^branch |^region /, '')} · ${au.req[0]}`, match: au.match, scope: au.scope, req: au.req.join(' and '), matched, viol, state, custom: true, ...(au.layers ? { layers: au.layers } : {}) }; set({ customPolicies: [...(s.customPolicies || []), pol], authoring: null, simulated: state === 'simulated' ? true : s.simulated,
+    // The list opens on the page that holds what you just authored.
+    polPage: Math.floor(((s.layer === 'cloud' ? layerPolicies(s, est, 'all').length : 0) + (s.customPolicies || []).length) / PAGE_SIZE.polRows[1]) }); };
   const openAuthor = (m, r) => () => set({ authoring: { match: m || null, scope: 'any cloud', req: r ? [r] : [] } });
   const polSentence = (p) => ({ match: p.match, scope: p.scope || (/internet/i.test(p.req) ? 'the Internet' : 'any cloud'), req: p.req.toLowerCase() });
   return {
@@ -2639,7 +2642,14 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
     authoring: !!au, openAuthor: openAuthor(), closeAuthor: () => set({ authoring: null }), aMatch: A_MATCH.map(v => aCard('match', v, true)), aScope: A_SCOPE.map(v => aCard('scope', v, true)), aReq: D.COMPOSE_CHIPS.control.map(v => aCard('req', v, false)),
     aSent: { match: au && au.match || 'something', scope: au && au.scope || 'somewhere', req: au && au.req && au.req.length ? au.req.map(x => x.toLowerCase()).join(' and ') : '…', matchOn: !!(au && au.match), scopeOn: !!(au && au.scope), reqOn: !!(au && au.req && au.req.length) },
     aSimulate: commit('simulated'), aEnforce: commit('enforced'), aReady, aBg: aReady ? 'var(--cta)' : 'var(--bg-neutral)', aColor: aReady ? '#fff' : 'var(--text-disabled)',
-    polRows: (s.layer === 'cloud' ? [...layerPolicies(s, est, 'all'), ...(s.customPolicies || [])] : layerPolicies(s, est, 'all')).map((p, i) => ({ ...p, key: 'pr' + i, sent: polSentence(p), dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-light)', hasViol: p.viol > 0, violLabel: p.viol ? `${p.viol} violations` : 'no violations', matchedLabel: `${p.matched} matched`,
+    // Policies read by layer (Micah, 2026-09-29: "give me policies that are multi-layer").
+    polLayerHeads: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label })),
+    aLayers: au && au.layers ? POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: au.layers[l.key] || 'Any' })) : [], hasALayers: !!(au && au.layers),
+    polRows: (s.layer === 'cloud' ? [...layerPolicies(s, est, 'all'), ...(s.customPolicies || [])] : layerPolicies(s, est, 'all')).map((p, i) => ({ ...p, key: 'pr' + i, sent: polSentence(p),
+      appliesTo: `${p.match} · ${p.matched} matched`,
+      // A rule sits in the layer it governs; a violation is marked where it breaks.
+      layers: (() => { const L = policyLayers(p), own = layerOfReq(String(p.req).split(' and ')[0]); return POLICY_LAYERS.map(l => { const text = L[l.key], broken = p.viol > 0 && l.key === own && !!text;
+        return { key: l.key, label: l.label, text: text || 'Any', set: !!text, broken, ink: broken ? 'var(--error)' : text ? 'var(--text-heading)' : 'var(--text-disabled)', bar: broken ? 'var(--error)' : text ? 'var(--cta)' : 'var(--border-secondary)', weight: broken ? 600 : 400 }; }); })(), dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-light)', hasViol: p.viol > 0, violLabel: p.viol ? `${p.viol} violations` : 'no violations', matchedLabel: `${p.matched} matched`,
       // A violation you cannot act on is a number on a wall. Every violating
       // policy opens the workloads breaking it, on the map, filtered to them.
       act: p.viol ? (p.state === 'simulated' ? 'Enforce' : 'See what is breaking it') : (p.state === 'simulated' ? 'Enforce' : ''),
@@ -2652,7 +2662,10 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
       actBg: p.viol ? 'var(--cta)' : 'transparent',
       actInk: p.viol ? '#fff' : 'var(--link)',
       actBorder: p.viol ? 'var(--cta)' : 'var(--border-primary)' })),
-    examplePolicies: [{ key: 'a', t: 'Tag PCI forces a private path', m: 'tag PCI', r: 'Private path required', go: openAuthor('tag PCI', 'Private path required') }, { key: 'b', t: 'Internet-facing gets inspected', m: 'tag Internet-facing', r: 'Inline inspection', go: openAuthor('tag Internet-facing', 'Inline inspection') }, { key: 'c', t: 'Finance stays segmented', m: 'branch Finance', r: 'Segment by tag', go: openAuthor('branch Finance', 'Segment by tag') }],
+    // Multi-layer starting points: a rule at every layer, carried into the author.
+    examplePolicies: MULTI_LAYER.map(t => ({ key: t.key, t: t.name, m: t.match, why: t.why, r: t.layers.core,
+      layers: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: t.layers[l.key] })),
+      go: () => set({ govPanel: 'policies', authoring: { match: t.match, scope: 'any cloud', req: [t.layers.core], layers: t.layers, templateName: t.name } }) })),
   };
 }
 
