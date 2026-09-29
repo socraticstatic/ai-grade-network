@@ -202,14 +202,20 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Scope dropdowns off Connect, Govern, Cost (2026-09-29 audit): span 613 -> 610, sc-for 185 -> 182, label 30 -> 27.
 // Window badges on the Traffic tiles (2026-09-29 audit): span 610 -> 611, sc-if 334 -> 335.
 // Clear filters only with filters (2026-09-29 audit): sc-if 335 -> 336.
+// Traffic overlays: jump, scope picker, zoom trail (2026-09-29 audit): div 884 -> 885.
+// Cost: one slot per panel, no expanders (2026-09-29 audit): div 885 -> 884, span 611 -> 607, sc-if 336 -> 340, button 252 -> 254.
+// Authoring hides the findings rows (2026-09-29 audit): sc-if 340 -> 341.
+// NaaS home is Your network; Connect is its own page (Micah, 2026-09-29): sc-if 341 -> 342.
+// Logs pagers only with more than one page (2026-09-29 audit): sc-if 342 -> 344.
+// Explain parts as one line of chips (2026-09-29 audit): div 884 -> 883, span 607 -> 604, button 254 -> 255.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 884],
-    ['span', /<span\b/g, /<\/span>/g, 611],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 336],
+    ['div', /<div\b/g, /<\/div>/g, 883],
+    ['span', /<span\b/g, /<\/span>/g, 604],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 344],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 182],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 252],
+    ['button', /<button\b/g, /<\/button>/g, 255],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];

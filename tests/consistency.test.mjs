@@ -89,3 +89,15 @@ test('Logs puts its tabs above the card, like every other page, and the card doe
   assert.match(logs, /aria-label="Log kind"/);
   assert.ok(!between('id="sec-logs"', 'aria-label="Filters"').includes('fx-card-title">Logs<'));
 });
+
+test('the NaaS home is Your network; Connect is its own page with Options and Ways to connect', () => {
+  // "Naas home is called 'Connect'. It needs to be called something else" (Micah, 2026-09-29).
+  const home = vals(mkC({ view: 'partial', screen: 's3', tab: 'connect', estateParam: null }));
+  assert.equal(home.pageTitle, 'Your network');
+  assert.equal(home.cnShowTabs, false);
+  assert.equal(home.showLaunch, true);
+  const cn = vals(mkC({ view: 'partial', screen: 's3', tab: 'connect', cnPage: 'options', estateParam: null }));
+  assert.equal(cn.pageTitle, 'Connect');
+  assert.deepEqual(cn.cnPanels.map(p => p.label), ['Options', 'Ways to connect']);
+  assert.equal(cn.showLaunch, false);
+});

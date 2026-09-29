@@ -896,7 +896,7 @@ export function vals(c) {
     s1Title: 'Discover',
     showSourcesBody: !isEmpty && s.discoverView === 'sources', showEstateBody: !isEmpty && s.discoverView !== 'sources',
     showEstateStats: s.scanStep >= 4 && s.discoverView !== 'sources',
-    sS0: s.screen === 's0' || (s.screen === 's2' && isEmpty), sS1: s.screen === 's1', sS2: s.screen === 's2' && !isEmpty, showLaunch: !isEmpty && (s.screen === 's2' || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect')), sS3: s.screen === 's3', sS4: s.screen === 's4', sS5: s.screen === 's5', sS6: s.screen === 's6', sS7: s.screen === 's7', sS8: s.screen === 's8',
+    sS0: s.screen === 's0' || (s.screen === 's2' && isEmpty), sS1: s.screen === 's1', sS2: s.screen === 's2' && !isEmpty, showLaunch: !isEmpty && (s.screen === 's2' || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect' && !['options', 'ways'].includes(s.cnPage))), sS3: s.screen === 's3', sS4: s.screen === 's4', sS5: s.screen === 's5', sS6: s.screen === 's6', sS7: s.screen === 's7', sS8: s.screen === 's8',
     heroVB: `0 0 ${L.W} ${L.H}`,
     fabricHealth: (() => {
       const rows = conns.rows || [];
@@ -1041,8 +1041,8 @@ function pageLists(out, s, set) {
     out[list] = pg.rows; out[pagerName] = pg.pager; out[sizeName] = size;
   }
   if (Array.isArray(out.candGroups)) {
-    out.candPageSize = 4;
-    out.candGroups = out.candGroups.map(g => { const pg = pageRows(g.rows, 4, (s.candPage || {})[g.key], (n) => set({ candPage: { ...(s.candPage || {}), [g.key]: n } })); return { ...g, rows: pg.rows, pager: pg.pager }; });
+    out.candPageSize = 5;
+    out.candGroups = out.candGroups.map(g => { const pg = pageRows(g.rows, 5, (s.candPage || {})[g.key], (n) => set({ candPage: { ...(s.candPage || {}), [g.key]: n } })); return { ...g, rows: pg.rows, pager: pg.pager }; });
   }
   return out;
 }
@@ -1520,7 +1520,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const logPub = logMatch.filter(r => r.path === 'public').length;
   // Logs is the page, and it pages to fit the fold rather than scrolling inside a box (Micah, 2026-09-29).
   const pageOf = (rows, size, key) => pageRows(rows, size, s[key], (n) => set({ [key]: n }));
-  const logPageSize = (s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen) ? 6 : 9;
+  // The explanation panel over the logs takes room; the page keeps the fold (2026-09-29 audit).
+  const logPageSize = Math.max(3, ((s.logFiltersOpen === undefined ? !s.explain : !!s.logFiltersOpen) ? 6 : 9) - (s.explain ? 2 : 0));
   const flowAll = logMatch.map(r => ({ ...r, key: r.id, actBg: r.deny ? (dark ? 'rgba(211,47,47,.2)' : '#fdecea') : 'var(--bg-wash)', actColor: r.deny ? 'var(--error)' : 'var(--text-body)',
     pathInk: r.path === 'public' ? 'var(--warning)' : 'var(--success)',
     pathWord: r.path === 'public' ? 'outside AT&T' : 'on AT&T' }));
@@ -1612,10 +1613,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     logNote: logMatch.length ? `${logDeny} denied · ${logPub} outside AT&T · public destinations stay unresolved` : 'Nothing matches these filters.',
     hasLogs: logMatch.length > 0, noLogs: logMatch.length === 0,
     logFiltersOpen: s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen,
-    logFiltersShut: !(s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen),
-    toggleLogFilters: () => set({ logFiltersOpen: !(s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen) }),
+    logFiltersShut: !(s.logFiltersOpen === undefined ? !s.explain : !!s.logFiltersOpen),
+    toggleLogFilters: () => set({ logFiltersOpen: !(s.logFiltersOpen === undefined ? !s.explain : !!s.logFiltersOpen) }),
     logFilterCount: (() => { const k = (logQ ? 1 : 0) + (logPath !== 'all' ? 1 : 0) + (logAct !== 'all' ? 1 : 0) + (logPattern !== 'all' ? 1 : 0); return k ? `${k} filter${k === 1 ? '' : 's'}` : 'No filters'; })(),
-    logFilterToggleWord: (s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen) ? 'Hide' : 'Show',
+    logFilterToggleWord: (s.logFiltersOpen === undefined ? !s.explain : !!s.logFiltersOpen) ? 'Hide' : 'Show',
     clearLogs: () => set({ logQ: '', logPath: 'all', logAct: 'all', logPattern: 'all', logPage: 0 }),
     logHasFilters: !!(logQ || logPath !== 'all' || logAct !== 'all' || logPattern !== 'all'),
   };
@@ -2352,7 +2353,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         // Group the picture's sites (notes, 2026-09-29): by region, or by how they attach.
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
         // Connect is two pages (notes, 2026-09-29): what you have, and the options for what is not on AT&T yet.
-        ...(() => { const on3 = s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect'; const ck = ['options', 'ways'].includes(s.cnPage) ? s.cnPage : 'picture'; return { cnIsOptions: on3 && ck === 'options', cnIsWays: on3 && ck === 'ways', cnIsPicture: on3 && ck === 'picture', cnShowLens: on3 && ck !== 'options', lensValue: s.lens || 'security', setLens: (e) => set({ lens: e.target.value }), cnTabs: on3, heroHead: s.screen !== 's3', cnPanels: [['picture', 'What you have'], ['options', 'Options'], ['ways', 'Ways to connect']].map(([k, l]) => { const on = ck === k; return { key: k, label: l, on, go: () => set({ cnPage: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }) }; })(),
+        ...(() => { const on3 = s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect'; const ck = ['options', 'ways'].includes(s.cnPage) ? s.cnPage : 'picture'; return { cnIsOptions: on3 && ck === 'options', cnIsWays: on3 && ck === 'ways', cnIsPicture: on3 && ck === 'picture', cnShowLens: on3 && ck !== 'options', lensValue: s.lens || 'security', setLens: (e) => set({ lens: e.target.value }), cnTabs: on3, heroHead: s.screen !== 's3', cnShowTabs: on3 && ck !== 'picture', cnPanels: [['options', 'Options'], ['ways', 'Ways to connect']].map(([k, l]) => { const on = ck === k; return { key: k, label: l, on, go: () => set({ cnPage: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }) }; })(),
         // Your clouds drill like Your sites (2026-09-29): clouds, regions with their bandwidth,
         // VPCs, subnets, workloads. The rollup on top counts the sites that reach them.
         ...(() => {
@@ -2714,10 +2715,12 @@ function shellVals(s, set, go, est, c, sched) {
         };
         const goTabRow = (key) => key === 'discover' ? go('s1')
           : key === 'observe' ? () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow' }); }
+          // Connect is its own page now, opening on Options; the home is NaaS.
+          : key === 'connect' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })
           : go('s3', { layer: 'cloud', tab: key });
         return [
           { key: 'home', hasTitle: false, title: '', items: [
-            item('NaaS', 'home', () => { if (est.stage === 'empty') go('s0')(); else go('s3', { layer: 'cloud', tab: 'connect' })(); }, false),
+            item('NaaS', 'home', () => { if (est.stage === 'empty') go('s0')(); else go('s3', { layer: 'cloud', tab: 'connect' })(); }, (s.screen === 's3' && s.tab === 'connect' && !['options', 'ways'].includes(s.cnPage)) || s.screen === 's0'),
           ] },
           // Discover, Observe, Govern and Cost are the same kind of thing - the
           // four categories. They get one treatment, always, and the one you
@@ -2750,6 +2753,8 @@ function shellVals(s, set, go, est, c, sched) {
         ];
       })();
   const pageTitle = s.screen === 's9' ? 'Help & Resources' : s.screen === 's1' ? 'Discover' : ['s4', 's5', 's6'].includes(s.screen) ? 'Connect' : storeCur ? 'Marketplace'
+    // The NaaS home is its own page (Micah, 2026-09-29: "Naas home is called 'Connect'. It needs to be called something else").
+    : s.screen === 's3' && s.tab === 'connect' && !['options', 'ways'].includes(s.cnPage) ? 'Your network'
     : s.screen === 's3' ? ({ connect: 'Connect', govern: 'Govern', observe: (obTabNow === logsTab ? 'Observe · Logs' : 'Observe'), cost: 'Cost' }[s.tab] || 'Connect')
     : 'Discover';
   // Re-discover keeps its one click and finally has somewhere to report: the
@@ -2985,6 +2990,8 @@ function costVals(s, set, est, invAll, ob, go, c) {
         saveRows: rows.map(r => ({ key: r.key, label: r.label, bankedN: r.banked, openN: r.open, bankedF: fmt(r.banked), openF: fmt(r.open), bw: (r.banked / mx * 100).toFixed(1) + '%', ow: (r.open / mx * 100).toFixed(1) + '%' })) }; })(),
     bankBars: bankSeries.map(b => ({ key: b.month, h: (b.cumulative / bankMax * 100).toFixed(2) + '%', title: `${monthName(b.month)} · ${fmt(b.saved)} banked · ${fmt(b.cumulative)} to date` })),
     bankFrom: bankSeries.length ? monthName(bankSeries[0].month) : '', bankTo: bankSeries.length ? monthName(bankSeries[bankSeries.length - 1].month) : '',
+    // One slot per Cost panel (2026-09-29 audit): the summary or its arithmetic, never both stacked.
+    costDetail: !!s.costDetail, costSummary: !s.costDetail, toggleCostDetail: () => set({ costDetail: !s.costDetail }), costDetailWord: s.costDetail ? 'Show the summary' : 'Show the arithmetic',
     costMoves: [
       ...(top ? [{ key: 'attach', l: `Attach ${top.region}`, v: fmt(top.saveN), u: '/mo to save', cta: 'Attach', go: go('s4', { ...newOrder(prefillAttach(top)) }) }] : []),
       ...(pubSite ? [{ key: 'sites', l: `${pubSite.label} sites`, v: fmt(pubSite.pubPart), u: '/mo egress outside AT&T', cta: 'Move to AT&T', go: go('s1') }] : []),
