@@ -1478,6 +1478,14 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <sc-for list="{{ costMoves }}" as="cm" hint-placeholder-count="2"><div class="fx-card" style="padding:14px 18px"><div style="display:flex;align-items:center;gap:16px"><div style="display:grid;gap:2px;flex:1;min-width:0"><span style="font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cm.l }}</span><span style="display:flex;align-items:baseline;gap:6px;white-space:nowrap"><span style="font-size:22px;line-height:28px;font-weight:700;color:var(--text-heading)">{{ cm.v }}</span><span style="font-size:12px;color:var(--text-light)">{{ cm.u }}</span></span></div><button onClick="{{ cm.go }}" style="flex:none;height:36px;padding:0 18px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--cta-hover)">{{ cm.cta }}</button></div></div></sc-for>
     </div>
     </sc-if>
+    <!-- Banked (notes, 2026-09-29): what acting saved, month by month, as a running total. -->
+    <sc-if value="{{ costPanelBanked }}" hint-placeholder-val="{{ false }}">
+    <div class="fx-card" aria-label="Banked" style="gap:12px;padding:16px 24px">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px"><sc-for list="{{ bankTiles }}" as="bt" hint-placeholder-count="4"><div style="display:grid;gap:2px;padding:8px 12px;border:1px solid var(--border-secondary);border-radius:10px;min-width:0"><span style="font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);white-space:nowrap">{{ bt.l }}</span><span style="font-size:20px;line-height:26px;font-weight:700;color:{{ bt.tone }};white-space:nowrap">{{ bt.v }}<small style="font-size:12px;font-weight:500;color:var(--text-light);margin-left:4px">{{ bt.u }}</small></span></div></sc-for></div>
+      <div class="fx-cols" role="img" aria-label="Savings banked, running total by month" style="height:calc(100vh - 560px);min-height:140px;gap:6px"><sc-for list="{{ bankBars }}" as="bb" hint-placeholder-count="12"><div title="{{ bb.title }}" style="cursor:default"><span style="height:{{ bb.h }};background:var(--success)"></span></div></sc-for></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ bankFrom }}</span><span class="fx-legend" style="gap:14px"><span><i style="background:var(--success)"></i>Banked to date</span></span><span>{{ bankTo }}</span></div>
+    </div>
+    </sc-if>
     <sc-if value="{{ costPanelMoney }}" hint-placeholder-val="{{ false }}">
     <sc-if value="{{ hasArbitrage }}" hint-placeholder-val="{{ true }}">
     <div class="fx-card" style="gap:12px;padding:16px 24px">

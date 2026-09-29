@@ -2552,12 +2552,12 @@ function shellVals(s, set, go, est, c, sched) {
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
             : id === 'sec-paths' ? (onS3('cloud', 'connect') && s.cnPage === 'options')
             : tab === 'govern' ? (onS3('cloud', tab) && (id === 'sec-starting' ? 'templates' : 'policies') === (s.govPanel || 'policies'))
-            : tab === 'cost' ? (onS3('cloud', tab) && (({ 'sec-egress': 'dest', 'sec-arbitrage': 'money' })[id] || 'money') === (s.costPanel || 'money') && !(s.sub && s.sub.page === 'cost'))
+            : tab === 'cost' ? (onS3('cloud', tab) && (({ 'sec-egress': 'dest', 'sec-arbitrage': 'banked' })[id] || 'money') === (s.costPanel || 'money') && !(s.sub && s.sub.page === 'cost'))
             : (onS3('cloud', tab) && activeSec === id && (tab !== 'observe' || !['insights', 'logs'].includes(s.obPage)));
           const goTo = isView ? (view === 'insights' || view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
             : id === 'sec-paths' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })
-            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: ({ 'sec-egress': 'dest', 'sec-arbitrage': 'money' })[id] || 'money' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
+            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: ({ 'sec-egress': 'dest', 'sec-arbitrage': 'banked' })[id] || 'money' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
           return { ...item(label, ic, goTo, cur, false, sub, isPanel || isView), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };
@@ -2782,6 +2782,16 @@ function costVals(s, set, est, invAll, ob, go, c) {
   const attNet = (ob.savingsMo || 0) - attTotal;
   const pubSite = siteRows.filter(r => r.pubPart > 0).sort((a, b) => b.pubPart - a.pubPart)[0];
   const top = arb[0];
+  // Banked (notes, 2026-09-29): what acting actually saved, as a running total, beside what is still open.
+  const bNow = new Date();
+  const bLife = lifeState(s, est);
+  const bankSeries = LC.banked(est, bLife, bNow);
+  const bankTo = bankSeries.length ? bankSeries[bankSeries.length - 1] : { saved: 0, cumulative: 0 };
+  const stillOpen = findingList(est, est, ob, bNow).filter(f => f.priced && OPEN_STATES.includes(LC.lifeOf(f, bLife, bNow).state)).reduce((a, f) => a + f.save, 0);
+  const hasBank = bankTo.cumulative > 0;
+  const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthName = (m) => `${MON3[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`;
+  const bankMax = Math.max(1, ...bankSeries.map(b => b.cumulative));
   const bySiteTotal = siteRows.reduce((a, r) => a + r.today, 0);
   // Three rings instead of one four-tint bar. Every figure here is already
   // somewhere else on this page; the rings are the shape of it, not new data.
@@ -2810,15 +2820,23 @@ function costVals(s, set, est, invAll, ob, go, c) {
   return { attCharges, hasAttCharges: attCharges.length > 0, attTotalF: fmt(attTotal), attNetF: (attNet >= 0 ? '+' : '−') + fmt(Math.abs(attNet)), attNetLabel: attNet >= 0 ? 'Net saving after charges' : 'Net cost after savings', attNetColor: attNet >= 0 ? 'var(--success)' : 'var(--warning)', attNote: `${fmt(attTotal)}/mo · carries ${fmt(ob.savingsMo || 0)}/mo of savings`, goMarketplace: go('s7'),
     // Two moves, not a paragraph (2026-09-28): the biggest region to attach and
     // the sites still outside AT&T, each a figure and one button.
+    bankTiles: [
+      { key: 'to', l: 'Banked to date', v: fmt(bankTo.cumulative), u: '', tone: 'var(--success)' },
+      { key: 'mo', l: 'This month', v: fmt(bankTo.saved), u: '/mo', tone: 'var(--success)' },
+      { key: 'open', l: 'Still open', v: fmt(stillOpen), u: '/mo', tone: 'var(--text-heading)' },
+      { key: 'pct', l: 'Realised', v: `${Math.round(bankTo.saved / ((bankTo.saved + stillOpen) || 1) * 100)}%`, u: 'of what is on the table', tone: 'var(--text-heading)' },
+    ],
+    bankBars: bankSeries.map(b => ({ key: b.month, h: (b.cumulative / bankMax * 100).toFixed(2) + '%', title: `${monthName(b.month)} · ${fmt(b.saved)} banked · ${fmt(b.cumulative)} to date` })),
+    bankFrom: bankSeries.length ? monthName(bankSeries[0].month) : '', bankTo: bankSeries.length ? monthName(bankSeries[bankSeries.length - 1].month) : '',
     costMoves: [
       ...(top ? [{ key: 'attach', l: `Attach ${top.region}`, v: fmt(top.saveN), u: '/mo to save', cta: 'Attach', go: go('s4', { ...newOrder(prefillAttach(top)) }) }] : []),
       ...(pubSite ? [{ key: 'sites', l: `${pubSite.label} sites`, v: fmt(pubSite.pubPart), u: '/mo egress outside AT&T', cta: 'Move to AT&T', go: go('s1') }] : []),
     ],
     hasCostMoves: !!(top || pubSite),
     // One panel at a time (2026-09-28, no scrolling).
-    ...(() => { const cpk = ['money', 'dest', 'mile', 'bucket'].includes(s.costPanel) ? s.costPanel : 'money';
-      return { costPanels: [['money', 'Where the money is'], ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
-        costPanelMoney: cpk === 'money', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
+    ...(() => { const cpk = ['money', 'dest', 'mile', 'bucket', ...(hasBank ? ['banked'] : [])].includes(s.costPanel) ? s.costPanel : 'money';
+      return { costPanels: [['money', 'Where the money is'], ...(hasBank ? [['banked', 'Banked']] : []), ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
+        costPanelMoney: cpk === 'money', costPanelBanked: cpk === 'banked', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
     costStrip: { has: !!(top || pubSite), title: 'Act on it', text: [pubSite ? `${fmt(pubSite.pubPart)}/mo of egress still leaves ${pubSite.label.toLowerCase()} on a public first mile.` : '', top ? `Attaching ${top.region} moves ${top.wl} workloads to $0.02/GB and saves ${fmt(top.saveN)}/mo, the largest single move on the table.` : 'Every region is attached; the remaining lever is the commit table below.'].filter(Boolean).join(' '), cta: top ? `Attach ${top.region}` : 'Drill sites', go: top ? go('s4', { ...newOrder(prefillAttach(top)) }) : go('s1') },
     bySite, hasBySite: bySite.length > 0, bySiteTotalF: fmt(bySiteTotal), bySiteNote: `${fmt(siteRows.reduce((a, r) => a + r.pubPart, 0))}/mo still on a public first mile`, goSites: go('s1'),
     costDonuts, hasCostDonuts: costDonuts.length > 0,

@@ -185,12 +185,13 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // span 734 -> 732, sc-if 357 -> 364, sc-for 208 -> 210, button 269 -> 271.
 // Connect views and the Options page (notes, 2026-09-29): div 955 -> 971, span 732 -> 736, sc-if 364 -> 368, sc-for 210 -> 214, button 271 -> 273.
 // One findings list with a life each, and the finding drawer (notes, 2026-09-29): div 971 -> 996, span 736 -> 758, sc-if 368 -> 376, sc-for 214 -> 217, button 273 -> 278, aside 10 -> 11.
+// Cost · Banked (notes, 2026-09-29): div 996 -> 1002, span 758 -> 765, sc-if 376 -> 377, sc-for 217 -> 219.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 996],
-    ['span', /<span\b/g, /<\/span>/g, 758],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 376],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 217],
+    ['div', /<div\b/g, /<\/div>/g, 1002],
+    ['span', /<span\b/g, /<\/span>/g, 765],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 377],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 219],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 278],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
