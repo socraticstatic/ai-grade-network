@@ -2143,8 +2143,30 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const on = findFilter === k;
     return { key: k, label: `${l} · ${n}`, on, go: () => set({ findFilter: k, findPage: 0 }), bg: on ? 'var(--cta)' : 'var(--bg-base)', color: on ? '#fff' : 'var(--text-heading)', border: on ? 'var(--cta)' : 'var(--border-secondary)' };
   });
+  // One source for a finding's evidence and next steps: the table and the
+  // drawer read the same records and offer the same moves (2026-09-29).
+  const persistLife = (next) => { const all = { ...(s.findingLife || {}), [est.id]: next }; set({ findingLife: all }); try { localStorage.setItem('naas.life', JSON.stringify(all)); } catch (e) {} };
+  const moveF = (f, to, extra) => () => { const next = LC.transition(life, f.key, to, { by: 'You', now, ...(extra || {}) }); if (next !== life) persistLife(next); };
+  const EVF = { crosscloud: r => r.pattern === 'clouds', ipsecegress: r => r.pattern === 'internet' && r.path === 'public', avoidable: r => r.pattern === 'internet' && r.path === 'public',
+    onecloud: r => r.path === 'public', ipsec: r => r.path === 'public', pci: r => r.pattern === 'internet', uninspected: r => r.pattern === 'internet', unsegmented: r => r.pattern === 'regions' || r.pattern === 'region' };
+  const evHitOf = (f) => { const rg = f.event && f.a && f.a.region; return EVF[f.kind] || (rg ? (r => `${r.srcSub} ${r.dstSub}`.includes(rg)) : f.tab === 'govern' ? (r => r.deny || r.path === 'public') : (() => true)); };
+  const evidenceOf = (f) => logAll.filter(evHitOf(f)).slice().sort((x, y) => (+y.bytes || 0) - (+x.bytes || 0));
+  const actsOf = (f, l) => (f.history ? [] : ({
+    open: [['Acknowledge', moveF(f, 'ack')], ['Snooze 7 days', moveF(f, 'snoozed', { snoozeDays: 7 })], ['Dismiss', moveF(f, 'dismissed')]],
+    ack: [['Snooze 7 days', moveF(f, 'snoozed', { snoozeDays: 7 })], ['Dismiss', moveF(f, 'dismissed')]],
+    progress: [['Mark resolved', moveF(f, 'resolved')], ['Snooze 7 days', moveF(f, 'snoozed', { snoozeDays: 7 })], ['Dismiss', moveF(f, 'dismissed')]],
+    snoozed: [['Reopen', moveF(f, 'open')], ['Dismiss', moveF(f, 'dismissed')]],
+    resolved: [['Reopen', moveF(f, 'open')]], dismissed: [['Reopen', moveF(f, 'open')]],
+  })[l.state] || []);
+  const maxSave = Math.max(1, ...every.filter(x => x.f.priced && x.f.save).map(x => x.f.save));
   const toRow = ({ f, l }) => ({
     key: f.key, persona: PNAME[f.persona] || f.persona || 'Network Engineering',
+    // The table's cells (Micah, 2026-09-29: "a beautiful table underneath (evidence, actions, etc)").
+    ...(() => { const ev = evidenceOf(f), top = ev[0], acts = actsOf(f, l);
+      const bytes = top ? (typeof top.bytes === 'number' ? top.bytes.toFixed(1) + ' GB' : String(top.bytes)) : '';
+      return { evLine: ev.length ? `${ev.length} flow ${ev.length === 1 ? 'record' : 'records'}` : 'No flow records', evTop: top ? `${top.srcName} → ${top.dstName} · ${bytes}` : 'nothing on the wire yet', evInk: top && top.path === 'public' ? 'var(--warning)' : 'var(--success)', hasEvTop: !!top,
+        impW: f.priced && f.save ? Math.max(4, Math.round(f.save / maxSave * 100)) + '%' : '0%', impWord: f.priced && f.save ? '' : (f.event ? 'Event' : 'Risk'),
+        actLabel: acts.length ? acts[0][0] : 'Open', actGo: acts.length ? acts[0][1] : () => set({ fdKey: f.key }) }; })(),
     kind: f.event ? 'Event' : (D.KINDS[f.kind] || f.pillar || 'Finding'), when: f.event ? f.a.when : '', head: f.head,
     stateLabel: l.label, stateTone: TONE[l.state], owner: l.owner, age: `${l.ageDays}d`,
     saveLine: f.priced && f.save ? `${fmt(f.save)}/mo` : '', hasSave: !!(f.priced && f.save),
@@ -2168,30 +2190,19 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const fd = (() => {
     if (!fdPick) return null;
     const { f, l } = fdPick;
-    const persist = (next) => { const all = { ...(s.findingLife || {}), [est.id]: next }; set({ findingLife: all }); try { localStorage.setItem('naas.life', JSON.stringify(all)); } catch (e) {} };
-    const move = (to, extra) => () => { const next = LC.transition(life, f.key, to, { by: 'You', now, ...(extra || {}) }); if (next !== life) persist(next); };
+    const move = (to, extra) => moveF(f, to, extra);
     // The preview starts from the headline's own figures (review, 2026-09-29): two figures are today and after; one is today.
     const m = /\$([\d,]+)\/mo[^$]*\$([\d,]+)/.exec(f.head || ''), m1 = /\$([\d,]+)\/mo/.exec(f.head || '');
     const beforeN = m ? +m[1].replace(/,/g, '') : m1 ? +m1[1].replace(/,/g, '') : f.priced ? Math.round(f.save / 0.78 / 100) * 100 : 0;
     const afterN = m ? +m[2].replace(/,/g, '') : Math.max(0, beforeN - (f.save || 0));
     // The records behind this finding, not the page's busiest (review, 2026-09-29).
-    const EV = { crosscloud: r => r.pattern === 'clouds', ipsecegress: r => r.pattern === 'internet' && r.path === 'public', avoidable: r => r.pattern === 'internet' && r.path === 'public',
-      onecloud: r => r.path === 'public', ipsec: r => r.path === 'public', pci: r => r.pattern === 'internet', uninspected: r => r.pattern === 'internet', unsegmented: r => r.pattern === 'regions' || r.pattern === 'region' };
     const evRegion = f.event && f.a && f.a.region;
-    const evHit = EV[f.kind] || (evRegion ? (r => `${r.srcSub} ${r.dstSub}`.includes(evRegion)) : f.tab === 'govern' ? (r => r.deny || r.path === 'public') : (() => true));
-    const evidence = logAll.filter(evHit)
-      .slice().sort((x, y) => (+y.bytes || 0) - (+x.bytes || 0)).slice(0, 5)
+    const evidence = evidenceOf(f).slice(0, 5)
       .map(r => ({ key: r.id, pattern: r.pattern, time: r.time, src: r.srcName, dst: r.dstName, bytes: typeof r.bytes === 'number' ? r.bytes.toFixed(1) + ' GB' : String(r.bytes), path: r.path === 'public' ? 'outside AT&T' : 'on AT&T', pathInk: r.path === 'public' ? 'var(--warning)' : 'var(--success)' }));
     const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const day = (iso) => `${MON[+iso.slice(5, 7) - 1]} ${+iso.slice(8, 10)}`;
     const closed = f.history;
-    const acts = closed ? [] : ({
-      open: [['Acknowledge', move('ack')], ['Snooze 7 days', move('snoozed', { snoozeDays: 7 })], ['Dismiss', move('dismissed')]],
-      ack: [['Snooze 7 days', move('snoozed', { snoozeDays: 7 })], ['Dismiss', move('dismissed')]],
-      progress: [['Mark resolved', move('resolved')], ['Snooze 7 days', move('snoozed', { snoozeDays: 7 })], ['Dismiss', move('dismissed')]],
-      snoozed: [['Reopen', move('open')], ['Dismiss', move('dismissed')]],
-      resolved: [['Reopen', move('open')]], dismissed: [['Reopen', move('open')]],
-    })[l.state] || [];
+    const acts = actsOf(f, l);
     const rec = !f.event && !closed && OPEN_STATES.includes(l.state) && l.state !== 'progress' ? findingCard(f).rec : null;
     const ev = f.event ? anomalyRows.find(r => r.key === f.key) : null;
     const primary = rec ? { label: rec.name, go: () => { move('progress', { note: `Started an order: ${rec.name}` })(); set({ fdKey: null }); rec.choose(); } }
@@ -2212,7 +2223,33 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       actions: acts.map(([label, go2]) => ({ key: label, label, go: go2 })),
     };
   })();
+  // Three pictures over the table (Micah, 2026-09-29: "make insights more
+  // visual less texty"): what is on the table, where each finding is in its
+  // life, and how long the open ones have waited.
+  const insBand = (() => {
+    const openX = every.filter(x => bucket(x.l.state) === 'open');
+    const priced = openX.filter(x => x.f.priced && x.f.save).sort((a, b) => b.f.save - a.f.save);
+    const tot = priced.reduce((a, x) => a + x.f.save, 0);
+    const PAL = ['var(--viz-1)', 'var(--viz-2)', 'var(--viz-3)', 'var(--viz-4)', 'var(--viz-5)', 'var(--viz-6)'];
+    const kindOf = (f) => (f.event ? 'Event' : (D.KINDS[f.kind] || f.pillar || 'Finding'));
+    const savSegs = priced.map((x, i) => ({ key: x.f.key, n: x.f.save, w: (x.f.save / (tot || 1) * 100).toFixed(2) + '%', color: PAL[i % PAL.length], title: `${x.f.head} · ${fmt(x.f.save)}/mo`, go: () => set({ fdKey: x.f.key }) }));
+    const ORDER = [['open', 'Open'], ['ack', 'Acknowledged'], ['progress', 'In progress'], ['snoozed', 'Snoozed'], ['resolved', 'Resolved'], ['dismissed', 'Dismissed']];
+    const lifeSegs = ORDER.map(([k, lbl]) => { const n = every.filter(x => x.l.state === k).length; return { key: k, n, w: (n / (every.length || 1) * 100).toFixed(2) + '%', color: TONE[k], title: `${lbl} · ${n}`, label: lbl, go: () => set({ findFilter: bucket(k), findPage: 0 }) }; }).filter(x => x.n > 0);
+    const AGES = [[0, 7, 'Under a week'], [8, 14, '1 to 2 weeks'], [15, 30, '2 to 4 weeks'], [31, Infinity, 'Over a month']];
+    const ageCols = AGES.map(([a, b, lbl]) => ({ key: lbl, label: lbl, n: openX.filter(x => x.l.ageDays >= a && x.l.ageDays <= b).length }));
+    const amax = Math.max(1, ...ageCols.map(c => c.n));
+    const oldest = openX.reduce((m, x) => Math.max(m, x.l.ageDays), 0);
+    return [
+      { key: 'savings', title: 'On the table', big: `${fmt(tot)}/mo`, total: fmt(tot), isBar: true, isAge: false, segs: savSegs, cols: [],
+        legend: priced.slice(0, 3).map((x, i) => ({ key: x.f.key, color: PAL[i], label: kindOf(x.f), v: fmt(x.f.save) })) },
+      { key: 'life', title: 'Where they are', big: `${openX.length} open`, isBar: true, isAge: false, segs: lifeSegs, cols: [],
+        legend: lifeSegs.map(sg => ({ key: sg.key, color: sg.color, label: sg.label, v: String(sg.n) })) },
+      { key: 'age', title: 'How long they have waited', big: openX.length ? `${oldest}d oldest` : 'None open', isBar: false, isAge: true, segs: [], legend: [],
+        cols: ageCols.map(c => ({ ...c, h: (c.n / amax * 100).toFixed(1) + '%', title: `${c.label} · ${c.n} open` })) },
+    ];
+  })();
   const insightVals = {
+    insBand,
     insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, noInsights: insightRowsShown.length === 0, findChips, insDrill, findAll: every.map(toRow),
     ...(() => { const ik = s.insPanel === 'findings' ? 'findings' : 'signals'; return { insPanels: [['signals', 'Signals'], ['findings', `Findings · ${openN}`]].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings' }; })(),
     hasInsFocus: !!insFocus, insFocusLabel: insFocus ? CARD_FINDS[insFocus][0] : '', clearInsFocus: () => set({ insFocus: null, findPage: 0 }),
