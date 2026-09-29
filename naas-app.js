@@ -95,10 +95,9 @@ export const SECTIONS = {
     ['sec-policies', 'Violations', 'check-shield'],
     ['sec-starting', 'Policies', 'grid'],
   ],
+  // One Cost door (Micah, 2026-09-29: "combine savings and forecast with spend").
   cost: [
-    ['sec-egress', 'Spend', 'cloud'],
-    ['sec-arbitrage', 'Savings', 'bill'],
-    ['sec-forecast', 'Forecast', 'pie-chart'],
+    ['sec-spend', 'Spend', 'cloud'],
   ],
 };
 const TAB_LABEL = { connect: 'Connect', govern: 'Govern', observe: 'Observe', cost: 'Cost' };
@@ -2775,12 +2774,12 @@ function shellVals(s, set, go, est, c, sched) {
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
             : id === 'sec-paths' ? (onS3('cloud', 'connect') && s.cnPage === 'options')
             : tab === 'govern' ? (onS3('cloud', tab) && (id === 'sec-starting' ? 'templates' : 'policies') === (s.govPanel || 'policies'))
-            : tab === 'cost' ? (onS3('cloud', tab) && (({ 'sec-egress': 'dest', 'sec-arbitrage': 'banked', 'sec-forecast': 'forecast' })[id] || 'money') === (s.costPanel || 'money') && !(s.sub && s.sub.page === 'cost'))
+            : tab === 'cost' ? (onS3('cloud', tab) && costPanelOf(s.costPanel) === 'spend' && !(s.sub && s.sub.page === 'cost'))
             : (onS3('cloud', tab) && activeSec === id && (tab !== 'observe' || !['insights', 'logs'].includes(s.obPage)));
           const goTo = isView ? (view === 'insights' || view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
             : id === 'sec-paths' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })
-            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: ({ 'sec-egress': 'dest', 'sec-arbitrage': 'banked', 'sec-forecast': 'forecast' })[id] || 'money' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
+            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: 'spend' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
           return { ...item(label, ic, goTo, cur, false, sub, isPanel || isView), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };
@@ -2950,6 +2949,8 @@ function connectVals(s, set, est, go, ob) {
   const lensRegions = rs.map(r => ({ key: r.region, enter: () => set({ hoverNode: 'reg' + r.region, hoverRegion: r.region }), leave: () => set({ hoverNode: null, hoverRegion: null }), askAndi: () => set({ andiScope: { kind: 'region', id: r.region, label: r.cloud + ' ' + r.region }, andiOpen: true }), region: r.cloud + ' ' + r.region, path: R.PATHS.find(p => p.id === R.regionPath(r)).short, score: R.lensScore(r, lens), dot: R.SCORE_COLOR[R.lensScore(r, lens)], word: R.SCORE_WORD[R.lensScore(r, lens)] })).sort((a, b) => a.score - b.score);
   return { lenses, lens, lensQ, lensVerdict: R.lensVerdict(est, lens), matrix, pathsSub, matrixHeads: R.LENSES.map(l => ({ key: l.id, label: l.label, hi: l.id === lens, color: l.id === lens ? 'var(--link)' : 'var(--text-light)' })), lensRegions, hasLensRegions: rs.length > 0, isCloudLayer: s.layer === 'cloud', notCloudLayer: s.layer !== 'cloud' };
 }
+/** Cost's views. Savings (Banked) and Forecast are part of Spend now; their old doors land there. */
+const costPanelOf = (k) => (['spend', 'money', 'dest', 'mile', 'bucket', 'charges'].includes(k) ? k : 'spend');
 function egressBaseFor(est, ob) { const bucketToday = (est.buckets || []).reduce((a, b) => a + b.today, 0); return bucketToday || ob.egressMo || 0; }
 /** AT&T's own monthly charges for an estate: on-ramps, hosted VPCs, L3
  *  attaches. Cost › AT&T charges lists them; the Sankey's Cost view prices
@@ -3058,6 +3059,40 @@ function costVals(s, set, est, invAll, ob, go, c) {
   return { attCharges, hasAttCharges: attCharges.length > 0, attTotalF: fmt(attTotal), attNetF: (attNet >= 0 ? '+' : '−') + fmt(Math.abs(attNet)), attNetLabel: attNet >= 0 ? 'Net saving after charges' : 'Net cost after savings', attNetColor: attNet >= 0 ? 'var(--success)' : 'var(--warning)', attNote: `${fmt(attTotal)}/mo · carries ${fmt(ob.savingsMo || 0)}/mo of savings`, goMarketplace: go('s7'),
     // Two moves, not a paragraph (2026-09-28): the biggest region to attach and
     // the sites still outside AT&T, each a figure and one button.
+    // Spend, savings and forecast in one view (Micah, 2026-09-29: "combine
+    // savings and forecast with spend"): the tiles and the chart share one model.
+    ...(() => {
+      const moveSave = arb.reduce((a, r) => a + r.saveN, 0);
+      const st = R.spendStory({ base, moveSave, series: bankSeries });
+      const last = st.past[st.past.length - 1] || { spend: base, saved: 0 };
+      const n3 = st.next[st.next.length - 1];
+      const mx = Math.max(1, ...st.past.map(p => p.spend + p.saved), ...st.next.map(n => n.asIs));
+      const pct = (v) => (v / mx * 100).toFixed(2) + '%';
+      const lastMonth = st.past.length ? st.past[st.past.length - 1].month : null;
+      const aheadName = (m) => { if (!lastMonth) return `+${m} mo`; const y = +lastMonth.slice(0, 4), mo = +lastMonth.slice(5, 7) - 1 + m; return `${MON3[mo % 12]} ${y + Math.floor(mo / 12)}`; };
+      const short = (name) => name.split(' ')[0];
+      // Money on a tile is whole hundreds, as on every other tile.
+      const r100 = (v) => Math.round(v / 100) * 100;
+      return {
+        spendTiles: [
+          { key: 'spend', l: 'Spend this month', v: fmt(last.spend), u: '/mo', sub: 'egress, every bucket', tone: 'var(--text-heading)' },
+          { key: 'banked', l: 'Banked to date', v: fmt(bankTo.cumulative), u: '', sub: `${fmt(last.saved)} this month`, tone: 'var(--success)' },
+          { key: 'could', l: 'Could save', v: fmt(Math.round(moveSave / 100) * 100), u: '/mo', sub: 'if every public region moves', tone: 'var(--success)' },
+          { key: 'ahead', l: 'In 90 days', v: fmt(r100(n3 ? n3.moved : last.spend)), u: '/mo', sub: n3 ? `with the moves · ${fmt(r100(n3.asIs))} as is` : 'as is', tone: 'var(--text-heading)' },
+        ],
+        spendFrom: st.past.length ? monthName(st.past[0].month) : '', spendTo: st.next.length ? aheadName(st.next[st.next.length - 1].m) : '',
+        spendCols: [
+          ...st.past.map((p, i) => ({ key: p.key, kind: 'past', label: i === 0 || i === st.past.length - 1 ? monthName(p.month) : short(monthName(p.month)), spendN: p.spend, baseN: p.spend, topN: p.saved,
+            baseH: pct(p.spend), topH: pct(p.saved), baseFill: 'var(--viz-1)', topFill: 'var(--success)', topBorder: 'none', opacity: 1,
+            title: `${monthName(p.month)} · spent ${fmt(p.spend)} · banked ${fmt(p.saved)} by acting` })),
+          ...st.next.map(n => ({ key: n.key, kind: 'next', label: short(aheadName(n.m)), spendN: n.moved, movedN: n.moved, baseN: n.moved, topN: n.asIs - n.moved,
+            baseH: pct(n.moved), topH: pct(n.asIs - n.moved), baseFill: 'var(--viz-1)', topFill: 'transparent', topBorder: '1.5px dashed var(--warning)', opacity: 0.55,
+            title: `${aheadName(n.m)} · ${fmt(n.moved)} with the moves · ${fmt(n.asIs)} as is · ${fmt(n.asIs - n.moved)} to save` })),
+        ],
+        spendNowIx: st.past.length,
+        spendLegend: [['var(--viz-1)', 'Spend', 'none'], ['var(--success)', 'Banked savings', 'none'], ['var(--viz-1)', 'With the moves', 'none'], ['transparent', 'Could save', '1.5px dashed var(--warning)']].map(([c, l, b], i) => ({ key: l, color: c, label: l, border: b, op: i === 2 ? 0.55 : 1 })),
+      };
+    })(),
     bankTiles: [
       { key: 'to', l: 'Banked to date', v: fmt(bankTo.cumulative), u: '', tone: 'var(--success)' },
       { key: 'mo', l: 'This month', v: fmt(bankTo.saved), u: '/mo', tone: 'var(--success)' },
@@ -3080,9 +3115,9 @@ function costVals(s, set, est, invAll, ob, go, c) {
     ],
     hasCostMoves: !!(top || pubSite),
     // One panel at a time (2026-09-28, no scrolling).
-    ...(() => { const cpk = ['money', 'dest', 'mile', 'bucket', 'forecast', 'charges', ...(hasBank ? ['banked'] : [])].includes(s.costPanel) ? s.costPanel : 'money';
-      return { costPanels: [['money', 'Where the money is'], ...(hasBank ? [['banked', 'Banked']] : []), ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['forecast', 'Forecast'], ['charges', 'AT&T charges']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
-        costPanelMoney: cpk === 'money', costPanelBanked: cpk === 'banked', costPanelForecast: cpk === 'forecast', costPanelCharges: cpk === 'charges', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
+    ...(() => { const cpk = costPanelOf(s.costPanel); void hasBank;
+      return { costPanels: [['spend', 'Spend'], ['money', 'By region'], ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['charges', 'AT&T charges']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
+        costPanelSpend: cpk === 'spend', costPanelMoney: cpk === 'money', costPanelCharges: cpk === 'charges', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
     costStrip: { has: !!(top || pubSite), title: 'Act on it', text: [pubSite ? `${fmt(pubSite.pubPart)}/mo of egress still leaves ${pubSite.label.toLowerCase()} on a public first mile.` : '', top ? `Attaching ${top.region} moves ${top.wl} workloads to $0.02/GB and saves ${fmt(top.saveN)}/mo, the largest single move on the table.` : 'Every region is attached; the remaining lever is the commit table below.'].filter(Boolean).join(' '), cta: top ? `Attach ${top.region}` : 'Drill sites', go: top ? go('s4', { ...newOrder(prefillAttach(top)) }) : go('s1') },
     bySite, hasBySite: bySite.length > 0, bySiteTotalF: fmt(bySiteTotal), bySiteNote: `${fmt(siteRows.reduce((a, r) => a + r.pubPart, 0))}/mo still on a public first mile`, goSites: go('s1'),
     costDonuts, hasCostDonuts: costDonuts.length > 0,

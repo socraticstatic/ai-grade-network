@@ -12,13 +12,18 @@ const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url)
 const cost = (view = 'partial', patch = {}) => mkC({ view, screen: 's3', tab: 'cost', costPanel: 'banked', estateParam: null, ...patch });
 const money = (s) => +String(s).replace(/[^\d]/g, '');
 
-test('Cost carries a Banked view with four figures and twelve months', () => {
+// Banked joined Spend (Micah, 2026-09-29: "combine savings and forecast with
+// spend"): the old Banked door lands on Spend, which carries the same figures.
+test('Spend carries what acting banked: the running total and twelve months of it', () => {
   const v = vals(cost());
-  assert.ok(v.costPanels.some(p => p.key === 'banked' && p.label === 'Banked'));
-  assert.equal(v.costPanelBanked, true);
+  assert.equal(v.costPanelSpend, true, 'the Banked door lands on Spend');
   assert.deepEqual(v.bankTiles.map(t => t.l), ['Banked to date', 'This month', 'Still open', 'Realised']);
+  assert.equal(v.spendTiles.find(t => t.l === 'Banked to date').v, v.bankTiles.find(t => t.l === 'Banked to date').v);
   assert.equal(v.bankBars.length, 12);
   assert.match(v.bankBars[11].title, /^Sep 2026 · \$[\d,]+ banked · \$[\d,]+ to date$/);
+  const past = v.spendCols.filter(c => c.kind === 'past');
+  assert.equal(past.length, 12);
+  assert.match(past[11].title, /^Sep 2026 · spent \$[\d,]+ · banked \$[\d,]+ by acting$/);
 });
 
 test('the running total never falls', () => {
@@ -42,22 +47,24 @@ test('resolving a priced finding raises this month by its saving', () => {
   assert.equal(after - before, 23200);
 });
 
-test('nothing banked, no Banked view', () => {
-  const v = vals(cost('small', { costPanel: 'money' }));
+test('nothing banked, nothing stacked on the spend', () => {
+  const v = vals(cost('small'));
+  assert.equal(v.costPanelSpend, true);
   assert.ok(!v.costPanels.some(p => p.key === 'banked'));
-  assert.equal(vals(cost('small')).costPanelBanked, false, 'a stale panel falls back');
+  assert.ok(v.spendCols.filter(c => c.kind === 'past').every(c => c.topN === 0));
 });
 
-test('the rail Savings item opens Banked', () => {
+test('the rail has no Savings door; Spend opens the view savings live in', () => {
   const c = cost('partial', { tab: 'connect', costPanel: 'money' });
-  const item = vals(c).railGroups.flatMap(g => g.items).find(i => i.label === 'Savings');
-  item.go();
-  assert.equal(c.state.costPanel, 'banked');
-  assert.equal(vals(c).railGroups.flatMap(g => g.items).find(i => i.label === 'Savings').cur, true);
+  assert.ok(!vals(c).railGroups.flatMap(g => g.items).some(i => i.label === 'Savings'));
+  vals(c).railGroups.flatMap(g => g.items).find(i => i.label === 'Spend').go();
+  assert.equal(c.state.costPanel, 'spend');
+  assert.equal(vals(c).railGroups.flatMap(g => g.items).find(i => i.label === 'Spend').cur, true);
 });
 
-test('the markup draws the Banked bars behind their own gate', () => {
-  const a = HTML.indexOf('<sc-if value="{{ costPanelBanked }}"');
+test('the markup draws banked savings on the Spend chart, behind the Spend gate', () => {
+  const a = HTML.indexOf('<sc-if value="{{ costPanelSpend }}"');
   assert.ok(a > 0);
-  assert.match(HTML.slice(a, a + 5000), /<sc-for list="\{\{ bankBars \}\}"/);
+  assert.match(HTML.slice(a, a + 5000), /<sc-for list="\{\{ spendCols \}\}"/);
+  assert.equal(HTML.indexOf('costPanelBanked'), -1);
 });

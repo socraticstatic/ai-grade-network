@@ -211,12 +211,14 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // The drill traces through the map (2026-09-29): sc-for 182 -> 183.
 // Map values and path lines sit on a backing (2026-09-29): span 604 -> 605.
 // Sankey views, legend and Health (2026-09-29): div 883 -> 884, span 605 -> 602, sc-for 183 -> 185, button 255 -> 256.
+// Spend joins Savings and Forecast (2026-09-29): div 884 -> 878, span 602 -> 597, sc-if 344 -> 343, sc-for 185 -> 186.
+// Spend joins Savings and Forecast; charges in two columns (2026-09-29): div 878 -> 880.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 884],
-    ['span', /<span\b/g, /<\/span>/g, 602],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 344],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 185],
+    ['div', /<div\b/g, /<\/div>/g, 880],
+    ['span', /<span\b/g, /<\/span>/g, 597],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 343],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 186],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 256],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],

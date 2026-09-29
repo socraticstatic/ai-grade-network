@@ -12,23 +12,27 @@ if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: ()
 const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
 const rail = (c, label) => vals(c).railGroups.flatMap(g => g.items).find(i => i.label === label);
 
-test('Forecast is a Cost tab; the rail opens it and lights', () => {
+// Forecast joined Spend (Micah, 2026-09-29: "combine savings and forecast with
+// spend"): the next three months sit on the Spend chart, as is and with the moves.
+test('Forecast is part of Spend; the Spend door opens it and lights', () => {
   const c = mkC({ view: 'partial', screen: 's3', tab: 'connect', estateParam: null });
-  rail(c, 'Forecast').go();
+  assert.equal(rail(c, 'Forecast'), undefined, 'no separate Forecast door');
+  rail(c, 'Spend').go();
   assert.equal(c.state.tab, 'cost');
-  assert.equal(c.state.costPanel, 'forecast');
+  assert.equal(c.state.costPanel, 'spend');
   assert.equal(c.state.sub, null, 'no drawer');
   const v = vals(c);
-  assert.equal(v.costPanelForecast, true);
-  assert.ok(v.costPanels.some(p => p.key === 'forecast' && p.label === 'Forecast'));
-  assert.equal(rail(c, 'Forecast').cur, true);
+  assert.equal(v.costPanelSpend, true);
+  assert.equal(v.spendCols.filter(x => x.kind === 'next').length, 3);
+  assert.equal(rail(c, 'Spend').cur, true);
 });
 
-test('the forecast draws on the Cost page, not in the drawer', () => {
-  const a = HTML.indexOf('<sc-if value="{{ costPanelForecast }}"');
+test('the forecast draws on the Spend chart, not in a drawer or a tab of its own', () => {
+  const a = HTML.indexOf('<sc-if value="{{ costPanelSpend }}"');
   assert.ok(a > 0);
-  assert.match(HTML.slice(a, a + 3000), /aria-label="Egress forecast"/);
+  assert.match(HTML.slice(a, a + 3000), /aria-label="Spend, savings and forecast"/);
   assert.equal(HTML.indexOf('subIsForecast'), -1);
+  assert.equal(HTML.indexOf('costPanelForecast'), -1);
 });
 
 test('Logs is not a card, and nothing on it scrolls inside a box', () => {

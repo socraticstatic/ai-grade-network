@@ -191,6 +191,18 @@ export function forecast(ob, arb) {
   const q = (arr) => Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
   return { W, H, asIs: path(asIs), moved: path(moved), asIsQ: fmt(q(asIs)), movedQ: fmt(q(moved)), diffQ: fmt(q(asIs) - q(moved)), maxLabel: fmt(Math.round(max)) };
 }
+/** Spend, savings and forecast as one story (Micah, 2026-09-29: "combine
+ *  savings and forecast with spend"). Twelve months back at the forecast's own
+ *  growth, each with what acting banked that month; three months ahead as is
+ *  and with the moves, on the forecast's curves. series: LC.banked's months. */
+export const SPEND_GROWTH = 0.06;
+export function spendStory({ base, moveSave, series }) {
+  const g = SPEND_GROWTH, save = Math.min(base * 0.9, Math.max(0, moveSave || 0));
+  const past = (series || []).map((b, i, a) => ({ key: b.month, month: b.month, kind: 'past', spend: Math.round(base / Math.pow(1 + g, a.length - 1 - i)), saved: Math.round(b.saved || 0) }));
+  const moved = (d) => Math.max(0, (base - save * Math.min(1, d / 20)) * Math.pow(1 + g * 0.4, d / 30));
+  const next = [1, 2, 3].map(m => { const asIs = Math.round(base * Math.pow(1 + g, m)); let sum = 0; for (let d = (m - 1) * 30 + 1; d <= m * 30; d++) sum += moved(d); return { key: 'next' + m, kind: 'next', m, asIs, moved: Math.min(asIs, Math.round(sum / 30)) }; });
+  return { past, next };
+}
 export function commitments(est, base) {
   const g = gbPerWl(est, base) || GB_PER_WL_MO;
   return est.regionsList.filter(r => r.priv).slice(0, 3).map((r, i) => { const gb = Math.round(r.wl * g); const metered = Math.round(gb * 0.02); const committed = Math.round(1200 + gb * 0.008); const better = committed < metered; return { key: 'cm-' + r.region, region: `${r.cloud} ${r.region}`, gbF: gb.toLocaleString('en-US'), metered: fmt(metered), committed: fmt(committed), verdict: better ? `Commit: saves ${fmt(metered - committed)}/mo at this volume` : `Stay metered: commitment breaks even at ${Math.round(1200 / 0.012).toLocaleString('en-US')} GB/mo`, tone: better ? 'var(--success)' : 'var(--text-body)' }; });

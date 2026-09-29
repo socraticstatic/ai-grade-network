@@ -130,10 +130,11 @@ test('Logs opens its page and Forecast opens its Cost tab, neither in a drawer',
   vals(c).railGroups.flatMap(g => g.items).find(r => r.label === 'Logs').go();
   assert.equal(c.state.obPage, 'logs');
   assert.equal(c.state.sub, null);
+  // Forecast joined Spend (2026-09-29): the Spend door opens it.
   const k = mkC({ screen: 's3', tab: 'cost' });
-  vals(k).railGroups.flatMap(g => g.items).find(r => r.label === 'Forecast').go();
+  vals(k).railGroups.flatMap(g => g.items).find(r => r.label === 'Spend').go();
   assert.equal(k.state.sub, null);
-  assert.equal(k.state.costPanel, 'forecast');
+  assert.equal(k.state.costPanel, 'spend');
 });
 
 test('each former drill-down section lives on its page, not in the layer', async () => {
@@ -149,7 +150,7 @@ test('each former drill-down section lives on its page, not in the layer', async
 test('each section sits under its own tab gate and no other', async () => {
   const { readFileSync } = await import('node:fs');
   const L = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8').split('\n');
-  const want = { 'sec-paths': 'cnIsWays', 'sec-obs-tags': 'govPanelTags', 'sec-charges': 'costPanelCharges', 'sec-forecast': 'costPanelForecast' };
+  const want = { 'sec-paths': 'cnIsWays', 'sec-obs-tags': 'govPanelTags', 'sec-charges': 'costPanelCharges', 'sec-spend': 'costPanelSpend' };
   const tabGate = /^(cnIs|govPanel|costPanel|estPanel|insPanel|obPanel)/;
   const stack = [];
   const seen = new Set();
