@@ -2018,6 +2018,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     if (reg) set({ mapRegion: reg.region, mapJumpOpen: false, mapJumpQ: '' });
   };
   const playMap = () => { if (typeof window === 'undefined') return; if (window.__mapTimer) { clearInterval(window.__mapTimer); window.__mapTimer = null; set({ mapPlay: false }); return; } let t = mapT == null || mapT >= 1 ? 0 : mapT; set({ mapPlay: true, mapT: t }); window.__mapTimer = setInterval(() => { t = +(t + 0.02).toFixed(2); if (t >= 1) { clearInterval(window.__mapTimer); window.__mapTimer = null; c.setState({ mapT: 1, mapPlay: false }); } else c.setState({ mapT: t }); }, 110); };
+  const capRows = OD.capacity(conns, s.obWindow || '30d');
   const gaugeRows = OD.gauges(conns).map(g => ({ ...g, key: g.id, on: mapRegion === g.region, selected: mapSel === g.id, border: mapSel === g.id ? 'var(--cta)' : mapRegion === g.region ? 'var(--border-primary)' : 'var(--border-secondary)',
     // Same bar grammar as every other figure on the page: a 150px track, an
     // 8px fill, tabular numbers right-aligned. A ring was the only radial
@@ -2030,10 +2031,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // Bandwidth in the open (Micah, 2026-09-29: "more transparency into bandwidth
     // capacity and utilization"): what you bought, average and peak, what is
     // left, the window's run, and when the port fills at the window's growth.
-    ...(() => { const row = (conns.rows || []).find(r => r.id === g.id) || {}; const capG = row.cap || 10, peakG = +(capG * g.pct / 100).toFixed(1), avgG = +(peakG * 0.82).toFixed(1);
-      const grow = R.growthOf(s.obWindow || '30d'), days = winDaysOf(s), perDay = grow > 0 ? Math.log(1 + grow) / days : 0;
-      const toFull = peakG >= capG * 0.99 ? 0 : perDay > 0 ? Math.log(capG / peakG) / perDay : Infinity;
-      const fullIn = toFull === 0 ? 'Now' : !isFinite(toFull) || toFull > 365 ? 'Over a year' : toFull < 63 ? `in ${Math.max(1, Math.round(toFull / 7))} ${Math.round(toFull / 7) === 1 ? 'week' : 'weeks'}` : `in ${Math.round(toFull / 30)} months`;
+    // The numbers come from one capacity function (2026-09-30), shared with Cost > Optimize.
+    ...(() => { const row = (conns.rows || []).find(r => r.id === g.id) || {}; const cp = capRows.find(x => x.id === g.id) || {}; const { capG, peakG, avgG, toFull, fullIn } = cp;
+      const grow = R.growthOf(s.obWindow || '30d');
       const series = X.utilSeries(g.id + ':' + (s.obWindow || '30d'), 24, g.pct, grow);
       return { capG, peakG, avgG, headG: +(capG - peakG).toFixed(1), toFull, portsF: row.bwShort || '10G', rampName: F.RAMP_NAME[g.ramp] || g.ramp,
         avgF: `${avgG} Gbps`, peakF: `${peakG} Gbps`, headF: `${+(capG - peakG).toFixed(1)} Gbps`, avgW: Math.min(100, avgG / capG * 100).toFixed(1) + '%', peakX: Math.min(100, g.pct).toFixed(1) + '%',

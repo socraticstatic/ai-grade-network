@@ -8,7 +8,8 @@
 // naas-observe-dash.js — gauges, the alert queue and the detail panel for the
 // Observe dashboard. Pure data. Added 2026-09-09.
 import * as F from './naas-flowmap.js';
-import { impacted, records, resolveDest } from './naas-connections.js';
+import { impacted, records, resolveDest, utilSeries } from './naas-connections.js';
+import { growthOf } from './naas-round2.js';
 import * as S from './naas-sites.js';
 import * as P from './naas-paths.js';
 import { agoOf, startOf, INCIDENT_MIN } from './naas-schedule.js';
@@ -380,4 +381,25 @@ export function changes(est, conns, activity, now = Date.now()) {
     ]),
   ];
   return rows.sort((a, b) => b.at - a.at);
+}
+
+// ---------- Is it full? (2026-09-30) ----------
+// One capacity function for Observe's Capacity tab and Cost > Optimize: what was
+// bought, the peak and the 6-month average, the headroom, when it fills at the
+// window's growth, and whether one fewer port would still hold the peak.
+const WIN_DAYS = { '1h': 1 / 24, '24h': 1, '7d': 7, '30d': 30, '90d': 90, '6m': 182, '12m': 365 };
+export function capacity(conns, win = '30d') {
+  const grow = growthOf(win) || 0, days = WIN_DAYS[win] || 30, perDay = grow > 0 ? Math.log(1 + grow) / days : 0;
+  return (conns.rows || []).map(r => {
+    const capG = r.cap || 10, ports = r.ports || 1, portG = capG / ports, peakPct = r.pct;
+    const peakG = +(capG * peakPct / 100).toFixed(1), avgG = +(peakG * 0.82).toFixed(1);
+    const toFull = peakG >= capG * 0.99 ? 0 : perDay > 0 ? Math.log(capG / peakG) / perDay : Infinity;
+    const fullIn = toFull === 0 ? 'Now' : !isFinite(toFull) || toFull > 365 ? 'Over a year' : toFull < 63 ? `in ${Math.max(1, Math.round(toFull / 7))} ${Math.round(toFull / 7) === 1 ? 'week' : 'weeks'}` : `in ${Math.round(toFull / 30)} months`;
+    const s6 = utilSeries(r.id + ':6m', 24, peakPct, growthOf('6m') || 0);
+    const avg6mPct = Math.round(s6.reduce((a, v) => a + v, 0) / s6.length);
+    const state = r.degraded ? 'down' : r.hot ? 'risk' : 'ok';
+    const resizePct = ports > 1 ? Math.round(peakG / (capG - portG) * 100) : null;
+    const oversized = state === 'ok' && ports > 1 && peakPct <= 50 && resizePct <= 80;
+    return { id: r.id, region: r.region, cloud: r.cloud, ramp: r.ramp, ports, portG, capG, peakG, avgG, peakPct, avg6mPct, headroomG: +(capG - peakG).toFixed(1), toFull, fullIn, state, oversized, resizeTo: oversized ? ports - 1 : null, resizePct };
+  });
 }
