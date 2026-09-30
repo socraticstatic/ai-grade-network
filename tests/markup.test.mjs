@@ -241,16 +241,22 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // ends in its door (Monthly briefing, Your actions):
 // div 1006 -> 1027, span 827 -> 837, sc-if 417 -> 429, sc-for 231 -> 234, section 11 -> 12, button 310 -> 322, label 28 -> 29.
 // Over time's legend isolates a series (2026-09-30, "outside of at&t is so small its not visible"): two legend spans become one sc-for of buttons, plus the scale line: span 837 -> 836, sc-if 429 -> 430, sc-for 234 -> 235, button 322 -> 323.
+// The NaaS home, v2 (2026-09-30, Micah: "home page is too wordy! this isn't a white paper"): the greeting, the
+// head, the Since label, the briefing band, the five-area strip and Now left; the role chips and an Andi's briefing
+// link, the take-away (icon tile, its h1 a door, the line's parts each a door, the action), four snapshot cards (a head door, the big figure, its unit and
+// swatch, a ring of arc buttons, health dots, an egress sparkline, an exposed bar, the foot's figures and legend),
+// Waiting on you as three chips (open, Accept, a door) and Empty's one step with its picture came in:
+// div 1027 -> 1028, span 836 -> 827, sc-if 430 -> 434, sc-for 235 -> 240, button 323 -> 326, label 29 -> 28.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1027],
-    ['span', /<span\b/g, /<\/span>/g, 836],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 430],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 235],
+    ['div', /<div\b/g, /<\/div>/g, 1028],
+    ['span', /<span\b/g, /<\/span>/g, 827],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 434],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 240],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 323],
+    ['button', /<button\b/g, /<\/button>/g, 326],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
-    ['label', /<label\b/g, /<\/label>/g, 29],
+    ['label', /<label\b/g, /<\/label>/g, 28],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

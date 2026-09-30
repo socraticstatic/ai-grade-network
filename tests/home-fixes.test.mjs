@@ -4,15 +4,20 @@ import { readFileSync } from 'node:fs';
 import { vals } from '../naas-app.js';
 import { mkC } from './harness.mjs';
 
-// The home skeptic's six findings (2026-09-30), each pinned.
+// The home skeptic's six findings (2026-09-30), each pinned. The home was
+// rebuilt the same afternoon (v2: take-away, snapshot cards, the map below);
+// D1, D4, D5 and D6 named parts of v1 that left, so each is pinned here in
+// the form it takes on v2.
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
 const home = (view, patch = {}) => mkC({ view, estateParam: null, screen: 's0', ...patch });
+const block = () => { const i = HTML.indexOf('aria-label="NaaS home"'); return HTML.slice(i, HTML.indexOf('</section>', i)); };
 
-test('D1: the briefing door sits under the prose, not floated to the band floor', () => {
-  const a = HTML.indexOf('aria-label="Andi\'s briefing"'), b = HTML.indexOf('aria-label="Waiting on you"', a);
-  const band = HTML.slice(a, b);
-  assert.ok(a > 0 && !/align-self:end/.test(band) && !/grid-template-rows:auto auto 1fr/.test(band), band.slice(0, 300));
+test('D1 (v2): the briefing is one link at the top of the home, never a band of prose', () => {
+  const b = block();
+  assert.ok(!b.includes('aria-label="Andi\'s briefing"'), 'the briefing band is back');
+  const at = b.indexOf('{{ homeBriefGo }}'), take = b.indexOf('aria-label="Take-away"');
+  assert.ok(at > 0 && take > at, 'the briefing link sits in the top row, above the take-away');
 });
 
 test('D2: the Connect group title opens the network map', () => {
@@ -29,21 +34,21 @@ test('D3: every Home door goes home', () => {
   assert.ok(!/goFloor \}\}"[^>]*>Home</.test(HTML) && /goHome \}\}"[^>]*>Home</.test(HTML), 'the Home label is bound to goHome');
 });
 
-test('D4: Empty claims no health it has no data for', () => {
+test('D4 (v2): Empty claims no health it has no data for: no cards, no map', () => {
   const v = vals(home('empty'));
-  assert.equal(v.homeNowNone, 'No telemetry yet. It starts with the first attach.');
-  assert.equal(v.homeNowNoneDot, 'transparent');
+  assert.deepEqual(v.homeCards, []);
+  assert.equal(v.heroVisible, false);
+  assert.equal(v.homeTake, null);
 });
 
-test('D5: Small, nothing attached, never says "No telemetry" above a latency problem', () => {
+test('D5 (v2): Small, nothing attached, never calls its apps healthy on AT&T and draws no private region', () => {
   const v = vals(home('small'));
-  const obs = v.homeStrip.find(t => t.key === 'observe');
-  if ((v.homeNow || []).length) assert.doesNotMatch(`${obs.value} ${obs.sub}`, /No telemetry/, `${obs.value} · ${obs.sub}`);
-  assert.equal(obs.value, 'Public paths only');
+  const apps = v.homeCards.find(x => x.key === 'apps');
+  assert.equal(apps.value, '1 of 2', 'Small counts its own two apps');
+  const on = v.homeCards.find(x => x.key === 'onatt');
+  assert.ok(!on.segs.some(g => g.key === 'priv'), 'a private arc on an estate with none');
 });
 
-test('D6: no tile on the home looks selected', () => {
-  for (const view of ['partial', 'small', 'empty']) for (const t of vals(home(view)).homeStrip) {
-    assert.equal(t.edge, 'var(--border-secondary)', `${view} ${t.key}`); assert.equal(t.ring, 'none', `${view} ${t.key}`);
-  }
+test('D6 (v2): no card on the home looks selected', () => {
+  for (const view of ['partial', 'small']) for (const t of vals(home(view)).homeCards) assert.equal(t.edge, 'var(--border-secondary)', `${view} ${t.key}`);
 });

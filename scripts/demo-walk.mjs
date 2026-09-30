@@ -2,7 +2,9 @@
 // The Monday demo, walked (docs/demo-2026-10-05-notes.md). Headless Chromium, a
 // fresh profile, Growing as Network Eng at 1440x900: each beat clicks what the
 // presenter clicks and asserts the words the presenter will say, and every stop
-// must fit the fold. It never drives Comet or Chrome; it serves the repo itself.
+// must fit the fold (scripts/fold-rule.mjs: the home alone may run past it, by
+// the Connect map below its fold, and only by that). It never drives Comet or
+// Chrome; it serves the repo itself.
 //
 //   node scripts/demo-walk.mjs [--shots <dir>]
 //
@@ -11,6 +13,7 @@
 import { readFile, mkdir } from 'node:fs/promises';
 import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { heightProblems, foldMarks, HOME_PAGE } from './fold-rule.mjs';
 
 const PW = 'file:///Users/micahbos/Developer/Cloud_Designer/node_modules/playwright/index.mjs';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -55,7 +58,9 @@ async function beat(name, fn) {
   try {
     await fn();
     const h = await page.evaluate(() => document.documentElement.scrollHeight);
-    if (h > H) throw new Error(`page is ${h}px tall; the fold is ${H}`);
+    const home = await page.locator('section[aria-label="NaaS home"]').count();
+    const bad = heightProblems({ page: home ? HOME_PAGE : name, scrollHeight: h, limit: H, ...(await page.evaluate(foldMarks)) });
+    if (bad.length) throw new Error(`the fold is ${H}: ${bad.join(', ')}`);
     if (errors.length) throw new Error(`page error: ${errors.splice(0).join(' | ')}`);
     if (shots) await page.screenshot({ path: join(shots, `${String(n).padStart(2, '0')}-${name.replace(/[^\w]+/g, '-').toLowerCase()}.png`) });
     results.push(['ok', name]);
@@ -68,24 +73,32 @@ await page.goto(`${ORIGIN}/NaaS%20Storefront.dc.html?view=partial`, { waitUntil:
 await page.waitForSelector('.rail-scroll', { timeout: 20000 });
 await settle(500);
 
-// Beat 0 (2026-09-30): the NaaS home, the whole network at a glance for the role.
-// The head is Observe's, the briefing is Monthly briefing's, the rows are Your
-// actions', the tiles are the pages' own; the role chips change the briefing.
+// Beat 0 (v2 home, 2026-09-30: "home page is too wordy! this isn't a white
+// paper"): one take-away for the role, four snapshot cards, Waiting on you as
+// chips, and the Connect map below the fold. The take-away is Health's first
+// problem, the cards are the pages' own figures, the chips are Your actions';
+// the role chips change the take-away and the card order.
 const inHome = (sel) => page.locator(`section[aria-label="NaaS home"] ${sel}`);
-const briefing = () => inHome('[aria-label="Andi\'s briefing"] p').innerText();
-await beat('0 NaaS home: the whole network at a glance', async () => {
+// Each part of the line is its own button, so innerText breaks between them; read it as one line.
+const takeaway = async () => (await inHome('[aria-label="Take-away"]').innerText()).replace(/\s+/g, ' ');
+const takes = async (...needles) => { const t = await takeaway(); for (const n of needles) if (!t.includes(n)) throw new Error(`the take-away reads "${t}", not ${n}`); };
+const cards = () => inHome('[aria-label="Snapshot"] > div').allInnerTexts();
+await beat('0 NaaS home: the take-away, the snapshot, the map below', async () => {
   await rail('NaaS');
-  await expect('Network Eng', '13 findings open. $41,500/mo potential savings. 1 Sev 1 open now.', "Andi's briefing", 'Waiting on you', 'Azure eastus · ExpressRoute', 'BGP flapping');
-  const rows = await inHome('[aria-label="Waiting on you"] button:has-text("Do it")').count();
-  if (rows !== 3) throw new Error(`Waiting on you shows ${rows} rows, not 3`);
-  const tiles = await inHome('[aria-label="The five areas"] > button').allInnerTexts();
-  if (tiles.length !== 5) throw new Error(`${tiles.length} tiles, not 5`);
-  for (const [i, want] of [[0, '25 sites · 3 clouds'], [1, '5 of 7 regions'], [2, '1 of 2 connections'], [4, '$41,500/mo']]) if (!tiles[i].includes(want)) throw new Error(`tile ${i + 1} reads "${tiles[i].replace(/\n/g, ' | ')}", not ${want}`);
-  const neteng = await briefing();
-  if (!/For network engineering/.test(neteng)) throw new Error('the briefing is not Network Eng\'s');
+  await expect("Andi's briefing", 'Waiting on you');
+  await takes('Azure eastus is down', 'Finance rides it · 40 workloads · 22 min', 'Trace it');
+  const chips = await inHome('[aria-label="Waiting on you"] button:has-text("Accept")').count();
+  if (chips !== 2) throw new Error(`Waiting on you offers Accept on ${chips} chips, not 2 (the IPsec one is acknowledged)`);
+  const c = await cards();
+  if (c.length !== 4) throw new Error(`${c.length} snapshot cards, not 4`);
+  for (const [i, want] of [[0, '5 of 8'], [1, '2 of 7'], [2, '$89,600'], [3, '54']]) if (!c[i].includes(want)) throw new Error(`card ${i + 1} reads "${c[i].replace(/\n/g, ' | ')}", not ${want}`);
+  if (!(await page.locator('#sec-fabric[data-fold="below"]').count())) throw new Error('no Connect map below the home');
+  const neteng = await takeaway();
   await tab('Executive', 'section[aria-label="NaaS home"]');
-  const exec = await briefing();
-  if (exec === neteng || !/For the executive team/.test(exec)) throw new Error('the briefing did not change for Executive');
+  const exec = await takeaway();
+  if (exec === neteng) throw new Error('the take-away did not change for Executive');
+  await takes('$41,500/mo on the table', '3 moves · 1 outage on Finance', 'See the moves');
+  if (!(await cards())[0].includes('$89,600')) throw new Error('Egress does not lead for Executive');
   await tab('Network Eng', 'section[aria-label="NaaS home"]');
 });
 
@@ -157,10 +170,15 @@ await beat('8 Estate switch to Established', async () => {
   // Beat 1 added Oracle's two public regions to Growing: 5 of 7 became 7 of 9.
   await expect('7 of 9 regions still ride the public internet');
   // Switched while on the home, the new estate's own figures show, with no stale role list.
+  // v2 home (2026-09-30): the On AT&T card counts Oracle's two public regions (2 of 7 became 2 of 9).
   await rail('NaaS');
-  await expect(/^14 findings open\./m, '25 sites · 4 clouds', '5 sites reach the cloud over IPsec');
+  await expect('5 sites reach the cloud over IPsec');
+  await takes('Azure eastus is down');
+  if (!(await cards())[1].includes('2 of 9')) throw new Error(`On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 2 of 9`);
   await page.selectOption('select[aria-label="View as"]', 'mature'); await settle(600);
-  await expect(/^10 findings open\. \$17,500\/mo potential savings\. 1 Sev 1 open now\./m, '221 sites · 4 clouds', '3 paths send no telemetry', 'AWS eu-central-1 · Direct Connect');
+  await expect('3 paths send no telemetry');
+  await takes('AWS us-west-2 is at risk', '3 apps ride it · 120 workloads');
+  if (!(await cards())[1].includes('7 of 8')) throw new Error(`Established's On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 7 of 8`);
   if ((await text()).includes('5 sites reach the cloud over IPsec')) throw new Error('Growing\'s role list stayed on the Established home');
   await rail('Options');
   await expect('1 of 8 regions still ride the public internet');

@@ -74,6 +74,60 @@ a{color:#0057b8}a:hover{color:#00388f}
 .fx-search input{border:0;background:transparent;font:inherit;font-size:14px;color:var(--text-heading);min-width:0;flex:1;outline:none}
 .rail-scroll::-webkit-scrollbar{display:none}
 .fx-btn{box-sizing:border-box;display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);box-shadow:0 1px 1px rgba(0,0,0,.1);color:var(--text-heading);font:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+/* The NaaS home, v2 (2026-09-30): the take-away, the four snapshot cards, Waiting on you. Theme tokens only. */
+.hm-link{border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap}
+.hm-link:hover{text-decoration:underline;text-underline-offset:3px}
+.hm-take{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:20px;padding:22px 24px;border:1px solid var(--border-secondary);border-radius:16px}
+.hm-headline{display:block;max-width:100%;border:0;background:transparent;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-headline:hover{color:var(--link)}
+.hm-parts{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:15px;line-height:22px;color:var(--text-body);white-space:nowrap;overflow:hidden}
+.hm-parts>button{border:0;background:transparent;padding:0;font:inherit;color:inherit;cursor:pointer;white-space:nowrap}
+.hm-parts>button:hover:not(:disabled){color:var(--link);text-decoration:underline;text-underline-offset:3px}
+.hm-parts>button:disabled{cursor:default;color:inherit}
+.hm-parts>i{font-style:normal;color:var(--text-disabled)}
+.hm-cta{display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 20px;border:0;border-radius:10px;background:var(--cta);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s}
+.hm-cta:hover{background:var(--cta-hover)}
+.hm-cta>i{font-style:normal;transition:transform .15s}.hm-cta:hover>i{transform:translateX(3px)}
+.hm-card{display:grid;grid-template-rows:20px 112px 20px;row-gap:14px;min-width:0;box-sizing:border-box;padding:18px 20px 20px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;transition:box-shadow .15s}
+.hm-card:hover{box-shadow:0 2px 10px rgba(16,24,40,.06)}
+.hm-head{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;background:transparent;padding:0;font:inherit;font-size:11px;line-height:20px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--text-light);cursor:pointer;text-align:left}
+.hm-head>b{font-size:18px;line-height:20px;font-weight:500;letter-spacing:0;color:var(--link);transition:transform .15s}
+.hm-head:hover{color:var(--link)}.hm-head:hover>b{transform:translateX(3px)}
+.hm-body{position:relative;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.hm-big{border:0;background:transparent;padding:0;font:inherit;text-align:left;cursor:pointer;color:var(--text-heading);font-size:32px;line-height:38px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hm-big:hover:not(:disabled){color:var(--link)}.hm-big:disabled{cursor:default;opacity:1}
+.hm-big>small{margin-left:2px;font-size:15px;font-weight:500;letter-spacing:0;color:var(--text-light)}
+.hm-unit{display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap}
+.hm-sw{flex:none;width:8px;height:8px;border-radius:2px}
+.hm-ring{position:absolute;right:-6px;top:50%;width:96px;height:96px;margin-top:-48px}
+.hm-seg{position:absolute;inset:0;padding:0;border:0;background:transparent;pointer-events:none}
+.hm-seg svg{display:block;overflow:visible}
+.hm-seg circle{pointer-events:stroke;cursor:pointer;transition:stroke-width .15s}
+.hm-seg:hover circle,.hm-seg:focus-visible circle{stroke-width:10.5}
+.hm-seg:focus-visible{outline:none}
+.hm-dot{display:inline-grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:6px;background:transparent;cursor:pointer}
+.hm-dot>i{display:block;width:16px;height:16px}
+.hm-dot:hover{background:var(--bg-neutral)}
+.hm-spark{position:relative;height:56px}
+.hm-spark>i{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--viz-1);box-shadow:0 0 0 2px var(--bg-base)}
+.hm-spark>small{position:absolute;right:0;transform:translateY(-135%);font-size:11px;line-height:14px;font-weight:600;color:var(--warning);white-space:nowrap}
+.hm-track{position:relative;height:18px;border-radius:9px;background:var(--bg-neutral);overflow:hidden}
+.hm-bar{position:absolute;top:0;bottom:0;left:0;min-width:8px;padding:0;border:0;border-radius:0 3px 3px 0;cursor:pointer;transition:filter .15s}
+.hm-bar:hover{filter:brightness(1.1)}
+.hm-foot{display:flex;align-items:center;gap:4px 14px;min-width:0;overflow:hidden;white-space:nowrap}
+.hm-fig{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:20px;color:var(--text-light);cursor:pointer;white-space:nowrap}
+.hm-fig>b{font-size:14px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.hm-fig:hover:not(:disabled)>b{color:var(--link)}.hm-fig:disabled{cursor:default}
+.hm-lg{display:inline-flex;align-items:center;gap:5px;font-size:12px;line-height:20px;color:var(--text-light)}
+.hm-lg>i{flex:none;width:8px;height:8px}
+.hm-chip{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;min-width:0;height:84px;box-sizing:border-box;padding:12px 14px 12px 16px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:12px}
+.hm-none{display:flex;align-items:flex-start;gap:10px;height:84px;box-sizing:border-box;padding-top:4px;font-size:14px;line-height:20px;color:var(--text-body)}
+.hm-none>i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-style:normal;font-size:12px;font-weight:700;color:var(--success);background:color-mix(in srgb, var(--success) 14%, transparent)}
+.hm-open{display:grid;gap:4px;min-width:0;border:0;background:transparent;padding:0;font:inherit;text-align:left;cursor:pointer;color:inherit}
+.hm-open>b{font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty}
+.hm-open:hover>b{color:var(--link)}
+.hm-open>span{display:flex;align-items:center;gap:8px;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap}
+.hm-open em{font-style:normal;font-weight:700;color:var(--success)}
 /* Figma shell cards (table-horizontal-bar-chart 114:1719, Alert 114:2625, Badge). */
 .fx-card{padding:24px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;display:grid;gap:16px;min-width:0;align-content:start}
 .fx-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
@@ -354,71 +408,56 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </section>
 </sc-if>
 
-<!-- ===== S0 THE NaaS HOME (spec 2026-09-30-naas-home-design.md): the whole network at a glance, by persona. A title row, the persona band (Andi's briefing, Waiting on you), the five areas, and Now. Every figure is its page's own (homeVals); Connect's four tiles moved here. ===== -->
+<!-- ===== S0 THE NaaS HOME, v2 (Micah, 2026-09-30: "home page is too wordy! this isn't a white paper"; the approved mockup): the role chips and Andi's briefing link, one take-away for the role, four snapshot cards with a picture each, Waiting on you as three chips. The Connect network map follows below the fold (#sec-fabric, data-fold). Every figure is its page's own (homeVals, naas-home.js) and opens the set it counts. ===== -->
 <sc-if value="{{ sHome }}" hint-placeholder-val="{{ false }}">
-<section aria-label="NaaS home" style="display:grid;gap:24px;min-width:0;animation:fadeIn .3s">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;padding:4px 0 16px;border-bottom:1px solid var(--border-secondary)">
-    <div style="display:grid;gap:2px;min-width:0;flex:1 1 auto"><h1 style="margin:0;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ homeGreeting }}</h1><div style="font-size:14px;line-height:20px;font-weight:500;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ homeHead }}</div></div>
-    <div style="display:flex;align-items:center;gap:16px;flex:none">
-      <div role="tablist" aria-label="Role" style="display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg-neutral)"><sc-for list="{{ roleChips }}" as="rc" hint-placeholder-count="5"><button role="tab" aria-selected="{{ rc.on }}" onClick="{{ rc.go }}" style="border:0;border-radius:6px;height:28px;padding:0 10px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;background:{{ rc.bg }};color:{{ rc.color }};font-weight:{{ rc.weight }};box-shadow:{{ rc.shadow }}">{{ rc.label }}</button></sc-for></div>
-      <label class="fx-filter"><span class="fx-label">Since</span><select class="fx-select" value="{{ rangeValue }}" onChange="{{ setRange }}" aria-label="Date range"><option value="1h">Last hour</option><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option></select></label>
-    </div>
-  </div>
+<section aria-label="NaaS home" style="display:grid;gap:20px;min-width:0;margin-bottom:36px;animation:fadeIn .3s">
   <sc-if value="{{ homeBand }}" hint-placeholder-val="{{ true }}">
-  <div style="display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:24px;align-items:stretch">
-    <div aria-label="Andi's briefing" style="display:grid;align-content:start;gap:8px;min-width:0;border-left:2px solid var(--border-secondary);padding-left:16px">
-      <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Andi's briefing</div>
-      <p style="margin:0;font-size:14px;line-height:22px;color:var(--text-body);text-wrap:pretty">{{ homeBrief }}</p>
-      <button onClick="{{ homeBriefGo }}" style="justify-self:start;border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap">Monthly briefing in Insights ›</button>
-    </div>
-    <div aria-label="Waiting on you" style="display:grid;align-content:start;min-width:0;border-left:2px solid var(--border-secondary);padding-left:16px">
-      <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Waiting on you</div>
-      <sc-for list="{{ homeWaiting }}" as="ra" hint-placeholder-count="3"><div style="display:grid;gap:4px;padding:8px 0;border-bottom:1px solid var(--border-secondary);min-width:0">
-        <div style="display:flex;align-items:baseline;gap:8px;min-width:0"><b title="{{ ra.head }}" style="min-width:0;font-size:13px;line-height:18px;color:var(--text-heading);text-wrap:pretty">{{ ra.head }}</b><span style="margin-left:auto;flex:none;font-size:11px;line-height:16px;color:var(--text-light);white-space:nowrap">{{ ra.stateLabel }}</span></div>
-        <div style="display:flex;gap:8px;font-size:12px;line-height:16px;color:var(--text-body);min-width:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ra.rec }}</span><sc-if value="{{ ra.hasSave }}" hint-placeholder-val="{{ false }}"><b style="flex:none;color:var(--success);white-space:nowrap">{{ ra.saveLine }}</b></sc-if></div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <button class="fx-btn" disabled="{{ comingSoon }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap;opacity:.5;cursor:not-allowed">Do it</button><span style="font-size:11px;color:var(--text-light)">Coming soon</span>
-          <sc-if value="{{ ra.canAccept }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ ra.accept }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Accept</button></sc-if>
-          <sc-if value="{{ ra.canDefer }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ ra.defer }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Defer</button></sc-if>
-          <sc-if value="{{ ra.canStart }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.start }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Start</button></sc-if>
-          <sc-if value="{{ ra.canSnooze }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.snooze }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Snooze</button></sc-if>
-          <sc-if value="{{ ra.hasDoor }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.door }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">{{ ra.doorLabel }}</button></sc-if>
-        </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-width:0">
+    <div role="tablist" aria-label="Role" style="display:inline-flex;gap:2px;padding:2px;border-radius:10px;background:var(--bg-neutral)"><sc-for list="{{ roleChips }}" as="rc" hint-placeholder-count="5"><button role="tab" aria-selected="{{ rc.on }}" onClick="{{ rc.go }}" style="border:0;border-radius:8px;height:32px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;background:{{ rc.bg }};color:{{ rc.color }};font-weight:{{ rc.weight }};box-shadow:{{ rc.shadow }}">{{ rc.label }}</button></sc-for></div>
+    <button onClick="{{ homeBriefGo }}" class="hm-link" style="display:inline-flex;align-items:center;gap:8px"><span aria-hidden="true" style="width:18px;height:18px;flex:none;background:url('{{ iconAndi }}') center / contain no-repeat"></span>Andi's briefing ›</button>
+  </div>
+  <div aria-label="Take-away" class="hm-take" style="background:linear-gradient(90deg,{{ homeTake.wash }} 0%,var(--bg-base) 50%)">
+    <span aria-hidden="true" style="display:grid;place-items:center;width:64px;height:64px;border-radius:18px;background:{{ homeTake.tint }}"><span style="width:30px;height:30px;background:{{ homeTake.ink }};-webkit-mask:url('{{ homeTake.icon }}') center / contain no-repeat;mask:url('{{ homeTake.icon }}') center / contain no-repeat"></span></span>
+    <div style="display:grid;gap:4px;min-width:0"><h1 style="margin:0;min-width:0;font-size:30px;line-height:36px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)"><button onClick="{{ homeTake.headGo }}" class="hm-headline">{{ homeTake.head }}</button></h1><div class="hm-parts"><sc-for list="{{ homeTake.parts }}" as="tp" hint-placeholder-count="3"><sc-if value="{{ tp.sep }}" hint-placeholder-val="{{ false }}"><i aria-hidden="true">·</i></sc-if><button onClick="{{ tp.go }}" disabled="{{ tp.off }}">{{ tp.t }}</button></sc-for></div></div>
+    <button onClick="{{ homeTake.go }}" class="hm-cta">{{ homeTake.cta }}<i aria-hidden="true">→</i></button>
+  </div>
+  <div aria-label="Snapshot" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+    <sc-for list="{{ homeCards }}" as="hc" hint-placeholder-count="4"><div aria-label="{{ hc.label }}" class="hm-card" style="border-color:{{ hc.edge }}">
+      <button onClick="{{ hc.go }}" title="Open {{ hc.door }}" class="hm-head"><span>{{ hc.label }}</span><b aria-hidden="true">›</b></button>
+      <div class="hm-body">
+        <div style="display:grid;gap:2px;justify-items:start;min-width:0"><button onClick="{{ hc.valueGo }}" disabled="{{ hc.valueOff }}" class="hm-big">{{ hc.value }}<sc-if value="{{ hc.hasSuffix }}" hint-placeholder-val="{{ false }}"><small>{{ hc.suffix }}</small></sc-if></button><div class="hm-unit"><sc-if value="{{ hc.hasSwatch }}" hint-placeholder-val="{{ false }}"><i class="hm-sw" style="background:{{ hc.swatch }}"></i></sc-if>{{ hc.unit }}</div></div>
+        <sc-if value="{{ hc.isRing }}" hint-placeholder-val="{{ false }}"><div class="hm-ring"><sc-for list="{{ hc.segs }}" as="sg" hint-placeholder-count="4"><button onClick="{{ sg.go }}" aria-label="{{ sg.title }}" title="{{ sg.title }}" class="hm-seg"><svg viewBox="0 0 80 80" width="96" height="96" aria-hidden="true"><circle cx="40" cy="40" r="{{ sg.r }}" fill="none" stroke="{{ sg.ink }}" stroke-width="{{ sg.sw }}" stroke-dasharray="{{ sg.dash }}" stroke-dashoffset="{{ sg.off }}" transform="rotate(-90 40 40)"></circle></svg></button></sc-for></div></sc-if>
+        <sc-if value="{{ hc.isDots }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:2px;margin:0 -3px"><sc-for list="{{ hc.dots }}" as="dt" hint-placeholder-count="6"><button onClick="{{ dt.go }}" aria-label="{{ dt.title }}" title="{{ dt.title }}" class="hm-dot"><i style="background:{{ dt.ink }};border-radius:{{ dt.rad }}"></i></button></sc-for></div></sc-if>
+        <sc-if value="{{ hc.isSpark }}" hint-placeholder-val="{{ false }}"><div class="hm-spark"><svg viewBox="0 0 240 56" preserveAspectRatio="none" width="100%" height="56" aria-hidden="true" style="display:block;overflow:visible"><path d="{{ hc.spark.area }}" fill="var(--viz-1)" opacity=".10" stroke="none"></path><path d="{{ hc.spark.past }}" fill="none" stroke="var(--viz-1)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path><path d="{{ hc.spark.asIs }}" fill="none" stroke="var(--warning)" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linecap="round"></path><path d="{{ hc.spark.act }}" fill="none" stroke="var(--success)" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linecap="round"></path></svg><i style="left:{{ hc.spark.todayL }};top:{{ hc.spark.todayT }}"></i><small style="top:{{ hc.spark.asIsT }}">As is</small></div></sc-if>
+        <sc-if value="{{ hc.isBar }}" hint-placeholder-val="{{ false }}"><div class="hm-track"><sc-for list="{{ hc.bar }}" as="br" hint-placeholder-count="1"><button onClick="{{ br.go }}" aria-label="{{ br.title }}" title="{{ br.title }}" class="hm-bar" style="width:{{ br.w }};background:{{ br.ink }}"></button></sc-for></div></sc-if>
+      </div>
+      <div class="hm-foot"><sc-for list="{{ hc.figs }}" as="hf" hint-placeholder-count="1"><button onClick="{{ hf.go }}" disabled="{{ hf.off }}" class="hm-fig"><sc-if value="{{ hf.hasSwatch }}" hint-placeholder-val="{{ false }}"><i class="hm-sw" style="background:{{ hf.swatch }}"></i></sc-if><b>{{ hf.v }}</b>{{ hf.u }}</button></sc-for><sc-for list="{{ hc.legend }}" as="lg" hint-placeholder-count="0"><span class="hm-lg"><i style="border-radius:{{ lg.rad }};background:{{ lg.ink }}"></i>{{ lg.word }}</span></sc-for></div>
+    </div></sc-for>
+  </div>
+  <div aria-label="Waiting on you" style="display:grid;gap:10px;min-width:0">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Waiting on you</span><sc-if value="{{ hasHomeWaitingMore }}" hint-placeholder-val="{{ true }}"><button onClick="{{ homeWaitingGo }}" class="hm-link">{{ homeWaitingMore }}</button></sc-if></div>
+    <sc-if value="{{ hasHomeWaiting }}" hint-placeholder-val="{{ true }}"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
+      <sc-for list="{{ homeWaiting }}" as="ra" hint-placeholder-count="3"><div class="hm-chip">
+        <button onClick="{{ ra.open }}" title="{{ ra.rec }}" class="hm-open"><b>{{ ra.head }}</b><span>{{ ra.stateLabel }}<sc-if value="{{ ra.hasSave }}" hint-placeholder-val="{{ false }}"><em>{{ ra.saveLine }}</em></sc-if></span></button>
+        <sc-if value="{{ ra.canAccept }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ ra.accept }}" style="height:32px;padding:0 12px;font-size:13px">Accept</button></sc-if><sc-if value="{{ ra.hasDoor }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.door }}" style="height:32px;padding:0 12px;font-size:13px">{{ ra.doorLabel }}</button></sc-if>
       </div></sc-for>
-      <sc-if value="{{ hasHomeWaitingMore }}" hint-placeholder-val="{{ true }}"><button onClick="{{ homeWaitingGo }}" style="justify-self:start;margin-top:8px;border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap">{{ homeWaitingMore }}</button></sc-if>
-      <sc-if value="{{ noHomeWaiting }}" hint-placeholder-val="{{ false }}"><div style="padding-top:8px;font-size:13px;line-height:18px;color:var(--text-light)">{{ homeWaitingNone }}</div></sc-if>
-    </div>
+    </div></sc-if>
+    <sc-if value="{{ noHomeWaiting }}" hint-placeholder-val="{{ false }}"><div class="hm-none"><i aria-hidden="true">✓</i>{{ homeWaitingNone }}</div></sc-if>
   </div>
   </sc-if>
   <sc-if value="{{ homeEmpty }}" hint-placeholder-val="{{ false }}">
-  <div aria-label="Your first step" style="display:grid;gap:8px;justify-items:start;max-width:640px;border-left:2px solid var(--border-secondary);padding-left:16px">
-    <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ homeStep.line }}</div>
-    <p style="margin:0;font-size:14px;line-height:22px;color:var(--text-body);text-wrap:pretty">Discovery reads a cloud account, read-only, and draws what you have: your sites, your clouds and the paths between them.</p>
-    <button onClick="{{ homeStep.go }}" style="margin-top:8px;height:32px;padding:0 14px;border:0;border-radius:8px;background:var(--cta);color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">{{ homeStep.cta }}</button>
+  <div aria-label="Your first step" style="display:grid;justify-items:center;gap:24px;padding:72px 24px 24px;text-align:center">
+    <svg role="img" aria-label="Your network, once a source is added" viewBox="0 0 600 150" width="600" height="150" style="display:block;max-width:100%">
+      <g fill="none" stroke="var(--border-primary)" stroke-width="1.5" stroke-dasharray="5 5"><path d="M150,43 C185,43 190,75 222,75"></path><path d="M150,75 L222,75"></path><path d="M150,107 C185,107 190,75 222,75"></path><path d="M378,75 C410,75 415,43 450,43"></path><path d="M378,75 L450,75"></path><path d="M378,75 C410,75 415,107 450,107"></path></g>
+      <g fill="var(--bg-base)" stroke="var(--border-primary)" stroke-width="1.5" stroke-dasharray="4 4"><rect x="30" y="30" width="120" height="26" rx="8"></rect><rect x="30" y="62" width="120" height="26" rx="8"></rect><rect x="30" y="94" width="120" height="26" rx="8"></rect><rect x="450" y="30" width="120" height="26" rx="8"></rect><rect x="450" y="62" width="120" height="26" rx="8"></rect><rect x="450" y="94" width="120" height="26" rx="8"></rect></g>
+      <rect x="222" y="22" width="156" height="106" rx="14" fill="var(--band)" stroke="var(--band-stroke)" stroke-width="1.5"></rect>
+      <path d="M236,75 L364,75" stroke="var(--viz-1)" stroke-width="3" stroke-linecap="round" opacity=".55"></path>
+      <g font-size="12" font-weight="600" text-anchor="middle"><text x="90" y="16" fill="var(--text-light)">Your sites</text><text x="300" y="14" fill="var(--link)">The AT&amp;T network</text><text x="510" y="16" fill="var(--text-light)">Your clouds</text></g>
+    </svg>
+    <div style="display:grid;gap:6px;justify-items:center"><h1 style="margin:0;font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)">{{ homeStep.line }}</h1><div style="font-size:15px;line-height:22px;color:var(--text-body)">{{ homeStep.sub }}</div></div>
+    <button onClick="{{ homeStep.go }}" class="hm-cta">{{ homeStep.cta }}<i aria-hidden="true">→</i></button>
   </div>
   </sc-if>
-  <div aria-label="The five areas" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px">
-    <sc-for list="{{ homeStrip }}" as="t" hint-placeholder-count="5">
-      <button onClick="{{ t.go }}" title="{{ t.title }}" style="display:grid;grid-template-rows:16px 22px 16px 1fr;gap:4px;min-width:0;height:100%;box-sizing:border-box;padding:16px;text-align:left;background:var(--bg-base);border:1px solid {{ t.edge }};box-shadow:{{ t.ring }};border-radius:12px;font:inherit;color:inherit;cursor:pointer" style-hover="border-color:var(--border-active)">
-        <span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);white-space:nowrap">{{ t.label }}</span>
-        <span style="font-size:16px;line-height:22px;font-weight:700;letter-spacing:-.3px;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.value }}</span>
-        <span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.sub }}</span>
-        <span style="align-self:end;padding-top:8px;font-size:13px;line-height:18px;font-weight:600;color:var(--link);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.door }} ›</span>
-      </button>
-    </sc-for>
-  </div>
-  <div aria-label="Now" style="display:grid;min-width:0">
-    <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:8px"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Now</span><span style="font-size:12px;line-height:16px;color:var(--text-light)">Open problems in Health, ranked by apps affected</span></div>
-    <sc-for list="{{ homeNow }}" as="pb" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:96px minmax(0,1.1fr) minmax(0,1.5fr) 176px 72px;gap:16px;align-items:center;min-height:40px;border-top:1px solid var(--border-secondary);font-size:13px;line-height:18px">
-      <span style="display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap"><i aria-hidden="true" style="flex:none;width:8px;height:8px;border-radius:{{ pb.rad }};background:{{ pb.dot }}"></i><span style="font-weight:600;color:var(--text-heading)">{{ pb.stateWord }}</span></span>
-      <span style="font-weight:600;color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pb.where }} · {{ pb.thing }}</span>
-      <span style="color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pb.what }}</span>
-      <span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ pb.startedF }}</span>
-      <span style="display:flex;justify-content:flex-end"><button class="fx-btn" onClick="{{ pb.trace }}" style="height:28px;padding:0 12px;font-size:12px">Trace</button></span>
-    </div></sc-for>
-    <sc-if value="{{ hasHomeNowMore }}" hint-placeholder-val="{{ false }}"><button onClick="{{ homeNowMoreGo }}" style="justify-self:start;margin-top:8px;border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap">{{ homeNowMore }}</button></sc-if>
-    <sc-if value="{{ noHomeNow }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;min-height:40px;border-top:1px solid var(--border-secondary);font-size:13px;line-height:18px;color:var(--text-body)"><i aria-hidden="true" style="flex:none;width:8px;height:8px;border-radius:{{ homeNowNoneRad }};background:{{ homeNowNoneDot }}"></i>{{ homeNowNone }}</div></sc-if>
-  </div>
 </section>
 </sc-if>
 
@@ -431,7 +470,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <div style="display:flex;align-items:center;gap:16px;padding:10px 16px;margin-bottom:24px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:12px"><span aria-hidden="true" style="width:16px;height:16px;flex:none;background:url('{{ iconFabric }}') center / contain no-repeat"></span><span style="flex:1;min-width:0;font-size:14px;line-height:20px;letter-spacing:-.4px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ heroStripText }}</span><button class="fx-btn" onClick="{{ toggleHero }}">Show the AT&amp;T network</button></div>
 </sc-if>
 <sc-if value="{{ heroVisible }}" hint-placeholder-val="{{ true }}">
-<div id="sec-fabric" style="display:grid;grid-template-columns:1fr;gap:12px;align-items:stretch;margin-bottom:{{ heroMb }}"><sc-if value="{{ heroHead }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:1px;min-width:0;margin-bottom:10px"><h3 style="margin:0;font-size:16px;line-height:22px;font-weight:600;color:var(--text-heading)">What you have</h3><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:12px;line-height:16px;color:var(--text-light)"><sc-for list="{{ fabricHealth }}" as="fh" hint-placeholder-count="3"><span title="{{ fh.title }}" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap"><i style="width:7px;height:7px;border-radius:9999px;background:{{ fh.dot }};flex:none"></i>{{ fh.text }}</span></sc-for></div></div></sc-if>
+<div id="sec-fabric" data-fold="{{ heroFold }}" style="display:grid;grid-template-columns:1fr;gap:12px;align-items:stretch;margin-bottom:{{ heroMb }}"><sc-if value="{{ heroHead }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:1px;min-width:0;margin-bottom:10px"><h3 style="margin:0;font-size:16px;line-height:22px;font-weight:600;color:var(--text-heading)">What you have</h3><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:12px;line-height:16px;color:var(--text-light)"><sc-for list="{{ fabricHealth }}" as="fh" hint-placeholder-count="3"><span title="{{ fh.title }}" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap"><i style="width:7px;height:7px;border-radius:9999px;background:{{ fh.dot }};flex:none"></i>{{ fh.text }}</span></sc-for></div></div></sc-if>
 <div style="position:relative;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;padding:10px 24px 12px;display:flex;align-items:stretch;min-height:{{ heroMinH }}">
 
 <div style="display:grid;gap:10px;width:100%;min-width:0">
@@ -2509,7 +2548,7 @@ class Component extends DCLogic {
     v.appReady = true;
     const s = this.state;
     // derived presentation values the template needs
-    v.heroMinH = s.screen === 's0' ? '0' : '0'; v.heroMb = s.screen === 's3' ? '0' : '24px'; v.heroSvgStyle = s.screen === 's0' ? { display: 'block', overflow: 'visible', width: '100%', height: 'auto', maxHeight: '440px', alignSelf: 'stretch', minHeight: 0 } : { display: 'block', overflow: 'visible', width: '100%' };
+    v.heroMinH = s.screen === 's0' ? '0' : '0'; v.heroMb = s.screen === 's3' ? '0' : '24px'; v.heroSvgStyle = { display: 'block', overflow: 'visible', width: '100%' }; // one map on the home and on Connect (v2 home, 2026-09-30)
     v.inetOp = s.hoverNode && s.hoverNode !== 'inet' ? 0.3 : 1;
     v.noop = (e) => e.preventDefault();
     v.setSourceCred = () => this.setState({ intakeSource: 'credential' });

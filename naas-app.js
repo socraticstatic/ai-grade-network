@@ -23,6 +23,7 @@ import * as LC from './naas-lifecycle.js';
 import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
 import { rampName } from './naas-things.js';
+import * as HM from './naas-home.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product', s9: 'Help' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
@@ -696,8 +697,9 @@ export function vals(c) {
   const costVerdict = VD.costVerdict(estOpen, ob, totalSave, buckets);
   const kpis = isEmpty ? [] : kpiTiles(s, est);
   // The AT&T network picture opens on Home and Fabric; every other screen keeps a one-line strip and a "Show the AT&T network" door (audit finding 2).
-  // The NaaS home (s0) draws no map since 2026-09-30: it is the whole network at a glance; the map stays on Connect.
-  const heroScreen = s.screen === 's2' || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect' && (s.cnPage || 'picture') === 'picture');
+  // The NaaS home (s0) repeats Connect's network map below the fold (v2 home, 2026-09-30: "the 'connect'
+  // diagram can be repeated below all the good stuff"); an estate with nothing to draw shows its one step instead.
+  const heroScreen = s.screen === 's2' || (s.screen === 's0' && !isEmpty) || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect' && (s.cnPage || 'picture') === 'picture');
   const heroKey = s.screen === 's3' ? `s3/${s.layer}/${s.tab}` : s.screen;
   // One hero graph (Micah, 13:23): the picture is open on home and on all four pages.
   // A new customer's picture is empty; the scan leads and the picture waits behind its strip (no-scroll pass, 2026-09-28).
@@ -1056,7 +1058,7 @@ export function vals(c) {
     ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll, probs, segCtx, incChanges),
   };
   Object.assign(out, briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }));
-  Object.assign(out, homeVals(out, s, set, { observeHead, ob, go, isEmpty }));
+  Object.assign(out, homeVals(out, s, set, { go, isEmpty, openSave }));
   if (s.screen === 's3' && s.tab === 'observe' && s.obPage === 'insights' && out.insPanelBrief) Object.assign(out, { andiSub: out.briefText, hasAndiSub: true });
   return pageLists(out, s, set);
 }
@@ -1107,40 +1109,78 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
     briefLast: at(SCH.prevRunAt(monthly, nowMs)), briefNext: cadence === 'off' ? 'Off' : at(SCH.nextRunAt(monthly, nowMs)) };
 }
 
-// The NaaS home (spec 2026-09-30-naas-home-design.md): the whole network at a
-// glance, by persona. Every figure is a field vals() already computed for the
-// page it opens; the home adds its greeting and its layout, never a number.
-// It reads problemRows before pageLists pages them, so "+N more" counts them all.
-const chicagoHour = (ms) => +new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Chicago' }).formatToParts(new Date(ms)).find(p => p.type === 'hour').value;
-export function homeVals(out, s, set, { observeHead, ob, go, isEmpty }) {
-  const rk = roleKeyOf(s), hr = chicagoHour(SCH.nowOf(s));
-  const sev1 = (out.opsFacts || {}).sev1 || 0;
+// The NaaS home, v2 (Micah, 2026-09-30: "home page is too wordy! this isn't a
+// white paper"; the approved mockup): one take-away for the role, four snapshot
+// cards with a picture each, Waiting on you as three chips, and the Connect
+// network map below the fold. The words and the pictures are naas-home.js's;
+// every figure is a field vals() already computed for the page it opens, and
+// every door here opens exactly the set that figure counts. It reads
+// problemRows before pageLists pages them.
+export function homeVals(out, s, set, { go, isEmpty, openSave }) {
+  const rk = roleKeyOf(s);
   const stat = (k) => String(((out.invStats || []).find(x => x.key === k) || {}).v ?? '');
-  const one = (n, a, b) => `${n} ${n === '1' ? a : b}`;
-  const step = { line: 'Add a source to see your network', cta: 'Add a source', go: () => { go('s1', { discoverView: 'sources' })(); if (out.openAddSource) out.openAddSource(); } };
-  const discover = isEmpty
-    ? { key: 'discover', label: 'Discover', value: 'Nothing discovered yet', sub: 'starts with the first source', door: 'Add a source', go: step.go }
-    : { key: 'discover', label: 'Discover', value: `${one(stat('s'), 'site', 'sites')} · ${one(stat('c'), 'cloud', 'clouds')}`, sub: out.newPill30 || '', door: 'Estate', go: go('s1') };
-  // The four rollup tiles as Connect read them; only the look is the home's.
-  const homeStrip = [discover, ...(out.rollup || []).map(r => ({ key: r.key, label: r.label, value: r.value, sub: r.sub, door: r.door, go: r.go, primary: !!r.primary }))]
-    .map(t => ({ ...t, title: `${t.label} · ${t.value}${t.sub ? ' · ' + t.sub : ''}`, edge: 'var(--border-secondary)', ring: 'none' }));
+  const roll = (k) => (out.rollup || []).find(r => r.key === k) || {};
+  const tile = (k) => ((out.spendTiles || []).find(t => t.key === k) || {}).v || '';
+  const ring = (k) => (out.glanceRings || []).find(r => r.key === k) || {};
   const acts = out.roleActAll || [], probs = out.problemRows || [];
-  const homeNow = probs.slice(0, 3).map(p => ({ key: p.key, stateWord: p.stateWord, dot: p.dot, rad: p.rad, where: p.where, thing: p.thing, what: p.what, startedF: p.startedF,
-    trace: () => { go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf' })(); p.trace(); } }));
+  const step = { line: 'Add a source to see your network', sub: 'Read-only. Discovery draws your sites, clouds and paths.', cta: 'Add a source',
+    go: () => { go('s1', { discoverView: 'sources' })(); if (out.openAddSource) out.openAddSource(); } };
+  const cloud = { layer: 'cloud' };
+  const obs = (extra) => go('s3', { ...cloud, tab: 'observe', obPage: 'perf', ...extra });
+  const picture = (siteFilter) => go('s3', { ...cloud, tab: 'connect', cnPage: 'picture', siteFilter });
+  const pathAll = out.pathTimeAll || [];
+  const doors = {
+    picture: () => picture({}),
+    capacity: () => obs({ obPanel: 'conn' }),
+    options: () => go('s3', { ...cloud, tab: 'connect', cnPage: 'options' }),
+    sitesOn: () => picture({ reach: 'att' }),
+    sitesOff: () => picture({ reach: 'outside' }),
+    health: () => obs({ obPanel: 'health', healthView: 'app' }),
+    // An app's dot opens its own path in Paths, on the page that holds it.
+    appPath: (tag) => { const ix = pathAll.findIndex(r => String(r.key).startsWith(tag + '|'));
+      return obs({ obPanel: 'paths', pathSel: ix >= 0 ? pathAll[ix].key : null, pathsPage: ix >= 0 ? Math.floor(ix / 8) : 0 }); },
+    spend: () => go('s3', { ...cloud, tab: 'cost', costPanel: 'spend' }),
+    optimize: () => go('s3', { ...cloud, tab: 'cost', costPanel: 'optimize' }),
+    tags: () => go('s3', { ...cloud, tab: 'govern', govPanel: 'tags' }),
+    policies: () => go('s3', { ...cloud, tab: 'govern', govPanel: 'policies' }),
+  };
+  const sitesG = ring('sites'), cloudsG = ring('clouds'), wlG = ring('workloads');
+  const glance = { sitesTotal: HM.numOf(sitesG.centre), sitesOn: /^All\b/.test(sitesG.head || '') ? HM.numOf(sitesG.centre) : HM.numOf(sitesG.head),
+    regTotal: HM.numOf(cloudsG.centre), regPriv: HM.numOf(cloudsG.head) };
+  const healthy = ((out.healthTiles || []).find(x => x.key === 'ok') || {}).v || '';
+  const take = isEmpty ? null : HM.takeAway(rk, { probs, acts, onTableF: openSave ? fmt(openSave) : '', spend: tile('spend'), could: tile('could'), ahead: tile('ahead'),
+    exposed: stat('e'), govern: roll('govern'), connect: roll('connect'), pubWl: (String(wlG.head || '').match(/^[\d,]+/) || ['0'])[0], clouds: stat('c'), healthy });
+  // The take-away's doors: its action, its headline and each part of its line open the set they name.
+  const takeDoor = {
+    trace: () => () => { go('s3', { ...cloud, tab: 'observe', obPage: 'perf' })(); probs[0].trace(); },
+    health: doors.health,
+    moves: () => go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0, persona: rk }),
+    optimize: doors.optimize,
+    spend: doors.spend,
+    violations: doors.policies,
+    tags: doors.tags,
+    options: doors.options,
+    connect: () => roll('connect').go || doors.options(),
+    clouds: () => go('s1', { discoverView: 'estate', estPanel: 'clouds' }),
+    app: (tag) => doors.appPath(tag),
+  };
+  const doorOf = (k, arg) => (takeDoor[k] ? takeDoor[k](arg) : null);
+  const homeCards = isEmpty ? [] : HM.snapshotCards(rk, { glance, health: healthy, flows: out.pathFlowAll || [], spend: { spend: tile('spend'), ahead: tile('ahead') },
+    spendCols: out.spendCols || [], exposed: stat('e'), workloads: stat('w'), govern: roll('govern') }, doors);
   return {
-    homeGreeting: `${hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'}, ${ROLE_OF[rk].short}`,
-    homeHead: [observeHead || (ob && ob.verdict) || '', sev1 ? `${sev1} Sev 1 open now.` : ''].filter(Boolean).join(' '),
-    homeBrief: isEmpty ? '' : (out.briefText || ''),
-    homeBriefGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'brief' }),
-    homeWaiting: acts.slice(0, 3), hasHomeWaiting: acts.length > 0, noHomeWaiting: !acts.length, homeWaitingNone: acts.length ? '' : (out.roleEmpty || ''),
+    homeTake: take && { key: take.key, head: take.head, sub: take.sub, cta: take.cta, ink: take.ink,
+      tint: `color-mix(in srgb, ${take.ink} 14%, transparent)`, wash: `color-mix(in srgb, ${take.ink} 7%, var(--bg-base))`,
+      icon: `brand/icons-light/${take.icon}.svg`, go: doorOf(take.door), headGo: doorOf(take.headDoor),
+      parts: take.parts.map((p, i) => { const g = doorOf(p.door, p.arg); return { key: 'p' + i, t: p.t, sep: i > 0, off: !g, go: g || (() => {}) }; }) },
+    homeCards,
+    homeBriefGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'brief' }),
+    homeWaiting: acts.slice(0, 3), hasHomeWaiting: acts.length > 0, noHomeWaiting: !acts.length, homeWaitingNone: acts.length ? '' : 'Nothing waiting on you',
     homeWaitingMore: acts.length ? `All ${acts.length} in Your actions ›` : '', hasHomeWaitingMore: acts.length > 0,
-    homeWaitingGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0 }),
-    homeStrip,
-    homeNow, hasHomeNow: homeNow.length > 0,
-    homeNowMore: probs.length > 3 ? `+${probs.length - 3} more in Health ›` : '', hasHomeNowMore: probs.length > 3,
-    homeNowMoreGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' }),
-    homeNowNone: probs.length ? '' : isEmpty ? 'No telemetry yet. It starts with the first attach.' : 'Nothing is down or over SLO.', noHomeNow: !probs.length, homeNowNoneDot: isEmpty ? 'transparent' : F.HEALTH_INK.ok, homeNowNoneRad: F.healthRadius('ok'),
+    homeWaitingGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0 }),
     homeEmpty: !!isEmpty, homeBand: !isEmpty, homeStep: step,
+    // The map below the home carries the fold marker (scripts/fold-rule.mjs), and its incident strip stays
+    // off the home: the take-away already names the problem.
+    heroFold: s.screen === 's0' ? 'below' : 'page', ...(s.screen === 's0' ? { hasIncidents: false } : {}),
   };
 }
 
@@ -2635,6 +2675,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       // The state in words beside its dot (review, 2026-09-30): Down, Over SLO and At risk never rest on colour alone.
       return { key: p.key, state: p.state, stateWord: F.HEALTH_WORD[p.state] || '', dot: INK[p.state] || 'var(--warning)', rad: F.healthRadius(p.state), where: p.where, thing: p.thing, what: p.what, ownerLabel: p.ownerLabel,
         appsF: `${n} ${n === 1 ? 'app' : 'apps'} · ${(p.wl || 0).toLocaleString('en-US')} workloads`,
+        // The home's take-away reads the apps, workloads and age as figures (v2 home, 2026-09-30).
+        apps: p.apps, wl: p.wl || 0, ago: SCH.agoOf(p.startedAt, nowMs),
         startedF: `Started ${SCH.hhmm(p.startedAt)} · ${SCH.agoOf(p.startedAt, nowMs)}`, changeF: p.change ? `${p.change.text} at ${SCH.hhmm(p.change.at)}` : '', hasChange: !!p.change,
         ...ticketOf(p.key),
         ticket: moveF({ key: p.key }, 'progress', { note: `Ticket ${tid(p.key)} opened, routed to ${p.ownerLabel}` }),
@@ -2737,10 +2779,13 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       return { key: f.kind, head: f.head, saveLine: f.priced ? `Save ${fmt(f.save)}/mo` : '', hasSave: !!f.priced, rec: `Recommended: ${rec}`, stateLabel: l.label,
         canAccept: st === 'open' || st === 'snoozed', accept: moveF(k, 'ack', { note: `Accepted: ${rec}` }),
         canDefer: st === 'open', defer: moveF(k, 'snoozed', { snoozeDays: deferDays, note: deferWhen ? `Deferred to the ${deferWhen} briefing` : 'Deferred' }),
-        canStart: st === 'ack', start: moveF(k, 'progress'), canSnooze: st === 'ack', snooze: moveF(k, 'snoozed', { snoozeDays: deferDays }), hasDoor: false, doorLabel: '', door: () => {} }; });
+        canStart: st === 'ack', start: moveF(k, 'progress'), canSnooze: st === 'ack', snooze: moveF(k, 'snoozed', { snoozeDays: deferDays }), hasDoor: false, doorLabel: '', door: () => {},
+        // The home's chip opens its finding in place (v2 home, 2026-09-30).
+        open: () => set({ fdKey: f.key }) }; });
     const ports = rk === 'architect' ? OD.capacity(conns, s.obWindow || '30d').filter(r => r.peakPct >= 80).map(r => { const reg = est0.regionsList.find(x => x.region === r.region) || { region: r.region, wl: 0 };
       return { key: 'cap-' + r.region, head: `${r.cloud} ${r.region} peaks at ${r.peakPct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, saveLine: '', hasSave: false, rec: 'Recommended: Add a port', stateLabel: 'Open',
-        canAccept: false, canDefer: false, canStart: false, canSnooze: false, hasDoor: true, doorLabel: 'Add a port', door: composeFor(go, reg), accept: () => {}, defer: () => {}, start: () => {}, snooze: () => {} }; }) : [];
+        canAccept: false, canDefer: false, canStart: false, canSnooze: false, hasDoor: true, doorLabel: 'Add a port', door: composeFor(go, reg), accept: () => {}, defer: () => {}, start: () => {}, snooze: () => {},
+        open: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn' }) }; }) : [];
     const all = [...acts, ...ports];
     const roleEmpty = all.length ? '' : rk === 'exec' ? 'Nothing priced on the table.' : 'Nothing to act on yet. What AT&T finds for this role lands here.';
     const roleChips = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk; return { key: k, label: ROLE_OF[k].short, on, ...seg(on), go: () => set({ persona: k, rolePage: 0 }) }; });

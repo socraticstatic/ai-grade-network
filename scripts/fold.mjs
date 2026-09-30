@@ -3,7 +3,10 @@
 //
 // It checks the standing rulings:
 //   - no page scroll: document.documentElement.scrollHeight <= 900
-//     (dashboard-fits-the-fold, 2026-09-28);
+//     (dashboard-fits-the-fold, 2026-09-28), with one exception read from
+//     scripts/fold-rule.mjs: the NaaS home may run past 900 by the Connect
+//     map below its fold (v2 home, 2026-09-30), and only by it: everything
+//     above the map fits 900 and nothing follows the map;
 //   - no sideways scroll: scrollWidth <= 1440 ("wide"), and no visible
 //     element whose right edge lands past the viewport ("past edge");
 //   - nothing boxed: no element that scrolls its own overflow
@@ -39,10 +42,14 @@
 // 20 FAIL: Sources after Add and scan scrolled to 1474px on four estates in
 // both themes (the Remove button), and Traffic > Where it goes and > Paths
 // printed em-dash placeholders on three. 422 checks, 0 FAIL, once fixed.
+// The v2 home (2026-09-30): 462 checks, 0 FAIL. Empty's home lost its five
+// role tabs (one step, nothing to personalize), so 472 became 462.
+// FOLD_LIMIT=600 fails every live home on "above the map": the allowance bites.
 
 import { readFile, mkdir } from 'node:fs/promises';
 import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { heightProblems, foldMarks } from './fold-rule.mjs';
 
 const PW = 'file:///Users/micahbos/Developer/Cloud_Designer/node_modules/playwright/index.mjs';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -213,7 +220,7 @@ let fails = 0;
 
 function report(estate, th, page, tab, m, errors) {
   const bad = [];
-  if (m.scrollHeight > LIMIT) bad.push(`scroll ${m.scrollHeight}`);
+  bad.push(...heightProblems({ page, scrollHeight: m.scrollHeight, limit: LIMIT, below: m.below, aboveBottom: m.aboveBottom }));
   if (m.scrollWidth > WLIMIT) bad.push(`wide ${m.scrollWidth}`);
   if (m.wide.length) bad.push(`past edge ${m.wide.slice(0, 4).join(', ')}${m.wide.length > 4 ? ` (+${m.wide.length - 4})` : ''}`);
   if (m.words.length) bad.push(`words ${m.words.slice(0, 4).join(', ')}${m.words.length > 4 ? ` (+${m.words.length - 4})` : ''}`);
@@ -256,7 +263,7 @@ try {
         const seen = new Set();
         const walk = async (depth, trail) => {
           errors.length = 0;
-          const m = await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT });
+          const m = { ...(await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT })), ...(await page.evaluate(foldMarks)) };
           report(estate, th, pageName, trail || '(landing)', m, errors);
           if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail || 'landing'}`.replace(/[^\w.-]+/g, '_') + '.png') });
           if (depth >= 2) return;
@@ -289,7 +296,7 @@ try {
           await settle(page);
         }
         errors.length = 0;
-        const m = await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT });
+        const m = { ...(await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT })), ...(await page.evaluate(foldMarks)) };
         report(estate, th, pageName, trail, m, missed ? [`no "${missed}" button`, ...errors] : errors);
         if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail}`.replace(/[^\w.-]+/g, '_') + '.png') });
       }
