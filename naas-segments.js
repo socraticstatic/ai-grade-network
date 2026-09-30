@@ -6,9 +6,9 @@
 // without flow logs, and each app's traffic by region. What the product cannot
 // see yet reads "Not yet measured". Nothing here invents a live number.
 import { accessThing, cloudEdgeThing, cloudAccessThing, entersAtt } from './naas-things.js';
-import { attHolds, connModeOf, siteModeOf, RAMP_EDGE } from './naas-logic.js';
+import { attHolds, connModeOf, siteModeOf, RAMP_EDGE, regionOf, regionRows } from './naas-logic.js';
 import { regionState, SLO, SLO_PRIVATE } from './naas-flowmap.js';
-import { countOf } from './naas-sites.js';
+import { countOf, stateOf, placeName } from './naas-sites.js';
 import { siteState } from './naas-volume.js';
 import { appsOf } from './naas-apps.js';
 
@@ -39,7 +39,7 @@ export const TABLE = [
   { key: 'ipsec', label: 'IPsec tunnels', owner: 'customer', show: 'Tunnel up or down, flaps, throughput', source: 'Cloud VPN metrics', limited: false },
   { key: 'hub', label: 'Cloud routing hub (Transit Gateway, Virtual WAN, NCC)', owner: 'customer', show: 'Attachment state, drops from missing or dead routes', source: 'Hub metrics and route tables', limited: false },
   { key: 'exit', label: 'Cloud exit (NAT, internet gateway)', owner: 'customer', show: 'Port exhaustion, dropped packets, exit volume', source: 'NAT gateway metrics', limited: false },
-  { key: 'app', label: 'VPC and app', owner: 'customer', show: 'Rejected flows, delay to app, DNS failures', source: 'Flow logs, security rules, DNS logs', limited: false },
+  { key: 'app', label: 'VPC and app', owner: 'customer', show: 'Rejected flows, delay to app, DNS failures', source: 'Flow logs, security rules, DNS logs', limited: false, gap: 'DNS not yet measured' },
 ];
 
 const NOT_YET = 'Not yet measured';
@@ -121,33 +121,71 @@ export function cellsFor(tag, ctx) {
   });
 }
 
+// Every instance behind each of the nine rows, with the site or region it is.
+function itemsOf(est, ctx) {
+  const sites = est.sites || [], regs = est.regionsList || [];
+  const siteItems = (pick) => sites.map((s, i) => ({ s, i })).filter(({ s }) => pick(s)).map(({ s, i }) => { const bad = siteState(s, i) === 'degraded'; return { site: s, n: countOf(s.name), state: bad ? 'risk' : 'ok', where: s.name, thing: s.access, why: bad ? 'Access degraded' : 'Healthy' }; });
+  const isAttAccess = (s) => entersAtt(s) && (accessThing(s) || {}).owner === 'att';
+  const regItem = (r, c) => ({ region: r, state: c.state, where: `${r.cloud} ${r.region} · ${c.thing}`, thing: c.thing, why: c.why });
+  return {
+    access: siteItems(isAttAccess),
+    access3p: siteItems(s => !isAttAccess(s)),
+    backbone: sites.some(entersAtt) ? [{ state: 'ok', where: 'AT&T backbone', thing: 'AT&T backbone', why: 'Healthy' }] : [],
+    onramp: regs.filter(r => r.priv && (attHolds(r) || RAMP_EDGE[r.ramp] === 'third')).map(r => regItem(r, part('onramp', r, ctx))),
+    cloudlink: regs.filter(r => r.priv && connModeOf(r) === 'direct').map(r => regItem(r, part('cloudlink', r, ctx))),
+    ipsec: siteItems(s => siteModeOf(s) === 'ipsec').map(x => ({ ...x, state: 'nodata', why: `${NOT_YET}: cloud VPN metrics are not connected` })),
+    hub: regs.map(r => ({ region: r, state: 'nodata', where: `${r.cloud} ${r.region} · ${HUB_NAME[r.cloud] || 'Routing hub'}`, thing: HUB_NAME[r.cloud] || 'Routing hub', why: `${NOT_YET}: hub metrics are not connected` })),
+    exit: regs.map(r => ({ region: r, state: 'nodata', where: `${r.cloud} ${r.region}`, thing: 'NAT gateway', why: `${NOT_YET}: NAT gateway metrics are not connected` })),
+    app: regs.map(r => ctx.blind.has(r.region) ? { region: r, state: 'nodata', where: `${r.cloud} ${r.region}`, thing: 'Flow logs', why: `${NOT_YET}: no flow logs` } : { region: r, state: 'ok', where: `${r.cloud} ${r.region}`, thing: 'Flow logs', why: 'Flow logs arrive' }),
+  };
+}
+function tally(items) {
+  const counts = { n: 0, ok: 0, risk: 0, slo: 0, down: 0, nodata: 0 };
+  let now = null;
+  for (const it of items) {
+    counts.n += it.n || 1; counts[it.state] = (counts[it.state] || 0) + (it.n || 1);
+    if (!now || (RANK[it.state] ?? -1) > (RANK[now.state] ?? -1)) now = { state: it.state, where: it.where, why: it.why };
+  }
+  return { counts, now };
+}
+const UNMEASURED = { ipsec: true, hub: true, exit: true };
+
 /** The nine rows: how many instances, how they stand, the worst one, and whether we can see them. */
 export function segmentTable(est, ctx) {
-  const sites = est.sites || [], regs = est.regionsList || [];
-  const tally = (items) => {
-    const counts = { n: 0, ok: 0, risk: 0, slo: 0, down: 0, nodata: 0 };
-    let now = null;
-    for (const it of items) {
-      counts.n += it.n || 1; counts[it.state] = (counts[it.state] || 0) + (it.n || 1);
-      if (!now || (RANK[it.state] ?? -1) > (RANK[now.state] ?? -1)) now = { state: it.state, where: it.where, why: it.why };
+  const items = itemsOf(est, ctx);
+  return TABLE.map(t => { const { counts, now } = tally(items[t.key]);
+    return { ...t, ownerLabel: OWNERS[t.owner], counts, now, measured: UNMEASURED[t.key] ? false : counts.nodata < counts.n || counts.n === 0 }; });
+}
+
+export const SITE_ROWS = new Set(['access', 'access3p', 'ipsec']);
+const bySeen = (items, keyOf) => { const m = new Map(); items.forEach(it => { const k = keyOf(it); if (!m.has(k)) m.set(k, []); m.get(k).push(it); }); return [...m.entries()]; };
+const group = (key, name, its, drillKey) => { const t = tally(its); return { key, name, n: t.counts.n, counts: t.counts, state: t.now ? t.now.state : 'none', worst: t.now, drillKey, leaf: false }; };
+
+/**
+ * One row's instances, drilled in place. The site rows go by place (region,
+ * state, then the state's sites, the way Your sites reads); the cloud rows go
+ * cloud, then region. Backbone is one thing.
+ */
+export function segmentDrill(est, ctx, key, trail = []) {
+  const items = itemsOf(est, ctx)[key];
+  if (!items) return null;
+  if (SITE_ROWS.has(key)) {
+    if (!trail.length) {
+      const order = regionRows({ ...est, sites: items.map(x => x.site) }).map(r => r.name);
+      const by = Object.fromEntries(bySeen(items, x => regionOf(x.site)));
+      return { level: 'region', rows: order.map(name => group('region:' + name, name, by[name], 'region:' + name)) };
     }
-    return { counts, now };
-  };
-  const siteItems = (pick) => sites.map((s, i) => ({ s, i })).filter(({ s }) => pick(s)).map(({ s, i }) => { const bad = siteState(s, i) === 'degraded'; return { n: countOf(s.name), state: bad ? 'risk' : 'ok', where: s.name, why: bad ? 'Access degraded' : 'Healthy' }; });
-  const isAttAccess = (s) => entersAtt(s) && (accessThing(s) || {}).owner === 'att';
-  const rows = {
-    access: tally(siteItems(isAttAccess)),
-    access3p: tally(siteItems(s => !isAttAccess(s))),
-    backbone: tally(sites.some(entersAtt) ? [{ state: 'ok', where: 'AT&T backbone', why: 'Healthy' }] : []),
-    onramp: tally(regs.filter(r => r.priv && (attHolds(r) || RAMP_EDGE[r.ramp] === 'third')).map(r => part('onramp', r, ctx)).map((c, i, a) => ({ state: c.state, where: c.thing, why: c.why }))),
-    cloudlink: tally(regs.filter(r => r.priv && connModeOf(r) === 'direct').map(r => { const c = part('cloudlink', r, ctx); return { state: c.state, where: `${r.cloud} ${r.region} · ${c.thing}`, why: c.why }; })),
-    ipsec: tally(siteItems(s => siteModeOf(s) === 'ipsec').map(x => ({ ...x, state: 'nodata', why: `${NOT_YET}: cloud VPN metrics are not connected` }))),
-    hub: tally(regs.map(r => ({ state: 'nodata', where: `${r.cloud} ${r.region} · ${HUB_NAME[r.cloud] || 'Routing hub'}`, why: `${NOT_YET}: hub metrics are not connected` }))),
-    exit: tally(regs.map(r => ({ state: 'nodata', where: `${r.cloud} ${r.region}`, why: `${NOT_YET}: NAT gateway metrics are not connected` }))),
-    app: tally(regs.map(r => ctx.blind.has(r.region) ? { state: 'nodata', where: `${r.cloud} ${r.region}`, why: `${NOT_YET}: no flow logs` } : { state: 'ok', where: `${r.cloud} ${r.region}`, why: 'Flow logs arrive' })),
-  };
-  const measured = { ipsec: false, hub: false, exit: false };
-  return TABLE.map(t => ({ ...t, ownerLabel: OWNERS[t.owner], counts: rows[t.key].counts, now: rows[t.key].now, measured: measured[t.key] === false ? false : rows[t.key].counts.nodata < rows[t.key].counts.n || rows[t.key].counts.n === 0 }));
+    const region = String(trail[0]).replace(/^region:/, '');
+    const inRegion = items.filter(x => regionOf(x.site) === region);
+    if (trail.length === 1) return { level: 'state', rows: bySeen(inRegion, x => stateOf(x.site.metro) || '—').map(([code, its]) => group('state:' + code, placeName(code === '—' ? '' : code), its, 'state:' + code)).sort((a, b) => a.name.localeCompare(b.name)) };
+    const code = String(trail[1]).replace(/^state:/, '');
+    const inState = inRegion.filter(x => (stateOf(x.site.metro) || '—') === code);
+    return { level: 'site', rows: inState.map(x => ({ key: 'site:' + x.site.name, name: x.site.name, n: x.n || 1, state: x.state, worst: x, sub: [x.site.metro, x.thing, x.why].filter(Boolean).join(' · '), leaf: true })).sort((a, b) => (RANK[b.state] ?? -1) - (RANK[a.state] ?? -1) || a.name.localeCompare(b.name)) };
+  }
+  if (key === 'backbone') return { level: 'segment', rows: items.map(x => ({ key: 'backbone', name: x.thing, n: 1, state: x.state, worst: x, sub: x.why, leaf: true })) };
+  if (!trail.length) return { level: 'cloud', rows: bySeen(items, x => x.region.cloud).map(([cloud, its]) => group('cloud:' + cloud, cloud, its, 'cloud:' + cloud)) };
+  const cloud = String(trail[0]).replace(/^cloud:/, '');
+  return { level: 'region', rows: items.filter(x => x.region.cloud === cloud).map(x => ({ key: 'region:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, n: 1, state: x.state, worst: x, sub: `${x.thing} · ${x.why}`, leaf: true })) };
 }
 
 /** The Health grid: one row per app group, worst first, then by workloads. */

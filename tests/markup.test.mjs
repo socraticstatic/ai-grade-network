@@ -227,14 +227,15 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Capacity's empty state (2026-09-30): sc-if 356 -> 357.
 // Discovery found (2026-09-30): div 901 -> 906, span 687 -> 688, sc-if 357 -> 358, button 265 -> 267.
 // Remove on an added source (2026-09-30): sc-if 358 -> 359, button 267 -> 268.
+// Health by segment (2026-09-30): the By app | By segment toggle, the nine rows and their in-place drill: div 906 -> 912, span 688 -> 708, sc-if 359 -> 365, sc-for 204 -> 208, button 268 -> 274.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 906],
-    ['span', /<span\b/g, /<\/span>/g, 688],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 359],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 204],
+    ['div', /<div\b/g, /<\/div>/g, 912],
+    ['span', /<span\b/g, /<\/span>/g, 708],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 365],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 208],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 268],
+    ['button', /<button\b/g, /<\/button>/g, 274],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];
