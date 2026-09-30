@@ -94,11 +94,18 @@ await beat('3 Traffic: a GCP pick, in proportion', async () => {
   await btn('Whole estate');
 });
 
-await beat('4 Health: the eastus flap, Open ticket', async () => {
+// With Andi On (the default) every incident already carries his ticket, and
+// Health and Operations read the same one (final review, 2026-09-30). Beat 7
+// checks Operations > Tickets lists the number Health shows here.
+let eastusTicket = null;
+await beat('4 Health: the eastus flap already carries Andi\'s ticket', async () => {
   await tab('Health');
   await expect('Azure eastus · ExpressRoute', 'BGP flapping', 'Cloud provider');
-  await btn('Open ticket');
-  await expect(/T-\d{4} · In progress/);
+  const t = await text();
+  const m = t.slice(t.indexOf('Azure eastus · ExpressRoute')).match(/(T-\d{4}) · opened by Andi/);
+  if (!m) throw new Error('the eastus row has no "T-nnnn · opened by Andi"');
+  eastusTicket = m[1];
+  if (await page.locator('button:visible', { hasText: 'Open ticket' }).count()) throw new Error('Open ticket shows beside Andi\'s tickets');
 });
 
 await beat('5 Capacity', async () => {
@@ -118,6 +125,9 @@ await beat('7 Insights: Your actions and Operations', async () => {
   await expect('Actions for Network Eng', 'Coming soon');
   await tab('Operations', '[aria-label="Insights views"]');
   await expect(/\d+ Sev 1 open now\. \d+ tickets? open\./, 'sample history');
+  await tab('Tickets', '[aria-label="Operations views"]');
+  if (!eastusTicket) throw new Error('beat 4 never read the eastus ticket');
+  await expect(`${eastusTicket} · opened by Andi`);
 });
 
 await beat('8 Estate switch to Established', async () => {

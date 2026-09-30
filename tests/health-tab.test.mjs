@@ -69,8 +69,10 @@ test('Alerts opens Health; the old drawer is gone', () => {
   assert.ok(!HTML.includes('aria-label="Queue"'));
 });
 
+// With Andi On every incident already carries his ticket, so Open ticket shows only with the toggle Off (final review, 2026-09-30).
 test('Open ticket moves the incident to In progress with a ticket, and it holds', () => {
-  const c = at('partial');
+  const c = at('partial', { andiTickets: false });
+  assert.equal(vals(c).problemRows[0].canTicket, true);
   vals(c).problemRows[0].ticket();
   const life = c.state.findingLife.partial['an-link-eastus'];
   const last = life.events[life.events.length - 1];

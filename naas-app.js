@@ -891,7 +891,7 @@ export function vals(c) {
     // An estate switch starts clean (2026-09-30): a By pick or a drill the new
     // estate lacks drew an empty map with a phantom "Internet 1.0 Gbps".
     view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0 }),
-    resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null }); },
+    resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], andiTickets: d.andiTickets, heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null, pathSel: null, pathPin: null }); },
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
     // which nulled s.order even when the live compose had not started an
     // outcome yet - exactly the state right after a marketplace product
@@ -2387,6 +2387,15 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: '#c9362c', down: 'var(--error)' };
   // One ticket number per problem key, shared by Health and Operations.
   const tid = (k) => 'T-' + (1000 + [...k].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9000, 7));
+  // One ticket per problem, and Health and Operations both read it (final review,
+  // 2026-09-30): a ticket you opened (the In progress step notes "Ticket T-nnnn")
+  // reads "T-nnnn · In progress"; else, with Andi's toggle On, "T-nnnn · opened by
+  // Andi"; else there is none, and only then is Open ticket offered.
+  const andiOn = s.andiTickets !== false;
+  const ticketNoteOf = (k) => { const l = LC.lifeOf({ kind: k }, life, now); if (l.state !== 'progress') return null;
+    const e = l.events.slice().reverse().find(x => /^Ticket T-\d{4}/.test(x.note || '')); return e ? e.note.match(/T-\d{4}/)[0] : null; };
+  const ticketOf = (k, andiMay = true) => { const mine = ticketNoteOf(k), id = mine || (andiOn && andiMay ? tid(k) : null);
+    return { ticketed: !!id, ticketF: mine ? `${mine} · In progress` : id ? `${id} · opened by Andi` : 'No ticket yet', canTicket: !id && LC.transition(life, k, 'progress', { now }) !== life }; };
   const healthVals = (() => {
     if (!segCtx) return { pathFlowAll: [], pathFlowRows: [], segHeads: [], healthTiles: [], problemRows: [], healthViews: [], segRows: [], segDrillRows: [], segCrumbs: [], pathTimeAll: [], pathTimeRows: [], changeAll: [], changeRows: [], chgTicks: [], chgBands: [], chgLegend: [], noPaths: true, noChanges: true };
     const all = G.pathFlow(segCtx);
@@ -2432,12 +2441,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const pctOf = (t) => `${Math.max(0, Math.min(100, (t - fromMs) / winMs * 100)).toFixed(2)}%`;
     const chgTicks = changeAll.filter(x => !x.upcoming).map(x => ({ key: x.key, left: pctOf(x.at), color: x.dot, title: `${x.whenF} · ${x.kind} · ${x.text}` }));
     const chgBands = probs.filter(p => p.startedAt).map(p => ({ key: p.key, left: `${Math.min(98.8, parseFloat(pctOf(Math.max(fromMs, p.startedAt))))}%`, width: `${Math.max(1.2, (nowMs - Math.max(fromMs, p.startedAt)) / winMs * 100).toFixed(2)}%`, title: `${p.where} · ${p.thing}: ${p.what} · started ${SCH.hhmm(p.startedAt)}` }));
-    const stateOfKey = (k) => { const ev = (life[k] && life[k].events) || []; return ev.length ? ev[ev.length - 1].state : 'open'; };
-    const problemRows = probs.map(p => { const st = stateOfKey(p.key), n = p.apps.length;
+    const problemRows = probs.map(p => { const n = p.apps.length;
       return { key: p.key, dot: INK[p.state] || 'var(--warning)', where: p.where, thing: p.thing, what: p.what, ownerLabel: p.ownerLabel,
         appsF: `${n} ${n === 1 ? 'app' : 'apps'} · ${(p.wl || 0).toLocaleString('en-US')} workloads`,
         startedF: `Started ${SCH.hhmm(p.startedAt)} · ${SCH.agoOf(p.startedAt, nowMs)}`, changeF: p.change ? `${p.change.text} at ${SCH.hhmm(p.change.at)}` : '', hasChange: !!p.change,
-        ticketed: st === 'progress', ticketF: st === 'progress' ? `${tid(p.key)} · In progress` : '', canTicket: st !== 'progress',
+        ...ticketOf(p.key),
         ticket: moveF({ key: p.key }, 'progress', { note: `Ticket ${tid(p.key)} opened, routed to ${p.ownerLabel}` }),
         trace: () => { const k = traceKey(p), ix = Math.max(0, G.pathTimes(segCtx, { pins: [pinOf(k)] }).findIndex(r => r.key === k)); set({ obPanel: 'paths', pathPin: k, pathSel: k, pathsPage: Math.floor(ix / 8) }); } }; });
     // By segment (notes, 2026-09-30): the stakeholder's nine rows, who answers for
@@ -2480,34 +2488,34 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const opsVals = (() => {
     const days = winDaysOf(s), nowMs = SCH.nowOf(s), winL = winLabelOf(s);
     const dayF = (t) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
-    const noteTicket = (k) => { const e = (((life[k] || {}).events) || []).slice().reverse().find(x => /^Ticket T-\d{4}/.test(x.note || '')); return e ? e.note.match(/T-\d{4}/)[0] : null; };
-    const tickets = lifeRows.filter(x => x.l.state === 'progress' && noteTicket(x.f.key)).map(x => { const ev = x.l.events || [];
+    const tickets = lifeRows.filter(x => ticketNoteOf(x.f.key)).map(x => { const ev = x.l.events || [];
       return { key: x.f.key, sev: 2, where: x.f.where || '', thing: '', what: x.f.title || x.f.kind, owner: 'AT&T', openedAt: ev.length ? +new Date(ev[ev.length - 1].at) : nowMs }; });
     const T = OD.ticketStats(est0, { probs, tickets, now: nowMs, days });
     const AV = OD.availability(est0, { probs, now: nowMs, days });
-    const andiOn = s.andiTickets !== false;
+    // Every open incident lists here; the counts are only the rows that carry a ticket (ticketOf, above).
+    const ticketAll = T.open.map(t => ({ key: t.key, sevF: `Sev ${t.sev}`, sevTone: t.sev === 1 ? 'var(--error)' : 'var(--warning)', what: t.what, where: t.thing ? `${t.where} · ${t.thing}` : t.where, owner: t.owner,
+      openedF: t.openedAt ? `${SCH.hhmm(t.openedAt)} · ${SCH.agoOf(t.openedAt, nowMs)}` : '', ...ticketOf(t.key, t.kind === 'problem'),
+      ticket: moveF({ key: t.key }, 'progress', { note: `Ticket ${tid(t.key)} opened, routed to ${t.owner}` }) }));
+    const ticketN = ticketAll.filter(r => r.ticketed).length, bareN = ticketAll.length - ticketN;
     const opsPanel = ['overview', 'tickets', 'avail', 'changes'].includes(s.opsPanel) ? s.opsPanel : 'overview';
-    const opsPanels = [['overview', 'Overview'], ['tickets', `Tickets · ${T.openN}`], ['avail', 'Availability'], ['changes', 'Maintenance & Changes']].map(([k, l]) => { const on = opsPanel === k;
+    const opsPanels = [['overview', 'Overview'], ['tickets', `Tickets · ${ticketN}`], ['avail', 'Availability'], ['changes', 'Maintenance & Changes']].map(([k, l]) => { const on = opsPanel === k;
       return { key: k, label: l, on, go: () => set({ opsPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; });
     const none = !T.openN && !T.hasHistory;
-    const opsLine = none ? 'No tickets yet. Nothing has been opened or fixed.' : `${T.sev1Open} Sev 1 open now. ${T.openN} ${T.openN === 1 ? 'ticket' : 'tickets'} open. ${T.fixedN ? `Fixes took ${T.mttrF} on average.` : `Nothing was fixed in the last ${winL}.`}`;
+    const bareF = bareN ? `, ${bareN} ${bareN === 1 ? 'incident' : 'incidents'} without one` : '';
+    const opsLine = none ? 'No tickets yet. Nothing has been opened or fixed.' : `${T.sev1Open} Sev 1 open now. ${ticketN} ${ticketN === 1 ? 'ticket' : 'tickets'} open${bareF}. ${T.fixedN ? `Fixes took ${T.mttrF} on average.` : `Nothing was fixed in the last ${winL}.`}`;
     const opsTiles = [
       { key: 'sev1', l: 'Sev 1 open', v: String(T.sev1Open), u: 'now', tone: T.sev1Open ? 'var(--error)' : 'var(--text-heading)' },
-      { key: 'open', l: 'Open tickets', v: String(T.openN), u: 'now', tone: 'var(--text-heading)' },
+      { key: 'open', l: 'Open tickets', v: String(ticketN), u: 'now', tone: 'var(--text-heading)' },
       { key: 'fixed', l: 'Fixed', v: String(T.fixedN), u: `in ${winL}`, tone: 'var(--text-heading)' },
       { key: 'mttr', l: 'Time to fix', v: T.fixedN ? T.mttrF : '—', u: T.fixedN ? 'on average' : '', tone: 'var(--text-heading)' },
     ];
-    const ticketAll = T.open.map(t => { const manual = noteTicket(t.key), id = manual || (andiOn && t.kind === 'problem' ? tid(t.key) : null);
-      return { key: t.key, sevF: `Sev ${t.sev}`, sevTone: t.sev === 1 ? 'var(--error)' : 'var(--warning)', what: t.what, where: t.thing ? `${t.where} · ${t.thing}` : t.where, owner: t.owner,
-        openedF: t.openedAt ? `${SCH.hhmm(t.openedAt)} · ${SCH.agoOf(t.openedAt, nowMs)}` : '', ticketF: manual ? `${manual} · In progress` : id ? `${id} · opened by Andi` : 'No ticket yet', canTicket: !id,
-        ticket: moveF({ key: t.key }, 'progress', { note: `Ticket ${tid(t.key)} opened, routed to ${t.owner}` }) }; });
     const fixAll = T.closed.map(x => ({ key: x.key, whenF: dayF(x.closedAt), sevF: `Sev ${x.sev}`, what: x.what, where: x.where, owner: x.owner, tookF: OD.durF(x.fixMin) }));
     const pctF = (u) => (u >= 1 ? '100%' : `${(Math.floor(u * 10000) / 100).toFixed(2)}%`);
     const availRows = AV.map(r => ({ key: r.key, where: r.where, owner: r.owner, targetF: `${r.target}%`, uptimeF: pctF(r.uptime), outageF: r.outageMin ? OD.durF(r.outageMin) : 'None', metF: r.met ? 'Met' : 'Missed', metTone: r.met ? 'var(--success)' : 'var(--error)' }));
     const chg = healthVals.changeAll || [];
     const maintAll = chg.filter(x => x.kind === 'Maintenance');
     const comingUp = maintAll.filter(x => x.upcoming && x.at > nowMs);
-    return { opsFacts: { sev1: T.sev1Open, openN: T.openN, fixedN: T.fixedN, mttrF: T.fixedN ? T.mttrF : '' }, opsPanels, opsPanelOverview: opsPanel === 'overview', opsPanelTickets: opsPanel === 'tickets', opsPanelAvail: opsPanel === 'avail', opsPanelChanges: opsPanel === 'changes',
+    return { opsFacts: { sev1: T.sev1Open, openN: ticketN, fixedN: T.fixedN, mttrF: T.fixedN ? T.mttrF : '' }, opsPanels, opsPanelOverview: opsPanel === 'overview', opsPanelTickets: opsPanel === 'tickets', opsPanelAvail: opsPanel === 'avail', opsPanelChanges: opsPanel === 'changes',
       opsLine, opsTiles,
       ticketAll, ticketRows: ticketAll, hasTickets: ticketAll.length > 0, noTickets: !ticketAll.length,
       andiTicketsLabel: `Andi opens a ticket for each new incident: ${andiOn ? 'On' : 'Off'}`, andiTicketsOn: andiOn, toggleAndiTickets: () => set({ andiTickets: !andiOn }),
