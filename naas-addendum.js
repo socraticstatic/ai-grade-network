@@ -164,7 +164,7 @@ const WL_APPS = {
       ...(priv ? [{ name: isAzure ? 'ergw-prod' : 'dxgw-prod', type: isAzure ? 'ExpressRoute gateway' : 'Direct Connect gateway', kind: 'dx', lock: true, circuits: circuitsFor(est, r, i, k, isAzure) }] : []),
       { name: isAzure ? 'vwan-hub' : 'tgw-attach', type: isAzure ? 'Virtual WAN hub' : 'Transit gateway', kind: 'tgw' },
     ];
-    return { id: `${pfx}-${i}-${k}`, managed: priv && k === 0, since: r.fresh ? 0 : (i * 47 + k * 31 + 3) % 240, label: pfx.toUpperCase(), name: `${pfx}-${suffix[k]}`, purpose: purposes[k], cidr: `${cidrBase}.0.0/16`, tags: tagsFor(k), azs: azs[k], subnets, routeTables, gws, wl, priv, violations: routeTables.reduce((a, t) => a + t.viol, 0) };
+    return { id: `${pfx}-${i}-${k}`, managed: false, since: r.fresh ? 0 : (i * 47 + k * 31 + 3) % 240, label: pfx.toUpperCase(), name: `${pfx}-${suffix[k]}`, purpose: purposes[k], cidr: `${cidrBase}.0.0/16`, tags: tagsFor(k), azs: azs[k], subnets, routeTables, gws, wl, priv, violations: routeTables.reduce((a, t) => a + t.viol, 0) };
   });
   return { id: 'r-' + r.cloud + '-' + r.region, cloud: r.cloud, region: r.region, city: CITY[r.region] || '', priv: r.priv, ramp: r.ramp, latency: r.priv ? r.fab : r.pub, wl: r.wl, rel: r.rel, tags: r.tags, vpcs, subnets: vpcs.reduce((a, v) => a + v.subnets.length, 0) };
 }

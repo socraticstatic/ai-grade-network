@@ -80,8 +80,9 @@ test('the Observe Cost tile is the Cost view\'s own total, at the whole estate a
     }
   }
   assert.equal(bad.length, 0, '\n  ' + bad.join('\n  '));
-  // Growing, whole estate: $4,600 of AT&T charges, $3,400 of ExpressRoute port, $8,600 of IPsec egress.
-  assert.equal(tile(at('partial'), 'cost').v, '$16,600');
+  // Growing, whole estate: $1,800 of AT&T charges (NetBond only, no hosted VPC: "NetBond today", 2026-09-30),
+  // $3,400 of ExpressRoute port, $8,600 of IPsec egress.
+  assert.equal(tile(at('partial'), 'cost').v, '$13,800');
 });
 
 test('Equinix Fabric has no public list price, so the Cost view leaves it unpriced and says so', () => {

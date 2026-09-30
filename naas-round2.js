@@ -291,10 +291,14 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
  *  Connect, ExpressRoute, Interconnect or Equinix port is not AT&T's to bill. */
 export function attChargeRows(est, invAll) {
   const nb = new Set(est.regionsList.filter(attHolds).map(r => r.region));
-  const vpcsAll = (invAll || []).flatMap(c => (c.regions || []).filter(r => nb.has(r.region)).flatMap(r => r.vpcs || []));
-  const hostedN = vpcsAll.filter(v => v.managed).length, l3N = vpcsAll.filter(v => v.priv && !v.managed).length;
+  // NetBond or an AT&T-hosted VPC, never both in one region (Micah, 2026-09-30: "either, not and").
+  // A customer L3 attach exists only beside a hosted VPC, so it is counted only where one runs.
+  const regsIn = (invAll || []).flatMap(c => (c.regions || []).filter(r => nb.has(r.region)));
+  const hostedRegs = regsIn.filter(r => (r.vpcs || []).some(v => v.managed));
+  const hostedN = hostedRegs.flatMap(r => r.vpcs || []).filter(v => v.managed).length, l3N = hostedRegs.flatMap(r => r.vpcs || []).filter(v => v.priv && !v.managed).length;
+  const nbOnly = new Set([...nb].filter(g => !hostedRegs.some(r => r.region === g)));
   return [
-    { key: 'nb', label: 'NetBond on-ramps', sub: `${nb.size} ${nb.size === 1 ? 'region' : 'regions'} × $1,800`, v: nb.size * 1800, regions: [...nb] },
+    { key: 'nb', label: 'NetBond on-ramps', sub: `${nbOnly.size} ${nbOnly.size === 1 ? 'region' : 'regions'} × $1,800`, v: nbOnly.size * 1800, regions: [...nbOnly] },
     { key: 'hv', label: 'Hosted VPC / VNet', sub: `${hostedN} × $2,400`, v: hostedN * 2400 },
     { key: 'l3', label: 'Customer L3 attach', sub: `${l3N} × $400`, v: l3N * 400 },
   ].filter(r => r.v > 0);
