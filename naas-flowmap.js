@@ -18,6 +18,12 @@ const n = (x) => x.toLocaleString('en-US');
 export const SLO = 100;
 /** A private on-ramp promises far less than the internet does (2026-09-28): 20 ms p95. */
 export const SLO_PRIVATE = 20;
+/** The one latency rule (2026-09-30): over the SLO is 'slo', within 80% of it is 'risk'. */
+export function healthOf(ms, slo) { return ms > slo ? 'slo' : ms > slo * 0.8 ? 'risk' : 'ok'; }
+/** A region's health: down on a degraded link, otherwise the SLO of the path it takes. */
+export function regionState(r) { return r.link === 'degraded' ? 'down' : healthOf(r.priv ? r.fab : r.pub, r.priv ? SLO_PRIVATE : SLO); }
+/** The words for the states, on every surface. */
+export const HEALTH_WORD = { ok: 'Healthy', risk: 'At risk', slo: 'Over SLO', down: 'Down' };
 const PUBLIC_IPS = ['104.18.32.7', '142.250.72.14', '3.5.140.2', '52.94.236.248', '20.60.132.10', '35.190.247.10'];
 const AI_HOSTS = ['api.openai.com', 'api.anthropic.com', 'bedrock-runtime', 'aiplatform.googleapis.com'];
 
@@ -572,7 +578,6 @@ export function perfOf(map, est) {
   const ramps = map.nodes.filter(x => x.side === 'm' && x.ramp).map(x => rampMs(x.ramp)).filter(x => x != null);
   // Your own private WAN is at least as good as the best on-ramp it rides beside.
   const wanMs = ramps.length ? Math.min(...ramps) : Math.round(wavg(regs.filter(r => r.priv), r => r.fab) || SLO_PRIVATE / 2);
-  const healthOf = (ms, slo) => (ms > slo ? 'slo' : ms > slo * 0.8 ? 'risk' : 'ok');
   const rank = { ok: 0, risk: 1, slo: 2 };
   const worst = (parts, tot) => parts.filter(p => p.v >= tot * 0.05).reduce((w, p) => (rank[p.health] > rank[w] ? p.health : w), 'ok');
   const one = (ms, slo) => ({ ms: Math.round(ms), slo, health: healthOf(ms, slo) });

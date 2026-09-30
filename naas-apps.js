@@ -6,7 +6,9 @@
 import * as F from './naas-flowmap.js';
 
 const SLO_OF = (priv) => (priv ? F.SLO_PRIVATE : F.SLO);
-const healthOf = (ms, slo) => (ms > slo ? 'slo' : ms > slo * 0.8 ? 'risk' : 'ok');
+const healthOf = F.healthOf;
+// A metrics sidecar rides every workload; it is not what anyone calls the app (2026-09-30).
+const SIDECARS = new Set(['otel-agent']);
 
 export function appsOf(est, inv, flows) {
   const regs = est.regionsList || [];
@@ -21,11 +23,11 @@ export function appsOf(est, inv, flows) {
     const per = (gbpsOf[r.region] || 0) / (listed[r.region] || 1);
     (r.vpcs || []).forEach(v => (v.subnets || []).forEach(sn => (sn.workloads || []).forEach(w => {
       const k = w.tag || 'untagged';
-      const g = by[k] = by[k] || { tag: k, wl: 0, priv: 0, exposed: 0, gbps: 0, regions: {}, clouds: {}, apps: {}, lat: [] };
+      const g = by[k] = by[k] || { tag: k, wl: 0, priv: 0, exposed: 0, gbps: 0, regions: {}, clouds: {}, apps: {}, lat: [], regG: {}, regN: {} };
       // On AT&T means its region is attached: the same count as Attach and the gaps (2026-09-29).
       const onAtt = !!reg.priv;
       g.wl++; if (onAtt) g.priv++; if (w.exposed) g.exposed++;
-      g.gbps += per;
+      g.gbps += per; g.regG[r.region] = (g.regG[r.region] || 0) + per; g.regN[r.region] = (g.regN[r.region] || 0) + 1;
       g.regions[`${reg.cloud} ${r.region}`] = (g.regions[`${reg.cloud} ${r.region}`] || 0) + 1;
       g.clouds[reg.cloud] = (g.clouds[reg.cloud] || 0) + 1;
       (w.endpoints || []).forEach(e => { g.apps[e.app] = (g.apps[e.app] || 0) + 1; });
@@ -44,6 +46,8 @@ export function appsOf(est, inv, flows) {
     const sortDesc = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]);
     return { tag: g.tag, wl: g.wl, onAtt: g.wl ? g.priv / g.wl : 0, exposed: g.exposed, gbps: g.gbps,
       regions: sortDesc(g.regions).map(([k]) => k), clouds: sortDesc(g.clouds).map(([k]) => k),
-      topApps: sortDesc(g.apps).slice(0, 3).map(([k]) => k), p95: Math.round(at ? at.ms : 0), slo: at ? at.slo : F.SLO, health };
+      topApps: sortDesc(g.apps).filter(([k]) => !SIDECARS.has(k)).slice(0, 3).map(([k]) => k),
+      // Each region's share of the app's traffic (by workloads when it sends none), for grids that read an app by path.
+      parts: Object.keys(g.regN).map(region => ({ region, gbps: g.regG[region] || 0, share: g.gbps > 0 ? (g.regG[region] || 0) / g.gbps : g.regN[region] / g.wl })), p95: Math.round(at ? at.ms : 0), slo: at ? at.slo : F.SLO, health };
   }).sort((a, b) => b.wl - a.wl);
 }

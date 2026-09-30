@@ -22,6 +22,7 @@ export function apportion(total, weights, min = 0) {
  */
 // Addendum 01: inventory tree, station track, Observe at full weight. Pure derivations from an estate.
 import { fmt, pct } from './naas-logic.js';
+import { regionState, SLO, SLO_PRIVATE } from './naas-flowmap.js';
 
 const CITY = { 'us-east-1': 'N. Virginia', 'us-east-2': 'Ohio', 'us-west-2': 'Oregon', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'Ireland', 'ap-southeast-1': 'Singapore', eastus: 'Virginia', eastus2: 'Virginia', westeurope: 'Netherlands', centralus: 'Iowa', 'uk-south': 'London', 'us-central1': 'Iowa', 'europe-west1': 'Belgium', 'us-east-04': 'Weehawken', 'us-east-04a': 'Weehawken', 'eu-north1': 'Finland', 'us-ashburn-1': 'Ashburn' };
 const GPU_CLOUDS = ['CoreWeave', 'Nebius', 'Lambda'];
@@ -321,8 +322,9 @@ export function observeFindings(est, ob) {
   if (!ob.total) return [];
   const out = [];
   if (ob.covPct < 100 && ob.blind.length) out.push({ kind: 'blindspots', layer: 'cloud', tab: 'observe', pillar: 'Observability', persona: 'FinOps & SRE', head: `${ob.blind.length} ${ob.blind.length === 1 ? 'region sends' : 'regions send'} no flow logs. ${100 - ob.covPct}% of your traffic is unseen.`, ev: `${ob.blind.map(r => r.region).join(', ')} carry ${ob.pub.toFixed(1)} Gbps with no telemetry. Coverage starts with the first attach.`, priced: false, why: 'The coverage metric turned into a finding. Telemetry, inspection and steering all begin when the region is on AT&T.', ladder: ['Attach the region', 'Hosted VPC in the region', 'Managed NOC'] });
-  const degraded = ob.flows.filter(f => !f.controlled && (f.latency > 120 || f.rel === 'warn'));
-  if (degraded.length) out.push({ kind: 'degraded', layer: 'cloud', tab: 'observe', pillar: 'Observability', persona: 'FinOps & SRE', head: `${degraded.length} ${degraded.length === 1 ? 'path runs' : 'paths run'} above the latency SLO or show loss.`, ev: `${degraded.slice(0, 2).map(f => `${f.name} at ${f.latency}ms`).join('; ')}${degraded.length > 2 ? ` and ${degraded.length - 2} more` : ''}. SLO is 100ms; loss is above zero on every public path.`, priced: false, why: 'Public transit has no latency floor. The AT&T network path to the same region is single digit milliseconds.', ladder: ['Steer the worst path onto the AT&T network', 'Latency SLO policy for the tag', 'Dual-attach for path diversity'] });
+  // Regions over the SLO of the path they take, by the one rule (2026-09-30); a latency spike is its own event.
+  const degraded = (est.regionsList || []).filter(r => regionState(r) === 'slo').map(r => ({ name: `${r.cloud} ${r.region}`, latency: r.priv ? r.fab : r.pub, slo: r.priv ? SLO_PRIVATE : SLO }));
+  if (degraded.length) out.push({ kind: 'degraded', layer: 'cloud', tab: 'observe', pillar: 'Observability', persona: 'FinOps & SRE', head: `${degraded.length} ${degraded.length === 1 ? 'region runs' : 'regions run'} above the latency SLO.`, ev: `${degraded.slice(0, 2).map(f => `${f.name} at ${f.latency} ms against ${f.slo} ms`).join('; ')}${degraded.length > 2 ? ` and ${degraded.length - 2} more` : ''}. The SLO is 100 ms on the public internet and 20 ms on the AT&T network.`, priced: false, why: 'Public transit has no latency floor. The AT&T network path to the same region is single digit milliseconds.', ladder: ['Steer the worst path onto the AT&T network', 'Latency SLO policy for the tag', 'Dual-attach for path diversity'] });
   return out;
 }
 

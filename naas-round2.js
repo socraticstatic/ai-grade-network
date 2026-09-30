@@ -9,6 +9,7 @@ import * as S from './naas-sites.js';
 // Stakeholder round 2: path tradeoffs, health, endpoints/resources, Observe cuts, Cost arbitrage.
 import { fmt, pct } from './naas-logic.js';
 import { agoOf, hhmm, startOf, INCIDENT_MIN } from './naas-schedule.js';
+import { regionState } from './naas-flowmap.js';
 
 // ---------- Three paths x four lenses ----------
 export const PATHS = [
@@ -54,8 +55,9 @@ export function health(est, ob, steered, now = Date.now()) {
   const rs = est.regionsList;
   const age = (k) => agoOf(startOf(k, now, INCIDENT_MIN[k]), now);
   const regionHealth = {};
-  rs.forEach(r => { regionHealth[r.region] = r.rel === 'warn' || r.link === 'degraded' ? 'amber' : !r.priv && r.pub > 120 ? 'amber' : 'green'; });
-  const amber = Object.values(regionHealth).filter(h => h === 'amber').length;
+  // One rule (2026-09-30): a degraded link is red, over SLO or a latency spike is amber.
+  rs.forEach(r => { const st = regionState(r); regionHealth[r.region] = st === 'down' ? 'red' : st === 'slo' || r.rel === 'warn' ? 'amber' : 'green'; });
+  const amber = Object.values(regionHealth).filter(h => h !== 'green').length;
   const incidents = [
     ...rs.filter(r => r.link === 'degraded').map(r => ({ region: r.region, cloud: r.cloud, text: `${r.cloud} ${r.region} · BGP flapping on ${r.ramp || 'NetBond'} · 0.31% drops · ${age('flap')} · ${r.wl.toLocaleString('en-US')} workloads behind it` })),
     ...rs.filter(r => r.rel === 'warn').map(r => ({ region: r.region, cloud: r.cloud, text: `${r.cloud} ${r.region} · p95 ${r.pub + 40} ms · ${age('spike')} · public path` })),
