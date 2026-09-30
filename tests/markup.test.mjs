@@ -218,6 +218,7 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // At a glance: rings and apps (2026-09-29): div 894 -> 889, span 623 -> 643, sc-if 345 -> 346, button 258 -> 261.
 // At a glance: rings and apps (2026-09-29): span 643 -> 644.
 // Connections: bandwidth in the open, in the Observe card (2026-09-29): span 644 -> 660, sc-for 195 -> 197.
+// Reset demo at the rail foot (2026-09-30): button 261 -> 262.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 889],
@@ -225,7 +226,7 @@ test('every container the markup opens, it closes', () => {
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 346],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 197],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 261],
+    ['button', /<button\b/g, /<\/button>/g, 262],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];
