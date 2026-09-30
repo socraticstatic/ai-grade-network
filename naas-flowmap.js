@@ -329,6 +329,10 @@ function expand(list, open, est, inv, flows, depth = 0) {
   return out;
 }
 
+/** How much of today's volume a window averages: growth g across the window, at moment t (0..1). */
+export function levelAt(g, t) { return (1 + g * t) / (1 + g); }
+/** The level a whole window averages, the one the map draws without a moment (2026-09-30: prices divide by it). */
+export function windowLevel(g) { return levelAt(+g || 0, 0.5); }
 /** The map. open: keys to expand. filterRegion: keep only what touches a region. t: 0..1 scrubber, null = window. */
 export function buildMap(est, inv, flows0, opts = {}) {
   const open = new Set(opts.open || []);
@@ -341,7 +345,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
   // traffic trend. The sites move first and the destinations follow them.
   if (opts.window || opts.t != null) {
     const g = opts.window ? +opts.window.growth || 0 : 0;
-    const level = (t) => (1 + g * t) / (1 + g);
+    const level = (t) => levelAt(g, t);
     L0 = L0.map(x => { const k = opts.t == null ? level(0.5) : level(opts.t) * shapeAt(x.key, opts.t); return { ...x, v: x.v * k, fabV: x.fabV * k, ipsecV: (x.ipsecV || 0) * k }; });
   }
   let R0 = rightRoots(est, flows, opts.rightBy || 'cloud', L0);
