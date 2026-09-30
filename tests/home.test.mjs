@@ -144,7 +144,8 @@ test('Now: up to three problems, Trace opens Paths on the problem, and none read
   assert.deepEqual([c.state.screen, c.state.tab, c.state.obPage, c.state.obPanel, c.state.pathSel], ['s3', 'observe', 'perf', 'paths', 'finance|eastus']);
   const e = vals(home('empty'));
   assert.equal(e.homeNow.length, 0);
-  assert.equal(e.homeNowNone, 'Nothing is down or over SLO.');
+  // Empty has no telemetry to call healthy (home skeptic D4, 2026-09-30).
+  assert.equal(e.homeNowNone, 'No telemetry yet. It starts with the first attach.');
   assert.equal(vals(home('partial')).homeNowNone, '');
 });
 

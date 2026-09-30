@@ -120,7 +120,8 @@ test('nothing attached starts at Connect, whatever else was discovered', () => {
   assert.equal(cards.find(x => x.primary).key, 'connect');
   assert.match(by('connect').value, /2 of 2 regions/);
   assert.equal(by('connect').door, 'Attach the 2 regions');
-  assert.equal(by('observe').value, 'No telemetry yet');
+  // Public paths still report latency, so a cold estate is "Public paths only", not "No telemetry" (home skeptic D5, 2026-09-30).
+  assert.equal(by('observe').value, 'Public paths only');
   assert.equal(by('observe').door, 'Open Observe');
   assert.equal(by('govern').value, '20');
   // An attached estate is untouched.

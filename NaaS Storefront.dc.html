@@ -366,10 +366,10 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </div>
   <sc-if value="{{ homeBand }}" hint-placeholder-val="{{ true }}">
   <div style="display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:24px;align-items:stretch">
-    <div aria-label="Andi's briefing" style="display:grid;grid-template-rows:auto auto 1fr;gap:8px;min-width:0;border-left:2px solid var(--border-secondary);padding-left:16px">
+    <div aria-label="Andi's briefing" style="display:grid;align-content:start;gap:8px;min-width:0;border-left:2px solid var(--border-secondary);padding-left:16px">
       <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Andi's briefing</div>
       <p style="margin:0;font-size:14px;line-height:22px;color:var(--text-body);text-wrap:pretty">{{ homeBrief }}</p>
-      <button onClick="{{ homeBriefGo }}" style="align-self:end;justify-self:start;border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap">Monthly briefing in Insights ›</button>
+      <button onClick="{{ homeBriefGo }}" style="justify-self:start;border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap">Monthly briefing in Insights ›</button>
     </div>
     <div aria-label="Waiting on you" style="display:grid;align-content:start;min-width:0;border-left:2px solid var(--border-secondary);padding-left:16px">
       <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Waiting on you</div>
@@ -703,7 +703,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         <div style="color:var(--text-light)">Your floor is ready: findings, packages and offers tailored to what already runs.</div>
       </div>
       <button onClick="{{ goDiscover }}" style="height:36px;padding:0 16px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">See the estate</button>
-      <button onClick="{{ goFloor }}" style="height:36px;padding:0 16px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:var(--cta-hover)">Home</button>
+      <button onClick="{{ goHome }}" style="height:36px;padding:0 16px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:var(--cta-hover)">Home</button>
     </div>
   </sc-if>
 </section>
@@ -1965,7 +1965,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       </sc-for>
     </div>
   </sc-if>
-  <sc-if value="{{ hasTailored }}" hint-placeholder-val="{{ false }}"><div style="color:var(--text-light)">Tailored offers for this estate are on the floor. <button onClick="{{ goFloor }}" style="border:0;background:transparent;padding:0;color:var(--link);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">Home</button></div></sc-if>
+  <sc-if value="{{ hasTailored }}" hint-placeholder-val="{{ false }}"><div style="color:var(--text-light)">Tailored offers for this estate are on the floor. <button onClick="{{ goHome }}" style="border:0;background:transparent;padding:0;color:var(--link);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">Home</button></div></sc-if>
 </section>
 </sc-if>
 

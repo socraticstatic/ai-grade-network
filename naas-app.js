@@ -913,7 +913,7 @@ export function vals(c) {
     // shortcut means "start composing," not "discard whatever was just
     // reviewed," so it writes a fresh compose without resetting order; only
     // an actual outcome switch (setC) resets a stale order now.
-    goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(cp.outcome ? { compose: { ...cp, step: cp.step || 0 } } : { compose: prefillCompose(est) }) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
+    goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goHome: go('s0'), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(cp.outcome ? { compose: { ...cp, step: cp.step || 0 } } : { compose: prefillCompose(est) }) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
     hasTasks: s.submitted, taskCount: 1, showPending, pendingStages, landed: landedAll, notLanded: !landedAll, pendingSub: landedAll ? 'Validated · live. First flow logs are in.' : 'Submitted for approval',
     deliverNow: () => { const cand = (s.compose && s.compose.prefillRegion ? s.compose.prefillRegion.split(' ')[1] : null) || (estRaw.regionsList.find(r => !r.priv) || {}).region; if (!cand) return; c.setState({ landed: cand, layer: 'cloud', tab: 'observe', screen: 's3', events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `${cand} validated · live. Hosted VPC on AT&T; first flow logs received; coverage up by one region.` }] }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
     ...shellVals(s, set, go, est, c, sched),
@@ -1123,7 +1123,7 @@ export function homeVals(out, s, set, { observeHead, ob, go, isEmpty }) {
     : { key: 'discover', label: 'Discover', value: `${one(stat('s'), 'site', 'sites')} · ${one(stat('c'), 'cloud', 'clouds')}`, sub: out.newPill30 || '', door: 'Estate', go: go('s1') };
   // The four rollup tiles as Connect read them; only the look is the home's.
   const homeStrip = [discover, ...(out.rollup || []).map(r => ({ key: r.key, label: r.label, value: r.value, sub: r.sub, door: r.door, go: r.go, primary: !!r.primary }))]
-    .map(t => ({ ...t, title: `${t.label} · ${t.value}${t.sub ? ' · ' + t.sub : ''}`, edge: t.primary ? 'var(--border-active)' : 'var(--border-secondary)', ring: t.primary ? 'inset 0 0 0 1px var(--border-active)' : 'none' }));
+    .map(t => ({ ...t, title: `${t.label} · ${t.value}${t.sub ? ' · ' + t.sub : ''}`, edge: 'var(--border-secondary)', ring: 'none' }));
   const acts = out.roleActAll || [], probs = out.problemRows || [];
   const homeNow = probs.slice(0, 3).map(p => ({ key: p.key, stateWord: p.stateWord, dot: p.dot, rad: p.rad, where: p.where, thing: p.thing, what: p.what, startedF: p.startedF,
     trace: () => { go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf' })(); p.trace(); } }));
@@ -1139,7 +1139,7 @@ export function homeVals(out, s, set, { observeHead, ob, go, isEmpty }) {
     homeNow, hasHomeNow: homeNow.length > 0,
     homeNowMore: probs.length > 3 ? `+${probs.length - 3} more in Health ›` : '', hasHomeNowMore: probs.length > 3,
     homeNowMoreGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' }),
-    homeNowNone: probs.length ? '' : 'Nothing is down or over SLO.', noHomeNow: !probs.length, homeNowNoneDot: F.HEALTH_INK.ok, homeNowNoneRad: F.healthRadius('ok'),
+    homeNowNone: probs.length ? '' : isEmpty ? 'No telemetry yet. It starts with the first attach.' : 'Nothing is down or over SLO.', noHomeNow: !probs.length, homeNowNoneDot: isEmpty ? 'transparent' : F.HEALTH_INK.ok, homeNowNoneRad: F.healthRadius('ok'),
     homeEmpty: !!isEmpty, homeBand: !isEmpty, homeStep: step,
   };
 }
@@ -3309,8 +3309,8 @@ function shellVals(s, set, go, est, c, sched) {
         };
         const goTabRow = (key) => key === 'discover' ? go('s1')
           : key === 'observe' ? () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow' }); }
-          // Connect is its own page now, opening on Options; the home is NaaS.
-          : key === 'connect' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })
+          // The home is NaaS; Connect's title opens its network map, Options is its own item (2026-09-30).
+          : key === 'connect' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'picture' })
           : go('s3', { layer: 'cloud', tab: key });
         return [
           { key: 'home', hasTitle: false, title: '', items: [
