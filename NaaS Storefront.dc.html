@@ -709,13 +709,13 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <div class="fx-card-head"><div><h3 class="fx-card-title">Connected accounts</h3><div class="fx-card-sub">{{ sourcesSub }}</div></div><button class="fx-btn" onClick="{{ openAddSource }}" style="height:32px;background:var(--cta);color:#fff;border-color:var(--cta)">Add a source</button></div>
       <div class="dt">
         <div class="dt-h"><div class="dt-r">
-          <div class="dt-c dt-th" style="width:22%">Account</div>
-          <div class="dt-c dt-th" style="width:14%">Credential</div>
-          <div class="dt-c dt-th" style="width:15%">Scope</div>
-          <div class="dt-c dt-th" style="width:11%">Last scan</div>
-          <div class="dt-c dt-th" style="width:11%">Next scan</div>
-          <div class="dt-c dt-th" style="width:15%">Cadence</div>
-          <div class="dt-c dt-th" style="width:12%">Manage</div>
+          <div class="dt-c dt-th" style="width:19%">Account</div>
+          <div class="dt-c dt-th" style="width:13%">Credential</div>
+          <div class="dt-c dt-th" style="width:14%">Scope</div>
+          <div class="dt-c dt-th" style="width:8%">Last scan</div>
+          <div class="dt-c dt-th" style="width:12%">Next scan</div>
+          <div class="dt-c dt-th" style="width:14%">Cadence</div>
+          <div class="dt-c dt-th" style="width:20%">Manage</div>
         </div></div>
         <div class="dt-b"><sc-for list="{{ sources }}" as="sr" hint-placeholder-count="4">
           <div class="dt-r">
@@ -728,7 +728,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
               <sc-if value="{{ sr.canSchedule }}" hint-placeholder-val="{{ true }}"><select class="dt-select" value="{{ sr.cadenceValue }}" onChange="{{ sr.setCadence }}" aria-label="Cadence"><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></sc-if>
               <sc-if value="{{ sr.noSchedule }}" hint-placeholder-val="{{ false }}"><span style="color:var(--text-light)">{{ sr.cadenceLabel }}</span></sc-if>
             </div>
-            <div data-th="Manage" class="dt-c"><span style="display:flex;gap:16px"><button class="dt-link" onClick="{{ sr.rescan }}">Re-scan</button><button class="dt-link" onClick="{{ sr.edit }}">Edit access</button><sc-if value="{{ sr.canRemove }}" hint-placeholder-val="{{ false }}"><button class="dt-link" onClick="{{ sr.remove }}">Remove</button></sc-if></span></div>
+            <div data-th="Manage" class="dt-c"><span style="display:flex;flex-wrap:wrap;gap:2px 12px"><button class="dt-link" onClick="{{ sr.rescan }}">Re-scan</button><button class="dt-link" onClick="{{ sr.edit }}">Edit access</button><sc-if value="{{ sr.canRemove }}" hint-placeholder-val="{{ false }}"><button class="dt-link" onClick="{{ sr.remove }}">Remove</button></sc-if></span></div>
           </div>
         </sc-for></div>
       </div>
@@ -1465,7 +1465,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
           <div style="display:grid;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr)) 84px;gap:8px;align-items:end;padding:0 0 6px;font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);border-bottom:1px solid var(--border-secondary)"><span>App group</span><sc-for list="{{ segHeads }}" as="sh" hint-placeholder-count="7"><span title="{{ sh.title }}" style="text-align:center;white-space:nowrap">{{ sh.label }}</span></sc-for><span style="text-align:right;white-space:nowrap">Site to app</span></div>
           <sc-for list="{{ pathTimeRows }}" as="pt" hint-placeholder-count="8"><button onClick="{{ pt.go }}" aria-pressed="{{ pt.sel }}" title="{{ pt.title }}" style="display:grid;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr)) 84px;gap:8px;align-items:center;width:100%;min-height:40px;padding:3px 0;border:0;border-bottom:1px solid var(--border-secondary);background:{{ pt.bg }};font:inherit;font-size:12px;line-height:16px;text-align:left;cursor:pointer;color:var(--text-body)" style-hover="background:var(--bg-wash)">
             <span style="display:flex;align-items:center;gap:8px;min-width:0"><i aria-hidden="true" style="flex:none;width:8px;height:8px;border-radius:{{ pt.rad }};background:{{ pt.dot }}"></i><span style="display:grid;min-width:0"><b style="font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pt.label }}</b><small style="color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pt.sub }}</small></span></span>
-            <sc-for list="{{ pt.cells }}" as="ph" hint-placeholder-count="7"><span title="{{ ph.title }}" style="display:grid;justify-items:center;min-width:0;font-variant-numeric:tabular-nums"><span style="color:{{ ph.msTone }};white-space:nowrap">{{ ph.msShow }}</span><small style="font-size:11px;line-height:14px;color:{{ ph.lossTone }};white-space:nowrap">{{ ph.lossF }}</small></span></sc-for>
+            <sc-for list="{{ pt.cells }}" as="ph" hint-placeholder-count="7"><span title="{{ ph.title }}" style="display:grid;justify-items:center;align-content:center;align-self:stretch;min-width:0;font-variant-numeric:tabular-nums"><span style="color:{{ ph.msTone }};white-space:nowrap">{{ ph.msShow }}</span><small style="font-size:11px;line-height:14px;color:{{ ph.lossTone }};white-space:nowrap">{{ ph.lossF }}</small></span></sc-for>
             <b style="text-align:right;font-size:13px;font-weight:700;color:{{ pt.totalTone }};font-variant-numeric:tabular-nums;white-space:nowrap">{{ pt.totalF }}</b>
           </button></sc-for>
           <sc-if value="{{ pathsPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding-top:6px;font-size:12px;color:var(--text-light)"><button class="fx-btn" onClick="{{ pathsPager.prev }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ pathsPager.prevOp }}">‹</button><span>{{ pathsPager.label }}</span><button class="fx-btn" onClick="{{ pathsPager.next }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ pathsPager.nextOp }}">›</button></div></sc-if>
@@ -1958,7 +1958,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
           <div class="dt-b"><sc-for list="{{ orderPolicies }}" as="p" hint-placeholder-count="1"><div class="dt-r"><div data-th="Match" class="dt-c" style="color:var(--text-heading);font-weight:500">{{ p.match }}</div><div data-th="Requirement" class="dt-c">{{ p.req }}</div><div data-th="State" class="dt-c"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:9999px;background:var(--cta)"></span>{{ p.state }}</span></div></div></sc-for></div>
         </div>
         </sc-if>
-        <div style="display:flex;align-items:center;gap:8px;color:var(--text-body)"><span style="width:8px;height:8px;border-radius:9999px;background:var(--success)"></span>Visible on delivery: path, throughput, P95 latency, loss, egress and flow logs{{ orderInspection }}.</div>
+        <div style="display:flex;align-items:center;gap:8px;color:var(--text-body)"><span style="width:8px;height:8px;border-radius:9999px;background:var(--success);flex:none"></span>{{ orderVisibleLine }}</div>
       </div>
     </div>
     <aside aria-label="Pricing overview" style="position:sticky;top:24px;padding:24px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;display:grid;gap:16px">
@@ -2099,8 +2099,8 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         <text x="500" y="14" style="fill:#66c8f0;font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:500">AWS</text>
         <rect x="0" y="112" width="150" height="40" rx="8" fill="#00388f" stroke="#3374cc"></rect><text x="16" y="137" style="fill:#fff;font-size:13px;font-weight:500">Ashburn DC</text>
         <rect x="250" y="28" width="140" height="220" rx="16" fill="url(#lmccBand)" stroke="#3374cc"></rect>
-        <rect x="264" y="52" width="112" height="72" rx="8" fill="#00235a" stroke="#3374cc"></rect><text x="276" y="80" style="fill:#fff;font-size:12px;font-weight:700">Ashburn</text><text x="276" y="98" style="fill:#99daf5;font-size:11px">NetBond · DX · 8 ms</text>
-        <rect x="264" y="152" width="112" height="72" rx="8" fill="#00235a" stroke="#3374cc"></rect><text x="276" y="180" style="fill:#fff;font-size:12px;font-weight:700">New York</text><text x="276" y="198" style="fill:#99daf5;font-size:11px">DX · 11 ms</text>
+        <rect x="264" y="52" width="112" height="72" rx="8" fill="#00235a" stroke="#3374cc"></rect><text x="276" y="74" style="fill:#fff;font-size:12px;font-weight:700">Ashburn</text><text x="276" y="91" style="fill:#99daf5;font-size:11px">Direct Connect</text><text x="276" y="106" style="fill:#99daf5;font-size:11px">NetBond · 8 ms</text>
+        <rect x="264" y="152" width="112" height="72" rx="8" fill="#00235a" stroke="#3374cc"></rect><text x="276" y="174" style="fill:#fff;font-size:12px;font-weight:700">New York</text><text x="276" y="191" style="fill:#99daf5;font-size:11px">Direct Connect</text><text x="276" y="206" style="fill:#99daf5;font-size:11px">11 ms</text>
         <rect x="500" y="68" width="140" height="40" rx="8" fill="#00388f" stroke="#3374cc"></rect><text x="516" y="93" style="fill:#fff;font-size:13px;font-weight:500">us-east-1</text><circle cx="624" cy="88" r="4" fill="#4fbf74"></circle>
         <rect x="500" y="168" width="140" height="40" rx="8" fill="#00388f" stroke="#3374cc"></rect><text x="516" y="193" style="fill:#fff;font-size:13px;font-weight:500">us-east-2</text><circle cx="624" cy="188" r="4" fill="#4fbf74"></circle>
         <path id="lmccA" d="M150,126 C200,126 200,88 264,88 M376,88 L500,88" fill="none" stroke="#66c8f0" stroke-width="3" stroke-linecap="round"></path>
@@ -2537,7 +2537,7 @@ class Component extends DCLogic {
         { group: 'Business unit', short: 'Unit', key: 'bu', values: ['Finance', 'Retail', 'Platform'], test: (r, val) => val === 'Finance' ? (r.tags || []).includes('Finance') : val === 'Platform' ? (r.tags || []).some(t => /Prod|AI|GPU/.test(t)) : !(r.tags || []).length || (r.tags || []).includes('Internet-facing') },
         { group: 'Cloud region', short: 'Cloud region', key: 'cregion', values: est.map(r => r.region), test: (r, val) => r.region === val },
         { group: 'Cloud', key: 'cloud', values: ['AWS', 'Azure', 'GCP'], test: (r, val) => r.cloud === val },
-        { group: 'Connection type', short: 'Connection', key: 'conn', values: ['NetBond', 'DX', 'ER', 'Internet'], test: (r, val) => val === 'Internet' ? !r.priv : r.ramp === val },
+        { group: 'Connection type', short: 'Connection', key: 'conn', values: this.app.CONN_FACET.values, test: this.app.CONN_FACET.test },
       ];
       const totalWl = est.reduce((a, r) => a + (r.wl || 0), 0) || 1;
       const setChips = (c, o) => this.setState({ chips: c, facetOpen: o === undefined ? s.facetOpen : o });

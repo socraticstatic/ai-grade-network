@@ -61,7 +61,7 @@ export function health(est, ob, steered, now = Date.now()) {
   const amber = Object.values(regionHealth).filter(h => h !== 'green').length;
   // Incidents come from the one list, OD.problems (2026-09-30).
   const incidents = [];
-  const uptime = rs.length ? (rs.reduce((a, r) => a + (r.priv ? 99.99 : 99.5), 0) / rs.length).toFixed(2) : '—';
+  const uptime = rs.length ? (rs.reduce((a, r) => a + (r.priv ? 99.99 : 99.5), 0) / rs.length).toFixed(2) : '';
   return { regionHealth, amber, incidents, strip: rs.length ? [
     { key: 'up', l: 'Uptime', v: uptime + '%', tone: 'var(--success)' },
     { key: 'p95', l: 'P95 latency', v: ob.kpis[1].v + ' ms', tone: +ob.kpis[1].v > 100 ? 'var(--warning)' : 'var(--success)' },

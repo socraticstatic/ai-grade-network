@@ -78,7 +78,10 @@ export function briefingFor(role, f) {
   return [
     `${n(f.open, 'finding', 'findings')} open${f.onTableF ? `, with ${f.onTableF}/mo potential savings` : ''}.`,
     `${banked}; this month AT&T found ${f.found ? n(f.found, 'finding', 'findings') : 'none'} and resolved ${f.resolved ? n(f.resolved, 'finding', 'findings') : 'none'}.`,
-    `Operations has ${f.sev1} Sev 1 open now, ${n(f.ticketsOpen, 'ticket', 'tickets')} open${f.mttrF ? `, and fixes took ${f.mttrF} on average` : ''}.`,
+    // None open reads as words, never "Operations has 0 Sev 1 open now" (sweep, 2026-09-30).
+    f.sev1
+      ? `Operations has ${f.sev1} Sev 1 open now, ${n(f.ticketsOpen, 'ticket', 'tickets')} open${f.mttrF ? `, and fixes took ${f.mttrF} on average` : ''}.`
+      : `No Sev 1 is open now; Operations has ${n(f.ticketsOpen, 'ticket', 'tickets')} open${f.mttrF ? `, and fixes took ${f.mttrF} on average` : ''}.`,
     f.availN ? `${f.availMet} of ${f.availN} connections met their availability target.` : '',
     actionsLine(who, f.top),
     f.nextMaint ? `Next AT&T maintenance: ${f.nextMaint}.` : '',

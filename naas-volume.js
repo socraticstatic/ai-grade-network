@@ -13,6 +13,7 @@ import { regionRows, accessRows, buRows } from './naas-logic.js';
 import * as P from './naas-paths.js';
 import * as C from './naas-connections.js';
 import * as FB from './naas-fabric.js';
+import { rampName } from './naas-things.js';
 
 const n = (x) => Number(x).toLocaleString('en-US');
 const RANK = { degraded: 0, public: 1, ok: 2 };
@@ -400,7 +401,7 @@ function cloudsLevel(est, inv, trail, opts) {
     const rows = est.regionsList.map(r => ({
       id: `${r.cloud} ${r.region}`, into: r.region,
       state: stateOfPriv(r.priv), stateLabel: r.priv ? 'On the AT&T network' : 'Public internet',
-      sub: `${n(r.wl || 0)} ${r.wl === 1 ? 'workload' : 'workloads'} · ${r.ramp || 'no on-ramp'}`,
+      sub: `${n(r.wl || 0)} ${r.wl === 1 ? 'workload' : 'workloads'} · ${r.ramp ? rampName(r) : 'no on-ramp'}`,
       action: r.priv ? '' : 'Attach',
     }));
     return frame(head, rows, opts);
