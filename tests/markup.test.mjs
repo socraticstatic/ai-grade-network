@@ -241,14 +241,23 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // ends in its door (Monthly briefing, Your actions):
 // div 1006 -> 1027, span 827 -> 837, sc-if 417 -> 429, sc-for 231 -> 234, section 11 -> 12, button 310 -> 322, label 28 -> 29.
 // Over time's legend isolates a series (2026-09-30, "outside of at&t is so small its not visible"): two legend spans become one sc-for of buttons, plus the scale line: span 837 -> 836, sc-if 429 -> 430, sc-for 234 -> 235, button 322 -> 323.
+// Connect > Recommended replaced Options (2026-09-30, Micah: "The options don't make much sense"): the two
+// candidate columns (group loop, row loop, pager, Attach per row) became one ranked list of moves: a head row
+// with the pager and Attach N selected, the "With AT&T" caption over the tiers, a row per move (rank checkbox,
+// title, a counts loop of set doors, the reason, Attach and Compare ways to connect, the attribute labels,
+// Today's three figure doors) and a tiers loop of three pickable columns, plus the empty state with its one step:
+// div 1027 -> 1030, span 837 -> 863, sc-if 429 -> 431, sc-for 234 -> 235, button 322 -> 331.
+// Same day, second pass: each tier's Cost reads its monthly after and what that saves or adds, the way
+// Performance reads its ms (a value span and a delta span in a row): span 863 -> 865.
+// Recommended merged onto Over time's legend (2026-09-30): both land, so each count is the sum of the two moves: span 865 -> 864, sc-if 431 -> 432, sc-for 235 -> 236, button 331 -> 332.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1027],
-    ['span', /<span\b/g, /<\/span>/g, 836],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 430],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 235],
+    ['div', /<div\b/g, /<\/div>/g, 1030],
+    ['span', /<span\b/g, /<\/span>/g, 864],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 432],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 236],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 323],
+    ['button', /<button\b/g, /<\/button>/g, 332],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
     ['label', /<label\b/g, /<\/label>/g, 29],
   ];
