@@ -167,6 +167,50 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 .fx-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;line-height:16px;color:var(--text-light)}
 .fx-legend span{display:inline-flex;align-items:center;gap:8px}
 .fx-legend i{width:12px;height:12px;border-radius:4px;display:inline-block;flex:none}
+/* Insights > Signals (2026-09-30): each card a head, four rows and a foot; the title, each figure, each week and the count are buttons, and each row's move sits beside its figure. */
+.sig-card{padding:16px 20px;gap:10px;grid-template-rows:auto 1fr auto;align-content:stretch}
+.sig-head{display:grid;gap:2px;justify-items:start;width:100%;min-width:0;border:0;background:transparent;padding:0;font:inherit;text-align:left;color:inherit;cursor:pointer}
+.sig-head .t{max-width:100%;font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sig-head .t i{font-style:normal;font-weight:500;color:var(--link);margin-left:6px}
+.sig-head .h{max-width:100%;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sig-head:hover .t{color:var(--link)}
+.sig-rows{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;min-width:0}
+.sig-row{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:center;column-gap:12px;min-height:41px;border-bottom:1px solid var(--border-secondary);min-width:0}
+.sig-row:last-child{border-bottom:0}
+.sig-row.wide{min-height:46px}
+.sig-row.wide:last-child{border-bottom:1px solid var(--border-secondary)}
+/* A row reads label and figure on its first line, what it is and its bar on the second. */
+.sig-fig{display:grid;gap:2px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;padding:5px 0;font:inherit;text-align:left;color:inherit;cursor:pointer}
+.sig-fig:hover{background:var(--bg-wash)}
+.sig-fig .l1{display:flex;align-items:baseline;gap:8px;min-width:0}
+.sig-fig .l1 b{flex:1 1 auto;min-width:0;font-size:12px;line-height:16px;font-weight:500;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sig-fig .val{flex:none;font-size:12px;line-height:16px;font-weight:600;color:var(--text-heading);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sig-fig .l2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,46%);align-items:center;gap:10px;min-width:0}
+.sig-fig .l2 small{min-width:0;font-size:10px;line-height:13px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sig-fig .bar{display:flex;align-items:center;gap:1px;height:8px;border-radius:2px;overflow:hidden;min-width:0}
+.sig-fig .bar i{display:block;flex:none;height:8px}
+/* The full list is a table: name over what it is, the bar, the figure. */
+.sig-fig.wide{grid-template-columns:minmax(0,32%) minmax(0,1fr) 120px;grid-template-areas:"lb bar val" "sb bar val";column-gap:24px;row-gap:1px;align-items:center;padding:6px 0}
+.sig-fig.wide .l1,.sig-fig.wide .l2{display:contents}
+.sig-fig.wide .l1 b{grid-area:lb;font-size:13px;line-height:18px}
+.sig-fig.wide .l2 small{grid-area:sb;font-size:11px;line-height:14px}
+.sig-fig.wide .bar{grid-area:bar;height:10px}
+.sig-fig.wide .bar i{height:10px}
+.sig-fig.wide .val{grid-area:val;font-size:13px;line-height:18px}
+.sig-row .sig-act{justify-self:end}
+.sig-act{height:24px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:11px;line-height:14px;font-weight:600;white-space:nowrap;cursor:pointer}
+.sig-act:hover{border-color:var(--link);background:var(--bg-accent)}
+.sig-foot{display:flex;align-items:center;gap:12px;min-width:0}
+.sig-foot .lg{display:flex;flex-wrap:wrap;gap:4px 12px;min-width:0;font-size:11px;line-height:14px;color:var(--text-light)}
+.sig-foot .lg span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.sig-foot .lg i{width:8px;height:8px;flex:none}
+.sig-finds{margin-left:auto;flex:none;border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:16px;font-weight:600;color:var(--link);white-space:nowrap;cursor:pointer}
+.sig-finds:hover{text-decoration:underline}
+.sig-finds:disabled{color:var(--text-disabled);text-decoration:none;cursor:default}
+.sig-cols{display:flex;align-items:flex-end;gap:3px;height:112px;min-width:0}
+.sig-cols button{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:1px;height:100%;min-width:0;border:0;border-radius:3px;background:transparent;padding:0;cursor:pointer}
+.sig-cols button:hover{background:var(--bg-wash)}
+.sig-cols button span{display:block;width:100%;border-radius:2px}
 .fx-badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);font-size:11px;line-height:16px;font-weight:500;color:var(--text-body);white-space:nowrap;vertical-align:middle}
 .fx-badge.att{border-color:#009fdb;color:#0074b3;background:rgba(0,159,219,.08)}
 .fx-badge.new{border-color:#91dc00;color:#3d6b00;background:rgba(145,220,0,.14)}
@@ -1155,49 +1199,49 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </div>
 </div>
 </sc-if>
-<!-- The six insight cards, back from iteration 1 (2026-09-28): "we had a fantastic Insights section". Two up in the drawer. -->
+<!-- Signals (Micah, 2026-09-30: "Observe insights is light"; "the previous insights in the last one yesterday were really good"; he chose "Cards plus Your actions"). Nine cards, the persona picks which three lead, six to a page. Every title, figure, bar, week and count is a button that opens the set it counts; every row carries its move. -->
 <sc-if value="{{ insPanelSignals }}" hint-placeholder-val="{{ true }}">
-<sc-if value="{{ hasIw }}" hint-placeholder-val="{{ true }}">
-<div aria-label="Insight cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">
-    <div class="fx-card sm" aria-label="Top talkers" style="border-color:{{ insDrill.talkers.border }}">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Top talkers</h3><div class="fx-card-sub" title="{{ iw.talkers.0.label }} carries {{ iw.talkers.0.share }} of all traffic">{{ iw.talkers.0.label }} · {{ iw.talkers.0.share }} of traffic</div></div></div>
-      <div class="fx-rows"><sc-for list="{{ iw.talkers }}" as="t" hint-placeholder-count="5"><div class="fx-row door" role="button" tabindex="0" onClick="{{ t.go }}" aria-label="{{ t.label }} {{ t.v }} · {{ t.doorLabel }}"><span class="lbl"><b title="{{ t.label }}">{{ t.label }}</b><small>{{ t.sub }}</small></span><span class="bar"><span style="width:{{ t.w }};background:{{ t.fill }}"></span></span><span class="val">{{ t.share }}<small>{{ t.v }}</small></span></div></sc-for></div>
-      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On AT&amp;T</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
-    <button onClick="{{ insDrill.talkers.go }}" aria-pressed="{{ insDrill.talkers.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.talkers.label }}</button>
-        </div>
-    <div class="fx-card sm" aria-label="New destinations" style="border-color:{{ insDrill.newdest.border }}">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">New destinations · {{ iw.winLabel }}</h3><div class="fx-card-sub" title="{{ iw.newDestN }} destinations not seen before the window, by volume">{{ iw.newDestN }} new, by volume</div></div></div>
-      <sc-if value="{{ iw.hasNewDest }}" hint-placeholder-val="{{ true }}"><div class="fx-rows"><sc-for list="{{ iw.newDest }}" as="d" hint-placeholder-count="4"><div class="fx-row door" role="button" tabindex="0" onClick="{{ d.go }}" aria-label="{{ d.name }} · {{ d.doorLabel }}"><span class="lbl"><b title="{{ d.name }}">{{ d.name }}</b><small>{{ d.sub }}</small></span><span class="bar"><span style="width:{{ d.w }};background:{{ d.fill }}"></span></span><span class="val">{{ d.v }}<span class="door-l" style="color:var(--link)">{{ d.doorLabel }}</span></span></div></sc-for></div></sc-if>
-      <sc-if value="{{ iw.hasNewDest }}" hint-placeholder-val="{{ true }}"><div class="fx-legend"><span><i style="background:var(--viz-5)"></i>AI endpoint</span><span><i style="background:var(--viz-4)"></i>SaaS</span><span><i style="background:var(--viz-2)"></i>Object storage</span></div></sc-if>
-    <button onClick="{{ insDrill.newdest.go }}" aria-pressed="{{ insDrill.newdest.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.newdest.label }}</button>
-        </div>
-    <div class="fx-card sm" aria-label="Shadow SaaS" style="border-color:{{ insDrill.shadow.border }}">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Shadow SaaS</h3><div class="fx-card-sub" title="{{ iw.shadowN }} domains move {{ iw.shadowGb }} GB a day with no policy">{{ iw.shadowN }} with no policy · {{ iw.shadowGb }} GB/day</div></div></div>
-      <div class="fx-rows"><sc-for list="{{ iw.shadow }}" as="d" hint-placeholder-count="5"><div class="fx-row door" role="button" tabindex="0" onClick="{{ d.go }}" aria-label="{{ d.name }} · {{ d.doorLabel }}"><span class="lbl"><b title="{{ d.name }}">{{ d.name }}</b><small>{{ d.sub }}</small></span><span class="bar"><span style="width:{{ d.w }};background:{{ d.fill }}"></span></span><span class="val">{{ d.v }}<span class="door-l" style="color:var(--link)">{{ d.doorLabel }}</span></span></div></sc-for></div>
-      <div class="fx-legend"><span><i style="background:var(--viz-4)"></i>No policy</span><span><i style="background:var(--viz-1)"></i>Covered</span></div>
-    <button onClick="{{ insDrill.shadow.go }}" aria-pressed="{{ insDrill.shadow.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.shadow.label }}</button>
-        </div>
-    <div class="fx-card sm" aria-label="Egress growth" style="border-color:{{ insDrill.growth.border }}">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Egress growth · 12 weeks</h3><div class="fx-card-sub" title="Public {{ iw.growth.pubThen }} → {{ iw.growth.pubNow }} Gbps · AT&amp;T {{ iw.growth.fabPctF }}">{{ iw.growth.subF }}</div></div></div>
-      <div class="fx-cols" role="img" aria-label="Weekly egress, on AT&amp;T under public internet"><sc-for list="{{ iw.growth.weeks }}" as="w" hint-placeholder-count="12"><div title="{{ w.title }}"><span style="height:{{ w.pubH }};background:var(--viz-6)"></span><span style="height:{{ w.fabH }};background:var(--viz-1)"></span></div></sc-for></div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;line-height:12px;color:var(--text-light)"><span>{{ iw.growth.thenLabel }}</span><span>{{ iw.growth.nowLabel }}</span></div>
-      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On AT&amp;T</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
-    <button onClick="{{ insDrill.growth.go }}" aria-pressed="{{ insDrill.growth.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.growth.label }}</button>
-        </div>
-    <div class="fx-card sm" aria-label="Cloud-to-cloud paths" style="border-color:{{ insDrill.multi.border }}">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Cloud-to-cloud paths</h3><div class="fx-card-sub">{{ iw.multi.privN }} of {{ iw.multi.totalN }} on AT&T</div></div></div>
-      <div class="fx-rows"><sc-for list="{{ iw.multi.rows }}" as="m" hint-placeholder-count="3"><div class="fx-row door" role="button" tabindex="0" onClick="{{ m.go }}" aria-label="{{ m.name }} · {{ m.doorLabel }}"><span class="lbl"><b title="{{ m.name }}">{{ m.name }}</b><small>{{ m.sub }}</small></span><span class="bar"><span style="width:{{ m.w }};background:{{ m.fill }}"></span></span><span class="val">{{ m.v }}<span class="door-l" style="color:{{ m.doorColor }}">{{ m.doorLabel }}</span></span></div></sc-for></div>
-      <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On AT&amp;T</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
-    <button onClick="{{ insDrill.multi.go }}" aria-pressed="{{ insDrill.multi.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.multi.label }}</button>
-        </div>
-    <div class="fx-card sm" aria-label="Latency over SLO" style="border-color:{{ insDrill.slo.border }}">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Latency over SLO</h3><div class="fx-card-sub">{{ iw.sloN }} of {{ iw.sloTotal }} flows over {{ iw.SLO }} ms</div></div></div>
-      <sc-if value="{{ iw.hasSlo }}" hint-placeholder-val="{{ true }}"><div class="fx-rows"><sc-for list="{{ iw.slo }}" as="f" hint-placeholder-count="3"><div class="fx-row door" role="button" tabindex="0" onClick="{{ f.go }}" aria-label="{{ f.name }} {{ f.v }} · {{ f.doorLabel }}"><span class="lbl"><b title="{{ f.name }}">{{ f.name }}</b><small>{{ f.sub }}</small></span><span class="bar"><span style="width:{{ f.w }};background:{{ f.fill }}"></span></span><span class="val">{{ f.v }}<span class="door-l" style="color:{{ f.doorColor }}">{{ f.doorLabel }}</span></span></div></sc-for></div></sc-if>
-      <div class="fx-legend"><span><i style="background:{{ iw.sloInk }}"></i>{{ iw.sloLegend }}</span></div>
-    <button onClick="{{ insDrill.slo.go }}" aria-pressed="{{ insDrill.slo.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.slo.label }}</button>
-        </div>
+<div aria-label="Signals" style="display:grid;gap:12px;padding-top:4px;min-width:0">
+  <sc-if value="{{ sigHas }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:12px;min-width:0">
+    <div role="tablist" aria-label="Signals for" style="display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg-neutral)"><sc-for list="{{ sigChips }}" as="pc" hint-placeholder-count="5"><button role="tab" aria-selected="{{ pc.on }}" onClick="{{ pc.go }}" style="border:0;border-radius:6px;height:28px;padding:0 10px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;background:{{ pc.bg }};color:{{ pc.color }};font-weight:{{ pc.weight }};box-shadow:{{ pc.shadow }}">{{ pc.label }}</button></sc-for></div>
+    <sc-if value="{{ sigGrid }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ sigPager.many }}" hint-placeholder-val="{{ true }}"><div style="margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ sigPager.label }}</span><button class="fx-btn" onClick="{{ sigPager.prev }}" aria-label="Previous signals" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ sigPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ sigPager.next }}" aria-label="Next signals" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ sigPager.nextOp }}">›</button></div></sc-if></sc-if>
+  </div></sc-if>
+  <sc-if value="{{ sigGrid }}" hint-placeholder-val="{{ true }}">
+  <div aria-label="Signal cards" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+    <sc-for list="{{ sigCards }}" as="sg" hint-placeholder-count="6"><div class="fx-card sm sig-card" aria-label="{{ sg.title }}">
+      <button class="sig-head" onClick="{{ sg.open }}" aria-label="{{ sg.openAria }}"><span class="t">{{ sg.title }}<i>›</i></span><span class="h" title="{{ sg.head }}">{{ sg.head }}</span></button>
+      <div style="display:grid;align-content:start;min-width:0">
+        <sc-if value="{{ sg.isRows }}" hint-placeholder-val="{{ true }}"><div class="sig-rows"><sc-for list="{{ sg.rows }}" as="r" hint-placeholder-count="4"><div class="sig-row">
+          <button class="sig-fig" onClick="{{ r.figGo }}" title="{{ r.title }}"><span class="l1"><b>{{ r.label }}</b><span class="val">{{ r.v }}</span></span><span class="l2"><small>{{ r.sub }}</small><span class="bar" style="background:{{ r.trackBg }}"><sc-for list="{{ r.segs }}" as="sgm" hint-placeholder-count="1"><i style="width:{{ sgm.w }};background:{{ sgm.fill }};border-radius:{{ sgm.rad }}"></i></sc-for></span></span></button>
+          <button class="sig-act" onClick="{{ r.actGo }}" aria-label="{{ r.actAria }}">{{ r.act }}</button>
+        </div></sc-for></div></sc-if>
+        <sc-if value="{{ sg.noRows }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:10px;justify-items:start;padding:10px 0;font-size:12px;line-height:17px;color:var(--text-light)"><span>{{ sg.empty }}</span><sc-if value="{{ sg.hasEmptyAct }}" hint-placeholder-val="{{ false }}"><button class="sig-act" onClick="{{ sg.emptyGo }}">{{ sg.emptyAct }}</button></sc-if></div></sc-if>
+        <sc-if value="{{ sg.isCols }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:6px;min-width:0">
+          <div class="sig-cols" aria-label="Weekly egress, on AT&amp;T under public internet"><sc-for list="{{ sg.cols }}" as="w" hint-placeholder-count="12"><button onClick="{{ w.go }}" title="{{ w.title }}" aria-label="{{ w.title }}"><span style="height:{{ w.pubH }};background:var(--viz-6)"></span><span style="height:{{ w.fabH }};background:var(--viz-1)"></span></button></sc-for></div>
+          <div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;line-height:12px;color:var(--text-light)"><span>{{ sg.thenLabel }}</span><span>{{ sg.nowLabel }}</span></div>
+          <div style="display:flex;justify-content:flex-end"><button class="sig-act" onClick="{{ sg.actGo }}">{{ sg.act }}</button></div>
+        </div></sc-if>
+      </div>
+      <div class="sig-foot"><div class="lg"><sc-for list="{{ sg.legend }}" as="lg" hint-placeholder-count="2"><span><i style="background:{{ lg.ink }};border-radius:{{ lg.rad }}"></i>{{ lg.label }}</span></sc-for></div><button class="sig-finds" onClick="{{ sg.finds.go }}" disabled="{{ sg.finds.none }}" title="{{ sg.finds.title }}">{{ sg.finds.label }}</button></div>
+    </div></sc-for>
+  </div>
+  </sc-if>
+  <sc-if value="{{ sigFocusOn }}" hint-placeholder-val="{{ false }}">
+  <div aria-label="{{ sigFocus.title }}" style="display:grid;gap:10px;min-width:0">
+    <div style="display:flex;align-items:center;gap:14px;min-width:0">
+      <button class="fx-btn" onClick="{{ sigFocus.back }}" style="flex:none;height:28px;padding:0 12px;font-size:12px">‹ All signals</button>
+      <div style="display:grid;gap:1px;min-width:0"><b style="font-size:16px;line-height:22px;font-weight:600;color:var(--text-heading);white-space:nowrap">{{ sigFocus.title }}</b><span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sigFocus.head }}</span></div>
+      <button class="sig-finds" onClick="{{ sigFocus.finds.go }}" disabled="{{ sigFocus.finds.none }}" title="{{ sigFocus.finds.title }}">{{ sigFocus.finds.label }}</button>
+    </div>
+    <div class="sig-rows" style="border-top:1px solid var(--border-secondary)"><sc-for list="{{ sigFocus.rows }}" as="fr" hint-placeholder-count="8"><div class="sig-row wide">
+      <button class="sig-fig wide" onClick="{{ fr.figGo }}" title="{{ fr.title }}"><span class="l1"><b>{{ fr.label }}</b><span class="val">{{ fr.v }}</span></span><span class="l2"><small>{{ fr.sub }}</small><span class="bar" style="background:{{ fr.trackBg }}"><sc-for list="{{ fr.segs }}" as="fsg" hint-placeholder-count="1"><i style="width:{{ fsg.w }};background:{{ fsg.fill }};border-radius:{{ fsg.rad }}"></i></sc-for></span></span></button>
+      <button class="sig-act" onClick="{{ fr.actGo }}" aria-label="{{ fr.actAria }}">{{ fr.act }}</button>
+    </div></sc-for></div>
+    <div class="sig-foot"><div class="lg"><sc-for list="{{ sigFocus.legend }}" as="flg" hint-placeholder-count="2"><span><i style="background:{{ flg.ink }};border-radius:{{ flg.rad }}"></i>{{ flg.label }}</span></sc-for></div><sc-if value="{{ sigFocus.pager.many }}" hint-placeholder-val="{{ false }}"><div style="margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ sigFocus.pager.label }}</span><button class="fx-btn" onClick="{{ sigFocus.pager.prev }}" aria-label="Previous page" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ sigFocus.pager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ sigFocus.pager.next }}" aria-label="Next page" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ sigFocus.pager.nextOp }}">›</button></div></sc-if></div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ sigEmpty }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 0;font-size:14px;line-height:20px;color:var(--text-light)"><span>No traffic seen yet. Signals start with the first source.</span><button class="fx-btn" onClick="{{ sigEmptyGo }}" style="height:28px;padding:0 12px;font-size:12px">Add a source</button></div></sc-if>
 </div>
-</sc-if>
 </sc-if>
 <!-- Operations (notes, 2026-09-30, C1): tickets open and fixed, how long fixes take, availability against each holder's target, and what changed. Theme tokens only. -->
 <sc-if value="{{ insPanelOps }}" hint-placeholder-val="{{ false }}">
@@ -2425,7 +2469,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36 }; }
+  constructor(p) { super(p); this.state = { screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36 }; }
   componentDidUpdate() {
     // Guarded on the instance, not on prevState: comparing against prevState
     // re-entered on the very setState this handler makes, and React counted

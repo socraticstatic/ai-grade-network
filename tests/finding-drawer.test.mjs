@@ -92,7 +92,7 @@ test('filter chips count the same list the head counts, and closed history shows
 
 test('a Signals card drills to the actionable findings behind it', () => {
   const c = at({ insPanel: 'signals' });
-  vals(c).insDrill.growth.go();
+  vals(c).sigAll.find(x => x.key === 'growth').finds.go();
   const v = vals(c);
   const keys = v.insightRows.map(r => r.key);
   assert.ok(keys.includes('avoidable') && keys.includes('an-egress'), keys.join(','));

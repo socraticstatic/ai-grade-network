@@ -245,9 +245,13 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   const flows = ob.flows || [];
   // 1. Top talkers: the same per-region flows the Sankey draws.
   const regGbps = (r) => { const i = rs.indexOf(r); return +flows.filter(f => f.id.startsWith(`f-${i}-`)).reduce((a, f) => a + f.gbps, 0).toFixed(1); };
-  const tk = rs.map(r => ({ r, gbps: regGbps(r) })).sort((a, b) => b.gbps - a.gbps).slice(0, 5);
+  // Every region, so Signals' full list holds what the card counts (2026-09-30); the card draws five.
+  const tk = rs.map(r => ({ r, gbps: regGbps(r) })).sort((a, b) => b.gbps - a.gbps);
   const tMax = Math.max(1, ...tk.map(t => t.gbps)), tTot = ob.total || 1;
-  const talkers = tk.map(({ r, gbps }) => ({ key: r.region, region: r.region, cloud: r.cloud, label: `${r.cloud} ${r.region}`, sub: `${r.priv ? (RAMP_NAME[r.ramp] || 'NetBond') : 'public internet'} · ${r.tags.slice(0, 2).join(' · ') || 'untagged'}`, gbps, v: gbps.toFixed(1) + ' Gbps', share: pct(gbps, tTot) + '%', w: Math.round(gbps / tMax * 100) + '%', priv: r.priv, fill: r.priv ? 'var(--viz-1)' : 'var(--viz-6)' }));
+  const talkersAll = tk.map(({ r, gbps }) => ({ key: r.region, region: r.region, cloud: r.cloud, label: `${r.cloud} ${r.region}`, sub: `${r.priv ? (RAMP_NAME[r.ramp] || 'NetBond') : 'public internet'} · ${r.tags.slice(0, 2).join(' · ') || 'untagged'}`, gbps, v: gbps.toFixed(1) + ' Gbps', share: pct(gbps, tTot) + '%', w: Math.round(gbps / tMax * 100) + '%', priv: r.priv, fill: r.priv ? 'var(--viz-1)' : 'var(--viz-6)' }));
+  const talkers = talkersAll.slice(0, 5);
+  // The region a flow belongs to, so its row opens that region on the map.
+  const regionOf = (f) => (rs.find(r => `${r.cloud} ${r.region}` === f.region) || {}).region || null;
   // 2. New destinations inside the window, by volume.
   const pubN = rs.filter(r => !r.priv).length;
   const DEST = [{ d: 3, n: 'api.anthropic.com', c: 'ai', gb: 4.6 }, { d: 8, n: 'files.slack-edge.com', c: 'saas', gb: 3.1 }, { d: 11, n: 's3.eu-west-1.amazonaws.com', c: 'obj', gb: 12.4 }, { d: 17, n: 'intake.datadoghq.com', c: 'saas', gb: 2.4 }, { d: 22, n: 'blob.core.windows.net', c: 'obj', gb: 8.8 }, { d: 26, n: 'api.openai.com', c: 'ai', gb: 2.2 }, { d: 41, n: 'api.mistral.ai', c: 'ai', gb: 1.1 }, { d: 63, n: 'storage.googleapis.com', c: 'obj', gb: 6.2 }].slice(0, 5 + pubN);
@@ -276,13 +280,14 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
     thenLabel: priced ? `${money(thenMo)}/mo · 12 weeks ago` : '12 weeks ago', nowLabel: priced ? `this week · ${money(nowMo)}/mo` : 'this week' };
   // 5. Multi-cloud paths: every cloud-to-cloud flow.
   const xflows = flows.filter(f => f.kind !== 'App'); const xMax = Math.max(1, ...xflows.map(f => f.gbps));
-  const multiRows = xflows.map(f => ({ key: f.id, id: f.id, name: f.name, sub: `${f.controlled ? 'on AT&T' : 'public internet'} · ${f.latency} ms`, v: f.gbps.toFixed(1) + ' Gbps', w: Math.round(f.gbps / xMax * 100) + '%', fill: f.controlled ? 'var(--viz-1)' : 'var(--viz-6)', controlled: f.controlled, steerable: !!f.steerable && !f.controlled }));
+  const multiRows = xflows.map(f => ({ key: f.id, id: f.id, region: regionOf(f), name: f.name, sub: `${f.controlled ? 'on AT&T' : 'public internet'} · ${f.latency} ms`, v: f.gbps.toFixed(1) + ' Gbps', w: Math.round(f.gbps / xMax * 100) + '%', fill: f.controlled ? 'var(--viz-1)' : 'var(--viz-6)', controlled: f.controlled, steerable: !!f.steerable && !f.controlled }));
   const multi = { rows: multiRows, privN: multiRows.filter(m => m.controlled).length, totalN: multiRows.length };
   // 6. Latency over SLO: the flows above 100 ms, worst first, in the Over SLO ink
   // (review round 2, 2026-09-30): red is Down's alone.
-  const SLO = 100; const over = flows.filter(f => f.latency > SLO).sort((a, b) => b.latency - a.latency).slice(0, 5); const lMax = Math.max(SLO, ...over.map(f => f.latency));
-  const slo = over.map(f => ({ key: f.id, id: f.id, name: f.name, sub: `${f.controlled ? 'on AT&T' : 'public internet'} · ${f.gbps.toFixed(1)} Gbps`, v: f.latency + ' ms', w: Math.round(f.latency / lMax * 100) + '%', fill: HEALTH_INK.slo, steerable: !!f.steerable && !f.controlled }));
-  return { talkers, newDest, newDestN: newDest.length, shadow, shadowN, shadowGb: shadowGb.toFixed(1), growth, multi, slo, sloN: slo.length, sloTotal: flows.length, SLO };
+  // sloN counts every flow over, not the five the card draws (2026-09-30: it undercounted past five).
+  const SLO = 100; const over = flows.filter(f => f.latency > SLO).sort((a, b) => b.latency - a.latency); const lMax = Math.max(SLO, ...over.map(f => f.latency));
+  const sloAll = over.map(f => ({ key: f.id, id: f.id, region: regionOf(f), where: f.region, name: f.name, sub: `${f.controlled ? 'on AT&T' : 'public internet'} · ${f.gbps.toFixed(1)} Gbps`, v: f.latency + ' ms', w: Math.round(f.latency / lMax * 100) + '%', fill: HEALTH_INK.slo, steerable: !!f.steerable && !f.controlled }));
+  return { talkers, talkersAll, newDest, newDestN: newDest.length, shadow, shadowAll: shadow, shadowN, shadowGb: shadowGb.toFixed(1), growth, multi, slo: sloAll.slice(0, 5), sloAll, sloN: sloAll.length, sloTotal: flows.length, SLO };
 }
 
 /** What AT&T bills for the cloud side (2026-09-30: one function for the AT&T

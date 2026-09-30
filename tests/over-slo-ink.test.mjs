@@ -49,12 +49,16 @@ test('Insights: the Latency over SLO bars are the Over SLO ink, on Signals and o
   assert.ok(seen > 0, 'some estate has a flow over SLO to draw');
 });
 
+// The nine Signals cards share one legend loop (2026-09-30): the swatch binds its
+// card's own ink, and Latency over SLO's is the Over SLO ink.
 test('Signals: the Latency over SLO legend swatch is the Over SLO ink, never Down\'s red', () => {
-  const i = HTML.indexOf('{{ iw.sloLegend }}');
+  const i = HTML.indexOf('{{ lg.label }}', HTML.indexOf('<sc-for list="{{ sg.legend }}"'));
   const swatch = HTML.slice(HTML.lastIndexOf('<i ', i), i);
   assert.ok(!swatch.includes('var(--error)'), swatch);
   const bound = (swatch.match(/background:\{\{ ([\w.]+) \}\}/) || [])[1];
-  assert.equal(bound, 'iw.sloInk', swatch);
+  assert.equal(bound, 'lg.ink', swatch);
+  const card = vals(at('partial', { obPage: 'insights', insPanel: 'signals' })).sigAll.find(x => x.key === 'slo');
+  assert.deepEqual(card.legend.map(l => l.ink), [F.HEALTH_INK.slo]);
   assert.equal(vals(at('partial', { obPage: 'insights', insPanel: 'signals' })).iw.sloInk, F.HEALTH_INK.slo);
 });
 
@@ -82,7 +86,8 @@ test('Traffic site panel: each path is inked by the one rule, and a 66 ms public
 });
 
 test('the Latency over SLO card counts a spike only when the one rule calls it over SLO', () => {
-  const drilled = (view) => { const c = at(view, { obPage: 'insights', insPanel: 'signals' }); const n = vals(c).insDrill.slo.n; vals(c).insDrill.slo.go(); return { n, keys: vals(c).insightRows.map(r => r.key) }; };
+  // The card's count is its finds (2026-09-30, Signals: every count a button).
+  const drilled = (view) => { const c = at(view, { obPage: 'insights', insPanel: 'signals' }); const f = vals(c).sigAll.find(x => x.key === 'slo').finds; f.go(); return { n: f.n, keys: vals(c).insightRows.map(r => r.key) }; };
   for (const view of ['small', 'partial', 'mature', 'trust']) {
     const { n, keys } = drilled(view);
     assert.equal(keys.length, n, `${view}: the card says ${n} and drills to ${keys.join(',')}`);

@@ -17,10 +17,13 @@ const NOW = '2026-10-05T15:00:00Z';
 const ins = (view, patch = {}) => mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', nowIso: NOW, ...patch });
 const ROLES = ['architect', 'neteng', 'security', 'finops', 'exec'];
 
-test('Insights lands on Your actions, in the stakeholder\'s tab order; the chips set the persona', () => {
-  const c = ins('partial');
+// Insights lands on Signals again (Micah, 2026-09-30: "Cards plus Your actions"):
+// Signals first, then Your actions, Operations, Findings and the briefing. Your
+// actions keeps its own tab and its behaviour (tests/signals.test.mjs has the landing).
+test('Your actions is the second tab, behaves as it did, and its chips set the persona', () => {
+  const c = ins('partial', { insPanel: 'role' });
   const v = vals(c);
-  assert.deepEqual(v.insPanels.map(p => p.label.replace(/ · \d+$/, ' · N')), ['Your actions', 'Operations', 'Findings · N', 'Signals', 'Monthly briefing']);
+  assert.deepEqual(v.insPanels.map(p => p.label.replace(/ · \d+$/, ' · N')), ['Signals', 'Your actions', 'Operations', 'Findings · N', 'Monthly briefing']);
   assert.ok(v.insPanelRole);
   assert.deepEqual(v.roleChips.map(r => r.label), ['Architect', 'Network Eng', 'Security', 'FinOps & SRE', 'Executive']);
   v.roleChips.find(r => r.label === 'Security').go();

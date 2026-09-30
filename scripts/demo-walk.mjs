@@ -82,7 +82,10 @@ await beat('0 NaaS home: the whole network at a glance', async () => {
   if (tiles.length !== 5) throw new Error(`${tiles.length} tiles, not 5`);
   for (const [i, want] of [[0, '25 sites · 3 clouds'], [1, '5 of 7 regions'], [2, '1 of 2 connections'], [4, '$41,500/mo']]) if (!tiles[i].includes(want)) throw new Error(`tile ${i + 1} reads "${tiles[i].replace(/\n/g, ' | ')}", not ${want}`);
   const neteng = await briefing();
-  if (!/For network engineering/.test(neteng)) throw new Error('the briefing is not Network Eng\'s');
+  // Blind regions and regions over SLO are Network Eng's (2026-09-30, "make sure mock data
+  // matches persona"): five things wait on the role, so the line reads "Of five things
+  // waiting on network engineering, three come first".
+  if (!/(For|waiting on) network engineering/.test(neteng)) throw new Error('the briefing is not Network Eng\'s');
   await tab('Executive', 'section[aria-label="NaaS home"]');
   const exec = await briefing();
   if (exec === neteng || !/For the executive team/.test(exec)) throw new Error('the briefing did not change for Executive');
@@ -141,8 +144,14 @@ await beat('6 Cost: the four moves, then By leg', async () => {
   await expect('Site access', 'Cloud connectivity', 'Cloud provider', 'Modelled', 'Egress');
 });
 
-await beat('7 Insights: Your actions and Operations', async () => {
+// Insights opens on Signals (2026-09-30, "Cards plus Your actions"): Network Eng's
+// three lead, each row with its move; Your actions is the next tab, unchanged.
+await beat('7 Insights: Signals, Your actions and Operations', async () => {
   await rail('Insights');
+  await expect('Health', '2 problems · 2 apps affected', 'Latency over SLO', 'Capacity', 'Trace', 'Steer', 'Resize');
+  const lead = await page.locator('[aria-label="Signal cards"] .sig-head .t').allInnerTexts();
+  if (!/^Health/.test(lead[0] || '') || !/^Latency over SLO/.test(lead[1] || '') || !/^Capacity/.test(lead[2] || '')) throw new Error(`Network Eng leads with ${lead.slice(0, 3).join(', ')}`);
+  await tab('Your actions', '[aria-label="Insights views"]');
   await expect('Actions for Network Eng', 'Coming soon');
   await tab('Operations', '[aria-label="Insights views"]');
   await expect(/\d+ Sev 1 open now\. \d+ tickets? open\./, 'sample history');

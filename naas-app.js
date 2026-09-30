@@ -20,6 +20,7 @@ import * as V from './naas-volume.js';
 import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
+import * as SG from './naas-signals.js';
 import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
 import { rampName } from './naas-things.js';
@@ -174,7 +175,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -1460,24 +1461,23 @@ function labelKit(s, set) {
   return { labelsOf, ui };
 }
 
-/** Insight cards: the generator's rows plus the doors each row and card opens. */
-function iwVals(iw, s, set, go, winLabel) {
+/**
+ * The generator's rows as Your actions' visuals read them, four to a list. The
+ * Signals cards read the whole generator through sigVals in addendumVals (2026-09-30), and
+ * every move they offer is bound there.
+ */
+function iwVals(iw, winLabel) {
   if (!iw) return null;
-  // Every door that leaves the drawer closes it; the drawer sits over every page.
-  const govern = (name) => () => { set({ authoring: { match: 'destination ' + name, scope: 'any cloud', req: ['Inspection in path'] } }); go('s3', { layer: 'cloud', tab: 'govern', sub: null })(); };
-  const toMap = (mapMode) => () => { go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', sub: null })(); set({ mapMode, scrollToSec: 'sec-flow', scrollNonce: (s.scrollNonce || 0) + 1 }); };
-  const andiFlow = (f) => () => set({ andiScope: { kind: 'flow', id: f.id, label: f.name }, andiOpen: true });
-  const steer = (f) => () => set({ steered: [...(s.steered || []), f.id], events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `Steered ${f.name} onto the AT&T network` }] });
-  const flowRow = (f) => ({ ...f, go: f.steerable ? steer(f) : andiFlow(f), doorLabel: f.steerable ? 'Steer →' : 'Ask Andi →', doorColor: f.steerable ? 'var(--warning)' : 'var(--link)' });
-  return {
-    ...iw, winLabel,
-    talkers: iw.talkers.slice(0, 4).map(t => ({ ...t, go: () => set({ andiScope: { kind: 'region', id: t.region, label: t.label }, andiOpen: true }), doorLabel: 'Ask Andi →', enter: () => set({ hoverNode: 'reg' + t.region }), leave: () => set({ hoverNode: null }) })), talkersGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null }),
-    newDest: iw.newDest.slice(0, 4).map(d => ({ ...d, go: govern(d.name), doorLabel: 'Set policy →' })), hasNewDest: iw.newDest.length > 0, newDestGo: go('s3', { layer: 'cloud', tab: 'govern', sub: null }),
-    shadow: iw.shadow.slice(0, 4).map(d => ({ ...d, go: govern(d.name), doorLabel: d.covered ? 'Policy →' : 'Set policy →' })), shadowGo: go('s3', { layer: 'cloud', tab: 'govern', sub: null }),
-    growthGo: go('s3', { layer: 'cloud', tab: 'cost', sub: null }),
-    multi: { ...iw.multi, rows: iw.multi.rows.map(flowRow), has: iw.multi.rows.length > 0 }, multiGo: toMap('state'),
-    slo: iw.slo.map(flowRow), hasSlo: iw.slo.length > 0, sloGo: toMap('slo'), sloLegend: `Over ${iw.SLO} ms`, sloInk: F.HEALTH_INK.slo,
-  };
+  return { ...iw, winLabel, talkers: iw.talkers.slice(0, 4), newDest: iw.newDest.slice(0, 4), shadow: iw.shadow.slice(0, 4),
+    sloLegend: `Over ${iw.SLO} ms`, sloInk: F.HEALTH_INK.slo };
+}
+
+/** Resize a connection that one fewer port can hold: the review says what changes. */
+function resizeGo(go, cp) {
+  // The review says what changes (final review, 2026-09-30): the ports before and after and where the peak lands. No catalog price, so AT&T prices it.
+  const where = `${cp.cloud} ${cp.region}`, before = `${cp.ports} × ${cp.portG} Gbps`, after = `${cp.resizeTo} × ${cp.portG} Gbps`, gone = cp.ports - cp.resizeTo;
+  return go('s6', { term: 36, order: { title: `Resize ${where}`, lines: [{ line: 1, product: gone === 1 ? `Remove a ${cp.portG} Gbps port` : `Remove ${cp.portG} Gbps ports`, qty: gone, term: '36-month', monthly: 0, unpriced: true }], policies: [], monthly: 0, savings: 0, days: 1,
+    pathSrc: 'Your sites', pathDst: where, pathDesc: `${where} on ${F.RAMP_NAME[cp.ramp] || 'NetBond'}: ${before} to ${after}. The peak goes from ${cp.peakPct}% to about ${cp.resizePct}% of what is bought.` } });
 }
 /**
  * Compose, prefilled for one region or site: the shape composeFor, the gap
@@ -2408,6 +2408,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // saying what that means. Two sources, one grammar - an anomaly is something
   // that happened and has a time on it; an insight is something that is true
   // and has a number on it. Both carry the evidence and one thing to do.
+  // The Signals generator, once (2026-09-30): the cards, the Your actions visuals and
+  // the tests read the same rows. Public egress is priced at the buckets' own rate.
+  const pubMo = (est0.buckets || []).filter(b => b.today > b.fabric).reduce((a, b) => a + b.today, 0);
+  const iwRaw = R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s), { pubRate: (() => { const w = R.egressWeeks(obAll)[11]; return w && w.pub > 0 ? pubMo / w.pub : 0; })() });
   const anomalyRows = R.anomalies(est0, ob, SCH.nowOf(s)).map((a, i) => ({
     key: a.key, persona: a.key === 'an-dest' ? 'Security & Compliance' : a.key === 'an-egress' ? 'FinOps & SRE' : 'Network Engineering',
     kind: 'Event', when: a.when, head: a.head, why: a.cause, did: a.did, hasDid: !!a.did, act: a.can,
@@ -2471,17 +2475,17 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // The Signals cards drill to the findings behind them (2026-09-28), now the actionable ones.
   // A latency spike counts on Latency over SLO only when the one rule calls it
   // over (review round 2, 2026-09-30): an 86 ms or a 100 ms peak is At risk.
-  const spikeKeys = new Set((est0.regionsList || []).filter(r => r.rel === 'warn').map(r => 'an-' + r.region));
+  // Which findings a card holds is naas-signals.js's (2026-09-30): Top talkers
+  // follows the persona's lens, and Health and Capacity take the incidents.
   const spikesOver = new Set((probs || []).filter(p => p.kind === 'spike' && p.state === 'slo').map(p => p.key));
-  const CARD_FINDS = { talkers: ['Top talkers', k => ['ipsec', 'onecloud', 'single', 'nothub'].includes(k)], newdest: ['New destinations', k => k === 'an-dest'],
-    shadow: ['Shadow SaaS', k => ['uninspected', 'pci', 'unsegmented', 'an-dest'].includes(k)], growth: ['Egress growth', k => ['avoidable', 'ipsecegress', 'an-egress'].includes(k)],
-    multi: ['Cloud-to-cloud paths', k => k === 'crosscloud'], slo: ['Latency over SLO', k => ['degraded', 'blindspots', 'unmonitored'].includes(k) || (/^an-/.test(k) && k !== 'an-dest' && k !== 'an-egress' && (!spikeKeys.has(k) || spikesOver.has(k)))] };
-  const insFocus = CARD_FINDS[s.insFocus] ? s.insFocus : null;
-  const insDrill = Object.fromEntries(Object.entries(CARD_FINDS).map(([k, [label, hit]]) => { const n0 = lifeRows.filter(x => hit(x.f.key) && bucket(x.l.state) === 'open').length, on = insFocus === k;
-    return [k, { n: n0, label: n0 ? `${n0} ${n0 === 1 ? 'finding' : 'findings'} ›` : 'No findings', on, border: on ? 'var(--border-active)' : 'var(--border-secondary)',
-      go: () => set({ insFocus: on ? null : k, findFilter: 'open', findPage: 0, insPanel: on ? 'signals' : 'findings' }) }]; }));
+  const sigLens = SG.lensOf(roleKeyOf(s)), sigCtx = { spikesOver };
+  const cardFinds = (k) => SG.findsOf(k, sigLens, sigCtx);
+  const insFocus = SG.CARDS.includes(s.insFocus) ? s.insFocus : null;
+  const findsFor = (k, label) => { const hit = cardFinds(k), n = lifeRows.filter(x => hit(x.f.key) && bucket(x.l.state) === 'open').length;
+    return { n, none: !n, label: n ? `${n} ${n === 1 ? 'finding' : 'findings'} ›` : 'No findings', title: `The open findings behind ${label}`,
+      go: () => set({ insFocus: k, findFilter: 'open', findPage: 0, insPanel: 'findings' }) }; };
   const personaSort = (rows) => rows.slice().sort((a, b) => ((b.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0) - ((a.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0));
-  const insightRowsShown = personaSort(every.filter(x => findFilter === 'all' || bucket(x.l.state) === findFilter).filter(x => !insFocus || CARD_FINDS[insFocus][1](x.f.key)).map(toRow))
+  const insightRowsShown = personaSort(every.filter(x => findFilter === 'all' || bucket(x.l.state) === findFilter).filter(x => !insFocus || cardFinds(insFocus)(x.f.key)).map(toRow))
     .map(r => ({ ...r, pFor: 'For ' + ({ 'Cloud & Platform Architect': 'Architect', 'Network Engineering': 'Network Eng', 'Security & Compliance': 'Security', 'FinOps & SRE': 'FinOps & SRE', 'Executive': 'Executive' }[r.persona] || r.persona), pInk: r.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect') ? 'var(--link)' : 'var(--text-disabled)' }));
   // The finding drawer: what AT&T saw, a preview of the change, the evidence, the timeline, the moves.
   const fdPick = every.find(x => x.f.key === s.fdKey) || null;
@@ -2548,9 +2552,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   })();
   const insightVals = {
     insBand,
-    insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, noInsights: insightRowsShown.length === 0, findChips, insDrill, findAll: every.map(toRow),
-    ...(() => { const ik = ['signals', 'findings', 'ops', 'brief'].includes(s.insPanel) ? s.insPanel : 'role'; return { insPanels: [['role', 'Your actions'], ['ops', 'Operations'], ['findings', `Findings · ${openN}`], ['signals', 'Signals'], ['brief', 'Monthly briefing']].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelRole: ik === 'role', insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings', insPanelOps: ik === 'ops', insPanelBrief: ik === 'brief' }; })(),
-    hasInsFocus: !!insFocus, insFocusLabel: insFocus ? CARD_FINDS[insFocus][0] : '', clearInsFocus: () => set({ insFocus: null, findPage: 0 }),
+    insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, noInsights: insightRowsShown.length === 0, findChips, findAll: every.map(toRow),
+    // Insights opens on Signals again, first in the tab order (Micah, 2026-09-30: "Cards plus Your actions").
+    ...(() => { const ik = ['role', 'findings', 'ops', 'brief'].includes(s.insPanel) ? s.insPanel : 'signals'; return { insPanels: [['signals', 'Signals'], ['role', 'Your actions'], ['ops', 'Operations'], ['findings', `Findings · ${openN}`], ['brief', 'Monthly briefing']].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelRole: ik === 'role', insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings', insPanelOps: ik === 'ops', insPanelBrief: ik === 'brief' }; })(),
+    hasInsFocus: !!insFocus, clearInsFocus: () => set({ insFocus: null, findPage: 0 }),
     hasFindings: every.length > 0,
     insightCount: `${openN} open`,
     insightSub: 'Found by AT&T, with what was done about each',
@@ -2747,7 +2752,90 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     return { roleChips, roleTitle: `Actions for ${role.short}`, roleHead: plNow.line, roleCta: plNow.cta, roleGo: plNow.go, roleActAll: all, roleActRows: all, hasRoleActs: all.length > 0,
       roleEmpty, hasRoleEmpty: !all.length, hasRoleEmptyGo: !all.length && rk === 'exec', roleEmptyGo: () => set({ insPanel: 'ops', opsPanel: 'overview' }) };
   })();
-  const dash = { ...mixVals, ...insightVals, ...healthVals, ...opsVals, ...roleVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
+  // Insights > Signals (Micah, 2026-09-30: "Observe insights is light"; "all need to
+  // be useful and action oriented"; "make sure mock data matches persona"; he chose
+  // "Cards plus Your actions"). Nine cards in the persona's order, six to a page.
+  // Every title, figure, bar and count is a button that opens exactly the set it
+  // counts; every row carries its move; only the traffic cards' figures open Logs.
+  const sigVals = (() => {
+    const rk = roleKeyOf(s), order = SG.orderOf(rk);
+    const sigChips = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk; return { key: k, label: ROLE_OF[k].short, on, ...seg(on), go: () => set({ persona: k, sigPage: 0, sigOpen: null, sigListPage: 0 }) }; });
+    // Nothing discovered yet: the first step, the one the home offers.
+    const sigEmptyGo = () => go('s1', { discoverView: 'sources' })();
+    const noPager = { label: '', many: false, prevOp: 0.4, nextOp: 0.4, prev: () => {}, next: () => {} };
+    if (!iwRaw) return { sigChips, sigHas: false, sigEmpty: true, sigEmptyGo, sigAll: [], sigCards: [], sigGrid: false, sigPager: noPager, sigFocusOn: false, sigFocus: null, insFocusLabel: '' };
+    const reg = (id) => est0.regionsList.find(x => x.region === id) || { region: id, wl: 0 };
+    const toObserve = (extra) => go('s3', { layer: 'cloud', tab: 'observe', sub: null, ...extra });
+    const toCost = (costPanel) => go('s3', { layer: 'cloud', tab: 'cost', costPanel, sub: null });
+    const author = (match) => () => { go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'policies', sub: null })(); set({ authoring: { match, scope: 'any cloud', req: ['Inline security inspection'] } }); };
+    // Each move lands where its label says.
+    const MOVE = {
+      'andi-region': (r) => () => set({ andiScope: { kind: 'region', id: r.region, label: r.label }, andiOpen: true }),
+      'andi-flow': (r) => () => set({ andiScope: { kind: 'flow', id: r.id, label: r.label }, andiOpen: true }),
+      attach: (r) => composeFor(go, reg(r.region)),
+      port: (r) => composeFor(go, reg(r.region)),
+      resize: (r) => { const cp = capRows.find(x => x.id === r.key); return cp && cp.oversized ? resizeGo(go, cp) : () => {}; },
+      'policy-region': (r) => author('region ' + r.region),
+      'policy-dest': (r) => author('destination ' + r.label),
+      policies: () => go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'policies', sub: null }),
+      steer: (r) => () => set({ steered: [...(s.steered || []), r.id], events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `Steered ${r.label} onto the AT&T network` }] }),
+      trace: (r) => () => { const p = (healthVals.problemRows || []).find(x => x.key === r.key); toObserve({ obPage: 'perf' })(); if (p) p.trace(); },
+      optimize: () => toCost('optimize'),
+      bucket: () => toCost('bucket'),
+    };
+    // Each figure opens the one thing it counts. A sample destination has no
+    // records of its own, so it opens the records of the path it takes, and says so.
+    const FIG = {
+      map: (r) => toObserve({ obPage: 'perf', obPanel: 'map', mapRegion: r.region }),
+      'map-slo': (r) => toObserve({ obPage: 'perf', obPanel: 'map', mapMode: 'slo', mapRegion: r.region }),
+      'map-state': (r) => toObserve({ obPage: 'perf', obPanel: 'map', mapMode: 'state', mapRegion: r.region }),
+      logs: (r) => explainNav(c, { label: r.label, value: r.v, sub: `${r.sub}. Sample data: no record names it yet, so these are the records on the path it takes.`, cut: 'Records to the internet, outside AT&T.', pattern: 'internet', path: 'public', parts: [] }),
+      finding: (r) => () => set({ fdKey: r.key }),
+      conn: (r) => toObserve({ obPage: 'perf', obPanel: 'conn', mapSel: r.key, mapRegion: r.region }),
+      bucket: () => toCost('bucket'),
+    };
+    // A title opens the card's whole list: in place for the traffic lists, else the page that holds it.
+    const LIST = new Set(['talkers', 'newdest', 'shadow', 'multi', 'slo']);
+    const OPEN = { growth: toObserve({ obPage: 'perf', obPanel: 'time' }), health: toObserve({ obPage: 'perf', obPanel: 'health' }), capacity: toObserve({ obPage: 'perf', obPanel: 'conn' }), spend: toCost('bucket') };
+    // Top talkers by cost shares the buckets' public egress by traffic (modelled); a scope takes its share.
+    const pubG = (rows) => rows.filter(t => !t.priv).reduce((a, t) => a + t.gbps, 0);
+    const allPubG = obScope === 'all' ? pubG(iwRaw.talkersAll) : pubG((R.insightWidgets(est0, obAll, winDaysOf(s)) || { talkersAll: [] }).talkersAll);
+    const pubMoIn = allPubG > 0 ? pubMo * pubG(iwRaw.talkersAll) / allPubG : 0;
+    const model = {
+      talkers: SG.talkers(iwRaw.talkersAll, sigLens, { pubMo: pubMoIn, covPct: ob.covPct || 0 }),
+      newdest: SG.newdest(iwRaw.newDest, { n: iwRaw.newDestN, win: winLabelOf(s) }),
+      shadow: SG.shadow(iwRaw.shadowAll, { n: iwRaw.shadowN, gb: iwRaw.shadowGb }),
+      growth: SG.growth(iwRaw.growth),
+      multi: SG.multi(iwRaw.multi.rows, iwRaw.multi),
+      slo: SG.slo(iwRaw.sloAll, { n: iwRaw.sloN, total: iwRaw.sloTotal, SLO: iwRaw.SLO, worst: (() => { const f = (ob.flows || []).slice().sort((a, b) => b.latency - a.latency)[0]; return f ? { name: f.name, where: f.region, ms: f.latency } : null; })() }),
+      health: SG.health((probs || []).map(p => ({ key: p.key, region: p.region, state: p.state, where: p.where, thing: p.thing, what: p.what, appsN: (p.apps || []).length, wlN: p.wl, apps: p.apps || [] }))),
+      capacity: SG.capacity(capRows),
+      spend: SG.spend(est0.buckets || []),
+    };
+    // A card with nothing to show offers the first step where there is one: Capacity with nothing attached offers Attach.
+    const firstPub = est0.regionsList.filter(r => !r.priv).sort((a, b) => (b.wl || 0) - (a.wl || 0))[0] || null;
+    const EMPTY = { attach: firstPub ? composeFor(go, firstPub) : null };
+    const bind = (k) => {
+      const m = model[k];
+      const all = (m.rows || []).map(r => ({ ...r, title: `${r.label}${r.ramp ? ` · ${r.ramp}` : ''} · ${r.sub} · ${r.v}`, figGo: FIG[r.fig](r), actGo: MOVE[r.actKind](r), actAria: `${r.act}: ${r.label}`,
+        trackBg: r.track ? 'var(--bg-neutral)' : 'transparent', segs: r.segs.map(x => ({ ...x, rad: x.rad || '2px' })) }));
+      return { key: k, title: m.title, head: m.head, open: LIST.has(k) ? () => set({ sigOpen: k, sigListPage: 0 }) : OPEN[k], openAria: `${m.title}: ${m.head}`,
+        // No bars, no key to them.
+        finds: findsFor(k, m.title), legend: !m.isCols && !all.length ? [] : m.legend.map(l => ({ ...l, rad: l.rad || '2px' })),
+        all, rows: all.slice(0, 4), hasRows: all.length > 0, noRows: !m.isCols && !all.length, empty: m.empty, isCols: !!m.isCols, isRows: !m.isCols,
+        hasEmptyAct: !m.isCols && !all.length && !!EMPTY[m.emptyKind], emptyAct: m.emptyAct || '', emptyGo: EMPTY[m.emptyKind] || (() => {}),
+        cols: (m.cols || []).map(w => ({ ...w, go: OPEN.growth })), thenLabel: m.thenLabel || '', nowLabel: m.nowLabel || '',
+        hasAct: !!m.isCols, act: m.isCols ? m.act : '', actGo: m.isCols ? MOVE[m.actKind]({}) : () => {} };
+    };
+    const sigAll = order.map(bind);
+    const pg = pageRows(sigAll, SG.PAGE_N, s.sigPage, (n) => set({ sigPage: n, sigOpen: null }));
+    const fc = LIST.has(s.sigOpen) ? sigAll.find(x => x.key === s.sigOpen) : null;
+    const fpg = fc ? pageRows(fc.all, 10, s.sigListPage, (n) => set({ sigListPage: n })) : null;
+    const sigFocus = fc ? { key: fc.key, title: fc.title, head: fc.head, total: fc.all.length, all: fc.all, rows: fpg.rows, pager: fpg.pager, legend: fc.legend, finds: fc.finds, back: () => set({ sigOpen: null, sigListPage: 0 }) } : null;
+    return { sigChips, sigHas: true, sigEmpty: false, sigEmptyGo, sigAll, sigCards: fc ? [] : pg.rows, sigGrid: !fc, sigPager: pg.pager, sigFocusOn: !!fc, sigFocus,
+      insFocusLabel: insFocus ? ((sigAll.find(x => x.key === insFocus) || {}).title || '') : '' };
+  })();
+  const dash = { ...mixVals, ...insightVals, ...healthVals, ...opsVals, ...roleVals, ...sigVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
     otSeries, otSeriesChips, otSeriesLine, hasOtSeriesLine: !!otSeriesLine, obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelHealth: obPanel === 'health', obPanelPaths: obPanel === 'paths', obPanelChanges: obPanel === 'changes', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0 && !!s.obPickOpen, scopeLabel, mapTotal: mapG.total, mapP95: perf.p95,
@@ -3051,7 +3139,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     obWindows: ['7d', '30d', '90d'].map(w => ({ key: w, label: w, on: (s.obWindow || '30d') === w, go: () => set({ obWindow: w }), ub: (s.obWindow || '30d') === w ? 'var(--cta)' : 'transparent', uc: (s.obWindow || '30d') === w ? 'var(--link)' : 'var(--text-body)', uw: (s.obWindow || '30d') === w ? 700 : 500 })),
     obTrends: R.trends(ob, s.obWindow || '30d').map(k => ({ ...k, hasUnit: !!k.u, badge: `${k.arrow} ${k.delta}`, go: ({ thr: () => set({ obTab: 'throughput' }), p95: () => set({ obTab: 'latency' }), loss: () => set({ obTab: 'loss' }), egr: () => set({ obTab: 'egress' }), fab: () => set({ obTab: 'flow' }), sav: go('s3', { layer: 'cloud', tab: 'cost' }), util: () => set({ obTab: 'flow' }) })[k.key] || (() => {}) })),
     utilRows: (ob.utilRows || []).map(u => { const hot = u.pct >= 80; const r = est0.regionsList.find(x => x.region === u.region) || { region: u.region, wl: 0 }; return { ...u, key: u.id, label: `${u.cloud} ${u.region}`, sub: `${rampName(u)} · ${u.bw || u.ports + ' × 10 Gbps'}`, w: u.pct + '%', v: `${u.gbps} Gbps`, pctF: u.pct + '%', fill: hot ? 'var(--error)' : '#009fdb', doorLabel: hot ? 'Add a port →' : 'Ask Andi →', doorColor: hot ? 'var(--warning)' : 'var(--link)', go: hot ? composeFor(go, r) : () => set({ andiScope: { kind: 'region', id: u.region, label: `${u.cloud} ${u.region}` }, andiOpen: true }) }; }),
-    obStrip: (() => { const rows = ob.utilRows || []; const hot = rows.filter(u => u.pct >= 80 && !(connRow && connRow.region === u.region && connRow.degraded)); const blind = ob.blind || []; const parts = []; const deg = conns.rows.find(r => r.degraded); if (deg) parts.push(`${deg.cloud} ${deg.region} is degraded on ${rampName(deg)}: BGP flapping, ${deg.drops} drops, ${deg.wl.toLocaleString('en-US')} workloads behind it.`); if (hot.length) parts.push(`${hot.map(u => `${u.cloud} ${u.region}`).join(', ')} ${hot.length === 1 ? 'runs' : 'run'} above 80% of ${hot.length === 1 ? 'its' : 'their'} ports.`); if (blind.length) parts.push(`${blind.length} ${blind.length === 1 ? 'region sends' : 'regions send'} no flow logs, so ${ob.pub.toFixed(1)} Gbps is unseen.`); if (ob.worst && !blind.length) parts.push(`${ob.worst.name} is the slowest public flow at ${ob.worst.latency} ms.`); const first = hot[0] ? est0.regionsList.find(x => x.region === hot[0].region) : blind[0]; return { has: parts.length > 0, title: 'Act on it', text: parts.join(' ') + (hot.length ? ' Add a port before it saturates.' : blind.length ? ' Attach it to bring the traffic under control.' : ''), cta: hot.length ? `Add a port on ${hot[0].region}` : blind.length ? `Attach ${blind[0].region}` : 'Steer worst offender', go: first ? composeFor(go, first) : (ob.worst ? () => set({ steered: [...(s.steered || []), ob.worst.id] }) : () => {}) }; })(), hasUtil: (ob.utilRows || []).length > 0, utilLine: `${ob.util}% of ${ob.capGbps} Gbps in use · ${(ob.utilRows || []).length} ${(ob.utilRows || []).length === 1 ? 'connection' : 'connections'}`, utilHot: (ob.utilRows || []).filter(u => u.pct >= 80).length, anomalies: R.anomalies(R.applyScope(est0, obScope), ob).map(a => ({ ...a, dot: a.sev === 'amber' ? 'var(--warning)' : 'var(--link)', go: a.region ? () => set({ obScope: 'cloud:' + (est0.regionsList.find(r => r.region === a.region) || {}).cloud }) : () => {} })), hasAnomalies: R.anomalies(R.applyScope(est0, obScope), ob).length > 0, insights: R.insights(R.applyScope(est0, obScope), ob), hasInsights: !isEmpty, iw: iwVals(R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s), { pubRate: (() => { const w = R.egressWeeks(obAll)[11], pubMo = (est0.buckets || []).filter(b => b.today > b.fabric).reduce((a, b) => a + b.today, 0); return w && w.pub > 0 ? pubMo / w.pub : 0; })() }), s, set, go, winLabelOf(s)) || {}, hasIw: !!R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s)),
+    obStrip: (() => { const rows = ob.utilRows || []; const hot = rows.filter(u => u.pct >= 80 && !(connRow && connRow.region === u.region && connRow.degraded)); const blind = ob.blind || []; const parts = []; const deg = conns.rows.find(r => r.degraded); if (deg) parts.push(`${deg.cloud} ${deg.region} is degraded on ${rampName(deg)}: BGP flapping, ${deg.drops} drops, ${deg.wl.toLocaleString('en-US')} workloads behind it.`); if (hot.length) parts.push(`${hot.map(u => `${u.cloud} ${u.region}`).join(', ')} ${hot.length === 1 ? 'runs' : 'run'} above 80% of ${hot.length === 1 ? 'its' : 'their'} ports.`); if (blind.length) parts.push(`${blind.length} ${blind.length === 1 ? 'region sends' : 'regions send'} no flow logs, so ${ob.pub.toFixed(1)} Gbps is unseen.`); if (ob.worst && !blind.length) parts.push(`${ob.worst.name} is the slowest public flow at ${ob.worst.latency} ms.`); const first = hot[0] ? est0.regionsList.find(x => x.region === hot[0].region) : blind[0]; return { has: parts.length > 0, title: 'Act on it', text: parts.join(' ') + (hot.length ? ' Add a port before it saturates.' : blind.length ? ' Attach it to bring the traffic under control.' : ''), cta: hot.length ? `Add a port on ${hot[0].region}` : blind.length ? `Attach ${blind[0].region}` : 'Steer worst offender', go: first ? composeFor(go, first) : (ob.worst ? () => set({ steered: [...(s.steered || []), ob.worst.id] }) : () => {}) }; })(), hasUtil: (ob.utilRows || []).length > 0, utilLine: `${ob.util}% of ${ob.capGbps} Gbps in use · ${(ob.utilRows || []).length} ${(ob.utilRows || []).length === 1 ? 'connection' : 'connections'}`, utilHot: (ob.utilRows || []).filter(u => u.pct >= 80).length, anomalies: R.anomalies(R.applyScope(est0, obScope), ob).map(a => ({ ...a, dot: a.sev === 'amber' ? 'var(--warning)' : 'var(--link)', go: a.region ? () => set({ obScope: 'cloud:' + (est0.regionsList.find(r => r.region === a.region) || {}).cloud }) : () => {} })), hasAnomalies: R.anomalies(R.applyScope(est0, obScope), ob).length > 0, insights: R.insights(R.applyScope(est0, obScope), ob), hasInsights: !isEmpty, iw: iwVals(iwRaw, winLabelOf(s)) || {}, hasIw: !!iwRaw,
     obVerdict: ob.verdict, obCoverage: ob.coverage, obKpis: ob.kpis.map(k => ({ ...k, hasUnit: !!k.u, hasE: !!k.e })), obTabs, obIsFlow: obTab === 'flow', trend, hasTrend: !!trend,
     ...logVals, ...gapVals, ...stepVals,
     skVB: `0 0 ${sk.W} ${sk.H}`, skNodes, skHeads, skRibbons, goLogs: () => toLogs({ logPattern: 'all' }), skSub: ob.subVerdict, skFoot: `All flows · ${ob.flows.filter(f => f.kind === 'App').length} app flows, ${ob.flows.filter(f => f.kind !== 'App').length} cloud-to-cloud. Sites roll up by class; the records table lists cloud flows only.`,
@@ -3324,7 +3412,8 @@ function shellVals(s, set, go, est, c, sched) {
             : tab === 'govern' ? (onS3('cloud', tab) && (id === 'sec-starting' ? 'templates' : 'policies') === (s.govPanel || 'policies'))
             : tab === 'cost' ? (onS3('cloud', tab) && costPanelOf(s.costPanel) === (COST_DOOR[id] || 'spend') && !(s.sub && s.sub.page === 'cost'))
             : (onS3('cloud', tab) && activeSec === id && (tab !== 'observe' || !['insights', 'logs'].includes(s.obPage)));
-          const goTo = isView ? (view === 'insights' || view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
+          // Insights opens on Signals, the card grid (Micah, 2026-09-30: "Cards plus Your actions").
+          const goTo = isView ? (view === 'insights' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null, insPanel: 'signals', sigOpen: null }) : view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
             : id === 'sec-paths' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })
             : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: COST_DOOR[id] || 'spend' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
@@ -3523,10 +3612,8 @@ function costVals(s, set, est, invAll, ob, go, c) {
       go('s4', { ...newOrder({ outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: group, metros: [metro, second], resiliency: 'Geodiversity', resiliencyChosen: true, control: ['Private path required'], step: 4, prefilled: true, prefillRegion: `${r.cloud} ${r.region}`, prefillWl: r.wl, sourceLabel: 'Optimize', noteStep: 4, note: `Add a second path for ${r.cloud} ${r.region}: a second metro, for geodiversity.` }) })(); },
     capacity: (cp, resize) => { if (!cp) return; const r = est.regionsList.find(x => x.region === cp.region) || {};
       if (!resize) return composeFor(go, r)();
-      // The review says what changes (final review, 2026-09-30): the ports before and after and where the peak lands. No catalog price, so AT&T prices it.
-      const where = `${cp.cloud} ${cp.region}`, before = `${cp.ports} × ${cp.portG} Gbps`, after = `${cp.resizeTo} × ${cp.portG} Gbps`, gone = cp.ports - cp.resizeTo;
-      go('s6', { term: 36, order: { title: `Resize ${where}`, lines: [{ line: 1, product: gone === 1 ? `Remove a ${cp.portG} Gbps port` : `Remove ${cp.portG} Gbps ports`, qty: gone, term: '36-month', monthly: 0, unpriced: true }], policies: [], monthly: 0, savings: 0, days: 1,
-        pathSrc: 'Your sites', pathDst: where, pathDesc: `${where} on ${F.RAMP_NAME[cp.ramp] || 'NetBond'}: ${before} to ${after}. The peak goes from ${cp.peakPct}% to about ${cp.resizePct}% of what is bought.` } })(); },
+      // One Resize order for Optimize and Signals' Capacity card (2026-09-30).
+      resizeGo(go, cp)(); },
   };
   const optTop = optBase.slice(0, 2).reduce((w, r) => (r.figure > (w ? w.figure : 0) ? r : w), null);
   const optRows = optBase.map(r => ({ ...r, go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(r.target, r.resize) : optGo[r.key],

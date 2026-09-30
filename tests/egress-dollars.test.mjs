@@ -52,5 +52,8 @@ test('no bar says 1 weeks; the axis ends carry the reference dollars', () => {
   assert.ok(g.weeks.every(w => !/\b1 weeks\b/.test(w.title)));
   assert.equal(g.thenLabel, '$64,800/mo · 12 weeks ago');
   assert.equal(g.nowLabel, 'this week · $71,600/mo');
-  assert.ok(HTML.includes('{{ iw.growth.subF }}') && HTML.includes('{{ iw.growth.thenLabel }}') && HTML.includes('{{ iw.growth.nowLabel }}'));
+  // The nine Signals cards share one loop (2026-09-30): Egress growth's figure and axis ends are its card's.
+  assert.ok(HTML.includes('{{ sg.head }}') && HTML.includes('{{ sg.thenLabel }}') && HTML.includes('{{ sg.nowLabel }}'));
+  const card = ins('partial').sigAll.find(x => x.key === 'growth');
+  assert.deepEqual([card.head, card.thenLabel, card.nowLabel], [g.subF, g.thenLabel, g.nowLabel]);
 });
