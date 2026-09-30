@@ -159,7 +159,10 @@ test('each tier\'s after-values follow its product\'s path', () => {
         const path = R.PATHS.find(p => p.id === t.path);
         assert.ok(path, `${view} ${m.title} ${t.tier}: ${t.path} is not a path`);
         assert.ok(rs.some(r => path.lat(r) === t.ms), `${view} ${m.title} ${t.tier}: ${t.ms} ms is not ${t.path}'s latency`);
-        assert.equal(t.egress, rs.reduce((a, r) => a + Math.round(m.gb[r.region] * path.egress), 0), `${view} ${m.title} ${t.tier}: egress not at ${path.egress}/GB`);
+        // Re-pinned (2026-09-30, Cost v2: one figure, one value): a region's egress is Cost > By region's row
+        // (R.arbitrage, off the buckets); a private path carries it at the AT&T price that row shows, the internet at today's.
+        const arb = Object.fromEntries(R.arbitrage(est).map(a => [a.regionId, a]));
+        assert.equal(t.egress, rs.reduce((a, r) => a + (path.id === 'internet' ? arb[r.region].nowN : arb[r.region].fabricN), 0), `${view} ${m.title} ${t.tier}: egress is not By region's ${path.id === 'internet' ? 'today' : 'AT&T price'}`);
       }
     }
   }

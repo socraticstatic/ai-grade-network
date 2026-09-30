@@ -57,7 +57,8 @@ test('every Spend tile says what it is in a buyer\'s words, and none is a lone f
   const t = Object.fromEntries(v.spendTiles.map(x => [x.l, x]));
   assert.equal(t['Spend this month'].v, '$89,600');
   assert.match(t['Spend this month'].sub, /egress/);
-  assert.match(t['Could save'].sub, /open moves/);
+  // Re-pinned (2026-09-30, the skeptic): Could save names Optimize's priced moves, not a count Optimize does not show.
+  assert.match(t['Could save'].sub, /^if you act on Spend and Routing$/);
   assert.match(t['Banked to date'].sub, /this month/);
   for (const x of v.spendTiles) assert.ok(x.sub || x.asIsWord, x.l);
 });
@@ -65,7 +66,8 @@ test('every Spend tile says what it is in a buyer\'s words, and none is a lone f
 test('this month splits into On AT&T and Outside AT&T by the buckets, and every past month adds up', () => {
   for (const view of ['partial', 'mature', 'trust', 'small']) {
     const e = D.ESTATES[view];
-    const att = e.buckets.filter(b => b.today <= b.fabric).reduce((a, b) => a + b.today, 0), out = e.buckets.filter(b => b.today > b.fabric).reduce((a, b) => a + b.today, 0);
+    // Re-pinned (2026-09-30, the skeptic): a bucket is at AT&T's price only where its cloud is attached (CV.bucketInk).
+    const att = e.buckets.filter(b => CV.bucketInk(e, b) === 'att').reduce((a, b) => a + b.today, 0), out = e.buckets.filter(b => CV.bucketInk(e, b) === 'public').reduce((a, b) => a + b.today, 0);
     const past = vals(cost(view, { costPanel: 'spend' })).spendCols.filter(c => c.kind === 'past');
     assert.equal(past.length, 12);
     assert.deepEqual([past.at(-1).attN, past.at(-1).outN], [att, out], view);
@@ -163,7 +165,8 @@ test('By region: one bar per region, sorted by spend, each the region\'s sum in 
     const want = {};
     for (const leg of [L.access, L.connect, L.cloud]) for (const r of leg.rows) for (const p of r.parts) {
       if (p.kind === 'bucket') continue;
-      const g = p.kind === 'site' ? regionOf(e.sites.find(x => x.name === p.site)) : CV.geoOfRegion(p.region);
+      // Re-pinned (2026-09-30, "Europe groups every European region"): a site's place resolves International to its continent.
+      const g = p.kind === 'site' ? CV.placeOfSite(e.sites.find(x => x.name === p.site)) : CV.geoOfRegion(p.region);
       want[g] = (want[g] || 0) + p.v;
     }
     const egress = (e.buckets || []).reduce((a, b) => a + b.today, 0);
@@ -232,7 +235,8 @@ test('one colour per meaning across Spend, By leg, By region and the Traffic Cos
 test('the Traffic Cost view draws with the Cost inks, not its own hex', () => {
   const v = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', mapMode: 'cost' }));
   assert.deepEqual(v.mapLegend.map(l => l.meaning), ['att', 'public', 'list']);
-  const fills = new Set(v.mapRibbons.map(r => r.fill));
+  // Re-pinned (2026-09-30, Cost v2): a ribbon's ink is the Cost token; a list price fills with its hatch.
+  const fills = new Set(v.mapRibbons.map(r => r.ink));
   for (const f of fills) assert.ok(Object.values(CV.COST_INK).some(i => i.color === f), `ribbon fill ${f}`);
 });
 
@@ -275,17 +279,21 @@ test('a place is one place on every surface: a cloud region sits where the site 
   assert.equal(CV.geoOfRegion('us-east-1'), 'US East');
   assert.equal(CV.geoOfRegion('eu-west-1'), 'Europe');
   assert.equal(CV.geoOfRegion('us-central1'), 'US Central');
-  // Frankfurt DC and eu-central-1 share a place, whatever the site side calls it.
-  assert.equal(CV.geoOfRegion('eu-central-1'), regionOf({ name: 'Frankfurt DC', metro: 'Frankfurt' }));
+  // Frankfurt DC and eu-central-1 share a place. Re-pinned (2026-09-30, "Europe groups every European region"):
+  // the site side's International resolves to its continent, so both are Europe.
+  assert.equal(CV.geoOfRegion('eu-central-1'), CV.placeOfSite({ name: 'Frankfurt DC', metro: 'Frankfurt' }));
+  assert.equal(CV.geoOfRegion('eu-central-1'), 'Europe');
+  assert.equal(regionOf({ name: 'Frankfurt DC', metro: 'Frankfurt' }), 'International', 'the site side itself does not move');
   assert.equal(CV.geoOfRegion('eu-frankfurt-1'), CV.geoOfRegion('eu-central-1'));
   assert.equal(CV.geoOfRegion('us-ashburn-1'), 'US East');
   assert.equal(CV.geoOfRegion('europe-west1'), 'Europe');
 });
 
-test('Banked opens the moves already acted on; a site opens its own services on Your sites', () => {
+test('Banked opens what it counts; a site opens its own services on Your sites', () => {
   const c = cost('partial', { costPanel: 'spend' });
   vals(c).spendTiles.find(t => t.l === 'Banked to date').go();
-  assert.deepEqual([c.state.tab, c.state.obPage, c.state.insPanel, c.state.findFilter], ['observe', 'insights', 'findings', 'closed']);
+  // Re-pinned (2026-09-30, the skeptic: Findings > Closed held $6,000 of the $36,000): Banked opens its sources on Spend.
+  assert.deepEqual([c.state.tab, c.state.costPanel, c.state.spendList], ['cost', 'spend', 'banked']);
   const d = cost('partial', { costPanel: 'legs', legDrill: { leg: 'access', row: 'avpn' } });
   const row = vals(d).legAccessRows.find(r => r.label === 'Ashburn DC');
   row.go();

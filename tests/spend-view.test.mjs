@@ -63,7 +63,9 @@ test('one chart: twelve months banked on top of spend, three months ahead as is 
   assert.ok(past.some(c => c.topN > 0), 'banked savings show');
   assert.ok(next.every(c => c.asIsN > c.movedN && c.movedN > 0), 'the moves save something every month ahead');
   for (const c of v.spendCols) { assert.ok(parseFloat(c.attH) + parseFloat(c.outH) + parseFloat(c.topH) <= 100.01, c.key); assert.match(c.title, /\$/); }
-  assert.deepEqual(v.spendLegend.map(l => l.label), ['On AT&T', 'Outside AT&T', 'Banked by acting', 'As is', 'If you act']);
+  // Re-pinned (2026-09-30, Cost v2): blue says what it is, AT&T's price, never a claim about the network,
+  // so an estate with nothing attached is never "On AT&T".
+  assert.deepEqual(v.spendLegend.map(l => l.label), ['AT&T price', 'Outside AT&T', 'Banked by acting', 'As is', 'If you act']);
 });
 
 test('the markup: one Spend panel with the chart and the savings list; commitments live with AT&T charges', () => {

@@ -17,26 +17,30 @@
 // the same whole on every estate.
 import { regionOf, fmt } from './naas-logic.js';
 import * as S from './naas-sites.js';
+import * as LC from './naas-lifecycle.js';
 
 // ---------- One colour vocabulary for Cost ----------
 // One meaning per colour on Spend, By leg, By region and the Traffic Cost view.
 // Nothing here means two things, and every colour is a theme token, so the dark
 // skin restates them without touching this file.
-//   att     var(--viz-1)          On AT&T: AT&T charges at catalog price, and egress already at your AT&T rate.
+//   att     var(--viz-1)          On AT&T: AT&T charges at catalog price, and egress already at your AT&T rate
+//                                 (only where the bucket's cloud has a region attached; nothing else is on AT&T).
 //   public  var(--warning)        Outside AT&T: egress at the cloud provider's public rates. The savings live here.
-//   list    var(--viz-2)          A list price we apply for someone else (a cloud port, a VPN tunnel, a colo
+//   list    var(--viz-2)          A public list price we apply for someone else (a cloud port, a VPN tunnel, a colo
 //                                 cross-connect). Always modelled, so always hatched.
 //   saved   var(--success)        Savings: banked is solid, still open is the same green as a tint.
-//   other   var(--text-disabled)  Billed by another carrier, not priced here. An outline, never a fill.
+//   other   var(--text-disabled)  Not priced here: billed by another carrier, or on no public price list. An outline, never a fill.
 //   asis    var(--text-light)     The forecast if nothing changes: a dashed line.
 //   act     var(--text-heading)   The forecast if you act on the open moves: a solid line.
-// Hatching means modelled: a list price or a rate applied to your estate, not a bill.
+// Hatching means modelled: a list price, a rate or a share applied to your estate, not a bill.
+// A split that is only a model and says nothing about who is paid (destination classes, first
+// miles) wears MODELLED, the hatched neutral the legend's Modelled swatch already shows.
 export const COST_INK = {
-  att: { color: 'var(--viz-1)', word: 'On AT&T' },
+  att: { color: 'var(--viz-1)', word: 'AT&T price' },
   public: { color: 'var(--warning)', word: 'Outside AT&T' },
-  list: { color: 'var(--viz-2)', word: 'Cloud provider list price' },
+  list: { color: 'var(--viz-2)', word: 'Public list price' },
   saved: { color: 'var(--success)', word: 'Saved' },
-  other: { color: 'var(--text-disabled)', word: 'Another carrier' },
+  other: { color: 'var(--text-disabled)', word: 'Not priced here' },
   asis: { color: 'var(--text-light)', word: 'As is' },
   act: { color: 'var(--text-heading)', word: 'If you act' },
 };
@@ -44,24 +48,50 @@ export const COST_INK = {
 export const hatch = (color) => `repeating-linear-gradient(135deg, ${color} 0 3px, color-mix(in srgb, ${color} 28%, transparent) 3px 6px)`;
 /** The fill for a part: solid, or hatched when it is modelled. */
 export const fillOf = (ink, modelled) => { const c = (COST_INK[ink] || COST_INK.other).color; return modelled ? hatch(c) : c; };
+/** The Modelled swatch: a hatched neutral that claims no payee. */
+export const MODELLED = { color: 'var(--text-body)', word: 'Modelled' };
+export const modelledFill = () => hatch(MODELLED.color);
+
+// ---------- Who is paid for a bucket ----------
+/**
+ * A bucket is On AT&T only when it already pays your AT&T rate and its cloud has a
+ * region attached (the skeptic, 2026-09-30: Small business has nothing attached, yet
+ * its base bucket read On AT&T). Anything else bills outside AT&T.
+ */
+export function bucketInk(est, b) {
+  const attached = (est.regionsList || []).some(r => r.priv && r.cloud === b.cloud);
+  return attached && b.today <= b.fabric ? 'att' : 'public';
+}
 
 // ---------- Places ----------
-// A cloud region's metro, as naas-app.js REGION_GEO has it for Compose (the twin
-// lives there; keep the two in step). The metro then takes the same region the
-// site side uses (regionOf), so a By region slice puts Frankfurt DC and
-// eu-central-1 in one place, as every other surface does.
+// By region groups by the place a buyer names (the skeptic, 2026-09-30: "a buyer
+// reads Frankfurt missing from Europe"; guidance: Europe groups every European
+// region). A cloud region goes by its provider's own name first, so AWS us-east-2
+// (Ohio) is US East, as AWS calls it; then by its metro, the way the site side
+// places a site. A site keeps the site side's place, except that International
+// resolves to its continent, so Frankfurt DC sits in Europe beside eu-central-1.
+// REGION_METRO is naas-app.js REGION_GEO's twin for Compose; keep the two in step.
 export const REGION_METRO = { 'us-east-1': 'Ashburn', 'us-east-2': 'Chicago', 'us-west-2': 'Seattle', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'London', 'ap-southeast-1': 'Singapore', eastus: 'Ashburn', westeurope: 'Amsterdam', centralus: 'Dallas', 'us-central1': 'Chicago', 'us-east-04': 'New York', 'uk-south': 'London' };
 const METRO_WORD = [[/ashburn|virginia/, 'Ashburn'], [/frankfurt/, 'Frankfurt'], [/london/, 'London'], [/amsterdam/, 'Amsterdam'], [/singapore/, 'Singapore'], [/chicago/, 'Chicago'], [/dallas/, 'Dallas'], [/phoenix/, 'Phoenix'], [/san-?jose/, 'San Jose'], [/seattle/, 'Seattle'], [/tokyo/, 'Tokyo'], [/sydney/, 'Sydney'], [/mumbai/, 'Mumbai'], [/seoul/, 'Seoul'], [/paris/, 'Paris'], [/dublin/, 'Dublin'], [/madrid/, 'Madrid']];
-/** The place a cloud region sits in, in the site side's words (US East, Europe, ...). */
+// The continent of a metro the site side calls International.
+const METRO_CONTINENT = { Frankfurt: 'Europe', London: 'Europe', Amsterdam: 'Europe', Paris: 'Europe', Dublin: 'Europe', Madrid: 'Europe', Singapore: 'Asia Pacific', Tokyo: 'Asia Pacific', Sydney: 'Asia Pacific', Mumbai: 'Asia Pacific', Seoul: 'Asia Pacific', Manila: 'Asia Pacific' };
+const settle = (place, metro) => (place === 'International' && METRO_CONTINENT[metro]) || place;
+/** The place a cloud region sits in: US East, US Central, US West, Europe, Asia Pacific. */
 export function geoOfRegion(region) {
   const r = String(region || '').toLowerCase();
-  const metro = REGION_METRO[region] || (METRO_WORD.find(([re]) => re.test(r)) || [])[1];
-  if (metro) return regionOf({ metro, name: '' });
-  if (/^(us|na)\b|^us-|us$|^(east|west|central|north|south)us/.test(r)) return /east/.test(r) ? 'US East' : /west/.test(r) ? 'US West' : 'US Central';
+  // The provider's own words first: us-east-*, eastus, us-central1, centralus, us-west-*, westus.
+  if (/^us-?east|^eastus|^us-ashburn|^us-new-?york/.test(r)) return 'US East';
+  if (/^us-?west|^westus|^us-phoenix|^us-sanjose|^us-san-jose/.test(r)) return 'US West';
+  if (/^us-?central|^centralus|^(north|south)centralus|^us-chicago/.test(r)) return 'US Central';
   if (/^(eu|europe|uk|france|germany|switzerland|norway|sweden|italy|spain|poland)|europe/.test(r)) return 'Europe';
   if (/^(ap|asia|japan|australia|korea|india|southeastasia|eastasia)/.test(r)) return 'Asia Pacific';
+  const metro = REGION_METRO[region] || (METRO_WORD.find(([re]) => re.test(r)) || [])[1];
+  if (metro) return settle(regionOf({ metro, name: '' }), metro);
+  if (/^(us|na)\b|^us-|us$|^(east|west|central|north|south)us/.test(r)) return /east/.test(r) ? 'US East' : /west/.test(r) ? 'US West' : 'US Central';
   return 'International';
 }
+/** The place a site sits in: the site side's region, with International resolved to its continent. */
+export function placeOfSite(st) { return settle(regionOf(st), (st || {}).metro); }
 
 // ---------- Slicing the one cost model ----------
 /** The By cloud member for everything a site buys (access, SD-WAN, its tunnels). */
@@ -71,53 +101,81 @@ export const BY = ['all', 'region', 'cloud'];
 export const byOf = (k) => (BY.includes(k) ? k : 'all');
 
 /**
+ * The Savings list's split (LC.savingsBy, 2026-09-30): money outside AT&T lives in
+ * the public regions, money on AT&T in the attached ones, each by workloads. With
+ * no region of the kind, it spreads evenly, as split() does. Dollars come from the
+ * same largest-remainder split, so a region's egress and its savings share one key.
+ */
+export function regionWeights(est, ink) {
+  return (est.regionsList || []).map(r => ((ink === 'public') === !r.priv ? (r.wl || 1) : 0));
+}
+/**
+ * This month's egress by cloud region: each ink's buckets pooled and split across
+ * that ink's regions, by workloads. A share is a model, so every part is modelled.
+ * Buckets carry only a cloud and a rate, never a region, so there is no measured
+ * regional figure to show instead.
+ */
+export function regionalEgress(est, row) {
+  const regs = est.regionsList || [];
+  if (!regs.length) return row.parts || [];
+  const out = [];
+  for (const ink of ['public', 'att']) {
+    const total = (row.parts || []).filter(p => p.ink === ink).reduce((a, p) => a + p.v, 0);
+    if (!(total > 0)) continue;
+    const w = regionWeights(est, ink), sum = w.reduce((a, x) => a + x, 0);
+    const dollars = LC.split(Math.round(total), w);
+    regs.forEach((r, i) => { const share = sum > 0 ? w[i] / sum : 1 / regs.length; if (!(dollars[i] > 0)) return;
+      out.push({ key: r.region + ':' + ink, kind: 'region', egress: true, region: r.region, cloud: r.cloud, n: 1, v: dollars[i], ink, modelled: true, share, wl: r.wl || 1, poolWl: sum }); });
+  }
+  return out;
+}
+/** A row's parts as a slice sees them: by region, egress is split across cloud regions; otherwise the row's own parts. */
+export function partsFor(est, row, by) {
+  return by === 'region' && row.key === 'egress' ? regionalEgress(est, row) : (row.parts || []);
+}
+/**
  * Where a part lands under a slice, as [member, share] pairs whose shares sum to 1.
- * A site sits in its region; a cloud region in its place or its cloud; a bucket of
- * egress in its cloud, or, by region, across that cloud's regions by workloads,
- * the split the Savings list already uses (LC.savingsBy).
+ * A site sits in its place or, by cloud, with your sites (an IPsec tunnel with the
+ * cloud that bills it); a cloud region in its place or its cloud; a bucket in its cloud.
  */
 export function sharesOf(est, part, by) {
   const regs = est.regionsList || [];
   if (part.kind === 'site') {
-    if (by === 'cloud') return [[SITES, 1]];
+    if (by === 'cloud') return [[part.cloud || SITES, 1]];
     const st = (est.sites || []).find(x => x.name === part.site) || { name: part.site, metro: '' };
-    return [[regionOf(st), 1]];
+    return [[placeOfSite(st), 1]];
   }
   if (part.kind === 'region') {
     const r = regs.find(x => x.region === part.region);
-    return [[by === 'cloud' ? (r ? r.cloud : 'Other') : geoOfRegion(part.region), 1]];
+    return [[by === 'cloud' ? (r ? r.cloud : part.cloud || 'Other') : geoOfRegion(part.region), 1]];
   }
-  if (part.kind === 'bucket') {
-    if (by === 'cloud') return [[part.cloud || 'Other', 1]];
-    const own = regs.filter(r => r.cloud === part.cloud), pool = own.length ? own : regs;
-    if (!pool.length) return [['International', 1]];
-    const w = pool.map(r => r.wl || 1), sum = w.reduce((a, x) => a + x, 0);
-    const by2 = {};
-    pool.forEach((r, i) => { const g = geoOfRegion(r.region); by2[g] = (by2[g] || 0) + w[i] / sum; });
-    return Object.entries(by2);
-  }
+  if (part.kind === 'bucket') return [[by === 'cloud' ? part.cloud || 'Other' : 'International', 1]];
   return [['Other', 1]];
 }
 const labelOf = (key) => (key === SITES ? SITES_LABEL : key);
 const LEGS = ['access', 'connect', 'cloud'];
 
-/** The members of a slice with what each costs a month, largest first. Their sum is the estate's total. */
+/**
+ * The members of a slice with what each costs a month, largest first. Their sum is
+ * the estate's total. A member with parts but no price (CoreWeave's two ports, on no
+ * public price list) is still a member: it holds things, it just costs $0 here.
+ */
 export function costMembers(est, L, by) {
   if (by !== 'region' && by !== 'cloud') return [];
   const m = {};
-  for (const leg of LEGS) for (const row of (L[leg] || {}).rows || []) for (const p of row.parts || []) {
+  for (const leg of LEGS) for (const row of (L[leg] || {}).rows || []) for (const p of partsFor(est, row, by)) {
     for (const [k, sh] of sharesOf(est, p, by)) { const g = m[k] = m[k] || { key: k, label: labelOf(k), v: 0, sites: new Set(), regions: new Set(), buckets: new Set() };
       g.v += p.v * sh;
       if (p.kind === 'site') g.sites.add(p.site); else if (p.kind === 'region') g.regions.add(p.region); else if (p.kind === 'bucket') g.buckets.add(p.bucket); }
   }
-  return Object.values(m).filter(g => g.v > 0.005).map(g => ({ key: g.key, label: g.label, v: g.v, sites: [...g.sites], regions: [...g.regions], buckets: [...g.buckets] }))
+  return Object.values(m).map(g => ({ key: g.key, label: g.label, v: g.v, sites: [...g.sites], regions: [...g.regions], buckets: [...g.buckets] }))
     .sort((a, b) => b.v - a.v || a.label.localeCompare(b.label));
 }
 
 /** One row, cut to a member: its parts that land there, at their share. */
 function sliceRow(est, row, by, key) {
   const parts = [];
-  for (const p of row.parts || []) for (const [k, sh] of sharesOf(est, p, by)) if (k === key && sh > 0) parts.push({ ...p, v: p.v * sh, share: sh });
+  for (const p of partsFor(est, row, by)) for (const [k, sh] of sharesOf(est, p, by)) if (k === key && sh > 0) parts.push({ ...p, v: p.v * sh, share: p.share != null ? p.share : sh });
   const n = row.key === 'egress' ? parts.length : parts.reduce((a, p) => a + p.n, 0);
   return { ...row, parts, n, v: parts.reduce((a, p) => a + p.v, 0) };
 }
@@ -140,7 +198,7 @@ export function memberCounts(est, by, key) {
     if (key === SITES) return { sites: sites.reduce((a, x) => a + S.countOf(x.name), 0), regions: 0, buckets: 0 };
     return { sites: 0, regions: regs.filter(r => r.cloud === key).length, buckets: bks.filter(b => b.cloud === key).length };
   }
-  return { sites: sites.filter(x => regionOf(x) === key).reduce((a, x) => a + S.countOf(x.name), 0), regions: regs.filter(r => geoOfRegion(r.region) === key).length, buckets: 0 };
+  return { sites: sites.filter(x => placeOfSite(x) === key).reduce((a, x) => a + S.countOf(x.name), 0), regions: regs.filter(r => geoOfRegion(r.region) === key).length, buckets: 0 };
 }
 
 // The order a bar stacks in: what AT&T carries, then list prices, then egress outside AT&T.
@@ -170,10 +228,14 @@ const noun = (n, one, many) => `${nf(n)} ${Math.round(n) === 1 ? one : many}`;
 /** A row in words a buyer reads: count × unit, then what the price is. Recounted from its parts, so a slice reads true. */
 export function rowWords(row) {
   const n = row.n, parts = row.parts || [];
-  if (row.key === 'egress') { const out = parts.filter(p => p.ink === 'public').reduce((a, p) => a + p.v, 0);
-    // Cut by region, a bucket is shared by workloads: say so, since the share is modelled.
-    const shared = parts.some(p => p.share != null && p.share < 0.999);
-    return `${noun(n, 'bucket', 'buckets')}${shared ? ', a share of each by workloads' : ' measured this month'}${out > 0.5 ? ` · ${fmt(out)} of it outside AT&T` : ' · all at your AT&T rate'}`; }
+  if (row.key === 'egress') {
+    // The figure leads, so a narrow column cuts the words, never the figure (the skeptic, 2026-09-30).
+    const out = parts.filter(p => p.ink === 'public').reduce((a, p) => a + p.v, 0), att = parts.filter(p => p.ink === 'att').reduce((a, p) => a + p.v, 0);
+    // When it is all one kind, the row's value already says the figure, so the words do not repeat it.
+    const lead = out > 0.5 && att > 0.5 ? `${fmt(Math.round(out))} outside AT&T` : out > 0.5 ? 'All outside AT&T' : 'All at your AT&T rate';
+    // Cut by region, egress is a share of the buckets by workloads, named by the cloud regions that carry it.
+    if (parts.some(p => p.kind === 'region')) return `${lead} · ${noun(n, 'cloud region', 'cloud regions')}, by workloads`;
+    return `${lead} · ${noun(n, 'bucket', 'buckets')}, measured`; }
   const [one, many] = row.nouns || ['item', 'items'];
   if (row.carrier) return `${noun(n, one, many)} · billed by another carrier, not priced here`;
   if (!row.unit) return `${noun(n, one, many)} · not on a public price list`;
@@ -194,7 +256,8 @@ export function legCovers(leg) {
   const ports = rows.filter(r => r.key !== 'egress'), eg = rows.find(r => r.key === 'egress');
   const clouds = new Set(ports.map(r => r.cloud).filter(Boolean));
   const pN = ports.reduce((a, r) => a + r.n, 0);
-  return [pN ? `${noun(pN, 'port', 'ports')} in ${noun(clouds.size, 'cloud', 'clouds')}` : '', eg && eg.n ? `egress from ${noun(eg.n, 'bucket', 'buckets')}` : ''].filter(Boolean).join(' · ') || 'Nothing billed by a cloud yet';
+  const egWords = !eg || !eg.n ? '' : (eg.parts || []).some(p => p.kind === 'region') ? `egress in ${noun(eg.n, 'cloud region', 'cloud regions')}` : `egress from ${noun(eg.n, 'bucket', 'buckets')}`;
+  return [pN ? `${noun(pN, 'port', 'ports')} in ${noun(clouds.size, 'cloud', 'clouds')}` : '', egWords].filter(Boolean).join(' · ') || 'Nothing billed by a cloud yet';
 }
 
 // ---------- Doors ----------

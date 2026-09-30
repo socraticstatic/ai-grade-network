@@ -271,14 +271,19 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // (buttons) with its chips and legend, and the old savings strip and arithmetic table left:
 // div 1027 -> 1006, span 836 -> 848, sc-if 430 -> 437, sc-for 235 -> 241, button 323 -> 340.
 // Cost merged onto the connect flow (2026-09-30): both land, so each count is the flow's plus Cost's own move: div 1118 -> 1097, span 947 -> 959, sc-if 477 -> 484, sc-for 247 -> 253, button 356 -> 373.
+// Cost v2, the skeptic's fixes (2026-09-30): Spend's right column gates on hasSaveList and holds either the Savings list
+// (each row a div with its banked and still-open figures as two buttons) or the banked sources (a back button, a row loop of
+// buttons, the empty line, a pager); By region gains the per-region save column beside the bars (its grid and column, a head
+// with the arithmetic toggle, a summary loop of rows with today, to save and Attach, an arithmetic loop, a pager); By
+// destination's ring and bar are gated: div 1097 -> 1111, span 959 -> 968, sc-if 484 -> 496, sc-for 253 -> 256, button 373 -> 385.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1097],
-    ['span', /<span\b/g, /<\/span>/g, 959],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 484],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 253],
+    ['div', /<div\b/g, /<\/div>/g, 1111],
+    ['span', /<span\b/g, /<\/span>/g, 968],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 496],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 256],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 373],
+    ['button', /<button\b/g, /<\/button>/g, 385],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

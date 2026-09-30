@@ -11,6 +11,8 @@ import { fmt, pct, connModeOf, attHolds, siteModeOf } from './naas-logic.js';
 import { CATALOG } from './naas-data.js';
 import { agoOf, hhmm, startOf, INCIDENT_MIN } from './naas-schedule.js';
 import { regionState, RAMP_NAME, HEALTH_INK } from './naas-flowmap.js';
+import { bucketInk, regionWeights } from './naas-cost-view.js';
+import { split as splitDollars } from './naas-lifecycle.js';
 
 // ---------- Three paths x four lenses ----------
 export const PATHS = [
@@ -160,18 +162,35 @@ const DEST_CLASSES = [
   { key: 'inet', label: 'Public internet · SaaS', share: 0.22, hyper: 0.09, fabric: 0.05 },
   { key: 'x', label: 'Inter-cloud', share: 0.18, hyper: 0.18, fabric: 0.02 },
 ];
-export function arbitrage(est, base, targetSave) {
-  const pubRs = est.regionsList.filter(r => !r.priv);
-  const pubWl = pubRs.reduce((a, r) => a + r.wl, 0) || 1;
-  // Anchor: total saving across public regions equals the bucket-level saving already shown elsewhere.
-  const g = targetSave ? targetSave / 0.07 / pubWl : gbPerWl(est, base);
-  return pubRs.map(r => {
-    const gb = Math.round(r.wl * g);
-    const rows = PATHS.map(p => ({ id: p.id, short: p.short, egressMo: Math.round(gb * p.egress), rate: p.egress }));
-    const now = rows.find(x => x.id === 'internet'), best = rows.find(x => x.id === 'netbond');
-    const nearby = est.regionsList.find(x => x.priv && x.cloud === r.cloud);
-    return { key: 'arb-' + r.region, region: `${r.cloud} ${r.region}`, wl: r.wl, gbF: gb.toLocaleString('en-US'), now: fmt(now.egressMo), nowRate: '$0.09', fabric: fmt(best.egressMo), fabricRate: '$0.02', save: fmt(now.egressMo - best.egressMo), saveN: now.egressMo - best.egressMo, math: `${gb.toLocaleString('en-US')} GB × ($0.09 − $0.02) × 12 = ${fmt((now.egressMo - best.egressMo) * 12)}/yr`, alt: nearby ? `Or move the workload to ${nearby.region}, already attached: same saving, no new circuit, +${Math.abs(nearby.fab - r.fab)} ms.` : 'No attached region in this cloud yet; the attach is the move.', regionId: r.region };
-  }).sort((a, b) => b.saveN - a.saveN);
+/**
+ * What each public region pays outside AT&T and could save (Cost > By region, its
+ * Attach rows and their arithmetic, restored 2026-09-30). Read off the buckets and
+ * split the way the Savings list splits (LC.savingsBy): the egress outside AT&T and
+ * the saving each go to the public regions by workloads, to the dollar, so a row's
+ * today is its By region bar's egress outside AT&T and its saving is its Savings list
+ * row. Today less the saving is what the AT&T network would carry it for.
+ * `open` is the saving to split (Still open on Cost); it defaults to the buckets'
+ * premium over your AT&T rate, which it equals until a move is acted on.
+ * Connect > Recommended prices a region move's egress from these rows (M.egressOf).
+ */
+export function arbitrage(est, base, open) {
+  void base;
+  const regs = est.regionsList || [], bks = est.buckets || [];
+  const out = bks.filter(b => bucketInk(est, b) === 'public').reduce((a, b) => a + b.today, 0);
+  const prem = bks.reduce((a, b) => a + Math.max(0, b.today - b.fabric), 0);
+  const S = Math.max(0, Math.round(open == null ? prem : open));
+  const w = regionWeights(est, 'public'), wSum = w.reduce((a, x) => a + x, 0);
+  const nowD = splitDollars(Math.round(out), w), saveD = splitDollars(S, w);
+  const nf = (n) => n.toLocaleString('en-US');
+  return regs.map((r, i) => ({ r, i })).filter(({ r }) => !r.priv).map(({ r, i }) => {
+    const now = nowD[i], save = Math.min(saveD[i], now), after = now - save;
+    const nearby = regs.find(x => x.priv && x.cloud === r.cloud);
+    const share = `${nf(w[i])} of ${nf(wSum)} workloads in public regions`;
+    return { key: 'arb-' + r.region, region: `${r.cloud} ${r.region}`, label: `${r.cloud} ${r.region}`, cloud: r.cloud, regionId: r.region, wl: r.wl,
+      nowN: now, now: fmt(now), fabricN: after, fabric: fmt(after), saveN: save, save: fmt(save), share,
+      math: `${share}: ${fmt(Math.round(out))} × ${nf(w[i])}/${nf(wSum)} = ${fmt(now)} outside AT&T; ${fmt(S)} × ${nf(w[i])}/${nf(wSum)} = ${fmt(save)} to save; ${fmt(now)} − ${fmt(save)} = ${fmt(after)} on AT&T`,
+      alt: nearby ? `Or move the workload to ${nearby.region}, already attached: same saving, no new circuit, +${Math.abs(nearby.fab - r.fab)} ms.` : 'No attached region in this cloud yet; the attach is the move.' };
+  }).sort((a, b) => b.saveN - a.saveN || b.nowN - a.nowN);
 }
 /**
  * One donut, as a conic-gradient string plus its legend. Ramesh's room reads
@@ -378,7 +397,10 @@ export function costLegs(est, inv, utilRows) {
     ...(sdwanN ? [{ key: 'sdwan', label: 'SD-WAN', n: sdwanN, v: sdwanN * catPrice('sdwan'), sub: `${sdwanN.toLocaleString('en-US')} sites × ${fmt(catPrice('sdwan'))}`, modelled: false, unit: catPrice('sdwan'), nouns: ['site', 'sites'], parts: siteParts(sdwanSites, catPrice('sdwan'), 'att', false) }] : []),
     ...(xcN ? [{ key: 'xc', label: 'Your cross-connects', n: xcN, v: xcN * XC_RATE, sub: `${xcN} × ${fmt(XC_RATE)} at a typical colo rate`, modelled: true, unit: XC_RATE, nouns: ['cross-connect', 'cross-connects'], rateWords: 'a typical colo rate',
       parts: [...xcRegs.map(r => ({ key: r.region, kind: 'region', region: r.region, n: 1, v: XC_RATE, ink: 'list', modelled: true })), ...xcSites.map(x => ({ key: x.name, kind: 'site', site: x.name, n: 1, v: XC_RATE, ink: 'list', modelled: true }))] }] : []),
-    ...(ipsecN ? [{ key: 'ipsec', label: 'IPsec tunnels', n: ipsecN, v: ipsecN * CSP_VPN, sub: `${ipsecN.toLocaleString('en-US')} tunnels × ${each(CSP_VPN)} cloud VPN list price`, modelled: true, unit: CSP_VPN, nouns: ['tunnel', 'tunnels'], rateWords: 'the cloud VPN list price', parts: siteParts(ipsecSites, CSP_VPN, 'list', true) }] : []),
+    // A tunnel ends on a cloud's VPN gateway and that cloud bills it: the cloud of the IPsec
+    // egress bucket, whose VPN list price we apply (By cloud, 2026-09-30: "by csp").
+    ...(ipsecN ? [{ key: 'ipsec', label: 'IPsec tunnels', n: ipsecN, v: ipsecN * CSP_VPN, sub: `${ipsecN.toLocaleString('en-US')} tunnels × ${each(CSP_VPN)} cloud VPN list price`, modelled: true, unit: CSP_VPN, nouns: ['tunnel', 'tunnels'], rateWords: 'the cloud VPN list price',
+      parts: siteParts(ipsecSites, CSP_VPN, 'list', true).map(p => ({ ...p, cloud: ((est.buckets || []).find(b => b.id === 'ipsec') || {}).cloud || undefined })) }] : []),
   ];
   // Cloud provider: each cloud's ports at its list price, then this month's egress.
   // direct: the share of it that is direct-connect regions' ports, which the
@@ -392,17 +414,18 @@ export function costLegs(est, inv, utilRows) {
     g.n += u.ports || 1; g.regions += 1;
     const mo = P ? (u.ports || 1) * (P[size] || P['10G']) + (P.vlan || 0) : 0;
     if (P) { g.v += mo; if (connModeOf(r) === 'direct') g.direct += mo; }
-    g.parts.push({ key: r.region, kind: 'region', region: r.region, n: u.ports || 1, v: mo, ink: 'list', modelled: true });
+    // A port on no public price list is counted, not priced: the not-priced-here outline, never a fill.
+    g.parts.push({ key: r.region, kind: 'region', region: r.region, n: u.ports || 1, v: mo, ink: P ? 'list' : 'other', modelled: !!P });
   }
   const cloudRows = Object.values(ports).map(g => { const P = CSP_PORT[g.cloud];
     const ports = `${g.n} ${g.n === 1 ? 'port' : 'ports'}`, regions = `${g.regions} ${g.regions === 1 ? 'region' : 'regions'}`;
     const sub = !g.priced ? `${ports} · not on a public price list` : `${ports} × ${each(P['10G'])}${P.vlan ? ` + ${fmt(P.vlan)} a region` : ''}${P.flat10G ? ' · flat rate offered' : ''}`;
     const title = !g.priced ? sub : `${ports} in ${regions} at the ${g.label} list price, ${each(P['10G'])} per 10G port${P.vlan ? `, plus ${fmt(P.vlan)} per VLAN attachment` : ''}. Metered.${P.flat10G ? ` A flat rate is offered at about ${fmt(P.flat10G)} per 10G port a month, transfer out included.` : ''}`;
-    return { key: g.key, label: g.label, cloud: g.cloud, n: g.n, v: g.v, direct: g.direct, sub, title, modelled: true, billing: P && P.flat10G ? 'metered' : undefined, parts: g.parts,
+    return { key: g.key, label: g.label, cloud: g.cloud, n: g.n, v: g.v, direct: g.direct, sub, title, modelled: g.priced, billing: P && P.flat10G ? 'metered' : undefined, parts: g.parts,
       nouns: ['port', 'ports'], unit: P ? P['10G'] : 0, perRegion: P && P.vlan ? P.vlan : 0, rateWords: P ? `list price${P.flat10G ? ' · flat rate offered' : ''}` : '' }; }).sort((a, b) => b.v - a.v);
   const egress = (est.buckets || []).reduce((a, b) => a + b.today, 0);
-  // Egress by bucket: at your AT&T rate when the bucket already pays it, outside AT&T when it pays more.
-  const eParts = (est.buckets || []).map(b => ({ key: b.id, kind: 'bucket', bucket: b.id, label: b.name, cloud: b.cloud, n: 1, v: b.today, ink: b.today <= b.fabric ? 'att' : 'public', modelled: false }));
+  // Egress by bucket: On AT&T only when its cloud is attached and it already pays your AT&T rate (CV.bucketInk).
+  const eParts = (est.buckets || []).map(b => ({ key: b.id, kind: 'bucket', bucket: b.id, label: b.name, cloud: b.cloud, n: 1, v: b.today, ink: bucketInk(est, b), modelled: false }));
   const cloud = [...cloudRows, ...(egress || regs.length ? [{ key: 'egress', label: 'Egress', n: (est.buckets || []).length, v: egress, sub: 'Data out of the clouds, this month', modelled: false, parts: eParts }] : [])];
   const L = { access: leg('access', 'Site access', access), connect: leg('connect', 'Cloud connectivity', connect), cloud: leg('cloud', 'Cloud provider', cloud) };
   return { ...L, total: L.access.total + L.connect.total + L.cloud.total };

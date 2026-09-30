@@ -126,8 +126,29 @@ export function banked(est, life, now) {
   }).slice(-12);
 }
 
-// Split `total` across weights, to the dollar (largest remainder).
-function split(total, weights) {
+/**
+ * What Banked counts, source by source (2026-09-30, the skeptic: "the Banked door
+ * does not open what it counts"): the network's own saving from the first attach,
+ * then each closed or newly resolved finding from the month it resolved. perMo is
+ * this month's share; toDate every month since. The rows add up to banked()'s last
+ * month, saved and cumulative, to the dollar.
+ */
+export function bankedSources(est, life, now) {
+  const closed = closedFindings(est);
+  const resolvedNow = (est.findings || []).filter(f => f.priced).map(f => ({ f, l: lifeOf(f, life, now) })).filter(x => x.l.state === 'resolved')
+    .map(x => ({ kind: x.f.kind, head: x.f.head, save: x.f.save, resolvedAt: x.l.events[x.l.events.length - 1].at }));
+  const base = Math.max(0, (est.savedMo || 0) - closed.reduce((a, f) => a + f.save, 0));
+  const first = FIRST[est.id], end = new Date(+now), endYm = ym(end);
+  const monthsFrom = (m) => { if (!m || m > endYm) return 0; return (end.getUTCFullYear() - +m.slice(0, 4)) * 12 + end.getUTCMonth() - (+m.slice(5, 7) - 1) + 1; };
+  const rows = [];
+  if (first && base > 0) rows.push({ key: 'network', kind: 'network', label: 'Your connections on AT&T', since: first, perMo: base, months: monthsFrom(first), toDate: base * monthsFrom(first) });
+  for (const f of [...closed, ...resolvedNow]) { const m = String(f.resolvedAt).slice(0, 7), n = monthsFrom(m); if (!n) continue; rows.push({ key: 'f:' + f.kind, kind: 'finding', finding: f.kind, label: f.head, since: m, perMo: f.save, months: n, toDate: f.save * n }); }
+  return rows;
+}
+
+// Split `total` across weights, to the dollar (largest remainder). Cost's regional
+// egress uses it too, so a region's share reads the same dollars as the Savings list.
+export function split(total, weights) {
   const w = weights.some(x => x > 0) ? weights : weights.map(() => 1);
   const sum = w.reduce((a, x) => a + x, 0) || 1;
   const raw = w.map(x => total * x / sum), floor = raw.map(Math.floor);
