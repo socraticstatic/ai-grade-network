@@ -50,12 +50,20 @@ function stateOfRegion(est, name) { const r = regionOf(est, name); if (!r) retur
 
 /** A site that reaches the cloud over IPsec on someone else's internet. */
 const isTunnel = (x) => !x.priv && (!!x.tunnel || S.servicesOf(x).some(v => v.key === 'tpa'));
+/** An estate with no private region has no on-ramp: nothing reaches a cloud on AT&T. */
+const attached = (est) => (est.regionsList || []).some(r => r.priv);
 /** Root nodes on the left: site regions, the grouping every other view uses (Micah, 2026-09-28). */
 export function leftRoots(est, flows, by = 'region') {
   // The site side groups by region (the default), by first mile, or by site
   // type (Micah, 2026-09-29: "by first mile ... on sankey, it doesn't work").
   // Every grouping holds the same sites, so every grouping holds the same traffic.
   const sg = {};
+  // Nothing attached (review, 2026-09-30): with no private region a site's
+  // AT&T share has no on-ramp to reach a cloud on, so it reaches the clouds
+  // over the internet, as it does on the right. Only the share bound for your
+  // own data centers stays on AT&T, on the private WAN. Small drew its sites
+  // 10% on AT&T with no path in the middle to take it.
+  const onAtt = attached(est) ? 1 : (dcSites(est).length ? DC_SHARE : 0);
   const tree = by === 'class' ? S.siteTree(est) : [];
   const group = (s) => {
     if (by === 'access') { const k = S.accessOf(s); return { id: k, node: { kind: 'site', key: 'site:access:' + k, cls: k, access: k, label: (S.ACCESS_CLASS[k] || { label: k }).label } }; }
@@ -64,7 +72,7 @@ export function leftRoots(est, flows, by = 'region') {
   };
   (est.sites || []).forEach(s => { const { id, node } = group(s); const count = S.countOf(s.name); const v = (PER_SITE[S.classOf(s)] || 0.5) * count;
     const g = sg[id] = sg[id] || { ...node, count: 0, v: 0, fabV: 0, ipsecV: 0 };
-    g.count += count; g.v += v; g.fabV += s.priv ? v : v * 0.1; if (isTunnel(s)) g.ipsecV += v * 0.9; });
+    g.count += count; g.v += v; g.fabV += (s.priv ? v : v * 0.1) * onAtt; if (isTunnel(s)) g.ipsecV += v * 0.9; });
   const order = regionRows(est).map(r => r.name);
   void flows;
   const rows = Object.values(sg).map(({ label, ...g }) => ({ ...g, name: `${label} · ${n(g.count)} ${g.count === 1 ? 'site' : 'sites'}`, group: 'sites', hasChildren: true, state: 'ok' }));
@@ -120,7 +128,9 @@ export function flowSplit(est, flows, left = leftRoots(est, flows)) {
   const sitesV = left.reduce((a, x) => a + x.v, 0), sitesFab = left.reduce((a, x) => a + x.fabV, 0), ipsec = left.reduce((a, x) => a + x.ipsecV, 0);
   const dc = dcSites(est).length ? DC_SHARE : 0;
   const pubV = Math.max(0, sitesV - sitesFab);
-  return { sitesV, sitesFab, ipsec, inet: Math.max(0, pubV - ipsec), pubV, dc, cloudFab: sitesFab * (1 - dc), dcV: sitesFab * dc };
+  // Nothing attached: leftRoots already kept on AT&T only what goes to your data centers.
+  const toDc = attached(est) ? dc : 1;
+  return { sitesV, sitesFab, ipsec, inet: Math.max(0, pubV - ipsec), pubV, dc, cloudFab: sitesFab * (1 - toDc), dcV: sitesFab * toDc };
 }
 /** Root nodes on the right: only destinations - clouds, neoclouds, your data centers (Micah, 2026-09-28). */
 export function rightRoots(est, flows, by = 'cloud', left = null) {
@@ -404,7 +414,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
   const Rs = [...R.map(scale), ...(localV > 0.001 ? [{ kind: 'dest', key: 'dest:local', name: 'Same region (east-west)', v: localV, fabV: 0, locV: 0, hasChildren: false, state: 'ok' }] : [])];
   const W = 900, colW = 12, minH = 14, pad = 5, headH = 16, gap = 14, top = 20, H0 = 380; // fits the fold (2026-09-28)
   const groups = [['sites', '']].map(([g, head]) => ({ g, head, nodes: Ls.filter(x => (x.group || rootGroup(x)) === g) })).filter(x => x.nodes.length);
-  const T = Ls.reduce((a, x) => a + x.v + (x.locV || 0), 0) || 1, fabV = Ls.reduce((a, x) => a + x.fabV, 0);
+  const T0 = Ls.reduce((a, x) => a + x.v + (x.locV || 0), 0), T = T0 || 1, fabV = Ls.reduce((a, x) => a + x.fabV, 0);
   // Fixed frame (Micah, 16:35: "zoom on click"): the map keeps its height. With a zoom, the focused subtree takes
   // 55 percent of the row budget and everything else compresses into the rest; ribbons taper, so they still attach.
   const nLeft = Ls.length;
@@ -454,7 +464,8 @@ export function buildMap(est, inv, flows0, opts = {}) {
   const rampSum = Object.values(rampT).reduce((a, v) => a + v, 0) || 1;
   const wanT = Rs.reduce((a, d) => a + (d.wan || 0), 0);
   const pubT = Rs.reduce((a, d) => a + (d.pubV || 0), 0);
-  const ipsecT = Ls.reduce((a, x) => a + (x.ipsecV || 0), 0), inetT = Math.max(0, T - fabV - ipsecT);
+  // The middle carries what the sites send, never the divide-by guard: no sites, no Internet node (2026-09-30).
+  const ipsecT = Ls.reduce((a, x) => a + (x.ipsecV || 0), 0), inetT = Math.max(0, T0 - fabV - ipsecT);
   const cloudFabT = Math.max(0, fabV - wanT);
   const mids = [
     ...Object.entries(rampT).sort((a2, b2) => b2[1] - a2[1]).map(([r, v]) => ({ kind: 'mid', key: 'mid:' + r, name: r, ramp: r, v: cloudFabT * v / rampSum, fabV: cloudFabT * v / rampSum, priv: true, state: 'ok', hasChildren: false })),
