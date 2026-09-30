@@ -112,8 +112,8 @@ test('the ends say where the order goes', () => {
   // A tier that opens Compose ends where the compose does: Steer orders the hosted VPC in AWS us-east-1.
   assert.deepEqual(endsOf('Growing: tier avoidable|Steer this bucket on AT&T'), { src: 'AWS us-east-1', dst: 'The internet' });
   assert.deepEqual(endsOf('Growing: tier pci|Author "private path required" for tag PCI'), { src: 'Your data centers', dst: 'Your clouds' });
-  // Round 1's Resize keeps its own ends.
-  assert.deepEqual(endsOf('Growing: optimize capacity'), { src: 'Your sites', dst: 'AWS us-east-1' });
+  // Resize opens Modify bandwidth in place (2026-09-30), so no Optimize capacity order reaches Review.
+  assert.ok(!everyOrder().some(o => /: optimize capacity$/.test(o.label)), 'Resize still lands on Review');
   // A finding the observe data raises names its one region, or counts them.
   assert.deepEqual(endsOf('Established: tier blindspots|Managed NOC'), { src: 'Your sites', dst: 'AWS ap-southeast-1' });
   assert.deepEqual(endsOf('Growing: tier blindspots|Managed NOC'), { src: 'Your sites', dst: '5 unseen regions' });
@@ -140,12 +140,10 @@ const gate = (html, key) => {
   while ((m = re.exec(html))) { depth += m[0] === '</sc-if>' ? -1 : 1; if (!depth) return html.slice(i, re.lastIndex); }
   return '';
 };
-const resized = () => {
-  const c = mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'cost' });
-  vals(c).optRows.find(r => r.key === 'capacity').go();
-  assert.equal(c.state.screen, 's6');
-  return c;
-};
+// An unpriced order on Review, the shape the retired Resize built (as in tests/resize-review.test.mjs).
+const UNPRICED = { title: 'Resize AWS us-east-1', lines: [{ line: 1, product: 'Remove a 10 Gbps port', qty: 1, term: '36-month', monthly: 0, unpriced: true }], policies: [], monthly: 0, savings: 0, days: 1,
+  pathSrc: 'Your sites', pathDst: 'AWS us-east-1', pathDesc: 'AWS us-east-1 on NetBond: 3 × 10 Gbps to 2 × 10 Gbps. The peak goes from 41% to about 62% of what is bought.' };
+const resized = () => mkC({ view: 'partial', estateParam: null, screen: 's6', term: 36, order: UNPRICED });
 
 test('an unpriced order offers no term to pick and no empty policy table', () => {
   const r = vals(resized());

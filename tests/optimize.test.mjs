@@ -55,8 +55,12 @@ test('every action lands', () => {
   c = cost('partial'); vals(c).optRows[2].go();
   assert.equal(c.state.screen, 's4'); assert.equal(c.state.compose.prefillRegion, 'Azure eastus');
   assert.equal(c.state.compose.resiliency, 'Geodiversity'); assert.ok(c.state.compose.metros.length >= 2, 'two metros, so Geodiversity is not blocked');
+  // Resize opens Modify bandwidth in place at one port fewer (Micah, 2026-09-30: "like the
+  // netbond advanced flow"); it no longer stages a Review order (tests/modify-bandwidth.test.mjs).
   c = cost('partial'); vals(c).optRows[3].go();
-  assert.equal(c.state.screen, 's6'); assert.match(c.state.order.title, /^Resize AWS us-east-1/);
+  assert.equal(c.state.screen, 's3'); assert.equal(c.state.tab, 'cost');
+  assert.equal(c.state.bwFor, 'cx-us-east-1'); assert.deepEqual(c.state.bwPick, { ports: 2, mbps: 10000 });
+  assert.equal(vals(c).bw.newLabel, '2 × 10 Gbps');
 });
 
 test('small and empty degrade in words, never $0 or NaN', () => {

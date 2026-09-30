@@ -241,15 +241,22 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // ends in its door (Monthly briefing, Your actions):
 // div 1006 -> 1027, span 827 -> 837, sc-if 417 -> 429, sc-for 231 -> 234, section 11 -> 12, button 310 -> 322, label 28 -> 29.
 // Over time's legend isolates a series (2026-09-30, "outside of at&t is so small its not visible"): two legend spans become one sc-for of buttons, plus the scale line: span 837 -> 836, sc-if 429 -> 430, sc-for 234 -> 235, button 322 -> 323.
+// Modify bandwidth (Micah, 2026-09-30: "option to resize bandwidth like the netbond advanced flow"). Capacity's rows stop being one
+// button: a row div holds nine figure buttons (name, Ports with its Modify bandwidth line and in-progress note, bar, Avg, Peak,
+// Headroom, Trend, Full in, State), inside one new grid div: div +1, span -5, sc-if +2, button +8. The drawer is one aside with its
+// head, the current size, three figures (Logs buttons or a plain Headroom), the AWS note, the ports stepper, the size ladder, the
+// legend, the price change, a footer row of when (and a pick short of the peak) or the order line beside Cancel / Apply change:
+// div +29, span +34, sc-if +9, sc-for +3, button +7, aside +1.
+// div 1027 -> 1057, span 836 -> 865, sc-if 430 -> 441, sc-for 235 -> 238, button 323 -> 338, aside 9 -> 10.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1027],
-    ['span', /<span\b/g, /<\/span>/g, 836],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 430],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 235],
+    ['div', /<div\b/g, /<\/div>/g, 1057],
+    ['span', /<span\b/g, /<\/span>/g, 865],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 441],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 238],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 323],
-    ['aside', /<aside\b/g, /<\/aside>/g, 9],
+    ['button', /<button\b/g, /<\/button>/g, 338],
+    ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 29],
   ];
   for (const [name, open, close, expected] of pairs) {
