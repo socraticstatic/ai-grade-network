@@ -5,7 +5,7 @@ import * as A from '../naas-addendum.js';
 import * as R from '../naas-round2.js';
 import { connections } from '../naas-connections.js';
 import { buildMap, leftRoots, rightRoots, childrenOf } from '../naas-flowmap.js';
-import { gauges, queue, panelFor } from '../naas-observe-dash.js';
+import { gauges, queue, problems, panelFor } from '../naas-observe-dash.js';
 
 const est = D.ESTATES.mature; const inv = A.inventory(est); const ob = A.observe(est, [], inv); const flows = ob.flows;
 const conns = connections(est, ob); const hp = R.health(est, ob, []);
@@ -13,8 +13,12 @@ const map = buildMap(est, inv, flows, {});
 const ctx = { est, inv, flows, map, conns };
 
 test('gauges: one ring per connection with used against purchased', () => { const g = gauges(conns); assert.equal(g.length, conns.total); assert.match(g[0].dash, /^\d+(\.\d+)? \d+(\.\d+)?$/); assert.equal(g[0].state, 'Degraded'); });
-test('queue: degraded first, then saturating, blind, over SLO, each with one action', () => {
-  const q = queue(est, ob, conns, hp); assert.equal(q[0].state, 'Degraded'); assert.ok(q.some(r => r.state === 'Saturating') && q.some(r => r.state === 'Blind'));
+// Alerts read the one incident list (2026-09-30): blind regions and flow-level
+// Over SLO are findings, not alerts; rows rank by apps affected.
+test('queue: the incident list in the queue\'s words, each with one action', () => {
+  const q = queue(problems(est, conns, ob, [], [], Date.parse('2026-10-05T15:00:00Z')));
+  assert.ok(q.some(r => r.state === 'Degraded') && q.some(r => r.state === 'Saturating'));
+  assert.ok(!q.some(r => r.state === 'Blind' || r.state === 'Over SLO'));
   assert.ok(q.every(r => r.action && r.actionLabel && r.where));
 });
 test('panel for a connection: overview, impact, records, actions', () => {

@@ -41,12 +41,13 @@ test('Reset demo clears every saved key and the head reads a clean estate', () =
   vals(c).fd.actions.find(a => a.label === 'Snooze 7 days').go();
   store['naas.tags'] = JSON.stringify({ siteTags: { x: 'HQ' }, buCustom: {} });
   store['naas.hero'] = '{}'; store['naas.openHint'] = 'seen';
-  assert.match(vals(c).pageVerdict, /^11 findings open\./);
+  // The eastus flap is a finding since Task 1.4 (2026-09-30): 13 open clean, 12 after one snooze.
+  assert.match(vals(c).pageVerdict, /^12 findings open\./);
   vals(c).resetDemo();
   for (const k of DEMO_KEYS) assert.equal(store[k], undefined, k);
   assert.deepEqual(c.state.findingLife, {});
   assert.deepEqual(c.state.siteTags, {});
-  assert.match(vals(c).pageVerdict, /^12 findings open\./);
+  assert.match(vals(c).pageVerdict, /^13 findings open\./);
 });
 
 test('DEMO_KEYS names every naas.* key the app saves', () => {

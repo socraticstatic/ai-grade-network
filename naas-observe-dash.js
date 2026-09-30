@@ -13,6 +13,7 @@ import * as S from './naas-sites.js';
 import * as P from './naas-paths.js';
 import { agoOf, startOf, INCIDENT_MIN } from './naas-schedule.js';
 import { FIRST_ATTACH } from './naas-lifecycle.js';
+import { cloudEdgeThing } from './naas-things.js';
 
 const n = (x) => Number(x).toLocaleString('en-US');
 const R = 22, C = 2 * Math.PI * R;
@@ -22,15 +23,41 @@ export function gauges(conns) {
   return conns.rows.map(r => ({ id: r.id, region: r.region, cloud: r.cloud, label: `${r.cloud} ${r.region}`, ramp: r.ramp, pct: r.pct, pctF: r.pct + '%', purchased: `${r.bw || r.ports + ' × 10 Gbps'}`, used: `${r.gbps} Gbps`, dash: `${(C * r.pct / 100).toFixed(1)} ${C.toFixed(1)}`, circ: C.toFixed(1), r: R, state: r.state, bgp: r.bgp, drops: r.drops, inD: r.inD, outD: r.outD, degraded: r.degraded, hot: r.hot, wl: r.wl, color: r.state === 'Degraded' ? 'var(--error)' : r.state === 'Saturating' ? '#e5a100' : '#009fdb' }));
 }
 
-/** The operator's morning: what, where, how long, one action. Worst first. */
-export function queue(est, ob, conns, hp, now = Date.now()) {
-  const rows = [];
-  const age = (k) => agoOf(startOf(k, now, INCIDENT_MIN[k]), now);
-  conns.rows.filter(r => r.degraded).forEach(r => rows.push({ key: 'deg:' + r.region, sev: 2, state: 'Degraded', what: `BGP flapping on ${r.ramp}, ${r.drops} drops`, where: `${r.cloud} ${r.region}`, age: age('flap'), wl: r.wl, action: 'impact', actionLabel: 'See impact', connId: r.id, region: r.region }));
-  conns.rows.filter(r => r.hot && !r.degraded).forEach(r => rows.push({ key: 'sat:' + r.region, sev: 1, state: 'Saturating', what: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'} purchased`, where: `${r.cloud} ${r.region}`, age: age('sat'), wl: r.wl, action: 'port', actionLabel: 'Add a port', connId: r.id, region: r.region }));
-  (ob.blind || []).forEach(r => rows.push({ key: 'blind:' + r.region, sev: 1, state: 'Blind', what: 'no flow logs, traffic unseen', where: `${r.cloud} ${r.region}`, age: 'since discovery', wl: r.wl, action: 'attach', actionLabel: 'Attach', region: r.region }));
-  (ob.flows || []).filter(f => !f.controlled && f.latency > F.SLO).slice(0, 3).forEach(f => rows.push({ key: 'slo:' + f.id, sev: 1, state: 'Over SLO', what: `${f.latency} ms on the public path`, where: f.name, age: age('slo'), wl: 0, action: 'steer', actionLabel: 'Steer', flowId: f.id, region: (f.region || '').split(' ')[1] }));
-  return rows.sort((a, b) => b.sev - a.sev);
+/** Who holds the SLA, in words (2026-09-30). */
+export const OWNER_LABEL = { att: 'AT&T', third: 'Third party', cloud: 'Cloud provider', customer: 'You', public: 'Public internet' };
+
+/**
+ * The one incident list (2026-09-30): a degraded link, a port near full, a
+ * latency spike. Each says where, on which thing, who holds the SLA, which
+ * apps ride it, when it started and what changed just before. Home, the
+ * Alerts count, the Health tab and the findings events all read it. Blind
+ * regions and flow-level Over SLO are findings, not alerts. Ranked by apps
+ * affected, then severity (1 is worst), then workloads.
+ */
+export function problems(est, conns, ob, apps = [], chg = [], now = Date.now()) {
+  const regs = est.regionsList || [];
+  const appsOn = (region) => (apps || []).filter(a => (a.parts || []).some(p => p.region === region && p.share >= 0.05)).map(a => a.tag);
+  const changeFor = (key) => { const c = (chg || []).filter(x => x.linedUp === key); return c.length ? { at: Math.max(...c.map(x => x.at)), text: `${c.length} ${c.length === 1 ? (c[0].kind === 'route' ? 'route change' : 'change') : 'changes'}` } : null; };
+  const out = [];
+  (conns.rows || []).filter(r => r.degraded).forEach(r => {
+    const t = cloudEdgeThing(regs.find(x => x.region === r.region) || r), key = 'an-link-' + r.region;
+    out.push({ key, kind: 'link', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: t.label, what: `BGP flapping · ${r.drops} drops`, owner: t.owner, ownerLabel: OWNER_LABEL[t.owner] || t.owner, state: 'down', sev: 1, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('flap', now, INCIDENT_MIN.flap), change: changeFor(key), connId: r.id, action: 'impact', actionLabel: 'See impact' });
+  });
+  (conns.rows || []).filter(r => r.hot && !r.degraded).forEach(r => {
+    const t = cloudEdgeThing(regs.find(x => x.region === r.region) || r), key = 'an-sat-' + r.region;
+    out.push({ key, kind: 'sat', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: t.label, what: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'} purchased`, owner: t.owner, ownerLabel: OWNER_LABEL[t.owner] || t.owner, state: 'risk', sev: 2, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('sat', now, INCIDENT_MIN.sat), change: changeFor(key), connId: r.id, action: 'port', actionLabel: 'Add a port' });
+  });
+  regs.filter(r => r.rel === 'warn').forEach(r => {
+    const key = 'an-' + r.region;
+    out.push({ key, kind: 'spike', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: 'Public internet', what: `Latency spike · p95 ${r.pub + 40} ms at peak, 0.3% loss`, owner: 'public', ownerLabel: OWNER_LABEL.public, state: 'slo', sev: 3, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('spike', now, INCIDENT_MIN.spike), change: changeFor(key), connId: null, action: 'impact', actionLabel: 'See impact' });
+  });
+  return out.sort((a, b) => b.apps.length - a.apps.length || a.sev - b.sev || b.wl - a.wl);
+}
+
+/** The Alerts rows: the incident list in the queue's words. */
+export function queue(probs, now = Date.now()) {
+  const WORD = { link: 'Degraded', sat: 'Saturating', spike: 'Latency spike' };
+  return probs.map(p => ({ key: p.key, sev: p.sev, state: WORD[p.kind], what: p.kind === 'link' ? `${p.what.replace(/^BGP flapping/, 'BGP flapping on ' + p.thing)}` : p.what, where: p.where, age: agoOf(p.startedAt, now), wl: p.wl, action: p.action, actionLabel: p.actionLabel, connId: p.connId, region: p.region }));
 }
 
 /** What the panel shows for a selection: a map node key or a connection id. */

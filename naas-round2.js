@@ -58,11 +58,8 @@ export function health(est, ob, steered, now = Date.now()) {
   // One rule (2026-09-30): a degraded link is red, over SLO or a latency spike is amber.
   rs.forEach(r => { const st = regionState(r); regionHealth[r.region] = st === 'down' ? 'red' : st === 'slo' || r.rel === 'warn' ? 'amber' : 'green'; });
   const amber = Object.values(regionHealth).filter(h => h !== 'green').length;
-  const incidents = [
-    ...rs.filter(r => r.link === 'degraded').map(r => ({ region: r.region, cloud: r.cloud, text: `${r.cloud} ${r.region} · BGP flapping on ${r.ramp || 'NetBond'} · 0.31% drops · ${age('flap')} · ${r.wl.toLocaleString('en-US')} workloads behind it` })),
-    ...rs.filter(r => r.rel === 'warn').map(r => ({ region: r.region, cloud: r.cloud, text: `${r.cloud} ${r.region} · p95 ${r.pub + 40} ms · ${age('spike')} · public path` })),
-    ...(ob.utilRows || []).filter(u => u.pct >= 80 && !rs.some(r => r.region === u.region && r.link === 'degraded')).map(u => ({ region: u.region, cloud: u.cloud, text: `${u.cloud} ${u.region} · ${u.pct}% of ${u.bw || u.ports + ' × 10 Gbps'} purchased · add a port before it saturates` })),
-  ];
+  // Incidents come from the one list, OD.problems (2026-09-30).
+  const incidents = [];
   const uptime = rs.length ? (rs.reduce((a, r) => a + (r.priv ? 99.99 : 99.5), 0) / rs.length).toFixed(2) : '—';
   return { regionHealth, amber, incidents, strip: rs.length ? [
     { key: 'up', l: 'Uptime', v: uptime + '%', tone: 'var(--success)' },
