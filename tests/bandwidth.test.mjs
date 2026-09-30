@@ -50,3 +50,32 @@ test('Connections sits in the Observe card with its sister tabs, not a box of it
   const panel = HTML.slice(c, c + 9000);
   for (const h of ['Connection', 'Ports', 'Utilization', 'Avg', 'Peak', 'Headroom', 'Trend', 'Full in', 'State']) assert.ok(panel.includes(`>${h}<`), h);
 });
+
+// ---- Is it full? (notes, 2026-09-30, Task 2.7) ----
+import * as D from '../naas-data.js';
+import * as A from '../naas-addendum.js';
+import * as X from '../naas-connections.js';
+import * as OD from '../naas-observe-dash.js';
+
+test('the tab answers "Is it full?" as Capacity; the key stays conn', () => {
+  const v = vals(conn());
+  const tab = v.obPanels.find(p => p.key === 'conn');
+  assert.equal(tab.label, 'Capacity');
+});
+
+test('each row says its 6-month average, from the one capacity function', () => {
+  const est = D.ESTATES.mature, ob = A.observe(est, [], A.inventory(est));
+  const cap = OD.capacity(X.connections(est, ob), '30d');
+  for (const g of vals(conn()).gaugeRows) {
+    const c = cap.find(x => x.id === g.id);
+    assert.match(g.title, new RegExp(`${c.avg6mPct}% on average over 6 months`), g.label);
+  }
+  assert.ok(HTML.includes('title="{{ g.title }}"'));
+});
+
+test('Small has nothing attached, and Capacity says so instead of a blank body', () => {
+  const v = vals(conn({ view: 'small' }));
+  assert.equal(v.hasGauges, false);
+  assert.equal(v.noGauges, true);
+  assert.ok(HTML.includes('Nothing attached yet. Capacity starts with your first port.'));
+});

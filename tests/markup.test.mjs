@@ -224,11 +224,12 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Cost > Optimize replaced the two-moves strip (2026-09-30): div 892 -> 896, span 665 -> 666, sc-if 346 -> 351, sc-for 199 -> 200, button 262 -> 262.
 // Observe > Health, and the Queue drawer retired (2026-09-30): div 896 -> 900, span 666 -> 681, sc-if 351 -> 356, sc-for 200 -> 204, button 262 -> 265, aside 10 -> 9.
 // The Health legend (2026-09-30): div 900 -> 901, span 681 -> 687.
+// Capacity's empty state (2026-09-30): sc-if 356 -> 357.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 901],
     ['span', /<span\b/g, /<\/span>/g, 687],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 356],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 357],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 204],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 265],
