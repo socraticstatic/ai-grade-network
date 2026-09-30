@@ -58,6 +58,8 @@ const CLOSED = {
 };
 // The month each estate first attached to AT&T.
 const FIRST = { partial: '2026-02', mature: '2025-06', trust: '2025-01' };
+/** The month each estate first attached (2026-09-30: the activity log and the change list start here). */
+export const FIRST_ATTACH = FIRST;
 
 const foundOf = (f) => f.found || ymd(ANCHOR - (3 + hash(f.kind) % 40) * DAY);
 const ownerOf = (f) => OWNER[f.persona] || OWNER['Network Engineering'];

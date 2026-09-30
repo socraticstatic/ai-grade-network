@@ -1561,41 +1561,18 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // carried; these say who changed it. Every row is derived from something
   // that actually exists in the estate - a region that got attached, a policy
   // that got written, a credential that got added.
-  const WHO = ['m.boswell', 'j.alvarez', 'p.nakamura', 'svc-terraform'];
   const FROM = ['12.34.56.78', '12.34.56.91', '10.42.8.14', 'api · portal token'];
-  const actAll = (() => {
-    const out = [];
-    const push = (mins, who, verb, target, detail, ok) => out.push({ mins, who, verb, target, detail, ok });
-    (est.regionsList || []).filter(r => r.priv).forEach((r, i) => {
-      push(38 + i * 176, WHO[i % 3], 'Attached to the AT&T network', `${r.cloud} ${r.region}`, `${F.RAMP_NAME[r.ramp] || 'NetBond'} · ${r.wl} workloads behind it`, true);
-    });
-    [...(est.policies || []), ...(s.customPolicies || [])].forEach((pl, i) => {
-      push(96 + i * 214, WHO[(i + 1) % 3], pl.state === 'enforced' || i % 2 === 0 ? 'Enforced policy' : 'Simulated policy', pl.name || 'Private path required', `${pl.viol || 0} ${(pl.viol || 0) === 1 ? 'violation' : 'violations'} at the time`, true);
-    });
-    [...new Set((est.regionsList || []).map(r => r.cloud))].slice(0, 3).forEach((nm, i) => {
-      const cred = /azure/i.test(nm) ? 'Service principal' : /google/i.test(nm) ? 'Service account' : 'Cross-account role';
-      push(12 + i * 61, WHO[i % 3], 'Added a credential', `${nm} account`, `${cred} · read-only, all regions`, true);
-    });
-    (conns.rows || []).filter(r => r.hot || r.degraded).forEach((r, i) => {
-      push(24 + i * 133, WHO[i % 3], r.degraded ? 'Opened an impact view' : 'Ordered a port', `${r.cloud} ${r.region}`, r.degraded ? `${r.wl} workloads behind a degraded link` : `${r.bw || r.ports + ' × 10 Gbps'} in place, ${r.pct}% used`, true);
-    });
-    (s.steered || []).forEach((f, i) => push(8 + i * 47, WHO[i % 3], 'Steered a flow', String(f), 'moved off the public path', true));
-    (sched.runs || []).forEach(r => {
-      const mins = Math.max(0, Math.round((sched.nowMs - r.at) / 60000));
-      const how = r.trigger === 'manual' ? 'on demand' : `on schedule at ${SCH.clockLabel(r.at)}`;
-      const bits = [
-        `${r.accounts} ${r.accounts === 1 ? 'account' : 'accounts'}`,
-        `${r.regions} ${r.regions === 1 ? 'region' : 'regions'}`,
-      ];
-      if (r.sites) bits.push(`${r.sites.toLocaleString('en-US')} ${r.sites === 1 ? 'site' : 'sites'}`);
-      push(mins, r.trigger === 'manual' ? WHO[0] : 'svc-terraform', 'Ran re-discovery',
-        r.accounts === 1 ? 'One account' : 'Whole estate',
-        `${bits.join(', ')} · ${how}`, r.ok);
-    });
-    push(151, WHO[1], 'Changed a scope', 'AWS account 4102-8837-5510', 'read-only, all regions', true);
-    push(207, WHO[2], 'Export denied', 'Flow records, last 30 days', 'no export role on this account', false);
-    return out.sort((a, b) => a.mins - b.mins);
-  })();
+  // One activity list (2026-09-30): dated from the first attach to now, shared
+  // with Observe's change list, so every window sees its own history.
+  const actNow = SCH.nowOf(s);
+  const actRuns = (sched.runs || []).map(r => {
+    const how = r.trigger === 'manual' ? 'on demand' : `on schedule at ${SCH.clockLabel(r.at)}`;
+    const bits = [`${r.accounts} ${r.accounts === 1 ? 'account' : 'accounts'}`, `${r.regions} ${r.regions === 1 ? 'region' : 'regions'}`];
+    if (r.sites) bits.push(`${r.sites.toLocaleString('en-US')} ${r.sites === 1 ? 'site' : 'sites'}`);
+    return { ...r, detail: `${bits.join(', ')} · ${how}` };
+  });
+  const actAll = OD.activityOf(est, { customPolicies: s.customPolicies || [], steered: s.steered || [], conns, runs: actRuns, now: actNow })
+    .map(a => ({ ...a, mins: Math.max(0, Math.round((actNow - a.at) / 60000)) }));
   const ago = (m) => m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
   const actQ = (s.actQ || '').toLowerCase();
   const actMatch = actAll.filter(a => !actQ || (a.who + ' ' + a.verb + ' ' + a.target + ' ' + a.detail).toLowerCase().includes(actQ));

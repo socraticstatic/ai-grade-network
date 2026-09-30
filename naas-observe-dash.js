@@ -12,6 +12,7 @@ import { impacted, records, resolveDest } from './naas-connections.js';
 import * as S from './naas-sites.js';
 import * as P from './naas-paths.js';
 import { agoOf, startOf, INCIDENT_MIN } from './naas-schedule.js';
+import { FIRST_ATTACH } from './naas-lifecycle.js';
 
 const n = (x) => Number(x).toLocaleString('en-US');
 const R = 22, C = 2 * Math.PI * R;
@@ -297,4 +298,59 @@ export function subnetPanel(sel, ctx) {
       { key: 'logs', label: 'All records for this subnet', region: c.region },
     ],
   };
+}
+
+// ---------- What changed (2026-09-30) ----------
+// One list of what people and systems did, dated from the estate's first
+// attach to now, so a 24-hour window and a 90-day window see different
+// histories. User activity renders it; changes() reads the rows that change
+// the network, adds route and maintenance events, and lines them up with the
+// problems they came before.
+const MIN = 60000, HR = 3600000, DAYMS = 86400000;
+const WHO = ['m.boswell', 'j.alvarez', 'p.nakamura', 'svc-terraform'];
+
+export function activityOf(est, { customPolicies = [], steered = [], conns = { rows: [] }, runs = [], now = Date.now() } = {}) {
+  const out = [];
+  const push = (key, at, who, verb, target, detail, ok, change, region = null) => out.push({ key, at, who, verb, target, detail, ok, change, region });
+  const first = FIRST_ATTACH[est.id] ? Date.parse(FIRST_ATTACH[est.id] + '-01T00:00:00Z') : now - 60 * DAYMS;
+  const priv = (est.regionsList || []).filter(r => r.priv);
+  priv.forEach((r, i) => {
+    // Attaches spread from the first one to a couple of days ago; one landed in this session is minutes old.
+    const at = r.landed ? now - 2 * MIN : Math.round(first + (now - 2 * DAYMS - first) * i / Math.max(1, priv.length));
+    push('att:' + r.region, at, WHO[i % 3], 'Attached to the AT&T network', `${r.cloud} ${r.region}`, `${F.RAMP_NAME[r.ramp] || 'NetBond'} · ${r.wl} workloads behind it`, true, true, r.region);
+  });
+  (est.policies || []).forEach((pl, i) => push('pol:' + i, now - (5 + i * 11) * DAYMS - i * 37 * MIN, WHO[(i + 1) % 3], pl.state === 'enforced' || i % 2 === 0 ? 'Enforced policy' : 'Simulated policy', pl.name || 'Private path required', `${pl.viol || 0} ${(pl.viol || 0) === 1 ? 'violation' : 'violations'} at the time`, true, true));
+  customPolicies.forEach((pl, i) => push('cpol:' + i, now - (i + 1) * 6 * MIN, WHO[0], pl.state === 'enforced' ? 'Enforced policy' : 'Simulated policy', pl.name || 'Private path required', `${pl.viol || 0} ${(pl.viol || 0) === 1 ? 'violation' : 'violations'} at the time`, true, true));
+  [...new Set((est.regionsList || []).map(r => r.cloud))].slice(0, 3).forEach((nm, i) => {
+    const cred = /azure/i.test(nm) ? 'Service principal' : /google/i.test(nm) ? 'Service account' : 'Cross-account role';
+    push('cred:' + nm, first - (3 + i) * DAYMS, WHO[i % 3], 'Added a credential', `${nm} account`, `${cred} · read-only, all regions`, true, false);
+  });
+  (conns.rows || []).filter(r => r.hot || r.degraded).forEach((r, i) => {
+    if (r.degraded) push('impact:' + r.region, now - (18 + i * 7) * MIN, WHO[i % 3], 'Opened an impact view', `${r.cloud} ${r.region}`, `${r.wl} workloads behind a degraded link`, true, false, r.region);
+    else push('port:' + r.region, now - (2 + i * 6) * DAYMS, WHO[i % 3], 'Ordered a port', `${r.cloud} ${r.region}`, `${r.bw || r.ports + ' × 10 Gbps'} in place, ${r.pct}% used`, true, true, r.region);
+  });
+  steered.forEach((f, i) => push('steer:' + f, now - (i + 1) * 3 * MIN, WHO[i % 3], 'Steered a flow', String(f), 'moved off the public path', true, true));
+  runs.forEach(r => push('run:' + r.at, r.at, r.trigger === 'manual' ? WHO[0] : 'svc-terraform', 'Ran re-discovery', r.accounts === 1 ? 'One account' : 'Whole estate', r.detail || '', r.ok, false));
+  push('scope', now - 12 * DAYMS, WHO[1], 'Changed a scope', 'AWS account 4102-8837-5510', 'read-only, all regions', true, true);
+  push('export', now - 4 * HR, WHO[2], 'Export denied', 'Flow records, last 30 days', 'no export role on this account', false, false);
+  return out.sort((a, b) => b.at - a.at);
+}
+
+export function changes(est, conns, activity, now = Date.now()) {
+  // Problem starts come from the same seeds problems() uses, so the two agree without calling each other.
+  const flap = startOf('flap', now, INCIDENT_MIN.flap), spike = startOf('spike', now, INCIDENT_MIN.spike);
+  const probs = [
+    ...(conns.rows || []).filter(r => r.degraded).map(r => ({ key: 'an-link-' + r.region, region: r.region, at: flap })),
+    ...(est.regionsList || []).filter(r => r.rel === 'warn').map(r => ({ key: 'an-' + r.region, region: r.region, at: spike })),
+  ];
+  const lined = (region, at) => { const p = region && probs.find(q => q.region === region && at <= q.at && q.at - at <= 15 * MIN); return p ? p.key : null; };
+  const rows = [
+    ...activity.filter(a => a.change).map(a => ({ key: a.key, at: a.at, kind: 'config', text: `${a.verb}: ${a.target}`, region: a.region, source: a.who, linedUp: lined(a.region, a.at), upcoming: false })),
+    ...(conns.rows || []).filter(r => r.degraded).map(r => ({ key: 'route:' + r.region, at: flap - 3 * MIN, kind: 'route', text: `Routes withdrawn toward ${r.cloud} ${r.region}`, region: r.region, source: 'BGP session', linedUp: 'an-link-' + r.region, upcoming: false })),
+    ...(conns.rows || []).filter(r => r.terminated === 'att').flatMap((r, i) => [
+      { key: 'mnt:' + r.region + ':done', at: now - (9 + i) * DAYMS, kind: 'maintenance', text: `AT&T planned maintenance on the ${r.cloud} ${r.region} on-ramp`, region: r.region, source: 'AT&T', linedUp: null, upcoming: false },
+      { key: 'mnt:' + r.region + ':next', at: now + (4 + i) * DAYMS, kind: 'maintenance', text: `AT&T planned maintenance on the ${r.cloud} ${r.region} on-ramp`, region: r.region, source: 'AT&T', linedUp: null, upcoming: true },
+    ]),
+  ];
+  return rows.sort((a, b) => b.at - a.at);
 }
