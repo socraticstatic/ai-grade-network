@@ -99,8 +99,9 @@ test('every new state key starts in defaults and in the markup constructor', () 
   const d = defaults();
   assert.deepEqual(Object.keys(d).filter(k => !(k in ctor)), [], 'defaults() keys the markup constructor lacks');
   assert.deepEqual(Object.keys(ctor).filter(k => !(k in d)), [], 'constructor keys defaults() lacks');
-  // The markup boots on s3 and init() moves an s0 there too; every other key starts the same.
-  const drift = Object.keys(d).filter(k => k !== 'screen' && JSON.stringify(d[k]) !== JSON.stringify(ctor[k]));
+  // The markup booted on s3 and init() moved an s0 there too. Since 2026-09-30 both boot on
+  // the NaaS home (s0), so screen is held to the same rule as every other key.
+  const drift = Object.keys(d).filter(k => JSON.stringify(d[k]) !== JSON.stringify(ctor[k]));
   assert.deepEqual(drift, [], 'keys whose constructor value differs from defaults()');
 });
 

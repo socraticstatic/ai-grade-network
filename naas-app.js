@@ -161,7 +161,7 @@ export function init(c) {
   if (q.get('mode') === 'browse') patch.screen = 's7';
   if (q.get('category')) { patch.screen = 's7'; patch.browseCat = q.get('category'); }
   if (SCREENS[hash[0]]) patch.screen = hash[0];
-  if (!patch.screen && (c.state.screen || 's0') === 's0' && (patch.view || c.state.view) !== 'empty') { patch.screen = 's3'; patch.layer = 'cloud'; patch.tab = 'connect'; }
+  // A load with no hash stays on the NaaS home, where the NaaS rail item goes (2026-09-30).
   if (hash[1] && D.LAYERS.find(l => l.id === hash[1])) patch.layer = hash[1];
   if (hash[2] && TABS.includes(hash[2])) patch.tab = hash[2];
   c.setState(patch);
@@ -696,7 +696,8 @@ export function vals(c) {
   const costVerdict = VD.costVerdict(estOpen, ob, totalSave, buckets);
   const kpis = isEmpty ? [] : kpiTiles(s, est);
   // The AT&T network picture opens on Home and Fabric; every other screen keeps a one-line strip and a "Show the AT&T network" door (audit finding 2).
-  const heroScreen = ['s0', 's2'].includes(s.screen) || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect' && (s.cnPage || 'picture') === 'picture');
+  // The NaaS home (s0) draws no map since 2026-09-30: it is the whole network at a glance; the map stays on Connect.
+  const heroScreen = s.screen === 's2' || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect' && (s.cnPage || 'picture') === 'picture');
   const heroKey = s.screen === 's3' ? `s3/${s.layer}/${s.tab}` : s.screen;
   // One hero graph (Micah, 13:23): the picture is open on home and on all four pages.
   // A new customer's picture is empty; the scan leads and the picture waits behind its strip (no-scroll pass, 2026-09-28).
@@ -926,7 +927,9 @@ export function vals(c) {
     s1Title: 'Discover',
     showSourcesBody: !isEmpty && s.discoverView === 'sources', showEstateBody: !isEmpty && s.discoverView !== 'sources',
     showEstateStats: s.scanStep >= 4 && s.discoverView !== 'sources',
-    sS0: s.screen === 's0' || (s.screen === 's2' && isEmpty), sS1: s.screen === 's1', sS2: s.screen === 's2' && !isEmpty, showLaunch: !isEmpty && (s.screen === 's2' || (s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect' && !['options', 'ways'].includes(s.cnPage))), sS3: s.screen === 's3', sS4: s.screen === 's4', sS5: s.screen === 's5', sS6: s.screen === 's6', sS7: s.screen === 's7', sS8: s.screen === 's8',
+    // s0 is the NaaS home (2026-09-30); the old s0 block is the empty estate's s2 onboarding.
+    // The four launch tiles left Connect for the home's strip (homeVals), so showLaunch is gone.
+    sHome: s.screen === 's0', sS0: s.screen === 's2' && isEmpty, sS1: s.screen === 's1', sS2: s.screen === 's2' && !isEmpty, sS3: s.screen === 's3', sS4: s.screen === 's4', sS5: s.screen === 's5', sS6: s.screen === 's6', sS7: s.screen === 's7', sS8: s.screen === 's8',
     heroVB: `0 0 ${L.W} ${L.H}`,
     fabricHealth: (() => {
       const rows = conns.rows || [];
@@ -1053,6 +1056,7 @@ export function vals(c) {
     ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll, probs, segCtx, incChanges),
   };
   Object.assign(out, briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }));
+  Object.assign(out, homeVals(out, s, set, { observeHead, ob, go, isEmpty }));
   if (s.screen === 's3' && s.tab === 'observe' && s.obPage === 'insights' && out.insPanelBrief) Object.assign(out, { andiSub: out.briefText, hasAndiSub: true });
   return pageLists(out, s, set);
 }
@@ -1101,6 +1105,43 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
   return { comingSoon: true, roleVisuals, roleNoVisuals: !roleVisuals.length, briefText, briefTitle: `Andi's monthly briefing for ${role.short}`, briefWho, briefCadence: cadence,
     setBriefCadence: (e) => set({ briefCfg: { ...cfg, cadence: e.target.value === 'off' ? 'off' : 'monthly' } }),
     briefLast: at(SCH.prevRunAt(monthly, nowMs)), briefNext: cadence === 'off' ? 'Off' : at(SCH.nextRunAt(monthly, nowMs)) };
+}
+
+// The NaaS home (spec 2026-09-30-naas-home-design.md): the whole network at a
+// glance, by persona. Every figure is a field vals() already computed for the
+// page it opens; the home adds its greeting and its layout, never a number.
+// It reads problemRows before pageLists pages them, so "+N more" counts them all.
+const chicagoHour = (ms) => +new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Chicago' }).formatToParts(new Date(ms)).find(p => p.type === 'hour').value;
+export function homeVals(out, s, set, { observeHead, ob, go, isEmpty }) {
+  const rk = roleKeyOf(s), hr = chicagoHour(SCH.nowOf(s));
+  const sev1 = (out.opsFacts || {}).sev1 || 0;
+  const stat = (k) => String(((out.invStats || []).find(x => x.key === k) || {}).v ?? '');
+  const one = (n, a, b) => `${n} ${n === '1' ? a : b}`;
+  const step = { line: 'Add a source to see your network', cta: 'Add a source', go: () => { go('s1', { discoverView: 'sources' })(); if (out.openAddSource) out.openAddSource(); } };
+  const discover = isEmpty
+    ? { key: 'discover', label: 'Discover', value: 'Nothing discovered yet', sub: 'starts with the first source', door: 'Add a source', go: step.go }
+    : { key: 'discover', label: 'Discover', value: `${one(stat('s'), 'site', 'sites')} · ${one(stat('c'), 'cloud', 'clouds')}`, sub: out.newPill30 || '', door: 'Estate', go: go('s1') };
+  // The four rollup tiles as Connect read them; only the look is the home's.
+  const homeStrip = [discover, ...(out.rollup || []).map(r => ({ key: r.key, label: r.label, value: r.value, sub: r.sub, door: r.door, go: r.go, primary: !!r.primary }))]
+    .map(t => ({ ...t, title: `${t.label} · ${t.value}${t.sub ? ' · ' + t.sub : ''}`, edge: t.primary ? 'var(--border-active)' : 'var(--border-secondary)', ring: t.primary ? 'inset 0 0 0 1px var(--border-active)' : 'none' }));
+  const acts = out.roleActAll || [], probs = out.problemRows || [];
+  const homeNow = probs.slice(0, 3).map(p => ({ key: p.key, stateWord: p.stateWord, dot: p.dot, rad: p.rad, where: p.where, thing: p.thing, what: p.what, startedF: p.startedF,
+    trace: () => { go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf' })(); p.trace(); } }));
+  return {
+    homeGreeting: `${hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'}, ${ROLE_OF[rk].short}`,
+    homeHead: [observeHead || (ob && ob.verdict) || '', sev1 ? `${sev1} Sev 1 open now.` : ''].filter(Boolean).join(' '),
+    homeBrief: isEmpty ? '' : (out.briefText || ''),
+    homeBriefGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'brief' }),
+    homeWaiting: acts.slice(0, 3), hasHomeWaiting: acts.length > 0, noHomeWaiting: !acts.length, homeWaitingNone: acts.length ? '' : (out.roleEmpty || ''),
+    homeWaitingMore: acts.length ? `All ${acts.length} in Your actions ›` : '', hasHomeWaitingMore: acts.length > 0,
+    homeWaitingGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0 }),
+    homeStrip,
+    homeNow, hasHomeNow: homeNow.length > 0,
+    homeNowMore: probs.length > 3 ? `+${probs.length - 3} more in Health ›` : '', hasHomeNowMore: probs.length > 3,
+    homeNowMoreGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' }),
+    homeNowNone: probs.length ? '' : 'Nothing is down or over SLO.', noHomeNow: !probs.length, homeNowNoneDot: F.HEALTH_INK.ok, homeNowNoneRad: F.healthRadius('ok'),
+    homeEmpty: !!isEmpty, homeBand: !isEmpty, homeStep: step,
+  };
 }
 
 // A list longer than the fold pages; it never scrolls in a box and never sits
@@ -1554,6 +1595,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const newUnlabeled = [...newVpcs, ...newSites].filter(x => !LK.labelsOf(x.id).length).length;
   const newPublic = newVpcs.filter(v => !v.priv).length + newWls.filter(w => w.exposed).length + newSites.filter(x => !x.priv).length;
   const nn = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  // The home's Discover tile reads the pill at Discover's own 30 days, so Since never moves the strip (2026-09-30).
+  const new30 = [...allVpcs, ...allWls, ...allSites].filter(x => !!x && x.since != null && x.since <= WIN['30d'][0]).length;
+  const newPill30 = new30 ? `${new30} new · ${WIN['30d'][1]}` : '';
   const newStrip = {
     title: newOnly ? `Showing only what is new in the last ${winLabel}` : 'Act on it',
     text: newN
@@ -2876,7 +2920,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         else { set({ jumpHit: `Jumped to ${hit.label}`, tagView: false, treeOrMap: 'tree', inv: { ...(s.inv || {}), [hit.cloudId]: true, [hit.regionId]: true, [hit.vpcId]: true } }); after('vpc:' + hit.vpcId); }
       };
       return { jumpQ: s.jumpQ || '', setJumpQ: (e) => set({ jumpQ: e.target.value, jumpHit: '' }), jumpKey: (e) => { if (e.key === 'Enter') jumpTo(); }, jumpGo: jumpTo, jumpHit: s.jumpHit || '', hasJumpHit: !!s.jumpHit,
-        newStrip, newOnly, haveCards, glanceRings, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
+        newStrip, newPill30, newOnly, haveCards, glanceRings, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
         // Three tabs, one panel at a time (2026-09-28, no scrolling).
         // Group the picture's sites (notes, 2026-09-29): by region, or by how they attach.
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
@@ -3171,7 +3215,7 @@ function shellVals(s, set, go, est, c, sched) {
   ].map(t => ({ ...t, border: t.current ? 'var(--cta)' : 'transparent', color: t.current ? 'var(--link)' : 'var(--text-heading)', weight: t.current ? 700 : 500 }));
   const railCur = s.screen === 's2' || s.screen === 's0' ? 'Home' : s.screen === 's3' ? ({ connect: 'Connect', govern: 'Govern', observe: 'Observe', cost: 'Cost' }[s.tab] || 'Home') : ['s4', 's5', 's6'].includes(s.screen) ? 'Connect' : null;
   const dataLayer = 'cloud';
-  const rail = [['Home', 'home', () => go('s3', { layer: 'cloud', tab: 'connect' })()], ['Connect', 'cable', go('s3', { layer: dataLayer, tab: 'connect' })], ['Govern', 'check-shield', go('s3', { layer: dataLayer, tab: 'govern' })], ['Observe', 'high-meter', go('s3', { layer: dataLayer, tab: 'observe' })], ['Cost', 'bill', go('s3', { layer: dataLayer, tab: 'cost' })]].map(([label, ic, fn]) => ({ key: label, label, done: label === 'Home' ? false : label === 'Connect' ? est.regionsList.some(r => r.priv) : label === 'Govern' ? est.policiesEnforced > 0 : label === 'Observe' ? (est.observedPct || 0) > 0 : label === 'Cost' ? !!(s.steered && s.steered.length) : false, go: () => { fn(); set(close); }, cur: railCur === label, icon: (railCur === label ? iconLink : iconDir) + '/' + ic + '.svg', bg: railCur === label ? 'var(--bg-accent)' : 'transparent', color: railCur === label ? 'var(--link)' : 'var(--text-heading)', weight: railCur === label ? 700 : 500 }));
+  const rail = [['Home', 'home', () => go('s0')()], ['Connect', 'cable', go('s3', { layer: dataLayer, tab: 'connect' })], ['Govern', 'check-shield', go('s3', { layer: dataLayer, tab: 'govern' })], ['Observe', 'high-meter', go('s3', { layer: dataLayer, tab: 'observe' })], ['Cost', 'bill', go('s3', { layer: dataLayer, tab: 'cost' })]].map(([label, ic, fn]) => ({ key: label, label, done: label === 'Home' ? false : label === 'Connect' ? est.regionsList.some(r => r.priv) : label === 'Govern' ? est.policiesEnforced > 0 : label === 'Observe' ? (est.observedPct || 0) > 0 : label === 'Cost' ? !!(s.steered && s.steered.length) : false, go: () => { fn(); set(close); }, cur: railCur === label, icon: (railCur === label ? iconLink : iconDir) + '/' + ic + '.svg', bg: railCur === label ? 'var(--bg-accent)' : 'transparent', color: railCur === label ? 'var(--link)' : 'var(--text-heading)', weight: railCur === label ? 700 : 500 }));
   // ---- Chrome switches, for dropping these screens into another shell ----
   // ?chrome=off   hide both the top header and the left rail
   // ?chrome=norail   keep the header, drop the rail
@@ -3205,7 +3249,8 @@ function shellVals(s, set, go, est, c, sched) {
   const railBtnPad = railCollapsed ? '4px 0' : '4px 8px';
   const pillBg = (on) => on ? 'var(--bg-accent)' : 'transparent';
   const pills = [
-    { key: 'net', label: 'NaaS', current: true, off: false, go: est.stage === 'empty' ? goTab('s0', { layer: 'cloud' }) : goTab('s3', { layer: 'cloud', tab: 'connect' }) },
+    // NaaS is the home on every estate (2026-09-30), the rail item and this pill alike.
+    { key: 'net', label: 'NaaS', current: true, off: false, go: goTab('s0', { layer: 'cloud' }) },
   ].map(p => ({ ...p, bg: pillBg(p.current), op: p.off ? 0.4 : 1, cursor: p.off ? 'default' : 'pointer', hover: p.off ? 'transparent' : 'var(--bg-wash)', dis: p.off ? 'true' : 'false' }));
   const obTabNow = s.obTab || 'flow';
   const logsTab = (typeof OBTABS !== 'undefined' && OBTABS.includes('records')) ? 'records' : 'control';
@@ -3269,7 +3314,8 @@ function shellVals(s, set, go, est, c, sched) {
           : go('s3', { layer: 'cloud', tab: key });
         return [
           { key: 'home', hasTitle: false, title: '', items: [
-            item('NaaS', 'home', () => { if (est.stage === 'empty') go('s0')(); else go('s3', { layer: 'cloud', tab: 'connect' })(); }, (s.screen === 's3' && s.tab === 'connect' && !['options', 'ways'].includes(s.cnPage)) || s.screen === 's0'),
+            // The NaaS home: the whole network at a glance, by persona (2026-09-30). Connect keeps its map.
+            item('NaaS', 'home', go('s0'), s.screen === 's0'),
           ] },
           // Discover, Observe, Govern and Cost are the same kind of thing - the
           // four categories. They get one treatment, always, and the one you
@@ -3278,7 +3324,7 @@ function shellVals(s, set, go, est, c, sched) {
           // different levels depending on where you stood.
           ...(seq ? [{
             key: 'steps', hasTitle: true, title: 'Get connected',
-            titleGo: () => { go('s1')(); set(close); }, titleCur: s.screen === 's1' || s.screen === 's0',
+            titleGo: () => { go('s1')(); set(close); }, titleCur: s.screen === 's1',
             items: STEPS.filter(st => st.ready(est)).map(st => ({
               ...item(st.label, st.icon, () => {
                 // Until there is a source, adding one is the task, so it is a page;
@@ -3292,7 +3338,7 @@ function shellVals(s, set, go, est, c, sched) {
           }] : []),
           ...(seq ? [] : TABS).map(([tab, title]) => {
             const here = tab === 'discover' ? s.screen === 's1'
-              : onS3('cloud', tab) || (tab === 'connect' && (s.screen === 's0' || s.screen === 's2'));
+              : onS3('cloud', tab) || (tab === 'connect' && s.screen === 's2');
             return {
               key: tab, hasTitle: true, title, titleGo: () => { goTabRow(tab)(); set(close); }, titleCur: here,
               // Every category shows its sections all the time. The rail scrolls.
@@ -3355,7 +3401,7 @@ function shellVals(s, set, go, est, c, sched) {
   // Discovery is Discover's task, but s1 draws its own header and the shared
   // title row skips s1 entirely, so the controls have nowhere to land there.
   // They stay on Connect until s1's header can carry them.
-  const ownsDiscovery = s.screen === 's0' || (s.screen === 's3' && s.tab === 'connect');
+  const ownsDiscovery = s.screen === 's3' && s.tab === 'connect';
   // Cost's figures are monthly rates a window cannot change, so Since lives on Observe only (2026-09-29 audit).
   const ownsTelemetry = s.screen === 's3' && s.tab === 'observe';
   const railIsSequence = railFor(est).sequence;
@@ -3382,8 +3428,8 @@ function shellVals(s, set, go, est, c, sched) {
   const rangeValue = s.obWindow || '30d';
   const setRange = (e) => set({ obWindow: e.target.value });
   const bellLabel = s.submitted ? 'Pending actions: 1 order in flight' : 'Notifications';
-  // Screens that carry their own heading (Discover, Compose, Recommend, Review, Marketplace) keep it; the frame's title row stands only where there is none.
-  const showPageTitle = !['s1', 's4', 's5', 's6', 's7', 's8'].includes(s.screen);
+  // Screens that carry their own heading (the NaaS home, Discover, Compose, Recommend, Review, Marketplace) keep it; the frame's title row stands only where there is none.
+  const showPageTitle = !['s0', 's1', 's4', 's5', 's6', 's7', 's8'].includes(s.screen);
   return {
     demoOpen: !!s.demoOpen, toggleDemo: () => set({ demoOpen: !s.demoOpen }),
     pills, railGroups, subNav, hasSubNav, pageTitle, credsLabel, credsTitle, manageCreds, showPageTitle, rangeValue, setRange, bellLabel, buildLabel: (typeof window !== 'undefined' && window.__naasVersion) ? `v${window.__naasVersion.build} · ${window.__naasVersion.date}` : '', hasBuildLabel: !!(typeof window !== 'undefined' && window.__naasVersion), railCollapsed, railExpanded: !railCollapsed, railToggleTitle: railCollapsed ? 'Expand navigation' : 'Collapse navigation', iconAndi: 'brand/andi-symbol.svg', iconCalendar: iconDir + '/checklist.svg', goBrowseClose: () => { go('s7')(); set({ demoOpen: false }); },

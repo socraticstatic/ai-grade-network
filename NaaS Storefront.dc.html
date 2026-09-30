@@ -354,20 +354,72 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </section>
 </sc-if>
 
-<!-- S0 FRONT DOOR: its second title (Network as a service / AT&T AI-grade network) left; the page title and the header already say it (no-scroll pass, 2026-09-28) -->
-
-<!-- ===== S2 LAUNCH POINTS: above the hero ===== -->
-<sc-if value="{{ showLaunch }}" hint-placeholder-val="{{ false }}">
-<div aria-label="Launch points" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px">
-  <sc-for list="{{ rollup }}" as="r" hint-placeholder-count="4">
-    <button onClick="{{ r.go }}" title="{{ r.label }} · {{ r.value }} {{ r.sub }}" aria-current="{{ r.primary }}" style="text-align:left;padding:10px 14px;background:var(--bg-base);border:{{ r.borderW }} solid {{ r.border }};border-radius:12px;cursor:pointer;display:grid;grid-template-rows:16px 24px 16px 1fr;gap:1px;min-width:0;height:100%" style-hover="box-shadow:0 1px 2px rgba(0,0,0,.08);border-color:var(--border-primary)">
-      <span style="display:flex;align-items:center;gap:8px;min-width:0"><span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;color:var(--text-disabled);white-space:nowrap">{{ r.label }}</span><span style="font-size:11px;line-height:16px;font-weight:500;color:var(--link);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.eyebrow }}</span></span>
-      <span style="font-size:17px;line-height:24px;font-weight:700;letter-spacing:-.4px;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.value }}</span>
-      <span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.sub }}</span>
-      <span style="align-self:end;padding-top:6px;font-size:12px;line-height:16px;font-weight:500;color:{{ r.doorInk }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.door }}&nbsp;→</span>
-    </button>
-  </sc-for>
-</div>
+<!-- ===== S0 THE NaaS HOME (spec 2026-09-30-naas-home-design.md): the whole network at a glance, by persona. A title row, the persona band (Andi's briefing, Waiting on you), the five areas, and Now. Every figure is its page's own (homeVals); Connect's four tiles moved here. ===== -->
+<sc-if value="{{ sHome }}" hint-placeholder-val="{{ false }}">
+<section aria-label="NaaS home" style="display:grid;gap:24px;min-width:0;animation:fadeIn .3s">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;padding:4px 0 16px;border-bottom:1px solid var(--border-secondary)">
+    <div style="display:grid;gap:2px;min-width:0;flex:1 1 auto"><h1 style="margin:0;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ homeGreeting }}</h1><div style="font-size:14px;line-height:20px;font-weight:500;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ homeHead }}</div></div>
+    <div style="display:flex;align-items:center;gap:16px;flex:none">
+      <div role="tablist" aria-label="Role" style="display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg-neutral)"><sc-for list="{{ roleChips }}" as="rc" hint-placeholder-count="5"><button role="tab" aria-selected="{{ rc.on }}" onClick="{{ rc.go }}" style="border:0;border-radius:6px;height:28px;padding:0 10px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;background:{{ rc.bg }};color:{{ rc.color }};font-weight:{{ rc.weight }};box-shadow:{{ rc.shadow }}">{{ rc.label }}</button></sc-for></div>
+      <label class="fx-filter"><span class="fx-label">Since</span><select class="fx-select" value="{{ rangeValue }}" onChange="{{ setRange }}" aria-label="Date range"><option value="1h">Last hour</option><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option></select></label>
+    </div>
+  </div>
+  <sc-if value="{{ homeBand }}" hint-placeholder-val="{{ true }}">
+  <div style="display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:24px;align-items:stretch">
+    <div aria-label="Andi's briefing" style="display:grid;grid-template-rows:auto auto 1fr;gap:8px;min-width:0;border-left:2px solid var(--border-secondary);padding-left:16px">
+      <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Andi's briefing</div>
+      <p style="margin:0;font-size:14px;line-height:22px;color:var(--text-body);text-wrap:pretty">{{ homeBrief }}</p>
+      <button onClick="{{ homeBriefGo }}" style="align-self:end;justify-self:start;border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap">Monthly briefing in Insights ›</button>
+    </div>
+    <div aria-label="Waiting on you" style="display:grid;align-content:start;min-width:0;border-left:2px solid var(--border-secondary);padding-left:16px">
+      <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Waiting on you</div>
+      <sc-for list="{{ homeWaiting }}" as="ra" hint-placeholder-count="3"><div style="display:grid;gap:4px;padding:8px 0;border-bottom:1px solid var(--border-secondary);min-width:0">
+        <div style="display:flex;align-items:baseline;gap:8px;min-width:0"><b title="{{ ra.head }}" style="min-width:0;font-size:13px;line-height:18px;color:var(--text-heading);text-wrap:pretty">{{ ra.head }}</b><span style="margin-left:auto;flex:none;font-size:11px;line-height:16px;color:var(--text-light);white-space:nowrap">{{ ra.stateLabel }}</span></div>
+        <div style="display:flex;gap:8px;font-size:12px;line-height:16px;color:var(--text-body);min-width:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ra.rec }}</span><sc-if value="{{ ra.hasSave }}" hint-placeholder-val="{{ false }}"><b style="flex:none;color:var(--success);white-space:nowrap">{{ ra.saveLine }}</b></sc-if></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button class="fx-btn" disabled="{{ comingSoon }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap;opacity:.5;cursor:not-allowed">Do it</button><span style="font-size:11px;color:var(--text-light)">Coming soon</span>
+          <sc-if value="{{ ra.canAccept }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ ra.accept }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Accept</button></sc-if>
+          <sc-if value="{{ ra.canDefer }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ ra.defer }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Defer</button></sc-if>
+          <sc-if value="{{ ra.canStart }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.start }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Start</button></sc-if>
+          <sc-if value="{{ ra.canSnooze }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.snooze }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Snooze</button></sc-if>
+          <sc-if value="{{ ra.hasDoor }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.door }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">{{ ra.doorLabel }}</button></sc-if>
+        </div>
+      </div></sc-for>
+      <sc-if value="{{ hasHomeWaitingMore }}" hint-placeholder-val="{{ true }}"><button onClick="{{ homeWaitingGo }}" style="justify-self:start;margin-top:8px;border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap">{{ homeWaitingMore }}</button></sc-if>
+      <sc-if value="{{ noHomeWaiting }}" hint-placeholder-val="{{ false }}"><div style="padding-top:8px;font-size:13px;line-height:18px;color:var(--text-light)">{{ homeWaitingNone }}</div></sc-if>
+    </div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ homeEmpty }}" hint-placeholder-val="{{ false }}">
+  <div aria-label="Your first step" style="display:grid;gap:8px;justify-items:start;max-width:640px;border-left:2px solid var(--border-secondary);padding-left:16px">
+    <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ homeStep.line }}</div>
+    <p style="margin:0;font-size:14px;line-height:22px;color:var(--text-body);text-wrap:pretty">Discovery reads a cloud account, read-only, and draws what you have: your sites, your clouds and the paths between them.</p>
+    <button onClick="{{ homeStep.go }}" style="margin-top:8px;height:32px;padding:0 14px;border:0;border-radius:8px;background:var(--cta);color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">{{ homeStep.cta }}</button>
+  </div>
+  </sc-if>
+  <div aria-label="The five areas" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px">
+    <sc-for list="{{ homeStrip }}" as="t" hint-placeholder-count="5">
+      <button onClick="{{ t.go }}" title="{{ t.title }}" style="display:grid;grid-template-rows:16px 22px 16px 1fr;gap:4px;min-width:0;height:100%;box-sizing:border-box;padding:16px;text-align:left;background:var(--bg-base);border:1px solid {{ t.edge }};box-shadow:{{ t.ring }};border-radius:12px;font:inherit;color:inherit;cursor:pointer" style-hover="border-color:var(--border-active)">
+        <span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);white-space:nowrap">{{ t.label }}</span>
+        <span style="font-size:16px;line-height:22px;font-weight:700;letter-spacing:-.3px;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.value }}</span>
+        <span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.sub }}</span>
+        <span style="align-self:end;padding-top:8px;font-size:13px;line-height:18px;font-weight:600;color:var(--link);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.door }} ›</span>
+      </button>
+    </sc-for>
+  </div>
+  <div aria-label="Now" style="display:grid;min-width:0">
+    <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:8px"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Now</span><span style="font-size:12px;line-height:16px;color:var(--text-light)">Open problems in Health, ranked by apps affected</span></div>
+    <sc-for list="{{ homeNow }}" as="pb" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:96px minmax(0,1.1fr) minmax(0,1.5fr) 176px 72px;gap:16px;align-items:center;min-height:40px;border-top:1px solid var(--border-secondary);font-size:13px;line-height:18px">
+      <span style="display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap"><i aria-hidden="true" style="flex:none;width:8px;height:8px;border-radius:{{ pb.rad }};background:{{ pb.dot }}"></i><span style="font-weight:600;color:var(--text-heading)">{{ pb.stateWord }}</span></span>
+      <span style="font-weight:600;color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pb.where }} · {{ pb.thing }}</span>
+      <span style="color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pb.what }}</span>
+      <span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ pb.startedF }}</span>
+      <span style="display:flex;justify-content:flex-end"><button class="fx-btn" onClick="{{ pb.trace }}" style="height:28px;padding:0 12px;font-size:12px">Trace</button></span>
+    </div></sc-for>
+    <sc-if value="{{ hasHomeNowMore }}" hint-placeholder-val="{{ false }}"><button onClick="{{ homeNowMoreGo }}" style="justify-self:start;margin-top:8px;border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap">{{ homeNowMore }}</button></sc-if>
+    <sc-if value="{{ noHomeNow }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;min-height:40px;border-top:1px solid var(--border-secondary);font-size:13px;line-height:18px;color:var(--text-body)"><i aria-hidden="true" style="flex:none;width:8px;height:8px;border-radius:{{ homeNowNoneRad }};background:{{ homeNowNoneDot }}"></i>{{ homeNowNone }}</div></sc-if>
+  </div>
+</section>
 </sc-if>
 
 <!-- Connect views (notes, 2026-09-29): What you have, and Options for what is not on AT&amp;T yet. Same tab row as Estate, Traffic, Govern and Cost. -->
@@ -579,7 +631,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 </div>
 </sc-if>
 
-<!-- ===== S0 below hero: head start strip, mode tabs, intake or CTA ===== -->
+<!-- ===== The empty estate's onboarding on s2 (the old s0 front door; s0 is the NaaS home since 2026-09-30): head start strip and intake ===== -->
 <sc-if value="{{ sS0 }}" hint-placeholder-val="{{ true }}">
 <aside aria-label="Head start" style="margin-top:24px;padding:20px 24px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:32px;align-items:center">
   <div><div style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;color:var(--text-disabled)">Before you tell us anything</div>
@@ -2373,7 +2425,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { screen: 's3', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36 }; }
+  constructor(p) { super(p); this.state = { screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36 }; }
   componentDidUpdate() {
     // Guarded on the instance, not on prevState: comparing against prevState
     // re-entered on the very setState this handler makes, and React counted

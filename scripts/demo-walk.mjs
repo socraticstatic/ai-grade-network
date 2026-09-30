@@ -68,6 +68,27 @@ await page.goto(`${ORIGIN}/NaaS%20Storefront.dc.html?view=partial`, { waitUntil:
 await page.waitForSelector('.rail-scroll', { timeout: 20000 });
 await settle(500);
 
+// Beat 0 (2026-09-30): the NaaS home, the whole network at a glance for the role.
+// The head is Observe's, the briefing is Monthly briefing's, the rows are Your
+// actions', the tiles are the pages' own; the role chips change the briefing.
+const inHome = (sel) => page.locator(`section[aria-label="NaaS home"] ${sel}`);
+const briefing = () => inHome('[aria-label="Andi\'s briefing"] p').innerText();
+await beat('0 NaaS home: the whole network at a glance', async () => {
+  await rail('NaaS');
+  await expect('Network Eng', '13 findings open. $41,500/mo potential savings. 1 Sev 1 open now.', "Andi's briefing", 'Waiting on you', 'Azure eastus · ExpressRoute', 'BGP flapping');
+  const rows = await inHome('[aria-label="Waiting on you"] button:has-text("Do it")').count();
+  if (rows !== 3) throw new Error(`Waiting on you shows ${rows} rows, not 3`);
+  const tiles = await inHome('[aria-label="The five areas"] > button').allInnerTexts();
+  if (tiles.length !== 5) throw new Error(`${tiles.length} tiles, not 5`);
+  for (const [i, want] of [[0, '25 sites · 3 clouds'], [1, '5 of 7 regions'], [2, '1 of 2 connections'], [4, '$41,500/mo']]) if (!tiles[i].includes(want)) throw new Error(`tile ${i + 1} reads "${tiles[i].replace(/\n/g, ' | ')}", not ${want}`);
+  const neteng = await briefing();
+  if (!/For network engineering/.test(neteng)) throw new Error('the briefing is not Network Eng\'s');
+  await tab('Executive', 'section[aria-label="NaaS home"]');
+  const exec = await briefing();
+  if (exec === neteng || !/For the executive team/.test(exec)) throw new Error('the briefing did not change for Executive');
+  await tab('Network Eng', 'section[aria-label="NaaS home"]');
+});
+
 await beat('1 Discover: add Oracle, see what it found', async () => {
   await rail('Sources');
   await page.waitForTimeout(3600); // the scan's four beats
@@ -131,10 +152,17 @@ await beat('7 Insights: Your actions and Operations', async () => {
 });
 
 await beat('8 Estate switch to Established', async () => {
+  // Options still reads the Connect verdict; the four tiles live on the home now.
   await rail('Options');
   // Beat 1 added Oracle's two public regions to Growing: 5 of 7 became 7 of 9.
   await expect('7 of 9 regions still ride the public internet');
+  // Switched while on the home, the new estate's own figures show, with no stale role list.
+  await rail('NaaS');
+  await expect(/^14 findings open\./m, '25 sites · 4 clouds', '5 sites reach the cloud over IPsec');
   await page.selectOption('select[aria-label="View as"]', 'mature'); await settle(600);
+  await expect(/^10 findings open\. \$17,500\/mo potential savings\. 1 Sev 1 open now\./m, '221 sites · 4 clouds', '3 paths send no telemetry', 'AWS eu-central-1 · Direct Connect');
+  if ((await text()).includes('5 sites reach the cloud over IPsec')) throw new Error('Growing\'s role list stayed on the Established home');
+  await rail('Options');
   await expect('1 of 8 regions still ride the public internet');
 });
 

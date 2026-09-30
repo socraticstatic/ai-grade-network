@@ -31,7 +31,10 @@ test('the rail Options item opens the same page and lights', () => {
 
 test('any other way into Connect lands on the picture', () => {
   const c = mkC({ view: 'partial', screen: 's3', tab: 'connect', cnPage: 'options', estateParam: null });
-  railItem(vals(c), 'NaaS').go();
+  // NaaS went here until 2026-09-30; it is the home now (tests/home.test.mjs). The bell still does.
+  vals(c).goFloor();
+  assert.equal(c.state.screen, 's3');
+  assert.equal(c.state.tab, 'connect');
   assert.equal(c.state.cnPage, 'picture');
   assert.equal(vals(c).cnIsOptions, false);
 });
