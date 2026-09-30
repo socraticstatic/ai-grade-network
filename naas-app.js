@@ -1085,7 +1085,7 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
   const bank = LC.banked(est, life, lifeNow), bankedLast = bank.length > 1 ? bank[bank.length - 2].saved : 0;
   const of = out.opsFacts || { sev1: 0, openN: 0, mttrF: '' }, av = out.availAll || [], next = (out.comingUp || [])[0];
   const briefText = VD.briefingFor(rk, { open: openF.length, onTableF: openSave ? fmt(openSave) : '', bankedLastF: fmt(bankedLast), found, resolved, sev1: of.sev1, ticketsOpen: of.openN, mttrF: of.mttrF,
-    availMet: av.filter(r => r.met).length, availN: av.length, top: (out.roleActAll || []).slice(0, 3).map(a => a.head), nextMaint: next ? `${next.touched}, ${next.whenF.replace(/, planned$/, '')}` : '' });
+    availMet: av.filter(r => r.met).length, availN: av.length, top: (out.roleActAll || []).map(a => a.head), nextMaint: next ? `${next.touched}, ${next.whenF.replace(/, planned$/, '')}` : '' });
   const domain = mailDomain(est0);
   const briefWho = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk;
     return { key: k, role: ROLE_OF[k].name, mail: `${ROLE_OF[k].mailbox}@${domain}`, on, bg: on ? 'var(--bg-accent)' : 'transparent', go: () => set({ persona: k }) }; });

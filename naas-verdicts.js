@@ -57,16 +57,30 @@ export function observeNext(conns) {
 // Andi's monthly briefing (notes, 2026-09-30, C3): four to six sentences for one
 // role, from figures the page already shows, so the words and the page agree.
 const ROLE_WORD = { exec: 'the executive team', architect: 'cloud architecture', neteng: 'network engineering', security: 'security', finops: 'FinOps' };
-const listOf = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+// The heads are whole clauses, some with their own ", and" and some two sentences
+// long (review, 2026-09-30). In the list each gives its first sentence, lower-cased
+// only when it opens on a common word (never Azure, AWS or a place), and the items
+// split on semicolons so no clause's "and" runs into the list's.
+const COUNT = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+const COMMON_LEAD = /^(?:Both|Every|All|Each|No|None|Some|Most|One|Two|Three|Four|Five|Finance|Object|Hosted|Public|New)\b/;
+const clause = (h) => { const c = String(h).split(/(?<=\.)\s+/)[0].replace(/\.$/, ''); return COMMON_LEAD.test(c) ? c[0].toLowerCase() + c.slice(1) : c; };
+const listOf = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join('; ')}; and ${xs[xs.length - 1]}`);
+function actionsLine(who, heads) {
+  const all = heads || [], named = all.slice(0, 3).map(clause), word = COUNT[all.length] || String(all.length);
+  if (!all.length) return `Nothing waits on ${who} this month.`;
+  if (all.length > named.length) return `Of ${word} things waiting on ${who}, ${COUNT[named.length]} come first: ${listOf(named)}.`;
+  return `For ${who}, ${word} ${all.length === 1 ? 'thing waits' : 'things wait'}: ${listOf(named)}.`;
+}
 export function briefingFor(role, f) {
   const n = (x, one, many) => `${x} ${x === 1 ? one : many}`;
   const who = ROLE_WORD[role] || 'you';
+  const banked = f.bankedLastF && f.bankedLastF !== '$0' ? `Acting banked ${f.bankedLastF} last month` : 'Nothing was banked last month';
   return [
     `${n(f.open, 'finding', 'findings')} open${f.onTableF ? `, with ${f.onTableF}/mo potential savings` : ''}.`,
-    `Acting banked ${f.bankedLastF || '$0'} last month, and this month AT&T found ${f.found ? n(f.found, 'finding', 'findings') : 'none'} and resolved ${f.resolved ? n(f.resolved, 'finding', 'findings') : 'none'}.`,
+    `${banked}; this month AT&T found ${f.found ? n(f.found, 'finding', 'findings') : 'none'} and resolved ${f.resolved ? n(f.resolved, 'finding', 'findings') : 'none'}.`,
     `Operations has ${f.sev1} Sev 1 open now, ${n(f.ticketsOpen, 'ticket', 'tickets')} open${f.mttrF ? `, and fixes took ${f.mttrF} on average` : ''}.`,
     f.availN ? `${f.availMet} of ${f.availN} connections met their availability target.` : '',
-    f.top && f.top.length ? `For ${who}, start with ${listOf(f.top)}.` : `Nothing waits on ${who} this month.`,
+    actionsLine(who, f.top),
     f.nextMaint ? `Next AT&T maintenance: ${f.nextMaint}.` : '',
   ].filter(Boolean).join(' ');
 }

@@ -67,3 +67,61 @@ test('Andi carries the briefing, and the page says Andi, never an em dash', () =
   assert.ok(!text.includes('\u2014'));
   assert.match(v.briefTitle, /^Andi/);
 });
+
+// Review, 2026-09-30, finding 9: the actions sentence joined whole finding heads
+// with "start with" and one "and", so it read "start with 5 sites ..., Azure eastus
+// has one path, and finance rides it and 6 paths ...", and a zero month read
+// "Acting banked $0 last month". The heads are clauses; they go in a list.
+const COUNT = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+const lead = (h) => String(h).split(/(?<=\.)\s+/)[0].replace(/\.$/, '');
+const readsAsEnglish = (t, where) => {
+  assert.ok(!/start with \d/.test(t), `${where}: "start with" a figure: ${t}`);
+  assert.ok(!/\$0 last month/.test(t), `${where}: $0 banked: ${t}`);
+  assert.ok(!/, and [^;:.]* and /.test(t), `${where}: double and: ${t}`);
+  assert.ok(!t.includes('\u2014'), `${where}: em dash`);
+  const ss = t.split(/(?<=\.)\s+/).filter(Boolean);
+  assert.ok(ss.length >= 4 && ss.length <= 6, `${where}: ${ss.length} sentences: ${t}`);
+  ss.forEach((x, i) => {
+    const figure = /^[\d$]/.test(x), prevFigure = i > 0 && /\d\.$/.test(ss[i - 1]);
+    assert.ok(/^[A-Z]/.test(x) || (figure && !prevFigure), `${where}: sentence ${i + 1} starts "${x.slice(0, 24)}" after "${i ? ss[i - 1].slice(-16) : ''}"`);
+  });
+};
+
+test('briefingFor lists the actions: a count word, clauses split by semicolons, and zero banked in words', () => {
+  const base = { open: 3, onTableF: '', bankedLastF: '$500', found: 0, resolved: 0, sev1: 0, ticketsOpen: 1, mttrF: '', availMet: 1, availN: 1, nextMaint: '' };
+  assert.match(briefingFor('neteng', { ...base, top: ['5 sites reach the cloud over IPsec on the public internet', 'Azure eastus has one path, and finance rides it', '6 paths send no telemetry'] }),
+    /For network engineering, three things wait: 5 sites reach the cloud over IPsec on the public internet; Azure eastus has one path, and finance rides it; and 6 paths send no telemetry\./);
+  assert.match(briefingFor('neteng', { ...base, top: ['Both regions ride the public internet'] }), /For network engineering, one thing waits: both regions ride the public internet\./);
+  assert.match(briefingFor('security', { ...base, top: ['96 PCI-tagged workloads reach the internet directly', 'Finance and non-finance workloads share a routing domain'] }),
+    /For security, two things wait: 96 PCI-tagged workloads reach the internet directly; and finance and non-finance workloads share a routing domain\./);
+  assert.match(briefingFor('architect', { ...base, top: ['AWS us-west-2 peaks at 84% of 2 \u00d7 10 Gbps'] }), /one thing waits: AWS us-west-2 peaks/);
+  // Five wait and three are named: the count is the page's, and a two-sentence head gives its lead.
+  assert.match(briefingFor('finops', { ...base, top: ['5 regions send no flow logs. 60% of your traffic is unseen.', '1 region runs above the latency SLO.', '$8,600/mo of egress rides IPsec tunnels over the internet', 'D', 'E'] }),
+    /Of five things waiting on FinOps, three come first: 5 regions send no flow logs; 1 region runs above the latency SLO; and \$8,600\/mo of egress rides IPsec tunnels over the internet\./);
+  for (const bankedLastF of ['$0', '']) {
+    const t = briefingFor('exec', { ...base, bankedLastF, top: [] });
+    assert.match(t, /Nothing was banked last month/, t);
+    readsAsEnglish(t, `banked ${bankedLastF || 'blank'}`);
+  }
+});
+
+test('the briefing reads as English on every estate, for every role', () => {
+  for (const view of ['partial', 'mature', 'trust', 'small', 'empty']) {
+    for (const persona of ['architect', 'neteng', 'security', 'finops', 'exec']) {
+      const where = `${view}/${persona}`;
+      const v = vals(brief(view, { persona }));
+      const t = v.briefText, acts = v.roleActAll || [];
+      readsAsEnglish(t, where);
+      if (['small', 'empty'].includes(view)) assert.match(t, /Nothing was banked last month/, where);
+      else assert.match(t, /Acting banked \$[1-9][\d,]* last month/, where);
+      const n = acts.length, w = COUNT[n] || String(n);
+      if (!n) assert.match(t, /Nothing waits on /, where);
+      else if (n <= 3) assert.ok(t.includes(`, ${w} ${n === 1 ? 'thing waits' : 'things wait'}: `), `${where}: ${n} waiting: ${t}`);
+      else assert.ok(t.includes(`Of ${w} things waiting on `) && t.includes(', three come first: '), `${where}: ${n} waiting: ${t}`);
+      for (const a of acts.slice(0, 3)) {
+        const c = lead(a.head);
+        assert.ok(t.includes(c) || t.includes(c[0].toLowerCase() + c.slice(1)), `${where}: "${c}" missing from ${t}`);
+      }
+    }
+  }
+});
