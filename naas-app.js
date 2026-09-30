@@ -68,10 +68,11 @@ export function railFor(est) {
 // The line. Each step appears only once it can act, so a customer is never
 // offered a door to an empty room. Ordering is not a step: you do not navigate
 // to Order, you order the thing you picked in Options.
+// Each step wears its section's icon (notes, 2026-09-30: one icon per link).
 export const STEPS = [
-  { key: 'sources', label: 'Sources', ready: () => true },
-  { key: 'estate', label: 'Estate', ready: (est) => est.regions > 0 },
-  { key: 'options', label: 'Options', ready: (est) => est.regions > 0 },
+  { key: 'sources', label: 'Sources', icon: 'lock', ready: () => true },
+  { key: 'estate', label: 'Estate', icon: 'apis', ready: (est) => est.regions > 0 },
+  { key: 'options', label: 'Options', icon: 'cable', ready: (est) => est.regions > 0 },
 ];
 
 // The loop. Exposed is a filter on the estate, not a stop of its own. Records
@@ -82,15 +83,15 @@ export const SECTIONS = {
     ['@sources', 'Sources', 'lock'],
   ],
   connect: [
-    ['sec-paths', 'Options', 'apis'],
-    ['@orders', 'Orders', 'checklist'],
+    ['sec-paths', 'Options', 'cable'],
+    ['@orders', 'Orders', 'shopping-bag'],
   ],
   observe: [
     // Health is where "Observe" itself lands, so it gives its slot to Insights
     // (2026-09-28): the six cards and the findings open in the layer, and with
     // no rail link they were reachable only through Records' tab strip.
     ['sec-flow', 'Traffic', 'hub'],
-    ['@insights', 'Insights', 'question-circle'],
+    ['@insights', 'Insights', 'lightbulb'],
     ['@logs', 'Logs', 'checklist'],
   ],
   govern: [
@@ -99,7 +100,7 @@ export const SECTIONS = {
   ],
   // One Cost door (Micah, 2026-09-29: "combine savings and forecast with spend").
   cost: [
-    ['sec-spend', 'Spend', 'cloud'],
+    ['sec-spend', 'Spend', 'bill'],
   ],
 };
 const TAB_LABEL = { connect: 'Connect', govern: 'Govern', observe: 'Observe', cost: 'Cost' };
@@ -2902,7 +2903,7 @@ function shellVals(s, set, go, est, c, sched) {
             key: 'steps', hasTitle: true, title: 'Get connected',
             titleGo: () => { go('s1')(); set(close); }, titleCur: s.screen === 's1' || s.screen === 's0',
             items: STEPS.filter(st => st.ready(est)).map(st => ({
-              ...item(st.label, 'apis', () => {
+              ...item(st.label, st.icon, () => {
                 // Until there is a source, adding one is the task, so it is a page;
                 // after that, managing them sits in the drawer beside the picture.
                 if (st.key === 'sources') { go('s1', { discoverView: 'sources' })(); return; }

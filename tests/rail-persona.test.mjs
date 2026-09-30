@@ -87,3 +87,36 @@ test('the rail is chosen by what is connected, not by which page you are on', ()
   assert.equal(railFor({ attachedRegions: 0, regions: 2 }).sequence, true);
   assert.equal(railFor({ attachedRegions: 5, regions: 12 }).sequence, false);
 });
+
+// ---- one icon per link (notes, 2026-09-30) ----
+// "Estate and under Connect - Options are same icons ... for Insight- ... currently
+// show ? which is same as under top right corner Help and resource."
+import { existsSync } from 'node:fs';
+const iconsOf = (v) => v.railGroups.flatMap(g => g.items.map(i => ({ label: i.label, icon: i.icon.split('/').pop() })));
+
+test('no two rail links share an icon, and none borrows a header icon', () => {
+  for (const view of ['empty', 'small', 'partial', 'mature']) {
+    const icons = iconsOf(at(view));
+    const names = icons.map(i => i.icon);
+    assert.equal(new Set(names).size, names.length, `${view}: ${icons.map(i => i.label + '=' + i.icon).join(', ')}`);
+    for (const i of icons) assert.ok(!['question-circle.svg', 'bell.svg'].includes(i.icon), `${view}/${i.label} uses ${i.icon}`);
+  }
+});
+
+test('Insights is a lightbulb, Spend a bill, Options a cable, Orders a shopping bag', () => {
+  const icons = Object.fromEntries(iconsOf(at('partial')).map(i => [i.label, i.icon]));
+  assert.equal(icons.Insights, 'lightbulb.svg');
+  assert.equal(icons.Spend, 'bill.svg');
+  assert.equal(icons.Options, 'cable.svg');
+  assert.equal(icons.Orders, 'shopping-bag.svg');
+});
+
+test('every rail icon exists in all four theme folders', () => {
+  for (const view of ['empty', 'small', 'partial', 'mature']) {
+    for (const { label, icon } of iconsOf(at(view))) {
+      for (const dir of ['icons-light', 'icons-dark', 'icons-link', 'icons-linkdark']) {
+        assert.ok(existsSync(new URL(`../brand/${dir}/${icon}`, import.meta.url)), `${view}/${label}: brand/${dir}/${icon}`);
+      }
+    }
+  }
+});
