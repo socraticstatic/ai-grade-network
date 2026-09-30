@@ -313,10 +313,11 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 </sc-if>
 
 <main style="min-width:0;max-width:1392px;margin:0 auto;padding:16px 24px 16px;width:100%;box-sizing:border-box">
+<!-- The verdict spans the title row under the title and its controls (2026-09-30, owner decision b): the longer "N are private: ..." sentence wrapped beside Connect's scan controls and pushed the landing past the fold. One line, and no taller than before. -->
 <sc-if value="{{ showPageTitle }}" hint-placeholder-val="{{ true }}">
-<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:4px 0 12px;margin-bottom:16px;border-bottom:1px solid var(--border-secondary)">
-  <div style="display:grid;gap:2px;min-width:0;flex:1 1 320px"><h1 style="margin:0;font-size:26px;line-height:32px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)">{{ pageTitle }}</h1><sc-if value="{{ hasPageSub }}" hint-placeholder-val="{{ false }}"><div onClick="{{ verdictGo }}" role="{{ verdictRole }}" tabindex="{{ verdictTab }}" style="font-size:14px;line-height:20px;font-weight:500;color:var(--text-heading);text-wrap:pretty;cursor:{{ verdictCursor }};text-decoration-line:{{ verdictLine }};text-decoration-style:dotted;text-underline-offset:3px">{{ pageVerdict }}</div></sc-if></div>
-  <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-light)">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 12px;padding:4px 0 12px;margin-bottom:16px;border-bottom:1px solid var(--border-secondary)">
+  <div style="display:contents"><h1 style="grid-column:1;grid-row:1;min-width:0;margin:0;font-size:26px;line-height:32px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)">{{ pageTitle }}</h1><sc-if value="{{ hasPageSub }}" hint-placeholder-val="{{ false }}"><div onClick="{{ verdictGo }}" role="{{ verdictRole }}" tabindex="{{ verdictTab }}" style="grid-column:1 / -1;grid-row:2;justify-self:start;font-size:14px;line-height:20px;font-weight:500;color:var(--text-heading);text-wrap:pretty;cursor:{{ verdictCursor }};text-decoration-line:{{ verdictLine }};text-decoration-style:dotted;text-underline-offset:3px">{{ pageVerdict }}</div></sc-if></div>
+  <div style="grid-column:2;grid-row:1;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-light)">
     <sc-if value="{{ hasBuildLabel }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:var(--text-disabled)">{{ buildLabel }}</span><span aria-hidden="true" style="width:1px;height:16px;background:var(--border-secondary)"></span></sc-if>
     <sc-if value="{{ ownsDiscovery }}" hint-placeholder-val="{{ true }}">
     <label class="sched-cadence" title="{{ schedTitle }}" style="position:relative;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer"><span id="sched-line">{{ schedLine }}</span><span aria-hidden="true" style="color:var(--link);font-weight:700">▾</span><select value="{{ cadenceValue }}" onChange="{{ setCadence }}" aria-label="Discovery cadence" aria-describedby="sched-line" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font:inherit"><option value="">Mixed</option><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></label>
@@ -1567,10 +1568,10 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         </div>
         <div class="fx-legend"><span><i style="background:#009fdb"></i>Monthly charge at catalog price</span></div>
         </div>
-        <!-- Committed vs metered on-ramps joined AT&T charges when Forecast joined Spend (2026-09-29). -->
+        <!-- Committed vs metered joined AT&T charges when Forecast joined Spend (2026-09-29). It covers every private region, so it reads cloud connections, not on-ramps (2026-09-30, owner decision c). -->
         <sc-if value="{{ hasCommitments }}" hint-placeholder-val="{{ true }}">
-        <div id="sec-commit" aria-label="Committed vs metered on-ramps" style="display:grid;gap:4px;min-width:0;padding-left:24px;border-left:1px solid var(--border-secondary)">
-          <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Committed vs metered on-ramps</div>
+        <div id="sec-commit" aria-label="Committed vs metered cloud connections" style="display:grid;gap:4px;min-width:0;padding-left:24px;border-left:1px solid var(--border-secondary)">
+          <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Committed vs metered cloud connections</div>
           <div class="fx-card-sub" style="margin-bottom:6px">Commit where the metered bill already pays for it</div>
           <sc-for list="{{ commitments }}" as="cm" hint-placeholder-count="2"><div onClick="{{ cm.explainGo }}" role="button" tabindex="0" style="cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border-secondary);font-size:12px;line-height:16px"><div style="min-width:0"><div style="font-weight:700;color:var(--text-heading)">{{ cm.region }}</div><div style="color:var(--text-light)">{{ cm.gbF }} GB/mo · metered {{ cm.metered }} · committed {{ cm.committed }}</div></div><div style="font-weight:700;color:{{ cm.tone }};white-space:nowrap">{{ cm.short }}</div></div></sc-for>
         </div>

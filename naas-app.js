@@ -2107,21 +2107,33 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const outG = Math.max(0, mapG.total - mapG.fabV);
   const costT = mapG.fabV * mapRates.att + outG * mapRates.out, couldT = outG * mapRates.out * mapRates.saveShare;
   const winTrends = R.trends(ob, s.obWindow || '30d');
+  // Sites, counted as sites (2026-09-29 audit: a traffic share wore a sites label).
+  // One rule, picked or not (2026-09-30, owner decision e): a site counts on AT&T
+  // only when the map carries something on the AT&T network. Under a GCP pick
+  // (IPsec only) Growing reads 0 of 25; Small, with nothing attached, 0 of 2.
+  const onAttTile = (() => {
+    const siteN = (xs) => xs.reduce((a, x) => a + S.countOf(x.name), 0);
+    const all = siteN(mapEst.sites || []), buy = siteN((mapEst.sites || []).filter(onAtt)), att = mapG.fabV > 0.0005 ? buy : 0;
+    const pick = scopeCloud || scopeApp || mapRegion, n = (x) => x.toLocaleString('en-US');
+    const title = !all ? 'No sites discovered yet'
+      : !buy ? `None of the ${plural(all, 'site', 'sites')} buys AT&T access yet`
+        : att ? `${n(att)} of ${plural(all, 'site', 'sites')} ${att === 1 ? 'buys' : 'buy'} AT&T access and reach ${pick || 'the clouds'} over the AT&T network`
+          : `${plural(buy, 'site', 'sites')} ${buy === 1 ? 'buys' : 'buy'} AT&T access; none reaches ${pick || 'a cloud'} over the AT&T network yet`;
+    return { v: `${n(att)} of ${n(all)}`, title };
+  })();
+  // Every tile says what it counts on hover (2026-09-30, owner decision e).
   const flowTiles = [
     // Under 1 Gbps the tile reads in Mbps, as the nodes do (2026-09-30: "0.1 Gbps" beside "70 Mbps").
-    ['traffic', 'Traffic', mapG.total >= 1 ? mapG.total.toFixed(1) : String(Math.round(mapG.total * 1000)), mapG.total >= 1 ? 'Gbps' : 'Mbps', { mapMode: 'state', mapPath: 'all', mapHealth: 'all' }],
-    ['p95', 'P95 latency', String(perf.p95), 'ms', { mapMode: 'slo', mapPath: 'all', mapHealth: 'all' }],
-    // Sites, counted as sites (2026-09-29 audit: a traffic share wore a sites label).
-    // Under a pick, a site is on AT&T for that pick only if the map carries the
-    // pick on AT&T (2026-09-30: "20 of 25" under GCP, which rides IPsec only).
-    ['onatt', 'Sites on AT&T', (() => { const all = (mapEst.sites || []).reduce((a, x) => a + S.countOf(x.name), 0), picked = !!(scopeCloud || scopeApp || mapRegion), att = picked && !(mapG.fabV > 0.0005) ? 0 : (mapEst.sites || []).filter(onAtt).reduce((a, x) => a + S.countOf(x.name), 0); return `${att.toLocaleString('en-US')} of ${all.toLocaleString('en-US')}`; })(), '', { mapMode: 'state', mapPath: 'att' }],
-    ['cost', 'Cost', money(costT), '/mo', { mapMode: 'cost', mapPath: 'all', mapHealth: 'all' }],
-    ['could', 'Could save', money(couldT), '/mo', { mapMode: 'cost', mapPath: 'out', mapHealth: 'all' }],
-    ['slo', 'Over SLO', String(perf.over.length), 'on the map', { mapMode: 'slo', mapPath: 'all', mapHealth: 'slo' }],
-  ].map(([k, l, v, u, patch]) => { const on = !!tileOn(k);
+    ['traffic', 'Traffic', mapG.total >= 1 ? mapG.total.toFixed(1) : String(Math.round(mapG.total * 1000)), mapG.total >= 1 ? 'Gbps' : 'Mbps', { mapMode: 'state', mapPath: 'all', mapHealth: 'all' }, 'Everything this map carries in the window, on the AT&T network and outside it'],
+    ['p95', 'P95 latency', String(perf.p95), 'ms', { mapMode: 'slo', mapPath: 'all', mapHealth: 'all' }, 'The 95th percentile latency across the paths on this map'],
+    ['onatt', 'Sites on AT&T', onAttTile.v, '', { mapMode: 'state', mapPath: 'att' }, onAttTile.title],
+    ['cost', 'Cost', money(costT), '/mo', { mapMode: 'cost', mapPath: 'all', mapHealth: 'all' }, 'Traffic on this map, at your AT&T rate and public egress rates. Site access, AT&T charges and cloud ports are in Cost, By leg.'],
+    ['could', 'Could save', money(couldT), '/mo', { mapMode: 'cost', mapPath: 'out', mapHealth: 'all' }, 'What the traffic outside AT&T on this map would save on the AT&T network, per month'],
+    ['slo', 'Over SLO', String(perf.over.length), 'on the map', { mapMode: 'slo', mapPath: 'all', mapHealth: 'slo' }, 'Paths and destinations on this map over their latency SLO'],
+  ].map(([k, l, v, u, patch, title]) => { const on = !!tileOn(k);
     // Since is the window the tiles compare against (2026-09-29 audit): now vs the prior window.
     const tr = ({ traffic: 'thr', p95: 'p95' })[k] ? (winTrends.find(x => x.key === ({ traffic: 'thr', p95: 'p95' })[k]) || null) : null;
-    return { key: k, l, v, u, on, go: () => set(patch), title: k === 'cost' ? 'Traffic on this map, at your AT&T rate and public egress rates. Site access, AT&T charges and cloud ports are in Cost, By leg.' : l, border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)',
+    return { key: k, l, v, u, on, go: () => set(patch), title, border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)',
       d: tr ? `${tr.delta} vs prior ${winLabelOf(s)}` : '', dShort: tr ? tr.delta : '', hasD: !!tr, dTone: tr ? tr.deltaTone : 'var(--text-light)' }; });
   const seg = (on) => ({ bg: on ? 'var(--bg-base)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 600 : 500, shadow: on ? '0 1px 2px rgba(16,24,40,.10), 0 0 0 1px var(--border-secondary)' : 'none' });
   // Over time (2026-09-28): the same traffic, by day, week or month. It reads
@@ -3653,7 +3665,7 @@ function answer(q, est, ob, s) {
   if (/steer|flow/.test(l)) return ob.worst ? `${ob.worst.name}: ${ob.worst.gbps} Gbps at ${ob.worst.latency} ms on the public path. Steering it saves about ${fmt(Math.round(ob.worst.gbps * 190))}/mo and puts it under AT&T control.` : 'Every flow is already controlled.';
   if (/egress|driving/.test(l)) return `Object-storage reads and AI-endpoint traffic from ${pub.map(r => r.region).slice(0, 2).join(' and ') || 'the public regions'} at $0.09/GB. The same bytes on AT&T are $0.02.`;
   if (/single-homed|diversity|failover/.test(l)) return 'Controlled flows on a single metro have no second path. Geodiversity adds a second metro and on-ramp; maximum adds managed failover.';
-  if (/commit|metered/.test(l)) return 'A committed on-ramp beats metered above about 100,000 GB/mo per region. Below that, stay metered; the table on Cost gives the verdict per region.';
+  if (/commit|metered/.test(l)) return 'A committed cloud connection beats metered above about 100,000 GB/mo per region. Below that, stay metered; the table on Cost gives the verdict per region.';
   if (/90|curve|assume/.test(l)) return 'As-is grows 6% a month, the observed rate. The moved curve applies the arbitrage savings over the first 20 days and grows at 40% of that rate, since bytes on AT&T are cheaper to add.';
   if (/two metros|metro/.test(l)) return 'A metro is where your path enters the AT&T network. Two metros give two on-ramps; if one fails the other carries the path. Standard resiliency is one metro.';
   if (/inspection|firewall/.test(l)) return 'Inline inspection is the vSRX pair in the hosted VPC: from $2,400/mo per region, every session judged before it leaves.';

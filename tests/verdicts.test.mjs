@@ -14,7 +14,8 @@ const EXPECT = {
     observe: 'No telemetry yet.',
   },
   partial: {
-    connect: '5 of 7 regions still ride the public internet. 2 are on the AT&T network.',
+    // Re-pinned (2026-09-30, owner decision b): private is private; a direct connect is not the AT&T network.
+    connect: '5 of 7 regions still ride the public internet. 2 are private: 1 on NetBond, 1 on a direct connect.',
     govern: '4 policies enforced. 11 PCI-tagged workloads reach the internet directly.',
     // The IPsec egress finding (2026-09-28) adds $5,500 and a third priced finding;
     // saved money counts on any estate with something attached, not only mature.
@@ -22,14 +23,16 @@ const EXPECT = {
     observe: '40% of all traffic on AT&T, saving $36k/mo. 5 regions are blind.',
   },
   mature: {
-    connect: '1 of 8 regions still ride the public internet. 7 are on the AT&T network.',
+    // Re-pinned (2026-09-30, owner decision b).
+    connect: '1 of 8 regions still ride the public internet. 7 are private: 2 on NetBond, 4 on direct connects, 1 on Equinix Fabric.',
     govern: '14 policies enforced. 2 authored but not enforced.',
     // Established prices its savings (2026-09-30), so Cost leads with what is on the table.
     cost: '$17,500/mo on the table across 2 priced findings. $61,400/mo already saved on AT&T.',
     observe: '95% of all traffic on AT&T, saving $61.4k/mo. 1 region is blind.',
   },
   trust: {
-    connect: '2 of 6 regions still ride the public internet. 4 are on the AT&T network.',
+    // Re-pinned (2026-09-30, owner decision b).
+    connect: '2 of 6 regions still ride the public internet. 4 are private: 2 on NetBond, 2 on direct connects.',
     govern: '9 policies enforced. 96 PCI-tagged workloads reach the internet directly.',
     cost: '$132,000/mo on the table across 2 priced findings. $148,000/mo already saved on AT&T.',
     observe: '77% of all traffic on AT&T, saving $148k/mo. 2 regions are blind.',

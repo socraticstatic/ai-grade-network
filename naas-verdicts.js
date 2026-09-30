@@ -3,7 +3,23 @@
 // in naas-addendum.js, which was already pure; it stays where it is. observeNext is
 // the "next stop" panel below it, not a sentence: it takes `conns` and returns
 // `{title, text, cta}`.
-import { fmt, plural } from './naas-logic.js';
+import { fmt, plural, connModeOf } from './naas-logic.js';
+
+// Private is private (2026-09-30, owner decision b): a direct connect or an
+// Equinix port is a private path, not the AT&T network, so the verdict says
+// how each private region connects, in the order NetBond, direct, Equinix.
+const PRIVATE_WAY = [
+  ['netbond', () => 'on NetBond'],
+  ['direct', (n) => (n === 1 ? 'on a direct connect' : 'on direct connects')],
+  ['third', () => 'on Equinix Fabric'],
+];
+function privateClause(regions) {
+  const n = regions.length;
+  const ways = PRIVATE_WAY.map(([mode, say]) => { const k = regions.filter(r => connModeOf(r) === mode).length; return k ? { k, say: say(k) } : null; }).filter(Boolean);
+  const head = `${n} ${n === 1 ? 'is' : 'are'} private`;
+  if (ways.length === 1) return `${head}, ${ways[0].say}.`;
+  return `${head}: ${ways.map(w => `${w.k} ${w.say}`).join(', ')}.`;
+}
 
 export function connectVerdict(est, layer = 'cloud', items = []) {
   if (est.stage === 'empty') return 'Nothing connected yet. AT&T already sees 41 metros with on-ramps and 12 clouds you could reach.';
@@ -14,11 +30,12 @@ export function connectVerdict(est, layer = 'cloud', items = []) {
   const noun = cloud
     ? ['region', 'regions', 'still ride the public internet']
     : ['site', 'sites', 'reach clouds over the public internet'];
-  if (!exposedN) return `Every ${noun[0]} is on the AT&T network.`;
+  if (!exposedN) return `Every ${noun[0]} is on a private path.`;
   const onFabric = totalN - exposedN;
+  const privSay = cloud ? privateClause(est.regionsList.filter(r => r.priv)) : `${onFabric} ${onFabric === 1 ? 'is' : 'are'} on the AT&T network.`;
   // The rollup clause left (2026-09-28, no scrolling): the picture already
   // carries "N smaller regions rolled up", and the verdict holds to one line.
-  return `${exposedN} of ${totalN} ${noun[1]} ${noun[2]}. ${onFabric ? `${onFabric} ${onFabric === 1 ? 'is' : 'are'} on the AT&T network.` : 'None is on the AT&T network yet.'}`;
+  return `${exposedN} of ${totalN} ${noun[1]} ${noun[2]}. ${onFabric ? privSay : 'None is on the AT&T network yet.'}`;
 }
 
 export function governVerdict(est) {

@@ -72,5 +72,6 @@ test('the markup: one Spend panel with the chart and the savings list; commitmen
   assert.match(panel, /<sc-for list="\{\{ saveRows \}\}"/);
   for (const g of ['costPanelBanked', 'costPanelForecast']) assert.equal(HTML.indexOf(g), -1, g);
   const ch = HTML.indexOf('<sc-if value="{{ costPanelCharges }}"');
-  assert.ok(HTML.slice(ch, ch + 6000).includes('aria-label="Committed vs metered on-ramps"'));
+  // Re-pinned (2026-09-30, owner decision c): commits are cloud connections, not on-ramps.
+  assert.ok(HTML.slice(ch, ch + 6000).includes('aria-label="Committed vs metered cloud connections"'));
 });
