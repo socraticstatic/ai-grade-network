@@ -814,9 +814,11 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         <span style="font-size:12px;color:var(--text-light)">{{ placeLine }}</span>
       </div>
       <div style="border-top:1px solid var(--border-secondary)"><sc-for list="{{ placeRows }}" as="pr" hint-placeholder-count="6">
-        <button onClick="{{ pr.go }}" style="display:grid;grid-template-columns:10px minmax(0,1fr) auto 16px;gap:12px;align-items:center;width:100%;padding:10px 0;border:0;border-bottom:1px solid var(--border-secondary);background:transparent;font:inherit;text-align:left;cursor:{{ pr.cursor }};color:var(--text-heading)" style-hover="background:var(--bg-wash)">
+        <button onClick="{{ pr.go }}" style="display:grid;grid-template-columns:10px minmax(0,1.3fr) minmax(0,1.4fr) 72px auto 16px;gap:12px;align-items:center;width:100%;padding:10px 0;border:0;border-bottom:1px solid var(--border-secondary);background:transparent;font:inherit;text-align:left;cursor:{{ pr.cursor }};color:var(--text-heading)" style-hover="background:var(--bg-wash)">
           <i aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;background:{{ pr.dot }}"></i>
           <span style="min-width:0;display:grid;gap:1px"><b style="font-size:14px;line-height:20px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pr.name }}</b><small style="font-size:12px;line-height:16px;color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pr.access }}</small></span>
+          <span title="{{ pr.svcLine }}" style="min-width:0;font-size:12px;line-height:16px;color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pr.svcLine }}</span>
+          <span style="font-size:12px;line-height:16px;font-weight:600;color:var(--text-heading);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ pr.bwF }}</span>
           <span style="font-size:12px;color:var(--text-light);white-space:nowrap">{{ pr.level }}</span>
           <span aria-hidden="true" style="color:var(--text-light)">{{ pr.caret }}</span>
         </button>

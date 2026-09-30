@@ -2571,23 +2571,32 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         // Your sites drill by place (Micah, 2026-09-29): region, state, metro, site, services.
         ...(() => {
           const trail = Array.isArray(s.placeTrail) ? s.placeTrail : [];
-          const lvl = trail.length ? X.siteDrillRows(est, trail) : null;
+          // A state lists its sites, not its metros (notes, 2026-09-30: "once we display States, we
+          // should show all city/sites"): the metros flatten into site rows, the metro stays in the
+          // trail, and a rolled-up metro's "+N more" opens the whole metro here, paged.
+          const lvl0 = trail.length ? X.siteDrillRows(est, trail, { full: true }) : null;
+          const flat = lvl0 && lvl0.level === 'metro' ? lvl0.rows.flatMap(m => { const sub = X.siteDrillRows(est, [...trail, m.drillKey]);
+            return (sub ? sub.rows : []).map(r => r.more ? { ...r, name: `${r.name} in ${m.name}`, moreTo: [...trail, m.drillKey] } : { ...r, via: [...trail, m.drillKey] }); }) : null;
+          const lvl = flat ? { level: 'site', rows: flat } : lvl0;
           const rows0 = lvl ? lvl.rows : regionRows(est).map(r => { const st = X.siteDrillRows(est, ['region:' + r.name]); const att = st ? st.rows.reduce((a, x) => a + (x.att || 0), 0) : r.sites.filter(onAtt).reduce((a, x) => a + S.countOf(x.name), 0);
             return { key: 'region:' + r.name, name: r.name, drillKey: 'region:' + r.name, count: r.count, priv: att > 0, access: `${r.count.toLocaleString('en-US')} ${r.count === 1 ? 'site' : 'sites'} · ${att.toLocaleString('en-US')} AT&T · ${(r.count - att).toLocaleString('en-US')} non-AT&T` }; });
           const level = !trail.length ? 'region' : lvl ? lvl.level : 'region';
-          const usRegion = (k) => /^region:US /.test(String(k || ''));
+          const usRegion = (k) => /^region:(US |Nationwide)/.test(String(k || ''));
           const NEXT = { region: 'states', state: 'metros', metro: 'sites', site: 'services', service: '' };
           const nextOf = (r) => level === 'region' && !usRegion(r.drillKey) ? 'countries' : NEXT[level] || '';
-          const placeRows = rows0.map(r => { const can = !!r.drillKey && !r.leaf && !r.more;
-            return { key: r.key || r.name, name: r.name, access: r.access || '', dot: r.priv ? 'var(--success)' : 'var(--warning)', level: can ? nextOf(r) : '', caret: can ? '›' : '', cursor: can ? 'pointer' : 'default',
-              go: can ? () => set({ placeTrail: [...trail, r.drillKey], placePage: 0 }) : () => {} }; });
+          const placeRows = rows0.map(r => { const can = (!!r.drillKey && !r.leaf && !r.more) || !!r.moreTo;
+            return { key: r.key || r.name, name: r.name, access: r.more ? 'the whole metro, here' : (r.svcLine && r.place) || r.access || '', svcLine: r.svcLine || '', bwF: r.bwF || '', dot: r.more ? 'transparent' : r.priv ? 'var(--success)' : 'var(--warning)', level: can && !r.moreTo ? nextOf(r) : '', caret: can ? '›' : '', cursor: can ? 'pointer' : 'default',
+              go: !can ? () => {} : r.moreTo ? () => set({ placeTrail: r.moreTo, placePage: 0 }) : () => set({ placeTrail: [...(r.via || trail), r.drillKey], placePage: 0 }) }; });
           const crumbs = [{ key: 'root', label: 'All regions', to: [] }, ...trail.map((k, i) => ({ key: k, label: S.labelOfKey(est, k), to: trail.slice(0, i + 1) }))]
             .map((c, i, a) => ({ ...c, notLast: i < a.length - 1, weight: i === a.length - 1 ? 700 : 500, color: i === a.length - 1 ? 'var(--text-heading)' : 'var(--link)', go: () => set({ placeTrail: c.to, placePage: 0 }) }));
           const total = rows0.reduce((a, r) => a + (r.count || 1), 0);
-          const nounOf = { region: ['region', 'regions'], state: [usRegion(trail[0]) ? 'state' : 'country', usRegion(trail[0]) ? 'states' : 'countries'], metro: ['metro', 'metros'], site: ['site', 'sites'], service: ['service', 'services'] }[level] || ['row', 'rows'];
+          // States or countries, read from the codes the level holds (2026-09-30: Nationwide read "6 countries").
+          const usCodes = rows0.every(r => { const code = String(r.key || '').replace(/^state:/, ''); return code === '—' || S.isUsState(code); });
+          const nounOf = { region: ['region', 'regions'], state: [usCodes ? 'state' : 'country', usCodes ? 'states' : 'countries'], metro: ['metro', 'metros'], site: ['site', 'sites'], service: ['service', 'services'] }[level] || ['row', 'rows'];
           const shown = rows0.filter(r => !r.more).length;
           const sitesN = `${total.toLocaleString('en-US')} ${total === 1 ? 'site' : 'sites'}`;
-          return { placeRows, placeCrumbs: crumbs, placeLine: level === 'service' || level === 'site' ? (level === 'site' ? sitesN : `${shown} ${shown === 1 ? nounOf[0] : nounOf[1]}`) : `${shown} ${shown === 1 ? nounOf[0] : nounOf[1]} · ${sitesN}` };
+          const flatLine = flat ? (() => { const n = lvl0.rows.reduce((a, m) => a + (m.count || 1), 0), mN = lvl0.rows.length; return `${n.toLocaleString('en-US')} ${n === 1 ? 'site' : 'sites'} in ${mN} ${mN === 1 ? 'metro' : 'metros'}`; })() : '';
+          return { placeRows, placeCrumbs: crumbs, placeLine: flat ? flatLine : level === 'service' || level === 'site' ? (level === 'site' ? sitesN : `${shown} ${shown === 1 ? nounOf[0] : nounOf[1]}`) : `${shown} ${shown === 1 ? nounOf[0] : nounOf[1]} · ${sitesN}` };
         })(),
         // Business units (notes, 2026-09-29): the customer tags sites, and every grouping reads the tags.
         ...(() => {

@@ -30,7 +30,9 @@ const STATE = { Dallas: 'TX', Houston: 'TX', Austin: 'TX', Atlanta: 'GA', Chicag
 const PLACE_NAME = { TX: 'Texas', GA: 'Georgia', IL: 'Illinois', AZ: 'Arizona', CO: 'Colorado', WA: 'Washington', FL: 'Florida', NC: 'North Carolina', TN: 'Tennessee', VA: 'Virginia', CA: 'California', NY: 'New York', MA: 'Massachusetts', MN: 'Minnesota', MO: 'Missouri', UT: 'Utah',
   DE: 'Germany', SG: 'Singapore', GB: 'United Kingdom', NL: 'Netherlands', FR: 'France', IE: 'Ireland', ES: 'Spain', JP: 'Japan', AU: 'Australia', IN: 'India', KR: 'South Korea', PH: 'Philippines' };
 /** A state's or country's name from its code; the code itself when unknown. */
-export const placeName = (code) => PLACE_NAME[code] || code || 'Unplaced';
+export const placeName = (code) => (code && code !== '—' ? PLACE_NAME[code] || code : 'Unplaced');
+/** The US states the second level can hold; anything else there is a country (2026-09-30: Nationwide read "6 countries"). */
+export const isUsState = (code) => ['TX', 'GA', 'IL', 'AZ', 'CO', 'WA', 'FL', 'NC', 'TN', 'VA', 'CA', 'NY', 'MA', 'MN', 'MO', 'UT'].includes(code);
 /** Two-letter state (or country) for a metro; the auto-label on every site row. */
 export const stateOf = (metro) => STATE[metro] || '';
 const HOSTS = ['7-Eleven', 'Kroger', 'Walgreens', 'QuikTrip', 'Costco', 'Target', 'CVS', 'H-E-B'];
@@ -104,7 +106,7 @@ export function siteTree(est) {
       let seed = gi;
       // Each rollup carries its own share on AT&T (2026-09-29): "Remote sites, West" is on AT&T and "East" is not.
       children = g.rollups.flatMap((r, ri) => { const privShare = r.priv ? 1 : 0; return splitMetros(r.n, seed++, metroPool(r)).map((m, mi) => {
-        const sites = Array.from({ length: Math.min(m.count, 6) }, (_, i) => siteRow(g.cls, m.metro, i + mi * 6, ((i * 7 + mi * 3) % 10) / 10 < privShare + 0.05));
+        const sites = Array.from({ length: Math.min(m.count, 6) }, (_, i) => siteRow(g.cls, m.metro, i + mi * 6, (privShare >= 1 || (privShare > 0 && ((i * 7 + mi * 3) % 10) / 10 < privShare + 0.05))));
         const onFabric = privShare >= 1 ? m.count : privShare <= 0 ? 0 : Math.round(m.count * (privShare + ((mi % 3) - 1) * 0.08));
         return {
           kind: 'metro', key: `${g.cls}:${ri}:${m.metro}`, name: m.metro, count: m.count, onFabric: Math.max(0, Math.min(m.count, onFabric)),
@@ -130,7 +132,7 @@ export function siteTree(est) {
 export function metroSites(m) {
   if (!m || !m.gen) return (m && m.sites) || [];
   const { cls, mi, privShare } = m.gen;
-  return Array.from({ length: m.count }, (_, i) => siteRow(cls, m.name, i + mi * 6, ((i * 7 + mi * 3) % 10) / 10 < privShare + 0.05));
+  return Array.from({ length: m.count }, (_, i) => siteRow(cls, m.name, i + mi * 6, (privShare >= 1 || (privShare > 0 && ((i * 7 + mi * 3) % 10) / 10 < privShare + 0.05))));
 }
 
 /**
@@ -165,15 +167,25 @@ const SERVICE_OF_ACCESS = { avpn: 'avpn', ase: 'aseod', adi: 'adi', abf: 'abf', 
  * A third-party circuit (accessSla third) or a public site on an unknown first
  * mile is Third Party Access.
  */
+// What each service is bought at (notes, 2026-09-30: "BW info (1Gbps or whatever it
+// may be)"): the purchased circuit, never the traffic. A site may state its own;
+// otherwise its class sets it, and a backup is at most 1 Gbps.
+const CLASS_BW = { 'Data center': 10000, Campus: 5000, Plant: 2000, Office: 2000, Branch: 100, Edge: 10, Field: 1000 };
+export const bwWord = (mbps) => (mbps >= 1000 ? `${Math.round(mbps / 100) / 10} Gbps` : `${mbps} Mbps`);
+function withBw(list, st) {
+  const base = CLASS_BW[classOf(st)] || 1000;
+  const primary = (list.find(v => v.role !== 'backup') || {}).bw || base;
+  return list.map(v => { const bw = v.bw || (v.role === 'backup' ? Math.min(1000, primary) : base); return { ...v, bw, bwF: bwWord(bw) }; });
+}
 export function servicesOf(st) {
   if (!st) return [];
-  if (Array.isArray(st.services) && st.services.length) return st.services.map((x, i) => ({ ...SERVICE[x.svc || x], role: x.role || (i ? 'backup' : 'primary') }));
+  if (Array.isArray(st.services) && st.services.length) return withBw(st.services.map((x, i) => ({ ...SERVICE[x.svc || x], role: x.role || (i ? 'backup' : 'primary'), bw: x.bw })), st);
   // SD-WAN over someone else's internet is Third Party Access; over AVPN it is AVPN (2026-09-29).
   const acc = accessOf(st);
   const k = st.accessSla === 'third' || (acc === 'sdwan' && !st.priv) || (acc === 'ipsec') ? 'tpa' : SERVICE_OF_ACCESS[acc];
-  if (k) return [{ ...SERVICE[k], role: 'primary' }];
+  if (k) return withBw([{ ...SERVICE[k], role: 'primary' }], st);
   // A circuit the catalog does not name (Lumen off-net) keeps its own words.
-  return [{ key: 'other', label: st.access || 'Access', name: st.access || 'Access', onAtt: !!st.priv, access: st.access, role: 'primary' }];
+  return withBw([{ key: 'other', label: st.access || 'Access', name: st.access || 'Access', onAtt: !!st.priv, access: st.access, role: 'primary' }], st);
 }
 
 export const ACCESS_CLASS = {

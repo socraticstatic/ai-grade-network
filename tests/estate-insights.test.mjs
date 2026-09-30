@@ -16,7 +16,8 @@ const at = (view = 'partial') => vals(mkC({ view, screen: 's1', estateParam: nul
 test('Estate opens on two rows of insight widgets: what you have, what you don\'t', () => {
   const v = at();
   assert.deepEqual(v.haveCards.map(c => c.title), ['Sites by service', 'Cloud connections', 'New in the last 30 days']);
-  assert.deepEqual(v.lackCards.map(c => c.title), ['Private path for 5 sites', 'Private connection in 5 regions', 'A backup path at 13 sites']);
+  // Atlanta and Los Angeles carry an Internet Air backup since 2026-09-30: 13 -> 11 single-path sites.
+  assert.deepEqual(v.lackCards.map(c => c.title), ['Private path for 5 sites', 'Private connection in 5 regions', 'A backup path at 11 sites']);
 });
 
 test('every widget says so what, shows its evidence, and offers one move', () => {

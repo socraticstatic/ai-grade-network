@@ -242,7 +242,7 @@ export function childrenOf(node, est, inv, flows) {
     const site = P.allSites(est).find(x => x.id === node.siteName || x.name === node.siteName) || (est.sites || []).find(x => x.name === node.siteName); if (!site) return [];
     const svcs = S.servicesOf(site);
     const w = svcs.map((_, i) => svcs.length === 1 ? 1 : i === 0 ? 0.7 : 0.3 / (svcs.length - 1));
-    return shareFab(svcs.map((sv, i) => ({ kind: 'service', key: `${node.key}/svc:${sv.key}`, name: sv.label, sub: `${sv.role} · ${sv.onAtt ? 'AT&T core' : 'outside the AT&T network'}`,
+    return shareFab(svcs.map((sv, i) => ({ kind: 'service', key: `${node.key}/svc:${sv.key}`, name: sv.label, sub: `${sv.role} · ${sv.bwF} · ${sv.onAtt ? 'AT&T core' : 'outside the AT&T network'}`,
       v: node.v * w[i], priv: !!sv.onAtt, hasChildren: false, state: node.state || 'ok', parentKey: node.key })), node.fabV);
   }
   if (node.kind === 'tag') {

@@ -400,9 +400,11 @@ test('finding H: switching the outcome after the drawer\'s bulk attach (no sourc
   v = vals(c);
   v.drawer.bulkAttach();
 
-  assert.equal(c.state.compose.qty, 263); // Atlanta's public sites: East's own rollup is off AT&T (2026-09-29)
+  // All 292 of Atlanta's sites are public (2026-09-30): the rollup is off AT&T, and its samples
+  // no longer mark about one in ten private, which read AVPN under a metro with 0 AT&T.
+  assert.equal(c.state.compose.qty, 292); // Atlanta's public sites: East's own rollup is off AT&T (2026-09-29)
   assert.equal(c.state.compose.sourceLabel, undefined, 'the drawer never writes a label - this is the gap the round-2 guard missed');
-  assert.equal(vals(c).pricedTotalF, '$475,800/mo');
+  assert.equal(vals(c).pricedTotalF, '$528,000/mo');
 
   v = vals(c);
   const u3 = v.outcomeCards.find(o => o.key === 'u3');

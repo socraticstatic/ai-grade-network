@@ -88,7 +88,8 @@ export const ESTATES = {
       { name: 'Ashburn DC', cls: 'Data center', access: 'AVPN (MPLS VPN)', services: [{ svc: 'avpn', role: 'primary' }, { svc: 'adi', role: 'backup' }], priv: true, metro: 'Ashburn' },
       { name: 'New York HQ', cls: 'Campus', access: 'ASE on Demand', services: [{ svc: 'aseod', role: 'primary' }, { svc: 'adi', role: 'backup' }], priv: true, metro: 'New York' },
       { name: 'Boston office', cls: 'Office', access: 'ABF (Business Fiber)', services: [{ svc: 'abf' }], priv: true, metro: 'Boston' },
-      { name: 'Atlanta office', cls: 'Office', access: 'AIA-B (Internet Air)', services: [{ svc: 'aiab' }], priv: true, metro: 'Atlanta' },
+      // 0.9 Gbps is not credible on fixed wireless (2026-09-30): Business Fiber first, Internet Air behind.
+      { name: 'Atlanta office', cls: 'Office', access: 'ABF (Business Fiber)', services: [{ svc: 'abf' }, { svc: 'aiab', role: 'backup', bw: 300 }], priv: true, metro: 'Atlanta' },
       { name: 'Charlotte branch', cls: 'Branch', access: 'IPsec VPN over internet', tunnel: 'IPsec', services: [{ svc: 'tpa' }], priv: false, metro: 'Charlotte' },
       { name: 'Dallas DC', cls: 'Data center', access: 'AVPN (MPLS VPN)', services: [{ svc: 'avpn', role: 'primary' }, { svc: 'adi', role: 'backup' }], priv: true, metro: 'Dallas' },
       { name: 'Chicago campus', cls: 'Campus', access: 'ASE on Demand', services: [{ svc: 'aseod', role: 'primary' }, { svc: 'abf', role: 'backup' }], priv: true, metro: 'Chicago' },
@@ -97,7 +98,7 @@ export const ESTATES = {
       { name: 'Kansas City branch', cls: 'Branch', access: 'IPsec VPN over internet', tunnel: 'IPsec', services: [{ svc: 'tpa' }], priv: false, metro: 'Kansas City' },
       { name: 'San Jose DC', cls: 'Data center', access: 'AVPN (MPLS VPN)', services: [{ svc: 'avpn', role: 'primary' }, { svc: 'aseod', role: 'backup' }], priv: true, metro: 'San Jose' },
       { name: 'Seattle office', cls: 'Office', access: 'ASE on Demand', services: [{ svc: 'aseod' }], priv: true, metro: 'Seattle' },
-      { name: 'Los Angeles office', cls: 'Office', access: 'AIA-B (Internet Air)', services: [{ svc: 'aiab' }], priv: true, metro: 'Los Angeles' },
+      { name: 'Los Angeles office', cls: 'Office', access: 'ABF (Business Fiber)', services: [{ svc: 'abf' }, { svc: 'aiab', role: 'backup', bw: 300 }], priv: true, metro: 'Los Angeles' },
       { name: 'Denver office', cls: 'Office', access: 'AVPN (MPLS VPN)', services: [{ svc: 'avpn' }], priv: true, metro: 'Denver' },
       { name: 'Phoenix branch', cls: 'Branch', access: 'IPsec VPN over internet', tunnel: 'IPsec', services: [{ svc: 'tpa' }], priv: false, metro: 'Phoenix' },
       { name: 'London DC', cls: 'Data center', access: 'ASE on Demand', services: [{ svc: 'aseod', role: 'primary' }, { svc: 'avpn', role: 'backup' }], priv: true, metro: 'London' },

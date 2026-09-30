@@ -178,7 +178,8 @@ function pathsOfAttSite(est, site) { const sr = P.siteRegions(est, site, 6); ret
 
 const byName = (a, b) => a.name.localeCompare(b.name);
 const groupRow = (key, name, sites) => ({ key, name, access: rollupLine(sites), priv: sites.some(onAtt), drillKey: key, rollup: true, lines: linesOf(sites), cursor: 'pointer' });
-const siteCard = (x) => ({ key: 'site:' + x.name, name: x.name, access: S.servicesOf(x).map(v => v.label).join(' + '), metro: x.metro, priv: !!x.priv, drillKey: 'site:' + x.name,
+const svcLineOf = (x) => S.servicesOf(x).map(v => `${v.label} ${v.bwF}${v.role === 'backup' ? ' backup' : ''}`).join(' + ');
+const siteCard = (x) => ({ key: 'site:' + x.name, name: x.name, access: S.servicesOf(x).map(v => v.label).join(' + '), svcLine: svcLineOf(x), bwF: (S.servicesOf(x)[0] || {}).bwF || '', place: [x.metro, x.cls].filter(Boolean).join(' · '), metro: x.metro, priv: !!x.priv, drillKey: 'site:' + x.name,
   // A site that declares its services fans one line per service; one that does not is its own line, as it always was.
   ...(Array.isArray(x.services) && x.services.length ? { lines: linesOf([x]) } : {}), circuit: x.access, accessSla: x.accessSla, carrier: x.carrier, core: x.core, via: x.via, viaRamp: x.viaRamp, xc: x.xc, rollup: false, cursor: 'pointer' });
 /**
@@ -194,7 +195,7 @@ function placeUnits(est, sites) {
       const cls = S.classOf(x), node = tree.find(c => c.cls === cls);
       const ix = String(S.rollupKeyOf(est, x) || '').split('#')[1];
       const kids = node ? node.children.filter(ch => ch.kind === 'metro' && (ix == null || String(ch.key).startsWith(`${cls}:${ix}:`))) : [];
-      if (kids.length) return kids.map(m => ({ metro: m.name, count: m.count, att: onAtt(x) ? m.count : 0, from: x, sample: m.sites, more: m.more || 0 }));
+      if (kids.length) return kids.map(m => ({ metro: m.name, count: m.count, att: onAtt(x) ? m.count : 0, from: x, sample: m.sites, more: m.more || 0, node: m }));
     }
     return [{ metro: x.metro, count, att: onAtt(x) ? count : 0, from: x, site: x }];
   });
@@ -222,11 +223,13 @@ export function placeMetroScope(est, trail) {
  * metro, site, then the site's services. It never turns into clouds; clouds are
  * where the traffic goes, on the right.
  */
-export function placeDrill(est, regionName, sites, rest) {
+export function placeDrill(est, regionName, sites, rest, opts = {}) {
   const units = placeUnits(est, sites);
   if (!rest.length) {
     const by = {}; units.forEach(u => { const k = S.stateOf(u.metro) || '—'; (by[k] = by[k] || []).push(u); });
-    return { level: 'state', label: regionName, rows: Object.entries(by).map(([code, us]) => unitRow('state:' + code, S.placeName(code === '—' ? '' : code), us)).sort(byName) };
+    // Two named sites or fewer: the row names them, so the region alone shows every site (2026-09-30).
+    const named = (us) => opts.full && us.length <= 2 && us.every(u => u.site) ? { access: us.map(u => { const sv = S.servicesOf(u.site)[0] || {}; return `${u.site.name} · ${sv.label} · ${sv.bwF}`; }).join(', ') } : {};
+    return { level: 'state', label: regionName, rows: Object.entries(by).map(([code, us]) => ({ ...unitRow('state:' + code, S.placeName(code === '—' ? '' : code), us), ...named(us) })).sort(byName) };
   }
   const code = String(rest[0]).replace(/^state:/, '');
   const inState = units.filter(u => (S.stateOf(u.metro) || '—') === code);
@@ -239,8 +242,9 @@ export function placeDrill(est, regionName, sites, rest) {
   const inMetro = inState.filter(u => u.metro === metro);
   if (!inMetro.length) return null;
   const named = inMetro.filter(u => u.site).map(u => u.site);
-  const sampled = inMetro.filter(u => u.sample).flatMap(u => u.sample.map(sx => ({ ...sx, name: sx.name || sx.id, access: u.from.access, accessSla: u.from.accessSla, carrier: u.from.carrier, core: u.from.core, via: u.from.via, viaRamp: u.from.viaRamp, metro })));
-  const more = inMetro.reduce((a, u) => a + (u.more || 0), 0);
+  // Asked for the whole metro (Your sites, 2026-09-30), a rollup lists every site and the list pages in place.
+  const sampled = inMetro.filter(u => u.sample).flatMap(u => (opts.full && u.node ? S.metroSites(u.node) : u.sample).map(sx => ({ ...sx, name: sx.name || sx.id, access: u.from.access, accessSla: u.from.accessSla, carrier: u.from.carrier, core: u.from.core, via: u.from.via, viaRamp: u.from.viaRamp, metro })));
+  const more = opts.full ? 0 : inMetro.reduce((a, u) => a + (u.more || 0), 0);
   if (rest.length === 2) return { level: 'site', label: metro, rows: [...named.map(siteCard).sort(byName), ...sampled.map(siteCard), ...(more ? [{ key: 'more:' + metro, name: `+${more.toLocaleString('en-US')} more`, access: 'open the list ›', more: true, rollup: false, count: more }] : [])] };
   const want = String(rest[2]).replace(/^site:/, '');
   // A site from the full list of a rolled-up metro is one of the rollup's own sites.
@@ -250,7 +254,7 @@ export function placeDrill(est, regionName, sites, rest) {
   if (!site || rest.length > 3) return null;
   return { level: 'service', label: site.name, rows: serviceSites(site).map((v, i) => {
     const sv = S.servicesOf(site)[i] || S.servicesOf(site)[0];
-    return { key: 'svc:' + sv.key, name: sv.label, access: `${sv.role} · ${sv.onAtt ? 'AT&T core' : 'outside the AT&T network'}`, priv: sv.onAtt, leaf: true, rollup: false,
+    return { key: 'svc:' + sv.key, name: sv.label, access: `${sv.role} · ${sv.bwF} · ${sv.onAtt ? 'AT&T core' : 'outside the AT&T network'}`, priv: sv.onAtt, leaf: true, rollup: false,
       lines: [{ key: 'svc:' + sv.key, ...v }], title: sv.name };
   }) };
 }
@@ -274,7 +278,7 @@ export function siteDrillRows(est, trail, opts = {}) {
     const name = String(trail[0]).slice('region:'.length);
     const region = regionRows(est).find(r => r.name === name);
     if (!region) return null;
-    return placeDrill(est, name, region.sites, trail.slice(1));
+    return placeDrill(est, name, region.sites, trail.slice(1), opts);
   }
   const tree = S.siteTree(est);
   const all = P.allSites(est);
