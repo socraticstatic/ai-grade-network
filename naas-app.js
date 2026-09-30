@@ -664,7 +664,7 @@ export function vals(c) {
   const findingCard = (f) => {
     const open = s.whyOpen === f.kind;
     return { ...f, key: f.kind, kindLabel: D.KINDS[f.kind], rec: (() => { const tiers = f.ladder.map((t, i) => ({ name: t, i })); const r = tiers[1] || tiers[0]; return { name: r ? r.name : 'Choose', choose: () => { const pid = PERSONA_PRODUCT[r.name]; if (pid) go('s8', { productId: pid })(); else go('s4')(); } }; })(), askAndi: () => set({ andiScope: { kind: 'finding', id: f.kind, label: D.KINDS[f.kind] }, andiOpen: true }), saveLine: f.priced ? `save ${fmt(f.save)}/mo` : '', toggleWhy: () => set({ whyOpen: open ? null : f.kind }), whyOpen: open, whyLabel: open ? 'Hide why' : 'Why we recommend this',
-      tiers: f.ladder.map((t, i) => { const pid = PERSONA_PRODUCT[t]; const prod = pid && D.CATALOG.find(p => p.id === pid); const price = prod && prod.price ? `Starting at ${fmt(prod.price)}/mo` : (prod && prod.price === 0 ? 'No charge' : 'Priced after survey'); return { key: t, tier: TIERS[i], name: t, featured: i === 1, price: f.priced && i === 0 ? `save ${fmt(Math.round(f.save * 0.6))}/mo` : f.priced ? `save ${fmt(f.save)}/mo` : price, choose: () => chooseTier(c, f, t, prod, est) }; }) };
+      tiers: f.ladder.map((t, i) => { const pid = PERSONA_PRODUCT[t]; const prod = pid && D.CATALOG.find(p => p.id === pid); const price = prod && prod.price ? `Starting at ${fmt(prod.price)}/mo` : (prod && prod.price === 0 ? 'No charge' : PRICE_NOTE); return { key: t, tier: TIERS[i], name: t, featured: i === 1, price: f.priced && i === 0 ? `save ${fmt(Math.round(f.save * 0.6))}/mo` : f.priced ? `save ${fmt(f.save)}/mo` : price, choose: () => chooseTier(c, f, t, prod, est) }; }) };
   };
   const floorFindings = sortF(est.findings).slice(0, 1).map(findingCard);
   const recFindings = sortF(est.findings).slice(0, 4).map(findingCard);
@@ -798,7 +798,7 @@ export function vals(c) {
 
   // ---- review ----
   const ord = s.order || composed;
-  const orderLines = (ord.lines || []).map((l, i) => ({ ...l, key: 'l' + i, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? (l.priceNote || 'Priced after survey') : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : fmt(l.monthly) + '/mo', color: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
+  const orderLines = (ord.lines || []).map((l, i) => ({ ...l, key: 'l' + i, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? PRICE_NOTE : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : fmt(l.monthly) + '/mo', color: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
   const pricedTotal = (ord.lines || []).filter(l => !l.unpriced).reduce((a, l) => a + l.monthly, 0);
   const termDisc = { 0: 0, 12: 15, 24: 30, 36: 50 }[s.term];
   const termTotal = Math.round(pricedTotal * (1 - termDisc / 100));
@@ -806,9 +806,8 @@ export function vals(c) {
   // review, 2026-09-30: Resize read "$0/mo · save 50% vs on-demand").
   const hasPrice = pricedTotal > 0, hasTermSave = hasPrice && termDisc > 0;
   const unpriced = (ord.lines || []).filter(l => l.unpriced).map((l, i) => ({ key: 'u' + i, product: l.product }));
-  // The path's two ends are names the order carries; the split is for orders that only carry "X to Y · ...".
-  const pathEnds = String(ord.pathDesc || '').split(' to ');
-  const reviewSrc = ord.pathSrc || pathEnds[0] || 'Source', reviewDst = ord.pathDst || (pathEnds[1] || 'Destination').split(' · ')[0];
+  // The path's two ends are names the order carries (review round 2, 2026-09-30), never a split of pathDesc.
+  const { src: reviewSrc, dst: reviewDst } = reviewEnds(ord);
   const orderDays = ord.days || 10;
   const orderPolicies = (ord.policies || []).map((p, i) => ({ ...p, key: 'p' + i }));
   const orderInspection = (ord.lines || []).some(l => /hosted VPC|hosted VNet|Hosted VPC/i.test(l.product || '')) ? ', with inspection from the vSRX pair' : '';
@@ -1030,7 +1029,7 @@ export function vals(c) {
     ...wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c),
     outcomeCards, hasOutcome: !!outcome, sourceChips: chipRow('source', D.COMPOSE_CHIPS.source), destChips: chipRow('dest', D.COMPOSE_CHIPS.dest), regionTabs, metroChips, resChips: chipRow('resiliency', D.COMPOSE_CHIPS.resiliency, true), controlChips: chipRow('control', D.COMPOSE_CHIPS.control), constraint, hasConstraint: !!constraint, summary, freeText: s.freeText, setFreeText: (e) => set({ freeText: e.target.value }), parseText: () => parseText(c, s.freeText), reviewOrder: () => { if (!summary.ready) return; set({ order: composed, screen: 's6', term: 36 }); window.scrollTo(0, 0); syncHash('s6'); }, reviewBg: summary.ready ? 'var(--cta)' : 'var(--bg-neutral)', reviewColor: summary.ready ? '#fff' : 'var(--text-disabled)',
     // review
-    hasOrder: orderLines.length > 0, noOrder: orderLines.length === 0, orderLines, orderPolicies, orderInspection, unpriced, hasUnpriced: hasPrice && unpriced.length > 0, orderPriced: hasPrice, orderUnpriced: !hasPrice, priceNote: ord.priceNote || 'Priced by AT&T after review', pricedTotalF: hasPrice ? fmt(pricedTotal) + '/mo' : '', termTotalF: hasPrice ? fmt(termTotal) + '/mo' : '', termDisc, hasTermSave, termSaveF: hasTermSave ? `save ${termDisc}% vs on-demand` : '', termLabel: s.term ? `${s.term}-month` : 'On-demand', termOptions, orderSave: ord.savings ? `save ${fmt(ord.savings)}/mo vs public egress` : '', hasOrderSave: !!ord.savings, orderTimeline: `${orderDays} business ${orderDays === 1 ? 'day' : 'days'}`, reviewSrc, reviewDst, approver: s.approver == null ? `j.martinez@${mailDomain(est)}` : s.approver, setApprover: (e) => set({ approver: e.target.value }), orderTitle: ord.title || 'Order', pathDesc: ord.pathDesc || '', submit: () => { set({ submitted: true, pendingDismissed: false, screen: 's2' }); window.scrollTo(0, 0); syncHash('s2'); }, saveProposal: () => set({ proposalSaved: true }), proposalSaved: !!s.proposalSaved, reviewShield: !!ord.shield, reviewWires: ord.wires || 1,
+    hasOrder: orderLines.length > 0, noOrder: orderLines.length === 0, orderLines, orderPolicies, hasOrderPolicies: orderPolicies.length > 0, orderInspection, unpriced, hasUnpriced: hasPrice && unpriced.length > 0, orderPriced: hasPrice, orderUnpriced: !hasPrice, priceNote: PRICE_NOTE, pricedTotalF: hasPrice ? fmt(pricedTotal) + '/mo' : '', termTotalF: hasPrice ? fmt(termTotal) + '/mo' : '', termDisc, hasTermSave, termSaveF: hasTermSave ? `save ${termDisc}% vs on-demand` : '', termLabel: s.term ? `${s.term}-month` : 'On-demand', termOptions, orderSave: ord.savings ? `save ${fmt(ord.savings)}/mo vs public egress` : '', hasOrderSave: !!ord.savings, orderTimeline: `${orderDays} business ${orderDays === 1 ? 'day' : 'days'}`, reviewSrc, reviewDst, approver: s.approver == null ? `j.martinez@${mailDomain(est)}` : s.approver, setApprover: (e) => set({ approver: e.target.value }), orderTitle: ord.title || 'Order', pathDesc: ord.pathDesc || '', submit: () => { set({ submitted: true, pendingDismissed: false, screen: 's2' }); window.scrollTo(0, 0); syncHash('s2'); }, saveProposal: () => set({ proposalSaved: true }), proposalSaved: !!s.proposalSaved, reviewShield: !!ord.shield, reviewWires: ord.wires || 1,
     // browse
     browseQuery: s.browseQuery, setQuery: (e) => set({ browseQuery: e.target.value }), browseSort: s.browseSort, setSort: (e) => set({ browseSort: e.target.value }), filtersOpen: s.filtersOpen, toggleFilters: () => set({ filtersOpen: !s.filtersOpen }), filterCount, filterLabel: filterCount ? `Filters (${filterCount})` : 'Filters', categories, curated, results, resultCount: results.length, browsing, backToMarket: () => set({ browseQuery: '', browseCat: null, filterProviders: [], priceCeil: 0 }), providerChips: providers.map(p => ({ key: p, label: p, on: s.filterProviders.includes(p), click: () => set({ filterProviders: s.filterProviders.includes(p) ? s.filterProviders.filter(x => x !== p) : [...s.filterProviders, p] }) })), priceChips: [1000, 2500, 5000].map(v => ({ key: 'p' + v, label: `Under ${fmt(v)}/mo`, on: s.priceCeil === v, click: () => set({ priceCeil: s.priceCeil === v ? 0 : v }) })), visionTiles, browseCatLabel: s.browseCat ? D.CATEGORIES.find(cc => cc.id === s.browseCat).label : q ? `Results for "${s.browseQuery}"` : 'Results',
     lmccHero: productCard(c, D.CATALOG.find(p => p.id === 'lmcc'), est), catalogAll: D.CATALOG,
@@ -1220,6 +1219,47 @@ function productCard(c, p, est) {
 
 const POLICY_FOR_CONTROL = { 'Private path required': { match: 'tag PCI', req: 'Private path required' }, 'No direct internet path': { match: 'tag Prod', req: 'No direct internet path' }, 'Inline inspection': { match: 'tag Internet-facing', req: 'Inline security inspection' }, 'Inline security inspection': { match: 'tag Internet-facing', req: 'Inline security inspection' }, 'Segment by tag': { match: 'branch Finance', req: 'Segment intra-tag only' }, 'Latency SLO': { match: 'tag GPU', req: 'Latency SLO 15 ms' }, 'Cost-aware routing': { match: 'region *', req: 'Cost-aware routing' } };
 
+// ---- path ends (review round 2, 2026-09-30) ----
+// Review draws every order as two ends with the AT&T network between them.
+// Each order carries its own ends (pathSrc, pathDst): short names of places,
+// at most END_MAX characters, never a sentence cut on ' to ' (Hosted VPC read
+// "A VPC in your region with ..." to "Destination"). A compose names them from
+// its source and destination chips, a catalog order from its product or the
+// product's category, a finding's order from the finding.
+const END_MAX = 22;
+// One unpriced phrase for the lines, the pricing box and the tier cards (review round 2, 2026-09-30).
+const PRICE_NOTE = 'Priced by AT&T after review';
+// The hosted VPC a "Control what leaves the cloud" compose orders (composeOrder's u2 line).
+const U2_REGION = 'AWS us-east-1';
+// A compose chip as one end on its own, and as a word in a list of several.
+const CHIP_END = { 'Data center': ['Your data centers', 'data centers'], 'Sites': ['Your sites', 'sites'], 'Internet': ['Internet sites', 'internet sites'], 'A cloud region': ['Your cloud region', 'cloud regions'], 'AI workloads': ['Your AI workloads', 'AI workloads'], 'Clouds': ['Your clouds', 'clouds'], 'Neoclouds': ['Neoclouds', 'neoclouds'], 'AI providers': ['AI providers', 'AI providers'], 'The Internet': ['The internet', 'the internet'], 'The WAN': ['Your WAN', 'your WAN'] };
+const OUTCOME_ENDS = { u1: ['Your sites', 'Your clouds'], u2: [U2_REGION, 'The internet'], u3: ['Your cloud region', 'Your other clouds'] };
+const capFirst = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+function chipEnd(list, fallback, noun, one) {
+  const xs = (list || []).filter(x => CHIP_END[x]);
+  if (!xs.length) return fallback;
+  if (xs.length === 1) return one ? one(xs[0]) : CHIP_END[xs[0]][0];
+  const words = xs.map(x => CHIP_END[x][1]);
+  const both = capFirst(words.join(' and ')), more = `${capFirst(words[0])} + ${xs.length - 1} more`;
+  return xs.length === 2 && both.length <= END_MAX ? both : more.length <= END_MAX ? more : `${xs.length} ${noun}`;
+}
+// A catalog product's ends: its own where the category's would not be true, else its category's.
+const GENERIC_ENDS = ['Your sites', 'Your clouds'];
+const CATEGORY_ENDS = { hosted: ['Your sites', 'Your cloud region'], maxres: ['Your data centers', 'Your cloud region'], private: GENERIC_ENDS, internet: GENERIC_ENDS, security: ['Your sites', 'The internet'], vnf: GENERIC_ENDS, apis: ['Your systems', 'Your estate'], managed: GENERIC_ENDS };
+const PRODUCT_ENDS = { 'hosted-vnet': ['Your sites', 'Your Azure region'], 'l3-attach': ['Your own VPC', 'The hosted VPC'], policy: GENERIC_ENDS, steer: ['Your cloud region', 'The internet'], c2c: ['Your cloud region', 'Your other clouds'], neocloud: ['Your clouds', 'Neoclouds'], lmcc: ['Your data centers', 'AWS'], i2c: ['Internet sites', 'Your clouds'], colo: ['Your colo facility', 'Your other colo'], ngfw: ['Your cloud region', 'The internet'], threat: GENERIC_ENDS, ddos: ['The internet', 'Your sites'], dyndef: ['The internet', 'Your sites'], mobility: ['Sites without fiber', 'Your clouds'], 'oracle-fc': ['Your sites', 'Oracle Cloud'] };
+// The end a product is itself: a finding's order keeps it whatever the finding named.
+const OWN_END = { neocloud: 1, lmcc: 1, 'oracle-fc': 1, i2c: 0 };
+const PACKAGE_ENDS = { start: ['Your sites', 'Your cloud'], grow: ['Your first cloud', 'Your second cloud'], run: ['Your sites', 'Every cloud region'] };
+const endsOf = (pair) => ({ pathSrc: pair[0], pathDst: pair[1] });
+function productEnds(p) { return endsOf(PRODUCT_ENDS[p.id] || CATEGORY_ENDS[p.cat] || GENERIC_ENDS); }
+// What Review draws: the order's own ends; an order that carries none (one saved before they existed) reads its first catalog line's.
+function reviewEnds(ord) {
+  if (ord.pathSrc && ord.pathDst) return { src: ord.pathSrc, dst: ord.pathDst };
+  const p = (ord.lines || []).map(l => D.CATALOG.find(x => (l.product || '').startsWith(x.name))).find(Boolean);
+  const e = p ? productEnds(p) : endsOf(GENERIC_ENDS);
+  return { src: e.pathSrc, dst: e.pathDst };
+}
+
 function composeOrder(cp, outcome, est) {
   if (!outcome) return { lines: [], policies: [], monthly: 0, savings: 0, days: 0 };
   const mult = { Standard: 1, Geodiversity: 1.6, Maximum: 2.2 }[cp.resiliency];
@@ -1237,7 +1277,7 @@ function composeOrder(cp, outcome, est) {
   // the hosted VPC, policy and observability lines are per-region/account,
   // not per-site, so they stay at qty 1 regardless of how many sites attach.
   if (outcome.id === 'u1') { add(P('netbond'), siteQty, null, siteQty > 1); if (cp.control.includes('Private path required')) add(P('hosted-vpc'), 1, cp.metros[0] || 'region'); }
-  if (outcome.id === 'u2') { add(P('hosted-vpc'), 1, 'AWS us-east-1'); add(P('ngfw'), 1); }
+  if (outcome.id === 'u2') { add(P('hosted-vpc'), 1, U2_REGION); add(P('ngfw'), 1); }
   if (outcome.id === 'u3') { add(P('c2c'), 1); add(P('hub'), cp.metros.length || 1); }
   if (cp.control.includes('Inline inspection') && outcome.id !== 'u2') add(P('ngfw'), 1);
   if (cp.dest.includes('Neoclouds') || cp.dest.includes('AI providers')) add(P('neocloud'), 1);
@@ -1247,20 +1287,24 @@ function composeOrder(cp, outcome, est) {
   const savings = outcome.id === 'u2' || outcome.id === 'u3' || cp.source.includes('A cloud region') ? Math.round((est.buckets || []).filter(b => b.today > b.fabric).slice(0, outcome.id === 'u3' ? 2 : 1).reduce((a, b) => a + b.today - b.fabric, 0)) : 0;
   const monthly = lines.filter(l => !l.unpriced).reduce((a, l) => a + l.monthly, 0);
   const hosted = lines.some(l => /hosted/i.test(l.product));
-  return { lines, policies, monthly, savings, days: hosted ? 10 : 5, title: outcome.name, pathDesc: `${cp.source.join(', ') || 'Source'} to ${cp.dest.join(', ') || 'destination'} · ${cp.resiliency}${cp.metros.length ? ' · ' + cp.metros.join(', ') : ''}`, shield: cp.control.includes('Inline inspection') || cp.control.includes('No direct internet path'), wires: cp.resiliency === 'Standard' ? 1 : 2 };
+  // Its ends are its chips: "A cloud region" on a u2 compose is the region the hosted VPC line names.
+  const fb = OUTCOME_ENDS[outcome.id] || GENERIC_ENDS;
+  const pathSrc = chipEnd(cp.source, fb[0], 'sources', x => x === 'A cloud region' && outcome.id === 'u2' ? U2_REGION : CHIP_END[x][0]);
+  const pathDst = chipEnd(cp.dest, fb[1], 'destinations');
+  return { lines, policies, monthly, savings, days: hosted ? 10 : 5, title: outcome.name, pathSrc, pathDst, pathDesc: `${cp.source.join(', ') || 'Source'} to ${cp.dest.join(', ') || 'destination'} · ${cp.resiliency}${cp.metros.length ? ' · ' + cp.metros.join(', ') : ''}`, shield: cp.control.includes('Inline inspection') || cp.control.includes('No direct internet path'), wires: cp.resiliency === 'Standard' ? 1 : 2 };
 }
 
 function packageOrder(pkg) {
   const lines = pkg.included.map((x, i) => ({ line: i + 1, product: x, qty: 1, term: '36-month', monthly: i === 0 ? pkg.od : 0, unpriced: false })).filter((l, i) => i === 0);
   lines[0].product = `${pkg.name} package`;
-  return { lines, policies: [{ match: 'tag PCI', req: 'Private path required', state: 'will be enforced on delivery' }], monthly: pkg.od, savings: 0, days: 10, title: `${pkg.name} package`, pathDesc: pkg.promise, shield: pkg.id !== 'start', wires: pkg.id === 'start' ? 1 : 2 };
+  return { lines, policies: [{ match: 'tag PCI', req: 'Private path required', state: 'will be enforced on delivery' }], monthly: pkg.od, savings: 0, days: 10, title: `${pkg.name} package`, ...endsOf(PACKAGE_ENDS[pkg.id] || GENERIC_ENDS), pathDesc: pkg.promise, shield: pkg.id !== 'start', wires: pkg.id === 'start' ? 1 : 2 };
 }
 
 function productOrder(p, est) {
   const lines = [{ line: 1, product: p.name, qty: 1, term: '36-month', monthly: p.price || 0, unpriced: p.price === null }];
   if (p.id !== 'policy') lines.push({ line: 2, product: 'Policy engine', qty: 1, term: '36-month', monthly: 0, unpriced: true });
   if (p.id !== 'observability') lines.push({ line: lines.length + 1, product: 'Observability', qty: 1, term: '36-month', monthly: 0, unpriced: true });
-  return { lines, policies: [{ match: 'tag PCI', req: 'Private path required', state: 'will be enforced on delivery' }], monthly: p.price || 0, savings: p.id === 'steer' ? (est.buckets || []).filter(b => b.today > b.fabric).reduce((a, b) => a + b.today - b.fabric, 0) : 0, days: p.stages ? 10 : 5, title: p.name, pathDesc: p.promise, shield: /ngfw|hosted|firewall/i.test(p.id + p.name), wires: p.id === 'lmcc' ? 2 : 1 };
+  return { lines, policies: [{ match: 'tag PCI', req: 'Private path required', state: 'will be enforced on delivery' }], monthly: p.price || 0, savings: p.id === 'steer' ? (est.buckets || []).filter(b => b.today > b.fabric).reduce((a, b) => a + b.today - b.fabric, 0) : 0, days: p.stages ? 10 : 5, title: p.name, ...productEnds(p), pathDesc: p.promise, shield: /ngfw|hosted|firewall/i.test(p.id + p.name), wires: p.id === 'lmcc' ? 2 : 1 };
 }
 
 function chooseTier(c, f, tierName, prod, est) {
@@ -1272,6 +1316,12 @@ function chooseTier(c, f, tierName, prod, est) {
   }
   const order = prod ? productOrder(prod, est) : { lines: [{ line: 1, product: tierName, qty: 1, term: '36-month', monthly: 0, unpriced: true }], policies: [], monthly: 0, savings: 0, days: 10, title: tierName, pathDesc: f.head };
   order.title = tierName;
+  // The finding names where the order goes; a product that is itself one end (Neoclouds, Oracle Cloud) keeps that end.
+  if (f.pathSrc && f.pathDst) {
+    const own = prod && OWN_END[prod.id] !== undefined ? productEnds(prod) : null;
+    order.pathSrc = own && OWN_END[prod.id] === 0 ? own.pathSrc : f.pathSrc;
+    order.pathDst = own && OWN_END[prod.id] === 1 ? own.pathDst : f.pathDst;
+  } else if (!prod) Object.assign(order, endsOf(GENERIC_ENDS));
   if (f.priced) order.savings = f.save;
   if (f.kind === 'pci') order.policies = [{ match: 'tag PCI', req: 'Private path required', state: 'will be enforced on delivery' }];
   if (f.kind === 'uninspected') order.policies = [{ match: 'tag Internet-facing', req: 'Inline security inspection', state: 'will be enforced on delivery' }];
@@ -3348,7 +3398,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
       if (!resize) return composeFor(go, r)();
       // The review says what changes (final review, 2026-09-30): the ports before and after and where the peak lands. No catalog price, so AT&T prices it.
       const where = `${cp.cloud} ${cp.region}`, before = `${cp.ports} × ${cp.portG} Gbps`, after = `${cp.resizeTo} × ${cp.portG} Gbps`, gone = cp.ports - cp.resizeTo;
-      go('s6', { term: 36, order: { title: `Resize ${where}`, lines: [{ line: 1, product: gone === 1 ? `Remove a ${cp.portG} Gbps port` : `Remove ${cp.portG} Gbps ports`, qty: gone, term: '36-month', monthly: 0, unpriced: true, priceNote: 'Priced after review' }], policies: [], monthly: 0, savings: 0, days: 1,
+      go('s6', { term: 36, order: { title: `Resize ${where}`, lines: [{ line: 1, product: gone === 1 ? `Remove a ${cp.portG} Gbps port` : `Remove ${cp.portG} Gbps ports`, qty: gone, term: '36-month', monthly: 0, unpriced: true }], policies: [], monthly: 0, savings: 0, days: 1,
         pathSrc: 'Your sites', pathDst: where, pathDesc: `${where} on ${F.RAMP_NAME[cp.ramp] || 'NetBond'}: ${before} to ${after}. The peak goes from ${cp.peakPct}% to about ${cp.resizePct}% of what is bought.` } })(); },
   };
   const optTop = optBase.slice(0, 2).reduce((w, r) => (r.figure > (w ? w.figure : 0) ? r : w), null);

@@ -58,8 +58,11 @@ test('a priced order still shows its totals and its term saving', () => {
   assert.equal(v.pricedTotalF, '$4,200/mo');
   assert.equal(v.termTotalF, '$2,100/mo');
   assert.equal(v.termSaveF, 'save 50% vs on-demand');
-  assert.equal(v.reviewSrc, 'Data center');
-  assert.equal(v.reviewDst, 'Clouds');
+  // Review round 2 (2026-09-30): the page never cuts pathDesc on ' to ' for an
+  // end. An order with no ends of its own (one saved before orders carried
+  // them) reads its product's; this NetBond line's are the generic pair.
+  assert.equal(v.reviewSrc, 'Your sites');
+  assert.equal(v.reviewDst, 'Your clouds');
   c.setState({ term: 0 });
   assert.equal(vals(c).hasTermSave, false, 'On-demand saves nothing against itself');
 });
