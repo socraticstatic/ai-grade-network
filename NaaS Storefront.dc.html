@@ -1946,23 +1946,25 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <div style="display:grid;gap:12px">
         <h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Order summary</h2>
         <div class="dt">
-          <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th" style="width:8%">Line</div><div class="dt-c dt-th">Product</div><div class="dt-c dt-th num" style="width:12%">Quantity</div><div class="dt-c dt-th" style="width:16%">Term</div><div class="dt-c dt-th num" style="width:22%">Monthly</div></div></div>
-          <div class="dt-b"><sc-for list="{{ orderLines }}" as="l" hint-placeholder-count="3"><div class="dt-r"><div data-th="Line" class="dt-c" style="color:var(--text-light)">{{ l.line }}</div><div data-th="Product" class="dt-c" style="color:var(--text-heading);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ l.product }}</div><div data-th="Quantity" class="dt-c num">{{ l.qtyF }}</div><div data-th="Term" class="dt-c">{{ termLabel }}</div><div data-th="Monthly" class="dt-c num" style="color:{{ l.color }}">{{ l.monthlyF }}</div></div></sc-for></div>
+          <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th" style="width:6%">Line</div><div class="dt-c dt-th">Product</div><div class="dt-c dt-th num" style="width:9%">Quantity</div><div class="dt-c dt-th" style="width:12%">Term</div><div class="dt-c dt-th num" style="width:22%">Monthly</div></div></div>
+          <div class="dt-b"><sc-for list="{{ orderLines }}" as="l" hint-placeholder-count="3"><div class="dt-r"><div data-th="Line" class="dt-c" style="color:var(--text-light)">{{ l.line }}</div><div data-th="Product" class="dt-c" style="color:var(--text-heading);font-weight:500;overflow-wrap:anywhere">{{ l.product }}</div><div data-th="Quantity" class="dt-c num">{{ l.qtyF }}</div><div data-th="Term" class="dt-c">{{ termLabel }}</div><div data-th="Monthly" class="dt-c num" style="color:{{ l.color }}">{{ l.monthlyF }}</div></div></sc-for></div>
         </div>
       </div>
       <div style="display:grid;gap:12px">
         <h2 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Ships with this order</h2>
+        <sc-if value="{{ hasOrderPolicies }}" hint-placeholder-val="{{ true }}">
         <div class="dt">
           <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th">Match</div><div class="dt-c dt-th">Requirement</div><div class="dt-c dt-th">State</div></div></div>
           <div class="dt-b"><sc-for list="{{ orderPolicies }}" as="p" hint-placeholder-count="1"><div class="dt-r"><div data-th="Match" class="dt-c" style="color:var(--text-heading);font-weight:500">{{ p.match }}</div><div data-th="Requirement" class="dt-c">{{ p.req }}</div><div data-th="State" class="dt-c"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:9999px;background:var(--cta)"></span>{{ p.state }}</span></div></div></sc-for></div>
         </div>
+        </sc-if>
         <div style="display:flex;align-items:center;gap:8px;color:var(--text-body)"><span style="width:8px;height:8px;border-radius:9999px;background:var(--success)"></span>Visible on delivery: path, throughput, P95 latency, loss, egress and flow logs{{ orderInspection }}.</div>
       </div>
     </div>
     <aside aria-label="Pricing overview" style="position:sticky;top:24px;padding:24px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;display:grid;gap:16px">
       <div style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;color:var(--text-disabled)">Pricing overview</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ termOptions }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.click }}" aria-pressed="{{ t.on }}" style="height:32px;padding:0 12px;border-radius:9999px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }};font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">{{ t.label }}</button></sc-for></div>
       <sc-if value="{{ orderPriced }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ termOptions }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.click }}" aria-pressed="{{ t.on }}" style="height:32px;padding:0 12px;border-radius:9999px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }};font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">{{ t.label }}</button></sc-for></div>
       <dl style="margin:0;display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:13px">
         <dt style="color:var(--text-light)">On-demand</dt><dd style="margin:0;text-align:right;color:var(--text-heading)">{{ pricedTotalF }}</dd>
         <dt style="color:var(--text-light)">{{ termLabel }}</dt><dd style="margin:0;text-align:right;font-weight:700;font-size:18px;line-height:26px;color:var(--text-heading)">{{ termTotalF }}</dd>
@@ -1972,7 +1974,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <sc-if value="{{ orderUnpriced }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;line-height:20px;font-weight:500;color:var(--text-heading)">{{ priceNote }}</div></sc-if>
       <sc-if value="{{ hasOrderSave }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 16px;border-radius:8px;background:var(--bg-accent);color:var(--link);font-weight:500;font-size:13px">{{ orderSave }}</div></sc-if>
       <sc-if value="{{ hasUnpriced }}" hint-placeholder-val="{{ false }}">
-        <div style="border-top:1px solid var(--border-secondary);padding-top:12px;display:grid;gap:4px"><div style="font-size:12px;font-weight:500;color:var(--text-light)">Priced after survey</div><sc-for list="{{ unpriced }}" as="u" hint-placeholder-count="1"><div style="font-size:13px;color:var(--text-body)">{{ u.product }}</div></sc-for><div style="font-size:12px;color:var(--text-disabled)">Not included in the total.</div></div>
+        <div style="border-top:1px solid var(--border-secondary);padding-top:12px;display:grid;gap:4px"><div style="font-size:12px;font-weight:500;color:var(--text-light)">{{ priceNote }}</div><sc-for list="{{ unpriced }}" as="u" hint-placeholder-count="1"><div style="font-size:13px;color:var(--text-body)">{{ u.product }}</div></sc-for><div style="font-size:12px;color:var(--text-disabled)">Not included in the total.</div></div>
       </sc-if>
       <dl style="margin:0;border-top:1px solid var(--border-secondary);padding-top:12px;display:grid;grid-template-columns:auto 1fr;gap:8px 12px;font-size:13px">
         <dt style="color:var(--text-light)">Timeline</dt><dd style="margin:0;color:var(--text-heading)">{{ orderTimeline }}</dd>
