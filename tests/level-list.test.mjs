@@ -62,7 +62,8 @@ test('rows.length before paging equals levelHead.total, at every sites level', (
 });
 
 test('the AT&T network column opens facilities, ports and circuits', () => {
-  assert.equal(list('fabric', []).rows.length, 4);
+  // (2026-09-30, D-6 restored) NetBond only: trust's Direct Connect and ExpressRoute facilities leave, 4 -> 2.
+  assert.equal(list('fabric', []).rows.length, 2);
   assert.equal(list('fabric', ['fab']).rows[0].into, 'N. Virginia');
   const ports = list('fabric', ['fab', 'N. Virginia']);
   assert.equal(ports.rows.length, 21, 'all 21 ports, not the band eight');

@@ -16,7 +16,7 @@ const n = (x) => Number(x).toLocaleString('en-US');
 export function facilities(est, inv, ob) {
   const util = ob.utilRows || [];
   const byCity = {};
-  // An AT&T facility holds the on-ramps AT&T carries; a port the customer owns, or Equinix's, is not AT&T's (2026-09-30).
+  // An AT&T facility holds the NetBond on-ramps; a Direct Connect, ExpressRoute or Equinix port is not AT&T's (D-6, 2026-09-30).
   inv.flatMap(c => c.regions).filter(r => r.priv && attHolds(est.regionsList.find(x => x.region === r.region) || r)).forEach(r => {
     const city = r.city || r.region; const u = util.find(x => x.region === r.region) || { ports: 1, cap: 10, gbps: 0, pct: 0 };
     const f = byCity[city] = byCity[city] || { key: 'fac:' + city, city, name: `AT&T ${city}`, regions: [], ramps: new Set(), ports: 0, cap: 0, gbps: 0, degraded: false };

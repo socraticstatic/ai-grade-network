@@ -269,8 +269,8 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
 
 /** What AT&T bills for the cloud side (2026-09-30: one function for the AT&T
  *  charges tab, the Traffic Cost view and the cost legs). A NetBond on-ramp is
- *  billed where AT&T carries the region (attHolds); a port the customer owns
- *  through their own cross-connect, or an Equinix port, is not AT&T's to bill. */
+ *  billed for NetBond regions only (attHolds, D-6 restored 2026-09-30); a Direct
+ *  Connect, ExpressRoute, Interconnect or Equinix port is not AT&T's to bill. */
 export function attChargeRows(est, invAll) {
   const nb = new Set(est.regionsList.filter(attHolds).map(r => r.region));
   const vpcsAll = (invAll || []).flatMap(c => (c.regions || []).filter(r => nb.has(r.region)).flatMap(r => r.vpcs || []));

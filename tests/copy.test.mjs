@@ -18,8 +18,11 @@ test('one of a thing reads as one', () => {
   assert.equal(estatePhrase(D.ESTATES.trust), '3 clouds, 14 regions, 2,860 workloads');
 
   // A live n=1 defect on a shipping estate: the Virginia facility has one port.
+  // (2026-09-30, D-6 restored) That port is ExpressRoute, the cloud provider's,
+  // so Virginia left the AT&T picture; Growing's one facility carries the singular.
   const e = D.ESTATES.partial, i = A.inventory(e), o = A.observe(e, [], i);
-  assert.equal(fabricRows(e, i, o, ['fab', 'Virginia']).head, '1 port · ER');
+  assert.equal(fabricRows(e, i, o, ['fab']).head, '1 facility');
+  assert.equal(fabricRows(e, i, o, ['fab', 'Virginia']), null);
   assert.equal(fabricRows(e, i, o, ['fab', 'N. Virginia']).head, '3 ports · NetBond');
 });
 

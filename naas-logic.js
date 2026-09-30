@@ -29,12 +29,12 @@ export const accessOwner = (site) => ((site && site.accessSla) || 'att');
  *  NetBond is AT&T's, Direct Connect, ExpressRoute and Interconnect are the
  *  cloud provider's, Equinix is a third party, and unattached is the internet. */
 export function connModeOf(r) { if (!r || !r.priv) return 'internet'; const o = RAMP_EDGE[r.ramp] || 'att'; return o === 'att' ? 'netbond' : o === 'cloud' ? 'direct' : 'third'; }
-/** Whether AT&T carries a region's on-ramp (2026-09-30). NetBond is AT&T's
- *  partner port into Direct Connect and ExpressRoute too, so those count, unless
- *  the customer owns the port through their own cross-connect (xc by 'yours')
- *  or a third party carries it (Equinix). This is what AT&T bills and where AT&T
- *  facilities sit. */
-export function attHolds(r) { return !!r && !!r.priv && RAMP_EDGE[r.ramp] !== 'third' && !(r.xc && r.xc.by === 'yours'); }
+/** Whether AT&T carries a region's on-ramp: exactly the NetBond connections
+ *  (D-6 restored, 2026-09-30). Direct Connect, ExpressRoute and Interconnect are
+ *  the cloud provider's ports and Equinix is a third party's, so none of them is
+ *  a NetBond on-ramp. One rule for what AT&T bills (attChargeRows, By leg), where
+ *  AT&T facilities sit, and the On-ramp column's AT&T rows. */
+export function attHolds(r) { return connModeOf(r) === 'netbond'; }
 /** How a site reaches the clouds: SD-WAN, an IPsec tunnel, or its own access, on AT&T or not. */
 export function siteModeOf(site) {
   if (/sd-?wan/i.test((site && site.access) || '')) return 'sdwan';

@@ -60,6 +60,21 @@ test('the NetBond row bills only what AT&T holds: no Equinix port, no port the c
   assert.ok(legsOf('mature').connect.rows.some(r => r.key === 'xc' && r.modelled), 'the customer\'s own cross-connect is its own row');
 });
 
+// D-6 restored (2026-09-30): By leg's NetBond row counts NetBond regions only.
+// A Direct Connect or ExpressRoute region is the cloud provider's port, billed
+// in the Cloud provider leg at its list price, not a second time as NetBond.
+test('D-6: By leg bills NetBond only for NetBond regions, and the connectivity tile agrees', () => {
+  const want = { partial: ['us-east-1'], mature: ['us-central1', 'us-east-1'], trust: ['us-central1', 'us-east-1'] };
+  for (const view of Object.keys(want)) {
+    const nb = legsOf(view).connect.rows.find(r => r.key === 'nb');
+    assert.deepEqual([...nb.regions].sort(), want[view], view);
+    assert.equal(nb.n, want[view].length, view);
+    assert.equal(nb.v, want[view].length * 1800, view);
+    const v = vals(cost(view));
+    assert.equal(v.legTiles.find(t => t.key === 'connect').v, '$' + Math.round(legsOf(view).connect.total).toLocaleString('en-US'), view);
+  }
+});
+
 test('the cloud ports are named products at list price, marked modelled; AWS flags the flat rate', () => {
   const rows = legsOf('trust').cloud.rows;
   const names = rows.map(r => r.label);

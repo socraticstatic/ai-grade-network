@@ -30,8 +30,9 @@ test('the sites column counts what the drawer will hold', () => {
 });
 
 test('the AT&T network column counts facilities, ports and circuits', () => {
-  assert.deepEqual(pick(head('fabric', [])), { total: 4, noun: 'facilities' });
-  assert.deepEqual(pick(head('fabric', ['fab'])), { total: 4, noun: 'facilities' });
+  // (2026-09-30, D-6 restored) NetBond only: trust's Direct Connect and ExpressRoute facilities leave, 4 -> 2.
+  assert.deepEqual(pick(head('fabric', [])), { total: 2, noun: 'facilities' });
+  assert.deepEqual(pick(head('fabric', ['fab'])), { total: 2, noun: 'facilities' });
   assert.deepEqual(pick(head('fabric', ['fab', 'N. Virginia'])), { total: 21, noun: 'ports' });
   const p = head('fabric', ['fab', 'N. Virginia']);
   assert.deepEqual(pick(head('fabric', ['fab', 'N. Virginia', 'port:us-east-1:1'])), { total: 3, noun: 'circuits' });
@@ -116,8 +117,8 @@ test('the three doors read the spec table on trust, level by level', () => {
   assert.equal(door('sitesDoor').label, 'All 4 regions ›');
   assert.equal(door('sitesDoor', { drill: ['region:US East'] }).label, 'All 4 states ›');
   assert.equal(door('sitesDoor', { drill: ['region:US East', 'state:GA', 'metro:Atlanta'] }).label, 'All 292 sites · 286 hidden ›');
-  // FABRIC
-  assert.equal(door('bandDoor').label, 'All 4 facilities ›');
+  // FABRIC ((2026-09-30, D-6 restored) NetBond facilities only, 4 -> 2)
+  assert.equal(door('bandDoor').label, 'All 2 facilities ›');
   assert.equal(door('bandDoor', { fabDrill: ['fab', 'N. Virginia'] }).label, 'All 21 ports · 13 hidden ›');
   assert.equal(door('bandDoor', { fabDrill: ['fab', 'N. Virginia', 'port:us-east-1:1'] }).label, 'All 3 circuits ›');
   // CLOUDS
@@ -149,7 +150,8 @@ test('a closed band still counts its facilities and hides nothing', () => {
   const v = vals(mkC());
   assert.equal(v.fabClosed, true);
   assert.equal(v.bandDoor.has, true);
-  assert.equal(v.bandDoor.label, 'All 4 facilities ›');
+  // (2026-09-30, D-6 restored) NetBond facilities only, 4 -> 2.
+  assert.equal(v.bandDoor.label, 'All 2 facilities ›');
   assert.equal(v.bandDoor.color, 'var(--text-light)');
 });
 
@@ -231,7 +233,8 @@ test('the band door opens the band with the drawer, in one frame', () => {
   assert.equal(c.state.drawerOpen, true);
   const v = vals(c);
   assert.equal(v.fabClosed, false, 'the band is open behind the drawer');
-  assert.equal(v.drawer.total, 4);
+  // (2026-09-30, D-6 restored) NetBond facilities only, 4 -> 2.
+  assert.equal(v.drawer.total, 2);
   // an already-open band is not re-seeded off its level
   const c2 = mkC({ fabDrill: ['fab', 'N. Virginia'] });
   vals(c2).bandDoor.open();
@@ -246,7 +249,9 @@ test('the roots still read on partial and mature', () => {
   // The sites root is regions since 2026-09-29: five on partial, five on mature.
   // AT&T facilities hold only the on-ramps AT&T carries (2026-09-30): mature's own-port
   // Direct Connect (us-west-2) and its Equinix port (us-east-04) leave, 7 -> 5.
-  for (const [view, sites, fab, clouds] of [['partial', 5, 2, 7], ['mature', 5, 5, 8]]) {
+  // (2026-09-30, D-6 restored) NetBond only: Direct Connect and ExpressRoute
+  // leave too, partial 2 -> 1 (eastus), mature 5 -> 2 (eu-central-1, eastus, westeurope).
+  for (const [view, sites, fab, clouds] of [['partial', 5, 1, 7], ['mature', 5, 2, 8]]) {
     const v = vals(mkC({ view }));
     assert.ok(v.sitesDoor.label.startsWith(`All ${sites} `), `${view} sites: ${v.sitesDoor.label}`);
     assert.ok(v.bandDoor.label.startsWith(`All ${fab} `), `${view} fabric: ${v.bandDoor.label}`);

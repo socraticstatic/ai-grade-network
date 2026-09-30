@@ -48,7 +48,8 @@ const TABLE = [
   ['sites',    ['region:US East', 'state:GA'],                         'metro',    1,    { search: false, chips: false, bulk: false }],
   ['sites',    ['region:US East', 'state:GA', 'metro:Atlanta'],        'site',     60,   { search: true,  chips: true,  bulk: true }],
   ['sites',    ['region:US East', 'state:GA', 'metro:Atlanta', 'site:RS-ATL-0100'], 'service', 1, { search: false, chips: false, bulk: false }],
-  ['fabric',   [],                                                     'facility', 4,    { search: false, chips: false, bulk: false }],
+  // (2026-09-30, D-6 restored) Facilities hold NetBond only: trust's Direct Connect and ExpressRoute leave, 4 -> 2.
+  ['fabric',   [],                                                     'facility', 2,    { search: false, chips: false, bulk: false }],
   ['fabric',   ['fab', 'N. Virginia'],                                 'port',     21,   { search: true,  chips: false, bulk: false }],
   ['fabric',   ['fab', 'N. Virginia', 'port:us-east-1:1'],             'circuit',  3,    { search: false, chips: false, bulk: false }],
   ['clouds',   [],                                                     'region',   6,    { search: false, chips: false, bulk: false }],
