@@ -229,14 +229,15 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Remove on an added source (2026-09-30): sc-if 358 -> 359, button 267 -> 268.
 // Health by segment (2026-09-30): the By app | By segment toggle, the nine rows and their in-place drill: div 906 -> 912, span 688 -> 708, sc-if 359 -> 365, sc-for 204 -> 208, button 268 -> 274.
 // Cost by leg (2026-09-30): three leg tiles over three paged lists, the Modelled mark, and the Cost view's door to them: div 912 -> 927, span 708 -> 726, sc-if 365 -> 375, sc-for 208 -> 212, button 274 -> 281.
+// Paths and Changes (2026-09-30): the hop table with Site to app, the changes strip as positioned divs, and the changes list: div 927 -> 944, span 726 -> 751, sc-if 375 -> 383, sc-for 212 -> 219, button 281 -> 286.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 927],
-    ['span', /<span\b/g, /<\/span>/g, 726],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 375],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 212],
+    ['div', /<div\b/g, /<\/div>/g, 944],
+    ['span', /<span\b/g, /<\/span>/g, 751],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 383],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 219],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 281],
+    ['button', /<button\b/g, /<\/button>/g, 286],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];

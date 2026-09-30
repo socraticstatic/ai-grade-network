@@ -1338,6 +1338,50 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         </sc-if>
       </div>
       </sc-if>
+      <!-- Paths (notes, 2026-09-30, B2 "is it fast"): each app group on its slowest path, hop by hop; loss only where a source reports it. -->
+      <sc-if value="{{ obPanelPaths }}" hint-placeholder-val="{{ false }}">
+      <div aria-label="Paths" style="display:grid;gap:8px;padding:4px 0 8px">
+        <div style="font-size:12px;line-height:16px;color:var(--text-light)">{{ pathLine }}</div>
+        <sc-if value="{{ hasPaths }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid">
+          <div style="display:grid;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr)) 84px;gap:8px;align-items:end;padding:0 0 6px;font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);border-bottom:1px solid var(--border-secondary)"><span>App group</span><sc-for list="{{ segHeads }}" as="sh" hint-placeholder-count="7"><span title="{{ sh.title }}" style="text-align:center;white-space:nowrap">{{ sh.label }}</span></sc-for><span style="text-align:right;white-space:nowrap">Site to app</span></div>
+          <sc-for list="{{ pathTimeRows }}" as="pt" hint-placeholder-count="8"><button onClick="{{ pt.go }}" aria-pressed="{{ pt.sel }}" style="display:grid;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr)) 84px;gap:8px;align-items:center;width:100%;min-height:40px;padding:3px 0;border:0;border-bottom:1px solid var(--border-secondary);background:{{ pt.bg }};font:inherit;font-size:12px;line-height:16px;text-align:left;cursor:pointer;color:var(--text-body)" style-hover="background:var(--bg-wash)">
+            <span style="display:flex;align-items:center;gap:8px;min-width:0"><i aria-hidden="true" style="flex:none;width:8px;height:8px;border-radius:9999px;background:{{ pt.dot }}"></i><span style="display:grid;min-width:0"><b style="font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pt.label }}</b><small style="color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pt.sub }}</small></span></span>
+            <sc-for list="{{ pt.cells }}" as="ph" hint-placeholder-count="7"><span title="{{ ph.title }}" style="display:grid;justify-items:center;min-width:0;font-variant-numeric:tabular-nums"><span style="color:{{ ph.msTone }};white-space:nowrap">{{ ph.msShow }}</span><small style="font-size:11px;line-height:14px;color:{{ ph.lossTone }};white-space:nowrap">{{ ph.lossF }}</small></span></sc-for>
+            <b style="text-align:right;font-size:13px;font-weight:700;color:{{ pt.totalTone }};font-variant-numeric:tabular-nums;white-space:nowrap">{{ pt.totalF }}</b>
+          </button></sc-for>
+          <sc-if value="{{ pathsPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding-top:6px;font-size:12px;color:var(--text-light)"><button class="fx-btn" onClick="{{ pathsPager.prev }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ pathsPager.prevOp }}">‹</button><span>{{ pathsPager.label }}</span><button class="fx-btn" onClick="{{ pathsPager.next }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ pathsPager.nextOp }}">›</button></div></sc-if>
+        </div>
+        <div aria-label="Path hops" style="font-size:12px;line-height:16px;color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ pathDetail }}">{{ pathDetail }}</div>
+        </sc-if>
+        <sc-if value="{{ noPaths }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--text-light);padding:12px 0">No paths to time yet.</div></sc-if>
+      </div>
+      </sc-if>
+      <!-- Changes (notes, 2026-09-30, B2 "what changed"): the Since window as a strip of problem bands and change ticks, positioned divs (never sc-for in svg), then the list. -->
+      <sc-if value="{{ obPanelChanges }}" hint-placeholder-val="{{ false }}">
+      <div aria-label="Changes" style="display:grid;gap:8px;padding:4px 0 8px">
+        <div aria-label="Changes timeline" style="position:relative;height:32px;border-radius:8px;background:var(--bg-neutral);overflow:hidden">
+          <sc-for list="{{ chgBands }}" as="cb" hint-placeholder-count="2"><div title="{{ cb.title }}" style="position:absolute;top:0;bottom:0;left:{{ cb.left }};width:{{ cb.width }};background:var(--error);opacity:.22"></div></sc-for>
+          <sc-for list="{{ chgTicks }}" as="ck" hint-placeholder-count="4"><div title="{{ ck.title }}" style="position:absolute;top:6px;bottom:6px;left:{{ ck.left }};width:3px;margin-left:-1px;border-radius:2px;background:{{ ck.color }}"></div></sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;font-size:11px;line-height:14px;color:var(--text-light)"><span>{{ chgFrom }}</span><span style="display:inline-flex;align-items:center;gap:4px;margin-left:auto"><i style="display:inline-block;width:10px;height:8px;background:var(--error);opacity:.3"></i>Problem</span><sc-for list="{{ chgLegend }}" as="cl2" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:4px"><i style="display:inline-block;width:3px;height:10px;border-radius:2px;background:{{ cl2.color }}"></i>{{ cl2.label }}</span></sc-for><span style="margin-left:auto">now</span></div>
+        <sc-if value="{{ hasChanges }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid">
+          <div style="display:grid;grid-template-columns:104px 108px minmax(0,2fr) minmax(0,1fr) 110px minmax(0,1.6fr);gap:12px;align-items:end;padding:0 0 6px;font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);border-bottom:1px solid var(--border-secondary)"><span>When</span><span>Kind</span><span>Change</span><span>What it touched</span><span>Source</span><span>Lined up with</span></div>
+          <sc-for list="{{ changeRows }}" as="cr" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:104px 108px minmax(0,2fr) minmax(0,1fr) 110px minmax(0,1.6fr);gap:12px;align-items:center;min-height:36px;border-bottom:1px solid var(--border-secondary);font-size:12px;line-height:16px;color:var(--text-body)">
+            <span style="white-space:nowrap;font-variant-numeric:tabular-nums">{{ cr.whenF }}</span>
+            <span style="display:flex;align-items:center;gap:6px;white-space:nowrap"><i aria-hidden="true" style="flex:none;width:3px;height:12px;border-radius:2px;background:{{ cr.dot }}"></i>{{ cr.kind }}</span>
+            <span title="{{ cr.text }}" style="color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ cr.text }}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ cr.touched }}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ cr.source }}</span>
+            <span title="{{ cr.lineF }}" style="color:var(--error);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ cr.lineF }}</span>
+          </div></sc-for>
+          <sc-if value="{{ changesPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding-top:6px;font-size:12px;color:var(--text-light)"><button class="fx-btn" onClick="{{ changesPager.prev }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ changesPager.prevOp }}">‹</button><span>{{ changesPager.label }}</span><button class="fx-btn" onClick="{{ changesPager.next }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ changesPager.nextOp }}">›</button></div></sc-if>
+        </div>
+        </sc-if>
+        <sc-if value="{{ noChanges }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--text-light);padding:12px 0">No changes in this window.</div></sc-if>
+      </div>
+      </sc-if>
       <!-- Connections: bandwidth in the open (Micah, 2026-09-29: "more transparency into bandwidth capacity and utilization"). In the Observe card, like its sister tabs. -->
       <sc-if value="{{ obPanelConn }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ hasGauges }}" hint-placeholder-val="{{ true }}">
       <div aria-label="Bandwidth" style="display:grid;gap:12px;padding:4px 0 8px">

@@ -81,10 +81,11 @@ test('Open ticket moves the incident to In progress with a ticket, and it holds'
   assert.equal(vals(c).findAll.find(r => r.key === 'an-link-eastus').stateLabel, 'In progress');
 });
 
-test('Trace puts the problem on the Traffic map', () => {
+// Trace opens Paths since 2026-09-30 (Task 3.3: "Trace re-points to Paths"); the region still rides along for the map.
+test('Trace opens the problem on Paths, and keeps its region for the map', () => {
   const c = at('partial');
   vals(c).problemRows[0].trace();
-  assert.equal(c.state.obPanel, 'map');
+  assert.equal(c.state.obPanel, 'paths');
   assert.equal(c.state.mapRegion, 'eastus');
 });
 

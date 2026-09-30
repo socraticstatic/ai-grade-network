@@ -173,7 +173,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathsPage: 0, changesPage: 0, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -890,7 +890,7 @@ export function vals(c) {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', themeTitle: s.theme === 'light' ? 'Dark mode' : 'Light mode', themeIsLight: s.theme !== 'dark', themeIsDark: s.theme === 'dark', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
     // An estate switch starts clean (2026-09-30): a By pick or a drill the new
     // estate lacks drew an empty map with a phantom "Internet 1.0 Gbps".
-    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0 }),
+    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathsPage: 0, changesPage: 0 }),
     resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null }); },
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
     // which nulled s.order even when the live compose had not started an
@@ -1037,7 +1037,7 @@ export function vals(c) {
         prodPanelGet: pk === 'get', prodPanelTerms: pk === 'terms', prodPanelRuns: pk === 'runs' }; })(),
     // discover
     allRegions: est.regionsList, scanSteps, scanLine: s.scanStep < 4 ? `${scanSteps[Math.min(3, s.scanStep)].label} · ${Math.min(4, s.scanStep + 1)} of 4` : '', scanDone: s.scanStep >= 4, scanning: s.scanStep < 4, intakeCadence, setIntakeCadence, intakeCadenceLabel, intakeCadenceLower, cadenceAsk, cadenceAskText, confirmCadence, discoverVerdict, discoverKpis, estateChips, treeOrMap: s.treeOrMap, isTree: s.treeOrMap === 'tree', isMap: s.treeOrMap === 'map', treeBg: s.treeOrMap === 'tree' ? 'var(--bg-accent)' : 'transparent', treeColor: s.treeOrMap === 'tree' ? 'var(--link)' : 'var(--text-body)', mapBg: s.treeOrMap === 'map' ? 'var(--bg-accent)' : 'transparent', mapColor: s.treeOrMap === 'map' ? 'var(--link)' : 'var(--text-body)', showTree: () => set({ treeOrMap: 'tree' }), showMap: () => set({ treeOrMap: 'map' }), tree, mapRows, mapSites, mapH, mapVB: `0 0 1000 ${mapH}`, bigEstate, sitesCountLabel: est.sitesCount ? `${est.sitesCount.toLocaleString('en-US')} sites, grouped` : plural(est.sites.length, 'site', 'sites'), chain, chainPolicies, hasChain: !!ow, chainRegion: ow ? `${ow.cloud} ${ow.region}` : '', closeChain: () => set({ openWorkload: null }),
-    ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll, probs, segCtx),
+    ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll, probs, segCtx, incChanges),
   };
   return pageLists(out, s, set);
 }
@@ -1050,7 +1050,7 @@ export function pageRows(rows, size, page, setPage) {
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
 const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
-  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
+  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 function pageLists(out, s, set) {
   for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
     if (!Array.isArray(out[list])) continue;
@@ -1351,7 +1351,7 @@ export function findingList(est, est0, ob, now) {
 }
 const OPEN_STATES = ['open', 'ack', 'progress'];
 function lifeState(s, est) { return { ...LC.lifeFor(est), ...(((s.findingLife || {})[est.id]) || {}) }; }
-function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows = [], obAll = ob, probs = [], segCtx = null) {
+function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows = [], obAll = ob, probs = [], segCtx = null, incChanges = []) {
   const obScope = s.obScope || 'all';
   const egressBase = egressBaseFor(est0, ob);
   const gpw = R.gbPerWlExport(est0, egressBase);
@@ -2000,8 +2000,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const otGrains = [['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly']].map(([k, l]) => { const on = otGrain === k; return { key: k, label: l, on, ...seg(on), go: () => set({ otGrain: k }) }; });
   const otEnds = OT.bars.length ? [OT.bars[0].label, OT.bars[OT.bars.length - 1].label] : ['', ''];
   // One panel at a time under the Traffic head (2026-09-28, "No scrolling").
-  const obPanel = ['map', 'time', 'where', 'health', 'conn'].includes(s.obPanel) ? s.obPanel : 'map';
-  const obPanels = [['map', 'Traffic'], ['time', 'Over time'], ['where', 'Where it goes'], ['health', 'Health'], ['conn', 'Capacity']].map(([k, l]) => { const on = obPanel === k;
+  // The four questions (notes, 2026-09-30, B2): Health is it up, Paths is it fast, Capacity is it full, Changes what changed.
+  const obPanel = ['map', 'time', 'where', 'health', 'paths', 'conn', 'changes'].includes(s.obPanel) ? s.obPanel : 'map';
+  const obPanels = [['map', 'Traffic'], ['time', 'Over time'], ['where', 'Where it goes'], ['health', 'Health'], ['paths', 'Paths'], ['conn', 'Capacity'], ['changes', 'Changes']].map(([k, l]) => { const on = obPanel === k;
     return { key: k, label: l, on, go: () => set({ obPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; });
   const flowViews = [['state', 'Traffic'], ['cost', 'Cost'], ['slo', 'Performance']].map(([k, l]) => { const on = mapMode === k || (k === 'state' && mapMode === 'delta'); return { key: k, label: l, on, ...seg(on), go: () => set({ mapMode: k }) }; });
   const flowPaths = [['all', 'All paths'], ['att', 'On AT&T'], ['out', 'Outside AT&T']].map(([k, l]) => { const on = mapPath === k; return { key: k, label: l, on, ...seg(on), go: () => set({ mapPath: k }) }; });
@@ -2348,7 +2349,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // ticket (a lifecycle move, no second store) and Trace (the Traffic map).
   const INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: '#c9362c', down: 'var(--error)' };
   const healthVals = (() => {
-    if (!segCtx) return { pathFlowAll: [], pathFlowRows: [], segHeads: [], healthTiles: [], problemRows: [], healthViews: [], segRows: [], segDrillRows: [], segCrumbs: [] };
+    if (!segCtx) return { pathFlowAll: [], pathFlowRows: [], segHeads: [], healthTiles: [], problemRows: [], healthViews: [], segRows: [], segDrillRows: [], segCrumbs: [], pathTimeAll: [], pathTimeRows: [], changeAll: [], changeRows: [], chgTicks: [], chgBands: [], chgLegend: [], noPaths: true, noChanges: true };
     const all = G.pathFlow(segCtx);
     const segHeads = G.SEGMENTS.map(g => ({ key: g.key, label: g.label, title: g.title }));
     const cellView = (c, i) => {
@@ -2368,6 +2369,26 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       { key: 'alerts', l: 'Alerts', v: String(probs.length), u: 'open' },
     ];
     const nowMs = SCH.nowOf(s);
+    // Is it fast (notes, 2026-09-30, B2): each app group on its worst path, hop by hop.
+    const pathAll = G.pathTimes(segCtx);
+    const pathKeyFor = (p) => (pathAll.find(r => r.region === p.region && (p.apps || []).includes(r.tag)) || pathAll.find(r => (p.apps || []).includes(r.tag)) || {}).key || null;
+    const pathSelRow = pathAll.find(r => r.key === s.pathSel) || null;
+    const pathTimeRows = pathAll.map(r => { const sel = !!pathSelRow && r.key === pathSelRow.key;
+      return { key: r.key, label: r.label, sub: `${r.site} to ${r.where}`, dot: INK[r.state] || 'var(--text-disabled)', totalF: r.totalF, totalTone: r.state === 'ok' ? 'var(--text-heading)' : INK[r.state], sel, bg: sel ? 'var(--bg-accent)' : 'transparent',
+        cells: r.cells.map(c => ({ key: c.key, msShow: c.msF || '—', msTone: c.msF ? 'var(--text-heading)' : 'var(--text-disabled)', lossF: c.lossF, lossTone: c.lossF && c.lossF !== '0.00%' ? 'var(--error)' : 'var(--text-light)', title: c.title })),
+        go: () => set({ pathSel: sel ? null : r.key }) }; });
+    const pathDetail = pathSelRow ? `${pathSelRow.label}, ${pathSelRow.site} to ${pathSelRow.where}: ${pathSelRow.hops.slice(1).map(h => `${h.name} ${h.ms} ms`).join(' › ')}` : 'Pick a row to see its hops.';
+    // What changed (notes, 2026-09-30, B2): the Since window's changes, lined up with the problems they preceded.
+    const DAY = 86400000, winMs = winDaysOf(s) * DAY, fromMs = nowMs - winMs;
+    const dayF = (t) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
+    const KIND = { config: ['Config', 'var(--link)'], route: ['Route', 'var(--error)'], maintenance: ['Maintenance', 'var(--warning)'] };
+    const regName = (id) => { const r = (est0.regionsList || []).find(x => x.region === id); return r ? `${r.cloud} ${r.region}` : (id || ''); };
+    const changeAll = (incChanges || []).filter(x => (x.upcoming ? x.at <= nowMs + 14 * DAY : x.at >= fromMs && x.at <= nowMs)).map(x => { const pb = x.linedUp ? probs.find(p => p.key === x.linedUp) : null;
+      return { key: x.key, at: x.at, upcoming: !!x.upcoming, whenF: x.upcoming ? `${dayF(x.at)}, planned` : nowMs - x.at < DAY ? SCH.hhmm(x.at) : dayF(x.at), kind: (KIND[x.kind] || [x.kind])[0], dot: (KIND[x.kind] || [0, 'var(--text-light)'])[1],
+        text: x.text, touched: regName(x.region), source: x.source || '', lineF: pb ? `${pb.where} · ${pb.thing}: ${pb.what}` : '', lined: !!pb }; });
+    const pctOf = (t) => `${Math.max(0, Math.min(100, (t - fromMs) / winMs * 100)).toFixed(2)}%`;
+    const chgTicks = changeAll.filter(x => !x.upcoming).map(x => ({ key: x.key, left: pctOf(x.at), color: x.dot, title: `${x.whenF} · ${x.kind} · ${x.text}` }));
+    const chgBands = probs.filter(p => p.startedAt).map(p => ({ key: p.key, left: `${Math.min(98.8, parseFloat(pctOf(Math.max(fromMs, p.startedAt))))}%`, width: `${Math.max(1.2, (nowMs - Math.max(fromMs, p.startedAt)) / winMs * 100).toFixed(2)}%`, title: `${p.where} · ${p.thing}: ${p.what} · started ${SCH.hhmm(p.startedAt)}` }));
     const tid = (k) => 'T-' + (1000 + [...k].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9000, 7));
     const stateOfKey = (k) => { const ev = (life[k] && life[k].events) || []; return ev.length ? ev[ev.length - 1].state : 'open'; };
     const problemRows = probs.map(p => { const st = stateOfKey(p.key), n = p.apps.length;
@@ -2376,7 +2397,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         startedF: `Started ${SCH.hhmm(p.startedAt)} · ${SCH.agoOf(p.startedAt, nowMs)}`, changeF: p.change ? `${p.change.text} at ${SCH.hhmm(p.change.at)}` : '', hasChange: !!p.change,
         ticketed: st === 'progress', ticketF: st === 'progress' ? `${tid(p.key)} · In progress` : '', canTicket: st !== 'progress',
         ticket: moveF({ key: p.key }, 'progress', { note: `Ticket ${tid(p.key)} opened, routed to ${p.ownerLabel}` }),
-        trace: () => set({ obPanel: 'map', mapRegion: p.region, mapSel: p.connId || null, panelTab: 'impact' }) }; });
+        trace: () => { const k = pathKeyFor(p), ix = Math.max(0, pathAll.findIndex(r => r.key === k)); set({ obPanel: 'paths', pathSel: k, pathsPage: Math.floor(ix / 8), mapRegion: p.region }); } }; });
     // By segment (notes, 2026-09-30): the stakeholder's nine rows, who answers for
     // each piece and what the product can see of it; a row drills in place.
     const healthView = s.healthView === 'segment' ? 'segment' : 'app';
@@ -2404,13 +2425,16 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const segHead = segKey ? segRows.find(r => r.key === segKey) : null;
     const segCrumbs = segKey ? [{ key: 'root', label: 'All segments', to: null }, { key: segKey, label: segHead.label.replace(/ \(.*\)$/, ''), to: [] }, ...segTrail.map((k, i) => ({ key: k, label: segLabelOf(k), to: segTrail.slice(0, i + 1) }))]
       .map((c, i, a) => ({ ...c, notLast: i < a.length - 1, weight: i === a.length - 1 ? 700 : 500, color: i === a.length - 1 ? 'var(--text-heading)' : 'var(--link)', go: () => set(c.to ? { segTrail: c.to, segPage: 0 } : { segOpen: null, segTrail: [], segPage: 0 }) })) : [];
-    return { pathFlowAll: all, pathFlowRows: rows, segHeads, healthTiles, problemRows, hasProblems: problemRows.length > 0,
+    const pathVals = { pathTimeAll: pathAll, pathTimeRows, pathDetail, pathLine: `Is it fast? Each app group on its slowest path, from the site that sends it the most. SLO ${F.SLO_PRIVATE} ms on AT&T, ${F.SLO} ms outside.`, hasPaths: pathAll.length > 0, noPaths: !pathAll.length,
+      changeAll, changeRows: changeAll, chgTicks, chgBands, chgFrom: winLabelOf(s), hasChanges: changeAll.length > 0, noChanges: !changeAll.length,
+      chgLegend: [['var(--error)', 'Route'], ['var(--link)', 'Config'], ['var(--warning)', 'Maintenance']].map(([color, label]) => ({ key: label, color, label })) };
+    return { ...pathVals, pathFlowAll: all, pathFlowRows: rows, segHeads, healthTiles, problemRows, hasProblems: problemRows.length > 0,
       healthViews, healthByApp: healthView === 'app', healthBySegment: healthView === 'segment', segRows, segOpen: !!segKey, segTable: healthView === 'segment' && !segKey, segLevel: drill ? drill.level : null, segDrillRows, segCrumbs,
       segOwner: segHead ? segHead.ownerLabel : '', segSource: segHead ? segHead.source : '', segLimited: !!(segHead && segHead.limited) };
   })();
   const dash = { ...mixVals, ...insightVals, ...healthVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
-    obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelHealth: obPanel === 'health', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
+    obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelHealth: obPanel === 'health', obPanelPaths: obPanel === 'paths', obPanelChanges: obPanel === 'changes', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0 && !!s.obPickOpen, scopeLabel, mapTotal: mapG.total, mapP95: perf.p95,
     // The Cost view prices traffic only; the door opens the three legs (notes, 2026-09-30, A2).
     costScopeOn: mapMode === 'cost', costScopeLine: 'Traffic only · every leg in Cost ›', costScopeGo: () => go('s3', { layer: 'cloud', tab: 'cost', costPanel: 'legs' })(),
