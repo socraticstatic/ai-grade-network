@@ -48,9 +48,12 @@ export function problems(est, conns, ob, apps = [], chg = [], now = Date.now()) 
     const t = cloudEdgeThing(regs.find(x => x.region === r.region) || r), key = 'an-sat-' + r.region;
     out.push({ key, kind: 'sat', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: t.label, what: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'} purchased`, owner: t.owner, ownerLabel: OWNER_LABEL[t.owner] || t.owner, state: 'risk', sev: 2, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('sat', now, INCIDENT_MIN.sat), change: changeFor(key), connId: r.id, action: 'port', actionLabel: 'Add a port' });
   });
+  // A spike is as bad as the one latency rule says (review, 2026-09-30): 86 ms
+  // at peak is At risk, 100 ms is not over 100, and a peak within it is no problem.
   regs.filter(r => r.rel === 'warn').forEach(r => {
-    const key = 'an-' + r.region;
-    out.push({ key, kind: 'spike', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: 'Public internet', what: `Latency spike · p95 ${r.pub + 40} ms at peak, 0.3% loss`, owner: 'public', ownerLabel: OWNER_LABEL.public, state: 'slo', sev: 3, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('spike', now, INCIDENT_MIN.spike), change: changeFor(key), connId: null, action: 'impact', actionLabel: 'See impact' });
+    const key = 'an-' + r.region, peak = r.pub + 40, state = F.healthOf(peak, F.SLO);
+    if (state === 'ok') return;
+    out.push({ key, kind: 'spike', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: 'Public internet', what: `Latency spike · p95 ${peak} ms at peak, 0.3% loss`, owner: 'public', ownerLabel: OWNER_LABEL.public, state, sev: 3, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('spike', now, INCIDENT_MIN.spike), change: changeFor(key), connId: null, action: 'impact', actionLabel: 'See impact' });
   });
   return out.sort((a, b) => b.apps.length - a.apps.length || a.sev - b.sev || b.wl - a.wl);
 }

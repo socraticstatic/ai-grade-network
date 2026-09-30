@@ -32,10 +32,10 @@ test('Performance shows latency: every node reads its p95, colored by its health
   const v = vals(at({ mapMode: 'slo' }));
   assert.ok(real(v).every(n => /^p95 \d+ ms$/.test(n.vF)), real(v).map(n => n.vF).join(', '));
   const inet = v.mapNodes.find(n => n.label === 'Internet');
-  assert.equal(inet.fill, '#c9362c');
+  assert.equal(inet.fill, 'var(--viz-5)', 'Over SLO ink (review, 2026-09-30)');
   assert.match(inet.pathSay, /over/i);
   const nb = v.mapNodes.find(n => n.label === 'NetBond');
-  assert.notEqual(nb.fill, '#c9362c');
+  assert.notEqual(nb.fill, 'var(--viz-5)');
   assert.ok(v.mapLegend.some(l => /Within SLO/.test(l.label)) && v.mapLegend.some(l => /Over SLO/.test(l.label)));
 });
 

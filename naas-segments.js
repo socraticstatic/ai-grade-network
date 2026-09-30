@@ -46,9 +46,9 @@ export const TABLE = [
 const NOT_YET = 'Not yet measured';
 const RANK = { ok: 0, risk: 1, slo: 2, down: 3 };
 
-/** Everything the segment model reads, built once from the whole estate. */
-export function segCtxOf(est, { inv, ob, conns }) {
-  return { est, ob, conns, apps: appsOf(est, inv, (ob && ob.flows) || []), blind: new Set(((ob && ob.blind) || []).map(r => r.region)) };
+/** Everything the segment model reads, built once from the whole estate; probs is the open incident list (naas-observe-dash problems()). */
+export function segCtxOf(est, { inv, ob, conns, probs = [] }) {
+  return { est, ob, conns, probs: probs || [], apps: appsOf(est, inv, (ob && ob.flows) || []), blind: new Set(((ob && ob.blind) || []).map(r => r.region)) };
 }
 
 const rowOf = (ctx, region) => (ctx.conns.rows || []).find(r => r.region === region) || null;
@@ -111,6 +111,13 @@ function worst(parts) {
   return nd ? nd.c : C('none', '', '', '');
 }
 
+// An open problem colours the cell it sits on (review, 2026-09-30): the same
+// thing in the same region is at least the problem's state, and says why.
+function lift(c, r, ctx) {
+  const p = (ctx.probs || []).filter(q => q.region === r.region && q.thing === c.thing && RANK[q.state] > (RANK[c.state] ?? -1)).sort((a, b) => RANK[b.state] - RANK[a.state])[0];
+  return p ? { ...c, state: p.state, why: p.what } : c;
+}
+
 /** One grid row: the seven cells of an app group's paths. */
 export function cellsFor(tag, ctx) {
   const app = (ctx.apps || []).find(a => a.tag === tag);
@@ -118,7 +125,7 @@ export function cellsFor(tag, ctx) {
   const regs = (app.parts || []).map(p => ({ r: (ctx.est.regionsList || []).find(x => x.region === p.region), material: p.share >= 0.05 })).filter(x => x.r);
   return SEGMENTS.map(seg => {
     if (seg.key === 'site' || seg.key === 'edge' || seg.key === 'backbone') return siteCell(seg.key, ctx);
-    return worst(regs.map(x => ({ c: part(seg.key, x.r, ctx, app), material: x.material })));
+    return worst(regs.map(x => ({ c: lift(part(seg.key, x.r, ctx, app), x.r, ctx), material: x.material })));
   });
 }
 
@@ -189,12 +196,17 @@ export function segmentDrill(est, ctx, key, trail = []) {
   return { level: 'region', rows: items.filter(x => x.region.cloud === cloud).map(x => ({ key: 'region:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, n: 1, state: x.state, worst: x, sub: `${x.thing} · ${x.why}`, leaf: true })) };
 }
 
-/** The Health grid: one row per app group, worst first, then by workloads. */
+/**
+ * The Health grid: one row per app group, worst first, then by workloads. An
+ * app an open problem lists is at least that problem's state (review,
+ * 2026-09-30), so the tiles, the grid and the problem list agree.
+ */
 export function pathFlow(ctx) {
   const R = { none: -2, nodata: -1, ok: 0, risk: 1, slo: 2, down: 3 };
   return (ctx.apps || []).map(a => {
     const cells = cellsFor(a.tag, ctx);
-    const state = cells.reduce((w, c) => (R[c.state] > R[w] ? c.state : w), 'ok');
+    const listed = (ctx.probs || []).filter(p => (p.apps || []).includes(a.tag)).map(p => p.state);
+    const state = [...cells.map(c => c.state), ...listed].reduce((w, st) => (R[st] > R[w] ? st : w), 'ok');
     const top = (a.topApps || [])[0];
     return { tag: a.tag, label: top ? `${a.tag} → ${top}` : a.tag, cells, state, wl: a.wl };
   }).sort((x, y) => R[y.state] - R[x.state] || y.wl - x.wl);

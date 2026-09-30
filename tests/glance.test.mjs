@@ -34,7 +34,8 @@ test('the apps: every workload, one row per app, largest first, paged to fit', (
   for (const r of v.appRows) {
     assert.ok(r.name && r.runsIn && r.wlF && r.onAttF && r.gbpsF && r.p95F, r.name);
     assert.match(r.onAttW, /%$/); assert.match(r.wlW, /%$/);
-    assert.ok(['var(--success)', 'var(--warning)', 'var(--error)'].includes(r.healthInk), r.name);
+    // Over SLO is its own ink, not Down's red (review, 2026-09-30).
+    assert.ok(['var(--success)', 'var(--warning)', 'var(--viz-5)'].includes(r.healthInk), r.name);
   }
   assert.equal(num(v.invStats.find(k => k.l === 'exposed workloads').v), all.reduce((a, x) => a + x.exposed, 0));
 });
