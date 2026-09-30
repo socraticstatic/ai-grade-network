@@ -442,7 +442,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
     if (sum > budgetPx && sum > 0) { const f = budgetPx / sum; rows = rows.map(r => ({ ...r, h: Math.max(7, r.h * f) })); }
     return rows;
   };
-  const layout = (rows, x, y0) => { let y = y0; return rows.map(r => { const o = { ...r, x, y, x2: x + colW, used: 0 }; y += o.h + pad; return o; }); };
+  const layout = (rows, x, y0) => { let y = y0; return rows.map(r => { const o = { ...r, x, y, x2: x + colW, usedIn: 0, usedOut: 0 }; y += o.h + pad; return o; }); };
   const leftRows = heightsFor(Ls, rowsBudget(nLeft, groups.length));
   const heads = []; const SS = []; let y = top + 20;
   // One column head for the left band, then a quieter head per group inside
@@ -487,7 +487,11 @@ export function buildMap(est, inv, flows0, opts = {}) {
   const MM = layout(MMh, W / 2 - colW / 2, Math.max(top, (H - midH) / 2));
   const ribbons = [];
   const patternOf = (a, b) => { const g = a.group || rootGroup(a); if (b.key === 'dest:local') return 'region'; if (g === 'sites' || b.kind === 'cloud' || b.key === 'dest:regions') return 'inbound'; if (g === 'c2c' || /inter-cloud/.test(b.name || '')) return 'clouds'; if (/object storage/.test(b.name || '')) return 'regions'; if (/AI endpoints|public internet/.test(b.name || '')) return 'internet'; return 'mixed'; };
-  const link = (a, b, v, priv, kindOverride) => { if (v <= 0.0005) return; const sa = a.h / (a.tot || a.v || 1), sb = b.h / (b.tot || b.v || 1); const ay = a.y + a.used * sa, by = b.y + b.used * sb, ah = v * sa, bh = v * sb; a.used += v; b.used += v; const g = [a.x2, ay, ah, b.x, by, bh]; ribbons.push({ d: ribbonPath(g, 1), g, priv, local: !!kindOverride, v, from: a.key, to: b.key, via: b.kind === 'mid' ? b.name : a.kind === 'mid' ? a.name : '', state: kindOverride ? 'ok' : priv ? 'ok' : (a.state !== 'ok' ? a.state : b.state), delta: deltaOf(a.key + '>' + b.key), pattern: kindOverride || patternOf(a, b) }); };
+  // A bar takes its traffic in on its left face and sends it on from its right
+  // face, each from the top (review, 2026-09-30). One offset for both stacked a
+  // middle bar's outgoing ribbons under its incoming ones: NetBond's traffic
+  // left from the bars below it, and Small's Internet ran off the frame.
+  const link = (a, b, v, priv, kindOverride) => { if (v <= 0.0005) return; const sa = a.h / (a.tot || a.v || 1), sb = b.h / (b.tot || b.v || 1); const ay = a.y + a.usedOut * sa, by = b.y + b.usedIn * sb, ah = v * sa, bh = v * sb; a.usedOut += v; b.usedIn += v; const g = [a.x2, ay, ah, b.x, by, bh]; ribbons.push({ d: ribbonPath(g, 1), g, priv, local: !!kindOverride, v, from: a.key, to: b.key, via: b.kind === 'mid' ? b.name : a.kind === 'mid' ? a.name : '', state: kindOverride ? 'ok' : priv ? 'ok' : (a.state !== 'ok' ? a.state : b.state), delta: deltaOf(a.key + '>' + b.key), pattern: kindOverride || patternOf(a, b) }); };
   const mid = (k) => MM.find(m => m.key === k);
   const wanShare = fabV ? wanT / fabV : 0;
   SS.forEach(s0 => {
@@ -504,7 +508,8 @@ export function buildMap(est, inv, flows0, opts = {}) {
     if (pv > 0 && pubT > 0) { const ipShare = ipsecT / Math.max(0.0001, ipsecT + inetT); if (mid('mid:ipsec')) link(mid('mid:ipsec'), d, pv * (pubT ? (ipsecT + inetT) / pubT : 1) * ipShare, false); if (mid('mid:internet')) link(mid('mid:internet'), d, pv * (pubT ? (ipsecT + inetT) / pubT : 1) * (1 - ipShare), false); }
   });
   const nodes = [...SS.map(x => ({ ...x, side: 'l' })), ...MM.map(x => ({ ...x, side: 'm' })), ...DD.map(x => ({ ...x, side: 'r' }))].map(x => ({ ...x, delta: deltaOf(x.key), open: open.has(x.key) }));
-  return { W, H, heads, nodes, context: CTX.map(x => ({ ...x, side: 'ctx' })), ribbons, total: T, fabV, localV, open: [...open], zoom, zf, trace: traceOf(ribbons, zoom ? inZoom : null, SS, DD) };
+  // The total is what the sites send; T's divide-by guard read 1.0 Gbps on an empty estate (2026-09-30).
+  return { W, H, heads, nodes, context: CTX.map(x => ({ ...x, side: 'ctx' })), ribbons, total: T0, fabV, localV, open: [...open], zoom, zf, trace: traceOf(ribbons, zoom ? inZoom : null, SS, DD) };
 }
 /** A ribbon's outline; k draws only the top share of it, at both ends. */
 function ribbonPath([x1, ay, ah, x2, by, bh], k) {
