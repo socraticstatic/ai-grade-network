@@ -250,16 +250,29 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Same day, second pass: each tier's Cost reads its monthly after and what that saves or adds, the way
 // Performance reads its ms (a value span and a delta span in a row): span 863 -> 865.
 // Recommended merged onto Over time's legend (2026-09-30): both land, so each count is the sum of the two moves: span 865 -> 864, sc-if 431 -> 432, sc-for 235 -> 236, button 331 -> 332.
+// The connect flow (2026-09-30, Micah: "ways to connect doesn't work - take from netbond advanced's
+// flow", "options and orders is so weird"): Ways to connect became NetBond Advanced's nine
+// connection types with a count that opens its set in place, each member a button that starts an
+// order with it attached (the three NetBond / SD-WAN / Hyperscaler cards and the path table left
+// it); Orders is a new Connect page (placed this session, the order in progress in an aside, No
+// orders yet); S4 became the flow: a stepper with honest states, a gate per step (type, provider,
+// endpoints, basic, advanced, terms, review) with the path table rebuilt in Connection Profile,
+// the policy block, the free-text box kept on Connection Type, the order's "All N" list in the
+// main column, a Review total, and "Your order, in progress" (rows, the path picture with its
+// ends as buttons, the running price) in place of Composed so far; the six-step wizard's cards
+// went with it:
+// div 1027 -> 1115, span 837 -> 920, sc-if 429 -> 474, sc-for 234 -> 245, button 322 -> 346, aside 9 -> 10, label 29 -> 31.
+// The flow merged onto Recommended (2026-09-30): each count is Recommended's plus the flow's own move: div 1030 -> 1118, span 864 -> 947, sc-if 432 -> 477, sc-for 236 -> 247, button 332 -> 356, aside 9 -> 10, label 29 -> 31.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1030],
-    ['span', /<span\b/g, /<\/span>/g, 864],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 432],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 236],
+    ['div', /<div\b/g, /<\/div>/g, 1118],
+    ['span', /<span\b/g, /<\/span>/g, 947],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 477],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 247],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 332],
-    ['aside', /<aside\b/g, /<\/aside>/g, 9],
-    ['label', /<label\b/g, /<\/label>/g, 29],
+    ['button', /<button\b/g, /<\/button>/g, 356],
+    ['aside', /<aside\b/g, /<\/aside>/g, 10],
+    ['label', /<label\b/g, /<\/label>/g, 31],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

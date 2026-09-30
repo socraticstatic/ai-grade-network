@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { vals } from '../naas-app.js';
+import { vals, estateFor } from '../naas-app.js';
 import { mkC } from './harness.mjs';
+import { walkFlow } from './flow-walk.mjs';
 
 // Every order review reads true (review round 2, 2026-09-30). Round 1 gave
 // Resize its own path ends; every other order still drew its two ends by
@@ -44,10 +45,20 @@ function everyOrder() {
     const c = mkC({ view: x.view, estateParam: null, screen: 's7', layer: 'cloud', tab: 'connect', ...(x.addedSources ? { addedSources: x.addedSources } : {}) });
     const snap = JSON.stringify(c.state);
     const reset = (patch) => { for (const k of Object.keys(c.state)) delete c.state[k]; Object.assign(c.state, JSON.parse(snap), patch || {}); };
+    // A door that opens the connect flow (2026-09-30) reaches the flow's own Review
+    // step: the order there is the one Place order places.
+    const flowReview = () => {
+      const done = walkFlow(c.state.compose, estateFor(c.state));
+      if (!done) return null;
+      c.state.compose = done;
+      const v = vals(c);
+      assert.equal(v.cfIsReview, true);
+      return v.cfOrder;
+    };
     const land = (label, go, patch) => {
       reset(patch);
       go();
-      if (c.state.screen === 's4') vals(c).reviewOrder();
+      if (c.state.screen === 's4') { const o = flowReview(); if (o) out.push({ label: `${x.tag}: ${label}`, order: o, state: JSON.parse(JSON.stringify(c.state)), flow: true }); return; }
       assert.equal(c.state.screen, 's6', `${x.tag} ${label} never reached Review`);
       out.push({ label: `${x.tag}: ${label}`, order: c.state.order, state: JSON.parse(JSON.stringify(c.state)) });
     };
@@ -60,8 +71,8 @@ function everyOrder() {
     for (const key of (vals(c).optRows || []).map(r => r.key)) {
       reset(OPT);
       vals(c).optRows.find(r => r.key === key).go();
-      if (c.state.screen === 's4') vals(c).reviewOrder();
-      if (c.state.screen === 's6') out.push({ label: `${x.tag}: optimize ${key}`, order: c.state.order, state: JSON.parse(JSON.stringify(c.state)) });
+      if (c.state.screen === 's4') { const o = flowReview(); if (o) out.push({ label: `${x.tag}: optimize ${key}`, order: o, state: JSON.parse(JSON.stringify(c.state)), flow: true }); }
+      else if (c.state.screen === 's6') out.push({ label: `${x.tag}: optimize ${key}`, order: c.state.order, state: JSON.parse(JSON.stringify(c.state)) });
     }
     const seen = new Set();
     for (const layer of LAYERS) {
@@ -109,9 +120,12 @@ test('the ends say where the order goes', () => {
   assert.deepEqual(endsOf('Growing: tier uninspected|NGFW (Palo Alto) in path'), { src: 'AWS eu-west-1', dst: 'The internet' });
   // A tier whose product is itself the far end says so, whatever the finding was about.
   assert.equal(endsOf('Growing: tier crosscloud|Neocloud reach via Equinix Fabric').dst, 'Neoclouds');
-  // A tier that opens Compose ends where the compose does: Steer orders the hosted VPC in AWS us-east-1.
-  assert.deepEqual(endsOf('Growing: tier avoidable|Steer this bucket on AT&T'), { src: 'AWS us-east-1', dst: 'The internet' });
-  assert.deepEqual(endsOf('Growing: tier pci|Author "private path required" for tag PCI'), { src: 'Your data centers', dst: 'Your clouds' });
+  // A tier that opens the connect flow (2026-09-30) ends where its order does: the
+  // site at the order's location and the cloud region it reaches, both named. Steer
+  // is Internet to Cloud, NetBond Advanced's public internet on-ramp: the internet
+  // and the region, never a site nobody attached.
+  assert.deepEqual(endsOf('Growing: tier avoidable|Steer this bucket on AT&T'), { src: 'The internet', dst: 'AWS us-east-1' });
+  assert.deepEqual(endsOf('Growing: tier pci|Author "private path required" for tag PCI'), { src: 'Ashburn DC', dst: 'AWS us-east-1' });
   // Round 1's Resize keeps its own ends.
   assert.deepEqual(endsOf('Growing: optimize capacity'), { src: 'Your sites', dst: 'AWS us-east-1' });
   // A finding the observe data raises names its one region, or counts them.

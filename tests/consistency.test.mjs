@@ -106,5 +106,6 @@ test('Connect\'s map is Your network; Connect is its own page with Recommended, 
   assert.equal(cn.pageTitle, 'Connect');
   // Options became Recommended and Orders joined Connect's views (Micah, 2026-09-30: "options and orders is so weird").
   assert.deepEqual(cn.cnPanels.map(p => p.label), ['Recommended', 'Ways to connect', 'Orders']);
+  assert.equal(vals(mkC({ view: 'partial', screen: 's3', tab: 'connect', cnPage: 'orders', estateParam: null })).pageTitle, 'Connect');
   assert.ok(!cn.showLaunch);
 });
