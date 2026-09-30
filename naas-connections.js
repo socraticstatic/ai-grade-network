@@ -11,7 +11,7 @@
 // are the workloads that are impacted. These workloads are also talking to
 // these other workloads."
 import * as P from './naas-paths.js';
-import { regionRows, rollupLine, linesOf, onAtt, serviceSites, accessRows, buRows, regionCard } from './naas-logic.js';
+import { regionRows, rollupLine, linesOf, onAtt, serviceSites, accessRows, buRows, regionCard, connModeOf, siteModeOf, CONN_LABEL } from './naas-logic.js';
 
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const rnd = (seed) => { let x = seed || 1; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 10000) / 10000; }; };
@@ -373,3 +373,40 @@ export function splitSources(est, flows, split) {
 
 /** Pattern a Sankey destination belongs to, for the Logs door. */
 export const destPattern = (name) => /object storage/.test(name) ? 'regions' : /inter-cloud/.test(name) ? 'clouds' : /from sites/.test(name) ? 'inbound' : 'internet';
+
+// ---------- Your clouds (notes, 2026-09-30) ----------
+// What the tiles count at each level of the cloud drill, and how the VPCs there
+// attach. The unit of the mix is the VPC or VNet, the thing that attaches, so
+// what is attached equals the header's "attached" pill. IPsec and SD-WAN are
+// properties of sites, so they are counted from the sites, not seeded on regions.
+const VPC_NOUN = { Azure: ['VNet', 'VNets'], Oracle: ['VCN', 'VCNs'] };
+const MIX_ORDER = ['netbond', 'direct', 'third', 'internet'];
+const MIX_INK = { netbond: 'var(--viz-1)', direct: 'var(--viz-2)', third: 'var(--viz-5)', internet: 'var(--viz-6)' };
+export function cloudScope(est, inv, trail = []) {
+  const at = (i, p) => (trail[i] ? String(trail[i]).replace(p, '') : null);
+  const cloud = at(0, /^cloud:/), region = at(1, /^region:/), vpcId = at(2, /^vpc:/), snId = at(3, /^sn:/);
+  const level = ['root', 'cloud', 'region', 'vpc', 'subnet'][Math.min(trail.length, 4)];
+  const regs = (inv || []).flatMap(c => (c.regions || []).map(r => ({ ...r, cloud: r.cloud || c.name }))).filter(r => (!cloud || r.cloud === cloud) && (!region || r.region === region));
+  const vpcs = regs.flatMap(r => (r.vpcs || []).map(v => ({ v, r }))).filter(x => !vpcId || x.v.id === vpcId);
+  const subnets = vpcs.flatMap(x => (x.v.subnets || []).map(sn => ({ sn, ...x }))).filter(x => !snId || x.sn.id === snId);
+  const wls = subnets.flatMap(x => x.sn.workloads || []);
+  const counts = { clouds: new Set(regs.map(r => r.cloud)).size, regions: regs.length, vpcs: vpcs.length, subnets: subnets.length, workloads: wls.length, apps: new Set(wls.map(w => w.tag || 'untagged')).size, exposed: wls.filter(w => w.exposed).length };
+  const noun = cloud ? (VPC_NOUN[cloud] || ['VPC', 'VPCs'])[1] : 'VPCs & VNets';
+  const T = (l, v) => ({ key: l, l, v: Number(v || 0).toLocaleString('en-US') });
+  const tiles = {
+    root: [T('Clouds', counts.clouds), T('Regions', counts.regions), T(noun, counts.vpcs), T('Apps', counts.apps)],
+    cloud: [T('Regions', counts.regions), T(noun, counts.vpcs), T('Apps', counts.apps), T('Workloads', counts.workloads)],
+    region: [T(noun, counts.vpcs), T('Subnets', counts.subnets), T('Apps', counts.apps), T('Workloads', counts.workloads)],
+    vpc: [T('Subnets', counts.subnets), T('Workloads', counts.workloads), T('Apps', counts.apps), T('Exposed', counts.exposed)],
+    subnet: [T('Workloads', counts.workloads), T('Exposed', counts.exposed), T('Apps', counts.apps), { key: 'AZ', l: 'Zone', v: (subnets[0] && subnets[0].sn.az) || '' }],
+  }[level];
+  const regionOf = (name) => (est.regionsList || []).find(r => r.region === name) || { priv: false };
+  const modeOf = (x) => (x.v.priv ? connModeOf(regionOf(x.r.region)) : 'internet');
+  const n = Object.fromEntries(MIX_ORDER.map(m => [m, 0])); vpcs.forEach(x => { n[modeOf(x)] += 1; });
+  const total = vpcs.length || 1;
+  const mix = MIX_ORDER.map(mode => ({ key: mode, mode, n: n[mode], label: CONN_LABEL[mode].short, title: `${CONN_LABEL[mode].long} · ${n[mode]} ${n[mode] === 1 ? 'VPC' : 'VPCs'}`, pct: +(n[mode] / total * 100).toFixed(1), ink: MIX_INK[mode] }));
+  const sitesBy = (m) => (est.sites || []).filter(x => siteModeOf(x) === m).reduce((a, x) => a + S.countOf(x.name), 0);
+  const ip = sitesBy('ipsec'), sd = sitesBy('sdwan');
+  const siteLine = `${ip.toLocaleString('en-US')} IPsec ${ip === 1 ? 'site' : 'sites'} · ${sd.toLocaleString('en-US')} SD-WAN ${sd === 1 ? 'site' : 'sites'}`;
+  return { level, counts, tiles, mix, siteLine, noun };
+}

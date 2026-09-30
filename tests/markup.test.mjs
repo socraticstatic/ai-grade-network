@@ -220,12 +220,13 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Connections: bandwidth in the open, in the Observe card (2026-09-29): span 644 -> 660, sc-for 195 -> 197.
 // Reset demo at the rail foot (2026-09-30): button 261 -> 262.
 // Your sites: Service and Bandwidth columns (2026-09-30): span 660 -> 662.
+// Your clouds: How they connect (2026-09-30): div 889 -> 892, span 662 -> 665, sc-for 197 -> 199.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 889],
-    ['span', /<span\b/g, /<\/span>/g, 662],
+    ['div', /<div\b/g, /<\/div>/g, 892],
+    ['span', /<span\b/g, /<\/span>/g, 665],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 346],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 197],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 199],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 262],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],

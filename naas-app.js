@@ -2560,13 +2560,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
             return id; };
           const cloudCrumbsE = [{ key: 'root', label: 'All clouds', to: [] }, ...trail.map((k, i) => ({ key: k, label: labelOf(k), to: trail.slice(0, i + 1) }))]
             .map((c, i, a) => ({ ...c, notLast: i < a.length - 1, weight: i === a.length - 1 ? 700 : 500, color: i === a.length - 1 ? 'var(--text-heading)' : 'var(--link)', go: () => set({ cloudTrailE: c.to, cloudPage: 0 }) }));
-          const sitesAll = (est.sites || []).reduce((a, x) => a + S.countOf(x.name), 0), sitesAtt = (est.sites || []).filter(onAtt).reduce((a, x) => a + S.countOf(x.name), 0);
-          const privN = est.regionsList.filter(r => r.priv).length;
-          const cloudTiles = [
-            { key: 's', l: 'Sites', v: nf(sitesAll), tone: 'var(--text-heading)' }, { key: 'a', l: 'On AT&T', v: nf(sitesAtt), tone: 'var(--success)' }, { key: 'n', l: 'Not on AT&T', v: nf(sitesAll - sitesAtt), tone: sitesAll - sitesAtt ? 'var(--warning)' : 'var(--text-heading)' },
-            { key: 'r', l: 'Cloud regions', v: nf(est.regionsList.length), tone: 'var(--text-heading)' }, { key: 'p', l: 'Private connections', v: `${privN} of ${est.regionsList.length}`, tone: 'var(--text-heading)' },
-          ];
-          return { cloudRows, cloudCrumbsE, cloudTiles, cloudLine: `${rows.length} ${rows.length === 1 ? LV[0] : LV[1]}` };
+          // The tiles count clouds, not sites, and follow the drill (notes, 2026-09-30).
+          const sc = X.cloudScope(est, invAll, trail);
+          const cloudTiles = sc.tiles.map(t => ({ ...t, tone: 'var(--text-heading)' }));
+          const cloudMix = sc.mix.map(m => ({ ...m, w: m.pct + '%', op: m.n ? 1 : 0.4 }));
+          const cloudMixLabel = `How they connect · ${sc.siteLine}`, cloudMixTitle = `${sc.noun} by how they attach. ${sc.siteLine} reach the clouds over their own tunnels.`;
+          return { cloudRows, cloudCrumbsE, cloudTiles, cloudMix, cloudMixLabel, cloudMixTitle, cloudLine: `${rows.length} ${rows.length === 1 ? LV[0] : LV[1]}` };
         })(),
         // Your sites drill by place (Micah, 2026-09-29): region, state, metro, site, services.
         ...(() => {
