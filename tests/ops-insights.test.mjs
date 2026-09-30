@@ -32,6 +32,8 @@ test('Growing at 30 days: fixes took 20h 31m, and the open count is the Tickets 
   const open = +v.opsLine.match(/(\d+) tickets? open/)[1];
   c.setState({ opsPanel: 'tickets' });
   const t = vals(c);
+  // The count is the rows that carry a ticket (final review, 2026-09-30); with Andi On that is every row.
+  assert.equal(t.ticketAll.filter(r => r.ticketed).length, open);
   assert.equal(t.ticketAll.length, open);
   assert.equal(t.opsPanels[1].label, `Tickets · ${open}`);
   assert.match(t.opsLine, /^1 Sev 1 open now\./);

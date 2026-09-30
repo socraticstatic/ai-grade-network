@@ -30,7 +30,8 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 
 - Tab: **Health**. Finance is red on the ExpressRoute cloud link, and red at the app.
 - Open problems, ranked by apps affected: "Azure eastus · ExpressRoute", "BGP flapping", owner "Cloud provider", 1 route change 3 minutes before it started.
-- **Open ticket**: the row reads "T-nnnn · In progress", and the same finding reads In progress under Insights.
+- The row already reads "T-nnnn · opened by Andi": Andi opens a ticket for each new incident, so there is no Open ticket to click. Operations > Tickets (beat 7) lists the same number.
+- Optional: to open one by hand, turn Andi off under Operations > Tickets. Open ticket then shows here and there alike, and the row reads "T-nnnn · In progress", the same number.
 - Optional: **By segment** shows the stakeholder's nine rows, each with its owner and its source. Hub, exit and DNS read "Not yet measured".
 - Optional: **Trace** opens **Paths** on finance through eastus, where the hops add up to Site to app and the cloud link shows 0.31% loss.
 
@@ -50,6 +51,7 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 - Rail: **Insights**. It lands on **Your actions** for Network Eng: health problems and latency over SLO on the left, and that role's findings on the right.
 - **Do it** is visible, disabled, and reads "Coming soon". **Accept** and **Defer** work; Defer snoozes the finding to the next monthly briefing.
 - Tab: **Operations**. "1 Sev 1 open now. N tickets open. Fixes took 20h 31m on average." The fixed list is labelled sample history.
+- Tab: **Tickets**. The eastus incident carries the T-nnnn Health showed in beat 4, opened by Andi. With Andi off, an incident with no ticket still lists here as "No ticket yet", and the line counts it as an incident, not a ticket.
 - Optional: **Monthly briefing**, Andi's four to six sentences for the role, built from the same figures. Nothing sends.
 
 ## 8. The Estate switch (F2)
@@ -60,6 +62,6 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 
 ## If something goes sideways
 
-- **Reset demo** clears tickets, deferrals, tags and added sources. Oracle comes off with it.
+- **Reset demo** clears tickets, deferrals, tags and added sources, and turns Andi's tickets back on. Oracle comes off with it.
 - A time on the page reads today's clock. Problems start 22 and 47 minutes before now, so the story holds whenever you run it.
 - Things that are shown but not live yet: ticket sending, briefing sending, Do it, and the reference design for Your actions (still owed by the stakeholder).

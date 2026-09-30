@@ -85,11 +85,23 @@ test('leaving the page, or switching estate, closes the finding drawer', () => {
   assert.match(HTML, /fdKey: null/);
 });
 
+// It checked two hand-listed keys, so the eleven keys the 2026-09-30 notes build
+// added to defaults() never reached the constructor: the browser booted without
+// andiTickets, and Health and Operations disagreed about tickets (final review,
+// 2026-09-30). It now reads the constructor's object whole and diffs every key.
 test('every new state key starts in defaults and in the markup constructor', () => {
   assert.equal(defaults().prodPanel, 'get');
   assert.equal(defaults().nowIso, null);
-  const ctor = HTML.slice(HTML.indexOf('constructor(p) { super(p); this.state = {'), HTML.indexOf('constructor(p) { super(p); this.state = {') + 4000);
-  for (const k of ['prodPanel', 'nowIso']) assert.ok(ctor.includes(k + ':'), k);
+  const head = 'constructor(p) { super(p); this.state = ';
+  const i = HTML.indexOf(head) + head.length;
+  assert.ok(i > head.length, 'the markup constructor is gone');
+  const ctor = Function(`return (${HTML.slice(i, HTML.indexOf('; }', i))})`)();
+  const d = defaults();
+  assert.deepEqual(Object.keys(d).filter(k => !(k in ctor)), [], 'defaults() keys the markup constructor lacks');
+  assert.deepEqual(Object.keys(ctor).filter(k => !(k in d)), [], 'constructor keys defaults() lacks');
+  // The markup boots on s3 and init() moves an s0 there too; every other key starts the same.
+  const drift = Object.keys(d).filter(k => k !== 'screen' && JSON.stringify(d[k]) !== JSON.stringify(ctor[k]));
+  assert.deepEqual(drift, [], 'keys whose constructor value differs from defaults()');
 });
 
 test('a first mile the catalog does not name, but that is on AT&T, is not drawn outside AT&T', () => {
