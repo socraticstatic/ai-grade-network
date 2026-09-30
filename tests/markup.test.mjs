@@ -222,15 +222,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Your sites: Service and Bandwidth columns (2026-09-30): span 660 -> 662.
 // Your clouds: How they connect (2026-09-30): div 889 -> 892, span 662 -> 665, sc-for 197 -> 199.
 // Cost > Optimize replaced the two-moves strip (2026-09-30): div 892 -> 896, span 665 -> 666, sc-if 346 -> 351, sc-for 199 -> 200, button 262 -> 262.
+// Observe > Health, and the Queue drawer retired (2026-09-30): div 896 -> 900, span 666 -> 681, sc-if 351 -> 356, sc-for 200 -> 204, button 262 -> 265, aside 10 -> 9.
+// The Health legend (2026-09-30): div 900 -> 901, span 681 -> 687.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 896],
-    ['span', /<span\b/g, /<\/span>/g, 666],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 351],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 200],
+    ['div', /<div\b/g, /<\/div>/g, 901],
+    ['span', /<span\b/g, /<\/span>/g, 687],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 356],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 204],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 262],
-    ['aside', /<aside\b/g, /<\/aside>/g, 10],
+    ['button', /<button\b/g, /<\/button>/g, 265],
+    ['aside', /<aside\b/g, /<\/aside>/g, 9],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];
   for (const [name, open, close, expected] of pairs) {

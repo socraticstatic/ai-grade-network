@@ -14,6 +14,7 @@ import * as P from './naas-paths.js';
 import * as X from './naas-connections.js';
 import * as F from './naas-flowmap.js';
 import * as OD from './naas-observe-dash.js';
+import * as G from './naas-segments.js';
 import * as FB from './naas-fabric.js';
 import * as V from './naas-volume.js';
 import * as SCH from './naas-schedule.js';
@@ -260,6 +261,8 @@ export function vals(c) {
   const incChanges = OD.changes(est0, conns, OD.activityOf(est0, { customPolicies: s.customPolicies || [], steered, conns, now: clockNow }), clockNow);
   const probs = OD.problems(est0, conns, obAll, appsOf(est0, A.inventory(est0), obAll.flows), incChanges, clockNow);
   const probRows = OD.queue(probs, clockNow);
+  // Who answers for each piece of every path, read once from the whole estate (2026-09-30).
+  const segCtx = G.segCtxOf(est0, { inv: A.inventory(est0), ob: obAll, conns });
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, obAll), ...est0.findings] };
   const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
@@ -654,7 +657,7 @@ export function vals(c) {
   // Big to tiny (Micah, 14:11): a card lands you inside the picture or the map at the level it names.
   const degConn = conns.rows.find(r => r.degraded) || conns.rows.find(r => r.hot) || null;
   const firstPublic = est.regionsList.find(r => !r.priv) || null;
-  const launchGo = { connect: go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' }), observe: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', mapSel: degConn ? degConn.id : null, mapRegion: degConn ? degConn.region : null, panelTab: 'impact' }), govern: go('s3', { layer: 'cloud', tab: 'govern' }), cost: go('s3', { layer: 'cloud', tab: 'cost' }) };
+  const launchGo = { connect: go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' }), observe: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', obPanel: 'health', mapSel: degConn ? degConn.id : null, mapRegion: degConn ? degConn.region : null, panelTab: 'impact' }), govern: go('s3', { layer: 'cloud', tab: 'govern' }), cost: go('s3', { layer: 'cloud', tab: 'cost' }) };
   const rollup = X.launchCards({ est: estOpen, ob, conns, totalSave, violations: violationsN, isEmpty }).map(r => ({ ...r, go: launchGo[r.key], hasSub: !!r.sub, barVis: r.bar !== null ? 'visible' : 'hidden', alarm: r.bar !== null && r.bar < 50, barColor: r.bar !== null && r.bar < 50 ? 'var(--warning)' : 'var(--cta)', barW: (r.bar || 0) + '%', hasBar: r.bar !== null, border: r.primary ? 'var(--cta)' : 'var(--border-secondary)', borderW: r.primary ? '2px' : '1px', hasEyebrow: !!r.eyebrow, doorInk: r.primary ? 'var(--cta)' : 'var(--link)', doorBg: r.primary ? 'var(--cta)' : 'transparent', doorColor: r.primary ? '#fff' : 'var(--link)', doorPad: r.primary ? '0 14px' : '0', doorBorder: r.primary ? '0' : '0' }));
 
   // ---- findings ----
@@ -975,7 +978,7 @@ export function vals(c) {
       const soon = { soon: true, go: () => {} };
       const resources = [
         { key: 'glossary', icon: 'grid', title: 'Network Glossary', desc: 'The words on these screens', tags: ['Access', 'Core', 'SLO'], cta: 'Open glossary', go: () => set({ helpPanel: 'terms' }) },
-        { key: 'tickets', icon: 'checklist', title: 'Support Tickets', desc: 'Create and track tickets', tags: ['Trouble report', 'Change'], cta: 'View tickets', ...soon },
+        { key: 'tickets', icon: 'checklist', title: 'Support Tickets', desc: 'Open problems and their tickets', tags: ['Trouble report', 'Change'], cta: 'Open problems', live: true, go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' }) },
         { key: 'tour', icon: 'hub', title: 'Interactive Tour', desc: 'A guided walk through the picture', tags: ['Overview', 'Navigation'], cta: 'Start tour', go: () => { set({ openHintSeen: false }); try { localStorage.removeItem('naas.openHint'); } catch (e) {} go('s3', { layer: 'cloud', tab: 'connect', drill: [], cloudPick: null })(); } },
         { key: 'kb', icon: 'apps', title: 'Knowledge Base', desc: 'Articles and FAQs', tags: ['Common issues', 'Use cases'], cta: 'Browse articles', ...soon },
         { key: 'video', icon: 'smart-meter', title: 'Video Tutorials', desc: 'Short how-to videos', tags: ['Quickstart', 'Troubleshooting'], cta: 'Watch videos', ...soon },
@@ -1034,7 +1037,7 @@ export function vals(c) {
         prodPanelGet: pk === 'get', prodPanelTerms: pk === 'terms', prodPanelRuns: pk === 'runs' }; })(),
     // discover
     allRegions: est.regionsList, scanSteps, scanLine: s.scanStep < 4 ? `${scanSteps[Math.min(3, s.scanStep)].label} · ${Math.min(4, s.scanStep + 1)} of 4` : '', scanDone: s.scanStep >= 4, scanning: s.scanStep < 4, intakeCadence, setIntakeCadence, intakeCadenceLabel, intakeCadenceLower, cadenceAsk, cadenceAskText, confirmCadence, discoverVerdict, discoverKpis, estateChips, treeOrMap: s.treeOrMap, isTree: s.treeOrMap === 'tree', isMap: s.treeOrMap === 'map', treeBg: s.treeOrMap === 'tree' ? 'var(--bg-accent)' : 'transparent', treeColor: s.treeOrMap === 'tree' ? 'var(--link)' : 'var(--text-body)', mapBg: s.treeOrMap === 'map' ? 'var(--bg-accent)' : 'transparent', mapColor: s.treeOrMap === 'map' ? 'var(--link)' : 'var(--text-body)', showTree: () => set({ treeOrMap: 'tree' }), showMap: () => set({ treeOrMap: 'map' }), tree, mapRows, mapSites, mapH, mapVB: `0 0 1000 ${mapH}`, bigEstate, sitesCountLabel: est.sitesCount ? `${est.sitesCount.toLocaleString('en-US')} sites, grouped` : plural(est.sites.length, 'site', 'sites'), chain, chainPolicies, hasChain: !!ow, chainRegion: ow ? `${ow.cloud} ${ow.region}` : '', closeChain: () => set({ openWorkload: null }),
-    ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll),
+    ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll, probs, segCtx),
   };
   return pageLists(out, s, set);
 }
@@ -1047,7 +1050,7 @@ export function pageRows(rows, size, page, setPage) {
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
 const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
-  saveRows: ['savePage', 5, 'savePager', 'savePageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
+  saveRows: ['savePage', 5, 'savePager', 'savePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 function pageLists(out, s, set) {
   for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
     if (!Array.isArray(out[list])) continue;
@@ -1348,7 +1351,7 @@ export function findingList(est, est0, ob, now) {
 }
 const OPEN_STATES = ['open', 'ack', 'progress'];
 function lifeState(s, est) { return { ...LC.lifeFor(est), ...(((s.findingLife || {})[est.id]) || {}) }; }
-function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows = [], obAll = ob) {
+function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows = [], obAll = ob, probs = [], segCtx = null) {
   const obScope = s.obScope || 'all';
   const egressBase = egressBaseFor(est0, ob);
   const gpw = R.gbPerWlExport(est0, egressBase);
@@ -1997,8 +2000,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const otGrains = [['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly']].map(([k, l]) => { const on = otGrain === k; return { key: k, label: l, on, ...seg(on), go: () => set({ otGrain: k }) }; });
   const otEnds = OT.bars.length ? [OT.bars[0].label, OT.bars[OT.bars.length - 1].label] : ['', ''];
   // One panel at a time under the Traffic head (2026-09-28, "No scrolling").
-  const obPanel = ['map', 'time', 'where', 'conn'].includes(s.obPanel) ? s.obPanel : 'map';
-  const obPanels = [['map', 'Traffic'], ['time', 'Over time'], ['where', 'Where it goes'], ['conn', 'Connections']].map(([k, l]) => { const on = obPanel === k;
+  const obPanel = ['map', 'time', 'where', 'health', 'conn'].includes(s.obPanel) ? s.obPanel : 'map';
+  const obPanels = [['map', 'Traffic'], ['time', 'Over time'], ['where', 'Where it goes'], ['health', 'Health'], ['conn', 'Connections']].map(([k, l]) => { const on = obPanel === k;
     return { key: k, label: l, on, go: () => set({ obPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; });
   const flowViews = [['state', 'Traffic'], ['cost', 'Cost'], ['slo', 'Performance']].map(([k, l]) => { const on = mapMode === k || (k === 'state' && mapMode === 'delta'); return { key: k, label: l, on, ...seg(on), go: () => set({ mapMode: k }) }; });
   const flowPaths = [['all', 'All paths'], ['att', 'On AT&T'], ['out', 'Outside AT&T']].map(([k, l]) => { const on = mapPath === k; return { key: k, label: l, on, ...seg(on), go: () => set({ mapPath: k }) }; });
@@ -2339,9 +2342,45 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     'FinOps & SRE': { line: totalSave > 0 ? `${fmt(totalSave)}/mo is on the table: the same bytes at AT&T rates instead of public ones.` : `The AT&T network is saving ${fmt(ob.savingsMo || 0)}/mo against public rates; egress runs ${fmt(ob.egressMo || 0)}/mo.`, cta: 'Open Cost', go: () => { go('s3', { layer: 'cloud', tab: 'cost' })(); } },
   };
   const plNow = PERSONA_LENS[personaNow] || PERSONA_LENS['Executive'];
-  const dash = { ...mixVals, ...insightVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ queueOpen: true }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
+  // Observe > Health (notes, 2026-09-30): the path flow, one row per app group, one
+  // cell per segment; and the open problems, ranked by apps affected, with Open
+  // ticket (a lifecycle move, no second store) and Trace (the Traffic map).
+  const INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: '#c9362c', down: 'var(--error)' };
+  const healthVals = (() => {
+    if (!segCtx) return { pathFlowAll: [], pathFlowRows: [], segHeads: [], healthTiles: [], problemRows: [] };
+    const all = G.pathFlow(segCtx);
+    const segHeads = G.SEGMENTS.map(g => ({ key: g.key, label: g.label, title: g.title }));
+    const cellView = (c, i) => {
+      const ink = INK[c.state], seg = G.SEGMENTS[i];
+      const bg = c.state === 'none' || c.state === 'nodata' || c.limited ? 'transparent' : ink;
+      const border = c.state === 'none' ? '0' : c.state === 'nodata' ? '1.5px dashed var(--text-disabled)' : c.limited ? `2px solid ${ink}` : '0';
+      const word = { ok: 'Healthy', risk: 'At risk', slo: 'Over SLO', down: 'Down', nodata: 'Not yet measured', none: 'Not on this path' }[c.state];
+      const title = c.state === 'none' ? `${seg.label}: not on this path` : `${seg.label} · ${c.thing}${c.owner ? ' · ' + G.OWNERS[c.owner] : ''} · ${word}${c.why && c.why !== 'Healthy' && c.why !== word ? ' · ' + c.why : ''}${c.limited ? ' · limited view' : ''}`;
+      return { key: seg.key, state: c.state, thing: c.thing, title, bg, border };
+    };
+    const rows = all.map(r => ({ key: r.tag, tag: r.tag, label: r.label, state: r.state, dot: INK[r.state] || 'var(--text-disabled)', cells: r.cells.map(cellView) }));
+    const downN = (conns.rows || []).filter(r => r.degraded).length, riskN = all.filter(r => r.state === 'risk' || r.state === 'slo').length;
+    const healthTiles = [
+      { key: 'ok', l: 'Apps healthy', v: `${all.filter(r => r.state === 'ok').length} of ${all.length}`, u: '' },
+      { key: 'risk', l: 'At risk', v: String(riskN), u: riskN === 1 ? 'app' : 'apps' },
+      { key: 'down', l: 'Down', v: String(downN), u: downN === 1 ? 'connection' : 'connections' },
+      { key: 'alerts', l: 'Alerts', v: String(probs.length), u: 'open' },
+    ];
+    const nowMs = SCH.nowOf(s);
+    const tid = (k) => 'T-' + (1000 + [...k].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9000, 7));
+    const stateOfKey = (k) => { const ev = (life[k] && life[k].events) || []; return ev.length ? ev[ev.length - 1].state : 'open'; };
+    const problemRows = probs.map(p => { const st = stateOfKey(p.key), n = p.apps.length;
+      return { key: p.key, dot: INK[p.state] || 'var(--warning)', where: p.where, thing: p.thing, what: p.what, ownerLabel: p.ownerLabel,
+        appsF: `${n} ${n === 1 ? 'app' : 'apps'} · ${(p.wl || 0).toLocaleString('en-US')} workloads`,
+        startedF: `Started ${SCH.hhmm(p.startedAt)} · ${SCH.agoOf(p.startedAt, nowMs)}`, changeF: p.change ? `${p.change.text} at ${SCH.hhmm(p.change.at)}` : '', hasChange: !!p.change,
+        ticketed: st === 'progress', ticketF: st === 'progress' ? `${tid(p.key)} · In progress` : '', canTicket: st !== 'progress',
+        ticket: moveF({ key: p.key }, 'progress', { note: `Ticket ${tid(p.key)} opened, routed to ${p.ownerLabel}` }),
+        trace: () => set({ obPanel: 'map', mapRegion: p.region, mapSel: p.connId || null, panelTab: 'impact' }) }; });
+    return { pathFlowAll: all, pathFlowRows: rows, segHeads, healthTiles, problemRows, hasProblems: problemRows.length > 0 };
+  })();
+  const dash = { ...mixVals, ...insightVals, ...healthVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
-    obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
+    obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelHealth: obPanel === 'health', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0 && !!s.obPickOpen, scopeLabel, mapTotal: mapG.total, mapP95: perf.p95,
     // The legend says what the colors mean in the view you are in.
     mapLegend: (mapMode === 'cost' ? [['#0057b8', 'On AT&T, at your AT&T rate'], [dark ? '#ffa25e' : '#e07b00', 'Outside AT&T, at egress rates']]

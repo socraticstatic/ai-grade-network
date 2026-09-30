@@ -149,3 +149,14 @@ export function segmentTable(est, ctx) {
   const measured = { ipsec: false, hub: false, exit: false };
   return TABLE.map(t => ({ ...t, ownerLabel: OWNERS[t.owner], counts: rows[t.key].counts, now: rows[t.key].now, measured: measured[t.key] === false ? false : rows[t.key].counts.nodata < rows[t.key].counts.n || rows[t.key].counts.n === 0 }));
 }
+
+/** The Health grid: one row per app group, worst first, then by workloads. */
+export function pathFlow(ctx) {
+  const R = { none: -2, nodata: -1, ok: 0, risk: 1, slo: 2, down: 3 };
+  return (ctx.apps || []).map(a => {
+    const cells = cellsFor(a.tag, ctx);
+    const state = cells.reduce((w, c) => (R[c.state] > R[w] ? c.state : w), 'ok');
+    const top = (a.topApps || [])[0];
+    return { tag: a.tag, label: top ? `${a.tag} → ${top}` : a.tag, cells, state, wl: a.wl };
+  }).sort((x, y) => R[y.state] - R[x.state] || y.wl - x.wl);
+}
