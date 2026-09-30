@@ -36,6 +36,20 @@ export const HEADSTART = [
 // a dedicated port has one; a partner-hosted port (NetBond) is cross-connected by the partner.
 const REG = (cloud, region, wl, priv, ramp, pub, fab, tags, rel, x) => ({ cloud, region, wl, priv, ramp, pub, fab, tags: tags || [], rel: rel || 'ok', link: (x && x.link) || 'ok', paths: (x && x.paths) || 1, acct: (x && x.acct) || null, xc: (x && x.xc) || null });
 
+// What a newly added source finds (notes, 2026-09-30: "add a new source, and rerun
+// discovery"). Oracle is the demo: two regions on the public internet with ERP on
+// them, an egress bucket and one priced finding, so every count and total follows.
+export const FOUND_SOURCES = {
+  Oracle: {
+    regions: [
+      REG('Oracle', 'us-ashburn-1', 48, false, null, 44, 11, ['ERP', 'Finance']),
+      REG('Oracle', 'eu-frankfurt-1', 22, false, null, 96, 24, ['ERP']),
+    ],
+    bucket: { id: 'oci', name: 'Oracle egress', cloud: 'Oracle', today: 3400, fabric: 1500 },
+    finding: { kind: 'newcloud-oracle', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'FinOps', head: '2 Oracle regions found on the public internet', ev: 'us-ashburn-1 and eu-frankfurt-1 carry 70 workloads, ERP among them, over public egress.', priced: true, save: 1900, why: 'NetBond reaches Oracle FastConnect in Ashburn and Frankfurt.', ladder: ['Attach over NetBond', 'Oracle FastConnect over NetBond', 'Multi-cloud routing'] },
+  },
+};
+
 export const ESTATES = {
   empty: {
     id: 'empty', name: 'Meridian Logistics', stage: 'empty', clouds: 0, regions: 0, workloads: 0, sites: [], regionsList: [], regionsExtra: 0, privatePct: 0,

@@ -225,14 +225,16 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Observe > Health, and the Queue drawer retired (2026-09-30): div 896 -> 900, span 666 -> 681, sc-if 351 -> 356, sc-for 200 -> 204, button 262 -> 265, aside 10 -> 9.
 // The Health legend (2026-09-30): div 900 -> 901, span 681 -> 687.
 // Capacity's empty state (2026-09-30): sc-if 356 -> 357.
+// Discovery found (2026-09-30): div 901 -> 906, span 687 -> 688, sc-if 357 -> 358, button 265 -> 267.
+// Remove on an added source (2026-09-30): sc-if 358 -> 359, button 267 -> 268.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 901],
-    ['span', /<span\b/g, /<\/span>/g, 687],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 357],
+    ['div', /<div\b/g, /<\/div>/g, 906],
+    ['span', /<span\b/g, /<\/span>/g, 688],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 359],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 204],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 265],
+    ['button', /<button\b/g, /<\/button>/g, 268],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
     ['label', /<label\b/g, /<\/label>/g, 27],
   ];

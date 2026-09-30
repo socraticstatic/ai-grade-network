@@ -173,7 +173,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -185,9 +185,9 @@ export function defaults() {
 export function estateFor(s) {
   // ?estate= names an estate outright; it used to be read only when the view
   // was 'live', so ?estate=meridian on its own silently showed the default.
-  if (s.estateParam && D.ESTATES[s.estateParam]) return D.ESTATES[s.estateParam];
-  if (s.view === 'live') return D.ESTATES.partial;
-  return D.ESTATES[s.view] || D.ESTATES.mature;
+  // Sources added in this session join the estate they were added to (2026-09-30).
+  const base = s.estateParam && D.ESTATES[s.estateParam] ? D.ESTATES[s.estateParam] : s.view === 'live' ? D.ESTATES.partial : D.ESTATES[s.view] || D.ESTATES.mature;
+  return SCH.withSources(base, s.addedSources || []);
 }
 
 export function scrollToResult(label) {
@@ -891,7 +891,7 @@ export function vals(c) {
     // An estate switch starts clean (2026-09-30): a By pick or a drill the new
     // estate lacks drew an empty map with a phantom "Internet 1.0 Gbps".
     view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0 }),
-    resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null }); },
+    resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null }); },
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
     // which nulled s.order even when the live compose had not started an
     // outcome yet - exactly the state right after a marketplace product
@@ -2431,21 +2431,27 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     ...sched.accounts.map(acctRow),
     ...(conns.total ? [attRow('src:netbond', 'NetBond inventory', `${conns.total} ${connWord}`, `${conns.total} ${connWord} · live`)] : []),
     ...(est0.sites.length ? [attRow('src:sites', 'AVPN and access sites', `${siteN} sites`, `${siteN} sites · from AT&T inventory`)] : []),
-    ...((s.addedSources || []).map((k, i) => ({
-      key: 'src:new' + i, name: k, kind: k, cred: 'Pending', scope: 'Read-only, all regions',
-      seen: 'never', nextSeen: 'at the next scan', cadenceValue: '', cadenceLabel: 'Pending',
-      setCadence: () => {}, canSchedule: false, noSchedule: true,
-      sub: 'added · queued for the next scan', state: 'Scanning', dot: 'var(--warning)',
-      rescan: sched.runNow(sched.accounts.map(a => a.id), 'manual'),
-    }))),
   ];
   const sources = rawSources.map(r => ({ ...r,
     edit: () => set({ sub: { page: 'discover', panel: 'add' }, sourceEdit: r.key }),
-    remove: () => set({ addedSources: (s.addedSources || []).filter(x => 'src:new' + (s.addedSources || []).indexOf(x) !== r.key) }),
-    canRemove: r.key.startsWith('src:new') }));
+    // A source added in this session comes back out the same way (2026-09-30).
+    remove: () => { const m = /^src:added-(\d+)-/.exec(r.key); if (!m) return; const mine = (s.addedSources || []).filter(a => a.estId === est.id); const drop = mine[+m[1]];
+      set({ addedSources: (s.addedSources || []).filter(a => a !== drop), cloudTrailE: [], cloudPage: 0 }); },
+    canRemove: /^src:added-/.test(r.key) }));
+  // What the last added source found, said once on the Sources page, with a way in.
+  const foundVals = (() => {
+    const mine = (s.addedSources || []).filter(a => a.estId === est.id), last = mine[mine.length - 1];
+    const regs = last ? est.regionsList.filter(r => r.fresh && r.via === (last.name || last.provider)) : [];
+    if (!last || !regs.length) return { hasFound: false, foundLine: '', seeFound: () => {}, foundAttach: () => {} };
+    const cloud = regs[0].cloud, noun = cloud === 'Azure' ? 'VNets' : cloud === 'Oracle' ? 'VCNs' : 'VPCs';
+    const vpcN = inv.flatMap(c => c.regions || []).filter(r => regs.some(x => x.region === r.region)).reduce((a, r) => a + (r.vpcs || []).length, 0);
+    const wl = regs.reduce((a, r) => a + (r.wl || 0), 0), pub = regs.every(r => !r.priv);
+    return { hasFound: true, foundLine: `Discovery found ${regs.length} ${cloud} ${regs.length === 1 ? 'region' : 'regions'}, ${vpcN} ${noun} and ${wl.toLocaleString('en-US')} workloads. ${pub ? (regs.length === 2 ? 'Both ride' : regs.length === 1 ? 'It rides' : 'All ride') : 'Some ride'} the public internet.`,
+      seeFound: () => set({ screen: 's1', discoverView: 'estate', estPanel: 'clouds', cloudTrailE: ['cloud:' + cloud], cloudPage: 0 }), foundAttach: composeFor(go, regs[0]) };
+  })();
   const credScanned = sources.filter(x => x.state === 'Connected').length;
   const gapVals = { candGroups, hasCands: candGroups.length > 0, noCands: candGroups.length === 0, gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
-  const obX = { sources, sourcesSub: `${credScanned} connected · ${sched.cadence.empty ? 'nothing on a schedule yet' : sched.cadence.label.toLowerCase()}`, ...(() => {
+  const obX = { ...foundVals, sources, sourcesSub: `${credScanned} connected · ${sched.cadence.empty ? 'nothing on a schedule yet' : sched.cadence.label.toLowerCase()}`, ...(() => {
       // One drawer adds a source or edits one: which cloud (adding only), then its
       // credential, scope and schedule. AT&T inventory has nothing to manage.
       const CRED_OPTS = { AWS: ['Cross-account role', 'Access keys'], Azure: ['Service principal', 'Managed identity'], GCP: ['Service account', 'Workload identity federation'], Oracle: ['API signing key'], CoreWeave: ['API key'] };
@@ -2463,9 +2469,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         srcCanSchedule: !editing || editing.canSchedule, srcInventoryNote: editing && !editing.canSchedule ? 'AT&T keeps this inventory live. There is no credential or schedule to manage.' : 'AT&T inventory needs no credential; AT&T keeps it live.',
         srcDoneLabel: editing ? 'Save' : 'Add and scan', srcRescan: editing ? editing.rescan : () => {}, srcCanRescan: !!editing,
         openAddSource: () => set({ sub: { page: 'discover', panel: 'add' }, sourceEdit: null, srcCred: null }),
-        addSource: () => set(editing
-          ? { sub: null, sourceEdit: null, srcCred: null }
-          : { addedSources: [...(s.addedSources || []), prov ? `${tile} account` : 'AT&T inventory'], sub: null, sourceEdit: null, srcCred: null, screen: 's1', discoverView: 'sources' }),
+        // Adding a cloud account adds it to this estate and discovers what it holds (2026-09-30);
+        // AT&T inventory is already live, so it adds nothing.
+        addSource: () => set(editing || !prov
+          ? { sub: null, sourceEdit: null, srcCred: null, ...(editing ? {} : { screen: 's1', discoverView: 'sources' }) }
+          : { addedSources: [...(s.addedSources || []), { provider: prov, name: `${tile} account`, cred: s.srcCred && creds.includes(s.srcCred) ? s.srcCred : creds[0] || '', cadence: s.srcCadence || 'nightly', at: SCH.nowOf(s), estId: est.id }], sub: null, sourceEdit: null, srcCred: null, screen: 's1', discoverView: 'sources' }),
       };
     })(), ...dash, nextStop, connectNext, governNext, costNext,
     // Next stop is a button in the title row, not a strip (2026-09-28, no scrolling).

@@ -696,6 +696,14 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </sc-if>
   <sc-if value="{{ scanDone }}" hint-placeholder-val="{{ false }}">
   <!-- Source management: the connected accounts on the page; the drawer adds a source or edits one's credentials and schedule (2026-09-23) -->
+  <!-- What the added source found (2026-09-30): said once, with the way in. -->
+  <sc-if value="{{ hasFound }}" hint-placeholder-val="{{ false }}">
+  <div class="fx-alert" role="status" aria-label="Discovery found" style="animation:fadeIn .3s">
+    <div class="fx-alert-body"><span class="fx-alert-icon" aria-hidden="true"></span><div style="display:grid;gap:2px;min-width:0"><div class="fx-alert-title">Discovery found something new</div><div class="fx-alert-text">{{ foundLine }}</div></div></div>
+    <button class="fx-btn" onClick="{{ seeFound }}">See what it found</button>
+    <button class="fx-btn" onClick="{{ foundAttach }}">Attach</button>
+  </div>
+  </sc-if>
   <sc-if value="{{ showSourcesBody }}" hint-placeholder-val="{{ false }}">
     <div id="sec-accounts" aria-label="Sources" style="display:grid;gap:10px;animation:fadeIn .3s">
       <div class="fx-card-head"><div><h3 class="fx-card-title">Connected accounts</h3><div class="fx-card-sub">{{ sourcesSub }}</div></div><button class="fx-btn" onClick="{{ openAddSource }}" style="height:32px;background:var(--cta);color:#fff;border-color:var(--cta)">Add a source</button></div>
@@ -720,7 +728,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
               <sc-if value="{{ sr.canSchedule }}" hint-placeholder-val="{{ true }}"><select class="dt-select" value="{{ sr.cadenceValue }}" onChange="{{ sr.setCadence }}" aria-label="Cadence"><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></sc-if>
               <sc-if value="{{ sr.noSchedule }}" hint-placeholder-val="{{ false }}"><span style="color:var(--text-light)">{{ sr.cadenceLabel }}</span></sc-if>
             </div>
-            <div data-th="Manage" class="dt-c"><span style="display:flex;gap:16px"><button class="dt-link" onClick="{{ sr.rescan }}">Re-scan</button><button class="dt-link" onClick="{{ sr.edit }}">Edit access</button></span></div>
+            <div data-th="Manage" class="dt-c"><span style="display:flex;gap:16px"><button class="dt-link" onClick="{{ sr.rescan }}">Re-scan</button><button class="dt-link" onClick="{{ sr.edit }}">Edit access</button><sc-if value="{{ sr.canRemove }}" hint-placeholder-val="{{ false }}"><button class="dt-link" onClick="{{ sr.remove }}">Remove</button></sc-if></span></div>
           </div>
         </sc-for></div>
       </div>
@@ -2132,7 +2140,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { screen: 's3', view: 'partial', persona: 'neteng', estateParam: null, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36 }; }
+  constructor(p) { super(p); this.state = { screen: 's3', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36 }; }
   componentDidUpdate() {
     // Guarded on the instance, not on prevState: comparing against prevState
     // re-entered on the very setState this handler makes, and React counted

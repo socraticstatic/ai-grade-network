@@ -293,7 +293,7 @@ export function optimizeRows(est, { open = [], capacity = [], apps = [] } = {}) 
   const pick = (kinds) => open.filter(f => kinds.includes(f.kind));
   const chip = (fs) => [...new Set(fs.map(f => STATE_WORD[f.state]).filter(Boolean))].join(' · ');
   const sum = (fs) => fs.reduce((a, f) => a + (f.save || 0), 0);
-  const spendF = pick(['ipsecegress', 'avoidable']), routF = pick(['crosscloud']);
+  const spendF = open.filter(f => ['ipsecegress', 'avoidable'].includes(f.kind) || /^newcloud-/.test(f.kind)), routF = pick(['crosscloud']);
   const critical = new Set((est.policies || []).filter(p => p.state === 'enforced').map(p => String(p.match || '').replace(/^(tag|remote-site)\s+/, '').toLowerCase()));
   const byReg = {};
   apps.filter(a => critical.has(String(a.tag).toLowerCase())).forEach(a => (a.parts || []).filter(pt => pt.share >= 0.05).forEach(pt => {

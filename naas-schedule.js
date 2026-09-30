@@ -1,3 +1,4 @@
+import { FOUND_SOURCES } from './naas-data.js';
 /*
  * AT&T AI-grade Network - NaaS storefront prototype
  * Copyright (c) 2026 AT&T Intellectual Property. All rights reserved.
@@ -135,11 +136,13 @@ export function accountsAt(est, now, opts = {}) {
   return ((est && est.accounts) || []).map(a => {
     const schedule = over[a.id] || a.schedule;
     const fromRuns = lastRunOf(a.id, runs);
+    // An account added in this session was scanned when it was added, never before (2026-09-30).
     const lastRun = fromRuns != null ? fromRuns
+      : a.added != null ? a.added
       : a.schedule.kind === 'manual' ? now - (a.lastRunAgoMin || 0) * 60000
       : prevRunAt(a.schedule, now);
     return {
-      id: a.id, cloud: a.cloud, acct: a.acct || null, cred: a.cred, regions: a.regions,
+      id: a.id, cloud: a.cloud, acct: a.acct || null, cred: a.cred, regions: a.regions, added: a.added,
       name: `${a.cloud} ${a.acct || 'account'}`,
       scope: `Read-only · ${a.regions} ${a.regions === 1 ? 'region' : 'regions'}`,
       schedule, lastRun, nextRun: nextRunAt(schedule, now),
@@ -180,7 +183,7 @@ export function seedRuns(accounts, now, n = 3) {
     const p = periodOf(a.schedule);
     if (!p) return;
     let t = prevRunAt(a.schedule, now);
-    for (let i = 0; i < n && t != null; i++, t -= p) {
+    for (let i = 0; i < n && t != null && (a.added == null || t >= a.added); i++, t -= p) {
       if (!byAt.has(t)) byAt.set(t, []);
       byAt.get(t).push(a.id);
     }
@@ -250,3 +253,33 @@ export function agoOf(at, now) {
 export function startOf(key, now, minutesAgo) { return now - minutesAgo * 60000; }
 /** How long ago each kind of seeded incident started, in minutes. */
 export const INCIDENT_MIN = { flap: 22, spike: 47, sat: 180, slo: 22 };
+
+/**
+ * An estate with the sources added in this session (2026-09-30). Each added
+ * account becomes an account of the estate, and what it finds (FOUND_SOURCES)
+ * joins it: regions appended, never inserted (lookups and ids are by region and
+ * index), an egress bucket and a finding, and the meta counts move with them.
+ * Session only: a reload starts from the pristine estate.
+ */
+export function withSources(est, added = []) {
+  const mine = (added || []).filter(a => a && (!a.estId || a.estId === est.id) && a.provider);
+  if (!mine.length) return est;
+  const have = new Set((est.regionsList || []).map(r => r.region));
+  const regionsList = [...(est.regionsList || [])], accounts = [...(est.accounts || [])], buckets = [...(est.buckets || [])], findings = [...(est.findings || [])];
+  const clouds0 = new Set(regionsList.map(r => r.cloud));
+  mine.forEach((a, i) => {
+    const seed = FOUND_SOURCES[a.provider];
+    const regs = (seed ? seed.regions : []).filter(r => !have.has(r.region)).map(r => ({ ...r, fresh: true, via: a.name || a.provider }));
+    regs.forEach(r => have.add(r.region));
+    regionsList.push(...regs);
+    const sch = (SCHEDULE_CHOICES.find(x => x.id === a.cadence) || SCHEDULE_CHOICES[2]).schedule;
+    accounts.push({ id: `added-${i}-${a.provider}`, cloud: a.provider, acct: null, cred: a.cred || '', regions: regs.length, schedule: sch, added: a.at, lastRunAgoMin: 0 });
+    if (seed && regs.length) {
+      if (seed.bucket && !buckets.some(b => b.id === seed.bucket.id)) buckets.push(seed.bucket);
+      if (seed.finding && !findings.some(f => f.kind === seed.finding.kind)) findings.push({ ...seed.finding, found: new Date(a.at || Date.now()).toISOString().slice(0, 10) });
+    }
+  });
+  const fresh = regionsList.slice((est.regionsList || []).length);
+  const newClouds = new Set(fresh.map(r => r.cloud).filter(c => !clouds0.has(c))).size;
+  return { ...est, regionsList, accounts, buckets, findings, clouds: (est.clouds || 0) + newClouds, regions: (est.regions || 0) + fresh.length, workloads: (est.workloads || 0) + fresh.reduce((x, r) => x + (r.wl || 0), 0) };
+}

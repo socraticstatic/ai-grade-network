@@ -137,7 +137,7 @@ const WL_APPS = {
   gpu: [['triton-server', '2.45', '8000/tcp', 'model serving'], ['embed-worker', '1.7', '', 'vector generation']],
   queue: [['rabbitmq', '3.13', '5672/tcp', 'broker'], ['shovel', '3.13', '15672/tcp', 'federation and console']],
 };
-    const mkWl = (pub, a, n, cidr, tag) => Array.from({ length: Math.min(n, 300) }, (_, w) => { const t = WL_TYPES[pub ? 'pub' : 'prv'][(w + a) % WL_TYPES[pub ? 'pub' : 'prv'].length]; const ip = cidr.replace(/0\/24$/, String(10 + w * 7)); return { id: `${cidr}-${w}`, since: (w * 37 + a * 53 + n * 11) % 365, name: `${t[0]}-${'abc'[a]}${String(w + 1).padStart(2, '0')}`, type: t[1], ip, tag, exposed: pub && w < 2, endpoints: (WL_APPS[t[0]] || []).map(([app, ver, port, note]) => ({ id: `${ip}:${app}`, app, ver, port, note })) }; });
+    const mkWl = (pub, a, n, cidr, tag) => Array.from({ length: Math.min(n, 300) }, (_, w) => { const t = WL_TYPES[pub ? 'pub' : 'prv'][(w + a) % WL_TYPES[pub ? 'pub' : 'prv'].length]; const ip = cidr.replace(/0\/24$/, String(10 + w * 7)); return { id: `${cidr}-${w}`, since: r.fresh ? 0 : (w * 37 + a * 53 + n * 11) % 365, name: `${t[0]}-${'abc'[a]}${String(w + 1).padStart(2, '0')}`, type: t[1], ip, tag, exposed: pub && w < 2, endpoints: (WL_APPS[t[0]] || []).map(([app, ver, port, note]) => ({ id: `${ip}:${app}`, app, ver, port, note })) }; });
     // Public 40, private 60 in every AZ, apportioned whole so subnets add up to their VPC.
     const snWl = apportion(wl, azList.flatMap(() => [0.4, 0.6]), Math.min(2, Math.floor(wl / (azList.length * 2))));
     const subnets = azList.flatMap((az, a) => {
@@ -156,7 +156,7 @@ const WL_APPS = {
       ...(priv ? [{ name: isAzure ? 'ergw-prod' : 'dxgw-prod', type: isAzure ? 'ExpressRoute gateway' : 'Direct Connect gateway', kind: 'dx', lock: true, circuits: circuitsFor(est, r, i, k, isAzure) }] : []),
       { name: isAzure ? 'vwan-hub' : 'tgw-attach', type: isAzure ? 'Virtual WAN hub' : 'Transit gateway', kind: 'tgw' },
     ];
-    return { id: `${pfx}-${i}-${k}`, managed: priv && k === 0, since: (i * 47 + k * 31 + 3) % 240, label: pfx.toUpperCase(), name: `${pfx}-${suffix[k]}`, purpose: purposes[k], cidr: `${cidrBase}.0.0/16`, tags: tagsFor(k), azs: azs[k], subnets, routeTables, gws, wl, priv, violations: routeTables.reduce((a, t) => a + t.viol, 0) };
+    return { id: `${pfx}-${i}-${k}`, managed: priv && k === 0, since: r.fresh ? 0 : (i * 47 + k * 31 + 3) % 240, label: pfx.toUpperCase(), name: `${pfx}-${suffix[k]}`, purpose: purposes[k], cidr: `${cidrBase}.0.0/16`, tags: tagsFor(k), azs: azs[k], subnets, routeTables, gws, wl, priv, violations: routeTables.reduce((a, t) => a + t.viol, 0) };
   });
   return { id: 'r-' + r.cloud + '-' + r.region, cloud: r.cloud, region: r.region, city: CITY[r.region] || '', priv: r.priv, ramp: r.ramp, latency: r.priv ? r.fab : r.pub, wl: r.wl, rel: r.rel, tags: r.tags, vpcs, subnets: vpcs.reduce((a, v) => a + v.subnets.length, 0) };
 }
