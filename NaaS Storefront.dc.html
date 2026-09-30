@@ -322,15 +322,15 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <div style="display:grid;grid-template-columns:{{ shellCols }};background:{{ shellBg }};padding-right:{{ shellPadRight }};transition:padding-right .28s cubic-bezier(.22,1,.36,1)">
 <sc-if value="{{ showRail }}" hint-placeholder-val="{{ true }}">
 <aside aria-label="{{ railTitle }} sections" data-collapsed="{{ railCollapsed }}" style="position:sticky;top:var(--hdr,65px);align-self:start;height:calc(100vh - var(--hdr,65px));display:flex;flex-direction:column;padding:{{ railPad }};border-right:1px solid var(--sidebar-border);background:var(--bg-base);width:{{ railW }};box-sizing:border-box;font-size:14px;transition:width .15s;overflow:hidden">
-  <!-- The rail fits a 900px screen without a scrollbar (2026-09-28, "a nav bar scroll bar? really?"); a shorter one still scrolls, silently. -->
+  <!-- The rail fits a 900px screen without a scrollbar (2026-09-28, "a nav bar scroll bar? really?"); a shorter one still scrolls, silently. Connect became four places (2026-09-30), so titles sit 8px under the last group and items 2px apart: Spend still ends inside 900. -->
   <div class="rail-scroll" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none">
   <sc-for list="{{ railGroups }}" as="g" hint-placeholder-count="4">
     <sc-if value="{{ g.hasTitle }}" hint-placeholder-val="{{ true }}">
-      <sc-if value="{{ railExpanded }}" hint-placeholder-val="{{ true }}"><button onClick="{{ g.titleGo }}" aria-current="{{ g.titleCur }}" style="display:block;width:100%;margin-top:12px;margin-bottom:4px;height:28px;box-sizing:border-box;padding:4px 8px;border:0;border-radius:8px;background:transparent;font:inherit;font-size:14px;line-height:20px;font-weight:700;letter-spacing:-.4px;color:var(--sidebar-fg);white-space:nowrap;text-align:left;cursor:pointer" style-hover="background:var(--bg-wash)">{{ g.title }}</button></sc-if>
+      <sc-if value="{{ railExpanded }}" hint-placeholder-val="{{ true }}"><button onClick="{{ g.titleGo }}" aria-current="{{ g.titleCur }}" style="display:block;width:100%;margin-top:8px;margin-bottom:4px;height:28px;box-sizing:border-box;padding:4px 8px;border:0;border-radius:8px;background:transparent;font:inherit;font-size:14px;line-height:20px;font-weight:700;letter-spacing:-.4px;color:var(--sidebar-fg);white-space:nowrap;text-align:left;cursor:pointer" style-hover="background:var(--bg-wash)">{{ g.title }}</button></sc-if>
       <sc-if value="{{ railCollapsed }}" hint-placeholder-val="{{ false }}"><div aria-hidden="true" style="height:1px;margin:12px 8px;background:var(--border-secondary)"></div></sc-if>
     </sc-if>
     <sc-for list="{{ g.items }}" as="r" hint-placeholder-count="2">
-      <button onClick="{{ r.go }}" aria-current="{{ r.cur }}" aria-label="{{ r.label }}" title="{{ r.title }}" style="width:100%;min-height:28px;box-sizing:border-box;padding:{{ r.pad }};margin-bottom:4px;border:0;border-radius:{{ r.radius }};display:flex;align-items:center;justify-content:{{ railJustify }};gap:8px;background:{{ r.bg }};color:{{ r.color }};opacity:{{ r.op }};font:inherit;font-size:14px;line-height:20px;font-weight:400;letter-spacing:-.4px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden" style-hover="background:var(--bg-wash)"><span aria-hidden="true" style="width:16px;height:16px;flex:none;background:url('{{ r.icon }}') center / contain no-repeat"></span><sc-if value="{{ railExpanded }}" hint-placeholder-val="{{ true }}"><span style="min-width:0;display:block"><span style="display:block;overflow:hidden;text-overflow:ellipsis">{{ r.label }}</span><sc-if value="{{ r.hasSub }}" hint-placeholder-val="{{ true }}"><span style="display:block;margin-top:1px;font-size:12px;line-height:16px;font-weight:400;letter-spacing:-.4px;color:var(--sidebar-muted);white-space:normal">{{ r.sub }}</span></sc-if></span></sc-if></button>
+      <button onClick="{{ r.go }}" aria-current="{{ r.cur }}" aria-label="{{ r.label }}" title="{{ r.title }}" style="width:100%;min-height:28px;box-sizing:border-box;padding:{{ r.pad }};margin-bottom:2px;border:0;border-radius:{{ r.radius }};display:flex;align-items:center;justify-content:{{ railJustify }};gap:8px;background:{{ r.bg }};color:{{ r.color }};opacity:{{ r.op }};font:inherit;font-size:14px;line-height:20px;font-weight:400;letter-spacing:-.4px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden" style-hover="background:var(--bg-wash)"><span aria-hidden="true" style="width:16px;height:16px;flex:none;background:url('{{ r.icon }}') center / contain no-repeat"></span><sc-if value="{{ railExpanded }}" hint-placeholder-val="{{ true }}"><span style="min-width:0;display:block"><span style="display:block;overflow:hidden;text-overflow:ellipsis">{{ r.label }}</span><sc-if value="{{ r.hasSub }}" hint-placeholder-val="{{ true }}"><span style="display:block;margin-top:1px;font-size:12px;line-height:16px;font-weight:400;letter-spacing:-.4px;color:var(--sidebar-muted);white-space:normal">{{ r.sub }}</span></sc-if></span></sc-if></button>
       <sc-if value="{{ r.cur }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ hasSubNav }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ railExpanded }}" hint-placeholder-val="{{ true }}">
         <div style="margin:0 0 4px;display:grid;gap:4px">
           <sc-for list="{{ subNav }}" as="sn" hint-placeholder-count="4"><button onClick="{{ sn.go }}" aria-current="{{ sn.on }}" style="width:100%;height:28px;box-sizing:border-box;text-align:left;border:0;border-radius:{{ sn.radius }};padding:4px 8px;display:flex;align-items:center;gap:8px;background:{{ sn.bg }};color:{{ sn.color }};font:inherit;font-size:14px;line-height:20px;letter-spacing:-.4px;font-weight:400;cursor:pointer;white-space:nowrap;overflow:hidden" style-hover="background:var(--bg-wash)"><span aria-hidden="true" style="width:16px;height:16px;flex:none;background:url('{{ sn.icon }}') center / contain no-repeat"></span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">{{ sn.label }}</span></button></sc-for>
@@ -995,64 +995,115 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <section data-screen-label="S3 Department" style="display:grid;gap:24px;margin-top:0;animation:fadeIn .3s;grid-template-columns:minmax(0,1fr)">
 
 
-  <!-- Ways to connect, a Connect tab (2026-09-29: no page view lives in a drawer). -->
+  <!-- Ways to connect (2026-09-30): NetBond Advanced's connection-type entry (CreateConnectionMenu.tsx), every type with its own words. Each counts what it applies to in this estate; the count opens exactly that set here, and Start opens the flow. -->
   <sc-if value="{{ cnIsWays }}" hint-placeholder-val="{{ false }}">
-        <div id="sec-paths" style="display:grid;gap:16px">
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
-        <sc-for list="{{ pathRows }}" as="pt" hint-placeholder-count="3">
-          <div style="display:grid;gap:8px;align-content:start;padding:16px;border:1px solid {{ pt.border }};border-radius:16px;background:{{ pt.bg }};min-width:0">
-            <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ pt.name }}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ pt.tagRows }}" as="tg" hint-placeholder-count="3"><span style="padding:1px 7px;border-radius:9999px;background:var(--bg-wash);color:var(--text-light);font-size:10px;font-weight:700;white-space:nowrap">{{ tg.label }}</span></sc-for></div>
-            <div style="font-size:12px;line-height:17px;color:var(--text-body);text-wrap:pretty">{{ pt.what }}</div>
-            <div style="font-size:12px;line-height:17px;color:var(--text-body);text-wrap:pretty"><b style="font-weight:700;color:var(--success)">Good for</b> · {{ pt.good }}</div>
-            <div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty"><b style="font-weight:700;color:var(--warning)">Tradeoff</b> · {{ pt.cost }}</div>
-            <button onClick="{{ pt.pick }}" style="justify-self:start;margin-top:2px;height:30px;padding:0 16px;border:1px solid {{ pt.pickBorder }};border-radius:9999px;background:{{ pt.pickBg }};color:{{ pt.pickInk }};font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">{{ pt.pickLabel }}</button>
+  <div id="sec-paths" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,320px);gap:24px;align-items:start">
+    <div style="display:grid;gap:10px;min-width:0">
+      <div style="font-size:11px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--text-light)">Choose a connection type</div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+        <sc-for list="{{ wayTypes }}" as="wt" hint-placeholder-count="9">
+          <div style="display:grid;grid-template-rows:auto 1fr auto;gap:6px;padding:14px 16px;border:1px solid {{ wt.border }};border-radius:14px;background:var(--bg-base);min-width:0;opacity:{{ wt.op }}">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);overflow-wrap:anywhere">{{ wt.label }}</span><sc-if value="{{ wt.isProduct }}" hint-placeholder-val="{{ false }}"><span style="padding:1px 7px;border-radius:9999px;background:var(--bg-wash);color:var(--text-light);font-size:10px;line-height:15px;font-weight:700;white-space:nowrap">{{ wt.kicker }}</span></sc-if></div>
+            <div style="font-size:12px;line-height:17px;color:var(--text-body);text-wrap:pretty">{{ wt.description }}</div>
+            <div style="display:flex;align-items:center;gap:8px;min-width:0;min-height:28px">
+              <sc-if value="{{ wt.hasCount }}" hint-placeholder-val="{{ true }}"><button onClick="{{ wt.openSet }}" aria-pressed="{{ wt.setOn }}" title="Show exactly these" style="border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:16px;font-weight:600;color:var(--link);cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px;min-width:0;overflow-wrap:anywhere">{{ wt.phrase }}</button></sc-if>
+              <sc-if value="{{ wt.noCount }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:16px;color:var(--text-disabled);min-width:0">{{ wt.none }}</span></sc-if>
+              <span style="flex:1"></span>
+              <sc-if value="{{ wt.notSoon }}" hint-placeholder-val="{{ true }}"><button onClick="{{ wt.start }}" style="height:28px;padding:0 14px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex:none">Start</button></sc-if>
+              <sc-if value="{{ wt.soon }}" hint-placeholder-val="{{ false }}"><span style="padding:2px 8px;border-radius:9999px;background:var(--bg-neutral);color:var(--text-light);font-size:10px;line-height:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;flex:none">Coming soon</span></sc-if>
+            </div>
           </div>
         </sc-for>
       </div>
-      <div style="border-top:1px solid var(--border-secondary)">
-        <div class="dt">
-          <div class="dt-h"><div class="dt-r">
-            <div class="dt-c dt-th" style="width:22%">Path</div>
-            <sc-for list="{{ matrixHeads }}" as="mh" hint-placeholder-count="4"><div class="dt-c dt-th" style="color:{{ mh.color }}">{{ mh.label }}</div></sc-for>
-            <div class="dt-c dt-th" style="width:16%">Time to stand up</div>
-          </div></div>
-          <div class="dt-b"><sc-for list="{{ matrix }}" as="m" hint-placeholder-count="3">
-            <div class="dt-r">
-              <div data-th="Path" class="dt-c" style="vertical-align:top"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span aria-hidden="true" style="width:10px;height:10px;border-radius:2px;background:{{ m.tone }};flex:none"></span><span style="font-weight:700;color:var(--text-heading)">{{ m.short }}</span></div><span style="margin-top:4px;display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ m.yoursBg }};color:{{ m.yoursInk }};font-size:11px;font-weight:600;white-space:nowrap">{{ m.yours }}</span></div>
-              <sc-for list="{{ m.cells }}" as="cl" hint-placeholder-count="4"><div data-th="{{ cl.label }}" class="dt-c" style="vertical-align:top"><div style="display:flex;align-items:center;gap:6px;min-width:0"><span aria-hidden="true" style="width:6px;height:6px;border-radius:9999px;background:{{ cl.color }};flex:none"></span><span style="font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ cl.text }}</span></div><div style="font-size:11px;line-height:15px;color:var(--text-light);overflow-wrap:anywhere">{{ cl.sub }}</div></div></sc-for>
-              <div data-th="Time to stand up" class="dt-c" style="vertical-align:top;font-size:12px;line-height:16px;overflow-wrap:anywhere">{{ m.setup }}</div>
-            </div>
-          </sc-for></div>
-        </div>
-      </div>
     </div>
-  </sc-if>
-  <!-- Connect · Options (notes, 2026-09-29): every candidate not on AT&amp;T yet, by what it is, each with its best option and what else would do. -->
-  <sc-if value="{{ cnIsOptions }}" hint-placeholder-val="{{ false }}">
-  <sc-if value="{{ hasCands }}" hint-placeholder-val="{{ true }}">
-  <div aria-label="Options" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start">
-    <sc-for list="{{ candGroups }}" as="cg" hint-placeholder-count="3">
-      <div aria-label="{{ cg.label }}" style="display:grid;gap:8px;align-content:start;min-width:0">
-        <div style="display:grid;gap:2px"><h3 class="fx-card-title">{{ cg.label }}</h3><div class="fx-card-sub">{{ cg.count }} not on AT&amp;T yet</div></div>
-        <div><sc-for list="{{ cg.rows }}" as="cr" hint-placeholder-count="4">
-          <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border-secondary);min-width:0">
-            <div style="min-width:0;display:grid;gap:3px">
-              <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);overflow-wrap:anywhere">{{ cr.name }}</div>
-              <div style="font-size:12px;line-height:16px;color:var(--text-light);overflow-wrap:anywhere">{{ cr.sub }}</div>
-              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-body)"><span style="padding:1px 8px;border-radius:9999px;background:var(--bg-accent);color:var(--link);font-weight:700;white-space:nowrap">{{ cr.bestName }}</span><span style="overflow-wrap:anywhere">{{ cr.bestWhy }}</span></div>
-              <div style="font-size:11px;line-height:15px;color:var(--text-disabled);overflow-wrap:anywhere">{{ cr.altLine }}</div>
-            </div>
-            <button class="fx-btn" onClick="{{ cr.go }}">Attach</button>
-          </div>
+    <div aria-label="What it applies to" style="display:grid;gap:8px;min-width:0">
+      <sc-if value="{{ waySet.has }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:flex-start;gap:8px;min-width:0"><div style="display:grid;gap:1px;min-width:0;flex:1"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ waySet.title }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light)">{{ waySet.head }}</span></div><button class="fx-btn" onClick="{{ waySet.close }}" aria-label="Close the list">Close</button></div>
+        <div><sc-for list="{{ waySet.rows }}" as="wr" hint-placeholder-count="5">
+          <sc-if value="{{ wr.canStart }}" hint-placeholder-val="{{ true }}"><button onClick="{{ wr.start }}" title="{{ wr.startTitle }}" style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;padding:8px 0;border:0;border-top:1px solid var(--border-secondary);background:transparent;font:inherit;text-align:left;cursor:pointer;min-width:0" style-hover="background:var(--bg-wash)"><span style="display:grid;gap:1px;min-width:0"><span style="font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ wr.name }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light);overflow-wrap:anywhere">{{ wr.sub }}</span></span><span style="font-size:12px;line-height:16px;font-weight:700;color:var(--link);white-space:nowrap">Start with it</span></button></sc-if>
+          <sc-if value="{{ wr.cantStart }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:1px;padding:8px 0;border-top:1px solid var(--border-secondary);min-width:0"><span style="font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ wr.name }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light);overflow-wrap:anywhere">{{ wr.sub }}</span></div></sc-if>
         </sc-for></div>
-        <sc-if value="{{ cg.pager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ cg.pager.label }}</span><button class="fx-btn" onClick="{{ cg.pager.prev }}" aria-label="Previous page" style="opacity:{{ cg.pager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ cg.pager.next }}" aria-label="Next page" style="opacity:{{ cg.pager.nextOp }}">›</button></div></sc-if>
-      </div>
-    </sc-for>
+        <sc-if value="{{ waySet.pager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ waySet.pager.label }}</span><button class="fx-btn" onClick="{{ waySet.pager.prev }}" aria-label="Previous page" style="opacity:{{ waySet.pager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ waySet.pager.next }}" aria-label="Next page" style="opacity:{{ waySet.pager.nextOp }}">›</button></div></sc-if>
+      </sc-if>
+      <sc-if value="{{ waySet.none }}" hint-placeholder-val="{{ true }}">
+        <div style="padding-top:4px;font-size:13px;line-height:19px;color:var(--text-light);text-wrap:pretty">Each type counts the sites or cloud regions it applies to in your estate. A count opens exactly those, here, and any one of them starts an order with it attached. Start opens the order, one step at a time, with your order in progress beside it.</div>
+      </sc-if>
+    </div>
   </div>
   </sc-if>
-  <sc-if value="{{ noCands }}" hint-placeholder-val="{{ false }}"><div class="fx-card" style="padding:16px 20px"><div class="fx-card-sub">Everything discovered is on the AT&amp;T network.</div></div></sc-if>
+  <!-- Orders (2026-09-30, "options and orders is so weird"): the order in progress, which you can resume, and the orders placed this session with their stage. Never invented history. -->
+  <sc-if value="{{ cnIsOrders }}" hint-placeholder-val="{{ false }}">
+  <div aria-label="Orders" style="display:grid;grid-template-columns:{{ ordCols }};gap:24px;align-items:start">
+    <div style="display:grid;gap:8px;min-width:0">
+      <h3 class="fx-card-title">Placed this session</h3>
+      <sc-if value="{{ hasOrdRows }}" hint-placeholder-val="{{ false }}">
+      <div class="dt">
+        <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th" style="width:30%">Order</div><div class="dt-c dt-th">Connection</div><div class="dt-c dt-th" style="width:16%">Monthly</div><div class="dt-c dt-th" style="width:20%">Stage</div></div></div>
+        <div class="dt-b"><sc-for list="{{ ordRows }}" as="or" hint-placeholder-count="2"><div class="dt-r"><div data-th="Order" class="dt-c" style="vertical-align:top"><div style="font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ or.title }}</div><div style="font-size:12px;line-height:16px;color:var(--text-light);overflow-wrap:anywhere">{{ or.sub }}</div></div><div data-th="Connection" class="dt-c" style="vertical-align:top"><div style="color:var(--text-heading);overflow-wrap:anywhere">{{ or.type }}</div><div style="font-size:12px;line-height:16px;color:var(--text-light);overflow-wrap:anywhere">{{ or.what }}</div></div><div data-th="Monthly" class="dt-c" style="vertical-align:top;overflow-wrap:anywhere">{{ or.monthly }}</div><div data-th="Stage" class="dt-c" style="vertical-align:top"><div style="display:flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;background:{{ or.stageInk }};flex:none"></span><span style="color:var(--text-heading)">{{ or.stage }}</span></div><div style="font-size:12px;line-height:16px;color:var(--text-light)">{{ or.atLine }}</div></div></div></sc-for></div>
+      </div>
+      <sc-if value="{{ ordPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ ordPager.label }}</span><button class="fx-btn" onClick="{{ ordPager.prev }}" aria-label="Previous page" style="opacity:{{ ordPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ ordPager.next }}" aria-label="Next page" style="opacity:{{ ordPager.nextOp }}">›</button></div></sc-if>
+      </sc-if>
+      <sc-if value="{{ ordNonePlaced }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 0;border-top:1px solid var(--border-secondary);font-size:13px;line-height:19px;color:var(--text-light)">Nothing placed yet this session. The order beside this is still in progress.</div></sc-if>
+      <sc-if value="{{ noOrders }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;gap:8px;justify-items:start;padding:12px 0;border-top:1px solid var(--border-secondary)"><div style="font-size:16px;line-height:22px;font-weight:700;color:var(--text-heading)">{{ ordersEmpty }}</div><div style="font-size:13px;line-height:19px;color:var(--text-light);text-wrap:pretty">{{ ordersEmptyLine }}</div><button class="fx-btn" onClick="{{ goWays }}">Ways to connect</button></div>
+      </sc-if>
+    </div>
+    <sc-if value="{{ ordInProgress.has }}" hint-placeholder-val="{{ false }}">
+    <aside aria-label="Order in progress" style="padding:18px 20px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;display:grid;gap:10px;align-content:start">
+      <div style="display:grid;gap:1px"><span style="font-size:11px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--text-light)">In progress</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);overflow-wrap:anywhere">{{ ordInProgress.title }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light)">{{ ordInProgress.stepLine }}</span></div>
+      <div><sc-for list="{{ ordInProgress.rows }}" as="ip" hint-placeholder-count="8"><div style="display:grid;grid-template-columns:10px 104px minmax(0,1fr);gap:8px;align-items:baseline;padding:5px 0;border-top:1px solid var(--border-secondary)"><span aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;border:1.5px {{ ip.dash }} {{ ip.ring }};background:{{ ip.dot }};box-sizing:border-box"></span><span style="font-size:12px;line-height:16px;color:var(--text-light)">{{ ip.label }}</span><span style="font-size:12px;line-height:16px;color:{{ ip.ink }};overflow-wrap:anywhere">{{ ip.value }}</span></div></sc-for></div>
+      <button onClick="{{ ordInProgress.resume }}" style="justify-self:start;height:34px;padding:0 16px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Resume</button>
+    </aside>
+    </sc-if>
+  </div>
   </sc-if>
+  <!-- Connect · Recommended (Micah, 2026-09-30: "with AT&amp;T tier options here's what you'd get"): one ranked list of moves, each a set one order serves; today once, then three AT&amp;T tiers side by side, each with Security, Performance and Cost after it. -->
+  <sc-if value="{{ cnIsOptions }}" hint-placeholder-val="{{ false }}">
+  <div aria-label="Recommended" style="display:grid;gap:8px;min-width:0">
+    <div style="display:flex;align-items:flex-end;gap:16px;min-width:0">
+      <div style="display:grid;gap:2px;min-width:0;flex:1"><h3 class="fx-card-title">{{ movesHead }}</h3><div class="fx-card-sub" title="{{ movesSub }}">{{ movesSub }}</div></div>
+      <sc-if value="{{ movesPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap"><span>{{ movesPager.label }}</span><button class="fx-btn" onClick="{{ movesPager.prev }}" aria-label="Previous page" style="height:28px;padding:0 10px;opacity:{{ movesPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ movesPager.next }}" aria-label="Next page" style="height:28px;padding:0 10px;opacity:{{ movesPager.nextOp }}">›</button></div></sc-if>
+      <sc-if value="{{ hasMoves }}" hint-placeholder-val="{{ true }}"><button onClick="{{ movesAttach }}" disabled="{{ movesAttachOff }}" title="{{ movesAttachTitle }}" style="height:32px;padding:0 16px;border:0;border-radius:8px;background:{{ movesAttachBg }};color:{{ movesAttachInk }};font:inherit;font-size:13px;font-weight:600;cursor:{{ movesAttachCursor }};white-space:nowrap">{{ movesAttachLabel }}</button></sc-if>
+    </div>
+    <sc-if value="{{ hasMoves }}" hint-placeholder-val="{{ true }}">
+    <div aria-hidden="true" style="display:grid;grid-template-columns:36px minmax(0,1fr) 68px 140px repeat(3,180px);gap:0 10px;font-size:11px;line-height:16px;color:var(--text-light)"><span></span><span></span><span></span><span></span><span style="grid-column:5 / span 3;white-space:nowrap">{{ movesWith }}</span></div>
+    <div role="list" aria-label="Moves, ranked by impact" style="display:grid;border-top:1px solid var(--border-secondary)">
+      <sc-for list="{{ moves }}" as="mv" hint-placeholder-count="5">
+      <div role="listitem" style="display:grid;grid-template-columns:36px minmax(0,1fr) 68px 140px repeat(3,180px);gap:0 10px;align-items:start;padding:5px 0;border-bottom:1px solid var(--border-secondary);min-width:0">
+        <button role="checkbox" aria-checked="{{ mv.sel }}" aria-label="{{ mv.selLabel }}" onClick="{{ mv.toggle }}" style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:0;border:0;background:transparent;font:inherit;cursor:pointer"><span aria-hidden="true" style="width:14px;height:14px;box-sizing:border-box;border-radius:3px;border:2px solid {{ mv.checkRing }};background:{{ mv.checkBg }};display:flex;align-items:center;justify-content:center;color:var(--bg-base);font-size:10px;line-height:10px;font-weight:700;flex:none">{{ mv.check }}</span><span style="font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums">{{ mv.rankF }}</span></button>
+        <div style="display:grid;gap:3px;align-content:start;min-width:0;padding-top:5px">
+          <div title="{{ mv.title }}" style="font-size:14px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mv.title }}</div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;min-width:0"><sc-for list="{{ mv.counts }}" as="ct" hint-placeholder-count="2"><button onClick="{{ ct.go }}" title="{{ ct.title }}" style="border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:16px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap" style-hover="text-decoration:underline">{{ ct.label }}</button></sc-for></div>
+          <div title="{{ mv.reason }}" style="font-size:12px;line-height:16px;color:var(--text-body);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ mv.reason }}</div>
+          <div style="display:flex;align-items:center;gap:14px;margin-top:1px"><button class="fx-btn" onClick="{{ mv.attach }}" style="height:22px;padding:0 10px;font-size:12px">Attach</button><button onClick="{{ mv.compare }}" style="border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:16px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap" style-hover="text-decoration:underline">Compare ways to connect</button></div>
+        </div>
+        <div aria-hidden="true" style="display:grid;grid-template-rows:15px 16px 14px 16px 16px 16px;padding:6px 0 0;font-size:11px;line-height:16px;color:var(--text-light)"><span></span><span></span><span></span><span>Security</span><span>Performance</span><span>Cost</span></div>
+        <div aria-label="Today" style="display:grid;grid-template-rows:15px 16px 14px 16px 16px 16px;padding:6px 0 0;min-width:0">
+          <span style="font-size:10px;line-height:15px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--text-light)">Today</span>
+          <span title="{{ mv.pathWord }}" style="font-size:12px;line-height:16px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mv.pathWord }}</span>
+          <span style="font-size:11px;line-height:14px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mv.todayNote }}</span>
+          <button onClick="{{ mv.tSec.go }}" title="{{ mv.tSec.value }}" style="border:0;background:transparent;padding:0;text-align:left;font:inherit;font-size:12px;line-height:16px;color:{{ mv.tSec.ink }};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" style-hover="text-decoration:underline">{{ mv.tSec.value }}</button>
+          <button onClick="{{ mv.tPerf.go }}" title="{{ mv.tPerf.value }}" style="border:0;background:transparent;padding:0;text-align:left;font:inherit;font-size:12px;line-height:16px;color:{{ mv.tPerf.ink }};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" style-hover="text-decoration:underline">{{ mv.tPerf.value }}</button>
+          <button onClick="{{ mv.tCost.go }}" title="{{ mv.tCostTitle }}" style="border:0;background:transparent;padding:0;text-align:left;font:inherit;font-size:12px;line-height:16px;font-weight:600;color:{{ mv.tCost.ink }};cursor:{{ mv.tCostCursor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" style-hover="text-decoration:{{ mv.tCostHover }}">{{ mv.tCost.value }}</button>
+        </div>
+        <sc-for list="{{ mv.tiers }}" as="tr" hint-placeholder-count="3">
+        <button onClick="{{ tr.pick }}" aria-pressed="{{ tr.on }}" aria-label="{{ tr.aria }}" title="{{ tr.title }}" style="display:grid;grid-template-rows:15px 16px 14px 16px 16px 16px;box-sizing:border-box;width:100%;min-width:0;padding:5px 8px;border:1px solid {{ tr.border }};border-radius:8px;background:{{ tr.bg }};font:inherit;text-align:left;cursor:pointer" style-hover="border-color:var(--border-active)">
+          <span style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;min-width:0"><span style="font-size:10px;line-height:15px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:{{ tr.wordInk }};white-space:nowrap">{{ tr.tier }}</span><span style="font-size:11px;line-height:15px;color:var(--text-body);white-space:nowrap">{{ tr.priceShort }}</span></span>
+          <span style="font-size:12px;line-height:16px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tr.label }}</span>
+          <span style="font-size:11px;line-height:14px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tr.fit }}</span>
+          <span style="display:flex;justify-content:space-between;gap:6px;min-width:0;font-size:12px;line-height:16px"><span style="color:{{ tr.sec.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tr.sec.value }}</span><span style="flex:none;font-size:11px;color:{{ tr.sec.dink }};white-space:nowrap">{{ tr.sec.delta }}</span></span>
+          <span style="display:flex;justify-content:space-between;gap:6px;min-width:0;font-size:12px;line-height:16px"><span style="color:{{ tr.perf.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tr.perf.value }}</span><span style="flex:none;font-size:11px;color:{{ tr.perf.dink }};white-space:nowrap">{{ tr.perf.delta }}</span></span>
+          <span style="display:flex;justify-content:space-between;gap:6px;min-width:0;font-size:12px;line-height:16px"><span style="font-weight:600;color:{{ tr.cost.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tr.cost.value }}</span><span style="flex:none;font-size:11px;font-weight:600;color:{{ tr.cost.dink }};white-space:nowrap">{{ tr.cost.delta }}</span></span>
+        </button>
+        </sc-for>
+      </div>
+      </sc-for>
+    </div>
+    </sc-if>
+    <sc-if value="{{ noMoves }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:10px;justify-items:start;padding:14px 0;border-top:1px solid var(--border-secondary)"><div style="font-size:13px;line-height:18px;color:var(--text-body)">{{ movesEmpty }}</div><sc-if value="{{ hasMovesStep }}" hint-placeholder-val="{{ false }}"><button onClick="{{ movesStep.go }}" style="height:32px;padding:0 14px;border:0;border-radius:8px;background:var(--cta);color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">{{ movesStep.label }}</button></sc-if></div></sc-if>
+  </div>
+  </sc-if>
+  <!-- /Recommended -->
 
   <!-- Govern -->
   <sc-if value="{{ tGovern }}" hint-placeholder-val="{{ false }}">
@@ -1847,127 +1898,195 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 </sc-if>
 
 <!-- ===== S4 COMPOSE ===== -->
+<!-- The connect flow (2026-09-30): NetBond Advanced's wizard (StandardWizard.tsx) in the house style. Its step order and words, a step done only when you passed it, a step an entry filled from your estate marked so, and "Your order, in progress" beside every step (WizardTopology.tsx plus CostSummaryPill.tsx). -->
 <sc-if value="{{ sS4 }}" hint-placeholder-val="{{ false }}">
-<section data-screen-label="S4 Compose" style="animation:fadeIn .3s;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)">
-  <div>
+<section data-screen-label="S4 Compose" style="animation:fadeIn .3s;display:grid;gap:14px;grid-template-columns:minmax(0,1fr)">
+  <div style="display:grid;gap:6px">
     <h1 style="margin:0;font-size:26px;line-height:32px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)">Connect</h1>
-    <div style="font-size:14px;line-height:20px;font-weight:500;color:var(--text-heading)">Compose an order. Describe the outcome; AT&amp;T composes the connection.</div>
-  <sc-if value="{{ hasParsedNote }}" hint-placeholder-val="{{ false }}"><div class="fx-alert" role="status" style="margin-top:8px"><div class="fx-alert-body"><span class="fx-alert-icon" aria-hidden="true"></span><div><div class="fx-alert-title">{{ parsedNoteTitle }}</div><div class="fx-alert-text">{{ parsedNote }}</div></div></div></div></sc-if>
+    <sc-if value="{{ hasParsedNote }}" hint-placeholder-val="{{ false }}"><div class="fx-alert" role="status"><div class="fx-alert-body"><span class="fx-alert-icon" aria-hidden="true"></span><div><div class="fx-alert-title">{{ parsedNoteTitle }}</div><div class="fx-alert-text">{{ parsedNote }}</div></div></div></div></sc-if>
   </div>
-  <ol aria-label="Steps" style="list-style:none;margin:0;padding:0;display:flex;align-items:center">
-    <sc-for list="{{ wizSteps }}" as="st" hint-placeholder-count="6">
-      <li style="display:flex;align-items:center;flex:{{ st.flex }};min-width:0">
-        <button onClick="{{ st.go }}" aria-current="{{ st.cur }}" style="display:flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;cursor:pointer;color:{{ st.color }};font-size:14px;font-weight:{{ st.weight }};white-space:nowrap" style-hover="color:var(--link)"><span style="width:22px;height:22px;border-radius:9999px;border:2px solid {{ st.ring }};background:{{ st.fill }};display:flex;align-items:center;justify-content:center;color:{{ st.markColor }};font-size:11px;font-weight:700;line-height:1">{{ st.mark }}</span>{{ st.label }}</button>
-        <sc-if value="{{ st.notLast }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" style="flex:1;height:1px;background:var(--border-secondary);margin:0 16px"></span></sc-if>
+  <ol aria-label="Steps" style="list-style:none;margin:0;padding:0;display:flex;align-items:flex-start">
+    <sc-for list="{{ cfSteps }}" as="st" hint-placeholder-count="6">
+      <li style="display:flex;align-items:flex-start;flex:{{ st.flex }};min-width:0">
+        <button onClick="{{ st.go }}" disabled="{{ st.off }}" aria-current="{{ st.aria }}" title="{{ st.sub }}" style="display:flex;align-items:flex-start;gap:8px;border:0;background:transparent;padding:0;cursor:{{ st.cursor }};text-align:left;min-width:0;font:inherit">
+          <span style="width:22px;height:22px;border-radius:9999px;border:2px {{ st.dash }} {{ st.ring }};background:{{ st.fill }};display:flex;align-items:center;justify-content:center;color:{{ st.markInk }};font-size:11px;font-weight:700;line-height:1;flex:none;box-sizing:border-box">{{ st.mark }}</span>
+          <span style="display:grid;gap:1px;min-width:0"><span style="font-size:13px;line-height:18px;font-weight:{{ st.weight }};color:{{ st.ink }};white-space:nowrap">{{ st.title }}</span><span style="font-size:11px;line-height:14px;color:{{ st.subInk }};max-width:152px;overflow-wrap:anywhere;text-wrap:pretty">{{ st.sub }}</span></span>
+        </button>
+        <sc-if value="{{ st.notLast }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" style="flex:1;min-width:12px;height:1px;background:var(--border-secondary);margin:11px 12px 0"></span></sc-if>
       </li>
     </sc-for>
   </ol>
-  <div style="display:grid;grid-template-columns:minmax(0,8fr) minmax(0,4fr);gap:24px;align-items:start">
-    <div style="display:grid;gap:24px">
-      <div style="display:grid;gap:6px"><h2 style="margin:0;font-size:26px;line-height:34px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ wizQ }}</h2></div>
-      <sc-if value="{{ stepIs0 }}" hint-placeholder-val="{{ true }}">
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
-          <sc-for list="{{ outcomeCards }}" as="o" hint-placeholder-count="3">
-            <button onClick="{{ o.click }}" aria-pressed="{{ o.on }}" style="text-align:left;padding:20px;border-radius:16px;border:1px solid {{ o.border }};background:{{ o.bg }};cursor:pointer;display:grid;gap:10px;align-content:start;min-height:172px" style-hover="border-color:var(--border-active)">
-              <span style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:500;color:var(--text-disabled)">{{ o.dir }}</span>
-              <span style="display:block;min-height:48px;font-weight:700;color:var(--text-heading);font-size:18px;line-height:24px;text-wrap:balance">{{ o.name }}</span>
-              <span style="font-size:13px;line-height:18px;color:var(--text-body)">{{ o.desc }}</span>
-              <span style="font-size:12px;color:var(--link);font-weight:500;margin-top:auto">Ships with: {{ o.controlLine }}</span>
-            </button>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start">
+    <div style="display:grid;gap:14px;min-width:0">
+      <div style="display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;min-width:0"><h2 style="margin:0;font-size:20px;line-height:26px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ cfTitle }}</h2><span style="font-size:13px;line-height:18px;color:var(--text-light);text-wrap:pretty;min-width:0">{{ cfDesc }}</span></div>
+      <sc-if value="{{ cfWipList.has }}" hint-placeholder-val="{{ false }}">
+        <div aria-label="{{ cfWipList.title }}" style="display:grid;gap:4px;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0"><span style="flex:1;min-width:0;font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ cfWipList.title }}</span><button class="fx-btn" onClick="{{ cfWipList.close }}" aria-label="Close the list">Close</button></div>
+          <div><sc-for list="{{ cfWipList.rows }}" as="wl" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:baseline;padding:8px 0;border-top:1px solid var(--border-secondary);min-width:0"><span style="font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ wl.name }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light);overflow-wrap:anywhere">{{ wl.sub }}</span></div></sc-for></div>
+          <sc-if value="{{ cfWipList.pager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ cfWipList.pager.label }}</span><button class="fx-btn" onClick="{{ cfWipList.pager.prev }}" aria-label="Previous page" style="opacity:{{ cfWipList.pager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ cfWipList.pager.next }}" aria-label="Next page" style="opacity:{{ cfWipList.pager.nextOp }}">›</button></div></sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ cfWipList.none }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ cfIsType }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+          <sc-for list="{{ cfTypes }}" as="ct" hint-placeholder-count="9">
+            <div style="display:grid;grid-template-rows:1fr auto;gap:4px;padding:10px 12px;border:1px solid {{ ct.border }};border-radius:12px;background:{{ ct.bg }};min-width:0;opacity:{{ ct.op }}">
+              <button onClick="{{ ct.pick }}" disabled="{{ ct.disabled }}" aria-pressed="{{ ct.on }}" style="display:grid;gap:2px;align-content:start;border:0;background:transparent;padding:0;text-align:left;cursor:pointer;font:inherit;min-width:0">
+                <span style="display:flex;align-items:center;gap:6px;min-width:0"><span aria-hidden="true" style="width:14px;height:14px;border-radius:9999px;border:2px solid {{ ct.checkRing }};background:{{ ct.check }};flex:none;box-sizing:border-box"></span><span style="font-size:13px;line-height:18px;font-weight:700;color:{{ ct.ink }};overflow-wrap:anywhere">{{ ct.label }}</span></span>
+                <span style="font-size:11px;line-height:15px;color:var(--text-body);text-wrap:pretty">{{ ct.description }}</span>
+              </button>
+              <div style="display:flex;align-items:center;gap:6px;min-width:0;min-height:18px">
+                <sc-if value="{{ ct.hasCount }}" hint-placeholder-val="{{ true }}"><button onClick="{{ ct.openSet }}" aria-pressed="{{ ct.setOn }}" style="border:0;background:transparent;padding:0;font:inherit;font-size:11px;line-height:15px;font-weight:600;color:var(--link);cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px;min-width:0;overflow-wrap:anywhere">{{ ct.phrase }}</button></sc-if>
+                <sc-if value="{{ ct.noCount }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:15px;color:var(--text-disabled)">{{ ct.none }}</span></sc-if>
+                <sc-if value="{{ ct.hasFits }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;font-size:11px;line-height:15px;font-weight:700;color:var(--success);text-align:right;min-width:0;overflow-wrap:anywhere">{{ ct.fits }}</span></sc-if>
+                <sc-if value="{{ ct.soon }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;font-size:10px;line-height:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-light);white-space:nowrap">Coming soon</span></sc-if>
+              </div>
+            </div>
           </sc-for>
         </div>
-        <div style="display:grid;gap:8px">
-          <label style="font-size:12px;font-weight:500;color:var(--text-light)">Or just say it</label>
-          <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
-            <input value="{{ freeText }}" onChange="{{ setFreeText }}" placeholder="AWS us-east-1 to the Internet, no direct internet path, firewall in path" style="height:40px;padding:0 16px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-heading);font-size:14px" style-focus="border-color:var(--border-active);outline:2px solid var(--border-active);outline-offset:1px"></input>
-            <button onClick="{{ parseText }}" style="height:40px;padding:0 16px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:var(--bg-accent)">Fill</button>
+        <sc-if value="{{ waySet.has }}" hint-placeholder-val="{{ false }}">
+          <div aria-label="What it applies to" style="display:grid;gap:4px;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0"><span style="font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading)">{{ waySet.title }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light);flex:1;min-width:0">{{ waySet.head }}</span><button class="fx-btn" onClick="{{ waySet.close }}" aria-label="Close the list">Close</button></div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px"><sc-for list="{{ waySet.rows }}" as="wr" hint-placeholder-count="4"><div style="display:grid;gap:0;padding:6px 0;border-top:1px solid var(--border-secondary);min-width:0"><span style="font-size:12px;line-height:16px;font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ wr.name }}</span><span style="font-size:11px;line-height:15px;color:var(--text-light);overflow-wrap:anywhere">{{ wr.sub }}</span></div></sc-for></div>
+            <sc-if value="{{ waySet.pager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ waySet.pager.label }}</span><button class="fx-btn" onClick="{{ waySet.pager.prev }}" aria-label="Previous page" style="opacity:{{ waySet.pager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ waySet.pager.next }}" aria-label="Next page" style="opacity:{{ waySet.pager.nextOp }}">›</button></div></sc-if>
+          </div>
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ cfIsType }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;gap:4px;min-width:0">
+          <label for="cf-say" style="font-size:12px;line-height:16px;font-weight:600;color:var(--text-light)">Or just say it</label>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px">
+            <input id="cf-say" value="{{ freeText }}" onChange="{{ setFreeText }}" placeholder="AWS us-west-2 to the internet, no direct internet path, firewall in path" style="height:36px;padding:0 14px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:13px;min-width:0" style-focus="border-color:var(--border-active);outline:2px solid var(--border-active);outline-offset:1px"></input>
+            <button onClick="{{ parseText }}" style="height:36px;padding:0 16px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:var(--bg-accent)">Fill</button>
           </div>
         </div>
       </sc-if>
-      <sc-if value="{{ stepIs1 }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
-          <sc-for list="{{ srcCards }}" as="cd" hint-placeholder-count="3">
-            <button onClick="{{ cd.click }}" aria-pressed="{{ cd.on }}" style="text-align:left;padding:20px;border-radius:16px;border:1px solid {{ cd.border }};background:{{ cd.bg }};cursor:pointer;display:grid;gap:10px;align-content:start;min-height:132px;transition:border-color .15s" style-hover="border-color:var(--border-active)">
-              <span style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><span style="font-weight:700;color:var(--text-heading);font-size:16px;line-height:22px">{{ cd.label }}</span><span aria-hidden="true" style="width:18px;height:18px;border-radius:9999px;border:2px solid {{ cd.checkRing }};background:{{ cd.check }};flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px">✓</span></span>
-              <span style="font-size:13px;line-height:18px;color:var(--text-body);text-wrap:pretty">{{ cd.desc }}</span>
+      <sc-if value="{{ cfIsProvider }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ cfMulti }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;line-height:18px;color:var(--text-body)">Select two or more clouds to link through one Hub.</div></sc-if>
+        <sc-if value="{{ noCfClouds }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--border-secondary)"><span style="flex:1;min-width:0;font-size:13px;line-height:19px;color:var(--text-body)">{{ cfNoCloudsLine }}</span><button class="fx-btn" onClick="{{ cfAddSource }}">Add a source</button></div></sc-if>
+        <div><sc-for list="{{ cfClouds }}" as="cg" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--border-secondary)">
+            <span style="font-size:14px;line-height:34px;font-weight:700;color:var(--text-heading)">{{ cg.cloud }}</span>
+            <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ cg.regions }}" as="rg" hint-placeholder-count="3"><button onClick="{{ rg.pick }}" aria-pressed="{{ rg.on }}" style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border:1px solid {{ rg.border }};border-radius:10px;background:{{ rg.bg }};font:inherit;cursor:pointer;text-align:left"><span aria-hidden="true" style="width:14px;height:14px;border-radius:9999px;border:2px solid {{ rg.checkRing }};background:{{ rg.check }};flex:none;box-sizing:border-box"></span><span style="display:grid;gap:0"><span style="font-size:13px;line-height:17px;font-weight:600;color:{{ rg.ink }};white-space:nowrap">{{ rg.region }}</span><span style="font-size:11px;line-height:14px;color:var(--text-light);white-space:nowrap">{{ rg.sub }}</span></span></button></sc-for></div>
+          </div>
+        </sc-for></div>
+      </sc-if>
+      <sc-if value="{{ cfIsEndpoints }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ cfEndpoints.hasDcs }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+          <div style="display:grid;gap:8px;align-content:start;min-width:0"><span style="font-size:12px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--text-heading)">{{ cfEndpoints.a.label }}</span>
+            <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ cfEndpoints.a.sites }}" as="ea" hint-placeholder-count="3"><button onClick="{{ ea.pick }}" aria-pressed="{{ ea.on }}" style="display:grid;gap:0;padding:6px 12px;border:1px solid {{ ea.border }};border-radius:10px;background:{{ ea.bg }};font:inherit;cursor:pointer;text-align:left;opacity:{{ ea.op }}"><span style="font-size:13px;line-height:17px;font-weight:600;color:{{ ea.ink }};white-space:nowrap">{{ ea.name }}</span><span style="font-size:11px;line-height:14px;color:var(--text-light)">{{ ea.sub }}</span></button></sc-for></div>
+            <span style="font-size:12px;line-height:16px;color:var(--text-light)">Connects through</span>
+            <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ cfEndpoints.a.fabrics }}" as="fa" hint-placeholder-count="2"><button onClick="{{ fa.pick }}" aria-pressed="{{ fa.on }}" style="display:grid;gap:0;padding:6px 12px;border:1px solid {{ fa.border }};border-radius:10px;background:{{ fa.bg }};font:inherit;cursor:pointer;text-align:left"><span style="font-size:13px;line-height:17px;font-weight:600;color:{{ fa.ink }};white-space:nowrap">{{ fa.label }}</span><span style="font-size:11px;line-height:14px;color:var(--text-light)">{{ fa.sub }}</span></button></sc-for></div>
+          </div>
+          <div style="display:grid;gap:8px;align-content:start;min-width:0"><span style="font-size:12px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--text-heading)">{{ cfEndpoints.b.label }}</span>
+            <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ cfEndpoints.b.sites }}" as="eb" hint-placeholder-count="3"><button onClick="{{ eb.pick }}" aria-pressed="{{ eb.on }}" style="display:grid;gap:0;padding:6px 12px;border:1px solid {{ eb.border }};border-radius:10px;background:{{ eb.bg }};font:inherit;cursor:pointer;text-align:left;opacity:{{ eb.op }}"><span style="font-size:13px;line-height:17px;font-weight:600;color:{{ eb.ink }};white-space:nowrap">{{ eb.name }}</span><span style="font-size:11px;line-height:14px;color:var(--text-light)">{{ eb.sub }}</span></button></sc-for></div>
+            <span style="font-size:12px;line-height:16px;color:var(--text-light)">Connects through</span>
+            <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ cfEndpoints.b.fabrics }}" as="fb" hint-placeholder-count="2"><button onClick="{{ fb.pick }}" aria-pressed="{{ fb.on }}" style="display:grid;gap:0;padding:6px 12px;border:1px solid {{ fb.border }};border-radius:10px;background:{{ fb.bg }};font:inherit;cursor:pointer;text-align:left"><span style="font-size:13px;line-height:17px;font-weight:600;color:{{ fb.ink }};white-space:nowrap">{{ fb.label }}</span><span style="font-size:11px;line-height:14px;color:var(--text-light)">{{ fb.sub }}</span></button></sc-for></div>
+          </div>
+        </div>
+        <div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty">Prerequisite: each colo cage must already be cross-connected to Equinix Fabric or Digital Realty ServiceFabric. NetBond Advanced connects into it on demand, with no new AT&amp;T cross-connect.</div>
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ cfIsBasic }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;gap:6px">
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Resiliency</span><span style="font-size:12px;line-height:16px;color:var(--text-light)">{{ cfTierProtects }}</span></div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px"><sc-for list="{{ cfTiers }}" as="tr" hint-placeholder-count="3">
+            <button onClick="{{ tr.pick }}" aria-pressed="{{ tr.on }}" style="display:grid;gap:3px;align-content:start;padding:8px 12px;border:1px solid {{ tr.border }};border-radius:12px;background:{{ tr.bg }};font:inherit;cursor:pointer;text-align:left;min-width:0;opacity:{{ tr.op }}">
+              <span style="display:flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:14px;height:14px;border-radius:9999px;border:2px solid {{ tr.checkRing }};background:{{ tr.check }};flex:none;box-sizing:border-box"></span><span style="font-size:14px;line-height:18px;font-weight:700;color:{{ tr.ink }}">{{ tr.tier }}</span><sc-if value="{{ tr.soon }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;font-size:10px;line-height:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--link);white-space:nowrap">Coming soon</span></sc-if></span>
+              <span style="font-size:11px;line-height:15px;color:var(--text-body);text-wrap:pretty">{{ tr.protects }}</span>
+              <sc-if value="{{ tr.becomes }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:15px;font-weight:700;color:var(--link)">{{ tr.becomes }}</span></sc-if>
+              <span style="display:grid;gap:0;padding-top:4px;border-top:1px solid var(--border-secondary);font-size:11px;line-height:15px;color:var(--text-body)"><span><b style="font-weight:600;color:var(--text-heading)">Security</b> {{ tr.security }}</span><span><b style="font-weight:600;color:var(--text-heading)">Performance</b> {{ tr.performance }}</span><span><b style="font-weight:600;color:var(--text-heading)">Cost</b> {{ tr.cost }}</span></span>
+              <sc-if value="{{ tr.costSub }}" hint-placeholder-val="{{ true }}"><span style="font-size:10px;line-height:13px;color:var(--text-light)">{{ tr.costSub }}</span></sc-if>
             </button>
-          </sc-for>
-        </div></sc-if>
-      <sc-if value="{{ stepIs2 }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
-          <sc-for list="{{ dstCards }}" as="cd" hint-placeholder-count="3">
-            <button onClick="{{ cd.click }}" aria-pressed="{{ cd.on }}" style="text-align:left;padding:20px;border-radius:16px;border:1px solid {{ cd.border }};background:{{ cd.bg }};cursor:pointer;display:grid;gap:10px;align-content:start;min-height:132px;transition:border-color .15s" style-hover="border-color:var(--border-active)">
-              <span style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><span style="font-weight:700;color:var(--text-heading);font-size:16px;line-height:22px">{{ cd.label }}</span><span aria-hidden="true" style="width:18px;height:18px;border-radius:9999px;border:2px solid {{ cd.checkRing }};background:{{ cd.check }};flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px">✓</span></span>
-              <span style="font-size:13px;line-height:18px;color:var(--text-body);text-wrap:pretty">{{ cd.desc }}</span>
-            </button>
-          </sc-for>
-        </div></sc-if>
-      <sc-if value="{{ stepIs3 }}" hint-placeholder-val="{{ false }}">
-        <nav role="tablist" style="display:flex;gap:20px;border-bottom:1px solid var(--border-secondary)"><sc-for list="{{ regionTabs }}" as="t" hint-placeholder-count="4"><button role="tab" aria-selected="{{ t.active }}" onClick="{{ t.click }}" style="height:36px;padding:0 4px;border:0;border-bottom:2px solid {{ t.border }};margin-bottom:-1px;background:transparent;color:{{ t.color }};font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">{{ t.label }}</button></sc-for></nav>
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
-          <sc-for list="{{ metroCards }}" as="cd" hint-placeholder-count="3">
-            <button onClick="{{ cd.click }}" aria-pressed="{{ cd.on }}" style="text-align:left;padding:20px;border-radius:16px;border:1px solid {{ cd.border }};background:{{ cd.bg }};cursor:pointer;display:grid;gap:10px;align-content:start;min-height:132px;transition:border-color .15s" style-hover="border-color:var(--border-active)">
-              <span style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><span style="font-weight:700;color:var(--text-heading);font-size:16px;line-height:22px">{{ cd.label }}</span><span aria-hidden="true" style="width:18px;height:18px;border-radius:9999px;border:2px solid {{ cd.checkRing }};background:{{ cd.check }};flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px">✓</span></span>
-              <span style="font-size:13px;line-height:18px;color:var(--text-body);text-wrap:pretty">{{ cd.desc }}</span>
-            </button>
-          </sc-for>
+          </sc-for></div>
+        </div>
+        <sc-if value="{{ cfShowPaths }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;gap:2px">
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-size:12px;line-height:16px;font-weight:700;color:var(--text-heading)">What you'd get, path by path</span><span style="font-size:12px;line-height:16px;color:var(--text-light)">{{ cfPathsFor }}</span></div>
+          <div class="dt" style="font-size:12px;line-height:16px">
+            <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th" style="width:19%;padding:6px 8px">Path</div><div class="dt-c dt-th" style="padding:6px 8px">Security</div><div class="dt-c dt-th" style="padding:6px 8px">Performance</div><div class="dt-c dt-th" style="padding:6px 8px">Reliability</div><div class="dt-c dt-th" style="width:11%;padding:6px 8px">Cost</div><div class="dt-c dt-th" style="width:27%;padding:6px 8px">Time to stand up</div></div></div>
+            <div class="dt-b"><sc-for list="{{ cfPaths }}" as="pt" hint-placeholder-count="3"><div class="dt-r" style="background:{{ pt.bg }}">
+              <div data-th="Path" class="dt-c" style="vertical-align:top;padding:6px 8px"><div style="display:flex;align-items:center;gap:6px;min-width:0"><span aria-hidden="true" style="width:8px;height:8px;border-radius:2px;background:{{ pt.tone }};flex:none"></span><span style="font-weight:{{ pt.weight }};color:var(--text-heading)">{{ pt.short }}</span></div><div style="font-size:11px;line-height:14px;font-weight:600;color:var(--link)">{{ pt.rideLine }}</div></div>
+              <div data-th="Security" class="dt-c" style="vertical-align:top;padding:6px 8px;font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ pt.security }}</div>
+              <div data-th="Performance" class="dt-c" style="vertical-align:top;padding:6px 8px"><div style="font-weight:600;color:var(--text-heading)">{{ pt.performance }}</div><div style="font-size:11px;line-height:14px;color:var(--text-light)">{{ pt.performanceSub }}</div></div>
+              <div data-th="Reliability" class="dt-c" style="vertical-align:top;padding:6px 8px;font-weight:600;color:var(--text-heading)">{{ pt.reliability }}</div>
+              <div data-th="Cost" class="dt-c" style="vertical-align:top;padding:6px 8px;font-weight:600;color:var(--text-heading)">{{ pt.cost }}</div>
+              <div data-th="Time to stand up" class="dt-c" style="vertical-align:top;padding:6px 8px;font-size:11px;line-height:15px;overflow-wrap:anywhere">{{ pt.setup }}</div>
+            </div></sc-for></div>
+          </div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ cfShowLoc }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;gap:6px;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ cfLocTitle }}</span><sc-if value="{{ hasCfAreas }}" hint-placeholder-val="{{ true }}"><span role="tablist" aria-label="Location areas" style="display:flex;gap:12px;flex-wrap:wrap"><sc-for list="{{ cfAreas }}" as="ar" hint-placeholder-count="3"><button role="tab" aria-selected="{{ ar.on }}" onClick="{{ ar.go }}" style="border:0;border-bottom:2px solid {{ ar.line }};background:transparent;padding:0 1px 2px;font:inherit;font-size:12px;line-height:16px;font-weight:{{ ar.weight }};color:{{ ar.ink }};cursor:pointer;white-space:nowrap">{{ ar.label }}</button></sc-for></span></sc-if></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ cfMetros }}" as="mt" hint-placeholder-count="4"><button onClick="{{ mt.pick }}" aria-pressed="{{ mt.on }}" title="{{ mt.nearAll }}" style="display:grid;gap:0;padding:4px 12px;border:1px solid {{ mt.border }};border-radius:10px;background:{{ mt.bg }};font:inherit;cursor:pointer;text-align:left;max-width:240px;min-width:0"><span style="font-size:13px;line-height:17px;font-weight:600;color:{{ mt.ink }};white-space:nowrap">{{ mt.metro }}</span><span style="font-size:11px;line-height:14px;color:var(--text-light);overflow-wrap:anywhere">{{ mt.near }}</span></button></sc-for></div>
+        </div>
+        </sc-if>
+        <div style="display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;min-width:0">
+          <span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Bandwidth</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ cfBandwidths }}" as="bw" hint-placeholder-count="5"><button onClick="{{ bw.pick }}" aria-pressed="{{ bw.on }}" style="height:30px;padding:0 12px;border:1px solid {{ bw.border }};border-radius:9999px;background:{{ bw.bg }};color:{{ bw.ink }};font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">{{ bw.label }}</button></sc-for></div>
         </div>
       </sc-if>
-      <sc-if value="{{ stepIs4 }}" hint-placeholder-val="{{ false }}">
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
-          <sc-for list="{{ resCards }}" as="cd" hint-placeholder-count="3">
-            <button onClick="{{ cd.click }}" aria-pressed="{{ cd.on }}" style="text-align:left;padding:20px;border-radius:16px;border:1px solid {{ cd.border }};background:{{ cd.bg }};cursor:pointer;display:grid;gap:10px;align-content:start;min-height:132px;transition:border-color .15s" style-hover="border-color:var(--border-active)">
-              <span style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><span style="font-weight:700;color:var(--text-heading);font-size:16px;line-height:22px">{{ cd.label }}</span><span aria-hidden="true" style="width:18px;height:18px;border-radius:9999px;border:2px solid {{ cd.checkRing }};background:{{ cd.check }};flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px">✓</span></span>
-              <span style="font-size:13px;line-height:18px;color:var(--text-body);text-wrap:pretty">{{ cd.desc }}</span>
-            </button>
-          </sc-for>
-        </div>
-        <sc-if value="{{ hasConstraintNow }}" hint-placeholder-val="{{ false }}"><div role="alert" style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:8px;background:var(--bg-base);border:1px solid var(--warning);color:var(--text-heading);font-size:13px"><span style="width:8px;height:8px;border-radius:9999px;background:var(--warning)"></span>{{ constraint }}<button onClick="{{ wizBack }}" style="margin-left:auto;border:0;background:transparent;padding:0;color:var(--link);font-weight:500;font-size:13px;cursor:pointer;white-space:nowrap">Add a metro</button></div></sc-if>
+      <sc-if value="{{ cfIsAdvanced }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ hasCfQos }}" hint-placeholder-val="{{ true }}">
+        <div><sc-for list="{{ cfQos }}" as="q" hint-placeholder-count="1"><div style="display:flex;align-items:center;gap:16px;padding:8px 0;border-top:1px solid var(--border-secondary)"><span style="width:96px;font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ q.cloud }}</span><label class="fx-filter"><span class="fx-label">Quality of Service Classifier</span><select class="fx-select" value="{{ q.value }}" onChange="{{ q.set }}" aria-label="Quality of Service Classifier"><option value="Standard">Standard</option><option value="Best Effort">Best Effort</option><option value="Out of Contract">Out of Contract</option></select></label></div></sc-for></div>
+        </sc-if>
       </sc-if>
-      <sc-if value="{{ stepIs5 }}" hint-placeholder-val="{{ false }}">
-        <div style="padding:16px 20px;border-radius:12px;background:var(--bg-wash);border:1px solid var(--border-secondary);font-size:16px;line-height:26px;color:var(--text-heading)"><span style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;color:var(--text-disabled);display:block;margin-bottom:4px">The policy, in Govern's words</span>When <strong style="color:var(--link)">{{ polSent.match }}</strong> reaches <strong style="color:var(--link)">{{ polSent.scope }}</strong>, require <strong style="color:var(--link)">{{ polSent.req }}</strong>.</div>
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
-          <sc-for list="{{ ctlCards }}" as="cd" hint-placeholder-count="3">
-            <button onClick="{{ cd.click }}" aria-pressed="{{ cd.on }}" style="text-align:left;padding:20px;border-radius:16px;border:1px solid {{ cd.border }};background:{{ cd.bg }};cursor:pointer;display:grid;gap:10px;align-content:start;min-height:132px;transition:border-color .15s" style-hover="border-color:var(--border-active)">
-              <span style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><span style="font-weight:700;color:var(--text-heading);font-size:16px;line-height:22px">{{ cd.label }}</span><span aria-hidden="true" style="width:18px;height:18px;border-radius:9999px;border:2px solid {{ cd.checkRing }};background:{{ cd.check }};flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px">✓</span></span>
-              <span style="font-size:13px;line-height:18px;color:var(--text-body);text-wrap:pretty">{{ cd.desc }}</span>
-            </button>
-          </sc-for>
+      <sc-if value="{{ cfShowPolicy }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;gap:8px">
+          <div style="display:grid;gap:2px"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">What must always be true?</span><span style="font-size:13px;line-height:19px;color:var(--text-body)">The policy ships with the order and is enforced from delivery; Govern shows it in the same words. When <b style="color:var(--link)">{{ cfPolicySent.match }}</b> reaches <b style="color:var(--link)">{{ cfPolicySent.scope }}</b>, require <b style="color:var(--link)">{{ cfPolicySent.req }}</b>.</span></div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px"><sc-for list="{{ cfPolicy }}" as="pc" hint-placeholder-count="6"><button onClick="{{ pc.pick }}" aria-pressed="{{ pc.on }}" style="display:grid;gap:2px;align-content:start;padding:8px 12px;border:1px solid {{ pc.border }};border-radius:12px;background:{{ pc.bg }};font:inherit;cursor:pointer;text-align:left;min-width:0"><span style="display:flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;border:2px solid {{ pc.checkRing }};background:{{ pc.check }};flex:none;box-sizing:border-box"></span><span style="font-size:13px;line-height:17px;font-weight:700;color:{{ pc.ink }}">{{ pc.label }}</span></span><span style="font-size:11px;line-height:15px;color:var(--text-body);text-wrap:pretty">{{ pc.desc }}</span></button></sc-for></div>
         </div>
       </sc-if>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">
-        <button onClick="{{ wizBack }}" style="height:40px;padding:0 16px;border:1px solid var(--border-secondary);border-radius:9999px;background:transparent;color:var(--text-heading);font-size:14px;font-weight:500;cursor:pointer;visibility:{{ backVis }};white-space:nowrap">Back</button>
-        <sc-if value="{{ wizIsLast }}" hint-placeholder-val="{{ false }}"><button onClick="{{ reviewOrder }}" disabled="{{ reviewDisabled }}" style="height:40px;padding:0 20px;border:0;border-radius:9999px;background:{{ reviewBg }};color:{{ reviewColor }};font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">Review</button></sc-if>
-        <sc-if value="{{ wizNotLast }}" hint-placeholder-val="{{ true }}"><button onClick="{{ wizNext }}" disabled="{{ wizNextDisabled }}" style="height:40px;padding:0 20px;border:0;border-radius:9999px;background:{{ wizNextBg }};color:{{ wizNextColor }};font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">{{ wizNextLabel }}</button></sc-if>
-      </div>
-    </div>
-    <aside aria-label="Composed summary" style="position:sticky;top:24px;padding:24px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;display:grid;gap:16px">
-      <div style="font-size:11px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;color:var(--text-disabled)">Composed so far</div>
-      <div style="display:grid;border-top:1px solid var(--border-secondary)">
-        <sc-for list="{{ slotRows }}" as="r" hint-placeholder-count="6">
-          <button onClick="{{ r.go }}" aria-current="{{ r.cur }}" style="display:grid;grid-template-columns:88px 1fr;gap:12px;align-items:baseline;padding:10px 0;border:0;border-bottom:1px solid var(--border-secondary);background:transparent;text-align:left;cursor:pointer;min-width:0" style-hover="color:var(--link)">
-            <span style="font-size:12px;color:var(--text-light)">{{ r.label }}</span>
-            <span style="font-size:14px;line-height:20px;font-weight:{{ r.weight }};color:{{ r.color }};min-width:0;overflow-wrap:anywhere">{{ r.text }}</span>
+      <sc-if value="{{ cfIsTerms }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px"><sc-for list="{{ cfTerms }}" as="tm" hint-placeholder-count="4">
+          <button onClick="{{ tm.pick }}" aria-pressed="{{ tm.on }}" style="display:grid;gap:3px;align-content:start;padding:12px;border:1px solid {{ tm.border }};border-radius:12px;background:{{ tm.bg }};font:inherit;cursor:pointer;text-align:left;min-width:0">
+            <span style="display:flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:14px;height:14px;border-radius:9999px;border:2px solid {{ tm.checkRing }};background:{{ tm.check }};flex:none;box-sizing:border-box"></span><span style="font-size:13px;line-height:17px;font-weight:700;color:{{ tm.ink }}">{{ tm.title }}</span><sc-if value="{{ tm.best }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;font-size:10px;line-height:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--link);white-space:nowrap">Best value</span></sc-if></span>
+            <sc-if value="{{ tm.hasPrice }}" hint-placeholder-val="{{ true }}"><span style="font-size:18px;line-height:24px;font-weight:700;color:var(--text-heading)">{{ tm.price }}</span></sc-if>
+            <span style="font-size:12px;line-height:16px;color:var(--text-light)">{{ tm.note }}</span>
+            <sc-if value="{{ tm.hasSave }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:16px;font-weight:600;color:var(--success)">{{ tm.save }}</span></sc-if>
           </button>
-        </sc-for>
+        </sc-for></div>
+        <div style="font-size:12px;line-height:16px;color:var(--text-light)">Modelled from the list prices and the term discounts Review has always used. Final pricing is confirmed by AT&amp;T at provisioning.</div>
+      </sc-if>
+      <sc-if value="{{ cfIsReview }}" hint-placeholder-val="{{ false }}">
+        <label style="display:grid;gap:4px;font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading)">Connection name · optional
+          <input value="{{ cfName }}" onChange="{{ cfSetName }}" placeholder="{{ cfNamePlaceholder }}" style="height:38px;padding:0 12px;border:1px solid var(--border-secondary);border-radius:10px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:14px;font-weight:400" style-focus="border-color:var(--border-active);outline:2px solid var(--border-active);outline-offset:1px"></input>
+          <span style="font-size:12px;line-height:16px;font-weight:400;color:var(--text-light)">{{ cfNameHelp }}</span>
+        </label>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start">
+          <div><sc-for list="{{ cfReviewRows }}" as="rv" hint-placeholder-count="8"><div style="display:grid;grid-template-columns:112px minmax(0,1fr);gap:10px;padding:6px 0;border-top:1px solid var(--border-secondary)"><span style="font-size:12px;line-height:17px;color:var(--text-light)">{{ rv.label }}</span><span style="display:grid;gap:0;min-width:0"><span style="font-size:13px;line-height:17px;font-weight:600;color:{{ rv.ink }};overflow-wrap:anywhere">{{ rv.value }}</span><span style="font-size:11px;line-height:14px;color:var(--text-light)">{{ rv.word }}</span></span></div></sc-for></div>
+          <div style="display:grid;gap:4px"><span style="font-size:12px;line-height:16px;font-weight:600;color:var(--text-light)">Order summary</span><div><sc-for list="{{ cfLines }}" as="ln" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:6px 0;border-top:1px solid var(--border-secondary);font-size:13px;line-height:17px"><span style="color:var(--text-heading);overflow-wrap:anywhere">{{ ln.qtyF }} × {{ ln.product }}</span><span style="color:{{ ln.ink }};white-space:nowrap">{{ ln.monthlyF }}</span></div></sc-for></div>
+            <sc-if value="{{ cfTotal.has }}" hint-placeholder-val="{{ true }}"><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:8px 0 0;border-top:2px solid var(--border-primary);font-size:14px;line-height:18px;font-weight:700;color:var(--text-heading)"><span style="overflow-wrap:anywhere">{{ cfTotal.label }}</span><span style="white-space:nowrap">{{ cfTotal.price }}</span></div><div style="font-size:11px;line-height:14px;color:var(--text-light);text-align:right">{{ cfTotal.sub }}</div></sc-if></div>
+        </div>
+      </sc-if>
+      <div style="display:flex;align-items:center;gap:12px;padding-top:4px">
+        <button onClick="{{ cfBack }}" style="height:38px;padding:0 16px;border:1px solid var(--border-secondary);border-radius:9999px;background:transparent;color:var(--text-heading);font:inherit;font-size:14px;font-weight:500;cursor:pointer;visibility:{{ cfBackVis }};white-space:nowrap;flex:none">Back</button>
+        <span style="flex:1;min-width:0;font-size:12px;line-height:16px;color:var(--text-light);text-align:right;text-wrap:pretty">{{ cfBlock }}</span>
+        <sc-if value="{{ cfNotLast }}" hint-placeholder-val="{{ true }}"><button onClick="{{ cfNext }}" disabled="{{ cfNextDisabled }}" style="height:38px;padding:0 20px;border:0;border-radius:9999px;background:{{ cfNextBg }};color:{{ cfNextInk }};font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex:none">{{ cfNextLabel }}</button></sc-if>
+        <sc-if value="{{ cfIsReview }}" hint-placeholder-val="{{ false }}"><button onClick="{{ cfPlace }}" disabled="{{ cfNextDisabled }}" style="height:38px;padding:0 20px;border:0;border-radius:9999px;background:{{ cfNextBg }};color:{{ cfNextInk }};font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex:none">Place order</button></sc-if>
       </div>
-      <svg viewBox="0 0 320 120" width="100%" role="img" aria-label="Path preview" style="display:block">
-        <rect x="8" y="42" width="84" height="36" rx="8" style="fill:var(--bg-base);stroke:var(--border-primary)" stroke-dasharray="{{ summary.ghostDash }}"></rect>
-        <foreignObject x="8" y="42" width="84" height="36"><div style="font-size:11px;line-height:36px;text-align:center;font-weight:500;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px">{{ summary.srcLabel }}</div></foreignObject>
-        <rect x="128" y="16" width="64" height="88" rx="10" style="fill:var(--band);stroke:var(--band-stroke)"></rect>
-        <foreignObject x="128" y="16" width="64" height="20"><div style="font-size:9px;line-height:20px;text-align:center;letter-spacing:.04em;text-transform:uppercase;color:var(--text-light)">AT&amp;T network</div></foreignObject>
-        <rect x="228" y="42" width="84" height="36" rx="8" style="fill:var(--bg-base);stroke:var(--border-primary)" stroke-dasharray="{{ summary.ghostDash }}"></rect>
-        <foreignObject x="228" y="42" width="84" height="36"><div style="font-size:11px;line-height:36px;text-align:center;font-weight:500;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px">{{ summary.dstLabel }}</div></foreignObject>
-        <path d="M92,60 L128,60 M192,60 L228,60" fill="none" stroke="{{ summary.wireStroke }}" stroke-width="{{ summary.wireW }}" stroke-dasharray="{{ summary.ghostDash }}" style="transition:all .2s"></path>
-        <sc-if value="{{ summary.dual }}" hint-placeholder-val="{{ false }}"><path d="M92,52 L128,52 M192,52 L228,52 M92,68 L128,68 M192,68 L228,68" fill="none" stroke="{{ summary.wireStroke }}" stroke-width="1.5"></path></sc-if>
-        <sc-if value="{{ summary.shield }}" hint-placeholder-val="{{ false }}"><g transform="translate(160 60)"><circle r="12" style="fill:var(--bg-base)"></circle><path d="M0,-7 L7,-4 L7,1 Q7,6 0,9 Q-7,6 -7,1 L-7,-4 Z" fill="#0057b8"></path><path d="M-3,0.5 L-1,2.5 L3,-2" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"></path></g></sc-if>
+      </sc-if>
+    </div>
+    <aside aria-label="Your order, in progress" style="position:sticky;top:24px;padding:16px 18px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;display:grid;gap:10px;align-content:start;min-width:0">
+      <div style="display:grid;gap:4px"><h3 style="margin:0;font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ cfWipTitle }}</h3><div style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;line-height:14px;color:var(--text-light)"><span style="display:inline-flex;align-items:center;gap:5px"><i aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;background:var(--cta);border:1.5px solid var(--cta);box-sizing:border-box"></i>You picked</span><span style="display:inline-flex;align-items:center;gap:5px"><i aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;border:1.5px dashed var(--link);box-sizing:border-box"></i>From your estate</span><span style="display:inline-flex;align-items:center;gap:5px"><i aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;border:1.5px solid var(--border-primary);box-sizing:border-box"></i>Not chosen yet</span></div></div>
+      <div><sc-for list="{{ cfWip }}" as="w" hint-placeholder-count="8"><div style="display:grid;grid-template-columns:10px 92px minmax(0,1fr);gap:8px;align-items:baseline;padding:5px 0;border-top:1px solid var(--border-secondary);min-width:0"><span aria-hidden="true" title="{{ w.word }}" style="width:8px;height:8px;border-radius:9999px;border:1.5px {{ w.dash }} {{ w.ring }};background:{{ w.dot }};box-sizing:border-box"></span><span style="font-size:12px;line-height:16px;color:var(--text-light)">{{ w.label }}</span><span style="display:grid;gap:1px;justify-items:start;min-width:0"><button onClick="{{ w.go }}" title="{{ w.word }}" style="border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:16px;font-weight:600;color:{{ w.ink }};text-align:left;cursor:{{ w.cursor }};overflow-wrap:anywhere;min-width:0">{{ w.value }}</button><sc-if value="{{ w.hasMore }}" hint-placeholder-val="{{ false }}"><button onClick="{{ w.openMore }}" aria-pressed="{{ w.moreOn }}" style="border:0;background:transparent;padding:0;font:inherit;font-size:11px;line-height:15px;font-weight:600;color:var(--link);text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap">{{ w.moreLabel }}</button></sc-if></span></div></sc-for></div>
+      <svg viewBox="0 0 284 92" width="100%" role="img" aria-label="The path, as it fills in" style="display:block">
+        <rect x="2" y="28" width="86" height="36" rx="8" style="fill:var(--bg-base);stroke:var(--border-primary)" stroke-dasharray="{{ cfDiagram.leftDash }}"></rect>
+        <foreignObject x="2" y="28" width="86" height="36"><button onClick="{{ cfDiagram.leftGo }}" disabled="{{ cfDiagram.leftOff }}" title="{{ cfDiagram.left }}" style="display:flex;align-items:center;justify-content:center;width:86px;height:36px;border:0;background:transparent;padding:0 5px;font:inherit;font-size:10px;line-height:12px;text-align:center;font-weight:600;color:{{ cfDiagram.leftLink }};text-decoration:{{ cfDiagram.leftDeco }};text-underline-offset:2px;overflow-wrap:anywhere;cursor:{{ cfDiagram.leftCursor }}">{{ cfDiagram.left }}</button></foreignObject>
+        <rect x="104" y="4" width="76" height="84" rx="10" style="fill:var(--band);stroke:var(--band-stroke)"></rect>
+        <foreignObject x="104" y="6" width="76" height="80"><div style="display:grid;gap:2px;text-align:center;padding:2px 4px"><div style="font-size:8px;line-height:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-light)">AT&amp;T network</div><div style="font-size:10px;line-height:13px;font-weight:600;color:{{ cfDiagram.midInk }};overflow-wrap:anywhere">{{ cfDiagram.mid }}</div><div style="font-size:9px;line-height:12px;color:var(--text-light)">{{ cfDiagram.bw }}</div></div></foreignObject>
+        <rect x="196" y="28" width="86" height="36" rx="8" style="fill:var(--bg-base);stroke:var(--border-primary)" stroke-dasharray="{{ cfDiagram.rightDash }}"></rect>
+        <foreignObject x="196" y="28" width="86" height="36"><button onClick="{{ cfDiagram.rightGo }}" disabled="{{ cfDiagram.rightOff }}" title="{{ cfDiagram.right }}" style="display:flex;align-items:center;justify-content:center;width:86px;height:36px;border:0;background:transparent;padding:0 5px;font:inherit;font-size:10px;line-height:12px;text-align:center;font-weight:600;color:{{ cfDiagram.rightLink }};text-decoration:{{ cfDiagram.rightDeco }};text-underline-offset:2px;overflow-wrap:anywhere;cursor:{{ cfDiagram.rightCursor }}">{{ cfDiagram.right }}</button></foreignObject>
+        <sc-if value="{{ cfDiagram.single }}" hint-placeholder-val="{{ true }}"><path d="M88,46 L104,46 M180,46 L196,46" fill="none" stroke="{{ cfDiagram.wireInk }}" stroke-width="2" stroke-dasharray="{{ cfDiagram.wireDash }}"></path></sc-if>
+        <sc-if value="{{ cfDiagram.dual }}" hint-placeholder-val="{{ false }}"><path d="M88,41 L104,41 M180,41 L196,41 M88,51 L104,51 M180,51 L196,51" fill="none" stroke="{{ cfDiagram.wireInk }}" stroke-width="2" stroke-dasharray="{{ cfDiagram.wireDash }}"></path></sc-if>
+        <sc-if value="{{ cfDiagram.shield }}" hint-placeholder-val="{{ false }}"><g transform="translate(142 76)"><circle r="8" style="fill:var(--bg-base)"></circle><path d="M0,-5 L5,-3 L5,1 Q5,4 0,6 Q-5,4 -5,1 L-5,-3 Z" style="fill:var(--cta)"></path></g></sc-if>
       </svg>
-      <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px">
-        <dt style="color:var(--text-light)">Tier</dt><dd style="margin:0;color:var(--text-heading)">{{ summary.tier }}</dd>
-        <dt style="color:var(--text-light)">Policy</dt><dd style="margin:0;color:var(--text-heading)">{{ summary.policyLine }}</dd>
-        <dt style="color:var(--text-light)">Timeline</dt><dd style="margin:0;color:var(--text-heading)">{{ summary.timeline }}</dd>
-      </dl>
-      <div style="border-top:1px solid var(--border-secondary);padding-top:12px">
-        <div style="font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">{{ summary.priceLine }}</div>
-        <div style="font-size:13px;font-weight:500;color:var(--success)">{{ summary.saveLine }}</div>
+      <div style="border-top:1px solid var(--border-secondary);padding-top:10px;display:grid;gap:2px">
+        <sc-if value="{{ cfPriced }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:baseline;gap:4px"><span style="font-size:26px;line-height:30px;font-weight:700;letter-spacing:-.02em;color:var(--text-heading)">{{ cfPrice.big }}</span><span style="font-size:13px;line-height:18px;color:var(--text-body)">/mo</span></div></sc-if>
+        <div style="font-size:12px;line-height:16px;color:var(--text-body)">{{ cfPrice.line }}</div>
+        <sc-if value="{{ cfPriced }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;line-height:14px;color:var(--text-light)">{{ cfPrice.sub }}</div></sc-if>
       </div>
     </aside>
   </div>
@@ -2469,7 +2588,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36 }; }
+  constructor(p) { super(p); this.state = { screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', waySet: null, waySetPage: 0, orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0, order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36 }; }
   componentDidUpdate() {
     // Guarded on the instance, not on prevState: comparing against prevState
     // re-entered on the very setState this handler makes, and React counted
@@ -2665,21 +2784,17 @@ class Component extends DCLogic {
     Object.assign(v, { treeBorder: tab(v.isTree).border, treeColor: tab(v.isTree).color, mapBorder: tab(v.isMap).border, mapColor: tab(v.isMap).color, discoverCols: v.hasChain ? '8fr 4fr' : '1fr', mapBandH: Math.max(60, v.mapH - 40) });
     v.mapSites = v.mapSites.map(s => ({ ...s, d: `M200,${s.y + 12} C250,${s.y + 12} 250,${s.y + 12} 300,${s.y + 12}`, stroke: s.priv ? '#3374cc' : 'var(--text-disabled)', dash: s.priv ? 'none' : '5 5' }));
     v.mapRows = v.mapRows.map(r => ({ ...r, d: `M480,${r.y + 12} C520,${r.y + 12} 520,${r.y + 12} 560,${r.y + 12}` }));
-    ['sourceChips', 'destChips', 'metroChips', 'resChips', 'controlChips', 'providerChips', 'priceChips'].forEach(k => { if (v[k]) v[k] = v[k].map(chip); });
-    v.regionTabs = (v.regionTabs || []).map(t => ({ ...t, ...tab(t.active) }));
+    ['providerChips', 'priceChips'].forEach(k => { if (v[k]) v[k] = v[k].map(chip); });
     v.termOptions = (v.termOptions || []).map(chip);
     v.curated = (v.curated || []).map(r => ({ ...r, kicker: { most: 'For estates like ' + (v.estateName || 'yours'), new: 'Newest', ai: 'Token layer' }[r.key] || '' }));
     v.tailored.automation = v.tailored.automation.map(t => ({ ...t, ...tab(t.active) }));
     v.categories = v.categories.map(c => ({ ...c, border: c.on ? 'var(--cta)' : 'var(--border-secondary)', bg: c.on ? 'var(--cta)' : 'var(--bg-base)', color: c.on ? '#fff' : 'var(--text-heading)' }));
-    v.outcomeCards = v.outcomeCards.map(o => ({ ...o, border: o.on ? 'var(--cta)' : 'var(--border-secondary)', bg: o.on ? 'var(--bg-accent)' : 'var(--bg-base)' }));
     const tierStyle = (t) => ({ ...t, border: t.featured ? 'var(--cta)' : 'var(--border-secondary)', bg: t.featured ? 'var(--cta)' : 'var(--bg-base)', kicker: t.featured ? '#cfe3ff' : 'var(--text-disabled)', color: t.featured ? '#fff' : 'var(--text-heading)', sub: t.featured ? '#cfe3ff' : 'var(--text-light)', cta: t.featured ? '#fff' : 'var(--link)' });
     const fStyle = (f) => ({ ...f, tiers: f.tiers.map(tierStyle) });
     ['floorFindings', 'connectFindings', 'governFindings', 'observeFindings', 'costFindings'].forEach(k => { v[k] = (v[k] || []).map(fStyle); });
     Object.assign(v, { hasGovernFindings: v.governFindings.length > 0, hasCostFindings: v.costFindings.length > 0, hasSteer: v.steerRecs.length > 0, enforceDisabled: !v.canEnforce, examplesTitle: v.hasPolicies ? 'Starting points' : 'No policies yet. Start from one of these.' });
     v.mostChosen = v.mostChosen.map(p => ({ ...p, evidenceShort: p.evidence || `${60 + (p.popular % 30)}% of estates your size run this` }));
     v.sankeyNodes = v.sankeyNodes.map(n => ({ ...n, lx: n.x === 0 ? n.x + 20 : n.x > 800 ? n.x - 186 : n.x + 20, ly: n.y + n.h / 2 - 8, align: n.x > 800 ? 'right' : 'left' }));
-    v.summary = { ...v.summary, ghostDash: v.summary.ghost ? '4 4' : 'none', wireStroke: v.summary.ghost ? 'var(--border-primary)' : '#3374cc', dual: v.summary.wires === 2 && !v.summary.ghost };
-    v.reviewDisabled = !v.summary.ready;
     v.recommendTitle = v.isEmpty ? 'Three ways to start' : v.isMature ? 'Recommended for your estate' : 'What closes the gaps';
     v.reviewWireW = v.reviewWires === 2 ? 4 : 2.5;
     v.proposalLabel = v.proposalSaved ? 'Proposal saved' : 'Save as proposal';
