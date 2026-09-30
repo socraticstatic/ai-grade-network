@@ -22,7 +22,7 @@ test('no box scrolls inside a page', () => {
 test('lists and tables sit on the page, not in a card', () => {
   assert.ok(!open('<div id="sec-insights"').includes('fx-card'), 'Findings');
   assert.ok(!open('<div id="sec-accounts"').includes('fx-card'), 'Connected accounts');
-  assert.ok(!open('<div class="fx-card" aria-label="{{ cg.label }}"').includes('cg.label'), 'Options columns');
+  assert.ok(!open('<div aria-label="Recommended"').includes('fx-card'), 'Recommended moves');
   assert.equal(HTML.indexOf('aria-label="Sites by business unit" style'), HTML.indexOf('<div aria-label="Sites by business unit"') + 5, 'Business units list');
 });
 
@@ -37,8 +37,8 @@ test('long lists page to fit the fold', () => {
   pages(vals(at({ screen: 's3', tab: 'govern' })), 'polRows', 'polPager', 'polPageSize');
   pages(vals(at({ screen: 's3', tab: 'cost', costPanel: 'banked' })), 'saveRows', 'savePager', 'savePageSize');
   pages(vals(at({ screen: 's1', discoverView: 'sources' })), 'sources', 'srcPager', 'srcPageSize');
-  const o = vals(at({ screen: 's3', tab: 'connect', cnPage: 'options' }));
-  for (const g of o.candGroups) { assert.ok(g.rows.length <= o.candPageSize, g.label); assert.match(g.pager.label, /of/); }
+  // Connect > Recommended is one ranked list of moves, paged (2026-09-30).
+  pages(vals(at({ screen: 's3', tab: 'connect', cnPage: 'options' })), 'moves', 'movesPager', 'movesPageSize');
 });
 
 test('paging moves, and a new filter starts at the first page', () => {

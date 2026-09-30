@@ -240,14 +240,22 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // you with Your actions' row pattern), the empty estate's first step, the five-area strip and Now; each half of the band
 // ends in its door (Monthly briefing, Your actions):
 // div 1006 -> 1027, span 827 -> 837, sc-if 417 -> 429, sc-for 231 -> 234, section 11 -> 12, button 310 -> 322, label 28 -> 29.
+// Connect > Recommended replaced Options (2026-09-30, Micah: "The options don't make much sense"): the two
+// candidate columns (group loop, row loop, pager, Attach per row) became one ranked list of moves: a head row
+// with the pager and Attach N selected, the "With AT&T" caption over the tiers, a row per move (rank checkbox,
+// title, a counts loop of set doors, the reason, Attach and Compare ways to connect, the attribute labels,
+// Today's three figure doors) and a tiers loop of three pickable columns, plus the empty state with its one step:
+// div 1027 -> 1030, span 837 -> 863, sc-if 429 -> 431, sc-for 234 -> 235, button 322 -> 331.
+// Same day, second pass: each tier's Cost reads its monthly after and what that saves or adds, the way
+// Performance reads its ms (a value span and a delta span in a row): span 863 -> 865.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1027],
-    ['span', /<span\b/g, /<\/span>/g, 837],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 429],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 234],
+    ['div', /<div\b/g, /<\/div>/g, 1030],
+    ['span', /<span\b/g, /<\/span>/g, 865],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 431],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 235],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 322],
+    ['button', /<button\b/g, /<\/button>/g, 331],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
     ['label', /<label\b/g, /<\/label>/g, 29],
   ];
