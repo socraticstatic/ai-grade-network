@@ -61,7 +61,7 @@ export function problems(est, conns, ob, apps = [], chg = [], now = Date.now()) 
 /** The Alerts rows: the incident list in the queue's words. */
 export function queue(probs, now = Date.now()) {
   const WORD = { link: 'Degraded', sat: 'Saturating', spike: 'Latency spike' };
-  return probs.map(p => ({ key: p.key, sev: p.sev, state: WORD[p.kind], what: p.kind === 'link' ? `${p.what.replace(/^BGP flapping/, 'BGP flapping on ' + p.thing)}` : p.what, where: p.where, age: agoOf(p.startedAt, now), wl: p.wl, action: p.action, actionLabel: p.actionLabel, connId: p.connId, region: p.region }));
+  return probs.map(p => ({ key: p.key, sev: p.sev, state: WORD[p.kind], health: p.state, what: p.kind === 'link' ? `${p.what.replace(/^BGP flapping/, 'BGP flapping on ' + p.thing)}` : p.what, where: p.where, age: agoOf(p.startedAt, now), wl: p.wl, action: p.action, actionLabel: p.actionLabel, connId: p.connId, region: p.region }));
 }
 
 /** What the panel shows for a selection: a map node key or a connection id. */
@@ -127,7 +127,10 @@ export function sitePanel(id, ctx) {
   const { est, inv, flows } = ctx;
   const site = findSite(est, id); if (!site) return null;
   const sr = P.siteRegions(est, site, 6);
-  const paths = sr.rows.map(x => { const pth = P.path(site, x.region); const bad = pth.hops.find(h => h.state !== 'ok'); return { key: x.region.region, region: `${x.region.cloud} ${x.region.region}`, ms: pth.ms, gbps: x.gbps, priv: !!x.region.priv, via: pth.hops.filter(h => h.kind !== 'site' && h.kind !== 'region').map(h => h.name).join(' → '), state: pth.state, worst: bad ? `${bad.name}: ${bad.sub}` : 'clean' }; });
+  // Each path's state is the one rule Paths reads (review round 2, 2026-09-30):
+  // Down on a degraded link, else its end-to-end ms against its SLO, so a 66 ms
+  // public path is Healthy and a path over its SLO is Over SLO, never Down's red.
+  const paths = sr.rows.map(x => { const pth = P.path(site, x.region); const bad = pth.hops.find(h => h.state !== 'ok'); return { key: x.region.region, region: `${x.region.cloud} ${x.region.region}`, ms: pth.ms, gbps: x.gbps, priv: !!x.region.priv, via: pth.hops.filter(h => h.kind !== 'site' && h.kind !== 'region').map(h => h.name).join(' → '), state: x.region.link === 'degraded' ? 'down' : F.healthOf(pth.ms, x.region.priv ? F.SLO_PRIVATE : F.SLO), worst: bad ? `${bad.name}: ${bad.sub}` : 'clean' }; });
   const regionsOf = inv.flatMap(c => c.regions);
   const talks = sr.rows.slice(0, 3).map(x => { const r = regionsOf.find(z => z.region === x.region.region); const v = r && r.vpcs[0]; const w = v && v.subnets.flatMap(sn => sn.workloads || [])[0]; return { key: x.region.region, label: `${x.region.cloud} ${x.region.region}`, what: v ? `${v.name}${w ? ' · ' + (w.tag || v.name) + '/' + w.name : ''}` : 'workloads', gbps: x.gbps }; });
   const recs = records(est, inv, { flows }, 'inbound').filter(r => r.srcName === site.name || r.srcName === site.id).slice(0, 8);
@@ -221,7 +224,7 @@ export function workloadPanel(sel, ctx) {
           note: open ? 'reachable from the internet' : 'private to the VPC' };
       }).sort((a, b) => (b.warn - a.warn)),
     } : null,
-    paths: [{ key: 'p0', region: `${top.cloud} ${top.region}`, ms, gbps: 0.04, priv: !!top.priv, via: top.priv ? rampName(top) : 'hyperscaler edge', state: w.exposed ? 'warn' : 'ok', worst: w.exposed ? 'reachable from the internet' : 'clean' }],
+    paths: [{ key: 'p0', region: `${top.cloud} ${top.region}`, ms, gbps: 0.04, priv: !!top.priv, via: top.priv ? rampName(top) : 'hyperscaler edge', state: F.regionState(top), worst: w.exposed ? 'reachable from the internet' : 'clean' }],
     talks, impact: null, records: recs,
     actions: [
       ...(w.exposed ? [{ key: 'attach', label: `Isolate ${w.name}`, site: `${w.name} · ${w.ip}` }] : []),
