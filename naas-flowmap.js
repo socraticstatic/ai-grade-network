@@ -24,6 +24,13 @@ export function healthOf(ms, slo) { return ms > slo ? 'slo' : ms > slo * 0.8 ? '
 export function regionState(r) { return r.link === 'degraded' ? 'down' : healthOf(r.priv ? r.fab : r.pub, r.priv ? SLO_PRIVATE : SLO); }
 /** The words for the states, on every surface. */
 export const HEALTH_WORD = { ok: 'Healthy', risk: 'At risk', slo: 'Over SLO', down: 'Down' };
+/**
+ * The inks for the states (review, 2026-09-30): among the health states, red is
+ * Down's alone. Over SLO is --viz-5, apart from --error and --warning in both
+ * themes, and Down is also the square dot, so the two never rest on colour alone.
+ */
+export const HEALTH_INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: 'var(--viz-5)', down: 'var(--error)' };
+export const healthRadius = (state) => (state === 'down' ? '2px' : '9999px');
 const PUBLIC_IPS = ['104.18.32.7', '142.250.72.14', '3.5.140.2', '52.94.236.248', '20.60.132.10', '35.190.247.10'];
 const AI_HOSTS = ['api.openai.com', 'api.anthropic.com', 'bedrock-runtime', 'aiplatform.googleapis.com'];
 

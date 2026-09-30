@@ -262,7 +262,7 @@ export function vals(c) {
   const probs = OD.problems(est0, conns, obAll, appsOf(est0, A.inventory(est0), obAll.flows), incChanges, clockNow);
   const probRows = OD.queue(probs, clockNow);
   // Who answers for each piece of every path, read once from the whole estate (2026-09-30).
-  const segCtx = G.segCtxOf(est0, { inv: A.inventory(est0), ob: obAll, conns });
+  const segCtx = G.segCtxOf(est0, { inv: A.inventory(est0), ob: obAll, conns, probs });
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, obAll), ...est0.findings] };
   const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
@@ -1544,7 +1544,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     ringOf('apps', 'Apps', apps.map(x => ({ label: x.tag, v: x.wl })), enf(apps.length), apps.length === 1 ? 'app' : 'apps', `${enf(apps.reduce((a, x) => a + x.exposed, 0))} workloads exposed`, 'Tags', go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'tags' })),
   ];
   const wlMax = Math.max(1, ...apps.map(x => x.wl));
-  const H_INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: 'var(--error)' };
+  const H_INK = F.HEALTH_INK; // one ink per state; Over SLO is not Down's red (review, 2026-09-30)
   const appAll = apps.map(x => ({ key: x.tag, name: x.tag, sub: x.topApps.join(', '), wl: x.wl, exposed: x.exposed, wlF: enf(x.wl), wlW: Math.max(3, Math.round(x.wl / wlMax * 100)) + '%',
     runsIn: x.regions.slice(0, 2).join(', ') + (x.regions.length > 2 ? ` +${x.regions.length - 2}` : ''), runsTitle: x.regions.join(', '),
     onAttF: Math.round(x.onAtt * 100) + '%', onAttW: Math.round(x.onAtt * 100) + '%', exposedF: x.exposed ? enf(x.exposed) : 'None', exposedInk: x.exposed ? 'var(--error)' : 'var(--text-light)',
@@ -1867,7 +1867,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const ribOp = (i, priv, local) => { if (pathOff(priv)) return 0.1; if (!hovLit && mapHealth !== 'all' && ribHealth(map.ribbons[i] || {}, i) !== mapHealth) return 0.08; const fromSite = !String((map.ribbons[i] || {}).from || '').startsWith('mid:'); const base = local ? 0.45 : priv ? (fromSite ? 0.4 : 0.6) : 0.36; return hovLit ? (hovLit.ribbons.has(i) ? 0.8 : 0.08) : patLit ? (patLit.ribbons.has(i) ? 0.8 : 0.07) : selLit ? (selLit.ribbons.has(i) ? 0.8 : 0.18) : trOn ? 0.1 : base; };
   const closeBranch = (arr, key) => arr.filter(k => k !== key && !k.startsWith(key + '/'));
   const toggleOpen = (key, select) => { const isOpen = mapOpen.includes(key); set({ mapOpen: isOpen ? closeBranch(mapOpen, key) : [...mapOpen, key], ...(select ? { mapSel: key, panelTab: s.panelTab || 'overview' } : {}) }); };
-  const STATE_FILL = { ok: dark ? '#c5cfd9' : '#1a2431', degraded: 'var(--error)', slo: '#c9362c' };
+  const STATE_FILL = { ok: dark ? '#c5cfd9' : '#1a2431', degraded: 'var(--error)', slo: F.HEALTH_INK.slo };
   /** The volume drawer, for a metro that stands for many sites. Same shape as
    *  the one in vals(); this function cannot see that one either. */
   const openVolume = (cls, metro) => set({ vol: { kind: 'metro', cls, metro }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [] });
@@ -1898,7 +1898,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     if (nd.ipsec) { const mo = nd.v * mapRates.out; return { sub: `${money(mo)}/mo egress`, hover: `IPsec over the internet: ${gbpsW(nd.v)} · ${money(mo)}/mo egress · ${money(mo * mapRates.saveShare)}/mo to save on AT&T` }; }
     return { sub: `p95 ${q.ms} ms · SLO ${q.slo} ms`, hover: `Internet: ${gbpsW(nd.v)} outside AT&T · p95 ${q.ms} ms` };
   };
-  const HEALTH_FILL = { ok: dark ? '#4caf50' : '#1e7a3c', risk: dark ? '#ffa25e' : '#e07b00', slo: '#c9362c', down: 'var(--error)' };
+  const HEALTH_FILL = { ok: dark ? '#4caf50' : '#1e7a3c', risk: dark ? '#ffa25e' : '#e07b00', slo: F.HEALTH_INK.slo, down: F.HEALTH_INK.down };
   const mapNodes = map.nodes.map((nd, i) => { const left = nd.side === 'l'; const mid = nd.side === 'm'; const say = mid ? midSay(nd) : null; const selected = nd.key === mapSel; return { ...nd, key: 'n' + i, id: nd.key, label: nd.name, subLabel: say ? say.sub : nd.sub || '', hasSub: !!(say ? say.sub : nd.sub), pathSay: say ? say.sub : '', pathBg: say && say.sub ? 'var(--bg-base)' : 'transparent', pathPad: say && say.sub ? '0 5px' : '0', sy: nd.y + nd.h / 2 + 10, subPad: 26, subInk: say && !nd.priv ? (dark ? '#ffa25e' : '#b85f00') : 'var(--text-light)', vF: (() => { const tot = nd.tot || nd.v, t = trAt(nd), q = perf.nodes[nd.key];
       // Each view reads in its own unit (2026-09-29): Gbps, dollars a month, or p95.
       if (mapMode === 'slo' && q) return `p95 ${q.ms} ms`;
@@ -2010,9 +2010,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // The map draws what sites send, so its outside ribbons are priced against site egress: the IPsec bucket where there is one, else internet egress.
   const siteBucket = egBuckets.find(b => b.id === 'ipsec') || egBuckets.find(b => b.id === 'misc') || { today: 0, fabric: 0 };
   void outGbps; const perGbps = mapRates.out, perSave = mapRates.out * mapRates.saveShare; void perGbps; void perSave;
-  const ribFill = (r, i) => { const base = r.local ? '#4db6ac' : r.priv ? '#3374cc' : (dark ? '#5d6f80' : '#8a949c'); if (mapMode === 'slo') return HEALTH_FILL[ribHealth(r, i)]; return mapMode === 'cost' ? (r.priv ? (dark ? '#3374cc' : '#6f9fd8') : (dark ? '#ffa25e' : '#e07b00')) : mapMode === 'delta' ? (r.delta > 10 ? '#1e7a3c' : r.delta < -10 ? '#c9362c' : (dark ? '#5d6f80' : '#b8c2cc')) : mapMode === 'slo' ? (r.state === 'slo' ? '#c9362c' : base) : base; };
+  const ribFill = (r, i) => { const base = r.local ? '#4db6ac' : r.priv ? '#3374cc' : (dark ? '#5d6f80' : '#8a949c'); if (mapMode === 'slo') return HEALTH_FILL[ribHealth(r, i)]; return mapMode === 'cost' ? (r.priv ? (dark ? '#3374cc' : '#6f9fd8') : (dark ? '#ffa25e' : '#e07b00')) : mapMode === 'delta' ? (r.delta > 10 ? '#1e7a3c' : r.delta < -10 ? '#c9362c' : (dark ? '#5d6f80' : '#b8c2cc')) : mapMode === 'slo' ? (r.state === 'slo' ? HEALTH_FILL.slo : base) : base; };
   const mapTrace = tr ? tr.ribbons.map((r, i) => ({ key: 't' + i, d: r.d, fill: ribFill(r), op: trOn ? 0.85 : 0 })) : [];
-  const mapRibbons = map.ribbons.map((r, i) => { const fill = ribFill(r, i); return { key: 'r' + i, d: r.d, fill, op: ribOp(i, r.priv, r.local), pulse: mapMode === 'state' && r.state === 'degraded' ? 'skPulse 1.6s ease-in-out infinite' : 'none', sleeve: (mapMode === 'state' || mapMode === 'slo') && ribHealth(r, i) === 'slo' ? '#c9362c' : 'transparent', title: mapMode === 'cost' ? `${money(r.v)}/mo · ${r.priv ? 'on AT&T, at your AT&T rate' : `egress outside AT&T · ${money(r.v * mapRates.saveShare)}/mo to save on AT&T`}` : mapMode === 'slo' ? (() => { const q = perf.ribbons[i] || {}; return `${r.v.toFixed(2)} Gbps · p95 ${q.ms} ms against a ${q.slo} ms SLO${q.health === 'slo' ? ', over' : q.health === 'risk' ? ', near it' : ''}`; })() : `${r.v.toFixed(2)} Gbps · ${r.local ? 'stays in the region' : r.priv ? 'AT&T network' : 'outside AT&T'} · ${(F.PATTERNS.find(x => x[0] === r.pattern) || ['', r.pattern])[1]} · ${(r.delta >= 0 ? '+' : '') + r.delta}% vs prior window` }; });
+  const mapRibbons = map.ribbons.map((r, i) => { const fill = ribFill(r, i); return { key: 'r' + i, d: r.d, fill, op: ribOp(i, r.priv, r.local), pulse: mapMode === 'state' && r.state === 'degraded' ? 'skPulse 1.6s ease-in-out infinite' : 'none', sleeve: (mapMode === 'state' || mapMode === 'slo') && ribHealth(r, i) === 'slo' ? HEALTH_FILL.slo : 'transparent', title: mapMode === 'cost' ? `${money(r.v)}/mo · ${r.priv ? 'on AT&T, at your AT&T rate' : `egress outside AT&T · ${money(r.v * mapRates.saveShare)}/mo to save on AT&T`}` : mapMode === 'slo' ? (() => { const q = perf.ribbons[i] || {}; return `${r.v.toFixed(2)} Gbps · p95 ${q.ms} ms against a ${q.slo} ms SLO${q.health === 'slo' ? ', over' : q.health === 'risk' ? ', near it' : ''}`; })() : `${r.v.toFixed(2)} Gbps · ${r.local ? 'stays in the region' : r.priv ? 'AT&T network' : 'outside AT&T'} · ${(F.PATTERNS.find(x => x[0] === r.pattern) || ['', r.pattern])[1]} · ${(r.delta >= 0 ? '+' : '') + r.delta}% vs prior window` }; });
   // The head's rollups double as filters; the control is the view (2026-09-28).
   const kShort = (n) => (n >= 1000 ? '$' + (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'k' : '$' + n);
   const sloN = (ob.flows || []).filter(f => f.latency > F.SLO).length;
@@ -2384,7 +2384,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // Observe > Health (notes, 2026-09-30): the path flow, one row per app group, one
   // cell per segment; and the open problems, ranked by apps affected, with Open
   // ticket (a lifecycle move, no second store) and Trace (the Traffic map).
-  const INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: '#c9362c', down: 'var(--error)' };
+  const INK = F.HEALTH_INK;
   // One ticket number per problem key, shared by Health and Operations.
   const tid = (k) => 'T-' + (1000 + [...k].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9000, 7));
   // One ticket per problem, and Health and Operations both read it (final review,
@@ -2406,9 +2406,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       const border = c.state === 'none' ? '0' : c.state === 'nodata' ? '1.5px dashed var(--text-disabled)' : c.limited ? `2px solid ${ink}` : '0';
       const word = { ok: 'Healthy', risk: 'At risk', slo: 'Over SLO', down: 'Down', nodata: 'Not yet measured', none: 'Not on this path' }[c.state];
       const title = c.state === 'none' ? `${seg.label}: not on this path` : `${seg.label} · ${c.thing}${c.owner ? ' · ' + G.OWNERS[c.owner] : ''} · ${word}${c.why && c.why !== 'Healthy' && c.why !== word ? ' · ' + c.why : ''}${c.limited ? ' · limited view' : ''}`;
-      return { key: seg.key, state: c.state, thing: c.thing, title, bg, border };
+      return { key: seg.key, state: c.state, thing: c.thing, title, bg, border, limited: !!c.limited, rad: F.healthRadius(c.state) };
     };
-    const rows = all.map(r => ({ key: r.tag, tag: r.tag, label: r.label, state: r.state, dot: INK[r.state] || 'var(--text-disabled)', cells: r.cells.map(cellView) }));
+    const rows = all.map(r => ({ key: r.tag, tag: r.tag, label: r.label, state: r.state, dot: INK[r.state] || 'var(--text-disabled)', rad: F.healthRadius(r.state), cells: r.cells.map(cellView) }));
     const downN = (conns.rows || []).filter(r => r.degraded).length, riskN = all.filter(r => r.state === 'risk' || r.state === 'slo').length;
     const healthTiles = [
       { key: 'ok', l: 'Apps healthy', v: `${all.filter(r => r.state === 'ok').length} of ${all.length}`, u: '' },
@@ -2426,7 +2426,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const traceKey = (p) => { const hit = pathAll.find(r => !r.pinned && r.region === p.region && (p.apps || []).includes(r.tag)); const pin = hit || G.pinFor(segCtx, p.region, p.apps); return `${pin.tag || ''}|${pin.region}`; };
     const pathSelRow = pathAll.find(r => r.key === s.pathSel) || null;
     const pathTimeRows = pathAll.map(r => { const sel = !!pathSelRow && r.key === pathSelRow.key;
-      return { key: r.key, label: r.label, sub: `${r.site} to ${r.where}`, dot: INK[r.state] || 'var(--text-disabled)', totalF: r.totalF, totalTone: r.state === 'ok' ? 'var(--text-heading)' : INK[r.state], sel, bg: sel ? 'var(--bg-accent)' : 'transparent',
+      return { key: r.key, label: r.label, sub: `${r.site} to ${r.where}`, state: r.state, dot: INK[r.state] || 'var(--text-disabled)', rad: F.healthRadius(r.state), totalF: r.totalF, totalTone: r.state === 'ok' ? 'var(--text-heading)' : INK[r.state], sel, bg: sel ? 'var(--bg-accent)' : 'transparent',
         cells: r.cells.map(c => ({ key: c.key, msShow: c.msF || '—', msTone: c.msF ? 'var(--text-heading)' : 'var(--text-disabled)', lossF: c.lossF, lossTone: c.lossF && c.lossF !== '0.00%' ? 'var(--error)' : 'var(--text-light)', title: c.title })),
         go: () => set({ pathSel: sel ? null : r.key }) }; });
     const pathDetail = pathSelRow ? `${pathSelRow.label}, ${pathSelRow.site} to ${pathSelRow.where}: ${pathSelRow.hops.slice(1).map(h => `${h.name} ${h.ms} ms`).join(' › ')}` : 'Pick a row to see its hops.';
@@ -2442,7 +2442,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const chgTicks = changeAll.filter(x => !x.upcoming).map(x => ({ key: x.key, left: pctOf(x.at), color: x.dot, title: `${x.whenF} · ${x.kind} · ${x.text}` }));
     const chgBands = probs.filter(p => p.startedAt).map(p => ({ key: p.key, left: `${Math.min(98.8, parseFloat(pctOf(Math.max(fromMs, p.startedAt))))}%`, width: `${Math.max(1.2, (nowMs - Math.max(fromMs, p.startedAt)) / winMs * 100).toFixed(2)}%`, title: `${p.where} · ${p.thing}: ${p.what} · started ${SCH.hhmm(p.startedAt)}` }));
     const problemRows = probs.map(p => { const n = p.apps.length;
-      return { key: p.key, dot: INK[p.state] || 'var(--warning)', where: p.where, thing: p.thing, what: p.what, ownerLabel: p.ownerLabel,
+      // The state in words beside its dot (review, 2026-09-30): Down, Over SLO and At risk never rest on colour alone.
+      return { key: p.key, state: p.state, stateWord: F.HEALTH_WORD[p.state] || '', dot: INK[p.state] || 'var(--warning)', rad: F.healthRadius(p.state), where: p.where, thing: p.thing, what: p.what, ownerLabel: p.ownerLabel,
         appsF: `${n} ${n === 1 ? 'app' : 'apps'} · ${(p.wl || 0).toLocaleString('en-US')} workloads`,
         startedF: `Started ${SCH.hhmm(p.startedAt)} · ${SCH.agoOf(p.startedAt, nowMs)}`, changeF: p.change ? `${p.change.text} at ${SCH.hhmm(p.change.at)}` : '', hasChange: !!p.change,
         ...ticketOf(p.key),
@@ -2453,7 +2454,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const healthView = s.healthView === 'segment' ? 'segment' : 'app';
     const healthViews = [['app', 'By app'], ['segment', 'By segment']].map(([k, l]) => { const on = healthView === k; return { key: k, label: l, on, ...seg(on), go: () => set({ healthView: k, segOpen: null, segTrail: [], segPage: 0 }) }; });
     const dotOf = (state, limited) => { const ink = INK[state] || 'var(--text-disabled)';
-      return { bg: state === 'nodata' || state === 'none' || limited ? 'transparent' : ink, border: state === 'nodata' ? '1.5px dashed var(--text-disabled)' : state === 'none' ? '1.5px solid var(--border-secondary)' : limited ? `2px solid ${ink}` : '0' }; };
+      return { rad: F.healthRadius(state), bg: state === 'nodata' || state === 'none' || limited ? 'transparent' : ink, border: state === 'nodata' ? '1.5px dashed var(--text-disabled)' : state === 'none' ? '1.5px solid var(--border-secondary)' : limited ? `2px solid ${ink}` : '0' }; };
     const NOUN = { access: ['site', 'sites'], access3p: ['site', 'sites'], ipsec: ['site', 'sites'], backbone: ['backbone', 'backbone'], onramp: ['on-ramp', 'on-ramps'], cloudlink: ['connection', 'connections'], hub: ['hub', 'hubs'], exit: ['region', 'regions'], app: ['region', 'regions'] };
     const countLine = (counts, noun) => { const n = counts.n; if (!n) return ''; const bad = [['down', 'down'], ['slo', 'over SLO'], ['risk', 'at risk'], ['nodata', 'not yet measured']].filter(([k]) => counts[k]).map(([k, w]) => `${counts[k].toLocaleString('en-US')} ${w}`);
       return [`${n.toLocaleString('en-US')} ${n === 1 ? noun[0] : noun[1]}`, ...bad].join(' · '); };
@@ -2561,7 +2562,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // The legend says what the colors mean in the view you are in.
     mapLegend: (mapMode === 'cost' ? [['#0057b8', 'On AT&T, at your AT&T rate'], [dark ? '#ffa25e' : '#e07b00', 'Outside AT&T, at egress rates']]
       : mapMode === 'slo' ? [[HEALTH_FILL.ok, 'Within SLO'], [HEALTH_FILL.risk, 'Near SLO'], [HEALTH_FILL.slo, 'Over SLO']]
-      : [['#3374cc', 'On AT&T'], ['#8a949c', 'Outside AT&T'], ['var(--error)', 'Degraded'], ['#c9362c', 'Over SLO']]).map(([color, label]) => ({ key: label, color, label })),
+      : [['#3374cc', 'On AT&T'], ['#8a949c', 'Outside AT&T'], ['var(--error)', 'Degraded'], [HEALTH_FILL.slo, 'Over SLO']]).map(([color, label]) => ({ key: label, color, label })),
     // Health filters the map (Micah, 2026-09-29: "on observe, add a 'health' filter").
     healthChips: [['all', 'All'], ['ok', 'Healthy'], ['risk', 'At risk'], ['slo', 'Over SLO']].map(([k, l]) => { const on = mapHealth === k; return { key: k, label: l, on, ...seg(on), go: () => set({ mapHealth: k }) }; }),
     // Replay plays the Since window, not a fixed 24 hours (2026-09-29).

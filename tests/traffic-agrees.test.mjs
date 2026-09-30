@@ -15,7 +15,8 @@ const tile = (v, k) => v.flowTiles.find(t => t.key === k);
 const node = (v, id) => v.mapNodes.find(n => n.id === id);
 const dollars = (s) => +String(s).replace(/^[^$]*\$([\d,]+).*$/, '$1').replace(/,/g, '');
 const GCP = { obDim: 'cloud', obScope: 'cloud:GCP' };
-const RED = '#c9362c';
+// Over SLO has its own ink since the review (2026-09-30); red is Down's alone.
+const RED = 'var(--viz-5)';
 
 for (const win of ['7d', '30d', '90d']) {
   test(`Whole estate IPsec prices at the $8,600 bucket at ${win}`, () => {
@@ -46,7 +47,7 @@ test('Sites on AT&T under a cloud pick counts what the map draws', () => {
   assert.equal(tile(at(), 'onatt').v, '20 of 25');
 });
 
-test('in the Traffic view, red means over SLO, the same as the tile and the Performance view', () => {
+test('in the Traffic view, the Over SLO ink means over SLO, the same as the tile and the Performance view', () => {
   for (const patch of [{}, { view: 'mature' }, { view: 'trust' }, GCP]) {
     const v = at(patch);
     // Nothing is red unless it is over SLO; every destination over SLO is red.
