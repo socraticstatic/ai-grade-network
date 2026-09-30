@@ -14,7 +14,7 @@ import * as S from './naas-sites.js';
 import * as P from './naas-paths.js';
 import { agoOf, startOf, INCIDENT_MIN } from './naas-schedule.js';
 import { FIRST_ATTACH } from './naas-lifecycle.js';
-import { cloudEdgeThing } from './naas-things.js';
+import { cloudEdgeThing, rampName } from './naas-things.js';
 
 const n = (x) => Number(x).toLocaleString('en-US');
 const R = 22, C = 2 * Math.PI * R;
@@ -69,7 +69,7 @@ export function panelFor(sel, ctx) {
     const row = conns.rows.find(r => r.id === sel); if (!row) return null;
     const imp = impacted(est, inv, row);
     const recs = records(est, inv, { flows }, 'all').filter(r => (r.srcSub + ' ' + r.dstSub).includes(row.region)).slice(0, 8);
-    return { kind: 'connection', title: `${row.cloud} ${row.region}`, sub: `${row.ramp} · ${row.bw || row.ports + ' × 10 Gbps'} purchased`, trail: [{ key: sel, name: `${row.cloud} ${row.region}` }],
+    return { kind: 'connection', title: `${row.cloud} ${row.region}`, sub: `${rampName(row)} · ${row.bw || row.ports + ' × 10 Gbps'} purchased`, trail: [{ key: sel, name: `${row.cloud} ${row.region}` }],
       overview: [['Current · in / out', `${row.gbps} / ${(row.gbps * 0.62).toFixed(1)} Gbps`], ['Average · in / out', `${row.avg} / ${(row.avg * 0.62).toFixed(1)} Gbps`], ['Purchased', `${row.bw || row.ports + ' × 10 Gbps'}`], ['Utilization', `${row.pct}% of ${row.cap} Gbps`], ['State', row.state], ['BGP', row.bgp], ['Drops', row.drops], ['Workloads behind it', n(row.wl)]],
       impact: imp, records: recs, actions: [...(row.hot ? [{ key: 'port', label: 'Add a port', region: row.region }] : []), { key: 'policy', label: 'Author a policy for these workloads', region: row.region }, { key: 'logs', label: 'All records for this connection', region: row.region }] };
   }
@@ -189,9 +189,9 @@ export function workloadPanel(sel, ctx) {
       ['Subnet', `${sn.name} · ${sn.cidr}`],
       ['Availability zone', sn.az],
       ['Reachability', w.exposed ? 'Exposed to the internet' : 'Private'],
-      ['Path', top.priv ? `AT&T network · ${top.ramp || 'NetBond'}` : 'Public internet'],
+      ['Path', top.priv ? `AT&T network · ${rampName(top)}` : 'Public internet'],
       ['Latency to the on-ramp', `${ms} ms`],
-      ...(row ? [['Connection', `${row.ramp} · ${row.state}`]] : []),
+      ...(row ? [['Connection', `${rampName(row)} · ${row.state}`]] : []),
       ['First seen', w.since === 0 ? 'today' : w.since === 1 ? '1 day ago' : `${w.since} days ago`],
       ['Instances sharing this app', `${peers.length + 1}`],
     ],
@@ -218,7 +218,7 @@ export function workloadPanel(sel, ctx) {
           note: open ? 'reachable from the internet' : 'private to the VPC' };
       }).sort((a, b) => (b.warn - a.warn)),
     } : null,
-    paths: [{ key: 'p0', region: `${top.cloud} ${top.region}`, ms, gbps: 0.04, priv: !!top.priv, via: top.priv ? (top.ramp || 'NetBond') : 'hyperscaler edge', state: w.exposed ? 'warn' : 'ok', worst: w.exposed ? 'reachable from the internet' : 'clean' }],
+    paths: [{ key: 'p0', region: `${top.cloud} ${top.region}`, ms, gbps: 0.04, priv: !!top.priv, via: top.priv ? rampName(top) : 'hyperscaler edge', state: w.exposed ? 'warn' : 'ok', worst: w.exposed ? 'reachable from the internet' : 'clean' }],
     talks, impact: null, records: recs,
     actions: [
       ...(w.exposed ? [{ key: 'attach', label: `Isolate ${w.name}`, site: `${w.name} · ${w.ip}` }] : []),
@@ -280,7 +280,7 @@ export function vpcPanel(sel, ctx) {
       ['Traffic', `${n(wls.length)} workloads`],
       ['Instances sharing this app', `${n(apps.length)} ${apps.length === 1 ? 'app' : 'apps'}: ${apps.slice(0, 3).join(', ')}`],
       ['Reachability', exposed ? `${n(exposed)} exposed to the internet` : 'All private'],
-      ['Path', top.priv ? `AT&T network · ${top.ramp || 'NetBond'}` : 'Public internet'],
+      ['Path', top.priv ? `AT&T network · ${rampName(top)}` : 'Public internet'],
       ['Latency to the on-ramp', `${top.priv ? top.fab : top.pub} ms`],
     ],
     children: { title: `${n(vpc.subnets.length)} ${vpc.subnets.length === 1 ? 'subnet' : 'subnets'}`, rows: vpc.subnets.map(x => {
@@ -314,7 +314,7 @@ export function subnetPanel(sel, ctx) {
       ['Traffic', `${n(wls.length)} workloads`],
       ['Instances sharing this app', apps.join(', ')],
       ['Reachability', sn.pub ? (exposed ? `Public subnet · ${n(exposed)} exposed` : 'Public subnet') : 'Private subnet'],
-      ['Path', top.priv ? `AT&T network · ${top.ramp || 'NetBond'}` : 'Public internet'],
+      ['Path', top.priv ? `AT&T network · ${rampName(top)}` : 'Public internet'],
     ],
     children: { title: `${n(wls.length)} ${wls.length === 1 ? 'workload' : 'workloads'}`, rows: wls.slice(0, 40).map(y => ({
       key: `wl:${c.region}|${vpc.id}|${y.id}`, name: y.name, sub: `${y.ip} · ${y.type} · ${y.tag || 'untagged'}`, warn: !!y.exposed, note: y.exposed ? 'exposed' : '',

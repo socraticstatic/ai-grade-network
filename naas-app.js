@@ -173,7 +173,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -890,7 +890,7 @@ export function vals(c) {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', themeTitle: s.theme === 'light' ? 'Dark mode' : 'Light mode', themeIsLight: s.theme !== 'dark', themeIsDark: s.theme === 'dark', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
     // An estate switch starts clean (2026-09-30): a By pick or a drill the new
     // estate lacks drew an empty map with a phantom "Internet 1.0 Gbps".
-    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0 }),
+    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0 }),
     resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null }); },
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
     // which nulled s.order even when the live compose had not started an
@@ -2409,8 +2409,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     ];
     const nowMs = SCH.nowOf(s);
     // Is it fast (notes, 2026-09-30, B2): each app group on its worst path, hop by hop.
-    const pathAll = G.pathTimes(segCtx);
-    const pathKeyFor = (p) => (pathAll.find(r => r.region === p.region && (p.apps || []).includes(r.tag)) || pathAll.find(r => (p.apps || []).includes(r.tag)) || {}).key || null;
+    // Trace (final review, 2026-09-30, finding 6) always lands on a row in the problem's own
+    // region: a default row of one of its apps, else a row pinned on demand (pathPin, 'tag|region').
+    const pinOf = (k) => { const i = k.indexOf('|'); return { tag: k.slice(0, i) || null, region: k.slice(i + 1) }; };
+    const pinKey = typeof s.pathPin === 'string' && s.pathPin.includes('|') ? s.pathPin : null;
+    const pathAll = G.pathTimes(segCtx, { pins: pinKey ? [pinOf(pinKey)] : [] });
+    const traceKey = (p) => { const hit = pathAll.find(r => !r.pinned && r.region === p.region && (p.apps || []).includes(r.tag)); const pin = hit || G.pinFor(segCtx, p.region, p.apps); return `${pin.tag || ''}|${pin.region}`; };
     const pathSelRow = pathAll.find(r => r.key === s.pathSel) || null;
     const pathTimeRows = pathAll.map(r => { const sel = !!pathSelRow && r.key === pathSelRow.key;
       return { key: r.key, label: r.label, sub: `${r.site} to ${r.where}`, dot: INK[r.state] || 'var(--text-disabled)', totalF: r.totalF, totalTone: r.state === 'ok' ? 'var(--text-heading)' : INK[r.state], sel, bg: sel ? 'var(--bg-accent)' : 'transparent',
@@ -2435,7 +2439,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         startedF: `Started ${SCH.hhmm(p.startedAt)} · ${SCH.agoOf(p.startedAt, nowMs)}`, changeF: p.change ? `${p.change.text} at ${SCH.hhmm(p.change.at)}` : '', hasChange: !!p.change,
         ticketed: st === 'progress', ticketF: st === 'progress' ? `${tid(p.key)} · In progress` : '', canTicket: st !== 'progress',
         ticket: moveF({ key: p.key }, 'progress', { note: `Ticket ${tid(p.key)} opened, routed to ${p.ownerLabel}` }),
-        trace: () => { const k = pathKeyFor(p), ix = Math.max(0, pathAll.findIndex(r => r.key === k)); set({ obPanel: 'paths', pathSel: k, pathsPage: Math.floor(ix / 8), mapRegion: p.region }); } }; });
+        trace: () => { const k = traceKey(p), ix = Math.max(0, G.pathTimes(segCtx, { pins: [pinOf(k)] }).findIndex(r => r.key === k)); set({ obPanel: 'paths', pathPin: k, pathSel: k, pathsPage: Math.floor(ix / 8) }); } }; });
     // By segment (notes, 2026-09-30): the stakeholder's nine rows, who answers for
     // each piece and what the product can see of it; a row drills in place.
     const healthView = s.healthView === 'segment' ? 'segment' : 'app';
