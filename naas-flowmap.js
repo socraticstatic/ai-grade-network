@@ -357,6 +357,9 @@ export function buildMap(est, inv, flows0, opts = {}) {
     L0 = L0.map(x => { const k = opts.t == null ? level(0.5) : level(opts.t) * shapeAt(x.key, opts.t); return { ...x, v: x.v * k, fabV: x.fabV * k, ipsecV: (x.ipsecV || 0) * k }; });
   }
   let R0 = rightRoots(est, flows, opts.rightBy || 'cloud', L0);
+  // A pick keeps the other destinations in view at estate scale (notes, 2026-09-30):
+  // context rows, outside the flow, so the picked bar keeps its true size.
+  const Rall = R0; let ctxRows = [];
   // The region filter shrank the egress classes (their volumes ride the flow
   // list) and left the site rows and cloud nodes at full size, because those
   // are sized from the estate. Filtering to eu-central-1 now scales the sites
@@ -379,6 +382,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
     const kf = sF ? F1 / sF : 0, ku = sU ? U1 / sU : 0;
     L0 = L0.map(x => x.kind === 'site' ? { ...x, fabV: x.fabV * kf, v: x.fabV * kf + (x.v - x.fabV) * ku, ipsecV: (x.ipsecV || 0) * ku } : x);
     R0 = keep;
+    if (opts.context) ctxRows = Rall.filter(x => !keep.some(k => k.key === x.key)).map(x => ({ ...x, ctx: true, hasChildren: false }));
   }
   // The Cost view weighs the same map in dollars: on AT&T at the AT&T rate,
   // outside at the egress rate (Micah, 2026-09-29: "cost and performance don't
@@ -386,7 +390,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
   if (opts.weigh) { const a = +opts.weigh.fab || 0, b = +opts.weigh.pub || 0;
     const w = (x) => { const f = (x.fabV || 0) * a, u = Math.max(0, x.v - (x.fabV || 0)) * b; return { ...x, fabV: f, v: f + u, ...(x.ipsecV != null ? { ipsecV: x.ipsecV * b } : {}), ...(x.pubV != null ? { pubV: x.pubV * b } : {}), ...(x.wan != null ? { wan: x.wan * a } : {}),
       ...(x.byRamp ? { byRamp: Object.fromEntries(Object.entries(x.byRamp).map(([r, v]) => [r, v * a])) } : {}), ...(x.parts ? { parts: x.parts.map(pt => ({ ...pt, fab: pt.fab * a, pub: pt.pub * b })) } : {}) }; };
-    L0 = L0.map(w); R0 = R0.map(w); }
+    L0 = L0.map(w); R0 = R0.map(w); ctxRows = ctxRows.map(w); }
   const L = expand(L0, open, est, inv, flows), R = expand(R0, open, est, inv, flows);
   const scale = (nd) => nd;
   // Ramesh's first pattern (19:09): what stays within the region. Workload groups carry east-west traffic that never leaves the region; it gets its own band.
@@ -429,10 +433,19 @@ export function buildMap(est, inv, flows0, opts = {}) {
   heads.push({ x: 0, y: top - 4, anchor: 'start', kind: 'col', text: 'Sites' });
   groups.forEach(g => { if (g.head) heads.push({ x: 0, y: y - 4, anchor: 'start', kind: 'group', text: g.head }); const mine = leftRows.filter(r => g.nodes.some(n0 => n0.key === r.key)); const placed = layout(mine, 0, y + headH - 6); SS.push(...placed); if (placed.length) y = placed[placed.length - 1].y + placed[placed.length - 1].h + gap; });
   const leftH = SS.length ? y - gap + 8 : top;
-  heads.push({ x: W, y: top - 4, anchor: 'end', kind: 'col', text: 'Destinations' });
+  // With the pick open, its regions need the room: the column goes back to the full frame.
+  const pickOpen = [...open].some(k => R0.some(x => k === x.key || k.startsWith(x.key + '/')));
+  const useCtx = ctxRows.length > 0 && !pickOpen;
+  heads.push({ x: W, y: top - 4, anchor: 'end', kind: 'col', text: useCtx ? 'Destinations · at estate scale' : 'Destinations' });
   heads.push({ x: W / 2, y: top - 4, anchor: 'middle', kind: 'col', text: 'Path' });
-  const DD = layout(heightsFor(Rs, rowsBudget(Rs.length, 1)), W - colW, top + headH - 6);
-  const rightH = DD.length ? DD[DD.length - 1].y + DD[DD.length - 1].h + 8 : top;
+  let DD, CTX = [];
+  if (useCtx) {
+    const lay = Rall.map(x => Rs.find(k => k.key === x.key) || ctxRows.find(k => k.key === x.key)).filter(Boolean);
+    const placed = layout(heightsFor(lay, rowsBudget(lay.length, 1)), W - colW, top + headH - 6);
+    DD = placed.filter(x => !x.ctx); CTX = placed.filter(x => x.ctx);
+  } else DD = layout(heightsFor(Rs, rowsBudget(Rs.length, 1)), W - colW, top + headH - 6);
+  const lastR = [...DD, ...CTX].sort((a, b) => b.y - a.y)[0];
+  const rightH = lastR ? lastR.y + lastR.h + 8 : top;
   const H = Math.max(leftH, rightH, H0);
   // The middle is the path the traffic actually takes (2026-09-28): each AT&T
   // on-ramp, the private WAN to your own data centers, and outside AT&T the
@@ -473,7 +486,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
     if (pv > 0 && pubT > 0) { const ipShare = ipsecT / Math.max(0.0001, ipsecT + inetT); if (mid('mid:ipsec')) link(mid('mid:ipsec'), d, pv * (pubT ? (ipsecT + inetT) / pubT : 1) * ipShare, false); if (mid('mid:internet')) link(mid('mid:internet'), d, pv * (pubT ? (ipsecT + inetT) / pubT : 1) * (1 - ipShare), false); }
   });
   const nodes = [...SS.map(x => ({ ...x, side: 'l' })), ...MM.map(x => ({ ...x, side: 'm' })), ...DD.map(x => ({ ...x, side: 'r' }))].map(x => ({ ...x, delta: deltaOf(x.key), open: open.has(x.key) }));
-  return { W, H, heads, nodes, ribbons, total: T, fabV, localV, open: [...open], zoom, zf, trace: traceOf(ribbons, zoom ? inZoom : null, SS, DD) };
+  return { W, H, heads, nodes, context: CTX.map(x => ({ ...x, side: 'ctx' })), ribbons, total: T, fabV, localV, open: [...open], zoom, zf, trace: traceOf(ribbons, zoom ? inZoom : null, SS, DD) };
 }
 /** A ribbon's outline; k draws only the top share of it, at both ends. */
 function ribbonPath([x1, ay, ah, x2, by, bh], k) {

@@ -1771,6 +1771,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const mapEst = obScope && obScope !== 'all' && !scopeCloud && !scopeApp ? R.applyScope(est0, obScope) : est0;
   const mapOpts = { open: mapOpen, filterRegion: mapRegion || scopeCloud || (appRegions.length ? appRegions : null), t: mapT, zoom: mapZoom,
     leftBy: mapDim === 'first' ? 'access' : mapDim === 'site' ? 'class' : 'region', rightBy: mapDim === 'app' ? 'app' : 'cloud', tag: scopeApp,
+    // A cloud or app pick keeps the other destinations at estate scale (notes, 2026-09-30).
+    context: !!(scopeCloud || scopeApp) && !mapRegion,
     // Since sets the window the map averages; Replay plays it (2026-09-29).
     window: { growth: R.growthOf(s.obWindow || '30d') } };
   // The Cost view prices the map from the Cost page's own figures (2026-09-29):
@@ -1848,6 +1850,18 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     health: (perf.nodes[nd.key] || {}).health || null, lx: left || mid ? nd.x2 + 6 : nd.x - 236, ly: nd.y + nd.h / 2 - 10, lw: 230, justify: left || mid ? 'flex-start' : 'flex-end', fill: mapMode === 'slo' && perf.nodes[nd.key] ? HEALTH_FILL[perf.nodes[nd.key].health]
       : mapMode === 'cost' && nd.kind !== 'rollup' ? ((mid ? !nd.priv : (nd.v - (nd.fabV || 0)) > (nd.fabV || 0)) ? (dark ? '#ffa25e' : '#e07b00') : '#0057b8')
       : mid ? (nd.priv ? '#0057b8' : nd.local ? '#00838f' : (dark ? '#5d6f80' : '#8a949c')) : nd.key === 'dest:local' ? '#00838f' : nd.kind === 'rollup' ? (dark ? '#5d6f80' : '#b8c2cc') : nd.state === 'degraded' ? STATE_FILL.degraded : (perf.nodes[nd.key] || {}).health === 'slo' ? STATE_FILL.slo : STATE_FILL.ok, op: nodeOp(nd.key), stroke: selected ? 'var(--cta)' : 'transparent', caret: nd.hasChildren ? (nd.open ? '−' : '+') : nd.kind === 'rollup' ? '‹' : '', cursor: nd.hasChildren || !mid ? 'pointer' : 'default', deltaF: (nd.delta >= 0 ? '+' : '') + nd.delta + '%', deltaColor: nd.delta > 10 ? '#1e7a3c' : nd.delta < -10 ? '#c9362c' : 'var(--text-light)', showDelta: mapMode === 'delta', click: () => { if (nd.kind === 'rollup') { if (nd.foldsKey && !nd.tailOnly) set({ mapOpen: closeBranch(mapOpen, nd.foldsKey), mapSel: null }); return; } if (nd.kind === 'more') { const parts = (nd.parentKey || '').split('/'); if (parts.length >= 2) set({ vol: { kind: 'metro', cls: nd.siteCls || parts[0].replace(/^site:/, ''), metro: nd.metro || parts[1] }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [] }); return; } if (nd.kind === 'wlmore') { openWorkloads(nd.regionName, nd.vpcId, nd.subnetId); return; } if (nd.kind === 'workload' && nd.wlSel) { set({ mapSel: nd.wlSel, panelTab: 'overview' }); return; } if (nd.hasChildren) { if (mapOpen.includes(nd.key)) set({ mapSel: nd.panelSel || nd.key, panelTab: 'overview' }); else toggleOpen(nd.key); } else set({ mapSel: nd.panelSel || nd.key, panelTab: s.panelTab || 'overview' }); }, pin: () => set({ mapPins: (s.mapPins || []).includes(nd.key) ? (s.mapPins || []).filter(k => k !== nd.key) : [...(s.mapPins || []).slice(-1), nd.key] }), enter: () => set({ mapHov: nd.key }), leave: () => set({ mapHov: null }), title: say ? say.hover : nd.hasChildren ? (nd.open ? 'Click to close' : 'Click to open in place') : 'Click to select', depthPad: (nd.depth || 0) * 8 }; });
+  // The other destinations, at estate scale beside a pick (notes, 2026-09-30):
+  // muted, outside the flow (no ribbons, no trace, no health), and a door to
+  // pick them instead. Your data centers are not a pick, so that row is not a door.
+  (map.context || []).forEach((nd, i) => {
+    const tmpl = mapNodes.find(n => n.side === 'r') || {};
+    const vF = mapMode === 'cost' ? `${money(nd.v)}/mo` : mapMode === 'slo' ? '' : gbpsW(nd.v);
+    const pickable = /^(cloud|app):/.test(nd.key);
+    mapNodes.push({ ...tmpl, ...nd, key: 'c' + i, id: nd.key, side: 'ctx', label: nd.name, subLabel: '', hasSub: false, pathSay: '', pathBg: 'transparent', pathPad: '0', vF, health: null,
+      lx: nd.x - 236, ly: nd.y + nd.h / 2 - 10, lw: 230, sy: nd.y + nd.h / 2 + 10, justify: 'flex-end', fill: dark ? '#5d6f80' : '#b8c2cc', op: 0.45, stroke: 'transparent', caret: '', showDelta: false,
+      cursor: pickable ? 'pointer' : 'default', title: `${nd.name} · ${vF}${pickable ? ' · look at this one instead' : ''}`,
+      click: pickable ? () => set({ obScope: nd.key, mapOpen: [], mapSel: null, mapRegion: null }) : () => {}, enter: () => {}, leave: () => {} });
+  });
   // The two questions the map has to answer without being read closely:
   // where does the traffic go, and how much of it rides AT&T. Both come out
   // of the ribbons already drawn - the destination leg carries the volume and
