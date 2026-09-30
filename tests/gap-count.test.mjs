@@ -112,10 +112,17 @@ test('the gap route\'s alert is gone one step away from where it landed', () => 
   assert.equal(c.state.compose.step, 5);
   assert.equal(vals(c).hasParsedNote, true);
 
-  c.state.compose.step = 4;
+  // The flow (2026-09-30) is NetBond Advanced's: the alert belongs to the step the
+  // route landed on (its first decision), and one step away it is gone. The old
+  // numbered `step` no longer moves the page; the flow's own Back does.
+  const landed = vals(c).cfKey;
+  vals(c).cfBack();
   const v = vals(c);
-  assert.equal(v.hasParsedNote, false, 'one step away from noteStep, the alert must be hidden');
+  assert.notEqual(v.cfKey, landed, 'Back moved one step');
+  assert.equal(v.hasParsedNote, false, 'one step away from where it landed, the alert must be hidden');
   assert.ok(c.state.compose.note, 'compose.note itself is still set - hasParsedNote is what gates it, not the text going away');
+  vals(c).cfNext();
+  assert.equal(vals(c).hasParsedNote, true, 'back on the step it landed on, it shows again');
 });
 
 test('every other route into Compose keeps the default alert title', () => {
@@ -196,7 +203,8 @@ test('the free-text parser clears the gap route\'s source label, bulk and qty', 
   v.parseText();
 
   v = vals(c);
-  assert.equal(v.parsedNoteTitle, 'From the drawer');
+  // Titled for what it is (the connect flow, 2026-09-30): never the gap route's label.
+  assert.equal(v.parsedNoteTitle, 'From what you typed');
   assert.equal(c.state.compose.sourceLabel, null);
   assert.equal(c.state.compose.bulk, null);
   assert.equal(c.state.compose.qty, 1);
@@ -339,26 +347,25 @@ test('a region row and a site row leave identical state apart from bulk/qty/sour
   assert.equal(snote, 'Attach 1,640 sites · Remote sites, East. One order, one policy, 1,640 circuits.');
 });
 
-// Fix round 2, finding E: switching the outcome on a sourceLabel-bearing
-// compose is a NEW order - u3 never consumes `qty`, so the alert and the
-// price must not keep claiming 1,640 circuits once the outcome no longer is one.
-test('switching the outcome after a gap order clears the label, quantity and stale alert text', () => {
+// Fix round 2, finding E: a NEW order after a gap order must not keep claiming
+// 1,640 circuits. The outcome cards that were the new-order boundary left with
+// the six-step wizard (2026-09-30); the flow's new order starts from Ways to
+// connect, and it carries nothing the gap route wrote.
+test('starting a new order from Ways to connect after a gap order clears the label, quantity and stale alert text', () => {
   const c = mkC();
   const v0 = vals(c);
   v0.gapRows.find(r => r.name === 'Remote sites, East').go();
   assert.equal(c.state.compose.qty, 1640);
 
-  const v1 = vals(c);
-  const u3 = v1.outcomeCards.find(o => o.key === 'u3');
-  u3.click();
+  vals(c).wayTypes.find(t => t.label === 'Cloud to Cloud').start();
 
   const v = vals(c);
-  assert.equal(c.state.compose.sourceLabel, null);
-  assert.equal(c.state.compose.qty, 1);
+  assert.ok(!c.state.compose.sourceLabel);
+  assert.ok(!c.state.compose.qty || c.state.compose.qty === 1);
   assert.equal(v.parsedNoteTitle, 'From the drawer');
   assert.equal(v.hasParsedNote, false, 'no alert at all - not even a correctly-titled one over stale text');
-  assert.equal(c.state.compose.note, null, 'the 1,640-circuits sentence must not survive to be shown at any step');
-  assert.equal(v.pricedTotalF, '$2,000/mo', 'u3\'s own price, not the 1,640-site total');
+  assert.ok(!c.state.compose.note, 'the 1,640-circuits sentence must not survive to be shown at any step');
+  assert.equal(v.cfOrder.monthly, 2000, 'Cloud to Cloud\'s own price (the route and its Hub), not the 1,640-site total');
 });
 
 // Every wizard-built order (no gap/drawer/panel route behind it) leaves
@@ -378,15 +385,18 @@ test('a plain wizard order (no compose.qty set) still renders Quantity 1 and the
 // ---------------------------------------------------------------------------
 // Fix round 3: the root fix. `parsedNote` moved from top-level state into
 // `compose.note`, so a fresh compose clears it by construction - no writer
-// has to remember to. `carriesOrder(cp)` replaces the `sourceLabel`-only
-// guard (finding H), and `newOrder()` resets a stale `s.order` snapshot on
-// every NEW-order writer (R3).
+// has to remember to. `carriesOrder(cp)` replaced the `sourceLabel`-only
+// guard (finding H) until the outcome switch it guarded left with the six-step
+// wizard (2026-09-30); a new order now starts from Ways to connect on a blank
+// compose. `newOrder()` resets a stale `s.order` snapshot on every NEW-order
+// writer (R3).
 // ---------------------------------------------------------------------------
 
-// Finding H: the round-2 guard keyed on `cp.sourceLabel`, which only the gap
-// route writes. The drawer's bulk attach carries `bulk` + `qty` with no
-// label, so it slipped through uncleaned. carriesOrder(cp) catches it.
-test('finding H: switching the outcome after the drawer\'s bulk attach (no sourceLabel, but bulk+qty) clears cleanly', () => {
+// Finding H: the drawer's bulk attach carries `bulk` + `qty` with no label.
+// A new order after it (from Ways to connect since 2026-09-30, where the
+// outcome cards used to be) must carry neither, and a second new order must
+// not resurrect them.
+test('finding H: a new order after the drawer\'s bulk attach (no sourceLabel, but bulk+qty) starts clean', () => {
   const c = mkC();
   let v = vals(c);
   v.openLevel('sites');
@@ -405,26 +415,25 @@ test('finding H: switching the outcome after the drawer\'s bulk attach (no sourc
   assert.equal(c.state.compose.qty, 292); // Atlanta's public sites: East's own rollup is off AT&T (2026-09-29)
   assert.equal(c.state.compose.sourceLabel, undefined, 'the drawer never writes a label - this is the gap the round-2 guard missed');
   assert.equal(vals(c).pricedTotalF, '$528,000/mo');
+  // The flow prices the same count per site: NetBond for Cloud at its list price, 292 times.
+  const bulk = vals(c).cfOrder.lines.find(l => l.product === 'NetBond for Cloud');
+  assert.equal(bulk.qty, 292);
+  assert.equal(bulk.perSite, true);
 
-  v = vals(c);
-  const u3 = v.outcomeCards.find(o => o.key === 'u3');
-  u3.click();
-
+  vals(c).wayTypes.find(t => t.label === 'Cloud to Cloud').start();
   v = vals(c);
   assert.equal(v.hasParsedNote, false, 'the alert must be gone, not just mistitled');
-  assert.equal(c.state.compose.qty, 1);
-  assert.equal(c.state.compose.bulk, null);
-  assert.equal(v.pricedTotalF, '$2,000/mo', 'u3\'s own price, not the 353-site total');
+  assert.ok(!c.state.compose.qty || c.state.compose.qty === 1);
+  assert.ok(!c.state.compose.bulk);
+  assert.equal(v.cfOrder.monthly, 2000, 'Cloud to Cloud\'s own price, not the 292-site total');
 
-  // Switching back to u1 must not resurrect the 353-site order either - it
-  // was cleaned, not hidden.
-  const u1 = v.outcomeCards.find(o => o.key === 'u1');
-  u1.click();
+  // A second new order must not resurrect the 292-site order either - it was cleaned, not hidden.
+  vals(c).wayTypes.find(t => t.label === 'DataCenter / CoLocation to Cloud').start();
   v = vals(c);
-  const netbond = v.orderLines.find(l => l.product === 'NetBond for Cloud');
-  assert.equal(netbond.qty, 1, 'switching back to u1 must not silently restore the 353-site quantity');
-  assert.equal(netbond.monthlyF, '$1,800/mo');
-  assert.equal(v.pricedTotalF, '$4,200/mo', 'the base\'s plain-attach total, not $637,800');
+  const netbond = v.cfOrder.lines.find(l => l.product === 'NetBond for Cloud');
+  assert.equal(netbond.qty, 1, 'a new order must not silently restore the 292-site quantity');
+  assert.equal(netbond.monthly, 1800);
+  assert.equal(v.cfOrder.monthly, 1800, 'NetBond for Cloud at list, one connection');
 });
 
 // Finding I: chooseTier and steerBucket build fresh compose literals with no
@@ -541,43 +550,28 @@ test('R3: a marketplace product choice does not survive into a later gap order\'
 // Fix round 4: two non-blocking findings left by the round-3 re-review.
 // ---------------------------------------------------------------------------
 
-// N1: round 3's `startsNew = patch.outcome !== undefined && carriesOrder(cp)`
-// gated BOTH halves (cleanCompose and order:null) on carriesOrder, so a plain
-// wizard order (no count, no label, no note - e.g. a region row) still left
-// a stale Review snapshot behind on an outcome switch. carriesOrder should
-// only gate whether the compose itself needs cleaning; an outcome switch is
-// always a new order, so `order: null` must be unconditional.
-test('N1: an outcome switch always drops the stale Review, even for a plain wizard order (no count, no label, no note)', () => {
+// N1: a new order always drops a stale Review snapshot, even after a plain
+// wizard order (no count, no label, no note). Since 2026-09-30 the new-order
+// boundary is Ways to connect, not an outcome switch, and a choice inside the
+// same order (a region, a metro) never touches the snapshot.
+test('N1: a new order from Ways to connect always drops the stale Review; a choice in the same order never does', () => {
   const c = mkC();
   let v = vals(c);
   v.gapRows.find(r => r.kind === 'region').go();
-  v = vals(c);
   assert.equal(c.state.compose.outcome, 'u1');
   assert.equal(c.state.compose.sourceLabel, undefined, 'a plain wizard order carries no label');
   assert.equal(c.state.compose.bulk, undefined, 'a plain wizard order carries no bulk count');
-  v.reviewOrder();
-  assert.ok(c.state.order, 'Review must freeze an order to reproduce the stale-Review bug');
-  assert.equal(c.state.screen, 's6');
+  c.state.order = { lines: [{ line: 1, product: 'NetBond for Cloud', qty: 1, monthly: 1800 }], monthly: 1800, title: 'A stale snapshot' };
 
-  // Back to Compose (implicitly - state.order/compose don't change on their
-  // own), switch the outcome. carriesOrder(cp) is false for this compose, so
-  // round 3 left the stale order behind here; it must be dropped regardless.
-  v = vals(c);
-  const u3 = v.outcomeCards.find(o => o.key === 'u3');
-  u3.click();
-  assert.equal(c.state.order, null, 'switching the outcome must always drop the stale Review, carriesOrder or not');
-  assert.equal(c.state.compose.outcome, 'u3');
+  vals(c).wayTypes.find(t => t.label === 'Cloud to Cloud').start();
+  assert.equal(c.state.order, null, 'a new order must always drop the stale Review');
+  assert.equal(c.state.compose.ctype, 'Cloud to Cloud');
 
-  // A SAME-order edit (setC with no outcome key) must still leave a live
-  // order untouched - carriesOrder still gates the cleanCompose half.
+  // A SAME-order edit must leave a live snapshot untouched.
+  c.state.order = { lines: [], monthly: 0, title: 'Still live' };
   v = vals(c);
-  v.reviewOrder();
-  assert.ok(c.state.order, 'Review must freeze the u3 order to test the SAME-order path');
-  v = vals(c);
-  const metro = v.metroChips.find(m => !m.on);
-  assert.ok(metro, 'need an unselected metro chip to toggle');
-  metro.click();
-  assert.ok(c.state.order, 'a metro change carries no outcome key and must not touch order');
+  v.cfClouds[0].regions[0].pick();
+  assert.equal(c.state.order.title, 'Still live', 'picking a region is the same order and must not touch order');
 });
 
 // N2: `goCompose`'s fresh branch called `newOrder(...)`, which nulls

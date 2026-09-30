@@ -165,8 +165,8 @@ await beat('7 Insights: Your actions and Operations', async () => {
 });
 
 await beat('8 Estate switch to Established', async () => {
-  // Options still reads the Connect verdict; the four tiles live on the home now.
-  await rail('Options');
+  // Recommended (Options until 2026-09-30, "options and orders is so weird") still reads the Connect verdict; the four tiles live on the home now.
+  await rail('Recommended');
   // Beat 1 added Oracle's two public regions to Growing: 5 of 7 became 7 of 9.
   await expect('7 of 9 regions still ride the public internet');
   // Switched while on the home, the new estate's own figures show, with no stale role list.
@@ -180,7 +180,7 @@ await beat('8 Estate switch to Established', async () => {
   await takes('AWS us-west-2 is at risk', '3 apps ride it · 120 workloads');
   if (!(await cards())[1].includes('7 of 8')) throw new Error(`Established's On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 7 of 8`);
   if ((await text()).includes('5 sites reach the cloud over IPsec')) throw new Error('Growing\'s role list stayed on the Established home');
-  await rail('Options');
+  await rail('Recommended');
   await expect('1 of 8 regions still ride the public internet');
 });
 
