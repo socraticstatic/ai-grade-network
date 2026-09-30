@@ -1,0 +1,206 @@
+/*
+ * AT&T AI-grade Network — NaaS storefront prototype
+ * Copyright (c) 2026 AT&T Intellectual Property. All rights reserved.
+ *
+ * AT&T proprietary and confidential. Provided for evaluation and
+ * integration by AT&T and its authorised partners. Not for redistribution.
+ */
+// naas-cost-view.js: how Cost is sliced, coloured and forecast (Micah, 2026-09-30:
+// "on cost spend, what does the 51k even mean - make the forecast make sense";
+// "cost by leg is good - numbers just are confusing"; "by region, by csp";
+// "filters"; "color scheme is really weird - cost by region bar chart is wrong
+// and colors don't make sense"; "cost by region needs love").
+//
+// Pure: it reads the one cost model (R.costLegs, whose every row carries the
+// parts it counts) and the estate, and never prices anything itself. A slice is
+// the model's own parts regrouped, so By leg, By region and By cloud add up to
+// the same whole on every estate.
+import { regionOf, fmt } from './naas-logic.js';
+import * as S from './naas-sites.js';
+
+// ---------- One colour vocabulary for Cost ----------
+// One meaning per colour on Spend, By leg, By region and the Traffic Cost view.
+// Nothing here means two things, and every colour is a theme token, so the dark
+// skin restates them without touching this file.
+//   att     var(--viz-1)          On AT&T: AT&T charges at catalog price, and egress already at your AT&T rate.
+//   public  var(--warning)        Outside AT&T: egress at the cloud provider's public rates. The savings live here.
+//   list    var(--viz-2)          A list price we apply for someone else (a cloud port, a VPN tunnel, a colo
+//                                 cross-connect). Always modelled, so always hatched.
+//   saved   var(--success)        Savings: banked is solid, still open is the same green as a tint.
+//   other   var(--text-disabled)  Billed by another carrier, not priced here. An outline, never a fill.
+//   asis    var(--text-light)     The forecast if nothing changes: a dashed line.
+//   act     var(--text-heading)   The forecast if you act on the open moves: a solid line.
+// Hatching means modelled: a list price or a rate applied to your estate, not a bill.
+export const COST_INK = {
+  att: { color: 'var(--viz-1)', word: 'On AT&T' },
+  public: { color: 'var(--warning)', word: 'Outside AT&T' },
+  list: { color: 'var(--viz-2)', word: 'Cloud provider list price' },
+  saved: { color: 'var(--success)', word: 'Saved' },
+  other: { color: 'var(--text-disabled)', word: 'Another carrier' },
+  asis: { color: 'var(--text-light)', word: 'As is' },
+  act: { color: 'var(--text-heading)', word: 'If you act' },
+};
+/** A modelled fill: the ink, striped with a tint of itself, so the block still reads as its colour. */
+export const hatch = (color) => `repeating-linear-gradient(135deg, ${color} 0 3px, color-mix(in srgb, ${color} 28%, transparent) 3px 6px)`;
+/** The fill for a part: solid, or hatched when it is modelled. */
+export const fillOf = (ink, modelled) => { const c = (COST_INK[ink] || COST_INK.other).color; return modelled ? hatch(c) : c; };
+
+// ---------- Places ----------
+// A cloud region's metro, as naas-app.js REGION_GEO has it for Compose (the twin
+// lives there; keep the two in step). The metro then takes the same region the
+// site side uses (regionOf), so a By region slice puts Frankfurt DC and
+// eu-central-1 in one place, as every other surface does.
+export const REGION_METRO = { 'us-east-1': 'Ashburn', 'us-east-2': 'Chicago', 'us-west-2': 'Seattle', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'London', 'ap-southeast-1': 'Singapore', eastus: 'Ashburn', westeurope: 'Amsterdam', centralus: 'Dallas', 'us-central1': 'Chicago', 'us-east-04': 'New York', 'uk-south': 'London' };
+const METRO_WORD = [[/ashburn|virginia/, 'Ashburn'], [/frankfurt/, 'Frankfurt'], [/london/, 'London'], [/amsterdam/, 'Amsterdam'], [/singapore/, 'Singapore'], [/chicago/, 'Chicago'], [/dallas/, 'Dallas'], [/phoenix/, 'Phoenix'], [/san-?jose/, 'San Jose'], [/seattle/, 'Seattle'], [/tokyo/, 'Tokyo'], [/sydney/, 'Sydney'], [/mumbai/, 'Mumbai'], [/seoul/, 'Seoul'], [/paris/, 'Paris'], [/dublin/, 'Dublin'], [/madrid/, 'Madrid']];
+/** The place a cloud region sits in, in the site side's words (US East, Europe, ...). */
+export function geoOfRegion(region) {
+  const r = String(region || '').toLowerCase();
+  const metro = REGION_METRO[region] || (METRO_WORD.find(([re]) => re.test(r)) || [])[1];
+  if (metro) return regionOf({ metro, name: '' });
+  if (/^(us|na)\b|^us-|us$|^(east|west|central|north|south)us/.test(r)) return /east/.test(r) ? 'US East' : /west/.test(r) ? 'US West' : 'US Central';
+  if (/^(eu|europe|uk|france|germany|switzerland|norway|sweden|italy|spain|poland)|europe/.test(r)) return 'Europe';
+  if (/^(ap|asia|japan|australia|korea|india|southeastasia|eastasia)/.test(r)) return 'Asia Pacific';
+  return 'International';
+}
+
+// ---------- Slicing the one cost model ----------
+/** The By cloud member for everything a site buys (access, SD-WAN, its tunnels). */
+export const SITES = 'sites';
+const SITES_LABEL = 'Your sites';
+export const BY = ['all', 'region', 'cloud'];
+export const byOf = (k) => (BY.includes(k) ? k : 'all');
+
+/**
+ * Where a part lands under a slice, as [member, share] pairs whose shares sum to 1.
+ * A site sits in its region; a cloud region in its place or its cloud; a bucket of
+ * egress in its cloud, or, by region, across that cloud's regions by workloads,
+ * the split the Savings list already uses (LC.savingsBy).
+ */
+export function sharesOf(est, part, by) {
+  const regs = est.regionsList || [];
+  if (part.kind === 'site') {
+    if (by === 'cloud') return [[SITES, 1]];
+    const st = (est.sites || []).find(x => x.name === part.site) || { name: part.site, metro: '' };
+    return [[regionOf(st), 1]];
+  }
+  if (part.kind === 'region') {
+    const r = regs.find(x => x.region === part.region);
+    return [[by === 'cloud' ? (r ? r.cloud : 'Other') : geoOfRegion(part.region), 1]];
+  }
+  if (part.kind === 'bucket') {
+    if (by === 'cloud') return [[part.cloud || 'Other', 1]];
+    const own = regs.filter(r => r.cloud === part.cloud), pool = own.length ? own : regs;
+    if (!pool.length) return [['International', 1]];
+    const w = pool.map(r => r.wl || 1), sum = w.reduce((a, x) => a + x, 0);
+    const by2 = {};
+    pool.forEach((r, i) => { const g = geoOfRegion(r.region); by2[g] = (by2[g] || 0) + w[i] / sum; });
+    return Object.entries(by2);
+  }
+  return [['Other', 1]];
+}
+const labelOf = (key) => (key === SITES ? SITES_LABEL : key);
+const LEGS = ['access', 'connect', 'cloud'];
+
+/** The members of a slice with what each costs a month, largest first. Their sum is the estate's total. */
+export function costMembers(est, L, by) {
+  if (by !== 'region' && by !== 'cloud') return [];
+  const m = {};
+  for (const leg of LEGS) for (const row of (L[leg] || {}).rows || []) for (const p of row.parts || []) {
+    for (const [k, sh] of sharesOf(est, p, by)) { const g = m[k] = m[k] || { key: k, label: labelOf(k), v: 0, sites: new Set(), regions: new Set(), buckets: new Set() };
+      g.v += p.v * sh;
+      if (p.kind === 'site') g.sites.add(p.site); else if (p.kind === 'region') g.regions.add(p.region); else if (p.kind === 'bucket') g.buckets.add(p.bucket); }
+  }
+  return Object.values(m).filter(g => g.v > 0.005).map(g => ({ key: g.key, label: g.label, v: g.v, sites: [...g.sites], regions: [...g.regions], buckets: [...g.buckets] }))
+    .sort((a, b) => b.v - a.v || a.label.localeCompare(b.label));
+}
+
+/** One row, cut to a member: its parts that land there, at their share. */
+function sliceRow(est, row, by, key) {
+  const parts = [];
+  for (const p of row.parts || []) for (const [k, sh] of sharesOf(est, p, by)) if (k === key && sh > 0) parts.push({ ...p, v: p.v * sh, share: sh });
+  const n = row.key === 'egress' ? parts.length : parts.reduce((a, p) => a + p.n, 0);
+  return { ...row, parts, n, v: parts.reduce((a, p) => a + p.v, 0) };
+}
+/** The three legs, cut to one member of a slice. The whole estate when by is 'all'. */
+export function sliceLegs(est, L, by, key) {
+  if ((by !== 'region' && by !== 'cloud') || key == null) return L;
+  const out = {};
+  for (const leg of LEGS) {
+    const src = L[leg] || { key: leg, label: '', rows: [] };
+    const rows = src.rows.map(r => sliceRow(est, r, by, key)).filter(r => r.parts.length);
+    out[leg] = { ...src, rows, total: rows.reduce((a, r) => a + r.v, 0) };
+  }
+  return { ...out, total: out.access.total + out.connect.total + out.cloud.total };
+}
+
+/** What a member holds, counted from the estate, not from what is priced: sites, cloud regions and buckets. */
+export function memberCounts(est, by, key) {
+  const sites = (est.sites || []), regs = (est.regionsList || []), bks = (est.buckets || []);
+  if (by === 'cloud') {
+    if (key === SITES) return { sites: sites.reduce((a, x) => a + S.countOf(x.name), 0), regions: 0, buckets: 0 };
+    return { sites: 0, regions: regs.filter(r => r.cloud === key).length, buckets: bks.filter(b => b.cloud === key).length };
+  }
+  return { sites: sites.filter(x => regionOf(x) === key).reduce((a, x) => a + S.countOf(x.name), 0), regions: regs.filter(r => geoOfRegion(r.region) === key).length, buckets: 0 };
+}
+
+// The order a bar stacks in: what AT&T carries, then list prices, then egress outside AT&T.
+const SEG_ORDER = [['att', false], ['att', true], ['list', true], ['list', false], ['public', false], ['public', true], ['other', false], ['other', true]];
+/** A set of rows as colour segments: how much of it is each ink, and whether modelled. */
+export function inkSegs(rows) {
+  const acc = {};
+  for (const r of rows) for (const p of r.parts || []) { const ink = COST_INK[p.ink] ? p.ink : 'other', k = ink + (p.modelled ? ':m' : ''); acc[k] = (acc[k] || 0) + p.v; }
+  return SEG_ORDER.map(([ink, m]) => ({ key: ink + (m ? ':m' : ''), ink, modelled: m, v: acc[ink + (m ? ':m' : '')] || 0 })).filter(x => x.v > 0.005);
+}
+
+/** By region (or By cloud): one bar per member, its segments by ink, its egress apart. */
+export function memberBars(est, L, by) {
+  const b = by === 'cloud' ? 'cloud' : 'region';
+  return costMembers(est, L, b).map(m => {
+    const sl = sliceLegs(est, L, b, m.key);
+    const rows = [...sl.access.rows, ...sl.connect.rows, ...sl.cloud.rows];
+    const egressV = rows.filter(r => r.key === 'egress').reduce((a, r) => a + r.v, 0);
+    return { ...m, v: sl.total, egressV, legs: { access: sl.access.total, connect: sl.connect.total, cloud: sl.cloud.total }, segs: inkSegs(rows) };
+  });
+}
+
+// ---------- Words ----------
+const nf = (n) => Math.round(n).toLocaleString('en-US');
+export const each = (v) => (Number.isInteger(v) ? fmt(v) : '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const noun = (n, one, many) => `${nf(n)} ${Math.round(n) === 1 ? one : many}`;
+/** A row in words a buyer reads: count × unit, then what the price is. Recounted from its parts, so a slice reads true. */
+export function rowWords(row) {
+  const n = row.n, parts = row.parts || [];
+  if (row.key === 'egress') { const out = parts.filter(p => p.ink === 'public').reduce((a, p) => a + p.v, 0);
+    // Cut by region, a bucket is shared by workloads: say so, since the share is modelled.
+    const shared = parts.some(p => p.share != null && p.share < 0.999);
+    return `${noun(n, 'bucket', 'buckets')}${shared ? ', a share of each by workloads' : ' measured this month'}${out > 0.5 ? ` · ${fmt(out)} of it outside AT&T` : ' · all at your AT&T rate'}`; }
+  const [one, many] = row.nouns || ['item', 'items'];
+  if (row.carrier) return `${noun(n, one, many)} · billed by another carrier, not priced here`;
+  if (!row.unit) return `${noun(n, one, many)} · not on a public price list`;
+  const backup = parts.filter(p => p.role === 'backup').reduce((a, p) => a + p.n, 0);
+  const regions = new Set(parts.filter(p => p.kind === 'region').map(p => p.region)).size;
+  const vlan = row.perRegion ? ` + ${fmt(row.perRegion)} for ${noun(regions, 'region', 'regions')}` : '';
+  return `${noun(n, one, many)} × ${each(row.unit)}${row.eachWord ? ' each' : ''}${vlan}${row.rateWords ? ', ' + row.rateWords : ''}${backup ? ` · ${nf(backup)} of them backup` : ''}`;
+}
+/** A leg in words: what its figure covers. */
+export function legCovers(leg) {
+  const rows = leg.rows || [];
+  if (leg.key === 'access') { const c = rows.reduce((a, r) => a + r.n, 0), sites = new Set(rows.flatMap(r => (r.parts || []).map(p => p.site)));
+    const nSites = [...sites].reduce((a, nm) => a + S.countOf(nm), 0);
+    return c ? `${noun(c, 'circuit', 'circuits')} at ${noun(nSites, 'site', 'sites')}` : 'No site access priced'; }
+  if (leg.key === 'connect') { const W = { nb: ['NetBond region', 'NetBond regions'], hv: ['hosted VPC', 'hosted VPCs'], l3: ['L3 attach', 'L3 attaches'], sdwan: ['SD-WAN site', 'SD-WAN sites'], xc: ['cross-connect', 'cross-connects'], ipsec: ['IPsec tunnel', 'IPsec tunnels'] };
+    const bits = rows.filter(r => W[r.key]).map(r => noun(r.n, ...W[r.key]));
+    return bits.length ? bits.slice(0, 3).join(' · ') : 'Nothing into the clouds priced'; }
+  const ports = rows.filter(r => r.key !== 'egress'), eg = rows.find(r => r.key === 'egress');
+  const clouds = new Set(ports.map(r => r.cloud).filter(Boolean));
+  const pN = ports.reduce((a, r) => a + r.n, 0);
+  return [pN ? `${noun(pN, 'port', 'ports')} in ${noun(clouds.size, 'cloud', 'clouds')}` : '', eg && eg.n ? `egress from ${noun(eg.n, 'bucket', 'buckets')}` : ''].filter(Boolean).join(' · ') || 'Nothing billed by a cloud yet';
+}
+
+// ---------- Doors ----------
+/** A bucket of egress, explained down to its records: the cut By bucket and By leg share. */
+export function bucketExplain(b) {
+  const nm = b.name || b.id || '';
+  return { label: nm, value: fmt(b.today) + '/mo', sub: `${fmt(b.today)}/mo on the hyperscaler against ${fmt(b.fabric)}/mo on AT&T.`, cut: 'The flow records in this bucket.',
+    pattern: /internet|saas/i.test(nm) ? 'internet' : /cross-cloud|inter/i.test(nm) ? 'clouds' : /gpu|inference/i.test(nm) ? 'internet' : null, parts: [] };
+}

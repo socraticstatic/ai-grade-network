@@ -216,13 +216,17 @@ export function forecast(ob, arb) {
 /** Spend, savings and forecast as one story (Micah, 2026-09-29: "combine
  *  savings and forecast with spend"). Twelve months back at the forecast's own
  *  growth, each with what acting banked that month; three months ahead as is
- *  and with the moves, on the forecast's curves. series: LC.banked's months. */
+ *  and if you act. series: LC.banked's months.
+ *  If you act (Micah, 2026-09-30: "what does the 51k even mean - make the
+ *  forecast make sense"): the open moves come off this month, then the bytes
+ *  grow at the same rate as is. The old curve phased the moves in over 20 days
+ *  and grew at 40% of the rate, so its $51,100 matched nothing on the page; now
+ *  the gap between the two lines is Could save, grown with the bytes. */
 export const SPEND_GROWTH = 0.06;
 export function spendStory({ base, moveSave, series }) {
-  const g = SPEND_GROWTH, save = Math.min(base * 0.9, Math.max(0, moveSave || 0));
+  const g = SPEND_GROWTH, left = Math.max(0, base - Math.max(0, moveSave || 0));
   const past = (series || []).map((b, i, a) => ({ key: b.month, month: b.month, kind: 'past', spend: Math.round(base / Math.pow(1 + g, a.length - 1 - i)), saved: Math.round(b.saved || 0) }));
-  const moved = (d) => Math.max(0, (base - save * Math.min(1, d / 20)) * Math.pow(1 + g * 0.4, d / 30));
-  const next = [1, 2, 3].map(m => { const asIs = Math.round(base * Math.pow(1 + g, m)); let sum = 0; for (let d = (m - 1) * 30 + 1; d <= m * 30; d++) sum += moved(d); return { key: 'next' + m, kind: 'next', m, asIs, moved: Math.min(asIs, Math.round(sum / 30)) }; });
+  const next = [1, 2, 3].map(m => { const f = Math.pow(1 + g, m); return { key: 'next' + m, kind: 'next', m, asIs: Math.round(base * f), moved: Math.round(left * f) }; });
   return { past, next };
 }
 export function commitments(est, base) {
@@ -297,10 +301,12 @@ export function attChargeRows(est, invAll) {
   const hostedRegs = regsIn.filter(r => (r.vpcs || []).some(v => v.managed));
   const hostedN = hostedRegs.flatMap(r => r.vpcs || []).filter(v => v.managed).length, l3N = hostedRegs.flatMap(r => r.vpcs || []).filter(v => v.priv && !v.managed).length;
   const nbOnly = new Set([...nb].filter(g => !hostedRegs.some(r => r.region === g)));
+  // Each row carries what it counts, one part per region (Cost by region and by cloud, 2026-09-30).
+  const perReg = (test, rate) => hostedRegs.map(r => { const n = (r.vpcs || []).filter(test).length; return { key: r.region, kind: 'region', region: r.region, n, v: n * rate }; }).filter(p => p.n > 0);
   return [
-    { key: 'nb', label: 'NetBond on-ramps', sub: `${nbOnly.size} ${nbOnly.size === 1 ? 'region' : 'regions'} × $1,800`, v: nbOnly.size * 1800, regions: [...nbOnly] },
-    { key: 'hv', label: 'Hosted VPC / VNet', sub: `${hostedN} × $2,400`, v: hostedN * 2400 },
-    { key: 'l3', label: 'Customer L3 attach', sub: `${l3N} × $400`, v: l3N * 400 },
+    { key: 'nb', label: 'NetBond on-ramps', sub: `${nbOnly.size} ${nbOnly.size === 1 ? 'region' : 'regions'} × $1,800`, v: nbOnly.size * 1800, regions: [...nbOnly], parts: [...nbOnly].map(g => ({ key: g, kind: 'region', region: g, n: 1, v: 1800 })) },
+    { key: 'hv', label: 'Hosted VPC / VNet', sub: `${hostedN} × $2,400`, v: hostedN * 2400, parts: perReg(v => v.managed, 2400) },
+    { key: 'l3', label: 'Customer L3 attach', sub: `${l3N} × $400`, v: l3N * 400, parts: perReg(v => v.priv && !v.managed, 400) },
   ].filter(r => r.v > 0);
 }
 
@@ -332,11 +338,17 @@ const XC_RATE = 350;
 const REMOTE_RATE = 0.3;
 const PRICE_OF = { avpn: 'avpn', aseod: 'ase', adi: 'adi', abf: 'abf', aiab: 'mobility' };
 const catPrice = (id) => ((CATALOG.find(p => p.id === id) || {}).price) || 0;
+// The words each AT&T charge counts in (By leg reads count × unit, 2026-09-30).
+const ATT_WORDS = { nb: { unit: 1800, nouns: ['region', 'regions'] }, hv: { unit: 2400, nouns: ['hosted VPC', 'hosted VPCs'] }, l3: { unit: 400, nouns: ['L3 attach', 'L3 attaches'] } };
 const each = (v) => (Number.isInteger(v) ? fmt(v) : '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
 export function costLegs(est, inv, utilRows) {
   const sites = est.sites || [], regs = est.regionsList || [];
   const leg = (key, label, rows) => ({ key, label, rows, total: rows.reduce((a, r) => a + r.v, 0) });
+  // Every row carries its parts, what it counts, priced in the same loop (2026-09-30):
+  // the sites, regions or buckets behind it. Cost slices and drills by them, so a
+  // slice can never disagree with the row it came from. ink: who is paid (att, list,
+  // public, other); modelled: a list price or rate applied, not a bill.
   // Site access: every service a site buys, primary and backup, at the catalog's "Starting at".
   const acc = {};
   for (const st of sites) {
@@ -344,22 +356,29 @@ export function costLegs(est, inv, utilRows) {
     for (const sv of S.servicesOf(st)) {
       const id = PRICE_OF[sv.key], carrier = !id;
       const key = carrier ? sv.key : sv.key + (remote ? ':remote' : '');
-      const g = acc[key] = acc[key] || { key, label: carrier ? sv.label : sv.label + (remote ? ' · remote sites' : ''), n: 0, primary: 0, backup: 0, unit: carrier ? 0 : catPrice(id) * (remote ? REMOTE_RATE : 1), carrier, modelled: remote && !carrier };
+      const g = acc[key] = acc[key] || { key, label: carrier ? sv.label : sv.label + (remote ? ' · remote sites' : ''), n: 0, primary: 0, backup: 0, unit: carrier ? 0 : catPrice(id) * (remote ? REMOTE_RATE : 1), carrier, modelled: remote && !carrier, parts: [] };
       g.n += n; g[sv.role === 'backup' ? 'backup' : 'primary'] += n;
+      g.parts.push({ key: st.name, kind: 'site', site: st.name, n, role: sv.role === 'backup' ? 'backup' : 'primary' });
     }
   }
-  const access = Object.values(acc).map(g => ({ key: g.key, label: g.label, n: g.n, v: g.unit * g.n, modelled: g.modelled,
+  const access = Object.values(acc).map(g => ({ key: g.key, label: g.label, n: g.n, v: g.unit * g.n, modelled: g.modelled, unit: g.unit, backup: g.backup, carrier: g.carrier,
+    nouns: ['circuit', 'circuits'], eachWord: true, rateWords: g.modelled ? 'the remote-site rate' : '',
+    parts: g.parts.map(p => ({ ...p, v: g.unit * p.n, ink: g.carrier ? 'other' : 'att', modelled: g.modelled })),
     sub: `${g.n.toLocaleString('en-US')} ${g.n === 1 ? 'circuit' : 'circuits'}${g.backup ? ` · ${g.backup.toLocaleString('en-US')} backup` : ''} · ${g.carrier ? 'billed by another carrier' : `${each(g.unit)} each${g.modelled ? ' at the remote-site rate' : ''}`}` }))
     .sort((a, b) => b.v - a.v || b.n - a.n);
   // Cloud connectivity: the AT&T charges, then what the customer runs themselves.
-  const xcN = regs.filter(r => r.priv && r.xc && r.xc.by === 'yours').length + sites.filter(x => x.xc && x.xc.by === 'yours').length;
-  const ipsecN = sites.filter(x => siteModeOf(x) === 'ipsec').reduce((a, x) => a + S.countOf(x.name), 0);
-  const sdwanN = sites.filter(x => siteModeOf(x) === 'sdwan').reduce((a, x) => a + S.countOf(x.name), 0);
+  const xcRegs = regs.filter(r => r.priv && r.xc && r.xc.by === 'yours'), xcSites = sites.filter(x => x.xc && x.xc.by === 'yours');
+  const xcN = xcRegs.length + xcSites.length;
+  const ipsecSites = sites.filter(x => siteModeOf(x) === 'ipsec'), sdwanSites = sites.filter(x => siteModeOf(x) === 'sdwan');
+  const ipsecN = ipsecSites.reduce((a, x) => a + S.countOf(x.name), 0);
+  const sdwanN = sdwanSites.reduce((a, x) => a + S.countOf(x.name), 0);
+  const siteParts = (xs, rate, ink, modelled) => xs.map(x => { const n = S.countOf(x.name); return { key: x.name, kind: 'site', site: x.name, n, v: n * rate, ink, modelled }; });
   const connect = [
-    ...attChargeRows(est, inv).map(r => ({ ...r, n: r.key === 'nb' ? r.regions.length : +String(r.sub).split(' ')[0] || 1, modelled: false })),
-    ...(sdwanN ? [{ key: 'sdwan', label: 'SD-WAN', n: sdwanN, v: sdwanN * catPrice('sdwan'), sub: `${sdwanN.toLocaleString('en-US')} sites × ${fmt(catPrice('sdwan'))}`, modelled: false }] : []),
-    ...(xcN ? [{ key: 'xc', label: 'Your cross-connects', n: xcN, v: xcN * XC_RATE, sub: `${xcN} × ${fmt(XC_RATE)} at a typical colo rate`, modelled: true }] : []),
-    ...(ipsecN ? [{ key: 'ipsec', label: 'IPsec tunnels', n: ipsecN, v: ipsecN * CSP_VPN, sub: `${ipsecN.toLocaleString('en-US')} tunnels × ${each(CSP_VPN)} cloud VPN list price`, modelled: true }] : []),
+    ...attChargeRows(est, inv).map(r => ({ ...r, n: r.key === 'nb' ? r.regions.length : +String(r.sub).split(' ')[0] || 1, modelled: false, ...ATT_WORDS[r.key], parts: r.parts.map(p => ({ ...p, ink: 'att', modelled: false })) })),
+    ...(sdwanN ? [{ key: 'sdwan', label: 'SD-WAN', n: sdwanN, v: sdwanN * catPrice('sdwan'), sub: `${sdwanN.toLocaleString('en-US')} sites × ${fmt(catPrice('sdwan'))}`, modelled: false, unit: catPrice('sdwan'), nouns: ['site', 'sites'], parts: siteParts(sdwanSites, catPrice('sdwan'), 'att', false) }] : []),
+    ...(xcN ? [{ key: 'xc', label: 'Your cross-connects', n: xcN, v: xcN * XC_RATE, sub: `${xcN} × ${fmt(XC_RATE)} at a typical colo rate`, modelled: true, unit: XC_RATE, nouns: ['cross-connect', 'cross-connects'], rateWords: 'a typical colo rate',
+      parts: [...xcRegs.map(r => ({ key: r.region, kind: 'region', region: r.region, n: 1, v: XC_RATE, ink: 'list', modelled: true })), ...xcSites.map(x => ({ key: x.name, kind: 'site', site: x.name, n: 1, v: XC_RATE, ink: 'list', modelled: true }))] }] : []),
+    ...(ipsecN ? [{ key: 'ipsec', label: 'IPsec tunnels', n: ipsecN, v: ipsecN * CSP_VPN, sub: `${ipsecN.toLocaleString('en-US')} tunnels × ${each(CSP_VPN)} cloud VPN list price`, modelled: true, unit: CSP_VPN, nouns: ['tunnel', 'tunnels'], rateWords: 'the cloud VPN list price', parts: siteParts(ipsecSites, CSP_VPN, 'list', true) }] : []),
   ];
   // Cloud provider: each cloud's ports at its list price, then this month's egress.
   // direct: the share of it that is direct-connect regions' ports, which the
@@ -369,17 +388,22 @@ export function costLegs(est, inv, utilRows) {
     const r = regs.find(x => x.region === u.region); if (!r || !r.priv) continue;
     const P = CSP_PORT[r.cloud], size = /(^|\D)1G/.test(u.bwShort || '') && !/10G/.test(u.bwShort || '') ? '1G' : '10G';
     const key = P ? P.product : r.cloud;
-    const g = ports[key] = ports[key] || { key: 'port:' + r.cloud, label: P ? P.product : r.cloud, cloud: r.cloud, n: 0, v: 0, direct: 0, regions: 0, priced: !!P };
+    const g = ports[key] = ports[key] || { key: 'port:' + r.cloud, label: P ? P.product : r.cloud, cloud: r.cloud, n: 0, v: 0, direct: 0, regions: 0, priced: !!P, parts: [] };
     g.n += u.ports || 1; g.regions += 1;
-    if (P) { const mo = (u.ports || 1) * (P[size] || P['10G']) + (P.vlan || 0); g.v += mo; if (connModeOf(r) === 'direct') g.direct += mo; }
+    const mo = P ? (u.ports || 1) * (P[size] || P['10G']) + (P.vlan || 0) : 0;
+    if (P) { g.v += mo; if (connModeOf(r) === 'direct') g.direct += mo; }
+    g.parts.push({ key: r.region, kind: 'region', region: r.region, n: u.ports || 1, v: mo, ink: 'list', modelled: true });
   }
   const cloudRows = Object.values(ports).map(g => { const P = CSP_PORT[g.cloud];
     const ports = `${g.n} ${g.n === 1 ? 'port' : 'ports'}`, regions = `${g.regions} ${g.regions === 1 ? 'region' : 'regions'}`;
     const sub = !g.priced ? `${ports} · not on a public price list` : `${ports} × ${each(P['10G'])}${P.vlan ? ` + ${fmt(P.vlan)} a region` : ''}${P.flat10G ? ' · flat rate offered' : ''}`;
     const title = !g.priced ? sub : `${ports} in ${regions} at the ${g.label} list price, ${each(P['10G'])} per 10G port${P.vlan ? `, plus ${fmt(P.vlan)} per VLAN attachment` : ''}. Metered.${P.flat10G ? ` A flat rate is offered at about ${fmt(P.flat10G)} per 10G port a month, transfer out included.` : ''}`;
-    return { key: g.key, label: g.label, n: g.n, v: g.v, direct: g.direct, sub, title, modelled: true, billing: P && P.flat10G ? 'metered' : undefined }; }).sort((a, b) => b.v - a.v);
+    return { key: g.key, label: g.label, cloud: g.cloud, n: g.n, v: g.v, direct: g.direct, sub, title, modelled: true, billing: P && P.flat10G ? 'metered' : undefined, parts: g.parts,
+      nouns: ['port', 'ports'], unit: P ? P['10G'] : 0, perRegion: P && P.vlan ? P.vlan : 0, rateWords: P ? `list price${P.flat10G ? ' · flat rate offered' : ''}` : '' }; }).sort((a, b) => b.v - a.v);
   const egress = (est.buckets || []).reduce((a, b) => a + b.today, 0);
-  const cloud = [...cloudRows, ...(egress || regs.length ? [{ key: 'egress', label: 'Egress', n: (est.buckets || []).length, v: egress, sub: 'Data out of the clouds, this month', modelled: false }] : [])];
+  // Egress by bucket: at your AT&T rate when the bucket already pays it, outside AT&T when it pays more.
+  const eParts = (est.buckets || []).map(b => ({ key: b.id, kind: 'bucket', bucket: b.id, label: b.name, cloud: b.cloud, n: 1, v: b.today, ink: b.today <= b.fabric ? 'att' : 'public', modelled: false }));
+  const cloud = [...cloudRows, ...(egress || regs.length ? [{ key: 'egress', label: 'Egress', n: (est.buckets || []).length, v: egress, sub: 'Data out of the clouds, this month', modelled: false, parts: eParts }] : [])];
   const L = { access: leg('access', 'Site access', access), connect: leg('connect', 'Cloud connectivity', connect), cloud: leg('cloud', 'Cloud provider', cloud) };
   return { ...L, total: L.access.total + L.connect.total + L.cloud.total };
 }
