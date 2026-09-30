@@ -53,3 +53,20 @@ export function observeNext(conns) {
     cta: 'Open Govern',
   };
 }
+
+// Andi's monthly briefing (notes, 2026-09-30, C3): four to six sentences for one
+// role, from figures the page already shows, so the words and the page agree.
+const ROLE_WORD = { exec: 'the executive team', architect: 'cloud architecture', neteng: 'network engineering', security: 'security', finops: 'FinOps' };
+const listOf = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+export function briefingFor(role, f) {
+  const n = (x, one, many) => `${x} ${x === 1 ? one : many}`;
+  const who = ROLE_WORD[role] || 'you';
+  return [
+    `${n(f.open, 'finding', 'findings')} open${f.onTableF ? `, with ${f.onTableF}/mo potential savings` : ''}.`,
+    `Acting banked ${f.bankedLastF || '$0'} last month, and this month AT&T found ${f.found ? n(f.found, 'finding', 'findings') : 'none'} and resolved ${f.resolved ? n(f.resolved, 'finding', 'findings') : 'none'}.`,
+    `Operations has ${f.sev1} Sev 1 open now, ${n(f.ticketsOpen, 'ticket', 'tickets')} open${f.mttrF ? `, and fixes took ${f.mttrF} on average` : ''}.`,
+    f.availN ? `${f.availMet} of ${f.availN} connections met their availability target.` : '',
+    f.top && f.top.length ? `For ${who}, start with ${listOf(f.top)}.` : `Nothing waits on ${who} this month.`,
+    f.nextMaint ? `Next AT&T maintenance: ${f.nextMaint}.` : '',
+  ].filter(Boolean).join(' ');
+}

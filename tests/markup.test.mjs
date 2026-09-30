@@ -231,16 +231,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Cost by leg (2026-09-30): three leg tiles over three paged lists, the Modelled mark, and the Cost view's door to them: div 912 -> 927, span 708 -> 726, sc-if 365 -> 375, sc-for 208 -> 212, button 274 -> 281.
 // Paths and Changes (2026-09-30): the hop table with Site to app, the changes strip as positioned divs, and the changes list: div 927 -> 944, span 726 -> 751, sc-if 375 -> 383, sc-for 212 -> 219, button 281 -> 286.
 // Insights > Operations (2026-09-30): four underline subtabs, tiles, the sample fixes, tickets with the Andi toggle, availability, maintenance and changes: div 944 -> 977, span 751 -> 812, sc-if 383 -> 401, sc-for 219 -> 226, button 286 -> 297.
+// Your actions and Monthly briefing (2026-09-30): role chips, the role's visuals and actions (Do it disabled), the briefing, who gets it, the longhand cadence select: div 977 -> 1005, span 812 -> 825, sc-if 401 -> 413, sc-for 226 -> 231, button 297 -> 310, label 27 -> 28.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 977],
-    ['span', /<span\b/g, /<\/span>/g, 812],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 401],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 226],
+    ['div', /<div\b/g, /<\/div>/g, 1005],
+    ['span', /<span\b/g, /<\/span>/g, 825],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 413],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 231],
     ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 297],
+    ['button', /<button\b/g, /<\/button>/g, 310],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
-    ['label', /<label\b/g, /<\/label>/g, 27],
+    ['label', /<label\b/g, /<\/label>/g, 28],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

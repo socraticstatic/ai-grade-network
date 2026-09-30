@@ -24,6 +24,15 @@ export const SCHEDULE_CHOICES = [
   { id: 'manual', label: 'Manual only', schedule: { kind: 'manual' } },
 ];
 
+// Andi's monthly briefing (notes, 2026-09-30, C3). A calendar cadence, not a
+// period: it stays out of periodOf, so the discovery history loop never walks it,
+// and out of SCHEDULE_CHOICES, which are discovery's five.
+export const BRIEF_CHOICES = [
+  { id: 'monthly', label: 'Monthly on the 1st at 08:00', schedule: { kind: 'monthly', day: 1, at: '08:00' } },
+  { id: 'off', label: 'Off', schedule: null },
+];
+const monthAt = (y, m, sch) => Date.UTC(y, m, sch.day || 1) + atMs(sch.at);
+
 function atMs(at) { const p = String(at || '00:00').split(':'); return (+p[0]) * HOUR + (+p[1]) * 60000; }
 
 function sameSchedule(a, b) {
@@ -68,6 +77,7 @@ export function prevRunAt(sch, now) {
   if (!sch || sch.kind === 'manual') return null;
   if (sch.kind === 'hours') { const p = periodOf(sch); return Math.floor(now / p) * p; }
   if (sch.kind === 'nightly') { const t = Math.floor(now / DAY) * DAY + atMs(sch.at); return t <= now ? t : t - DAY; }
+  if (sch.kind === 'monthly') { const d = new Date(now), t = monthAt(d.getUTCFullYear(), d.getUTCMonth(), sch); return t <= now ? t : monthAt(d.getUTCFullYear(), d.getUTCMonth() - 1, sch); }
   if (sch.kind === 'weekly') {
     const midnight = Math.floor(now / DAY) * DAY;
     const back = (new Date(midnight).getUTCDay() - sch.day + 7) % 7;
@@ -83,6 +93,7 @@ export function prevRunAt(sch, now) {
  * 18:00 slot.
  */
 export function nextRunAt(sch, now) {
+  if (sch && sch.kind === 'monthly') { const d = new Date(now), t = monthAt(d.getUTCFullYear(), d.getUTCMonth(), sch); return t > now ? t : monthAt(d.getUTCFullYear(), d.getUTCMonth() + 1, sch); }
   const p = periodOf(sch);
   if (!p) return null;
   return prevRunAt(sch, now) + p;

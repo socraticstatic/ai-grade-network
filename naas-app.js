@@ -173,7 +173,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -1039,7 +1039,48 @@ export function vals(c) {
     allRegions: est.regionsList, scanSteps, scanLine: s.scanStep < 4 ? `${scanSteps[Math.min(3, s.scanStep)].label} · ${Math.min(4, s.scanStep + 1)} of 4` : '', scanDone: s.scanStep >= 4, scanning: s.scanStep < 4, intakeCadence, setIntakeCadence, intakeCadenceLabel, intakeCadenceLower, cadenceAsk, cadenceAskText, confirmCadence, discoverVerdict, discoverKpis, estateChips, treeOrMap: s.treeOrMap, isTree: s.treeOrMap === 'tree', isMap: s.treeOrMap === 'map', treeBg: s.treeOrMap === 'tree' ? 'var(--bg-accent)' : 'transparent', treeColor: s.treeOrMap === 'tree' ? 'var(--link)' : 'var(--text-body)', mapBg: s.treeOrMap === 'map' ? 'var(--bg-accent)' : 'transparent', mapColor: s.treeOrMap === 'map' ? 'var(--link)' : 'var(--text-body)', showTree: () => set({ treeOrMap: 'tree' }), showMap: () => set({ treeOrMap: 'map' }), tree, mapRows, mapSites, mapH, mapVB: `0 0 1000 ${mapH}`, bigEstate, sitesCountLabel: est.sitesCount ? `${est.sitesCount.toLocaleString('en-US')} sites, grouped` : plural(est.sites.length, 'site', 'sites'), chain, chainPolicies, hasChain: !!ow, chainRegion: ow ? `${ow.cloud} ${ow.region}` : '', closeChain: () => set({ openWorkload: null }),
     ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll, probs, segCtx, incChanges),
   };
+  Object.assign(out, briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }));
+  if (s.screen === 's3' && s.tab === 'observe' && s.obPage === 'insights' && out.insPanelBrief) Object.assign(out, { andiSub: out.briefText, hasAndiSub: true });
   return pageLists(out, s, set);
+}
+
+// Your actions' visuals and Andi's monthly briefing (notes, 2026-09-30, C2, C3):
+// read from what the page already rendered, so the words and the cards agree.
+function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }) {
+  const rk = roleKeyOf(s), role = ROLE_OF[rk], iw = out.iw || {};
+  const bars = (key, title, sub, rows) => ({ key, title, sub, rows: rows.slice(0, 4).map((r, i) => ({ key: r.key || String(i), label: r.label || r.name, sub: r.sub || '', v: r.v, w: r.w, fill: r.fill })) });
+  const weeks = (R.egressWeeks(obAll) || []).slice(-4), wMax = Math.max(1e-9, ...weeks.map(w => w.pub));
+  const WEEK = ['3 weeks ago', '2 weeks ago', 'Last week', 'This week'];
+  const idle = OD.capacity(conns, s.obWindow || '30d').filter(r => r.oversized);
+  const V = {
+    talkers: () => bars('talkers', 'Top talkers', `Last ${iw.winLabel || '30 days'}`, iw.talkers || []),
+    newdest: () => bars('newdest', 'New destinations', `Last ${iw.winLabel || '30 days'}`, iw.newDest || []),
+    shadow: () => bars('shadow', 'Shadow SaaS', 'no policy covers these', iw.shadow || []),
+    multi: () => bars('multi', 'Cloud to cloud', 'pairs and the path they take', (iw.multi || {}).rows || []),
+    slo: () => bars('slo', 'Latency over SLO', iw.sloLegend || '', iw.slo || []),
+    problems: () => bars('problems', 'Health problems', 'ranked by apps affected', (out.problemRows || []).map(p => ({ key: p.key, label: `${p.where} · ${p.thing}`, sub: p.what, v: p.appsF.split(' · ')[0], w: '100%', fill: p.dot }))),
+    growth: () => bars('growth', 'Public egress', 'the last four weeks', weeks.map((w, i) => ({ key: 'w' + i, label: WEEK[i + 4 - weeks.length], sub: `AT&T ${w.fab.toFixed(1)} Gbps`, v: `${w.pub.toFixed(1)} Gbps`, w: `${(w.pub / wMax * 100).toFixed(1)}%`, fill: 'var(--viz-2)' }))),
+    idle: () => bars('idle', 'Idle capacity', 'ports bought and not used', idle.map(r => ({ key: r.region, label: `${r.cloud} ${r.region}`, sub: `${r.ports} ports bought; ${r.resizeTo} hold the peak`, v: `${r.peakPct}% peak`, w: `${r.peakPct}%`, fill: 'var(--viz-3)' }))),
+  };
+  const roleVisuals = role.visuals.map(k => V[k]()).filter(v => v.rows.length > 0);
+  // The briefing's facts, once, from the figures on the page.
+  const ym = new Date(+lifeNow).toISOString().slice(0, 7);
+  const lives = findList.filter(f => !f.event).map(f => LC.lifeOf(f, life, lifeNow));
+  const found = lives.filter(l => String(l.foundAt).slice(0, 7) === ym).length;
+  const resolved = lives.filter(l => l.state === 'resolved' && String(l.events[l.events.length - 1].at).slice(0, 7) === ym).length + LC.closedFindings(est).filter(f => String(f.resolvedAt).slice(0, 7) === ym).length;
+  const bank = LC.banked(est, life, lifeNow), bankedLast = bank.length > 1 ? bank[bank.length - 2].saved : 0;
+  const of = out.opsFacts || { sev1: 0, openN: 0, mttrF: '' }, av = out.availAll || [], next = (out.comingUp || [])[0];
+  const briefText = VD.briefingFor(rk, { open: openF.length, onTableF: openSave ? fmt(openSave) : '', bankedLastF: fmt(bankedLast), found, resolved, sev1: of.sev1, ticketsOpen: of.openN, mttrF: of.mttrF,
+    availMet: av.filter(r => r.met).length, availN: av.length, top: (out.roleActAll || []).slice(0, 3).map(a => a.head), nextMaint: next ? `${next.touched}, ${next.whenF.replace(/, planned$/, '')}` : '' });
+  const domain = String(est0.name || 'example').toLowerCase().replace(/\b(corp|co|inc|llc)\b\.?/g, '').replace(/[^a-z]/g, '') + '.com';
+  const briefWho = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk;
+    return { key: k, role: ROLE_OF[k].name, mail: `${ROLE_OF[k].mailbox}@${domain}`, on, bg: on ? 'var(--bg-accent)' : 'transparent', go: () => set({ persona: k }) }; });
+  const cfg = s.briefCfg || { cadence: 'monthly' }, cadence = cfg.cadence === 'off' ? 'off' : 'monthly';
+  const monthly = SCH.BRIEF_CHOICES[0].schedule, nowMs = SCH.nowOf(s);
+  const at = (t) => `${new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}, ${SCH.clockLabel(t)}`;
+  return { comingSoon: true, roleVisuals, roleNoVisuals: !roleVisuals.length, briefText, briefTitle: `Andi's monthly briefing for ${role.short}`, briefWho, briefCadence: cadence,
+    setBriefCadence: (e) => set({ briefCfg: { ...cfg, cadence: e.target.value === 'off' ? 'off' : 'monthly' } }),
+    briefLast: at(SCH.prevRunAt(monthly, nowMs)), briefNext: cadence === 'off' ? 'Off' : at(SCH.nextRunAt(monthly, nowMs)) };
 }
 
 // A list longer than the fold pages; it never scrolls in a box and never sits
@@ -1050,7 +1091,7 @@ export function pageRows(rows, size, page, setPage) {
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
 const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
-  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
+  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 4, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 function pageLists(out, s, set) {
   for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
     if (!Array.isArray(out[list])) continue;
@@ -1254,6 +1295,17 @@ function parseText(c, t) {
 
 
 const PERSONAS = ['Cloud & Platform Architect', 'Network Engineering', 'Security & Compliance', 'FinOps & SRE', 'Executive'];
+// Insights > Your actions and the monthly briefing (notes, 2026-09-30, C2, C3): each
+// role's chip, the Signals cards it reads (the assignments the retired insight-row
+// map made), and the mailbox its briefing goes to.
+const ROLE_OF = {
+  architect: { name: 'Cloud & Platform Architect', short: 'Architect', visuals: ['multi'], mailbox: 'cloud-architecture' },
+  neteng: { name: 'Network Engineering', short: 'Network Eng', visuals: ['problems', 'slo'], mailbox: 'network-ops' },
+  security: { name: 'Security & Compliance', short: 'Security', visuals: ['newdest', 'shadow'], mailbox: 'security' },
+  finops: { name: 'FinOps & SRE', short: 'FinOps & SRE', visuals: ['growth', 'idle'], mailbox: 'finops' },
+  exec: { name: 'Executive', short: 'Executive', visuals: ['talkers'], mailbox: 'cio' },
+};
+const roleKeyOf = (s) => (ROLE_OF[s.persona] ? s.persona : 'neteng');
 const PERSONA_NAME = { architect: 'Cloud & Platform Architect', neteng: 'Network Engineering', security: 'Security & Compliance', finops: 'FinOps & SRE', exec: 'Executive' };
 const PERSONA_TAB = { 'Cloud & Platform Architect': 'connect', 'Network Engineering': 'connect', 'Security & Compliance': 'govern', 'FinOps & SRE': 'cost', 'Executive': 'observe' };
 const PERSONA_LINE = { 'Cloud & Platform Architect': 'see what I actually have across every cloud, one inventory.', 'Network Engineering': 'which paths are private, which still ride the internet.', 'Security & Compliance': 'where policy is enforced and where it is only written.', 'FinOps & SRE': 'where the money leaks and what closes it.', 'Executive': 'one number: how much of the estate is under AT&T control.' };
@@ -2180,21 +2232,6 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       ? () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow', mapRegion: a.region, panelTab: 'overview' }); }
       : go('s3', { layer: 'cloud', tab: 'cost' }),
   }));
-  const insightRows = R.insights(est0, ob).map(x => ({
-    key: x.key, persona: { talkers: 'Executive', newdest: 'Security & Compliance', shadow: 'Security & Compliance', growth: 'FinOps & SRE', multi: 'Cloud & Platform Architect', idle: 'FinOps & SRE' }[x.key] || 'FinOps & SRE',
-    kind: x.kicker, when: '', head: x.head, why: x.body, did: '', hasDid: false,
-    act: { talkers: 'Open the busiest source on the map and see what it reaches.',
-           newdest: 'Review the new destinations in Logs before they become normal.',
-           shadow: 'Author a policy that requires inspection for SaaS from cloud workloads.',
-           growth: 'Steer object storage onto the AT&T network and the curve flattens.',
-           multi: 'Put the cloud-to-cloud pairs on AT&T and stop paying egress twice.',
-           idle: 'Consolidate the under-used ports at renewal.' }[x.key] || '',
-    tone: 'var(--link)', toneBg: 'var(--bg-base)',
-    cta: { talkers: 'Open the map', newdest: 'Open Logs', shadow: 'Open Govern', growth: 'Open Cost', multi: 'Open Cost', idle: 'Open Cost' }[x.key] || 'Open Cost',
-    go: { talkers: () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow' }); },
-          newdest: () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ explain: { label: 'Destinations not seen before', value: x.head.replace(/[^0-9]/g, '') + ' new', sub: 'Traffic to destinations that were absent from the prior 30 days.', cut: 'Records leaving the cloud.', pattern: 'internet', parts: [] }, scrollToSec: 'sec-logs', scrollNonce: (s.scrollNonce || 0) + 1 }); },
-          shadow: go('s3', { layer: 'cloud', tab: 'govern' }) }[x.key] || go('s3', { layer: 'cloud', tab: 'cost' }),
-  }));
   // One findings list with a life each (notes, 2026-09-29). The events above
   // are part of it; the standing insights are the Signals cards, so they are
   // not repeated here.
@@ -2322,7 +2359,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const insightVals = {
     insBand,
     insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, noInsights: insightRowsShown.length === 0, findChips, insDrill, findAll: every.map(toRow),
-    ...(() => { const ik = ['findings', 'ops'].includes(s.insPanel) ? s.insPanel : 'signals'; return { insPanels: [['signals', 'Signals'], ['findings', `Findings · ${openN}`], ['ops', 'Operations']].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings', insPanelOps: ik === 'ops' }; })(),
+    ...(() => { const ik = ['signals', 'findings', 'ops', 'brief'].includes(s.insPanel) ? s.insPanel : 'role'; return { insPanels: [['role', 'Your actions'], ['ops', 'Operations'], ['findings', `Findings · ${openN}`], ['signals', 'Signals'], ['brief', 'Monthly briefing']].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelRole: ik === 'role', insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings', insPanelOps: ik === 'ops', insPanelBrief: ik === 'brief' }; })(),
     hasInsFocus: !!insFocus, insFocusLabel: insFocus ? CARD_FINDS[insFocus][0] : '', clearInsFocus: () => set({ insFocus: null, findPage: 0 }),
     hasFindings: every.length > 0,
     insightCount: `${openN} open`,
@@ -2466,7 +2503,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const chg = healthVals.changeAll || [];
     const maintAll = chg.filter(x => x.kind === 'Maintenance');
     const comingUp = maintAll.filter(x => x.upcoming && x.at > nowMs);
-    return { opsPanels, opsPanelOverview: opsPanel === 'overview', opsPanelTickets: opsPanel === 'tickets', opsPanelAvail: opsPanel === 'avail', opsPanelChanges: opsPanel === 'changes',
+    return { opsFacts: { sev1: T.sev1Open, openN: T.openN, fixedN: T.fixedN, mttrF: T.fixedN ? T.mttrF : '' }, opsPanels, opsPanelOverview: opsPanel === 'overview', opsPanelTickets: opsPanel === 'tickets', opsPanelAvail: opsPanel === 'avail', opsPanelChanges: opsPanel === 'changes',
       opsLine, opsTiles,
       ticketAll, ticketRows: ticketAll, hasTickets: ticketAll.length > 0, noTickets: !ticketAll.length,
       andiTicketsLabel: `Andi opens a ticket for each new incident: ${andiOn ? 'On' : 'Off'}`, andiTicketsOn: andiOn, toggleAndiTickets: () => set({ andiTickets: !andiOn }),
@@ -2474,7 +2511,36 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       availAll: AV, availRows, hasAvail: AV.length > 0, noAvail: !AV.length, availLine: AV.length ? `${AV.filter(r => r.met).length} of ${AV.length} connections met their target over the last ${winL}. Uptime counts Sev 1 outage minutes, open ones and the sample history; targets are NetBond 99.99%, cloud provider 99.9%, public internet 99.5%.` : 'No connections to measure yet.',
       maintAll, comingUp, hasComing: comingUp.length > 0, opsChangeRows: chg.filter(x => !x.upcoming), hasOpsChanges: chg.some(x => !x.upcoming), noOpsChanges: !chg.some(x => !x.upcoming), opsChangeEmpty: `No changes in the last ${winL}.`, opsChangeLabel: `In the last ${winL}` };
   })();
-  const dash = { ...mixVals, ...insightVals, ...healthVals, ...opsVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
+  // Insights > Your actions (notes, 2026-09-30, C2): that role's findings, never
+  // events, each with its recommendation. Do it waits; Accept and Defer move the
+  // finding's life. A stand-in until the reference file arrives (D-10).
+  const roleVals = (() => {
+    const rk = roleKeyOf(s), role = ROLE_OF[rk], nowMs = SCH.nowOf(s);
+    const cad = SCH.BRIEF_CHOICES.find(b => b.id === ((s.briefCfg || {}).cadence || 'monthly')) || SCH.BRIEF_CHOICES[0];
+    const nextBrief = cad.schedule ? SCH.nextRunAt(cad.schedule, nowMs) : null;
+    const deferDays = nextBrief ? Math.max(1, Math.ceil((nextBrief - nowMs) / 86400000)) : 7;
+    const deferWhen = nextBrief ? new Date(nextBrief).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '';
+    const live = lifeRows.filter(x => !x.f.event && !['resolved', 'dismissed'].includes(x.l.state));
+    const personaOf = (f) => PNAME[f.persona] || f.persona;
+    const picked = rk === 'exec' ? live.filter(x => x.f.priced && OPEN_STATES.includes(x.l.state)).sort((a, b) => b.f.save - a.f.save).slice(0, 3)
+      : rk === 'architect' ? live.filter(x => x.f.pillar === 'Private reach' || x.f.kind === 'crosscloud')
+      : live.filter(x => personaOf(x.f) === role.name);
+    const recOf = (f) => (f.ladder && (f.ladder[1] || f.ladder[0])) || 'Review it with AT&T';
+    const acts = picked.map(({ f, l }) => { const st = l.state, rec = recOf(f), k = { key: f.kind };
+      return { key: f.kind, head: f.head, saveLine: f.priced ? `Save ${fmt(f.save)}/mo` : '', hasSave: !!f.priced, rec: `Recommended: ${rec}`, stateLabel: l.label,
+        canAccept: st === 'open' || st === 'snoozed', accept: moveF(k, 'ack', { note: `Accepted: ${rec}` }),
+        canDefer: st === 'open', defer: moveF(k, 'snoozed', { snoozeDays: deferDays, note: deferWhen ? `Deferred to the ${deferWhen} briefing` : 'Deferred' }),
+        canStart: st === 'ack', start: moveF(k, 'progress'), canSnooze: st === 'ack', snooze: moveF(k, 'snoozed', { snoozeDays: deferDays }), hasDoor: false, doorLabel: '', door: () => {} }; });
+    const ports = rk === 'architect' ? OD.capacity(conns, s.obWindow || '30d').filter(r => r.peakPct >= 80).map(r => { const reg = est0.regionsList.find(x => x.region === r.region) || { region: r.region, wl: 0 };
+      return { key: 'cap-' + r.region, head: `${r.cloud} ${r.region} peaks at ${r.peakPct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, saveLine: '', hasSave: false, rec: 'Recommended: Add a port', stateLabel: 'Open',
+        canAccept: false, canDefer: false, canStart: false, canSnooze: false, hasDoor: true, doorLabel: 'Add a port', door: composeFor(go, reg), accept: () => {}, defer: () => {}, start: () => {}, snooze: () => {} }; }) : [];
+    const all = [...acts, ...ports];
+    const roleEmpty = all.length ? '' : rk === 'exec' ? 'Nothing priced on the table.' : 'Nothing to act on yet. What AT&T finds for this role lands here.';
+    const roleChips = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk; return { key: k, label: ROLE_OF[k].short, on, ...seg(on), go: () => set({ persona: k, rolePage: 0 }) }; });
+    return { roleChips, roleTitle: `Actions for ${role.short}`, roleHead: plNow.line, roleCta: plNow.cta, roleGo: plNow.go, roleActAll: all, roleActRows: all, hasRoleActs: all.length > 0,
+      roleEmpty, hasRoleEmpty: !all.length, hasRoleEmptyGo: !all.length && rk === 'exec', roleEmptyGo: () => set({ insPanel: 'ops', opsPanel: 'overview' }) };
+  })();
+  const dash = { ...mixVals, ...insightVals, ...healthVals, ...opsVals, ...roleVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
     obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelHealth: obPanel === 'health', obPanelPaths: obPanel === 'paths', obPanelChanges: obPanel === 'changes', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0 && !!s.obPickOpen, scopeLabel, mapTotal: mapG.total, mapP95: perf.p95,

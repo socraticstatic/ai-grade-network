@@ -305,3 +305,17 @@ test('the empty estate has a view with nothing in it', () => {
   assert.equal(v.nextSchedule, null);
   assert.equal(v.cadence.empty, true);
 });
+
+// Andi's monthly briefing (notes, 2026-09-30, C3): a calendar branch, kept out of
+// periodOf (so the discovery history loop never walks it) and out of SCHEDULE_CHOICES.
+test('the monthly briefing sends on the 1st at 08:00, and the discovery cadences stay five', async () => {
+  const SCH = await import('../naas-schedule.js');
+  const m = SCH.BRIEF_CHOICES.find(c => c.id === 'monthly').schedule;
+  assert.deepEqual(SCH.BRIEF_CHOICES.map(c => c.label), ['Monthly on the 1st at 08:00', 'Off']);
+  assert.equal(nextRunAt(m, T('2026-10-05T15:00:00Z')), T('2026-11-01T08:00:00Z'));
+  assert.equal(prevRunAt(m, T('2026-10-05T15:00:00Z')), T('2026-10-01T08:00:00Z'));
+  assert.equal(nextRunAt(m, T('2026-12-01T07:59:00Z')), T('2026-12-01T08:00:00Z'));
+  assert.equal(nextRunAt(m, T('2026-12-15T00:00:00Z')), T('2027-01-01T08:00:00Z'));
+  assert.equal(periodOf(m), 0);
+  assert.equal(SCHEDULE_CHOICES.length, 5);
+});

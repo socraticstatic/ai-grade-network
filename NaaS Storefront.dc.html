@@ -1052,6 +1052,56 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <sc-if value="{{ obIsInsights }}" hint-placeholder-val="{{ false }}">
   <div style="display:grid;gap:16px">
   <div role="tablist" aria-label="Insights views" style="display:flex;align-items:center;border-bottom:1px solid var(--border-secondary)"><sc-for list="{{ insPanels }}" as="ip" hint-placeholder-count="2"><button role="tab" aria-selected="{{ ip.on }}" onClick="{{ ip.go }}" style="border:0;border-bottom:2px solid {{ ip.line }};background:transparent;padding:6px 2px;margin-right:18px;font:inherit;font-size:15px;line-height:22px;font-weight:{{ ip.weight }};color:{{ ip.color }};cursor:pointer;white-space:nowrap">{{ ip.label }}</button></sc-for></div>
+<!-- Your actions (notes, 2026-09-30, C2): one page per role, the role's Signals on the left and its actions on the right. Do it is visible, not enabled. A stand-in until the reference file arrives (D-10). -->
+<sc-if value="{{ insPanelRole }}" hint-placeholder-val="{{ true }}">
+<div aria-label="Your actions" style="display:grid;gap:12px;padding-top:4px">
+  <div role="tablist" aria-label="Role" style="display:inline-flex;justify-self:start;gap:2px;padding:2px;border-radius:8px;background:var(--bg-neutral)"><sc-for list="{{ roleChips }}" as="rc" hint-placeholder-count="5"><button role="tab" aria-selected="{{ rc.on }}" onClick="{{ rc.go }}" style="border:0;border-radius:6px;height:28px;padding:0 10px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;background:{{ rc.bg }};color:{{ rc.color }};font-weight:{{ rc.weight }};box-shadow:{{ rc.shadow }}">{{ rc.label }}</button></sc-for></div>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start">
+    <div style="display:grid;gap:14px;min-width:0">
+      <div style="display:grid;gap:6px;justify-items:start"><div style="font-size:16px;line-height:22px;font-weight:600;color:var(--text-heading)">{{ roleHead }}</div><button class="fx-btn" onClick="{{ roleGo }}" style="height:28px;padding:0 12px;font-size:12px">{{ roleCta }}</button></div>
+      <sc-for list="{{ roleVisuals }}" as="rv" hint-placeholder-count="2"><div style="display:grid;gap:4px;min-width:0">
+        <div style="display:flex;align-items:baseline;gap:8px;min-width:0"><b style="font-size:13px;line-height:18px;color:var(--text-heading);white-space:nowrap">{{ rv.title }}</b><small style="font-size:11px;color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ rv.sub }}</small></div>
+        <sc-for list="{{ rv.rows }}" as="rb" hint-placeholder-count="4"><div title="{{ rb.sub }}" style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 84px;gap:8px;align-items:center;min-height:24px;font-size:12px;line-height:16px"><span style="color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ rb.label }}</span><span style="display:block;height:8px;border-radius:4px;background:var(--bg-neutral);overflow:hidden"><i style="display:block;height:100%;width:{{ rb.w }};background:{{ rb.fill }};border-radius:4px"></i></span><span style="text-align:right;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap">{{ rb.v }}</span></div></sc-for>
+      </div></sc-for>
+      <sc-if value="{{ roleNoVisuals }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--text-light)">Nothing to show yet.</div></sc-if>
+    </div>
+    <div style="display:grid;min-width:0;border-left:2px solid var(--border-secondary);padding-left:16px">
+      <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);padding-bottom:4px">{{ roleTitle }}</div>
+      <sc-for list="{{ roleActRows }}" as="ra" hint-placeholder-count="4"><div style="display:grid;gap:4px;padding:8px 0;border-bottom:1px solid var(--border-secondary);min-width:0">
+        <div style="display:flex;align-items:baseline;gap:8px;min-width:0"><b title="{{ ra.head }}" style="font-size:13px;line-height:18px;color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ra.head }}</b><span style="margin-left:auto;flex:none;font-size:11px;color:var(--text-light);white-space:nowrap">{{ ra.stateLabel }}</span></div>
+        <div style="display:flex;gap:8px;font-size:12px;line-height:16px;color:var(--text-body);min-width:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ra.rec }}</span><sc-if value="{{ ra.hasSave }}" hint-placeholder-val="{{ false }}"><b style="flex:none;color:var(--success);white-space:nowrap">{{ ra.saveLine }}</b></sc-if></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button class="fx-btn" disabled="{{ comingSoon }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap;opacity:.5;cursor:not-allowed">Do it</button><span style="font-size:11px;color:var(--text-light)">Coming soon</span>
+          <sc-if value="{{ ra.canAccept }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ ra.accept }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Accept</button></sc-if>
+          <sc-if value="{{ ra.canDefer }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ ra.defer }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Defer</button></sc-if>
+          <sc-if value="{{ ra.canStart }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.start }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Start</button></sc-if>
+          <sc-if value="{{ ra.canSnooze }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.snooze }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Snooze</button></sc-if>
+          <sc-if value="{{ ra.hasDoor }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.door }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">{{ ra.doorLabel }}</button></sc-if>
+        </div>
+      </div></sc-for>
+      <sc-if value="{{ rolePager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding-top:6px;font-size:12px;color:var(--text-light)"><button class="fx-btn" onClick="{{ rolePager.prev }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ rolePager.prevOp }}">‹</button><span>{{ rolePager.label }}</span><button class="fx-btn" onClick="{{ rolePager.next }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ rolePager.nextOp }}">›</button></div></sc-if>
+      <sc-if value="{{ hasRoleEmpty }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--text-light);padding:8px 0"><span>{{ roleEmpty }}</span><sc-if value="{{ hasRoleEmptyGo }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ roleEmptyGo }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap">Open Operations</button></sc-if></div></sc-if>
+    </div>
+  </div>
+</div>
+</sc-if>
+<!-- Monthly briefing (notes, 2026-09-30, C3): what Andi would send each role on the 1st, from the figures on these pages. Nothing sends. -->
+<sc-if value="{{ insPanelBrief }}" hint-placeholder-val="{{ false }}">
+<div aria-label="Monthly briefing" style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;align-items:start;padding-top:4px">
+  <div style="display:grid;gap:8px;min-width:0">
+    <div style="font-size:16px;line-height:22px;font-weight:700;color:var(--text-heading)">{{ briefTitle }}</div>
+    <div style="font-size:14px;line-height:22px;color:var(--text-body)">{{ briefText }}</div>
+    <div style="font-size:11px;line-height:15px;color:var(--text-light)">Built from the figures on these pages. Nothing is sent from this prototype.</div>
+  </div>
+  <div style="display:grid;gap:10px;min-width:0;border-left:2px solid var(--border-secondary);padding-left:16px">
+    <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Who gets it</div>
+    <div style="display:grid;border-top:1px solid var(--border-secondary)"><sc-for list="{{ briefWho }}" as="bw" hint-placeholder-count="5"><button onClick="{{ bw.go }}" aria-pressed="{{ bw.on }}" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px;align-items:center;width:100%;min-height:32px;padding:0 6px;border:0;border-bottom:1px solid var(--border-secondary);background:{{ bw.bg }};font:inherit;font-size:12px;line-height:16px;text-align:left;cursor:pointer;color:var(--text-body)"><span style="color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ bw.role }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ bw.mail }}</span></button></sc-for></div>
+    <label style="display:grid;gap:4px;font-size:12px;color:var(--text-light)">Cadence<select value="{{ briefCadence }}" onChange="{{ setBriefCadence }}" aria-label="Briefing cadence" style="height:32px;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:13px;padding:0 8px"><option value="monthly">Monthly on the 1st at 08:00</option><option value="off">Off</option></select></label>
+    <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:12px;line-height:16px;color:var(--text-light)"><span>Last sent</span><b style="color:var(--text-heading)">{{ briefLast }}</b><span>Next send</span><b style="color:var(--text-heading)">{{ briefNext }}</b></div>
+    <div style="display:flex;align-items:center;gap:8px"><button class="fx-btn" disabled="{{ comingSoon }}" style="height:26px;padding:0 10px;font-size:12px;white-space:nowrap;opacity:.5;cursor:not-allowed">Send a test</button><span style="font-size:11px;color:var(--text-light)">Coming soon</span></div>
+  </div>
+</div>
+</sc-if>
 <!-- The six insight cards, back from iteration 1 (2026-09-28): "we had a fantastic Insights section". Two up in the drawer. -->
 <sc-if value="{{ insPanelSignals }}" hint-placeholder-val="{{ true }}">
 <sc-if value="{{ hasIw }}" hint-placeholder-val="{{ true }}">
