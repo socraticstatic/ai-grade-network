@@ -75,4 +75,8 @@ test('region rows name the connection, never the ER or DX code', () => {
   }
   const src = readFileSync(new URL('../naas-app.js', import.meta.url), 'utf8');
   assert.ok(!/\$\{r\.ramp \|\| /.test(src), 'a template still prints the raw ramp code');
+  // The Signals cards too (2026-09-30: Top talkers read "ER · Finance").
+  const v = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'signals' }));
+  const subs = v.iw.talkers.map(t => t.sub).join(' | ');
+  assert.ok(!/\b(ER|DX|EQX)\b/.test(subs), subs);
 });

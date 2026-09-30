@@ -9,6 +9,7 @@
 // opened in place on the picture. Pure data. Added 2026-09-09 (Micah, 14:13:
 // "Why does clicking on AT&T fabric take me to a wordy sales page!").
 import { plural, attHolds } from './naas-logic.js';
+import { RAMP_NAME } from './naas-flowmap.js';
 const n = (x) => Number(x).toLocaleString('en-US');
 
 /** Facilities the estate's attached regions land on, from the inventory's city per region. */
@@ -23,7 +24,7 @@ export function facilities(est, inv, ob) {
     f.regions.push({ region: r.region, cloud: r.cloud, ramp: r.ramp || 'NetBond', ports: u.ports, cap: u.cap, gbps: u.gbps, pct: u.pct, degraded: reg.link === 'degraded', paths: reg.paths || 1 });
     f.ramps.add(r.ramp || 'NetBond'); f.ports += u.ports; f.cap += u.cap; f.gbps += u.gbps; if (reg.link === 'degraded') f.degraded = true;
   });
-  return Object.values(byCity).map(f => { const ramps = [...f.ramps]; const pct = f.cap ? Math.round(f.gbps / f.cap * 100) : 0; return { ...f, ramps, pct, sub: `${f.ports} ${f.ports === 1 ? 'port' : 'ports'} · ${ramps.join(' · ')} · ${pct}% used`, state: f.degraded ? 'degraded' : (pct >= 80 ? 'saturating' : 'ok') }; }).sort((a, b) => b.gbps - a.gbps);
+  return Object.values(byCity).map(f => { const ramps = [...f.ramps]; const pct = f.cap ? Math.round(f.gbps / f.cap * 100) : 0; return { ...f, ramps, pct, sub: `${f.ports} ${f.ports === 1 ? 'port' : 'ports'} · ${ramps.map(x => RAMP_NAME[x] || x).join(' · ')} · ${pct}% used`, state: f.degraded ? 'degraded' : (pct >= 80 ? 'saturating' : 'ok') }; }).sort((a, b) => b.gbps - a.gbps);
 }
 
 /** Ports at a facility: one row per purchased 10 Gbps port, with its own utilization. */

@@ -1065,9 +1065,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <button onClick="{{ insDrill.shadow.go }}" aria-pressed="{{ insDrill.shadow.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.shadow.label }}</button>
         </div>
     <div class="fx-card sm" aria-label="Egress growth" style="border-color:{{ insDrill.growth.border }}">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Egress growth · 12 weeks</h3><div class="fx-card-sub" title="Public {{ iw.growth.pubThen }} → {{ iw.growth.pubNow }} Gbps · AT&amp;T {{ iw.growth.fabPctF }}">Public {{ iw.growth.pubPctF }} · AT&amp;T {{ iw.growth.fabPctF }}</div></div></div>
+      <div class="fx-card-head"><div><h3 class="fx-card-title">Egress growth · 12 weeks</h3><div class="fx-card-sub" title="Public {{ iw.growth.pubThen }} → {{ iw.growth.pubNow }} Gbps · AT&amp;T {{ iw.growth.fabPctF }}">{{ iw.growth.subF }}</div></div></div>
       <div class="fx-cols" role="img" aria-label="Weekly egress, on AT&amp;T under public internet"><sc-for list="{{ iw.growth.weeks }}" as="w" hint-placeholder-count="12"><div title="{{ w.title }}"><span style="height:{{ w.pubH }};background:var(--viz-6)"></span><span style="height:{{ w.fabH }};background:var(--viz-1)"></span></div></sc-for></div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;line-height:12px;color:var(--text-light)"><span>12 weeks ago</span><span>this week</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;line-height:12px;color:var(--text-light)"><span>{{ iw.growth.thenLabel }}</span><span>{{ iw.growth.nowLabel }}</span></div>
       <div class="fx-legend"><span><i style="background:var(--viz-1)"></i>On AT&amp;T</span><span><i style="background:var(--viz-6)"></i>Public internet</span></div>
     <button onClick="{{ insDrill.growth.go }}" aria-pressed="{{ insDrill.growth.on }}" style="justify-self:start;margin-top:auto;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer" style-hover="text-decoration:underline">{{ insDrill.growth.label }}</button>
         </div>
