@@ -235,16 +235,21 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Down and Over SLO apart (review, 2026-09-30): each problem row prints its state word beside the dot: span 825 -> 827.
 // Resize reviews the real change (final review, 2026-09-30): the totals and the term saving hide when the order carries no price, and its price line shows instead: div 1005 -> 1006, sc-if 413 -> 416 (merged after the state words: span stays 827).
 // Every order review reads true (review round 2, 2026-09-30): the policy table hides behind hasOrderPolicies when the order ships none, and the term chips move inside the existing orderPriced gate (no new tag): sc-if 416 -> 417.
+// The NaaS home (2026-09-30): the launch-points strip left Connect (its gate, grid, loop, tile button and six spans) and s0
+// became one home section: a title row with role chips and a Since label, the persona band (Andi's briefing, Waiting on
+// you with Your actions' row pattern), the empty estate's first step, the five-area strip and Now; each half of the band
+// ends in its door (Monthly briefing, Your actions):
+// div 1006 -> 1027, span 827 -> 837, sc-if 417 -> 429, sc-for 231 -> 234, section 11 -> 12, button 310 -> 322, label 28 -> 29.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1006],
-    ['span', /<span\b/g, /<\/span>/g, 827],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 417],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 231],
-    ['section', /<section\b/g, /<\/section>/g, 11],
-    ['button', /<button\b/g, /<\/button>/g, 310],
+    ['div', /<div\b/g, /<\/div>/g, 1027],
+    ['span', /<span\b/g, /<\/span>/g, 837],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 429],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 234],
+    ['section', /<section\b/g, /<\/section>/g, 12],
+    ['button', /<button\b/g, /<\/button>/g, 322],
     ['aside', /<aside\b/g, /<\/aside>/g, 9],
-    ['label', /<label\b/g, /<\/label>/g, 28],
+    ['label', /<label\b/g, /<\/label>/g, 29],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

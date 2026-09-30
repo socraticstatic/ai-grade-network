@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { vals, homeVals } from '../naas-app.js';
+import { readFileSync } from 'node:fs';
+import { vals, homeVals, init } from '../naas-app.js';
 import { mkC } from './harness.mjs';
 
 // The NaaS home (spec docs/superpowers/specs/2026-09-30-naas-home-design.md,
@@ -104,6 +105,13 @@ test('All N in Your actions opens Insights > Your actions', () => {
   assert.deepEqual([c.state.screen, c.state.tab, c.state.obPage, c.state.insPanel], ['s3', 'observe', 'insights', 'role']);
 });
 
+test('the briefing\'s door opens Insights > Monthly briefing, where who gets it and when live', () => {
+  const c = home('partial');
+  vals(c).homeBriefGo();
+  assert.deepEqual([c.state.screen, c.state.tab, c.state.obPage, c.state.insPanel], ['s3', 'observe', 'insights', 'brief']);
+  assert.equal(vals(c).andiSub, vals(c).briefText, 'the page it opens carries the same text');
+});
+
 // Review Focus 2: adding Oracle, then the home.
 test('after Add a source > Oracle, the home reads 4 clouds and 14 findings', () => {
   const c = mkC({ view: 'partial', estateParam: null, screen: 's1', discoverView: 'sources', nowIso: NOW });
@@ -177,4 +185,90 @@ test('no em dash and no ramp code anywhere on the home', () => {
   for (const view of ESTATES) for (const persona of ROLES) {
     for (const w of words(vals(home(view, { persona })))) assert.ok(!/—|\b(ER|DX|EQX|GCI)\b/.test(w), `${view}/${persona}: "${w}"`);
   }
+});
+
+// ---- Task 2: the home's markup and its routes ----
+
+const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
+const railItem = (v, label) => v.railGroups.flatMap(g => g.items).find(i => i.label === label);
+const ctorScreen = () => { const head = 'constructor(p) { super(p); this.state = '; const i = HTML.indexOf(head) + head.length; return Function(`return (${HTML.slice(i, HTML.indexOf('; }', i))})`)().screen; };
+
+test('the NaaS rail item and the NaaS pill land on the home on every estate, and only NaaS lights there', () => {
+  for (const view of ESTATES) {
+    const c = mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', nowIso: NOW });
+    assert.equal(railItem(vals(c), 'NaaS').cur, false, `${view}: Connect's map is not the home`);
+    railItem(vals(c), 'NaaS').go();
+    assert.equal(c.state.screen, 's0', view);
+    const v = vals(c);
+    assert.equal(railItem(v, 'NaaS').cur, true, view);
+    assert.deepEqual(v.railGroups.filter(g => g.titleCur).map(g => g.title), [], `${view}: a group lights beside NaaS`);
+    const p = mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', nowIso: NOW });
+    vals(p).pills.find(x => x.label === 'NaaS').go();
+    assert.equal(p.state.screen, 's0', `${view}: the NaaS pill`);
+  }
+});
+
+test('a cold load lands on the home, on every estate', () => {
+  window.addEventListener = window.addEventListener || (() => {});
+  assert.equal(ctorScreen(), 's0', 'the markup boots on the home');
+  for (const view of ESTATES) {
+    globalThis.location = { search: `?view=${view}`, hash: '', pathname: '/' };
+    const c = mkC({ view: 'partial', screen: ctorScreen() });
+    init(c);
+    assert.equal(c.state.view, view);
+    assert.equal(c.state.screen, 's0', view);
+  }
+});
+
+test('the home is one section: title row, persona band, strip and Now, each bound to its field', () => {
+  const i = HTML.indexOf('aria-label="NaaS home"');
+  assert.ok(i > 0, 'no NaaS home section');
+  const gate = HTML.lastIndexOf('<sc-if value="{{ sHome }}"', i);
+  assert.ok(gate >= 0 && i - gate < 120, 'the home is not gated on sHome');
+  const block = HTML.slice(i, HTML.indexOf('</section>', i));
+  for (const b of ['{{ homeGreeting }}', '{{ homeHead }}', '<sc-for list="{{ roleChips }}"', 'onChange="{{ setRange }}"', '{{ homeBrief }}', "Andi's briefing", '{{ homeBriefGo }}', 'Waiting on you',
+    '<sc-for list="{{ homeWaiting }}"', '{{ homeWaitingGo }}', '<sc-for list="{{ homeStrip }}"', '<sc-for list="{{ homeNow }}"', '{{ pb.trace }}', '{{ homeNowMoreGo }}', '{{ homeNowNone }}', '{{ homeNowNoneDot }}', '{{ homeStep.go }}']) {
+    assert.ok(block.includes(b), `${b} is not in the home`);
+  }
+  assert.match(block, /grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/, 'the strip is five equal tiles');
+  assert.match(block, /<button[^>]*disabled="\{\{ comingSoon \}\}"[^>]*>Do it<\/button>/, 'Do it is bound disabled');
+  for (const a of ['{{ ra.accept }}', '{{ ra.defer }}', '{{ ra.canAccept }}', '{{ ra.canDefer }}']) assert.ok(block.includes(a), a);
+  for (const tag of ['svg', 'table', 'select']) {
+    for (const m of block.matchAll(new RegExp(`<${tag}\\b[^]*?</${tag}>`, 'g'))) assert.ok(!m[0].includes('<sc-for'), `an sc-for inside a ${tag}`);
+  }
+});
+
+test('Connect no longer draws the four tiles: the rollup is the home\'s strip', () => {
+  assert.equal(HTML.includes('list="{{ rollup }}"'), false, 'the rollup still renders on its own');
+  assert.equal(HTML.includes('{{ showLaunch }}'), false, 'the launch strip gate is still in the markup');
+  const cn = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', nowIso: NOW }));
+  assert.ok(!cn.showLaunch && !cn.sHome, 'Connect draws no strip');
+  assert.equal(cn.heroVisible, true, 'Connect keeps its network map');
+});
+
+test('the home draws no hero map, no discovery controls, and its own title row; the empty estate keeps its s2 onboarding', () => {
+  for (const view of ESTATES) {
+    const h = vals(home(view));
+    assert.equal(h.sHome, true, view);
+    assert.equal(h.heroVisible, false, `${view}: the map left the home`);
+    assert.equal(h.heroStrip, false, `${view}: so did its strip`);
+    assert.equal(h.showPageTitle, false, `${view}: the home draws its own title row`);
+    assert.equal(h.ownsDiscovery, false, `${view}: Re-discover belongs to Connect`);
+    assert.equal(h.sS0, false, `${view}: the onboarding block is s2's`);
+  }
+  const onboard = vals(mkC({ view: 'empty', estateParam: null, screen: 's2', nowIso: NOW }));
+  assert.equal(onboard.sS0, true);
+  assert.equal(onboard.sHome, false);
+});
+
+// Review Focus 4: an estate switch while on the home.
+test('an estate switch on the home shows the new estate\'s own figures and role list', () => {
+  const c = home('partial');
+  vals(c).setView({ target: { value: 'mature' } });
+  assert.equal(c.state.screen, 's0');
+  const v = vals(c), fresh = vals(home('mature'));
+  assert.equal(v.homeStrip[0].value, '221 sites · 4 clouds');
+  assert.equal(v.homeHead, fresh.homeHead);
+  assert.deepEqual(v.homeWaiting.map(a => a.key), fresh.homeWaiting.map(a => a.key));
+  assert.deepEqual(v.homeNow.map(p => p.key), fresh.homeNow.map(p => p.key));
 });

@@ -1,9 +1,20 @@
 # Monday demo, 2026-10-05: the notes, walked
 
-Growing estate, Network Eng persona, 1440 x 900. Eight beats, about twelve minutes.
+Growing estate, Network Eng persona, 1440 x 900. Nine beats, about thirteen minutes.
 `node scripts/demo-walk.mjs` clicks every beat below on a fresh profile and asserts the words in quotes. Run it the morning of the demo.
 
-Before you start: open the storefront, click **Reset demo** at the foot of the left rail, and check that Estate reads **Growing** and Persona reads **Network Eng**.
+Before you start: open the storefront. It opens on the NaaS home. Click **Reset demo** at the foot of the left rail, and check that Estate reads **Growing** and Persona reads **Network Eng**.
+
+## 0. The NaaS home: the whole network at a glance
+
+- Rail: **NaaS**. "Good morning, Network Eng" (the greeting follows the clock in Chicago time).
+- Under it, the Observe head: "13 findings open. $41,500/mo potential savings. 1 Sev 1 open now."
+- **Andi's briefing** on the left is the Monthly briefing's text for the role. **Waiting on you** on the right is the first three of Your actions, with the same Accept and Defer; Do it reads "Coming soon".
+- The five areas, each figure from the page its door opens: Discover "25 sites · 3 clouds", Connect "5 of 7 regions", Observe "1 of 2 connections", Govern "166", Cost "$41,500/mo".
+- **Now**: the eastus flap, "Azure eastus · ExpressRoute", "BGP flapping", with Trace.
+- Click **Executive** in the role chips: the briefing and the rows change to the executive team's. Click **Network Eng** to come back.
+
+Say: one page for every role. The role changes what the top band says; the strip and Now are the same for everyone.
 
 ## 1. Discover: add a source, and discovery finds it
 
@@ -56,8 +67,10 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 
 ## 8. The Estate switch (F2)
 
-- Rail: **Options**. Growing reads "7 of 9 regions still ride the public internet" (Oracle's two regions joined it in beat 1).
-- Estate, at the foot of the rail: **Established**. Every page recomputes: "1 of 8 regions still ride the public internet."
+- Rail: **Options**. It still reads the Connect verdict: Growing reads "7 of 9 regions still ride the public internet" (Oracle's two regions joined it in beat 1).
+- Rail: **NaaS**. The home reads "14 findings open" and "25 sites · 4 clouds" now that Oracle is in.
+- Estate, at the foot of the rail: **Established**, while on the home. Every figure recomputes: "10 findings open", "221 sites · 4 clouds", and Waiting on you lists Established's "3 paths send no telemetry", not Growing's rows.
+- Rail: **Options**: "1 of 8 regions still ride the public internet."
 - The answer to the stakeholder's question is Appendix A of the plan (docs/superpowers/plans/2026-09-30-notes-monday-demo.md).
 
 ## If something goes sideways

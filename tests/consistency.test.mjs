@@ -94,14 +94,16 @@ test('Logs puts its tabs above the card, like every other page, and the card doe
   assert.ok(!between('id="sec-logs"', 'aria-label="Filters"').includes('fx-card-title">Logs<'));
 });
 
-test('the NaaS home is Your network; Connect is its own page with Options and Ways to connect', () => {
+test('Connect\'s map is Your network; Connect is its own page with Options and Ways to connect', () => {
   // "Naas home is called 'Connect'. It needs to be called something else" (Micah, 2026-09-29).
+  // Since 2026-09-30 the NaaS home is s0 (tests/home.test.mjs), and its strip carries the
+  // four tiles this map used to draw, so Your network keeps its title and draws none.
   const home = vals(mkC({ view: 'partial', screen: 's3', tab: 'connect', estateParam: null }));
   assert.equal(home.pageTitle, 'Your network');
   assert.equal(home.cnShowTabs, false);
-  assert.equal(home.showLaunch, true);
+  assert.ok(!home.showLaunch);
   const cn = vals(mkC({ view: 'partial', screen: 's3', tab: 'connect', cnPage: 'options', estateParam: null }));
   assert.equal(cn.pageTitle, 'Connect');
   assert.deepEqual(cn.cnPanels.map(p => p.label), ['Options', 'Ways to connect']);
-  assert.equal(cn.showLaunch, false);
+  assert.ok(!cn.showLaunch);
 });
