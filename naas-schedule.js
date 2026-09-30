@@ -23,7 +23,7 @@ export const SCHEDULE_CHOICES = [
   { id: 'manual', label: 'Manual only', schedule: { kind: 'manual' } },
 ];
 
-function hhmm(at) { const p = String(at || '00:00').split(':'); return (+p[0]) * HOUR + (+p[1]) * 60000; }
+function atMs(at) { const p = String(at || '00:00').split(':'); return (+p[0]) * HOUR + (+p[1]) * 60000; }
 
 function sameSchedule(a, b) {
   if (!a || !b || a.kind !== b.kind) return false;
@@ -66,11 +66,11 @@ export function periodOf(sch) {
 export function prevRunAt(sch, now) {
   if (!sch || sch.kind === 'manual') return null;
   if (sch.kind === 'hours') { const p = periodOf(sch); return Math.floor(now / p) * p; }
-  if (sch.kind === 'nightly') { const t = Math.floor(now / DAY) * DAY + hhmm(sch.at); return t <= now ? t : t - DAY; }
+  if (sch.kind === 'nightly') { const t = Math.floor(now / DAY) * DAY + atMs(sch.at); return t <= now ? t : t - DAY; }
   if (sch.kind === 'weekly') {
     const midnight = Math.floor(now / DAY) * DAY;
     const back = (new Date(midnight).getUTCDay() - sch.day + 7) % 7;
-    const t = midnight - back * DAY + hhmm(sch.at);
+    const t = midnight - back * DAY + atMs(sch.at);
     return t <= now ? t : t - 7 * DAY;
   }
   return null;
@@ -232,3 +232,21 @@ export function scheduleView(est, now, opts = {}) {
     cadence: estateCadence(accounts),
   };
 }
+
+// ---------- One clock (2026-09-30) ----------
+// Findings, schedules and incidents read one now: the pinned s.nowIso when a
+// test or a demo sets it, the real clock otherwise. Times print in Dallas.
+export function nowOf(s) { return s && s.nowIso ? Date.parse(s.nowIso) : Date.now(); }
+const HHMM = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago' });
+export function hhmm(ms) { return HHMM.format(new Date(ms)); }
+/** An age in the fewest words: 22 min, 3 h, 2 d. */
+export function agoOf(at, now) {
+  const m = Math.max(0, Math.round((now - at) / 60000));
+  if (m < 60) return `${m} min`;
+  if (m < 1440) return `${Math.round(m / 60)} h`;
+  return `${Math.round(m / 1440)} d`;
+}
+/** When a seeded incident started: minutes before now, so it reads the same at any hour. */
+export function startOf(key, now, minutesAgo) { return now - minutesAgo * 60000; }
+/** How long ago each kind of seeded incident started, in minutes. */
+export const INCIDENT_MIN = { flap: 22, spike: 47, sat: 180, slo: 22 };

@@ -11,6 +11,7 @@ import * as F from './naas-flowmap.js';
 import { impacted, records, resolveDest } from './naas-connections.js';
 import * as S from './naas-sites.js';
 import * as P from './naas-paths.js';
+import { agoOf, startOf, INCIDENT_MIN } from './naas-schedule.js';
 
 const n = (x) => Number(x).toLocaleString('en-US');
 const R = 22, C = 2 * Math.PI * R;
@@ -21,12 +22,13 @@ export function gauges(conns) {
 }
 
 /** The operator's morning: what, where, how long, one action. Worst first. */
-export function queue(est, ob, conns, hp) {
+export function queue(est, ob, conns, hp, now = Date.now()) {
   const rows = [];
-  conns.rows.filter(r => r.degraded).forEach(r => rows.push({ key: 'deg:' + r.region, sev: 2, state: 'Degraded', what: `BGP flapping on ${r.ramp}, ${r.drops} drops`, where: `${r.cloud} ${r.region}`, age: '22 min', wl: r.wl, action: 'impact', actionLabel: 'See impact', connId: r.id, region: r.region }));
-  conns.rows.filter(r => r.hot && !r.degraded).forEach(r => rows.push({ key: 'sat:' + r.region, sev: 1, state: 'Saturating', what: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'} purchased`, where: `${r.cloud} ${r.region}`, age: '3 h', wl: r.wl, action: 'port', actionLabel: 'Add a port', connId: r.id, region: r.region }));
+  const age = (k) => agoOf(startOf(k, now, INCIDENT_MIN[k]), now);
+  conns.rows.filter(r => r.degraded).forEach(r => rows.push({ key: 'deg:' + r.region, sev: 2, state: 'Degraded', what: `BGP flapping on ${r.ramp}, ${r.drops} drops`, where: `${r.cloud} ${r.region}`, age: age('flap'), wl: r.wl, action: 'impact', actionLabel: 'See impact', connId: r.id, region: r.region }));
+  conns.rows.filter(r => r.hot && !r.degraded).forEach(r => rows.push({ key: 'sat:' + r.region, sev: 1, state: 'Saturating', what: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'} purchased`, where: `${r.cloud} ${r.region}`, age: age('sat'), wl: r.wl, action: 'port', actionLabel: 'Add a port', connId: r.id, region: r.region }));
   (ob.blind || []).forEach(r => rows.push({ key: 'blind:' + r.region, sev: 1, state: 'Blind', what: 'no flow logs, traffic unseen', where: `${r.cloud} ${r.region}`, age: 'since discovery', wl: r.wl, action: 'attach', actionLabel: 'Attach', region: r.region }));
-  (ob.flows || []).filter(f => !f.controlled && f.latency > F.SLO).slice(0, 3).forEach(f => rows.push({ key: 'slo:' + f.id, sev: 1, state: 'Over SLO', what: `${f.latency} ms on the public path`, where: f.name, age: '22 min', wl: 0, action: 'steer', actionLabel: 'Steer', flowId: f.id, region: (f.region || '').split(' ')[1] }));
+  (ob.flows || []).filter(f => !f.controlled && f.latency > F.SLO).slice(0, 3).forEach(f => rows.push({ key: 'slo:' + f.id, sev: 1, state: 'Over SLO', what: `${f.latency} ms on the public path`, where: f.name, age: age('slo'), wl: 0, action: 'steer', actionLabel: 'Steer', flowId: f.id, region: (f.region || '').split(' ')[1] }));
   return rows.sort((a, b) => b.sev - a.sev);
 }
 

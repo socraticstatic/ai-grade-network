@@ -8,6 +8,7 @@
 import * as S from './naas-sites.js';
 // Stakeholder round 2: path tradeoffs, health, endpoints/resources, Observe cuts, Cost arbitrage.
 import { fmt, pct } from './naas-logic.js';
+import { agoOf, hhmm, startOf, INCIDENT_MIN } from './naas-schedule.js';
 
 // ---------- Three paths x four lenses ----------
 export const PATHS = [
@@ -49,14 +50,15 @@ export function lensVerdict(est, lens) {
 }
 
 // ---------- Health ----------
-export function health(est, ob, steered) {
+export function health(est, ob, steered, now = Date.now()) {
   const rs = est.regionsList;
+  const age = (k) => agoOf(startOf(k, now, INCIDENT_MIN[k]), now);
   const regionHealth = {};
   rs.forEach(r => { regionHealth[r.region] = r.rel === 'warn' || r.link === 'degraded' ? 'amber' : !r.priv && r.pub > 120 ? 'amber' : 'green'; });
   const amber = Object.values(regionHealth).filter(h => h === 'amber').length;
   const incidents = [
-    ...rs.filter(r => r.link === 'degraded').map(r => ({ region: r.region, cloud: r.cloud, text: `${r.cloud} ${r.region} · BGP flapping on ${r.ramp || 'NetBond'} · 0.31% drops · 22 min · ${r.wl.toLocaleString('en-US')} workloads behind it` })),
-    ...rs.filter(r => r.rel === 'warn').map(r => ({ region: r.region, cloud: r.cloud, text: `${r.cloud} ${r.region} · p95 ${r.pub + 40} ms · 22 min · public path` })),
+    ...rs.filter(r => r.link === 'degraded').map(r => ({ region: r.region, cloud: r.cloud, text: `${r.cloud} ${r.region} · BGP flapping on ${r.ramp || 'NetBond'} · 0.31% drops · ${age('flap')} · ${r.wl.toLocaleString('en-US')} workloads behind it` })),
+    ...rs.filter(r => r.rel === 'warn').map(r => ({ region: r.region, cloud: r.cloud, text: `${r.cloud} ${r.region} · p95 ${r.pub + 40} ms · ${age('spike')} · public path` })),
     ...(ob.utilRows || []).filter(u => u.pct >= 80 && !rs.some(r => r.region === u.region && r.link === 'degraded')).map(u => ({ region: u.region, cloud: u.cloud, text: `${u.cloud} ${u.region} · ${u.pct}% of ${u.bw || u.ports + ' × 10 Gbps'} purchased · add a port before it saturates` })),
   ];
   const uptime = rs.length ? (rs.reduce((a, r) => a + (r.priv ? 99.99 : 99.5), 0) / rs.length).toFixed(2) : '—';
@@ -109,9 +111,10 @@ export function trends(ob, window) {
   const d = TREND[window] || [0, 0, 0, 0, 0, 0, 0];
   return ob.kpis.map((k, i) => { const delta = d[i] || 0; const good = (i === 1 || i === 2 || i === 3) ? delta <= 0 : delta >= 0; return { ...k, delta: (delta >= 0 ? '+' : '') + Math.round(delta * 100) + '%', deltaTone: good ? 'var(--success)' : 'var(--warning)', arrow: delta >= 0 ? '↑' : '↓', vs: `vs prior ${window}`, vsShort: `vs ${window}` }; });
 }
-export function anomalies(est, ob) {
+export function anomalies(est, ob, now = Date.now()) {
   const out = [];
-  est.regionsList.filter(r => r.rel === 'warn').forEach(r => out.push({ key: 'an-' + r.region, when: '02:14 today · 22 min', sev: 'amber', head: `Latency spike on ${r.cloud} ${r.region}`, cause: `Upstream transit congestion between the hyperscaler edge and your users; p95 rose from ${r.pub} to ${r.pub + 40} ms with 0.3% loss.`, did: 'AT&T flagged the event and confirmed the AT&T network path to the same region held at ' + r.fab + ' ms.', can: 'Attach the region and set a latency SLO; the AT&T network re-routes before the ceiling is hit.', region: r.region }));
+  const spike = startOf('spike', now, INCIDENT_MIN.spike);
+  est.regionsList.filter(r => r.rel === 'warn').forEach(r => out.push({ key: 'an-' + r.region, when: `Started ${hhmm(spike)} · ${agoOf(spike, now)}`, sev: 'amber', head: `Latency spike on ${r.cloud} ${r.region}`, cause: `Upstream transit congestion between the hyperscaler edge and your users; p95 rose from ${r.pub} to ${r.pub + 40} ms with 0.3% loss.`, did: 'AT&T flagged the event and confirmed the AT&T network path to the same region held at ' + r.fab + ' ms.', can: 'Attach the region and set a latency SLO; the AT&T network re-routes before the ceiling is hit.', region: r.region }));
   const newDest = est.regionsList.find(r => !r.priv && (r.tags || []).includes('Prod'));
   if (newDest) out.push({ key: 'an-dest', when: 'Yesterday', sev: 'amber', head: `New destination from ${newDest.region}: files.slack-edge.com`, cause: `Workloads tagged Prod began sending 3.1 GB/day to a destination not seen in the prior 30 days.`, did: 'Logged and classified as SaaS; no policy matched, so nothing was blocked.', can: 'Author a policy: when tag Prod reaches the Internet, require inline inspection.', region: newDest.region });
   if (ob.pub > 0) out.push({ key: 'an-egress', when: 'This week', sev: 'info', head: `Public egress up ${Math.round(8 + ob.pub * 3)}% week over week`, cause: `Growth is concentrated in object-storage reads from ${est.regionsList.filter(r => !r.priv).map(r => r.region).slice(0, 2).join(' and ') || 'unattached regions'}.`, did: 'Priced the same bytes on AT&T.', can: `Steer the object-storage flow: ${fmt(Math.round(ob.pub * 1000 * 0.07 * 30 / 10) * 10)}/mo back.` });
