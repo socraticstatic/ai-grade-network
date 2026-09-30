@@ -7,7 +7,7 @@
 // see yet reads "Not yet measured". Nothing here invents a live number.
 import { accessThing, cloudEdgeThing, cloudAccessThing, entersAtt } from './naas-things.js';
 import { attHolds, connModeOf, siteModeOf, RAMP_EDGE, regionOf, regionRows } from './naas-logic.js';
-import { regionState, healthOf, SLO, SLO_PRIVATE } from './naas-flowmap.js';
+import { regionState, healthOf, SLO, SLO_PRIVATE, HEALTH_WORD } from './naas-flowmap.js';
 import { countOf, stateOf, placeName } from './naas-sites.js';
 import { siteState } from './naas-volume.js';
 import { appsOf } from './naas-apps.js';
@@ -102,14 +102,23 @@ function siteCell(key, ctx) {
 }
 
 // Worst of the parts: down wins from any part; otherwise the worst material one.
+// On a tie the part AT&T measures beats a limited view (review round 2,
+// 2026-09-30): Bank scale analytics' On-ramp is the NetBond saturation you can
+// act on, not the public-internet spike's hollow ring that happens to come first.
+const worse = (p, w) => RANK[p.state] > RANK[w.state] || (RANK[p.state] === RANK[w.state] && !!w.limited && !p.limited);
 function worst(parts) {
-  const down = parts.find(p => p.c.state === 'down');
-  if (down) return down.c;
+  const downs = parts.filter(p => p.c.state === 'down');
+  if (downs.length) return downs.reduce((w, p) => (worse(p.c, w) ? p.c : w), downs[0].c);
   const live = parts.filter(p => p.material && RANK[p.c.state] != null);
-  if (live.length) return live.reduce((w, p) => (RANK[p.c.state] > RANK[w.state] ? p.c : w), live[0].c);
+  if (live.length) return live.reduce((w, p) => (worse(p.c, w) ? p.c : w), live[0].c);
   const nd = parts.find(p => p.c.state === 'nodata');
   return nd ? nd.c : C('none', '', '', '');
 }
+
+// The open problems that list an app on a region, worst first.
+const listedOn = (ctx, tag, region) => (ctx.probs || []).filter(q => q.region === region && (q.apps || []).includes(tag)).sort((a, b) => RANK[b.state] - RANK[a.state]);
+// A state lifted to the worst of the problems given, when they are worse.
+const liftTo = (state, ps) => (ps.length && RANK[ps[0].state] > (RANK[state] ?? -1) ? ps[0].state : state);
 
 // An open problem colours the cell it sits on (review, 2026-09-30): the same
 // thing in the same region is at least the problem's state, and says why.
@@ -240,8 +249,17 @@ function timeRow(ctx, a, r) {
     return { key: c.key, ms: c.ms, msF: c.ms != null ? `${c.ms} ms` : '', loss: c.loss, lossF: c.loss || '', title };
   });
   const slo = r.priv ? SLO_PRIVATE : SLO, topApp = a && (a.topApps || [])[0];
-  return { key: `${a ? a.tag : ''}|${r.region}`, tag: a ? a.tag : null, label: !a ? `${r.cloud} ${r.region}` : topApp ? `${a.tag} → ${topApp}` : a.tag, region: r.region, where: `${r.cloud} ${r.region}`, site: site.name,
-    aggHub: drawn.hops.some(h => h.kind === 'hub'), cells: out, total: drawn.ms, totalF: `${drawn.ms} ms`, slo, state: row && row.degraded ? 'down' : healthOf(drawn.ms, slo), hops: drawn.hops, wl: a ? a.wl : (r.wl || 0) };
+  // The lift the Health grid takes (review round 2, 2026-09-30): a row whose app
+  // and region an open problem lists is at least that problem's state, and its
+  // title, and the cell the problem sits on, carry the problem's words.
+  const listed = a ? listedOn(ctx, a.tag, r.region) : [];
+  const state = liftTo(row && row.degraded ? 'down' : healthOf(drawn.ms, slo), listed);
+  const cellOf = (q) => (q.kind === 'spike' ? 'backbone' : mode === 'direct' ? 'cloudlink' : 'onramp');
+  const cells2 = out.map(c => { const on = listed.filter(q => cellOf(q) === c.key); return on.length ? { ...c, title: [c.title, ...on.map(q => q.what)].join(' · ') } : c; });
+  const label = !a ? `${r.cloud} ${r.region}` : topApp ? `${a.tag} → ${topApp}` : a.tag;
+  const title = [`${label} · ${site.name} to ${r.cloud} ${r.region} · ${drawn.ms} ms against ${slo} ms · ${HEALTH_WORD[state] || state}`, ...listed.map(q => `${q.thing}: ${q.what}`)].join(' · ');
+  return { key: `${a ? a.tag : ''}|${r.region}`, tag: a ? a.tag : null, label, region: r.region, where: `${r.cloud} ${r.region}`, site: site.name,
+    aggHub: drawn.hops.some(h => h.kind === 'hub'), cells: cells2, total: drawn.ms, totalF: `${drawn.ms} ms`, slo, state, title, hops: drawn.hops, wl: a ? a.wl : (r.wl || 0) };
 }
 
 /**
@@ -272,7 +290,8 @@ export function pathTimes(ctx, { pins = [] } = {}) {
   const base = (ctx.apps || []).map(a => {
     const parts = (a.parts || []).filter(p => p.share >= 0.05).map(p => ({ p, r: regs.find(x => x.region === p.region) })).filter(x => x.r);
     if (!parts.length) return null;
-    const weight = ({ r, p }) => { const row = rowOf(ctx, r.region); return (row && row.degraded ? RW.down : RW[regionState(r)] || 1) * 10 + p.share; };
+    // The worst region counts the problems that list the app there, so the row lands where Health says it hurts.
+    const weight = ({ r, p }) => { const row = rowOf(ctx, r.region); return (RW[liftTo(row && row.degraded ? 'down' : regionState(r), listedOn(ctx, a.tag, r.region))] || 1) * 10 + p.share; };
     const { r } = parts.reduce((w, x) => (weight(x) > weight(w) ? x : w), parts[0]);
     return timeRow(ctx, a, r);
   }).filter(Boolean).sort((x, y) => (RW[y.state] || 0) - (RW[x.state] || 0) || y.wl - x.wl);

@@ -10,7 +10,7 @@ import * as S from './naas-sites.js';
 import { fmt, pct, connModeOf, attHolds, siteModeOf } from './naas-logic.js';
 import { CATALOG } from './naas-data.js';
 import { agoOf, hhmm, startOf, INCIDENT_MIN } from './naas-schedule.js';
-import { regionState, RAMP_NAME } from './naas-flowmap.js';
+import { regionState, RAMP_NAME, HEALTH_INK } from './naas-flowmap.js';
 
 // ---------- Three paths x four lenses ----------
 export const PATHS = [
@@ -261,9 +261,10 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   const xflows = flows.filter(f => f.kind !== 'App'); const xMax = Math.max(1, ...xflows.map(f => f.gbps));
   const multiRows = xflows.map(f => ({ key: f.id, id: f.id, name: f.name, sub: `${f.controlled ? 'on AT&T' : 'public internet'} · ${f.latency} ms`, v: f.gbps.toFixed(1) + ' Gbps', w: Math.round(f.gbps / xMax * 100) + '%', fill: f.controlled ? 'var(--viz-1)' : 'var(--viz-6)', controlled: f.controlled, steerable: !!f.steerable && !f.controlled }));
   const multi = { rows: multiRows, privN: multiRows.filter(m => m.controlled).length, totalN: multiRows.length };
-  // 6. Latency over SLO: the flows above 100 ms, worst first.
+  // 6. Latency over SLO: the flows above 100 ms, worst first, in the Over SLO ink
+  // (review round 2, 2026-09-30): red is Down's alone.
   const SLO = 100; const over = flows.filter(f => f.latency > SLO).sort((a, b) => b.latency - a.latency).slice(0, 5); const lMax = Math.max(SLO, ...over.map(f => f.latency));
-  const slo = over.map(f => ({ key: f.id, id: f.id, name: f.name, sub: `${f.controlled ? 'on AT&T' : 'public internet'} · ${f.gbps.toFixed(1)} Gbps`, v: f.latency + ' ms', w: Math.round(f.latency / lMax * 100) + '%', fill: 'var(--error)', steerable: !!f.steerable && !f.controlled }));
+  const slo = over.map(f => ({ key: f.id, id: f.id, name: f.name, sub: `${f.controlled ? 'on AT&T' : 'public internet'} · ${f.gbps.toFixed(1)} Gbps`, v: f.latency + ' ms', w: Math.round(f.latency / lMax * 100) + '%', fill: HEALTH_INK.slo, steerable: !!f.steerable && !f.controlled }));
   return { talkers, newDest, newDestN: newDest.length, shadow, shadowN, shadowGb: shadowGb.toFixed(1), growth, multi, slo, sloN: slo.length, sloTotal: flows.length, SLO };
 }
 

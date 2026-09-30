@@ -93,18 +93,36 @@ test('Trace lands on a Paths row in the problem\'s own region, on every estate',
   }
 });
 
-test('Established us-west-2 saturation traces to us-west-2, first on Paths', () => {
+// Review round 2 (2026-09-30): Paths takes Health's lift, so Established
+// internet-facing now sits on the saturated us-west-2 (At risk) instead of a
+// green us-east-1, and the saturation's Trace lands on that default row. The
+// "no default row there" premise this test used to start from was the defect.
+// The pin path stays covered end to end by the ap-southeast-1 spike: both its
+// apps ride the Down eu-central-1 first, so Trace pins a row and shows it first.
+test('Established us-west-2 saturation traces to its own default row; the ap-southeast-1 spike pins one first', () => {
   const c = at('mature', { obPanel: 'health' });
   const v0 = vals(c);
   const i = v0.problemRows.findIndex(p => p.where === 'AWS us-west-2');
   assert.equal(i, 0, 'the top-ranked problem');
-  assert.ok(!v0.pathTimeAll.some(r => r.region === 'us-west-2'), 'no default row sits on us-west-2');
+  const own = v0.pathTimeAll.find(r => r.region === 'us-west-2');
+  assert.ok(own && !own.pinned && own.state === 'risk', 'internet-facing rides the saturation on a default row');
   v0.problemRows[i].trace();
-  const v = vals(c);
-  assert.equal(v.pathTimeAll[0].region, 'us-west-2');
-  assert.equal(v.pathTimeAll[0].key, c.state.pathSel);
-  assert.ok(v.pathTimeRows[0].sel);
+  let v = vals(c);
+  assert.equal(c.state.pathSel, own.key);
+  assert.ok(v.pathTimeRows.find(r => r.key === own.key).sel);
   assert.equal(c.state.pathsPage, 0);
+  const c2 = at('mature', { obPanel: 'health' });
+  const v2 = vals(c2);
+  const j = v2.problemRows.findIndex(p => p.where === 'AWS ap-southeast-1');
+  assert.ok(j >= 0);
+  assert.ok(!v2.pathTimeAll.some(r => r.region === 'ap-southeast-1'), 'no default row sits on ap-southeast-1');
+  v2.problemRows[j].trace();
+  v = vals(c2);
+  assert.equal(v.pathTimeAll[0].region, 'ap-southeast-1');
+  assert.equal(v.pathTimeAll[0].key, c2.state.pathSel);
+  assert.ok(v.pathTimeAll[0].pinned);
+  assert.ok(v.pathTimeRows[0].sel);
+  assert.equal(c2.state.pathsPage, 0);
 });
 
 test('a pinned row is computed on demand with the same hop mapping, and shown first', () => {
