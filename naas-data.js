@@ -44,11 +44,19 @@ const REG = (cloud, region, wl, priv, ramp, pub, fab, tags, rel, x) => ({ cloud,
 // What a newly added source finds (notes, 2026-09-30: "add a new source, and rerun
 // discovery"). Oracle is the demo: two regions on the public internet with ERP on
 // them, an egress bucket and one priced finding, so every count and total follows.
+// apps (final review, 2026-09-30): what discovery reads off the source's own
+// control plane, so its workloads carry ERP names and the ERP group reads
+// "erp → erp-ledger", not a generic app. [app, version, port, note, workload kind].
+const ERP_APPS = {
+  ledger: ['erp-ledger', '12.2.12', '8080/tcp', 'general ledger and period close', 'app'],
+  payables: ['erp-payables', '12.2.12', '8080/tcp', 'supplier invoices and payments', 'app'],
+  ebs: ['ebs-app', '12.2.12', '443/tcp', 'E-Business Suite web entry and forms', 'web'],
+};
 export const FOUND_SOURCES = {
   Oracle: {
     regions: [
-      REG('Oracle', 'us-ashburn-1', 48, false, null, 44, 11, ['ERP', 'Finance']),
-      REG('Oracle', 'eu-frankfurt-1', 22, false, null, 96, 24, ['ERP']),
+      { ...REG('Oracle', 'us-ashburn-1', 48, false, null, 44, 11, ['ERP', 'Finance']), apps: [ERP_APPS.ledger, ERP_APPS.payables, ERP_APPS.ebs] },
+      { ...REG('Oracle', 'eu-frankfurt-1', 22, false, null, 96, 24, ['ERP']), apps: [ERP_APPS.ledger, ERP_APPS.ebs] },
     ],
     bucket: { id: 'oci', name: 'Oracle egress', cloud: 'Oracle', today: 3400, fabric: 1500 },
     finding: { kind: 'newcloud-oracle', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'FinOps', head: '2 Oracle regions found on the public internet', ev: 'us-ashburn-1 and eu-frankfurt-1 carry 70 workloads, ERP among them, over public egress.', priced: true, save: 1900, why: 'NetBond reaches Oracle FastConnect in Ashburn and Frankfurt.', ladder: ['Attach over NetBond', 'Oracle FastConnect over NetBond', 'Multi-cloud routing'] },

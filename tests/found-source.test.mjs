@@ -38,6 +38,27 @@ test('Growing: add Oracle, and the account, its regions, its workloads and its a
   assert.ok(vals(c).pathFlowAll.some(r => r.tag === 'erp'), 'ERP shows up as an app group');
 });
 
+// Final review, 2026-09-30, finding 2: Health read "erp → storefront-web". The
+// stakeholder's example is "Finance → ERP"; an ERP group names ERP apps.
+test('the ERP app group names the ERP apps Oracle found, never a generic one', () => {
+  const c = sources('partial');
+  addOracle(c);
+  c.setState({ screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' });
+  const seeds = new Set(D.FOUND_SOURCES.Oracle.regions.flatMap(r => (r.apps || []).map(x => x[0])));
+  const generic = ['storefront-web', 'redis', 'batch-runner', 'triton-server', 'embed-worker'];
+  const row = vals(c).pathFlowAll.find(r => r.tag === 'erp');
+  assert.ok(row, 'ERP shows up as an app group');
+  const top = row.label.split(' → ')[1];
+  assert.ok(!generic.includes(top), `erp group reads "${row.label}"`);
+  assert.ok(seeds.has(top), `erp top app ${top} is one of the Oracle seed apps (${[...seeds].join(', ')})`);
+  // Every Oracle workload's apps are Oracle's, in every app group, so no ERP region carries a storefront.
+  const inv = A.inventory(SCH.withSources(D.ESTATES.partial, [{ provider: 'Oracle', at: Date.parse(NOW), estId: 'partial' }]));
+  const ora = inv.find(cl => cl.name === 'Oracle');
+  const apps = ora.regions.flatMap(r => r.vpcs.flatMap(v => v.subnets.flatMap(s => s.workloads.flatMap(w => w.endpoints.map(e => e.app)))));
+  assert.equal(apps.length, 70, 'one app per Oracle workload');
+  assert.ok(apps.every(a => seeds.has(a)), [...new Set(apps.filter(a => !seeds.has(a)))].join(', '));
+});
+
 test('See what it found drills into the new cloud, in place', () => {
   const c = sources('partial');
   addOracle(c);
