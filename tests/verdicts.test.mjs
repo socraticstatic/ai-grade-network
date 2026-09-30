@@ -24,7 +24,8 @@ const EXPECT = {
   mature: {
     connect: '1 of 8 regions still ride the public internet. 7 are on the AT&T network.',
     govern: '14 policies enforced. 2 authored but not enforced.',
-    cost: '$32,800/mo leaves through public egress that the AT&T network would carry for $15,300.',
+    // Established prices its savings (2026-09-30), so Cost leads with what is on the table.
+    cost: '$17,500/mo on the table across 2 priced findings. $61,400/mo already saved on AT&T.',
     observe: '95% of all traffic on AT&T, saving $61.4k/mo. 1 region is blind.',
   },
   trust: {

@@ -7,6 +7,8 @@ import { mkC } from './harness.mjs';
 // 'xx findings open. $xx/mo potential savings'" (notes, 2026-09-29).
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
+const store = {};
+globalThis.localStorage = globalThis.localStorage || { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
 const at = (view, patch = {}) => mkC({ view, screen: 's3', tab: 'observe', estateParam: null, ...patch });
 
 test('Observe leads with findings open and potential savings', () => {
@@ -22,7 +24,10 @@ test('the count and the dollars are the open findings, the same figure Cost puts
 });
 
 test('findings with no price still count as open; an estate with none keeps the old line', () => {
-  const v = vals(at('mature'));
+  // Established prices its savings since 2026-09-30; snooze both priced findings to leave only unpriced ones open.
+  const c = at('mature', { obPage: 'insights', insPanel: 'findings' });
+  for (const k of ['avoidable', 'crosscloud']) { vals(c).findAll.find(r => r.key === k).open(); vals(c).fd.actions.find(a => a.label === 'Snooze 7 days').go(); }
+  const v = vals(c);
   assert.equal(v.pageVerdict, `${v.openFindingsN} ${v.openFindingsN === 1 ? 'finding' : 'findings'} open.`, 'nothing priced, so no dollar clause');
   assert.equal(vals(at('empty')).pageVerdict, 'No telemetry yet.');
 });
