@@ -104,6 +104,10 @@ test('Connect\'s map is Your network; Connect is its own page with Options and W
   assert.ok(!home.showLaunch);
   const cn = vals(mkC({ view: 'partial', screen: 's3', tab: 'connect', cnPage: 'options', estateParam: null }));
   assert.equal(cn.pageTitle, 'Connect');
-  assert.deepEqual(cn.cnPanels.map(p => p.label), ['Options', 'Ways to connect']);
+  // Orders joined them (2026-09-30, "options and orders is so weird"): the order in
+  // progress and the orders placed this session are a Connect page, not a screen of their own.
+  // The tab says Recommended, the destination's own name (2026-09-30, Connect navigation); cnPage 'options' keeps old links.
+  assert.deepEqual(cn.cnPanels.map(p => p.label), ['Recommended', 'Ways to connect', 'Orders']);
+  assert.equal(vals(mkC({ view: 'partial', screen: 's3', tab: 'connect', cnPage: 'orders', estateParam: null })).pageTitle, 'Connect');
   assert.ok(!cn.showLaunch);
 });
