@@ -7,7 +7,7 @@
  */
 import * as S from './naas-sites.js';
 // Stakeholder round 2: path tradeoffs, health, endpoints/resources, Observe cuts, Cost arbitrage.
-import { fmt, pct } from './naas-logic.js';
+import { fmt, pct, connModeOf, attHolds } from './naas-logic.js';
 import { agoOf, hhmm, startOf, INCIDENT_MIN } from './naas-schedule.js';
 import { regionState } from './naas-flowmap.js';
 
@@ -26,7 +26,7 @@ export const LENSES = [
 const GB_PER_WL_MO = 42;
 // Scale GB per workload so that public regions' egress at $0.09 equals the estate's public egress spend.
 function gbPerWl(est, base) { const pubWl = est.regionsList.filter(r => !r.priv).reduce((a, r) => a + r.wl, 0); const totalWl = est.regionsList.reduce((a, r) => a + r.wl, 0) || 1; const pubShare = pubWl / totalWl; const pubSpend = base * (pubShare * 0.09 / (pubShare * 0.09 + (1 - pubShare) * 0.02) || 0); return pubWl && base ? pubSpend / 0.09 / pubWl : GB_PER_WL_MO; }
-export function regionPath(r) { return r.priv ? (r.ramp === 'DX' || r.ramp === 'ER' ? 'native' : 'netbond') : 'internet'; }
+export function regionPath(r) { const m = connModeOf(r); return m === 'netbond' ? 'netbond' : m === 'internet' ? 'internet' : 'native'; }
 export function compareRegion(r, base, est) {
   const gb = Math.round(r.wl * (r.gbPerWl || GB_PER_WL_MO)), cur = regionPath(r);
   return PATHS.map(p => ({ ...p, cur: p.id === cur, egressMo: Math.round(gb * p.egress), latMs: p.lat(r), latText: p.latLabel(r), gbF: gb.toLocaleString('en-US'), math: `${gb.toLocaleString('en-US')} GB × $${p.egress.toFixed(2)} = ${fmt(Math.round(gb * p.egress))}/mo` }));
@@ -248,4 +248,19 @@ export function insightWidgets(est, ob, win = 30) {
   const SLO = 100; const over = flows.filter(f => f.latency > SLO).sort((a, b) => b.latency - a.latency).slice(0, 5); const lMax = Math.max(SLO, ...over.map(f => f.latency));
   const slo = over.map(f => ({ key: f.id, id: f.id, name: f.name, sub: `${f.controlled ? 'on AT&T' : 'public internet'} · ${f.gbps.toFixed(1)} Gbps`, v: f.latency + ' ms', w: Math.round(f.latency / lMax * 100) + '%', fill: 'var(--error)', steerable: !!f.steerable && !f.controlled }));
   return { talkers, newDest, newDestN: newDest.length, shadow, shadowN, shadowGb: shadowGb.toFixed(1), growth, multi, slo, sloN: slo.length, sloTotal: flows.length, SLO };
+}
+
+/** What AT&T bills for the cloud side (2026-09-30: one function for the AT&T
+ *  charges tab, the Traffic Cost view and the cost legs). A NetBond on-ramp is
+ *  billed where AT&T carries the region (attHolds); a port the customer owns
+ *  through their own cross-connect, or an Equinix port, is not AT&T's to bill. */
+export function attChargeRows(est, invAll) {
+  const nb = new Set(est.regionsList.filter(attHolds).map(r => r.region));
+  const vpcsAll = (invAll || []).flatMap(c => (c.regions || []).filter(r => nb.has(r.region)).flatMap(r => r.vpcs || []));
+  const hostedN = vpcsAll.filter(v => v.managed).length, l3N = vpcsAll.filter(v => v.priv && !v.managed).length;
+  return [
+    { key: 'nb', label: 'NetBond on-ramps', sub: `${nb.size} ${nb.size === 1 ? 'region' : 'regions'} × $1,800`, v: nb.size * 1800 },
+    { key: 'hv', label: 'Hosted VPC / VNet', sub: `${hostedN} × $2,400`, v: hostedN * 2400 },
+    { key: 'l3', label: 'Customer L3 attach', sub: `${l3N} × $400`, v: l3N * 400 },
+  ].filter(r => r.v > 0);
 }

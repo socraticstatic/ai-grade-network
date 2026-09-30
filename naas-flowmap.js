@@ -138,6 +138,8 @@ export function rightRoots(est, flows, by = 'cloud', left = null) {
  *  apps splits evenly between them. tag keeps one app whole. */
 export function destRoots(regions, fabT, pubT, by = 'cloud', tag = null) {
   const priv = regions.filter(r => r.priv), pub = regions.filter(r => !r.priv);
+  // Nothing attached: no on-ramp to land on, so it all reaches the clouds over the internet (2026-09-30: Small drew a NetBond it does not have).
+  if (!priv.length) { pubT += fabT; fabT = 0; }
   const fabTo = priv.length ? priv : regions, pubTo = pub.length ? pub : (priv.length ? priv : regions);
   const wl = (rs) => rs.reduce((a, r) => a + (r.wl || 0), 0) || 1;
   const fw = wl(fabTo), pw = wl(pubTo);

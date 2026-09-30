@@ -8,14 +8,15 @@
 // naas-fabric.js — inside the AT&T fabric band: facilities → ports → circuits,
 // opened in place on the picture. Pure data. Added 2026-09-09 (Micah, 14:13:
 // "Why does clicking on AT&T fabric take me to a wordy sales page!").
-import { plural } from './naas-logic.js';
+import { plural, attHolds } from './naas-logic.js';
 const n = (x) => Number(x).toLocaleString('en-US');
 
 /** Facilities the estate's attached regions land on, from the inventory's city per region. */
 export function facilities(est, inv, ob) {
   const util = ob.utilRows || [];
   const byCity = {};
-  inv.flatMap(c => c.regions).filter(r => r.priv).forEach(r => {
+  // An AT&T facility holds the on-ramps AT&T carries; a port the customer owns, or Equinix's, is not AT&T's (2026-09-30).
+  inv.flatMap(c => c.regions).filter(r => r.priv && attHolds(est.regionsList.find(x => x.region === r.region) || r)).forEach(r => {
     const city = r.city || r.region; const u = util.find(x => x.region === r.region) || { ports: 1, cap: 10, gbps: 0, pct: 0 };
     const f = byCity[city] = byCity[city] || { key: 'fac:' + city, city, name: `AT&T ${city}`, regions: [], ramps: new Set(), ports: 0, cap: 0, gbps: 0, degraded: false };
     const reg = est.regionsList.find(x => x.region === r.region) || {};

@@ -244,7 +244,9 @@ test('the roots still read on partial and mature', () => {
   // Then Salt Lake branch, a Lumen last mile the customer bought: 9 -> 10.
   // Partial became 25 named sites across five regions on 2026-09-28: 5 -> 25.
   // The sites root is regions since 2026-09-29: five on partial, five on mature.
-  for (const [view, sites, fab, clouds] of [['partial', 5, 2, 7], ['mature', 5, 7, 8]]) {
+  // AT&T facilities hold only the on-ramps AT&T carries (2026-09-30): mature's own-port
+  // Direct Connect (us-west-2) and its Equinix port (us-east-04) leave, 7 -> 5.
+  for (const [view, sites, fab, clouds] of [['partial', 5, 2, 7], ['mature', 5, 5, 8]]) {
     const v = vals(mkC({ view }));
     assert.ok(v.sitesDoor.label.startsWith(`All ${sites} `), `${view} sites: ${v.sitesDoor.label}`);
     assert.ok(v.bandDoor.label.startsWith(`All ${fab} `), `${view} fabric: ${v.bandDoor.label}`);

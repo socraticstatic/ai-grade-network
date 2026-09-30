@@ -6,7 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 import * as D from './naas-data.js';
-import { filterSites, buRows, regionRows, regionOf, onAtt, fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits } from './naas-logic.js';
+import { filterSites, buRows, regionRows, regionOf, onAtt, fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits , connModeOf, CONN_LABEL } from './naas-logic.js';
 import * as A from './naas-addendum.js';
 import * as R from './naas-round2.js';
 import * as S from './naas-sites.js';
@@ -436,10 +436,9 @@ export function vals(c) {
   const heroRegions = L.regions.filter(r => !r.card).map(r => ({ ...r, key: r.key, pillN: '', hasPill: !(r.ghost || r.rollup || r.other || r.pinned || r.leaf), noPill: !!(r.ghost || r.rollup || r.other || r.pinned || r.leaf), tip: wlTip(r.cloud && !r.child ? `${r.cloud} ${r.region}` : r.region, r), op: dimFor(['reg' + r.region]), ty: r.y + 19, dash: r.seeAll ? '3 3' : r.ghost ? '4 4' : 'none', stroke: r.seeAll ? 'var(--cta)' : 'var(--border-primary)', color: r.seeAll ? 'var(--link)' : (r.ghost || r.muted) ? 'var(--text-disabled)' : 'var(--text-heading)', cursor: r.ghost || r.muted ? 'default' : 'pointer', relFill: r.ghost ? 'transparent' : hp.regionHealth[r.region] === 'red' ? 'var(--error)' : hp.regionHealth[r.region] === 'amber' ? 'var(--warning)' : 'var(--success)', relTitle: r.link === 'degraded' ? `Degraded: BGP flapping on ${F.RAMP_NAME[r.ramp] || 'NetBond'}` : hp.regionHealth[r.region] === 'amber' ? 'Degraded: latency spike on the public path' : 'Healthy', rx: L.rightX + (r.indent || 0), dotX: L.rightX + 214, rw: 240 - (r.indent || 0), rh: r.child ? 26 : 28, caret: r.seeAll ? '›' : r.ghost || r.rollup || r.other ? (r.other ? '‹' : '') : (r.pinned ? '‹' : r.leaf ? '' : '›'), action: r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : ''), hasAction: !!(r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : '')), act: () => { if (r.link === 'degraded') { go('s3', { layer: 'cloud', tab: 'observe', mapSel: 'cx-' + r.region, mapRegion: r.region, panelTab: 'impact' })(); return; } composeFor(go, r)(); }, actionBg: r.link === 'degraded' ? 'var(--warning)' : 'var(--cta)', rectFill: r.seeAll ? 'var(--bg-accent)' : r.pinned ? 'var(--bg-accent)' : r.child ? 'var(--bg-wash)' : 'var(--bg-base)', relOp: r.child || r.other ? 0 : 1, click: () => { if (r.ghost) return; if (r.seeAll) { openWorkloads(r.wlScope.region, r.wlScope.vpcId, r.wlScope.snId); return; } if (r.wlSel) { set({ mapSel: r.wlSel, panelTab: 'overview' }); return; } if (r.toRoot) { set(r.toProvider ? { cloudDrill: [], cloudPick } : { cloudDrill: [], cloudPick: null }); return; } if (r.pinned) { set({ cloudDrill: cloudDrill.slice(0, -1), cloudPick }); return; } if (r.rollup) return; if (r.child) { if (r.drill) set({ cloudDrill: [...cloudDrill, r.drill] }); return; } set({ cloudDrill: [r.region], cloudPick: r.cloud, andiScope: { kind: 'region', id: r.region, label: r.cloud + ' ' + r.region } }); }, enter: () => set({ hoverNode: 'reg' + r.region, hoverRegion: r.ghost || r.rollup ? null : r.region }), leave: () => set({ hoverNode: null, hoverRegion: null }) }));
   // Provider cards: the first level on the right. Each says how many regions it
   // holds and how they are reached, and opens to those regions.
-  const RAMP_NAME = { NetBond: 'NetBond', DX: 'DX', ER: 'ER', Interconnect: 'Interconnect', EQX: 'Equinix' };
   const heroClouds = L.regions.filter(r => r.card).map(r => {
     const rs = est.regionsList.filter(x => x.cloud === r.cloud);
-    const ways = [...new Set(rs.map(x => (x.priv ? RAMP_NAME[x.ramp] || 'private' : 'internet')))];
+    const ways = [...new Set(rs.map(x => (x.priv ? CONN_LABEL[connModeOf(x)].short : 'internet')))];
     if (r.ghost) return { ...r, key: 'card:' + r.cloud, x: L.rightX, dotX: L.rightX + 226, tip: 'Discover to find them', op: 1, sub: r.cloud === 'Your clouds' ? 'AWS, Azure, GCP, Oracle' : 'CoreWeave, GPU clouds', relFill: 'transparent', relTitle: '', click: () => {}, enter: () => {}, leave: () => {}, dash: '4 4', color: 'var(--text-disabled)', cursor: 'default', caret: '' };
     const down = rs.some(x => hp.regionHealth[x.region] === 'red'), amber = !down && rs.some(x => hp.regionHealth[x.region] === 'amber');
     return { ...r, dash: 'none', color: 'var(--text-heading)', cursor: 'pointer', caret: '›', hasPill: true, pillN: String(rs.length), key: 'card:' + r.cloud, x: L.rightX, dotX: L.rightX + 226, tip: `${r.cloud} · ${plural(r.count, 'region', 'regions')} · ${plural(r.wl, 'workload', 'workloads')}`, op: dimFor(['reg' + r.region]), sub: `${plural(r.count, 'region', 'regions')} · ${ways.length > 2 ? ways.slice(0, 2).join(', ') + ' +' + (ways.length - 2) : ways.join(', ')}`,
@@ -1524,7 +1523,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const conns = X.connections(est0, ob);
   const obConn = s.obConn && conns.rows.some(r => r.id === s.obConn) ? s.obConn : (conns.rows[0] || {}).id;
   const connRow = conns.rows.find(r => r.id === obConn) || null;
-  const connRows = conns.rows.map(r => ({ ...r, key: r.id, label: `${r.cloud} ${r.region}`, sub: `${r.ramp} · ${r.bw || r.ports + ' × 10 Gbps'} purchased`, pctF: r.pct + '%', curAvg: `cur ${r.gbps} · avg ${r.avg} Gbps`, on: r.id === obConn, rowBg: r.id === obConn ? 'var(--bg-accent)' : 'transparent', stateColor: r.state === 'Up' ? 'var(--success)' : 'var(--warning)', lineColor: r.degraded ? 'var(--error)' : '#009fdb', select: () => set({ obConn: r.id, cloudDrill: [r.region] }), hasDoor: r.hot, doorLabel: 'Add a port', go: composeFor(go, est0.regionsList.find(x => x.region === r.region) || {}) }));
+  const connRows = conns.rows.map(r => ({ ...r, key: r.id, label: `${r.cloud} ${r.region}`, sub: `${F.RAMP_NAME[r.ramp] || 'NetBond'} · ${r.bw || r.ports + ' × 10 Gbps'} purchased`, pctF: r.pct + '%', curAvg: `cur ${r.gbps} · avg ${r.avg} Gbps`, on: r.id === obConn, rowBg: r.id === obConn ? 'var(--bg-accent)' : 'transparent', stateColor: r.state === 'Up' ? 'var(--success)' : 'var(--warning)', lineColor: r.degraded ? 'var(--error)' : '#009fdb', select: () => set({ obConn: r.id, cloudDrill: [r.region] }), hasDoor: r.hot, doorLabel: 'Add a port', go: composeFor(go, est0.regionsList.find(x => x.region === r.region) || {}) }));
   const impact0 = X.impacted(est0, inv, connRow);
   const impact = { ...impact0, isNone: impact0.kind === 'none', isHit: impact0.kind !== 'none', hasDown: impact0.downstream.length > 0, hasVpcs: impact0.vpcs.length > 0, vpcs: impact0.vpcs.map(v => ({ ...v, key: v.name, wlF: v.wl.toLocaleString('en-US') + ' workloads', tagsF: v.tags.join(' · ') || 'untagged' })), downstream: impact0.downstream.map(d => ({ ...d, key: d.label, vpcsF: d.vpcs.map(v => v.name).join(', ') })), tone: impact0.kind === 'direct' ? 'var(--error)' : impact0.kind === 'possible' ? 'var(--warning)' : 'var(--success)', title: connRow ? `${connRow.cloud} ${connRow.region} · ${connRow.ramp}` : 'No connection selected', openLogs: () => toLogs({ logPattern: 'all', obScope: connRow ? 'cloud:' + connRow.cloud : obScope }), askAndi: () => set({ andiScope: connRow ? { kind: 'region', id: connRow.region, label: `${connRow.cloud} ${connRow.region}` } : null, andiOpen: true }) };
   const logPattern = s.logPattern || 'all';
@@ -1779,7 +1778,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // bucket per Gbps outside. Its avoidable share is what could be saved.
   const mapRates = (() => {
     const bk = (est0.buckets || []), sb = bk.find(b => b.id === 'ipsec') || bk.find(b => b.id === 'misc') || { today: 0, fabric: 0 };
-    const sp0 = F.flowSplit(est0, ob.flows), attMo = attChargeRows(est0, inv).reduce((a, r) => a + r.v, 0);
+    const sp0 = F.flowSplit(est0, ob.flows), attMo = R.attChargeRows(est0, inv).reduce((a, r) => a + r.v, 0);
     // A month's bill over the volume the window averages (2026-09-30): the map
     // draws window-scaled Gbps, so the rate divides by the same level, and
     // Whole estate IPsec prices at its $8,600 bucket in every Since window.
@@ -3057,17 +3056,6 @@ function egressBaseFor(est, ob) { const bucketToday = (est.buckets || []).reduce
 /** AT&T's own monthly charges for an estate: on-ramps, hosted VPCs, L3
  *  attaches. Cost › AT&T charges lists them; the Sankey's Cost view prices
  *  the on-AT&T paths with them, so the two agree (2026-09-29). */
-function attChargeRows(est, invAll) {
-  const attached = est.regionsList.filter(r => r.priv);
-  const inScope = new Set(est.regionsList.map(r => r.region));
-  const vpcsAll = (invAll || []).flatMap(c => (c.regions || []).filter(r => inScope.has(r.region)).flatMap(r => r.vpcs || []));
-  const hostedN = vpcsAll.filter(v => v.managed).length, l3N = vpcsAll.filter(v => v.priv && !v.managed).length;
-  return [
-    { key: 'nb', label: 'NetBond on-ramps', sub: `${attached.length} ${attached.length === 1 ? 'region' : 'regions'} × $1,800`, v: attached.length * 1800 },
-    { key: 'hv', label: 'Hosted VPC / VNet', sub: `${hostedN} × $2,400`, v: hostedN * 2400 },
-    { key: 'l3', label: 'Customer L3 attach', sub: `${l3N} × $400`, v: l3N * 400 },
-  ].filter(r => r.v > 0);
-}
 function costVals(s, set, est, invAll, ob, go, c) {
   const base = egressBaseFor(est, ob);
   const bT = (est.buckets || []).reduce((a, b) => a + b.today, 0), bF = (est.buckets || []).reduce((a, b) => a + b.fabric, 0);
@@ -3093,7 +3081,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
   const vpcsAll = invAll.flatMap(c => c.regions.filter(r => inScope.has(r.region)).flatMap(r => r.vpcs));
   const hostedN = vpcsAll.filter(v => v.managed).length, l3N = vpcsAll.filter(v => v.priv && !v.managed).length;
   void hostedN; void l3N;
-  const chargeRows = attChargeRows(est, invAll);
+  const chargeRows = R.attChargeRows(est, invAll);
   const chargeMax = Math.max(1, ...chargeRows.map(r => r.v));
   const attTotal = chargeRows.reduce((a, r) => a + r.v, 0);
   const attCharges = chargeRows.map(r => ({ ...r, vF: fmt(r.v), w: Math.round(r.v / chargeMax * 100) + '%' }));

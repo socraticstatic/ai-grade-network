@@ -25,6 +25,31 @@ const CLOUD_ORDER = ['AWS', 'Azure', 'GCP', 'CoreWeave', 'Oracle'];
 // which put AT&T's off-net circuits on the not-AT&T track.
 export const RAMP_EDGE = { NetBond: 'att', DX: 'cloud', ER: 'cloud', Interconnect: 'cloud', EQX: 'third' };
 export const accessOwner = (site) => ((site && site.accessSla) || 'att');
+/** How a cloud region connects, read through who holds its SLA (2026-09-30):
+ *  NetBond is AT&T's, Direct Connect, ExpressRoute and Interconnect are the
+ *  cloud provider's, Equinix is a third party, and unattached is the internet. */
+export function connModeOf(r) { if (!r || !r.priv) return 'internet'; const o = RAMP_EDGE[r.ramp] || 'att'; return o === 'att' ? 'netbond' : o === 'cloud' ? 'direct' : 'third'; }
+/** Whether AT&T carries a region's on-ramp (2026-09-30). NetBond is AT&T's
+ *  partner port into Direct Connect and ExpressRoute too, so those count, unless
+ *  the customer owns the port through their own cross-connect (xc by 'yours')
+ *  or a third party carries it (Equinix). This is what AT&T bills and where AT&T
+ *  facilities sit. */
+export function attHolds(r) { return !!r && !!r.priv && RAMP_EDGE[r.ramp] !== 'third' && !(r.xc && r.xc.by === 'yours'); }
+/** How a site reaches the clouds: SD-WAN, an IPsec tunnel, or its own access, on AT&T or not. */
+export function siteModeOf(site) {
+  if (/sd-?wan/i.test((site && site.access) || '')) return 'sdwan';
+  if (site && !site.priv && (site.tunnel || servicesOf(site).some(v => v.key === 'tpa'))) return 'ipsec';
+  return onAtt(site) ? 'att' : 'third';
+}
+/** The words for each way to connect, short for cards and legends, long for titles. */
+export const CONN_LABEL = {
+  netbond: { short: 'NetBond', long: 'AT&T NetBond' },
+  direct: { short: 'Direct connect', long: 'Cloud provider direct connect' },
+  third: { short: 'Equinix', long: 'Third party (Equinix Fabric)' },
+  internet: { short: 'Internet', long: 'Public internet' },
+  ipsec: { short: 'IPsec', long: 'IPsec VPN' },
+  sdwan: { short: 'SD-WAN', long: 'SD-WAN' },
+};
 
 // The left column starts at regions. A site is placed by its metro, or, for a
 // nationwide rollup, by the region its own name carries ("Remote sites, East").
