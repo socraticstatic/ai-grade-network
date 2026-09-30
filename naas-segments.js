@@ -200,44 +200,78 @@ export function pathFlow(ctx) {
   }).sort((x, y) => R[y.state] - R[x.state] || y.wl - x.wl);
 }
 
+// One Paths row: an app group on one region (or, with no app, the region
+// alone), from the site that sends that region the most. The hops are the ones
+// the product already draws (naas-paths path()), placed in the seven columns;
+// they add up to Site to app. Loss shows only where a source reports it: the
+// connection's own drops, or 0.3% on a public path already marked warn.
+function timeRow(ctx, a, r) {
+  const top = regionSites(ctx.est, r, 1).rows[0];
+  if (!top) return null;
+  const site = top.site, drawn = hopsOf(site, r), row = rowOf(ctx, r.region), mode = connModeOf(r);
+  const step = (i) => drawn.hops[i].ms - drawn.hops[i - 1].ms;
+  const cells = SEGMENTS.map(seg => ({ key: seg.key, label: seg.label, ms: null, names: [], loss: null, why: '' }));
+  const put = (key, i) => { const c = cells.find(x => x.key === key); c.ms = (c.ms || 0) + step(i); c.names.push(drawn.hops[i].name); };
+  drawn.hops.forEach((h, i) => {
+    if (!i) return;
+    if (h.kind === 'access' || h.kind === 'hub') put('site', i);
+    else if (h.kind === 'pop') put('edge', i);
+    else if (h.kind === 'fabric' || h.kind === 'public') put('backbone', i);
+    else if (h.kind === 'ramp') put(mode === 'direct' ? 'cloudlink' : 'onramp', i);
+    else if (h.kind === 'region') put('app', i);
+  });
+  if (row && r.priv) cells.find(x => x.key === (mode === 'direct' ? 'cloudlink' : 'onramp')).loss = row.drops;
+  if (!r.priv && r.rel === 'warn') cells.find(x => x.key === 'backbone').loss = '0.30%';
+  const out = cells.map(c => {
+    const why = c.ms != null ? '' : c.key === 'hub' ? NOT_YET : c.key === 'cloudlink' && r.priv && mode !== 'direct' ? `Inside the ${mode === 'third' ? 'Equinix' : 'NetBond'} on-ramp` : 'Not on this path';
+    const title = c.ms != null ? `${c.label} · ${c.names.join(', ')} · ${c.ms} ms · loss ${c.loss || NOT_YET.toLowerCase()}` : `${c.label} · ${why}`;
+    return { key: c.key, ms: c.ms, msF: c.ms != null ? `${c.ms} ms` : '', loss: c.loss, lossF: c.loss || '', title };
+  });
+  const slo = r.priv ? SLO_PRIVATE : SLO, topApp = a && (a.topApps || [])[0];
+  return { key: `${a ? a.tag : ''}|${r.region}`, tag: a ? a.tag : null, label: !a ? `${r.cloud} ${r.region}` : topApp ? `${a.tag} → ${topApp}` : a.tag, region: r.region, where: `${r.cloud} ${r.region}`, site: site.name,
+    aggHub: drawn.hops.some(h => h.kind === 'hub'), cells: out, total: drawn.ms, totalF: `${drawn.ms} ms`, slo, state: row && row.degraded ? 'down' : healthOf(drawn.ms, slo), hops: drawn.hops, wl: a ? a.wl : (r.wl || 0) };
+}
+
+/**
+ * The row a problem on a region opens (final review, 2026-09-30, finding 6):
+ * of the apps given (a problem's own), else of every app on the region, the
+ * one that sends the region the most; with no app there, the region alone.
+ */
+export function pinFor(ctx, region, tags = []) {
+  const on = (ctx.apps || []).map(a => ({ a, p: (a.parts || []).find(x => x.region === region) })).filter(x => x.p);
+  const mine = on.filter(x => (tags || []).includes(x.a.tag));
+  const pool = mine.length ? mine : on;
+  if (!pool.length) return { tag: null, region };
+  const best = pool.reduce((w, x) => (x.p.gbps > w.p.gbps || (x.p.gbps === w.p.gbps && x.a.wl > w.a.wl) ? x : w), pool[0]);
+  return { tag: best.a.tag, region };
+}
+
 /**
  * Is it fast (notes, 2026-09-30, B2): one row per app group, on its worst
- * material region, from the site that sends it the most. The hops are the ones
- * the product already draws (naas-paths path()), placed in the seven columns;
- * they add up to Site to app. Loss shows only where a source reports it: the
- * connection's own drops, or 0.3% on a public path already marked warn.
+ * material region, from the site that sends it the most.
+ *
+ * Pins (final review, 2026-09-30, finding 6): the {tag, region} pairs Trace
+ * asks for. A pin that is not already a default row is computed on demand with
+ * the same hop mapping and listed first; the default rows keep their order.
  */
-export function pathTimes(ctx) {
+export function pathTimes(ctx, { pins = [] } = {}) {
   const regs = ctx.est.regionsList || [];
   const RW = { down: 4, slo: 3, risk: 2, ok: 1 };
-  return (ctx.apps || []).map(a => {
+  const base = (ctx.apps || []).map(a => {
     const parts = (a.parts || []).filter(p => p.share >= 0.05).map(p => ({ p, r: regs.find(x => x.region === p.region) })).filter(x => x.r);
     if (!parts.length) return null;
     const weight = ({ r, p }) => { const row = rowOf(ctx, r.region); return (row && row.degraded ? RW.down : RW[regionState(r)] || 1) * 10 + p.share; };
     const { r } = parts.reduce((w, x) => (weight(x) > weight(w) ? x : w), parts[0]);
-    const top = regionSites(ctx.est, r, 1).rows[0];
-    if (!top) return null;
-    const site = top.site, drawn = hopsOf(site, r), row = rowOf(ctx, r.region), mode = connModeOf(r);
-    const step = (i) => drawn.hops[i].ms - drawn.hops[i - 1].ms;
-    const cells = SEGMENTS.map(seg => ({ key: seg.key, label: seg.label, ms: null, names: [], loss: null, why: '' }));
-    const put = (key, i) => { const c = cells.find(x => x.key === key); c.ms = (c.ms || 0) + step(i); c.names.push(drawn.hops[i].name); };
-    drawn.hops.forEach((h, i) => {
-      if (!i) return;
-      if (h.kind === 'access' || h.kind === 'hub') put('site', i);
-      else if (h.kind === 'pop') put('edge', i);
-      else if (h.kind === 'fabric' || h.kind === 'public') put('backbone', i);
-      else if (h.kind === 'ramp') put(mode === 'direct' ? 'cloudlink' : 'onramp', i);
-      else if (h.kind === 'region') put('app', i);
-    });
-    if (row && r.priv) cells.find(x => x.key === (mode === 'direct' ? 'cloudlink' : 'onramp')).loss = row.drops;
-    if (!r.priv && r.rel === 'warn') cells.find(x => x.key === 'backbone').loss = '0.30%';
-    const out = cells.map(c => {
-      const why = c.ms != null ? '' : c.key === 'hub' ? NOT_YET : c.key === 'cloudlink' && r.priv && mode !== 'direct' ? `Inside the ${mode === 'third' ? 'Equinix' : 'NetBond'} on-ramp` : 'Not on this path';
-      const title = c.ms != null ? `${c.label} · ${c.names.join(', ')} · ${c.ms} ms · loss ${c.loss || NOT_YET.toLowerCase()}` : `${c.label} · ${why}`;
-      return { key: c.key, ms: c.ms, msF: c.ms != null ? `${c.ms} ms` : '', loss: c.loss, lossF: c.loss || '', title };
-    });
-    const slo = r.priv ? SLO_PRIVATE : SLO, topApp = (a.topApps || [])[0];
-    return { key: `${a.tag}|${r.region}`, tag: a.tag, label: topApp ? `${a.tag} → ${topApp}` : a.tag, region: r.region, where: `${r.cloud} ${r.region}`, site: site.name,
-      aggHub: drawn.hops.some(h => h.kind === 'hub'), cells: out, total: drawn.ms, totalF: `${drawn.ms} ms`, slo, state: row && row.degraded ? 'down' : healthOf(drawn.ms, slo), hops: drawn.hops, wl: a.wl };
+    return timeRow(ctx, a, r);
   }).filter(Boolean).sort((x, y) => (RW[y.state] || 0) - (RW[x.state] || 0) || y.wl - x.wl);
+  const seen = new Set(base.map(x => x.key)), extra = [];
+  for (const pin of pins || []) {
+    const r = pin && regs.find(x => x.region === pin.region);
+    if (!r) continue;
+    const a = (pin.tag && (ctx.apps || []).find(x => x.tag === pin.tag)) || null;
+    if (seen.has(`${a ? a.tag : ''}|${r.region}`)) continue;
+    const row = timeRow(ctx, a, r);
+    if (row) { seen.add(row.key); extra.push({ ...row, pinned: true }); }
+  }
+  return [...extra, ...base];
 }

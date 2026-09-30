@@ -69,6 +69,8 @@ const RAMP_THING = {
   Interconnect: ['Interconnect', 'cloud', 'Google Cloud Interconnect'],
   EQX: ['Equinix Fabric', 'third'],
 };
+/** A region's on-ramp by its product name, never its code; no ramp reads NetBond (final review, 2026-09-30). */
+export const rampName = (region) => (RAMP_THING[region && region.ramp] || RAMP_THING.NetBond)[0];
 /** Cloud-side Edge: the on-ramp into the cloud. A third-party core reaches it over its carrier's own on-ramp. */
 export function cloudEdgeThing(region, viaCarrier) {
   if (viaCarrier) return T('ce:' + slug(viaCarrier), 'Third Party On-ramp', 'third', "The carrier's own cloud on-ramp");

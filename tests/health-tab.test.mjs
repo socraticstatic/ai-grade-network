@@ -82,11 +82,14 @@ test('Open ticket moves the incident to In progress with a ticket, and it holds'
 });
 
 // Trace opens Paths since 2026-09-30 (Task 3.3: "Trace re-points to Paths"); the region still rides along for the map.
-test('Trace opens the problem on Paths, and keeps its region for the map', () => {
+// 2026-09-30 final review, finding 6: the region no longer rides along. Trace set mapRegion
+// silently, so Traffic came back filtered to the problem's region; it lands on Paths only.
+test('Trace opens the problem on Paths, and leaves the map unfiltered', () => {
   const c = at('partial');
   vals(c).problemRows[0].trace();
   assert.equal(c.state.obPanel, 'paths');
-  assert.equal(c.state.mapRegion, 'eastus');
+  assert.equal(c.state.pathSel, 'finance|eastus');
+  assert.equal(c.state.mapRegion ?? null, null);
 });
 
 test('Home\'s Observe door and Help\'s Support Tickets land on Health', () => {
