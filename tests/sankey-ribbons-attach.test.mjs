@@ -41,7 +41,10 @@ function mapsFor(id) {
     return dim === 'cloud' ? [k, est, { window, filterRegion: name, context: true }] : [k, R.applyScope(est, k), { window, leftBy: 'class' }];
   })];
   // The Cost view weighs the same map in dollars; any rates do for geometry.
-  return scoped.flatMap(([label, e, o]) => [[`${label} · Gbps`, F.buildMap(e, inv, flows, o)], [`${label} · $/mo`, F.buildMap(e, inv, flows, { ...o, weigh: { fab: 700, pub: 1900 } })]]);
+  // Since 2026-09-30 (owner decision a) each path has its own: direct connect
+  // at a list price, Equinix Fabric unpriced, so its bars leave the dollar map.
+  const weigh = { fab: 700, pub: 1900, ramp: { [F.RAMP_NAME.DX]: 2600, [F.RAMP_NAME.EQX]: 0 } };
+  return scoped.flatMap(([label, e, o]) => [[`${label} · Gbps`, F.buildMap(e, inv, flows, o)], [`${label} · $/mo`, F.buildMap(e, inv, flows, { ...o, weigh })]]);
 }
 
 // The spans must lie end to end from y to y + h: no gap, no overlap, no overhang.

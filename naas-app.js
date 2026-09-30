@@ -1915,19 +1915,25 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // Since sets the window the map averages; Replay plays it (2026-09-29).
     window: { growth: R.growthOf(s.obWindow || '30d') } };
   // The Cost view prices the map from the Cost page's own figures (2026-09-29):
-  // on AT&T at your AT&T charges per Gbps on AT&T, outside at the site egress
-  // bucket per Gbps outside. Its avoidable share is what could be saved.
+  // outside at the site egress bucket per Gbps outside, whose avoidable share
+  // is what could be saved. Each private path is priced from the leg that bills
+  // it (2026-09-30, owner decision a): NetBond and the private WAN at your AT&T
+  // charges per Gbps on them; direct connect at its regions' ports, at the
+  // cloud provider's list price (By leg's figure), per Gbps on it. Equinix
+  // Fabric is a third party's with no public list price, so it is not priced.
   const mapRates = (() => {
     const bk = (est0.buckets || []), sb = bk.find(b => b.id === 'ipsec') || bk.find(b => b.id === 'misc') || { today: 0, fabric: 0 };
-    const sp0 = F.flowSplit(est0, ob.flows), attMo = R.attChargeRows(est0, inv).reduce((a, r) => a + r.v, 0);
+    const sp0 = F.flowSplit(est0, ob.flows), pg = F.pathGbps(est0, ob.flows), attMo = R.attChargeRows(est0, inv).reduce((a, r) => a + r.v, 0);
+    const directMo = R.costLegs(est0, inv, obAll.utilRows).cloud.rows.reduce((a, r) => a + (r.direct || 0), 0);
     // A month's bill over the volume the window averages (2026-09-30): the map
     // draws window-scaled Gbps, so the rate divides by the same level, and
     // Whole estate IPsec prices at its $8,600 bucket in every Since window.
-    const k = F.windowLevel(R.growthOf(s.obWindow || '30d')), fabW = sp0.sitesFab * k, pubW = sp0.pubV * k;
-    return { att: fabW > 0 ? attMo / fabW : 0, out: pubW > 0 ? sb.today / pubW : 0, saveShare: sb.today > 0 ? Math.max(0, sb.today - sb.fabric) / sb.today : 0 };
+    const k = F.windowLevel(R.growthOf(s.obWindow || '30d')), attW = ((pg.ramps[F.RAMP_NAME.NetBond] || 0) + pg.wan) * k, dirW = (pg.ramps[F.DIRECT] || 0) * k, pubW = sp0.pubV * k;
+    const direct = dirW > 0 ? directMo / dirW : 0;
+    return { att: attW > 0 ? attMo / attW : 0, direct, ramp: { [F.DIRECT]: direct, [F.RAMP_NAME.EQX]: 0 }, out: pubW > 0 ? sb.today / pubW : 0, saveShare: sb.today > 0 ? Math.max(0, sb.today - sb.fabric) / sb.today : 0 };
   })();
   const mapG = F.buildMap(mapEst, inv, ob.flows, mapOpts);
-  const map = mapMode === 'cost' ? F.buildMap(mapEst, inv, ob.flows, { ...mapOpts, weigh: { fab: mapRates.att, pub: mapRates.out } }) : mapG;
+  const map = mapMode === 'cost' ? F.buildMap(mapEst, inv, ob.flows, { ...mapOpts, weigh: { fab: mapRates.att, pub: mapRates.out, ramp: mapRates.ramp } }) : mapG;
   // Latency against the SLO, node by node, from the Gbps map (the same keys in both).
   const perf = F.perfOf(mapG, est0);
   const mapHealth = ['ok', 'risk', 'slo'].includes(s.mapHealth) ? s.mapHealth : 'all';
@@ -1963,11 +1969,16 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const pubMs = (() => { const rs = est.regionsList.filter(r => !r.priv); return rs.length ? Math.round(rs.reduce((a, r) => a + (r.pub || 0), 0) / rs.length) : null; })();
   const siteB = (est.buckets || []).find(b => b.id === 'ipsec') || (est.buckets || []).find(b => b.id === 'misc') || { today: 0, fabric: 0 };
   const money = (v) => fmt(v >= 1000 ? Math.round(v / 100) * 100 : Math.round(v));
+  // In the Cost view direct connect wears its own swatch: it is priced at a list price, not your AT&T rate (2026-09-30).
+  const DIRECT_INK = 'var(--viz-2)';
+  const viaDirect = (r) => r.from === 'mid:' + F.DIRECT || r.to === 'mid:' + F.DIRECT;
   const midSay = (nd) => {
     const q = perf.nodes[nd.key] || { ms: 0, slo: F.SLO, health: 'ok' };
     // Cost: what the path costs a month, and what moving it would save.
     if (mapMode === 'cost') {
       // The legend says on-AT&T paths are at your AT&T rate; the line would only repeat it.
+      // Direct connect is the cloud provider's port, at its list price (2026-09-30, owner decision a).
+      if (nd.ramp === F.DIRECT) return { sub: '', hover: `${nd.name}: ${money(nd.v)}/mo at the cloud provider's list price (modelled)` };
       if (nd.priv) return { sub: '', hover: `${nd.name}: ${money(nd.v)}/mo on AT&T, priced from your AT&T charges` };
       const save = nd.v * mapRates.saveShare;
       return { sub: `${money(save)}/mo to save`, hover: `${nd.name}: ${money(nd.v)}/mo of egress outside AT&T · ${money(save)}/mo to save on AT&T` };
@@ -1988,7 +1999,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       if (mapMode === 'slo' && q) return `p95 ${q.ms} ms`;
       if (mapMode === 'cost') return t == null || t >= tot - 0.5 ? `${money(tot)}/mo` : `${money(t)} of ${money(tot)}/mo`;
       const g = (v) => (v >= 1 ? v.toFixed(1) + ' Gbps' : Math.round(v * 1000) + ' Mbps'); if (t == null || t >= tot - 0.01) return g(tot); return (t >= 1) === (tot >= 1) ? `${g(t).replace(/ \S+$/, '')} of ${g(tot)}` : `${g(t)} of ${g(tot)}`; })(),
-    health: (perf.nodes[nd.key] || {}).health || null, lx: left || mid ? nd.x2 + 6 : nd.x - 236, ly: nd.y + nd.h / 2 - 10, lw: 230, justify: left || mid ? 'flex-start' : 'flex-end', fill: mapMode === 'slo' && perf.nodes[nd.key] ? HEALTH_FILL[perf.nodes[nd.key].health]
+    // A path's label in the Cost view holds its name and a five-figure month (2026-09-30: "$30,400/mo" cut "Cloud provider direct connect").
+    health: (perf.nodes[nd.key] || {}).health || null, lx: left || mid ? nd.x2 + 6 : nd.x - 236, ly: nd.y + nd.h / 2 - 10, lw: mid && mapMode === 'cost' ? 250 : 230, justify: left || mid ? 'flex-start' : 'flex-end', fill: mapMode === 'slo' && perf.nodes[nd.key] ? HEALTH_FILL[perf.nodes[nd.key].health]
+      : mapMode === 'cost' && mid && nd.ramp === F.DIRECT ? DIRECT_INK
       : mapMode === 'cost' && nd.kind !== 'rollup' ? ((mid ? !nd.priv : (nd.v - (nd.fabV || 0)) > (nd.fabV || 0)) ? (dark ? '#ffa25e' : '#e07b00') : '#0057b8')
       : mid ? (nd.priv ? '#0057b8' : nd.local ? '#00838f' : (dark ? '#5d6f80' : '#8a949c')) : nd.key === 'dest:local' ? '#00838f' : nd.kind === 'rollup' ? (dark ? '#5d6f80' : '#b8c2cc') : nd.state === 'degraded' ? STATE_FILL.degraded : (perf.nodes[nd.key] || {}).health === 'slo' ? STATE_FILL.slo : STATE_FILL.ok, op: nodeOp(nd.key), stroke: selected ? 'var(--cta)' : 'transparent', caret: nd.hasChildren ? (nd.open ? '−' : '+') : nd.kind === 'rollup' ? '‹' : '', cursor: nd.hasChildren || !mid ? 'pointer' : 'default', deltaF: (nd.delta >= 0 ? '+' : '') + nd.delta + '%', deltaColor: nd.delta > 10 ? '#1e7a3c' : nd.delta < -10 ? '#c9362c' : 'var(--text-light)', showDelta: mapMode === 'delta', click: () => { if (nd.kind === 'rollup') { if (nd.foldsKey && !nd.tailOnly) set({ mapOpen: closeBranch(mapOpen, nd.foldsKey), mapSel: null }); return; } if (nd.kind === 'more') { const parts = (nd.parentKey || '').split('/'); if (parts.length >= 2) set({ vol: { kind: 'metro', cls: nd.siteCls || parts[0].replace(/^site:/, ''), metro: nd.metro || parts[1] }, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [] }); return; } if (nd.kind === 'wlmore') { openWorkloads(nd.regionName, nd.vpcId, nd.subnetId); return; } if (nd.kind === 'workload' && nd.wlSel) { set({ mapSel: nd.wlSel, panelTab: 'overview' }); return; } if (nd.hasChildren) { if (mapOpen.includes(nd.key)) set({ mapSel: nd.panelSel || nd.key, panelTab: 'overview' }); else toggleOpen(nd.key); } else set({ mapSel: nd.panelSel || nd.key, panelTab: s.panelTab || 'overview' }); }, pin: () => set({ mapPins: (s.mapPins || []).includes(nd.key) ? (s.mapPins || []).filter(k => k !== nd.key) : [...(s.mapPins || []).slice(-1), nd.key] }), enter: () => set({ mapHov: nd.key }), leave: () => set({ mapHov: null }), title: say ? say.hover : nd.hasChildren ? (nd.open ? 'Click to close' : 'Click to open in place') : 'Click to select', depthPad: (nd.depth || 0) * 8 }; });
   // The other destinations, at estate scale beside a pick (notes, 2026-09-30):
@@ -2094,9 +2107,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // The map draws what sites send, so its outside ribbons are priced against site egress: the IPsec bucket where there is one, else internet egress.
   const siteBucket = egBuckets.find(b => b.id === 'ipsec') || egBuckets.find(b => b.id === 'misc') || { today: 0, fabric: 0 };
   void outGbps; const perGbps = mapRates.out, perSave = mapRates.out * mapRates.saveShare; void perGbps; void perSave;
-  const ribFill = (r, i) => { const base = r.local ? '#4db6ac' : r.priv ? '#3374cc' : (dark ? '#5d6f80' : '#8a949c'); if (mapMode === 'slo') return HEALTH_FILL[ribHealth(r, i)]; return mapMode === 'cost' ? (r.priv ? (dark ? '#3374cc' : '#6f9fd8') : (dark ? '#ffa25e' : '#e07b00')) : mapMode === 'delta' ? (r.delta > 10 ? '#1e7a3c' : r.delta < -10 ? '#c9362c' : (dark ? '#5d6f80' : '#b8c2cc')) : mapMode === 'slo' ? (r.state === 'slo' ? HEALTH_FILL.slo : base) : base; };
+  const ribFill = (r, i) => { const base = r.local ? '#4db6ac' : r.priv ? '#3374cc' : (dark ? '#5d6f80' : '#8a949c'); if (mapMode === 'slo') return HEALTH_FILL[ribHealth(r, i)]; return mapMode === 'cost' ? (viaDirect(r) ? DIRECT_INK : r.priv ? (dark ? '#3374cc' : '#6f9fd8') : (dark ? '#ffa25e' : '#e07b00')) : mapMode === 'delta' ? (r.delta > 10 ? '#1e7a3c' : r.delta < -10 ? '#c9362c' : (dark ? '#5d6f80' : '#b8c2cc')) : mapMode === 'slo' ? (r.state === 'slo' ? HEALTH_FILL.slo : base) : base; };
   const mapTrace = tr ? tr.ribbons.map((r, i) => ({ key: 't' + i, d: r.d, fill: ribFill(r), op: trOn ? 0.85 : 0 })) : [];
-  const mapRibbons = map.ribbons.map((r, i) => { const fill = ribFill(r, i); return { key: 'r' + i, d: r.d, fill, op: ribOp(i, r.priv, r.local), pulse: mapMode === 'state' && r.state === 'degraded' ? 'skPulse 1.6s ease-in-out infinite' : 'none', sleeve: (mapMode === 'state' || mapMode === 'slo') && ribHealth(r, i) === 'slo' ? HEALTH_FILL.slo : 'transparent', title: mapMode === 'cost' ? `${money(r.v)}/mo · ${r.priv ? 'on AT&T, at your AT&T rate' : `egress outside AT&T · ${money(r.v * mapRates.saveShare)}/mo to save on AT&T`}` : mapMode === 'slo' ? (() => { const q = perf.ribbons[i] || {}; return `${r.v.toFixed(2)} Gbps · p95 ${q.ms} ms against a ${q.slo} ms SLO${q.health === 'slo' ? ', over' : q.health === 'risk' ? ', near it' : ''}`; })() : `${r.v.toFixed(2)} Gbps · ${r.local ? 'stays in the region' : r.priv ? 'AT&T network' : 'outside AT&T'} · ${(F.PATTERNS.find(x => x[0] === r.pattern) || ['', r.pattern])[1]} · ${(r.delta >= 0 ? '+' : '') + r.delta}% vs prior window` }; });
+  const mapRibbons = map.ribbons.map((r, i) => { const fill = ribFill(r, i); return { key: 'r' + i, d: r.d, fill, op: ribOp(i, r.priv, r.local), pulse: mapMode === 'state' && r.state === 'degraded' ? 'skPulse 1.6s ease-in-out infinite' : 'none', sleeve: (mapMode === 'state' || mapMode === 'slo') && ribHealth(r, i) === 'slo' ? HEALTH_FILL.slo : 'transparent', title: mapMode === 'cost' ? `${money(r.v)}/mo · ${viaDirect(r) ? 'direct connect, at the cloud provider\'s list price (modelled)' : r.priv ? 'on AT&T, at your AT&T rate' : `egress outside AT&T · ${money(r.v * mapRates.saveShare)}/mo to save on AT&T`}` : mapMode === 'slo' ? (() => { const q = perf.ribbons[i] || {}; return `${r.v.toFixed(2)} Gbps · p95 ${q.ms} ms against a ${q.slo} ms SLO${q.health === 'slo' ? ', over' : q.health === 'risk' ? ', near it' : ''}`; })() : `${r.v.toFixed(2)} Gbps · ${r.local ? 'stays in the region' : r.priv ? 'AT&T network' : 'outside AT&T'} · ${(F.PATTERNS.find(x => x[0] === r.pattern) || ['', r.pattern])[1]} · ${(r.delta >= 0 ? '+' : '') + r.delta}% vs prior window` }; });
   // The head's rollups double as filters; the control is the view (2026-09-28).
   const kShort = (n) => (n >= 1000 ? '$' + (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'k' : '$' + n);
   const sloN = (ob.flows || []).filter(f => f.latency > F.SLO).length;
@@ -2105,7 +2118,13 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // and the sankey graphic doesn't really match"): its traffic, its p95, its
   // dollars, what it could save, and what it draws red.
   const outG = Math.max(0, mapG.total - mapG.fabV);
-  const costT = mapG.fabV * mapRates.att + outG * mapRates.out, couldT = outG * mapRates.out * mapRates.saveShare;
+  // Each private path at its own rate, as the Cost view weighs it (2026-09-30, owner decision a).
+  const pathRate = (m) => (m.ramp && m.ramp in mapRates.ramp ? mapRates.ramp[m.ramp] : mapRates.att);
+  const costT = mapG.nodes.filter(m => m.side === 'm' && m.priv).reduce((a, m) => a + m.v * pathRate(m), 0) + outG * mapRates.out, couldT = outG * mapRates.out * mapRates.saveShare;
+  // Traffic with no price on it reads in words, never $0 (a pick that is all Equinix Fabric).
+  const costNone = mapG.total > 0.0005 && costT < 0.5;
+  const unpriced = mapG.nodes.some(m => m.side === 'm' && m.ramp === F.RAMP_NAME.EQX);
+  const costTitle = `Traffic on this map: NetBond and the private WAN at your AT&T rate, direct connect at the cloud provider's list price (modelled), outside AT&T at egress rates.${unpriced ? ' Equinix Fabric has no public list price, so its traffic is left off this view.' : ''} Site access and every other charge are in Cost, By leg.`;
   const winTrends = R.trends(ob, s.obWindow || '30d');
   const flowTiles = [
     // Under 1 Gbps the tile reads in Mbps, as the nodes do (2026-09-30: "0.1 Gbps" beside "70 Mbps").
@@ -2115,13 +2134,13 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // Under a pick, a site is on AT&T for that pick only if the map carries the
     // pick on AT&T (2026-09-30: "20 of 25" under GCP, which rides IPsec only).
     ['onatt', 'Sites on AT&T', (() => { const all = (mapEst.sites || []).reduce((a, x) => a + S.countOf(x.name), 0), picked = !!(scopeCloud || scopeApp || mapRegion), att = picked && !(mapG.fabV > 0.0005) ? 0 : (mapEst.sites || []).filter(onAtt).reduce((a, x) => a + S.countOf(x.name), 0); return `${att.toLocaleString('en-US')} of ${all.toLocaleString('en-US')}`; })(), '', { mapMode: 'state', mapPath: 'att' }],
-    ['cost', 'Cost', money(costT), '/mo', { mapMode: 'cost', mapPath: 'all', mapHealth: 'all' }],
+    ['cost', 'Cost', costNone ? 'Not priced' : money(costT), costNone ? '' : '/mo', { mapMode: 'cost', mapPath: 'all', mapHealth: 'all' }],
     ['could', 'Could save', money(couldT), '/mo', { mapMode: 'cost', mapPath: 'out', mapHealth: 'all' }],
     ['slo', 'Over SLO', String(perf.over.length), 'on the map', { mapMode: 'slo', mapPath: 'all', mapHealth: 'slo' }],
   ].map(([k, l, v, u, patch]) => { const on = !!tileOn(k);
     // Since is the window the tiles compare against (2026-09-29 audit): now vs the prior window.
     const tr = ({ traffic: 'thr', p95: 'p95' })[k] ? (winTrends.find(x => x.key === ({ traffic: 'thr', p95: 'p95' })[k]) || null) : null;
-    return { key: k, l, v, u, on, go: () => set(patch), title: k === 'cost' ? 'Traffic on this map, at your AT&T rate and public egress rates. Site access, AT&T charges and cloud ports are in Cost, By leg.' : l, border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)',
+    return { key: k, l, v, u, on, go: () => set(patch), title: k === 'cost' ? costTitle : l, border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)',
       d: tr ? `${tr.delta} vs prior ${winLabelOf(s)}` : '', dShort: tr ? tr.delta : '', hasD: !!tr, dTone: tr ? tr.deltaTone : 'var(--text-light)' }; });
   const seg = (on) => ({ bg: on ? 'var(--bg-base)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 600 : 500, shadow: on ? '0 1px 2px rgba(16,24,40,.10), 0 0 0 1px var(--border-secondary)' : 'none' });
   // Over time (2026-09-28): the same traffic, by day, week or month. It reads
@@ -2653,9 +2672,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelHealth: obPanel === 'health', obPanelPaths: obPanel === 'paths', obPanelChanges: obPanel === 'changes', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0 && !!s.obPickOpen, scopeLabel, mapTotal: mapG.total, mapP95: perf.p95,
     // The Cost view prices traffic only; the door opens the three legs (notes, 2026-09-30, A2).
-    costScopeOn: mapMode === 'cost', costScopeLine: 'Traffic only · every leg in Cost ›', costScopeGo: () => go('s3', { layer: 'cloud', tab: 'cost', costPanel: 'legs' })(),
+    // With nothing priced (a pick that is all Equinix Fabric) the map is empty, so the line says why (2026-09-30).
+    costScopeOn: mapMode === 'cost', costScopeLine: costNone && unpriced ? 'Equinix Fabric has no public list price · every leg in Cost ›' : 'Traffic only · every leg in Cost ›', costScopeGo: () => go('s3', { layer: 'cloud', tab: 'cost', costPanel: 'legs' })(),
     // The legend says what the colors mean in the view you are in.
-    mapLegend: (mapMode === 'cost' ? [['#0057b8', 'On AT&T, at your AT&T rate'], [dark ? '#ffa25e' : '#e07b00', 'Outside AT&T, at egress rates']]
+    // A third swatch when the map draws direct connect, priced at a list price (2026-09-30, owner decision a).
+    mapLegend: (mapMode === 'cost' ? [['#0057b8', 'On AT&T, at your AT&T rate'], [dark ? '#ffa25e' : '#e07b00', 'Outside AT&T, at egress rates'],
+        ...(map.nodes.some(n => n.side === 'm' && n.ramp === F.DIRECT) ? [[DIRECT_INK, 'Cloud provider direct connect, list price (modelled)']] : [])]
       : mapMode === 'slo' ? [[HEALTH_FILL.ok, 'Within SLO'], [HEALTH_FILL.risk, 'Near SLO'], [HEALTH_FILL.slo, 'Over SLO']]
       : [['#3374cc', 'On AT&T'], ['#8a949c', 'Outside AT&T'], ['var(--error)', 'Degraded'], [HEALTH_FILL.slo, 'Over SLO']]).map(([color, label]) => ({ key: label, color, label })),
     // Health filters the map (Micah, 2026-09-29: "on observe, add a 'health' filter").

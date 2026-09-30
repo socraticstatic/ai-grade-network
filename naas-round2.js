@@ -358,20 +358,22 @@ export function costLegs(est, inv, utilRows) {
     ...(ipsecN ? [{ key: 'ipsec', label: 'IPsec tunnels', n: ipsecN, v: ipsecN * CSP_VPN, sub: `${ipsecN.toLocaleString('en-US')} tunnels × ${each(CSP_VPN)} cloud VPN list price`, modelled: true }] : []),
   ];
   // Cloud provider: each cloud's ports at its list price, then this month's egress.
+  // direct: the share of it that is direct-connect regions' ports, which the
+  // Traffic Cost view prices its direct connect path at (2026-09-30, owner decision a).
   const ports = {};
   for (const u of utilRows || []) {
     const r = regs.find(x => x.region === u.region); if (!r || !r.priv) continue;
     const P = CSP_PORT[r.cloud], size = /(^|\D)1G/.test(u.bwShort || '') && !/10G/.test(u.bwShort || '') ? '1G' : '10G';
     const key = P ? P.product : r.cloud;
-    const g = ports[key] = ports[key] || { key: 'port:' + r.cloud, label: P ? P.product : r.cloud, cloud: r.cloud, n: 0, v: 0, regions: 0, priced: !!P };
+    const g = ports[key] = ports[key] || { key: 'port:' + r.cloud, label: P ? P.product : r.cloud, cloud: r.cloud, n: 0, v: 0, direct: 0, regions: 0, priced: !!P };
     g.n += u.ports || 1; g.regions += 1;
-    if (P) g.v += (u.ports || 1) * (P[size] || P['10G']) + (P.vlan || 0);
+    if (P) { const mo = (u.ports || 1) * (P[size] || P['10G']) + (P.vlan || 0); g.v += mo; if (connModeOf(r) === 'direct') g.direct += mo; }
   }
   const cloudRows = Object.values(ports).map(g => { const P = CSP_PORT[g.cloud];
     const ports = `${g.n} ${g.n === 1 ? 'port' : 'ports'}`, regions = `${g.regions} ${g.regions === 1 ? 'region' : 'regions'}`;
     const sub = !g.priced ? `${ports} · not on a public price list` : `${ports} × ${each(P['10G'])}${P.vlan ? ` + ${fmt(P.vlan)} a region` : ''}${P.flat10G ? ' · flat rate offered' : ''}`;
     const title = !g.priced ? sub : `${ports} in ${regions} at the ${g.label} list price, ${each(P['10G'])} per 10G port${P.vlan ? `, plus ${fmt(P.vlan)} per VLAN attachment` : ''}. Metered.${P.flat10G ? ` A flat rate is offered at about ${fmt(P.flat10G)} per 10G port a month, transfer out included.` : ''}`;
-    return { key: g.key, label: g.label, n: g.n, v: g.v, sub, title, modelled: true, billing: P && P.flat10G ? 'metered' : undefined }; }).sort((a, b) => b.v - a.v);
+    return { key: g.key, label: g.label, n: g.n, v: g.v, direct: g.direct, sub, title, modelled: true, billing: P && P.flat10G ? 'metered' : undefined }; }).sort((a, b) => b.v - a.v);
   const egress = (est.buckets || []).reduce((a, b) => a + b.today, 0);
   const cloud = [...cloudRows, ...(egress || regs.length ? [{ key: 'egress', label: 'Egress', n: (est.buckets || []).length, v: egress, sub: 'Data out of the clouds, this month', modelled: false }] : [])];
   const L = { access: leg('access', 'Site access', access), connect: leg('connect', 'Cloud connectivity', connect), cloud: leg('cloud', 'Cloud provider', cloud) };
