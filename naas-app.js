@@ -22,8 +22,10 @@ import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
 import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
+import * as M from './naas-moves.js';
 import { rampName } from './naas-things.js';
 import * as BW from './naas-bandwidth.js';
+import * as CF from './naas-connect-flow.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product', s9: 'Help' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
@@ -70,12 +72,12 @@ export function railFor(est) {
 
 // The line. Each step appears only once it can act, so a customer is never
 // offered a door to an empty room. Ordering is not a step: you do not navigate
-// to Order, you order the thing you picked in Options.
+// to Order, you order the thing you picked in Recommended.
 // Each step wears its section's icon (notes, 2026-09-30: one icon per link).
 export const STEPS = [
   { key: 'sources', label: 'Sources', icon: 'lock', ready: () => true },
   { key: 'estate', label: 'Estate', icon: 'apis', ready: (est) => est.regions > 0 },
-  { key: 'options', label: 'Options', icon: 'cable', ready: (est) => est.regions > 0 },
+  { key: 'options', label: 'Recommended', icon: 'cable', ready: (est) => est.regions > 0 },
 ];
 
 // The loop. Exposed is a filter on the estate, not a stop of its own. Records
@@ -85,8 +87,13 @@ export const SECTIONS = {
     ['@estate', 'Estate', 'apis'],
     ['@sources', 'Sources', 'lock'],
   ],
+  // Connect is four places, nouns (Micah, 2026-09-30: "options and orders is so
+  // weird"): what is connected, the ranked moves, the ways to connect, the orders.
+  // Each is a cnPage (CN_VIEW) both Connect builders share; 'options' keeps its key for old links.
   connect: [
-    ['sec-paths', 'Options', 'cable'],
+    ['@connections', 'Connections', 'router'],
+    ['@recommended', 'Recommended', 'cable'],
+    ['@ways', 'Ways to connect', 'ethernet'],
     ['@orders', 'Orders', 'shopping-bag'],
   ],
   observe: [
@@ -109,7 +116,10 @@ export const SECTIONS = {
   ],
 };
 const TAB_LABEL = { connect: 'Connect', govern: 'Govern', observe: 'Observe', cost: 'Cost' };
-const TIERS = ['Start here', 'Recommended', 'Full control'];
+/** The Connect rail items' pages. Any other cnPage (or none) is Connections. */
+export const CN_VIEW = { '@connections': 'picture', '@recommended': 'options', '@ways': 'ways', '@orders': 'orders' };
+export const cnPageOf = (s) => (['options', 'ways', 'orders'].includes(s && s.cnPage) ? s.cnPage : 'picture');
+const TIERS = M.TIERS;
 const PERSONA_PRODUCT = { 'Steer this bucket on AT&T': 'steer', 'Steer every internet bucket': 'steer', 'Hosted VPC with AT&T egress for the region': 'hosted-vpc', 'Cloud to Cloud for the pair': 'c2c', 'Multi-region, multi-cloud routing': 'c2c', 'Neocloud reach via Equinix Fabric': 'neocloud', 'Hosted VPC in us-east-1 with the policy enforced': 'hosted-vpc', 'Hosted VPC in us-west-2 with the policy enforced': 'hosted-vpc', 'Hosted VPC plus inline inspection': 'hosted-vpc', 'NGFW (Palo Alto) in path': 'ngfw', 'Hosted VPC with the vSRX pair and AT&T egress': 'hosted-vpc', 'Advanced Network Monitoring for the estate': 'monitoring', 'Advanced Network Monitoring for APAC': 'monitoring', 'Managed NOC with path telemetry': 'noc', 'AWS Interconnect Last Mile, maximum resiliency': 'lmcc', 'Add a second ADI circuit': 'adi', '14-day AI traffic assessment': 'ai-assess', 'Add the providers to AI Fabric': 'ai-gov', 'Virtual keys with team limits': 'ai-gov', 'Connection Hub in Atlanta': 'hub', 'Connection Hubs in Atlanta and Chicago': 'hub', "Segmentation across the region's hosted VNet": 'hosted-vnet' };
 
 // The connect tab's stat line counts cloud regions. Off the cloud layer, the verdict
@@ -177,10 +187,12 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
+    // The connect flow (2026-09-30): the set a Ways to connect figure opened, the orders placed this session, the location area shown.
+    waySet: null, waySetPage: 0, orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0,
     order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null,
     simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36,
     // Modify bandwidth (2026-09-30): the connection it is open on, the size picked, the changes ordered.
@@ -270,7 +282,7 @@ export function vals(c) {
   // Who answers for each piece of every path, read once from the whole estate (2026-09-30).
   const segCtx = G.segCtxOf(est0, { inv: A.inventory(est0), ob: obAll, conns, probs });
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, obAll), ...est0.findings] };
-  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !s.compose.outcome ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, bwFor: null, bwPick: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
+  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !composeStarted(s.compose) ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, bwFor: null, bwPick: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -780,31 +792,12 @@ export function vals(c) {
   // ---- compose ----
   const cp = s.compose;
   const outcome = D.OUTCOMES.find(o => o.id === cp.outcome);
-  // Picking a metro, a control, a resiliency tier keeps building the SAME
-  // order, so they spread `cp` unchanged. Changing the outcome on a compose
-  // that carries a site count is a NEW order - u2/u3 never consume `qty`, so
-  // the label and count would otherwise survive pointing at a price nothing
-  // still explains (Fix round 2, finding E).
-  // Fix round 3, finding H: guard on what an order actually looks like
-  // (carriesOrder), not on `sourceLabel` alone - the drawer's bulk attach
-  // carries `bulk`/`qty` with no label and was slipping past a
-  // sourceLabel-only guard. `note` now lives inside `compose`, so cleaning
-  // it is just part of cleanCompose; no separate parsedNote side effect.
-  // Fix round 4, finding N1: carriesOrder must gate only the cleanCompose
-  // half. An outcome switch is always a new order - a plain wizard compose
-  // (no count, no label, no note; carriesOrder false) still left a stale
-  // Review snapshot behind. `order: null` is now unconditional on any
-  // outcome switch; a SAME-order patch (no `outcome` key) still leaves
-  // `order` untouched either way.
-  const setC = (patch) => { const startsNew = patch.outcome !== undefined; set({ compose: { ...(startsNew && carriesOrder(cp) ? cleanCompose(cp) : cp), ...patch, ...(patch.resiliency !== undefined ? { resiliencyChosen: true } : {}) }, ...(startsNew ? { order: null } : {}) }); };
-  const toggle = (field, v, single) => () => { if (single) return setC({ [field]: v }); const arr = cp[field]; setC({ [field]: arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v] }); };
-  const chipRow = (field, list, single) => list.map(v => ({ key: v, label: v, on: single ? cp[field] === v : cp[field].includes(v), click: toggle(field, v, single) }));
-  const metroChips = (D.COMPOSE_CHIPS.regions[cp.regionTab] || []).map(m => ({ key: m, label: m, on: cp.metros.includes(m), click: () => setC({ metros: cp.metros.includes(m) ? cp.metros.filter(x => x !== m) : [...cp.metros, m].slice(-2) }) }));
-  const regionTabs = Object.keys(D.COMPOSE_CHIPS.regions).map(r => ({ key: r, label: r, active: cp.regionTab === r, click: () => setC({ regionTab: r }) }));
-  const constraint = cp.resiliency === 'Maximum' && cp.metros.length < 2 ? 'Maximum resiliency needs two metros. Add one.' : cp.resiliency === 'Geodiversity' && cp.metros.length < 2 ? 'Geodiversity needs two metros. Add one.' : cp.outcome === 'u3' && cp.dest.length < 1 ? 'Cloud to cloud needs a destination cloud. Pick one.' : '';
+  // The old six-step wizard (Outcome, Source, Destination, Metro, Resiliency,
+  // Control) gave way to NetBond Advanced's flow (flowVals, 2026-09-30). Its
+  // entry routes still write outcome, source, metros, resiliency and control;
+  // the flow reads them as filled from your estate. Review (s6) still prices a
+  // compose that reaches it without a placed order, so composeOrder stays.
   const composed = composeOrder(cp, outcome, est);
-  const summary = { ...composed, ready: !!outcome && !constraint, outcomeName: outcome ? outcome.name : 'Pick an outcome to start', dir: outcome ? outcome.dir : '', providers: [...cp.source, ...cp.dest].join(', ') || (outcome ? 'Pick a source and destination' : ''), tier: cp.resiliency, policyLine: composed.policies.map(p => p.req).join(' · ') || 'Control ships with the path', priceLine: composed.monthly ? `Starting at ${fmt(composed.monthly)}/mo` : '', saveLine: composed.savings ? `save ${fmt(composed.savings)}/mo vs public egress` : '', timeline: outcome ? `${composed.days} business days` : 'Set once the order has lines', wires: cp.resiliency === 'Standard' ? 1 : 2, wireW: cp.resiliency === 'Maximum' ? 4 : cp.resiliency === 'Geodiversity' ? 3 : 2, shield: cp.control.includes('Inline inspection') || cp.control.includes('No direct internet path'), ghost: !outcome, srcLabel: cp.source[0] || 'Source', dstLabel: cp.dest[0] || 'Destination', dir: outcome ? outcome.dir : '' };
-  const outcomeCards = D.OUTCOMES.map(o => ({ ...o, key: o.id, on: cp.outcome === o.id, click: () => setC({ outcome: o.id, control: o.control.slice(), source: o.id === 'u1' ? ['Data center'] : ['A cloud region'], dest: o.id === 'u2' ? ['The Internet'] : ['Clouds'] }), controlLine: o.control.join(', ') }));
 
   // ---- review ----
   const ord = s.order || composed;
@@ -918,9 +911,10 @@ export function vals(c) {
     // shortcut means "start composing," not "discard whatever was just
     // reviewed," so it writes a fresh compose without resetting order; only
     // an actual outcome switch (setC) resets a stale order now.
-    goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goHome: go('s0'), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(cp.outcome ? { compose: { ...cp, step: cp.step || 0 } } : { compose: prefillCompose(est) }) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
+    goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goHome: go('s0'), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(composeStarted(cp) ? { compose: { ...cp, step: cp.step || 0 } } : { compose: prefillCompose(est) }) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
     hasTasks: s.submitted, taskCount: 1, showPending, pendingStages, landed: landedAll, notLanded: !landedAll, pendingSub: landedAll ? 'Validated · live. First flow logs are in.' : 'Submitted for approval',
-    deliverNow: () => { const cand = (s.compose && s.compose.prefillRegion ? s.compose.prefillRegion.split(' ')[1] : null) || (estRaw.regionsList.find(r => !r.priv) || {}).region; if (!cand) return; c.setState({ landed: cand, layer: 'cloud', tab: 'observe', screen: 's3', events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `${cand} validated · live. Hosted VPC on AT&T; first flow logs received; coverage up by one region.` }] }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
+    // The region the last order placed reaches is the one delivered (the connect flow, 2026-09-30).
+    deliverNow: () => { const lastPlaced = (s.orders || []).at(-1); const cand = (lastPlaced && lastPlaced.region) || (s.compose && s.compose.prefillRegion ? s.compose.prefillRegion.split(' ')[1] : null) || (estRaw.regionsList.find(r => !r.priv) || {}).region; if (!cand) return; c.setState({ landed: cand, layer: 'cloud', tab: 'observe', screen: 's3', events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `${cand} validated · live. Hosted VPC on AT&T; first flow logs received; coverage up by one region.` }] }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
     ...shellVals(s, set, go, est, c, sched),
     headOpen: s.headOpen !== false, headClosed: s.headOpen === false, toggleHead: () => { const v = s.headOpen === false; set({ headOpen: v }); try { localStorage.setItem('naas.headOpen', String(v)); } catch (e) {} }, headRot: s.headOpen === false ? 'rotate(-90deg)' : 'rotate(0deg)',
     ...andiVals(s, set, go, est, ob, { conns, floorVerdict, connectVerdict, governVerdict, costVerdict, discoverVerdict, stageKicker, findingCard, sortF, findingsFor, isEmpty, totalSave, persona, personaTab }),
@@ -1034,6 +1028,7 @@ export function vals(c) {
     crumbs, verbTabs, cloudCrumbs, siteTrail, cloudTrail, sitesDrilled: s.drill.length > 0, cloudsDrilled: !!cloudPick, hasCloudCrumbs: cloudCrumbs.length > 0, showCrumbs: s.drill.length > 0 || cloudDrill.length > 0, drillLabel: [drillLabel, regionDrill ? `${regionDrill.label} · ${regionDrill.level}s` : ''].filter(Boolean).join(' · '), hasDrill: s.drill.length > 0 || cloudDrill.length > 0, drillUp: () => set({ drill: s.drill.slice(0, -1), cloudDrill: cloudDrill.slice(0, -1), cloudPick: cloudDrill.length ? cloudPick : null }), sitesHead: s.drill.length ? '‹ ' + S.labelOfKey(est, s.drill[s.drill.length - 1]) : 'Sites', sitesUp: () => set({ drill: s.drill.slice(0, -1) }), sitesHeadColor: s.drill.length ? 'var(--link)' : 'var(--text-light)', cloudsHead: regionDrill ? '‹ ' + (regionDrill.crumb || [cloudDrill[0]]).slice(-1)[0] : 'Clouds', cloudsUp: cloudsUpNow, cloudsHeadColor: regionDrill ? 'var(--link)' : 'var(--text-light)', cloudsHeadW, showWorkloadsHead: false, tConnect: s.tab === 'connect', tGovern: s.tab === 'govern', tObserve: s.tab === 'observe', tCost: s.tab === 'cost',
     // Scope lives on Traffic; Connect, Govern and Cost read the whole estate (2026-09-29 audit).
     ...connectVals(s, set, est, go, ob),
+    ...movesVals(s, set, go, est, { openF, obAll, conns }),
     connectFindings: deptFindings('connect'), hasConnectFindings: deptFindings('connect').length > 0, tabLabel: TAB_LABEL[s.tab] || 'Connect', noConnectFindings: deptFindings('connect').length === 0, connectOthers: ['govern', 'observe', 'cost'].map(t => ({ key: t, n: findingsFor(s.layer, t).length, label: `${findingsFor(s.layer, t).length} close on ${TAB_LABEL[t]}`, go: () => { set({ tab: t }); syncHash('s3', s.layer, t); scrollToResult('S3 Department'); } })).filter(x => x.n > 0), hasConnectOthers: ['govern', 'observe', 'cost'].some(t => findingsFor(s.layer, t).length > 0), mostChosen, levelTiles: sorted, levelCount: levelItems.length, levelSort: s.levelSort, setLevelSort: (e) => set({ levelSort: e.target.value }), levelQuery: s.levelQuery, setLevelQuery: (e) => set({ levelQuery: e.target.value }), levelTitle: drillInfo ? drillInfo.label : levelMapTitle(layer), levelMore: Math.max(0, levelItems.length - 60), hasLevelMore: levelItems.length > 60, catalogRow, visionRow, hasVision: visionRow.length > 0,
     hasSim: !!s.simulated || (s.customPolicies || []).some(p => p.state === 'simulated'),
     governVerdict, governFindings: deptFindings('govern'), policies, hasPolicies: policies.length > 0, examplePolicies0: [{ key: 'a', t: 'Tag PCI forces a private path', m: 'tag PCI', r: 'Private path required' }, { key: 'b', t: 'Tag Internet-facing gets NGFW plus AT&T egress', m: 'tag Internet-facing', r: 'Inline security inspection' }, { key: 'c', t: 'Branch Finance reaches only finance-tagged workloads', m: 'branch Finance', r: 'Segment intra-tag only' }], authorPolicy: go('s4', { ...newOrder({ ...cleanCompose(cp), outcome: 'u1', control: ['Private path required'], source: ['Data center'], dest: ['Clouds'] }) }), simulate: () => set({ simulated: true, enforced: false }), enforce: () => set({ enforced: true }), undo: () => set({ simulated: false, enforced: false }), simulated: s.simulated, enforced: s.enforced, canEnforce: s.simulated && !s.enforced, simulateText: s.enforced ? 'Enforced. Paths rerouted onto the AT&T network.' : s.simulated ? `Simulated: ${pciViol ? pciViol.split(' ')[0] : 0} paths reroute onto the AT&T network, 2 flows denied. Drawn dashed until enforced.` : 'Simulate shows what changes before enforce is enabled.', enforceBg: s.simulated && !s.enforced ? 'var(--cta)' : 'var(--bg-neutral)', enforceColor: s.simulated && !s.enforced ? '#fff' : 'var(--text-disabled)',
@@ -1041,11 +1036,12 @@ export function vals(c) {
     ...costVals(s, set, est, A.inventory(est), obAll, go, c),
     ...bwVals(s, set, est0, conns),
     costVerdict, buckets, steerRecs: steerable, costFindings: deptFindings('cost'), hasBuckets: buckets.length > 0, bTotalF: fmt(bTotal), bFabF: fmt(bFab), bSaveF: fmt(bTotal - bFab),
-    // compose
-    ...wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c),
-    outcomeCards, hasOutcome: !!outcome, sourceChips: chipRow('source', D.COMPOSE_CHIPS.source), destChips: chipRow('dest', D.COMPOSE_CHIPS.dest), regionTabs, metroChips, resChips: chipRow('resiliency', D.COMPOSE_CHIPS.resiliency, true), controlChips: chipRow('control', D.COMPOSE_CHIPS.control), constraint, hasConstraint: !!constraint, summary, freeText: s.freeText, setFreeText: (e) => set({ freeText: e.target.value }), parseText: () => parseText(c, s.freeText), reviewOrder: () => { if (!summary.ready) return; set({ order: composed, screen: 's6', term: 36 }); window.scrollTo(0, 0); syncHash('s6'); }, reviewBg: summary.ready ? 'var(--cta)' : 'var(--bg-neutral)', reviewColor: summary.ready ? '#fff' : 'var(--text-disabled)',
+    // compose: Govern's authoring grammar, then the connect flow (Ways to connect, s4, Orders).
+    ...wizardVals(s, est, set, c),
+    ...flowVals(s, set, est, c),
+    freeText: s.freeText, setFreeText: (e) => set({ freeText: e.target.value }), parseText: () => parseText(c, s.freeText, est),
     // review
-    hasOrder: orderLines.length > 0, noOrder: orderLines.length === 0, orderLines, orderPolicies, hasOrderPolicies: orderPolicies.length > 0, orderInspection, orderVisibleLine, unpriced, hasUnpriced: hasPrice && unpriced.length > 0, orderPriced: hasPrice, orderUnpriced: !hasPrice, priceNote: PRICE_NOTE, pricedTotalF: hasPrice ? fmt(pricedTotal) + '/mo' : '', termTotalF: hasPrice ? fmt(termTotal) + '/mo' : '', termDisc, hasTermSave, termSaveF: hasTermSave ? `save ${termDisc}% vs on-demand` : '', termLabel: s.term ? `${s.term}-month` : 'On-demand', termOptions, orderSave: ord.savings ? `save ${fmt(ord.savings)}/mo vs public egress` : '', hasOrderSave: !!ord.savings, orderTimeline: `${orderDays} business ${orderDays === 1 ? 'day' : 'days'}`, reviewSrc, reviewDst, approver: s.approver == null ? `j.martinez@${mailDomain(est)}` : s.approver, setApprover: (e) => set({ approver: e.target.value }), orderTitle: ord.title || 'Order', pathDesc: ord.pathDesc || '', submit: () => { set({ submitted: true, pendingDismissed: false, screen: 's2' }); window.scrollTo(0, 0); syncHash('s2'); }, saveProposal: () => set({ proposalSaved: true }), proposalSaved: !!s.proposalSaved, reviewShield: !!ord.shield, reviewWires: ord.wires || 1,
+    hasOrder: orderLines.length > 0, noOrder: orderLines.length === 0, orderLines, orderPolicies, hasOrderPolicies: orderPolicies.length > 0, orderInspection, orderVisibleLine, unpriced, hasUnpriced: hasPrice && unpriced.length > 0, orderPriced: hasPrice, orderUnpriced: !hasPrice, priceNote: PRICE_NOTE, pricedTotalF: hasPrice ? fmt(pricedTotal) + '/mo' : '', termTotalF: hasPrice ? fmt(termTotal) + '/mo' : '', termDisc, hasTermSave, termSaveF: hasTermSave ? `save ${termDisc}% vs on-demand` : '', termLabel: s.term ? `${s.term}-month` : 'On-demand', termOptions, orderSave: ord.savings ? `save ${fmt(ord.savings)}/mo vs public egress` : '', hasOrderSave: !!ord.savings, orderTimeline: `${orderDays} business ${orderDays === 1 ? 'day' : 'days'}`, reviewSrc, reviewDst, approver: s.approver == null ? `j.martinez@${mailDomain(est)}` : s.approver, setApprover: (e) => set({ approver: e.target.value }), orderTitle: ord.title || 'Order', pathDesc: ord.pathDesc || '', submit: () => { const placed = s.orders || []; const rec = { id: `o${placed.length + 1}`, title: ord.title || 'Order', type: (ord.lines || [])[0] ? ord.lines[0].product : '', what: `${reviewSrc} · ${reviewDst}`, monthly: hasPrice ? `${fmt(termTotal)}/mo · ${s.term ? s.term + '-month' : 'On-demand'}` : PRICE_NOTE, term: s.term ? `${s.term}-month` : 'On-demand', policy: (ord.policies || []).map(p => p.req).join(', '), at: SCH.hhmm(SCH.nowOf(s)), stage: CF.ORDER_STAGE }; set({ orders: [...placed, rec], submitted: true, pendingDismissed: false, screen: 's2' }); window.scrollTo(0, 0); syncHash('s2'); }, saveProposal: () => set({ proposalSaved: true }), proposalSaved: !!s.proposalSaved, reviewShield: !!ord.shield, reviewWires: ord.wires || 1,
     // browse
     browseQuery: s.browseQuery, setQuery: (e) => set({ browseQuery: e.target.value }), browseSort: s.browseSort, setSort: (e) => set({ browseSort: e.target.value }), filtersOpen: s.filtersOpen, toggleFilters: () => set({ filtersOpen: !s.filtersOpen }), filterCount, filterLabel: filterCount ? `Filters (${filterCount})` : 'Filters', categories, curated, results, resultCount: results.length, browsing, backToMarket: () => set({ browseQuery: '', browseCat: null, filterProviders: [], priceCeil: 0 }), providerChips: providers.map(p => ({ key: p, label: p, on: s.filterProviders.includes(p), click: () => set({ filterProviders: s.filterProviders.includes(p) ? s.filterProviders.filter(x => x !== p) : [...s.filterProviders, p] }) })), priceChips: [1000, 2500, 5000].map(v => ({ key: 'p' + v, label: `Under ${fmt(v)}/mo`, on: s.priceCeil === v, click: () => set({ priceCeil: s.priceCeil === v ? 0 : v }) })), visionTiles, browseCatLabel: s.browseCat ? D.CATEGORIES.find(cc => cc.id === s.browseCat).label : q ? `Results for "${s.browseQuery}"` : 'Results',
     lmccHero: productCard(c, D.CATALOG.find(p => p.id === 'lmcc'), est), catalogAll: D.CATALOG,
@@ -1165,10 +1161,6 @@ function pageLists(out, s, set) {
     const pg = pageRows(out[list], size, s[key], (n) => set({ [key]: n }));
     out[list] = pg.rows; out[pagerName] = pg.pager; out[sizeName] = size;
   }
-  if (Array.isArray(out.candGroups)) {
-    out.candPageSize = 5;
-    out.candGroups = out.candGroups.map(g => { const pg = pageRows(g.rows, 5, (s.candPage || {})[g.key], (n) => set({ candPage: { ...(s.candPage || {}), [g.key]: n } })); return { ...g, rows: pg.rows, pager: pg.pager }; });
-  }
   return out;
 }
 
@@ -1285,7 +1277,8 @@ function productCard(c, p, est) {
   return { ...p, key: p.id, priceLine: price, hasPrice: !!price, proof: p.proof.map((x, i) => ({ key: i, label: x, head: ['Uptime', 'Latency', 'Support'][i] })), tagList: p.tags.map(t => ({ key: t, label: t })), open: () => { c.setState({ product: p.id, screen: 's8' }); window.scrollTo(0, 0); syncHash('s8'); }, choose: () => { c.setState({ order: productOrder(p, est), screen: 's6', term: 36 }); window.scrollTo(0, 0); syncHash('s6'); }, layerLabel: D.LAYERS.find(l => l.id === p.layer).label, mark: p.provider === 'AT&T' ? 'AT&T' : p.provider.split(',')[0].slice(0, 2).toUpperCase() };
 }
 
-const POLICY_FOR_CONTROL = { 'Private path required': { match: 'tag PCI', req: 'Private path required' }, 'No direct internet path': { match: 'tag Prod', req: 'No direct internet path' }, 'Inline inspection': { match: 'tag Internet-facing', req: 'Inline security inspection' }, 'Inline security inspection': { match: 'tag Internet-facing', req: 'Inline security inspection' }, 'Segment by tag': { match: 'branch Finance', req: 'Segment intra-tag only' }, 'Latency SLO': { match: 'tag GPU', req: 'Latency SLO 15 ms' }, 'Cost-aware routing': { match: 'region *', req: 'Cost-aware routing' } };
+// One table of what a control ships as, shared with the connect flow (naas-connect-flow.js).
+const POLICY_FOR_CONTROL = CF.POLICY_FOR_CONTROL;
 
 // ---- path ends (review round 2, 2026-09-30) ----
 // Review draws every order as two ends with the AT&T network between them.
@@ -1330,7 +1323,7 @@ function reviewEnds(ord) {
 
 function composeOrder(cp, outcome, est) {
   if (!outcome) return { lines: [], policies: [], monthly: 0, savings: 0, days: 0 };
-  const mult = { Standard: 1, Geodiversity: 1.6, Maximum: 2.2 }[cp.resiliency];
+  const mult = CF.TIER_MULT[cp.resiliency];
   // The site-attach routes (gap row, drawer bulk attach, a row's own Attach)
   // are the only writers of `cp.qty`; every wizard-built order leaves it
   // unset and renders exactly as before (siteQty defaults to 1).
@@ -1402,7 +1395,7 @@ function steerBucket(c, b, est) {
   window.scrollTo(0, 0); syncHash('s4');
 }
 
-function parseText(c, t) {
+function parseText(c, t, est) {
   const s = (t || '').toLowerCase();
   const outcome = /leave|egress|internet/.test(s) ? 'u2' : /two clouds|cloud to cloud|join|between/.test(s) ? 'u3' : 'u1';
   const control = [];
@@ -1417,12 +1410,14 @@ function parseText(c, t) {
   const metros = ['ashburn', 'dallas', 'chicago', 'san jose', 'frankfurt', 'atlanta', 'denver', 'london'].filter(m => s.includes(m)).map(m => m.replace(/\b\w/g, ch => ch.toUpperCase()));
   const ctl = control.length ? control : D.OUTCOMES.find(o => o.id === outcome).control.slice();
   const source = outcome === 'u1' ? ['Data center'] : ['A cloud region'];
+  // A cloud region the sentence names, from this estate (the connect flow, 2026-09-30: "which cloud for example").
+  const named = ((est && est.regionsList) || []).find(r => s.includes(`${r.cloud} ${r.region}`.toLowerCase())) || ((est && est.regionsList) || []).find(r => new RegExp(`\\b${r.region.replace(/[-]/g, '\\-')}\\b`).test(s));
   // Spreads the live compose rather than rebuilding it through prefillCompose,
   // so it is a NEW-order writer that must go through cleanCompose explicitly:
   // the user just typed this order themselves - it does not come "from"
   // anything upstream, so the fields that carry provenance and count are
   // wiped here, not inherited from whatever route ran before it.
-  c.setState(st => ({ ...newOrder({ ...cleanCompose(st.compose), outcome, control: ctl, dest, source, resiliency, metros: metros.length ? metros : st.compose.metros, prefilled: false, step: 0, note: `Understood: ${D.OUTCOMES.find(o => o.id === outcome).name.toLowerCase()} · from ${source.join(', ').toLowerCase()} · to ${dest.join(', ').toLowerCase()}${metros.length ? ' · via ' + metros.join(', ') : ''} · ${resiliency.toLowerCase()} resiliency · require ${ctl.join(', ').toLowerCase()}. Each step below is filled; correct anything I got wrong.` }) }));
+  c.setState(st => ({ ...newOrder({ ...cleanCompose(st.compose), outcome, control: ctl, dest, source, resiliency, metros, prefilled: false, byText: true, ...(named ? { prefillRegion: named.cloud + ' ' + named.region } : {}), step: 0, note: `Understood: ${D.OUTCOMES.find(o => o.id === outcome).name.toLowerCase()} · from ${source.join(', ').toLowerCase()} · to ${dest.join(', ').toLowerCase()}${metros.length ? ' · via ' + metros.join(', ') : ''} · ${resiliency.toLowerCase()} resiliency · require ${ctl.join(', ').toLowerCase()}. The steps it filled say so; correct anything I got wrong.` }) }));
 }
 
 
@@ -1873,80 +1868,14 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     };
   });
   const gapRows = [...gapRegions, ...gapSites];
-  // Connect · Options (notes, 2026-09-29): the same candidates as a page, split
-  // by what they are, each with its own best option and what else would do.
-  const candRow = (row, opt) => ({ ...row, qty: row.qty || 1, bestName: opt.best.name, bestWhy: opt.best.why, altLine: 'or ' + opt.alts.map(a => a.name).join(' · ') });
-  const pubSites = (est.sites || []).filter(x => !x.priv);
-  const candSiteRows = pubSites.map((x, i) => ({ row: candRow(gapSites[i], S.candidateOptions(x)), dc: S.isDataCenter(x) }));
-  const candGroups = [
-    ['sites', 'Sites', candSiteRows.filter(r => !r.dc).map(r => r.row)],
-    ['dcs', 'Data centers', candSiteRows.filter(r => r.dc).map(r => r.row)],
-    ['regions', 'Cloud regions', est.regionsList.filter(r => !r.priv).map((r, i) => candRow(gapRegions[i], S.candidateOptions(r)))],
-  ].filter(g => g[2].length).map(([key, label, rows]) => ({ key, label, rows, count: rows.reduce((a, r) => a + r.qty, 0).toLocaleString('en-US') }));
+  // The Options page's candidate columns retired for Connect > Recommended (2026-09-30, naas-moves.js).
   const gapSiteN = S.gapSiteCount(est);
   const gapSummary = gapRows.length
     ? `${gapRegions.length} cloud ${gapRegions.length === 1 ? 'region' : 'regions'} and ${gapSiteN.toLocaleString('en-US')} ${gapSiteN === 1 ? 'site is' : 'sites are'} still on the public internet, in ${gapRows.length} ${gapRows.length === 1 ? 'group' : 'groups'}.`
     : 'Everything discovered is on the AT&T network.';
-  // Connect, as three decisions in the order a customer makes them:
-  // which path, how to buy it, what happens after the order is placed.
-  const pathPick = s.pathPick || 'fabric';
-  const buyPick = s.buyPick || 'hosted';
-  const PATH_STEPS = [
-    { id: 'fabric', name: 'Private AT&T (NetBond)', tone: '#0057b8',
-      what: 'AT&T NetBond into the cloud on-ramp. Private layer 3, never on the public internet.',
-      tags: ['Private', 'Any cloud', 'AT&T managed'],
-      good: 'Deterministic latency, one SLA end to end, $0.02/GB egress, every cloud off the same port.',
-      cost: 'Capacity is committed up front. From 10 business days to stand up.' },
-    { id: 'sdwan', name: 'SD-WAN overlay', tone: '#00a8e0',
-      what: 'Your SD-WAN extended to the cloud gateway. Encrypted overlay over the access you already have.',
-      tags: ['Encrypted', 'Any transport', 'Days not weeks'],
-      good: 'Live on existing access, steers around brownouts on its own, no new circuit to order.',
-      cost: 'The middle mile is shared transport, so it is best effort. $0.04/GB blended.' },
-    { id: 'native', name: 'Hyperscaler-native interconnect', tone: '#5d6f80',
-      what: 'Direct Connect, ExpressRoute or Cloud Interconnect straight into one cloud.',
-      tags: ['Private', 'One cloud', 'You operate'],
-      good: 'Lowest per-GB rate inside that one cloud, with no middle party.',
-      cost: 'One cloud per circuit, 4 to 8 weeks, and you own the routers, the LOA and the ticket.' },
-  ];
-  const pathRows = PATH_STEPS.map(p => {
-    const on = p.id === pathPick;
-    return { ...p, key: p.id, on, tagRows: p.tags.map(t => ({ key: t, label: t })),
-      border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)',
-      pickLabel: on ? 'Chosen' : 'Choose', pickBg: on ? 'var(--cta)' : 'transparent', pickInk: on ? '#fff' : 'var(--link)',
-      pickBorder: on ? 'var(--cta)' : 'var(--border-primary)',
-      pick: () => set({ pathPick: p.id }) };
-  });
-  const pathChosen = PATH_STEPS.find(p => p.id === pathPick) || PATH_STEPS[0];
-  const BUY_OPTS = [
-    { id: 'hosted', name: 'Hosted private', badge: 'Most chosen',
-      what: 'AT&T owns the port, the edge router and the cross-connect. You buy capacity, not hardware.',
-      gets: ['One monthly rate per Mbps, one bill, one SLA', 'Change capacity in the portal, no truck roll', 'AT&T holds the ticket end to end'],
-      fit: 'Best when you would rather not run edge routers.' },
-    { id: 'byoc', name: 'Bring your own circuit', badge: 'BYOC',
-      what: 'You keep the access and the LOA-CFA. AT&T rides it and manages the overlay only.',
-      gets: ['Lower monthly, because the port is already yours', 'Reuse access that is in place and depreciated', 'You keep the hardware and the first-line ticket'],
-      fit: 'Best when the circuit is already there and paid for.' },
-  ];
-  const buyRows = BUY_OPTS.map(b => {
-    const on = b.id === buyPick;
-    return { ...b, key: b.id, on, getRows: b.gets.map((g, i) => ({ key: b.id + i, text: g })),
-      border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)',
-      pickLabel: on ? 'Chosen' : 'Choose', pickBg: on ? 'var(--cta)' : 'transparent', pickInk: on ? '#fff' : 'var(--link)',
-      pickBorder: on ? 'var(--cta)' : 'var(--border-primary)',
-      pick: () => set({ buyPick: b.id }) };
-  });
-  const buyChosen = BUY_OPTS.find(b => b.id === buyPick) || BUY_OPTS[0];
-  const buildText = { fabric: 'AT&T provisions both ends and gives you a build ticket with a date. From 10 business days.', sdwan: 'AT&T pushes the overlay to your edge devices. Days, not weeks.', native: 'You order the port and book the cross-connect; the cloud side is yours. 4 to 8 weeks.' }[pathPick];
-  const provSteps = [
-    { key: 'p1', n: '1', t: 'Pick what to connect', d: 'Choose a region, a VPC or a site from what discovery already found. Nothing to type in.' },
-    { key: 'p2', n: '2', t: 'Size it', d: 'Capacity arrives pre-filled from the traffic Observe already measured. Burst above it is allowed.' },
-    { key: 'p3', n: '3', t: 'Order', d: buyPick === 'hosted' ? 'One order. AT&T generates the LOA and books the cross-connect.' : 'One order against your circuit. You send the LOA-CFA, we ride the access.' },
-    { key: 'p4', n: '4', t: 'Build', d: buildText },
-    { key: 'p5', n: '5', t: 'Turn-up', d: 'BGP comes up, routes advertise, and we run test traffic before you cut over.' },
-    { key: 'p6', n: '6', t: 'Policy on day one', d: 'The tags you already govern apply to the new path the moment it carries traffic.' },
-  ];
-  const provSub = `${pathChosen.name} · ${buyChosen.name}`;
-  const stepVals = { pathRows, buyRows, provSteps, provSub, pathChosenName: pathChosen.name, buyChosenName: buyChosen.name };
+  // The three-card NetBond / SD-WAN / Hyperscaler comparison and its Chosen button left Ways to
+  // connect (2026-09-30): the page is NetBond Advanced's connection types now (flowVals), and the
+  // path table moved into the flow's Connection Profile step.
   // A customer with nothing connected is three steps from Observe; point them at the next one.
   // With nothing attached, or nothing degraded, it says what is true (sweep, 2026-09-30:
   // Small read "0 connections carry 0.0 Gbps on AT&T. See which one is degraded").
@@ -2852,7 +2781,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       seeFound: () => set({ screen: 's1', discoverView: 'estate', estPanel: 'clouds', cloudTrailE: ['cloud:' + cloud], cloudPage: 0 }), foundAttach: composeFor(go, regs[0]) };
   })();
   const credScanned = sources.filter(x => x.state === 'Connected').length;
-  const gapVals = { candGroups, hasCands: candGroups.length > 0, noCands: candGroups.length === 0, gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
+  const gapVals = { gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
   const obX = { ...foundVals, sources, sourcesSub: `${credScanned} connected · ${sched.cadence.empty ? 'nothing on a schedule yet' : sched.cadence.label.toLowerCase()}`, ...(() => {
       // One drawer adds a source or edits one: which cloud (adding only), then its
       // credential, scope and schedule. AT&T inventory has nothing to manage.
@@ -2977,8 +2906,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         // Three tabs, one panel at a time (2026-09-28, no scrolling).
         // Group the picture's sites (notes, 2026-09-29): by region, or by how they attach.
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
-        // Connect is two pages (notes, 2026-09-29): what you have, and the options for what is not on AT&T yet.
-        ...(() => { const on3 = s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect'; const ck = ['options', 'ways'].includes(s.cnPage) ? s.cnPage : 'picture'; return { cnIsOptions: on3 && ck === 'options', cnIsWays: on3 && ck === 'ways', cnIsPicture: on3 && ck === 'picture', cnShowLens: on3 && ck !== 'options', lensValue: s.lens || 'security', setLens: (e) => set({ lens: e.target.value }), cnTabs: on3, heroHead: s.screen !== 's3', cnShowTabs: on3 && ck !== 'picture', cnPanels: [['options', 'Options'], ['ways', 'Ways to connect']].map(([k, l]) => { const on = ck === k; return { key: k, label: l, on, go: () => set({ cnPage: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }) }; })(),
+        // Connect's views (2026-09-30): Connections (the map, no tab row) and three pages under
+        // one head, Recommended, Ways to connect and Orders, the rail's four places.
+        ...(() => { const on3 = s.screen === 's3' && s.layer === 'cloud' && s.tab === 'connect'; const ck = cnPageOf(s); return { cnIsOptions: on3 && ck === 'options', cnIsWays: on3 && ck === 'ways', cnIsOrders: on3 && ck === 'orders', cnIsPicture: on3 && ck === 'picture', cnShowLens: on3 && ck === 'picture', lensValue: s.lens || 'security', setLens: (e) => set({ lens: e.target.value }), cnTabs: on3, heroHead: s.screen !== 's3', cnShowTabs: on3 && ck !== 'picture', cnPanels: [['options', 'Recommended'], ['ways', 'Ways to connect'], ['orders', 'Orders']].map(([k, l]) => { const on = ck === k; return { key: k, label: l, on, go: () => set({ cnPage: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }) }; })(),
         // Your clouds drill like Your sites (2026-09-29): clouds, regions with their bandwidth,
         // VPCs, subnets, workloads. The rollup on top counts the sites that reach them.
         ...(() => {
@@ -3082,7 +3012,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     utilRows: (ob.utilRows || []).map(u => { const hot = u.pct >= 80; const r = est0.regionsList.find(x => x.region === u.region) || { region: u.region, wl: 0 }; return { ...u, key: u.id, label: `${u.cloud} ${u.region}`, sub: `${rampName(u)} · ${u.bw || u.ports + ' × 10 Gbps'}`, w: u.pct + '%', v: `${u.gbps} Gbps`, pctF: u.pct + '%', fill: hot ? 'var(--error)' : '#009fdb', doorLabel: hot ? 'Add a port →' : 'Ask Andi →', doorColor: hot ? 'var(--warning)' : 'var(--link)', go: hot ? composeFor(go, r) : () => set({ andiScope: { kind: 'region', id: u.region, label: `${u.cloud} ${u.region}` }, andiOpen: true }) }; }),
     obStrip: (() => { const rows = ob.utilRows || []; const hot = rows.filter(u => u.pct >= 80 && !(connRow && connRow.region === u.region && connRow.degraded)); const blind = ob.blind || []; const parts = []; const deg = conns.rows.find(r => r.degraded); if (deg) parts.push(`${deg.cloud} ${deg.region} is degraded on ${rampName(deg)}: BGP flapping, ${deg.drops} drops, ${deg.wl.toLocaleString('en-US')} workloads behind it.`); if (hot.length) parts.push(`${hot.map(u => `${u.cloud} ${u.region}`).join(', ')} ${hot.length === 1 ? 'runs' : 'run'} above 80% of ${hot.length === 1 ? 'its' : 'their'} ports.`); if (blind.length) parts.push(`${blind.length} ${blind.length === 1 ? 'region sends' : 'regions send'} no flow logs, so ${ob.pub.toFixed(1)} Gbps is unseen.`); if (ob.worst && !blind.length) parts.push(`${ob.worst.name} is the slowest public flow at ${ob.worst.latency} ms.`); const first = hot[0] ? est0.regionsList.find(x => x.region === hot[0].region) : blind[0]; return { has: parts.length > 0, title: 'Act on it', text: parts.join(' ') + (hot.length ? ' Add a port before it saturates.' : blind.length ? ' Attach it to bring the traffic under control.' : ''), cta: hot.length ? `Add a port on ${hot[0].region}` : blind.length ? `Attach ${blind[0].region}` : 'Steer worst offender', go: first ? composeFor(go, first) : (ob.worst ? () => set({ steered: [...(s.steered || []), ob.worst.id] }) : () => {}) }; })(), hasUtil: (ob.utilRows || []).length > 0, utilLine: `${ob.util}% of ${ob.capGbps} Gbps in use · ${(ob.utilRows || []).length} ${(ob.utilRows || []).length === 1 ? 'connection' : 'connections'}`, utilHot: (ob.utilRows || []).filter(u => u.pct >= 80).length, anomalies: R.anomalies(R.applyScope(est0, obScope), ob).map(a => ({ ...a, dot: a.sev === 'amber' ? 'var(--warning)' : 'var(--link)', go: a.region ? () => set({ obScope: 'cloud:' + (est0.regionsList.find(r => r.region === a.region) || {}).cloud }) : () => {} })), hasAnomalies: R.anomalies(R.applyScope(est0, obScope), ob).length > 0, insights: R.insights(R.applyScope(est0, obScope), ob), hasInsights: !isEmpty, iw: iwVals(R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s), { pubRate: (() => { const w = R.egressWeeks(obAll)[11], pubMo = (est0.buckets || []).filter(b => b.today > b.fabric).reduce((a, b) => a + b.today, 0); return w && w.pub > 0 ? pubMo / w.pub : 0; })() }), s, set, go, winLabelOf(s)) || {}, hasIw: !!R.insightWidgets(R.applyScope(est0, obScope), ob, winDaysOf(s)),
     obVerdict: ob.verdict, obCoverage: ob.coverage, obKpis: ob.kpis.map(k => ({ ...k, hasUnit: !!k.u, hasE: !!k.e })), obTabs, obIsFlow: obTab === 'flow', trend, hasTrend: !!trend,
-    ...logVals, ...gapVals, ...stepVals,
+    ...logVals, ...gapVals,
     skVB: `0 0 ${sk.W} ${sk.H}`, skNodes, skHeads, skRibbons, goLogs: () => toLogs({ logPattern: 'all' }), skSub: ob.subVerdict, skFoot: `All flows · ${ob.flows.filter(f => f.kind === 'App').length} app flows, ${ob.flows.filter(f => f.kind !== 'App').length} cloud-to-cloud. Sites roll up by class; the records table lists cloud flows only.`,
     records, recordCount: `${records.length} groups`, groupBy, setGroupBy: (e) => set({ groupBy: e.target.value }), groupOptions: ['None', 'Source', 'Destination', 'Path', 'Action'].map(o => ({ key: o, label: o })),
     briefing: ob.briefing, briefPills, briefQs, paths, pathsSummary: ob.pathsSummary, restoreAll: () => set({ steered: [] }), hasSteered: steered.length > 0,
@@ -3093,17 +3023,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
 
 
 // ---------- Compose wizard + Govern grammar ----------
-const STEP_LABELS = ['Outcome', 'Source', 'Destination', 'Metro', 'Resiliency', 'Control'];
 const CARD_DESC = {
-  source: { 'Data center': 'Sites tagged site/dc-* on AVPN, ASE or Dedicated Internet.', 'Sites': 'Offices, branches, plants and campuses.', 'Internet': 'Any site that only has an internet first mile. IPSec into the AT&T network.', 'A cloud region': 'Resources tagged prod, pci or finance inside a VPC or VNet.', 'AI workloads': 'Resources tagged gpu or ai: ml-infra/gpu-*, rd-helion/*.' },
-  dest: { 'Clouds': 'Named resources in AWS, Azure, Google Cloud, Oracle: a region, a VPC, a tag.', 'Neoclouds': 'CoreWeave, Nebius, Lambda through Equinix Fabric.', 'AI providers': 'OpenAI, Anthropic, Bedrock, Vertex behind the AI Fabric gateway.', 'The Internet': 'Egress through inspection instead of the hyperscaler exit.', 'The WAN': 'Back to your sites over AVPN.' },
-  resiliency: { 'Standard': 'One metro, one path. 99.99% uptime. The right default for most regions.', 'Geodiversity': 'Two metros, two on-ramps, active/standby. 99.995%.', 'Maximum': 'Two metros, two paths, managed failover. 99.999%. AWS Interconnect Last Mile.' },
   control: { 'Private path required': 'Traffic may never touch the public internet. Enforced on the path.', 'No direct internet path': 'Cloud workloads leave only through the AT&T network and its inspection.', 'Inline inspection': 'NGFW in path. Every session judged before it leaves.', 'Segment by tag': 'Workloads talk only to their own tag. East-west contained.', 'Latency SLO': 'A millisecond ceiling per tag; the AT&T network re-routes when it is at risk.', 'Cost-aware routing': 'When two paths meet policy, take the cheaper one.' },
 };
-// On-ramps by product name, never code (sweep, 2026-09-30). IX is an internet exchange.
-const METRO_RAMPS = { Ashburn: 'NetBond · Direct Connect · ExpressRoute · IX · 8 ms', Atlanta: 'NetBond · Direct Connect · 11 ms', 'New York': 'NetBond · Direct Connect · ExpressRoute · 9 ms', Dallas: 'NetBond · Direct Connect · ExpressRoute · 9 ms', Chicago: 'NetBond · Direct Connect · ExpressRoute · 10 ms', Denver: 'NetBond · 14 ms', 'San Jose': 'NetBond · Direct Connect · ExpressRoute · 7 ms', 'Los Angeles': 'NetBond · Direct Connect · 9 ms', Seattle: 'Direct Connect · ExpressRoute · 11 ms', Frankfurt: 'NetBond · Direct Connect · ExpressRoute · 9 ms', London: 'NetBond · Direct Connect · ExpressRoute · 8 ms', Amsterdam: 'NetBond · Direct Connect · 10 ms', Singapore: 'NetBond · Direct Connect · 12 ms', Tokyo: 'Direct Connect · ExpressRoute · 13 ms', Sydney: 'Direct Connect · 15 ms' };
 const REGION_OF_METRO = (m) => Object.keys(D.COMPOSE_CHIPS.regions).find(r => D.COMPOSE_CHIPS.regions[r].includes(m)) || 'US East';
-const REGION_GEO = { 'us-east-1': 'Ashburn', 'us-east-2': 'Chicago', 'us-west-2': 'Seattle', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'London', 'ap-southeast-1': 'Singapore', eastus: 'Ashburn', westeurope: 'Amsterdam', centralus: 'Dallas', 'us-central1': 'Chicago', 'us-east-04': 'New York', 'uk-south': 'London' };
+const REGION_GEO = CF.REGION_GEO;
 
 /**
  * Strips a compose of everything that names where it came from, how many of
@@ -3121,18 +3045,11 @@ const REGION_GEO = { 'us-east-1': 'Ashburn', 'us-east-2': 'Chicago', 'us-west-2'
  * shortcut) spreads `cp` unchanged; those fields are exactly what should
  * survive.
  */
-const cleanCompose = (cp) => ({ ...cp, sourceLabel: null, bulk: null, qty: 1, noteStep: 0, note: null });
-
-/**
- * Whether a compose carries an order at all - fix round 3, finding H: the
- * round-2 guard keyed on `sourceLabel` alone, which only the gap route
- * writes, so an outcome switch after the drawer's bulk attach (label-less,
- * but `bulk`/`qty` both set) slipped through uncleaned. This names every
- * shape a "this compose is about N sites/a labelled card/a written note"
- * order can take, so a future writer that sets any one of them is covered
- * without a fourth patch.
- */
-const carriesOrder = (cp) => !!(cp.sourceLabel || cp.bulk || (cp.qty || 1) > 1 || cp.note);
+// The connect flow's own fields (2026-09-30) are the person's choices on an
+// order, so a NEW order drops them with the rest: nothing picked for one order
+// is ever shown as picked on the next.
+const FLOW_FIELDS = { ctype: null, regions: null, sites: null, loc: null, bandwidth: null, tier: null, policy: null, term: null, name: '', qos: null, colo: null, passed: [], fk: null, from: {}, prefillSets: null, noteKey: null, lmccExpress: false, byText: false };
+const cleanCompose = (cp) => ({ ...cp, sourceLabel: null, bulk: null, qty: 1, noteStep: 0, note: null, ...FLOW_FIELDS });
 
 /**
  * Fix round 3, finding R3 (the reviewer's own, pre-existing on the base):
@@ -3156,26 +3073,7 @@ function prefillCompose(est) {
   return { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: REGION_OF_METRO(metro), metros: [metro], resiliency: r.tags.includes('PCI') ? 'Geodiversity' : 'Standard', control, step: 0, prefilled: true, prefillRegion: r.cloud + ' ' + r.region, prefillWl: r.wl };
 }
 
-function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
-  const step = cp.step || 0;
-  const filled = [!!cp.outcome, cp.source.length > 0, cp.dest.length > 0, cp.metros.length > 0, !!cp.resiliencyChosen, cp.control.length > 0];
-  const goStep = (i) => () => setC({ step: i });
-  const steps = STEP_LABELS.map((l, i) => ({ key: l, n: i + 1, label: l, cur: i === step, done: filled[i] && i !== step, go: goStep(i), fill: i === step ? 'var(--cta)' : filled[i] ? 'var(--success)' : 'transparent', ring: i === step ? 'var(--cta)' : filled[i] ? 'var(--success)' : 'var(--border-primary)', color: i === step ? 'var(--link)' : filled[i] ? 'var(--text-heading)' : 'var(--text-light)', weight: i === step ? 700 : 500, mark: filled[i] && i !== step ? '✓' : String(i + 1), markColor: i === step || filled[i] ? '#fff' : 'var(--text-light)', notLast: i < 5, flex: i < 5 ? '1 1 0' : '0 0 auto' }));
-  const card = (field, v, single, desc) => { const on = single ? cp[field] === v : cp[field].includes(v); return { key: v, label: v, desc: desc || '', on, click: () => { if (single) return setC({ [field]: v }); const arr = cp[field]; setC({ [field]: arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v] }); }, border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', check: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)' }; };
-  const stepMeta = [
-    { q: 'What should this connection do?', help: 'One outcome per order. The choice sets the control that ships with the path; you can change it at step 6.' },
-    { q: 'Where does the traffic start?', help: 'Pick every source that applies. Sites and data centers reach the AT&T network on the access you already have.' },
-    { q: 'Where is it going?', help: 'The destination decides the on-ramp: NetBond, Direct Connect, ExpressRoute, or Equinix Fabric for neoclouds.' },
-    { q: 'Through which AT&T metro?', help: 'A metro is where your path enters the AT&T network. Two metros are needed for geodiversity and maximum resiliency.' },
-    { q: 'How much resiliency?', help: 'Standard is one path. The other two add a second metro and a second on-ramp; maximum adds managed failover.' },
-    { q: 'What must always be true?', help: 'This is the policy. It ships with the path and is enforced from delivery; Govern shows it in the same words.' },
-  ];
-  const sentence = {
-    src: cp.source.join(' and '), dst: cp.dest.join(' and '), metro: cp.metros.join(' and '), res: cp.resiliency ? cp.resiliency.toLowerCase() : '', ctl: cp.control.map(x => x.toLowerCase()).join(' and '),
-    verb: outcome ? (outcome.id === 'u2' ? 'Let' : outcome.id === 'u3' ? 'Join' : 'Connect') : 'Connect', join: outcome && outcome.id === 'u2' ? 'reach' : outcome && outcome.id === 'u3' ? 'with' : 'to',
-  };
-  const slot = (v, i, empty) => ({ text: v || empty, filled: !!v, go: goStep(i), bg: v ? 'var(--bg-accent)' : 'transparent', color: v ? 'var(--link)' : 'var(--text-disabled)', border: v ? 'transparent' : 'var(--border-primary)' });
-  const policySentence = { match: cp.source[0] ? (cp.source[0] === 'A cloud region' ? 'a cloud region' : cp.source[0] === 'AI workloads' ? 'tag GPU' : cp.source[0].toLowerCase()) : 'the source', scope: cp.dest[0] ? cp.dest[0].toLowerCase() : 'the destination', req: cp.control.map(x => x.toLowerCase()).join(' and ') || '…' };
+function wizardVals(s, est, set, c) {
   // Govern authoring
   const au = s.authoring || null;
   const A_MATCH0 = ['tag PCI', 'tag Prod', 'tag Internet-facing', 'branch Finance', 'tag GPU', 'region ap-*'];
@@ -3190,14 +3088,7 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
   const openAuthor = (m, r) => () => set({ authoring: { match: m || null, scope: 'any cloud', req: r ? [r] : [] } });
   const polSentence = (p) => ({ match: p.match, scope: p.scope || (/internet/i.test(p.req) ? 'the Internet' : 'any cloud'), req: p.req.toLowerCase() });
   return {
-    wizSteps: steps, wizStep: step, wizNotLast: step < 5, backVis: step === 0 ? 'hidden' : 'visible', aNotReady: !aReady, wizQ: stepMeta[step].q, wizHelp: stepMeta[step].help, wizIsFirst: step === 0, wizIsLast: step === 5, wizNext: () => setC({ step: Math.min(5, step + 1) }), wizBack: () => setC({ step: Math.max(0, step - 1) }), wizNextLabel: step === 5 ? 'Review' : STEP_LABELS[step + 1], wizNextDisabled: !filled[step] || (step === 4 && !!constraint), wizNextBg: !filled[step] || (step === 4 && !!constraint) ? 'var(--bg-neutral)' : 'var(--cta)', wizNextColor: !filled[step] || (step === 4 && !!constraint) ? 'var(--text-disabled)' : '#fff',
-    stepIs0: step === 0, stepIs1: step === 1, stepIs2: step === 2, stepIs3: step === 3, stepIs4: step === 4, stepIs5: step === 5,
-    srcCards: D.COMPOSE_CHIPS.source.map(v => card('source', v, false, CARD_DESC.source[v])), dstCards: D.COMPOSE_CHIPS.dest.map(v => card('dest', v, false, CARD_DESC.dest[v])), resCards: D.COMPOSE_CHIPS.resiliency.map(v => card('resiliency', v, true, CARD_DESC.resiliency[v])), ctlCards: D.COMPOSE_CHIPS.control.map(v => card('control', v, false, CARD_DESC.control[v])),
-    metroCards: (D.COMPOSE_CHIPS.regions[cp.regionTab] || []).map(m => ({ ...card('metros', m, false, METRO_RAMPS[m] || 'NetBond'), })),
-    parsedNote: cp.note || '', parsedNoteTitle: cp.sourceLabel || 'From the drawer', hasParsedNote: !!cp.note && step === (cp.noteStep ?? 0), prefilled: !!cp.prefilled && !cp.note, prefillLine: cp.prefilled ? `Started from your estate: ${cp.prefillRegion} has ${cp.prefillWl} workloads on the public internet. Every step is filled; change what you like.` : '',
-    slotRows: [['Outcome', outcome ? outcome.name : '', 0, 'Pick an outcome'], ['From', cp.source.join(', '), 1, 'Pick a source'], ['To', cp.dest.join(', '), 2, 'Pick a destination'], ['Via', cp.metros.join(', '), 3, 'Pick a metro'], ['Resiliency', cp.resiliencyChosen ? cp.resiliency : `${cp.resiliency} (default)`, 4, ''], ['Require', cp.control.join(', '), 5, 'Pick a control']].map(([label, v, i, empty]) => ({ key: label, label, text: v || empty, go: goStep(i), cur: step === i, weight: v ? 500 : 400, color: step === i ? 'var(--link)' : v ? 'var(--text-heading)' : 'var(--text-disabled)' })),
-    sent: sentence, slotSrc: slot(sentence.src, 1, 'a source'), slotDst: slot(sentence.dst, 2, 'a destination'), slotMetro: slot(sentence.metro, 3, 'a metro'), slotRes: slot(sentence.res, 4, 'resiliency'), slotCtl: slot(sentence.ctl, 5, 'a control'), slotOutcome: slot(outcome ? outcome.name.toLowerCase() : '', 0, 'an outcome'),
-    polSent: policySentence, hasConstraintNow: !!constraint && step === 4,
+    aNotReady: !aReady,
     // govern
     notAuthoring: !au,
     // Two tabs, one at a time (2026-09-28, no scrolling).
@@ -3232,6 +3123,217 @@ function wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c) {
   };
 }
 
+
+// ---------- The connect flow: Ways to connect, the flow (s4), Orders ----------
+// NetBond Advanced's connection-type entry and wizard, in the storefront's
+// house style (Micah, 2026-09-30). The logic is naas-connect-flow.js; this
+// binds it. A compose is what an entry wrote plus what the person chose; the
+// person's choices are the fields the flow writes, marked "you".
+const BLANK_COMPOSE = () => ({ outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] });
+/** A compose the person has started: an entry wrote it, or they picked something in the flow. */
+export const composeStarted = (cp) => !!(cp && (cp.outcome || cp.ctype || cp.prefillSets || (cp.passed || []).length));
+const CF_INK = {
+  current: { fill: 'var(--cta)', ring: 'var(--cta)', dash: 'solid', ink: 'var(--link)', markInk: '#fff', weight: 700, subInk: 'var(--text-light)' },
+  done: { fill: 'var(--success)', ring: 'var(--success)', dash: 'solid', ink: 'var(--text-heading)', markInk: '#fff', weight: 600, subInk: 'var(--text-light)' },
+  filled: { fill: 'transparent', ring: 'var(--link)', dash: 'dashed', ink: 'var(--text-heading)', markInk: 'var(--link)', weight: 600, subInk: 'var(--link)' },
+  todo: { fill: 'transparent', ring: 'var(--border-primary)', dash: 'solid', ink: 'var(--text-light)', markInk: 'var(--text-light)', weight: 500, subInk: 'var(--text-disabled)' },
+};
+const WIP_INK = { you: { dot: 'var(--cta)', ring: 'var(--cta)', dash: 'solid', ink: 'var(--text-heading)' }, estate: { dot: 'transparent', ring: 'var(--link)', dash: 'dashed', ink: 'var(--text-heading)' }, none: { dot: 'transparent', ring: 'var(--border-primary)', dash: 'solid', ink: 'var(--text-disabled)' } };
+const pickInk = (on) => ({ border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', ink: on ? 'var(--link)' : 'var(--text-heading)', check: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)' });
+const STEP_HEAD = {
+  type: ['Choose your connection type', 'Each type says which of your sites or clouds it applies to.'],
+  provider: ['Select your cloud provider', 'Pick the region this connection reaches, from the clouds discovery found.'],
+  endpoints: ['Choose your two colo endpoints', 'Select the data center for each side, and what its cage connects through. AT&T bridges them with an on-demand virtual connection.'],
+  basic: ['Connection profile', 'Set resiliency, bandwidth, and location.'],
+  advanced: ['Advanced Settings', 'Configure network settings, and what must always be true.'],
+  terms: ['Choose your contract term', 'Longer commitments discount the monthly rate. Billing starts when the connection becomes Active.'],
+  review: ['Review', 'Review your selections. Name it if you like, then place your order.'],
+  confirm: ['Review your order', 'Check that this is the connection you want, then place your order.'],
+};
+function flowVals(s, set, est, c) {
+  const cp = s.compose || BLANK_COMPOSE();
+  const f = CF.flowOf(cp, est);
+  const keys = CF.stepKeysFor(f), key = CF.currentKey(f), landing = CF.landingKey(f), ki = keys.indexOf(key);
+  const noteKey = cp.noteKey || landing;
+  // Every write pins the step you are on, so a choice never moves the page under you.
+  const put = (patch) => set({ compose: { ...cp, fk: key, noteKey, ...patch } });
+  const choose = (field, value, extra) => put({ [field]: value, from: { ...(cp.from || {}), [field]: 'you', ...((extra && extra.from) || {}) }, ...((extra && extra.patch) || {}) });
+  const goStep = (k) => set({ compose: { ...cp, fk: k, noteKey } });
+  const scrollTop = () => { try { window.scrollTo(0, 0); } catch (e) { } };
+  // What a type applies to here, and the tile that shows it. On Connection
+  // Type, a type that applies to what the order already carries says so.
+  const tile = (t) => {
+    const a = CF.appliesTo(est, t.key);
+    const on = f.ctype === t.label;
+    const fits = t.disabled ? '' : CF.fitsOf(est, t.key, f);
+    return { ...t, n: a.n, phrase: a.phrase, none: a.none, hasCount: a.n > 0, noCount: a.n === 0, soon: !!t.disabled, notSoon: !t.disabled, disabled: !!t.disabled,
+      isProduct: !!t.category, kicker: t.category || '', on, ...pickInk(on), op: t.disabled ? 0.6 : 1, setOn: s.waySet === t.key, fits, hasFits: !!fits,
+      openSet: () => set({ waySet: s.waySet === t.key ? null : t.key, waySetPage: 0 }) };
+  };
+  // A new order from Ways to connect: the type is the decision you just made.
+  // Started from one member of its set, that member comes attached (the
+  // contract's prefillSets), filled from your estate, and the flow lands on
+  // the first step that still needs you.
+  const start = (t, member) => () => {
+    if (t.disabled) return;
+    const next = CF.stepKeysFor({ ctype: t.label, regions: [], passed: [] });
+    const sets = member ? [{ [member.kind]: [member.name], sourceLabel: 'Ways to connect' }] : null;
+    c.setState({ screen: 's4', ...newOrder({ ...BLANK_COMPOSE(), ctype: t.label, from: { ctype: 'you' }, passed: ['type'], fk: sets ? null : next[next.indexOf('type') + 1], ...(sets ? { prefillSets: sets } : {}) }), waySet: null, waySetPage: 0, wipList: null, wipListPage: 0, cfArea: null, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [] });
+    scrollTop(); syncHash('s4');
+  };
+  const pickType = (t) => () => {
+    if (t.disabled) return;
+    // wizardDoor.ts normalizeArmed: a type change prunes what the new type cannot carry.
+    const nf = { ...f, ctype: t.label, tier: t.key === 'lmcc' ? 'Maximum' : f.tier };
+    const patch = {};
+    const clouds = CF.cloudsOf(f);
+    if (t.key === 'lmcc' && clouds.some(x => x !== 'AWS')) patch.regions = f.regions.filter(r => CF.cloudOfName(r) === 'AWS');
+    else if (t.key !== 'c2c' && clouds.length > 1) patch.regions = [];
+    if (t.key !== 'colo' && cp.colo) patch.colo = null;
+    if (t.key === 'colo' && f.tier === 'Geodiversity') patch.tier = null;
+    const after = { ...nf, ...patch, regions: patch.regions || f.regions };
+    if (f.bandwidth && !CF.bandwidthsFor(after).includes(f.bandwidth)) patch.bandwidth = null;
+    if (CF.isLmcc(after) && f.loc.some(m => !CF.LMCC_METROS.includes(m))) patch.loc = [];
+    choose('ctype', t.label, { patch });
+  };
+  const wayTypes = CF.ALL_TYPES.map(t => ({ ...tile(t), start: start(t) }));
+  const cfTypes = CF.ALL_TYPES.map(t => ({ ...tile(t), pick: pickType(t) }));
+  // The set a count opens: exactly what it counted, as a list on the page, paged.
+  const setT = CF.ALL_TYPES.find(t => t.key === s.waySet) || null;
+  const setA = setT ? CF.appliesTo(est, setT.key) : null;
+  // On Ways to connect a member starts the order with it attached; inside an order the list only reads.
+  const setAll = setA ? CF.appliesRows(est, setA, rampName).map(r => { const canStart = !setT.disabled && s.screen !== 's4';
+    return { ...r, kind: setA.kind, canStart, cantStart: !canStart, startTitle: `Start ${setT.label} with ${r.name} attached`, start: start(setT, { kind: setA.kind, name: r.name }) }; }) : [];
+  const setPg = pageRows(setAll, 5, s.waySetPage, (n) => set({ waySetPage: n }));
+  const waySet = { has: !!setT, none: !setT, key: setT ? setT.key : null, title: setT ? setT.label : '', count: setA ? setA.phrase : '', head: setA ? `Applies to ${setA.phrase}` : '', all: setAll, rows: setPg.rows, pager: setPg.pager, close: () => set({ waySet: null, waySetPage: 0 }) };
+  // Choose Provider: this estate's clouds, each with its regions.
+  const lmccOnly = f.ctype === CF.LAST_MILE.label;
+  const cloudNames = [...new Set((est.regionsList || []).map(r => r.cloud))].filter(x => !lmccOnly || x === 'AWS');
+  const pickRegion = (name) => () => {
+    const has = f.regions.includes(name), cl = CF.cloudOfName(name);
+    const multi = f.ctype === 'Cloud to Cloud';
+    const next = has ? f.regions.filter(r => r !== name) : multi || CF.cloudsOf(f).every(x => x === cl) ? [...f.regions, name] : [name];
+    const after = { ...f, regions: next };
+    const patch = {};
+    if (f.bandwidth && !CF.bandwidthsFor(after).includes(f.bandwidth)) patch.bandwidth = null;
+    choose('regions', next, { patch });
+  };
+  const cfClouds = cloudNames.map(cloud => ({ key: cloud, cloud, regions: (est.regionsList || []).filter(r => r.cloud === cloud).map(r => { const name = CF.regionName(r), on = f.regions.includes(name);
+    return { key: name, name, region: r.region, sub: r.priv ? `${rampName(r)} today` : 'Public internet today', on, ...pickInk(on), pick: pickRegion(name) }; }) }));
+  // Connection Profile: the tiers and what each gets you, location and bandwidth.
+  const soon = CF.maximumSoon(f);
+  const cfTiers = CF.tiersFor(f).map(t => { const g = CF.tierGets(f, est, t), on = CF.tierOf(f) === t && (!!f.tier || t === 'Standard'), isSoon = t === 'Maximum' && soon;
+    return { ...g, key: t, on, chosen: f.tier === t, soon: isSoon, notSoon: !isSoon, locked: lmccOnly, ...pickInk(on), op: isSoon ? 0.6 : 1, pick: () => { if (isSoon || lmccOnly) return; const after = { ...f, tier: t }; const patch = {};
+      if (f.bandwidth && !CF.bandwidthsFor(after).includes(f.bandwidth)) patch.bandwidth = null;
+      if (CF.isLmcc(after) && f.loc.some(m => !CF.LMCC_METROS.includes(m))) patch.loc = [];
+      if (t !== 'Geodiversity' && f.loc.length > 1) patch.loc = f.loc.slice(0, 1);
+      choose('tier', t, { patch }); } }; });
+  const metros = CF.metroOptions(f, est);
+  const areas = [...new Set(metros.map(m => m.area))];
+  const areaNow = areas.includes(s.cfArea) ? s.cfArea : (metros.find(m => f.loc.includes(m.metro)) || metros.find(m => m.near) || metros[0] || {}).area;
+  const geo = CF.tierOf(f) === 'Geodiversity';
+  const cfAreas = areas.map(a => { const on = a === areaNow; return { key: a, label: a, on, go: () => set({ cfArea: a }), line: on ? 'var(--cta)' : 'transparent', ink: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; });
+  const cfMetros = metros.filter(m => m.area === areaNow).map(m => { const on = f.loc.includes(m.metro);
+    return { key: m.metro, metro: m.metro, near: m.near || 'No site here yet', nearAll: m.nearAll || 'No site here yet', on, pickable: true, ...pickInk(on), pick: () => choose('loc', geo ? (on ? f.loc.filter(x => x !== m.metro) : [...f.loc, m.metro]) : [m.metro]) }; });
+  // What you'd get, path by path: the comparison that left Ways to connect, read for this order's region.
+  const cfPaths = CF.pathTable(f, est).map(p => ({ ...p, weight: p.rides ? 700 : 600, rideLine: p.rides ? 'This order rides it' : '', bg: p.rides ? 'var(--bg-accent)' : 'transparent' }));
+  const cfBandwidths = CF.bandwidthsFor(f).map(b => { const on = f.bandwidth === b; return { key: b, label: b, on, ...pickInk(on), pick: () => choose('bandwidth', b) }; });
+  // Advanced Settings: the QoS classifier per cloud, and the policy the order ships with.
+  const cfQos = CF.cloudsOf(f).map(cl => ({ key: cl, cloud: cl, value: f.qos[cl] || 'Standard', set: (e) => put({ qos: { ...f.qos, [cl]: e.target.value } }) }));
+  const cfPolicy = D.COMPOSE_CHIPS.control.map(k => { const on = f.policy.includes(k); return { key: k, label: k, desc: CARD_DESC.control[k] || '', on, ...pickInk(on), pick: () => choose('policy', on ? f.policy.filter(x => x !== k) : [...f.policy, k]) }; });
+  const cfPolicySent = CF.policySentence(f, est);
+  // Terms: the storefront's term discounts, the same ones Review always used.
+  const ord = CF.flowOrder(f, est);
+  const cfTerms = CF.TERMS.map(t => { const on = f.term === t.m, priced = CF.priceable(f) && ord.priced;
+    return { key: 't' + t.m, m: t.m, title: t.title, note: t.note, best: !!t.best, price: priced ? `${fmt(CF.termPrice(ord.monthly, t.m))}/mo` : '', hasPrice: priced, save: priced && t.m ? `Save ${fmt(ord.monthly - CF.termPrice(ord.monthly, t.m))}/mo` : '', hasSave: priced && t.m > 0, on, ...pickInk(on), pick: () => choose('term', t.m) }; });
+  // Colo endpoints: two of this estate's data centers, each on a fabric.
+  const dcs = (est.sites || []).filter(x => x.cls === 'Data center' && S.countOf(x.name) === 1);
+  const side = (k, other) => ({ label: k === 'a' ? 'Colo A' : 'Colo B',
+    sites: dcs.map(x => { const on = f.colo[k].site === x.name, taken = f.colo[other].site === x.name; return { key: x.name, name: x.name, sub: x.metro, on, taken, ...pickInk(on), op: taken ? 0.5 : 1, pick: () => { if (taken) return; choose('colo', { ...f.colo, [k]: { ...f.colo[k], site: x.name } }); } }; }),
+    fabrics: CF.FABRICS.map(fb => { const on = f.colo[k].fabric === fb.product; return { key: fb.key, label: fb.product, sub: fb.key, on, ...pickInk(on), pick: () => choose('colo', { ...f.colo, [k]: { ...f.colo[k], fabric: fb.product } }) }; }) });
+  const cfEndpoints = { a: side('a', 'b'), b: side('b', 'a'), noDcs: dcs.length < 2, hasDcs: dcs.length >= 2 };
+  // The steps, honestly.
+  const cfSteps = CF.stepStates(f).map((st, i, all) => { const ink = CF_INK[st.state], can = CF.reachable(st.key, f) && st.key !== key;
+    return { ...st, ...ink, mark: st.state === 'done' ? '✓' : String(st.n), sub: st.state === 'filled' ? `${st.filledFrom}: ${st.value}` : st.state === 'done' && st.value ? st.value : st.description,
+      go: can ? () => goStep(st.key) : () => {}, off: !can, cursor: can ? 'pointer' : 'default', notLast: i < all.length - 1, flex: i < all.length - 1 ? '1 1 0' : '0 1 auto', aria: st.key === key ? 'step' : 'false' }; });
+  // A block this estate cannot clear by itself says so, and what would clear it.
+  const estClouds = new Set((est.regionsList || []).map(r => r.cloud));
+  const block0 = CF.blockOf(key, f);
+  const block = !block0 ? '' : key === 'provider' && f.ctype === 'Cloud to Cloud' && estClouds.size < 2 ? 'Cloud to Cloud links two clouds, and discovery found one. Add a source for a second cloud.'
+    : key === 'provider' && lmccOnly && !estClouds.has('AWS') ? 'Interconnect - Last Mile reaches AWS, and discovery found no AWS region. Add an AWS source.'
+    : key === 'provider' && !estClouds.size ? 'Discovery has found no cloud region yet. Add a source to see yours.'
+    : key === 'endpoints' && dcs.length < 2 ? 'Your data centers are grouped as one entry, so there are not two to bridge. Name them in your sources.'
+    : block0;
+  const isLast = key === 'review' || key === 'confirm';
+  const next = () => {
+    if (CF.blockOf(key, f) || isLast) return;
+    const passed = [...new Set([...f.passed, key])];
+    // Standard is pre-selected and never gates Next (wizardDoor.ts); passing it accepts it.
+    const tierPatch = key === 'basic' && !f.tier ? { tier: 'Standard', from: { ...(cp.from || {}), tier: 'you' } } : {};
+    set({ compose: { ...cp, noteKey, passed, fk: keys[ki + 1], ...tierPatch } });
+    scrollTop();
+  };
+  const back = () => { if (ki > 0) goStep(keys[ki - 1]); };
+  const orders = s.orders || [];
+  const place = () => {
+    if (!isLast || CF.blockOf(key, f)) return;
+    const rec = CF.placedRecord(f, est, SCH.hhmm(SCH.nowOf(s)), orders.length + 1);
+    const all = [...orders, rec];
+    c.setState({ orders: all, ordersPage: 0, order: { ...ord, lines: ord.lines.map(l => ({ ...l, term: CF.termTitle(f.term) })) }, submitted: true, pendingDismissed: false, compose: BLANK_COMPOSE(), screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', waySet: null, wipList: null, wipListPage: 0, cfArea: null });
+    scrollTop(); syncHash('s3', 'cloud', 'connect');
+  };
+  // Your order, in progress. "All N sites" and "All N regions" open exactly
+  // those, in the panel, where the picture was.
+  const openList = (kind) => () => set({ wipList: s.wipList === kind ? null : kind, wipListPage: 0 });
+  const wip = CF.wipRows(f, est).map(r => ({ ...r, ...WIP_INK[r.state], go: CF.reachable(r.step, f) ? () => goStep(r.step) : () => {}, cursor: CF.reachable(r.step, f) ? 'pointer' : 'default', openMore: r.more ? openList(r.more) : () => {}, moreOn: !!r.more && s.wipList === r.more }));
+  const listKind = ['sites', 'regions', 'others'].includes(s.wipList) ? s.wipList : null;
+  const wl = listKind ? CF.wipList(f, est, listKind) : { all: [], title: '' };
+  const wlPg = pageRows(wl.all, 5, s.wipListPage, (n) => set({ wipListPage: n }));
+  const cfWipList = { has: !!listKind && wl.all.length > 0, none: !(listKind && wl.all.length), title: wl.title, all: wl.all, rows: wlPg.rows, pager: wlPg.pager, close: () => set({ wipList: null, wipListPage: 0 }) };
+  const dg = CF.wipDiagram(f, est);
+  const cfDiagram = { ...dg, leftDash: dg.leftSet ? 'none' : '4 4', rightDash: dg.rightSet ? 'none' : '4 4', leftInk: dg.leftSet ? 'var(--text-heading)' : 'var(--text-disabled)', rightInk: dg.rightSet ? 'var(--text-heading)' : 'var(--text-disabled)', midInk: dg.midSet ? 'var(--link)' : 'var(--text-disabled)',
+    leftGo: dg.leftKind ? openList(dg.leftKind) : () => {}, rightGo: dg.rightKind ? openList(dg.rightKind) : () => {}, leftOff: !dg.leftKind, rightOff: !dg.rightKind, leftCursor: dg.leftKind ? 'pointer' : 'default', rightCursor: dg.rightKind ? 'pointer' : 'default', leftDeco: dg.leftKind ? 'underline' : 'none', rightDeco: dg.rightKind ? 'underline' : 'none',
+    leftLink: dg.leftKind ? 'var(--link)' : (dg.leftSet ? 'var(--text-heading)' : 'var(--text-disabled)'), rightLink: dg.rightKind ? 'var(--link)' : (dg.rightSet ? 'var(--text-heading)' : 'var(--text-disabled)'),
+    wireInk: dg.leftSet && dg.rightSet ? 'var(--link)' : 'var(--border-primary)', wireDash: dg.leftSet && dg.rightSet ? 'none' : '4 4', single: !dg.dual, hasBw: !!dg.bw };
+  const price = CF.wipPrice(f, est);
+  // Review's total: the order at its term, the same figure the panel shows.
+  const hasTerm = f.term !== null && f.term !== undefined;
+  const cfTotal = { has: price.has, label: hasTerm ? `Monthly · ${CF.termTitle(f.term)}${CF.TERM_DISC[f.term] ? `, ${CF.TERM_DISC[f.term]}% off` : ''}` : 'Monthly · month-to-month', price: price.has ? `${price.big}/mo` : '', sub: price.sub };
+  // The review, NetBond Advanced's ReviewStep rows in the storefront's words.
+  const reviewRows = CF.wipRows(f, est).map(r => ({ key: r.key, label: r.label, value: r.value, word: r.word, ink: WIP_INK[r.state].ink }));
+  const lines = ord.lines.map(l => ({ ...l, key: 'l' + l.line, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? PRICE_NOTE : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : `${fmt(l.monthly)}/mo`, ink: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
+  // Orders: the one in progress, and the ones placed this session.
+  const started = composeStarted(cp);
+  // An order's stage is its own until Deliver now validates the region it reaches.
+  const stageOf = (o) => (s.landed && o.region === s.landed ? 'Validated · live' : o.stage);
+  const opg = pageRows(orders.slice().reverse().map(o => ({ ...o, key: o.id, stage: stageOf(o), atLine: `Placed at ${o.at}`, sub: [o.term, o.policy].filter(Boolean).join(' · '), stageInk: stageOf(o) === o.stage ? 'var(--cta)' : 'var(--success)' })), 6, s.ordersPage, (n) => set({ ordersPage: n }));
+  const note = f.note;
+  return {
+    wayTypes, cfTypes, waySet,
+    cfKey: key, cfSteps, cfTitle: (STEP_HEAD[key] || [])[0] || '', cfDesc: (STEP_HEAD[key] || [])[1] || '',
+    cfIsType: key === 'type', cfIsProvider: key === 'provider', cfIsEndpoints: key === 'endpoints', cfIsBasic: key === 'basic', cfIsAdvanced: key === 'advanced', cfIsTerms: key === 'terms', cfIsReview: isLast,
+    cfShowPolicy: key === 'advanced' || (isLast && !keys.includes('advanced')),
+    cfClouds, hasCfClouds: cfClouds.length > 0, noCfClouds: cfClouds.length === 0, cfMulti: f.ctype === 'Cloud to Cloud',
+    // With no cloud found, the step's door is the one that finds one; the order waits in Orders.
+    cfAddSource: () => { c.setState({ screen: 's1', discoverView: 'sources' }); scrollTop(); syncHash('s1'); },
+    cfNoCloudsLine: lmccOnly && (est.regionsList || []).length ? 'Add an AWS source and its AWS regions show here.' : 'Add a source and its cloud regions show here.',
+    cfTiers, cfTierProtects: CF.isColo(f) ? 'Colo to Colo is point to point, so its tiers are its own.' : 'Each tier says what it protects against.', cfAreas, cfMetros, hasCfAreas: cfAreas.length > 1, cfBandwidths, cfLocTitle: geo ? 'Location · pick at least 2 metros' : CF.isLmcc(f) ? 'Metro' : 'Location', cfShowLoc: !CF.isColo(f),
+    cfPaths, cfPathsFor: CF.pathsFor(f, est), cfShowPaths: !CF.isColo(f) && cfPaths.length > 0 && !!CF.pathsFor(f, est), cfTotal,
+    cfQos, hasCfQos: cfQos.length > 0, cfPolicy, cfPolicySent, cfTerms, cfEndpoints,
+    cfBlock: block, hasCfBlock: !!block, cfNext: next, cfBack: back, cfHasBack: ki > 0, cfBackVis: ki > 0 ? 'visible' : 'hidden', cfNotLast: !isLast,
+    cfNextLabel: isLast ? 'Place order' : `Next: ${CF.STEP_META[keys[ki + 1]].title}`, cfNextDisabled: !!block, cfNextBg: block ? 'var(--bg-neutral)' : 'var(--cta)', cfNextInk: block ? 'var(--text-disabled)' : '#fff',
+    cfPlace: place, cfCanPlace: isLast && !block,
+    cfName: f.name, cfNamePlaceholder: CF.defaultName(f), cfNameHelp: `Leave it blank and it is named ${CF.defaultName(f)}.`, cfSetName: (e) => put({ name: e.target.value }),
+    cfReviewRows: reviewRows, cfLines: lines, cfOrder: ord, cfShield: ord.shield,
+    cfWipTitle: 'Your order, in progress', cfWip: wip, cfWipList, cfDiagram, cfPrice: price, cfPriced: price.has, cfUnpriced: !price.has,
+    hasParsedNote: !!note && key === noteKey, parsedNote: note || '', parsedNoteTitle: f.noteTitle,
+    // Orders.
+    ordInProgress: { has: started, title: started ? (f.name.trim() || CF.defaultName(f)) : '', stepLine: started ? `At ${CF.STEP_META[key].title}` : '', rows: started ? CF.wipRows(f, est).map(r => ({ ...r, ...WIP_INK[r.state] })) : [], resume: () => { c.setState({ screen: 's4' }); scrollTop(); syncHash('s4'); } },
+    ordCols: started ? 'minmax(0,1fr) minmax(280px,340px)' : 'minmax(0,1fr)',
+    ordRows: opg.rows, ordPager: opg.pager, hasOrdRows: orders.length > 0, noOrders: !started && !orders.length, ordNonePlaced: started && !orders.length, ordersEmpty: 'No orders yet', ordersEmptyLine: 'An order you start from Ways to connect, Recommended or a finding waits here until you place it.',
+    goWays: () => set({ cnPage: 'ways' }),
+  };
+}
 
 // ---------- Shell: elevator, top tabs, rail ----------
 function shellVals(s, set, go, est, c, sched) {
@@ -3342,6 +3444,14 @@ function shellVals(s, set, go, est, c, sched) {
         const seq = railFor(est).sequence;
         const TABS = STOPS.map(st => [st.key, st.label]);
         const row = (tab, id, label, ic, sub) => {
+          // Connect's four places (2026-09-30): each lands on its own cnPage and lights
+          // there; the compose screens light Orders, where an order in progress lives.
+          const cnView = tab === 'connect' ? CN_VIEW[id] : null;
+          if (cnView) {
+            const here = onS3('cloud', 'connect') && cnPageOf(s) === cnView;
+            const cur = cnView === 'orders' ? here || composeCur : here;
+            return { ...item(label, ic, go('s3', { layer: 'cloud', tab: 'connect', cnPage: cnView }), cur, false, sub, true), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
+          }
           // Three kinds of sub-task: a view on the inventory, a section of the
           // stop's own page, and a panel in the sub layer.
           const isView = id.startsWith('@');
@@ -3349,20 +3459,18 @@ function shellVals(s, set, go, est, c, sched) {
           const view = isView ? id.slice(1) : '';
           const cur = isView ? (view === 'insights' || view === 'logs' ? onS3('cloud', 'observe') && s.obPage === view : view === 'estate' ? s.screen === 's1' && s.discoverView !== 'sources' : view === 'sources' ? s.screen === 's1' && s.discoverView === 'sources' : ['s4', 's5', 's6'].includes(s.screen))
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
-            : id === 'sec-paths' ? (onS3('cloud', 'connect') && s.cnPage === 'options')
             : tab === 'govern' ? (onS3('cloud', tab) && (id === 'sec-starting' ? 'templates' : 'policies') === (s.govPanel || 'policies'))
             : tab === 'cost' ? (onS3('cloud', tab) && costPanelOf(s.costPanel) === (COST_DOOR[id] || 'spend') && !(s.sub && s.sub.page === 'cost'))
             : (onS3('cloud', tab) && activeSec === id && (tab !== 'observe' || !['insights', 'logs'].includes(s.obPage)));
           const goTo = isView ? (view === 'insights' || view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
-            : id === 'sec-paths' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })
             : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: COST_DOOR[id] || 'spend' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
           return { ...item(label, ic, goTo, cur, false, sub, isPanel || isView), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };
         const goTabRow = (key) => key === 'discover' ? go('s1')
           : key === 'observe' ? () => { go('s3', { layer: 'cloud', tab: 'observe' })(); set({ obPage: 'perf', obTab: 'flow' }); }
-          // The home is NaaS; Connect's title opens its network map, Options is its own item (2026-09-30).
+          // The home is NaaS; Connect's title opens Connections, its network map (2026-09-30).
           : key === 'connect' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'picture' })
           : go('s3', { layer: 'cloud', tab: key });
         return [
@@ -3402,7 +3510,7 @@ function shellVals(s, set, go, est, c, sched) {
       })();
   const pageTitle = s.screen === 's9' ? 'Help & Resources' : s.screen === 's1' ? 'Discover' : ['s4', 's5', 's6'].includes(s.screen) ? 'Connect' : storeCur ? 'Marketplace'
     // The NaaS home is its own page (Micah, 2026-09-29: "Naas home is called 'Connect'. It needs to be called something else").
-    : s.screen === 's3' && s.tab === 'connect' && !['options', 'ways'].includes(s.cnPage) ? 'Your network'
+    : s.screen === 's3' && s.tab === 'connect' && cnPageOf(s) === 'picture' ? 'Your network'
     : s.screen === 's3' ? ({ connect: 'Connect', govern: 'Govern', observe: (obTabNow === logsTab ? 'Observe · Logs' : 'Observe'), cost: 'Cost' }[s.tab] || 'Connect')
     : 'Discover';
   // Re-discover keeps its one click and finally has somewhere to report: the
@@ -3590,6 +3698,87 @@ function bwVals(s, set, est0, conns) {
       applyLabel: locked ? (s.bwPick && s.bwPick.done ? 'Done' : 'In progress') : 'Apply change', applyOff: locked || !p.changed, apply,
     },
   };
+}
+// ---------- Connect > Recommended: the estate as ranked moves (2026-09-30) ----------
+// One list, paged to the fold. Each move is a set one order serves, its three
+// AT&T tiers side by side, and what Security, Performance and Cost would read
+// after each against today. Attach N selected composes ONE order: the contract
+// with the compose flow is compose.prefillSets (M.attachSets).
+export const MOVES_PAGE = 5;
+const MOVE_TONE = { good: 'var(--success)', risk: 'var(--warning)', bad: 'var(--error)', slo: 'var(--viz-5)', same: 'var(--text-light)' };
+function movesVals(s, set, go, est, { openF, obAll, conns }) {
+  const onPage = s.screen === 's3' && s.tab === 'connect' && cnPageOf(s) === 'options';
+  const empty = !est || est.stage === 'empty' || !(est.regionsList || []).length;
+  const step = { label: 'Add a source', go: go('s1', { discoverView: 'sources' }) };
+  const shell = (all) => { const pg = pageRows(all, MOVES_PAGE, s.movePage, (n) => set({ movePage: n }));
+    const picked = all.filter(m => m.sel);
+    return { moveList: all, moves: pg.rows, movesPager: pg.pager, movesPageSize: MOVES_PAGE, hasMoves: all.length > 0, noMoves: !all.length,
+      movesHead: 'What to connect next, by impact',
+      movesSub: all.length ? `${all.length} ${all.length === 1 ? 'move' : 'moves'}, ranked by what the Recommended tier saves a month, then by the risk it closes. Today is measured; what you'd get is modelled at AT&T rates and list prices.` : '',
+      movesEmpty: empty ? 'Nothing is discovered yet, so there is nothing to connect. Discovery reads a cloud account and lists what it can move.' : 'Everything discovered is on the AT&T network. Nothing to move.',
+      movesStep: step, hasMovesStep: empty,
+      movesSelN: picked.length, movesAttachOff: !picked.length, movesAttachLabel: picked.length ? `Attach ${picked.length} selected` : 'Attach selected',
+      movesAttachBg: picked.length ? 'var(--cta)' : 'var(--bg-neutral)', movesAttachInk: picked.length ? '#fff' : 'var(--text-disabled)', movesAttachCursor: picked.length ? 'pointer' : 'not-allowed',
+      movesWith: "With AT&T, here's what you'd get · catalog prices are Starting at, a month",
+      movesAttachTitle: picked.length ? `One order for ${picked.map(m => m.title.replace(/^\w/, ch => ch.toLowerCase())).join('; ')}` : 'Tick the moves to put in one order',
+      movesAttach: () => { if (picked.length) composeMoves(picked); } };
+  };
+  if (!onPage || empty) return shell([]);
+  const inv = A.inventory(est);
+  const model = M.movesOf(est, { findings: openF.filter(f => !f.event), capacity: OD.capacity(conns, s.obWindow || '30d'), apps: appsOf(est, inv, obAll.flows || []), inv, base: egressBaseFor(est, obAll) });
+  // Picks are kept per estate, so the demo picker never carries a tick from one estate to another.
+  const sel = (s.moveSel || {})[est.id] || {}, tierPick = (s.moveTier || {})[est.id] || {};
+  const keep = (k, v) => ({ ...(s[k] || {}), [est.id]: v });
+  const tierOfMove = (m) => (Number.isInteger(tierPick[m.key]) ? tierPick[m.key] : 1);
+  const labelOf = (m) => m.title.replace(/^(Move|Bring|Put|Add) /, '').replace(/ onto AT&T( access)?$| on the AT&T network$/, '');
+  // The contract with the compose flow is prefillSets. Until that flow reads it, the
+  // compose screen's own fields read the same sets: regions bring the metros where
+  // they meet the AT&T network, sites come as sites, and nothing is guessed.
+  function composeMoves(picks) {
+    const sets = M.attachSets(picks.map(m => ({ move: m, tier: tierOfMove(m) })));
+    const note = `${picks.length === 1 ? picks[0].title : `One order: ${picks.map(labelOf).join('; ')}`}.`;
+    const regs = sets.regions.map(id => est.regionsList.find(r => r.region === id)).filter(Boolean);
+    const onRamps = Object.values(D.COMPOSE_CHIPS.regions).flat();
+    const siteRows = (est.sites || []).filter(x => sets.sites.includes(x.name));
+    const metros = [...new Set([...regs.map(r => REGION_GEO[r.region]), ...siteRows.map(x => x.metro)].filter(m => onRamps.includes(m)))];
+    const dcOnly = siteRows.length > 0 && siteRows.every(x => S.isDataCenter(x));
+    const tags = regs.flatMap(r => r.tags || []);
+    const control = ['Private path required', ...(tags.includes('PCI') || tags.includes('Prod') ? ['No direct internet path'] : []), ...(tags.includes('GPU') ? ['Latency SLO'] : [])];
+    go('s4', { ...newOrder({ ...prefillCompose(est), source: siteRows.length && !dcOnly ? ['Sites'] : ['Data center'], dest: ['Clouds'], metros, regionTab: metros.length ? REGION_OF_METRO(metros[0]) : 'US East', control,
+      resiliency: sets.tier === 'maximum' ? 'Maximum' : sets.tier === 'geodiversity' ? 'Geodiversity' : 'Standard',
+      prefilled: false, prefillRegion: regs.length ? `${regs[0].cloud} ${regs[0].region}` : null, prefillWl: regs.reduce((a, r) => a + r.wl, 0),
+      prefillSets: sets, sourceLabel: 'Options', noteStep: 0, note }) })();
+  }
+  const sitesOf = (m) => (est.sites || []).filter(x => m.sites.includes(x.name));
+  // Every count lands on its set: sites on the Connections map filtered to them, regions and workloads in Your clouds.
+  const siteDoor = (m) => go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'picture', siteFilter: { svc: [...new Set(sitesOf(m).flatMap(x => S.servicesOf(x).map(v => v.key)))], reach: 'outside' } });
+  const cloudDoor = (m) => go('s1', { estPanel: 'clouds', cloudTrailE: m.regions.length === 1 ? ['cloud:' + m.cloud, 'region:' + m.regions[0]] : ['cloud:' + m.cloud], cloudPage: 0 });
+  const costDoor = (m) => go('s3', { layer: 'cloud', tab: 'cost', costPanel: m.kind === 'sites' ? 'bucket' : m.kind === 'region' ? 'money' : 'legs' });
+  // The latency figure opens the path it reports: Traffic > Paths, that region's row pinned and picked. A site set's opens the sites.
+  const perfDoor = (m) => (!m.today.msRegion ? siteDoor(m) : go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', obPanel: 'paths', pathPin: '|' + m.today.msRegion, pathSel: '|' + m.today.msRegion, pathsPage: 0 }));
+  const cell = (x, go2) => ({ ...x, ink: MOVE_TONE[x.tone] || 'var(--text-heading)', dink: MOVE_TONE[x.dtone || x.tone] || 'var(--text-light)', hasDelta: !!x.delta, delta: x.delta || '', go: go2 || (() => {}) });
+  const all = model.map(m => {
+    const pickI = tierOfMove(m), on = !!sel[m.key];
+    const pick = (i) => () => set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: i }), moveSel: keep('moveSel', { ...sel, [m.key]: true }) });
+    const setDoor = m.kind === 'sites' ? siteDoor(m) : cloudDoor(m);
+    return { ...m, rankF: String(m.rank), sel: on, check: on ? '✓' : '', checkBg: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)',
+      selLabel: `${on ? 'Remove' : 'Add'} move ${m.rank}, ${m.title}, ${on ? 'from' : 'to'} the order`,
+      toggle: () => set({ moveSel: keep('moveSel', { ...sel, [m.key]: !on }) }),
+      attach: () => composeMoves([m]), compare: () => set({ cnPage: 'ways' }),
+      counts: m.counts.map(n => ({ ...n, title: n.kind === 'sites' ? `Show these ${n.label} on the map` : `Open ${n.label} in Your clouds`, go: n.kind === 'sites' ? siteDoor(m) : cloudDoor(m) })),
+      // Today reads once, left of the tiers; every figure in it is a door to what it counts.
+      pathWord: m.today.pathWord, todayNote: m.today.cost.modelled ? 'Ports at list price, modelled' : 'Measured',
+      tSec: cell(m.today.sec, setDoor), tPerf: cell(m.today.perf, perfDoor(m)), tCost: cell(m.today.cost, m.today.cost.value === 'Not priced today' ? null : costDoor(m)),
+      tCostTitle: m.today.cost.modelled ? `${m.today.cost.value}: a cloud provider list price applied to your ports, modelled` : m.today.egress !== null ? `${m.today.cost.value}: this month's egress for this set, as Cost splits it. Opens Cost.` : 'Not priced today',
+      tCostCursor: m.today.cost.value === 'Not priced today' ? 'default' : 'pointer', tCostHover: m.today.cost.value === 'Not priced today' ? 'none' : 'underline',
+      tiers: m.tiers.map(t => { const tOn = t.i === pickI;
+        return { ...t, key: m.key + ':' + t.i, on: tOn, pick: pick(t.i), featured: t.rec, priceShort: t.monthly === null ? '' : `${fmt(t.monthly)}/mo`,
+          aria: `${t.intro} Security: ${t.sec.value}${t.sec.delta ? `, ${t.sec.delta}` : ''}. Performance: ${t.perf.value}${t.perf.delta ? `, ${t.perf.delta}` : ''}. Cost: ${t.cost.value}${t.cost.delta ? `, ${t.cost.delta}` : ''}.`,
+          title: `${t.intro} ${t.fit}. ${t.price}. Performance: ${t.perfTitle}. Cost: ${t.costTitle}.`,
+          border: tOn ? 'var(--cta)' : 'var(--border-secondary)', bg: tOn ? 'var(--bg-accent)' : 'transparent', wordInk: t.rec ? 'var(--link)' : 'var(--text-light)',
+          sec: cell(t.sec), perf: cell(t.perf), cost: cell(t.cost) }; }) };
+  });
+  return shell(all);
 }
 
 /** Cost's views. Savings (Banked) and Forecast are part of Spend now; their old doors land there. */
@@ -3822,7 +4011,7 @@ function andiVals(s, set, go, est, ob, x) {
     qs = { connect: ['Which region should I attach first?', 'What does NetBond give me over Direct Connect?', 'Where does latency vary by hour?'], govern: ['Which policy has violations?', 'What would enforcing PCI change?', 'Is anything internet-facing uninspected?'], observe: ['Which flow saves most if steered?', 'What is driving public egress?', 'Is any controlled flow single-homed?'], cost: ['Where is the biggest arbitrage?', 'Commit or stay metered?', 'What does the 90-day curve assume?'] }[s.tab] || [];
     if (s.tab === 'observe') acts = [{ key: 'a', label: 'Show public flows', go: () => set({ obTab: 'flow' }) }, { key: 'b', label: 'Steer worst offender', go: ob.worst ? () => set({ steered: [...(s.steered || []), ob.worst.id] }) : () => {} }, { key: 'c', label: 'Path diversity', go: () => set({ obTab: 'control' }) }];
   }
-  else if (s.screen === 's4') { lead = (s.compose && s.compose.note) || (s.compose && s.compose.prefilled ? `Started from your estate: ${s.compose.prefillRegion} has ${s.compose.prefillWl} workloads on the public internet. Every step is filled; change what you like.` : 'Describe the outcome. AT&T composes the connection.'); sub = ['One outcome per order; the control ships with the path.', 'Pick every source that applies.', 'The destination decides the on-ramp.', 'Two metros for geodiversity or maximum resiliency.', 'Standard is one path; the other two add a second metro.', 'This is the policy, in Govern\'s words.'][(s.compose && s.compose.step) || 0]; qs = ['Why two metros?', 'What does inline inspection cost?', 'How long until it is live?']; }
+  else if (s.screen === 's4') { const fl = CF.flowOf(s.compose, est), fk = CF.currentKey(fl); lead = fl.note || 'Create a connection, one step at a time. Your order, in progress, sits beside every step.'; sub = CF.STEP_META[fk] ? `${CF.STEP_META[fk].title}: ${CF.STEP_META[fk].description}.` : ''; qs = ['Why two metros?', 'What does inline inspection cost?', 'How long until it is live?']; }
   else if (s.screen === 's6') { lead = 'Review the order. Nothing is ordered until you submit.'; qs = ['What ships on day one?', 'Can I change the policy later?']; }
   else if (s.screen === 's7' || s.screen === 's8') { lead = 'Filter by what the path must do, not by product name.'; qs = ['Which products fit tag PCI?', 'What do estates like mine choose?']; }
   // scoped focus

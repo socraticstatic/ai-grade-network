@@ -13,10 +13,12 @@ const titlesOf = (v) => v.railGroups.filter(g => g.hasTitle).map(g => g.title);
 
 // ---- the shape holds in every state ----
 
-test('no category offers more than three links, in any state', () => {
+test('no category offers more than three links, in any state; Connect offers its four', () => {
+  // Connect is four destinations (Micah, 2026-09-30: "options and orders is so weird"):
+  // Connections, Recommended, Ways to connect, Orders. Every other category stays at three.
   for (const view of ['empty', 'small', 'partial', 'mature']) {
     for (const g of at(view).railGroups.filter(x => x.hasTitle)) {
-      assert.ok(g.items.length <= 3, `${view}/${g.title} offers ${g.items.length}`);
+      assert.ok(g.items.length <= (g.title === 'Connect' ? 4 : 3), `${view}/${g.title} offers ${g.items.length}`);
     }
   }
 });
@@ -50,7 +52,7 @@ test('the first step is the only step until it is done', () => {
 test('reading the estate opens the next steps', () => {
   const l = linksOf(at('small'));
   assert.ok(l.includes('Estate'), 'a scanned estate cannot be looked at');
-  assert.ok(l.includes('Options'), 'a scanned estate offers no way to connect');
+  assert.ok(l.includes('Recommended'), 'a scanned estate offers no way to connect');
 });
 
 // ---- the returning customer gets the five stops ----
@@ -103,12 +105,58 @@ test('no two rail links share an icon, and none borrows a header icon', () => {
   }
 });
 
-test('Insights is a lightbulb, Spend a bill, Options a cable, Orders a shopping bag', () => {
+test('Insights is a lightbulb, Spend a bill, Recommended a cable, Orders a shopping bag', () => {
   const icons = Object.fromEntries(iconsOf(at('partial')).map(i => [i.label, i.icon]));
   assert.equal(icons.Insights, 'lightbulb.svg');
   assert.equal(icons.Spend, 'bill.svg');
-  assert.equal(icons.Options, 'cable.svg');
+  assert.equal(icons.Recommended, 'cable.svg');
   assert.equal(icons.Orders, 'shopping-bag.svg');
+  assert.equal(icons.Connections, 'router.svg');
+  assert.equal(icons['Ways to connect'], 'ethernet.svg');
+});
+
+// ---- Connect is four places, nouns (Micah, 2026-09-30: "options and orders is so weird") ----
+// Connections is what is connected today; Recommended the ranked moves; Ways to
+// connect NetBond Advanced's connection types; Orders the order in progress and
+// the orders placed. Each is a cnPage both Connect builders share.
+const connectItems = (v) => (v.railGroups.find(g => g.title === 'Connect') || { items: [] }).items;
+const CN = [['Connections', 'picture'], ['Recommended', 'options'], ['Ways to connect', 'ways'], ['Orders', 'orders']];
+
+test('the Connect group is Connections, Recommended, Ways to connect and Orders', () => {
+  for (const view of ['partial', 'mature', 'trust']) assert.deepEqual(connectItems(at(view)).map(i => i.label), CN.map(x => x[0]), view);
+});
+
+test('each Connect item lands on its page and lights there, and only there', () => {
+  for (const [label, page] of CN) {
+    const c = mkC({ screen: 's3', tab: 'govern', view: 'partial', estateParam: null });
+    connectItems(vals(c)).find(i => i.label === label).go();
+    assert.equal(c.state.screen, 's3', label);
+    assert.equal(c.state.tab, 'connect', label);
+    assert.equal(c.state.cnPage, page, label);
+    const lit = connectItems(vals(c)).filter(i => i.cur).map(i => i.label);
+    assert.deepEqual(lit, [label], `${label} lights ${lit.join(', ')}`);
+  }
+});
+
+test('the Connect title opens Connections; old Options links land on Recommended; compose lights Orders', () => {
+  const c = mkC({ screen: 's3', tab: 'govern', view: 'partial', estateParam: null });
+  vals(c).railGroups.find(g => g.title === 'Connect').titleGo();
+  assert.equal(c.state.cnPage, 'picture');
+  assert.deepEqual(connectItems(vals(c)).filter(i => i.cur).map(i => i.label), ['Connections']);
+  const old = vals(mkC({ screen: 's3', tab: 'connect', cnPage: 'options', view: 'partial', estateParam: null }));
+  assert.equal(old.cnIsOptions, true);
+  assert.deepEqual(connectItems(old).filter(i => i.cur).map(i => i.label), ['Recommended']);
+  const s4 = vals(mkC({ screen: 's4', view: 'partial', estateParam: null }));
+  assert.deepEqual(connectItems(s4).filter(i => i.cur).map(i => i.label), ['Orders']);
+});
+
+test('the first-run steps call the moves Recommended too', () => {
+  const c = mkC({ screen: 's3', tab: 'connect', view: 'small', estateParam: null });
+  const step = vals(c).railGroups.find(g => g.key === 'steps').items.find(i => i.label === 'Recommended');
+  assert.ok(step, 'no Recommended step on Small');
+  step.go();
+  assert.equal(c.state.cnPage, 'options');
+  assert.equal(vals(c).railGroups.find(g => g.key === 'steps').items.find(i => i.label === 'Recommended').cur, true);
 });
 
 test('every rail icon exists in all four theme folders', () => {
