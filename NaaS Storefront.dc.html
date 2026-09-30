@@ -175,26 +175,29 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 .sig-head .h{max-width:100%;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sig-head:hover .t{color:var(--link)}
 .sig-rows{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;min-width:0}
-.sig-row{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:center;column-gap:12px;min-height:41px;border-bottom:1px solid var(--border-secondary);min-width:0}
+.sig-row{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:center;column-gap:12px;min-height:42px;border-bottom:1px solid var(--border-secondary);min-width:0}
 .sig-row:last-child{border-bottom:0}
 .sig-row.wide{min-height:46px}
 .sig-row.wide:last-child{border-bottom:1px solid var(--border-secondary)}
 /* A row reads label and figure on its first line, what it is and its bar on the second. */
-.sig-fig{display:grid;gap:2px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;padding:5px 0;font:inherit;text-align:left;color:inherit;cursor:pointer}
+.sig-fig{display:grid;gap:1px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;padding:3px 0;font:inherit;text-align:left;color:inherit;cursor:pointer}
 .sig-fig:hover{background:var(--bg-wash)}
 .sig-fig .l1{display:flex;align-items:baseline;gap:8px;min-width:0}
 .sig-fig .l1 b{flex:1 1 auto;min-width:0;font-size:12px;line-height:16px;font-weight:500;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sig-fig .val{flex:none;font-size:12px;line-height:16px;font-weight:600;color:var(--text-heading);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.sig-fig .l2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,46%);align-items:center;gap:10px;min-width:0}
-.sig-fig .l2 small{min-width:0;font-size:10px;line-height:13px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sig-fig .bar{display:flex;align-items:center;gap:1px;height:8px;border-radius:2px;overflow:hidden;min-width:0}
-.sig-fig .bar i{display:block;flex:none;height:8px}
+/* Three lines (2026-09-30, "text must not truncate the figure that matters"): the label and its figure; what it means and the figure beside it; the bar, full width. */
+.sig-fig .l2{display:flex;align-items:baseline;gap:8px;min-width:0}
+.sig-fig .l2 small{flex:1 1 auto;min-width:0;font-size:10px;line-height:13px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sig-fig .l2 small.v2{flex:none;color:var(--text-body);font-weight:500;text-align:right;font-variant-numeric:tabular-nums;overflow:visible;text-overflow:clip}
+.sig-fig .bar{display:flex;align-items:center;gap:1px;height:4px;margin-top:1px;border-radius:2px;overflow:hidden;min-width:0}
+.sig-fig .bar i{display:block;flex:none;height:4px}
 /* The full list is a table: name over what it is, the bar, the figure. */
-.sig-fig.wide{grid-template-columns:minmax(0,32%) minmax(0,1fr) 120px;grid-template-areas:"lb bar val" "sb bar val";column-gap:24px;row-gap:1px;align-items:center;padding:6px 0}
+.sig-fig.wide{grid-template-columns:minmax(0,36%) minmax(0,1fr) 140px;grid-template-areas:"lb bar val" "sb bar v2";column-gap:24px;row-gap:1px;align-items:center;padding:6px 0}
 .sig-fig.wide .l1,.sig-fig.wide .l2{display:contents}
 .sig-fig.wide .l1 b{grid-area:lb;font-size:13px;line-height:18px}
 .sig-fig.wide .l2 small{grid-area:sb;font-size:11px;line-height:14px}
-.sig-fig.wide .bar{grid-area:bar;height:10px}
+.sig-fig.wide .l2 small.v2{grid-area:v2;text-align:right}
+.sig-fig.wide .bar{grid-area:bar;height:10px;margin-top:0}
 .sig-fig.wide .bar i{height:10px}
 .sig-fig.wide .val{grid-area:val;font-size:13px;line-height:18px}
 .sig-row .sig-act{justify-self:end}
@@ -211,6 +214,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 .sig-cols button{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:1px;height:100%;min-width:0;border:0;border-radius:3px;background:transparent;padding:0;cursor:pointer}
 .sig-cols button:hover{background:var(--bg-wash)}
 .sig-cols button span{display:block;width:100%;border-radius:2px}
+.sig-ends{display:flex;justify-content:space-between;gap:8px}
+.sig-ends button{border:0;border-radius:4px;background:transparent;padding:1px 2px;font:inherit;font-size:10px;line-height:12px;color:var(--text-light);white-space:nowrap;cursor:pointer}
+.sig-ends button:hover{color:var(--link);background:var(--bg-wash)}
 .fx-badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);font-size:11px;line-height:16px;font-weight:500;color:var(--text-body);white-space:nowrap;vertical-align:middle}
 .fx-badge.att{border-color:#009fdb;color:#0074b3;background:rgba(0,159,219,.08)}
 .fx-badge.new{border-color:#91dc00;color:#3d6b00;background:rgba(145,220,0,.14)}
@@ -1263,13 +1269,13 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <button class="sig-head" onClick="{{ sg.open }}" aria-label="{{ sg.openAria }}"><span class="t">{{ sg.title }}<i>›</i></span><span class="h" title="{{ sg.head }}">{{ sg.head }}</span></button>
       <div style="display:grid;align-content:start;min-width:0">
         <sc-if value="{{ sg.isRows }}" hint-placeholder-val="{{ true }}"><div class="sig-rows"><sc-for list="{{ sg.rows }}" as="r" hint-placeholder-count="4"><div class="sig-row">
-          <button class="sig-fig" onClick="{{ r.figGo }}" title="{{ r.title }}"><span class="l1"><b>{{ r.label }}</b><span class="val">{{ r.v }}</span></span><span class="l2"><small>{{ r.sub }}</small><span class="bar" style="background:{{ r.trackBg }}"><sc-for list="{{ r.segs }}" as="sgm" hint-placeholder-count="1"><i style="width:{{ sgm.w }};background:{{ sgm.fill }};border-radius:{{ sgm.rad }}"></i></sc-for></span></span></button>
+          <button class="sig-fig" onClick="{{ r.figGo }}" title="{{ r.title }}"><span class="l1"><b>{{ r.label }}</b><span class="val">{{ r.v }}</span></span><span class="l2"><small>{{ r.sub }}</small><small class="v2">{{ r.v2 }}</small></span><span class="bar" style="background:{{ r.trackBg }}"><sc-for list="{{ r.segs }}" as="sgm" hint-placeholder-count="1"><i style="width:{{ sgm.w }};background:{{ sgm.fill }};border-radius:{{ sgm.rad }}"></i></sc-for></span></button>
           <button class="sig-act" onClick="{{ r.actGo }}" aria-label="{{ r.actAria }}">{{ r.act }}</button>
         </div></sc-for></div></sc-if>
         <sc-if value="{{ sg.noRows }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:10px;justify-items:start;padding:10px 0;font-size:12px;line-height:17px;color:var(--text-light)"><span>{{ sg.empty }}</span><sc-if value="{{ sg.hasEmptyAct }}" hint-placeholder-val="{{ false }}"><button class="sig-act" onClick="{{ sg.emptyGo }}">{{ sg.emptyAct }}</button></sc-if></div></sc-if>
         <sc-if value="{{ sg.isCols }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:6px;min-width:0">
           <div class="sig-cols" aria-label="Weekly egress, on AT&amp;T under public internet"><sc-for list="{{ sg.cols }}" as="w" hint-placeholder-count="12"><button onClick="{{ w.go }}" title="{{ w.title }}" aria-label="{{ w.title }}"><span style="height:{{ w.pubH }};background:var(--viz-6)"></span><span style="height:{{ w.fabH }};background:var(--viz-1)"></span></button></sc-for></div>
-          <div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;line-height:12px;color:var(--text-light)"><span>{{ sg.thenLabel }}</span><span>{{ sg.nowLabel }}</span></div>
+          <div class="sig-ends"><button onClick="{{ sg.thenGo }}">{{ sg.thenLabel }}</button><button onClick="{{ sg.nowGo }}">{{ sg.nowLabel }}</button></div>
           <div style="display:flex;justify-content:flex-end"><button class="sig-act" onClick="{{ sg.actGo }}">{{ sg.act }}</button></div>
         </div></sc-if>
       </div>
@@ -1284,8 +1290,8 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <div style="display:grid;gap:1px;min-width:0"><b style="font-size:16px;line-height:22px;font-weight:600;color:var(--text-heading);white-space:nowrap">{{ sigFocus.title }}</b><span style="font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sigFocus.head }}</span></div>
       <button class="sig-finds" onClick="{{ sigFocus.finds.go }}" disabled="{{ sigFocus.finds.none }}" title="{{ sigFocus.finds.title }}">{{ sigFocus.finds.label }}</button>
     </div>
-    <div class="sig-rows" style="border-top:1px solid var(--border-secondary)"><sc-for list="{{ sigFocus.rows }}" as="fr" hint-placeholder-count="8"><div class="sig-row wide">
-      <button class="sig-fig wide" onClick="{{ fr.figGo }}" title="{{ fr.title }}"><span class="l1"><b>{{ fr.label }}</b><span class="val">{{ fr.v }}</span></span><span class="l2"><small>{{ fr.sub }}</small><span class="bar" style="background:{{ fr.trackBg }}"><sc-for list="{{ fr.segs }}" as="fsg" hint-placeholder-count="1"><i style="width:{{ fsg.w }};background:{{ fsg.fill }};border-radius:{{ fsg.rad }}"></i></sc-for></span></span></button>
+    <div class="sig-rows" style="border-top:1px solid var(--border-secondary)"><sc-for list="{{ sigFocus.rows }}" as="fr" hint-placeholder-count="8"><div class="sig-row wide" style="background:{{ fr.bg }}">
+      <button class="sig-fig wide" onClick="{{ fr.figGo }}" title="{{ fr.title }}"><span class="l1"><b>{{ fr.label }}</b><span class="val">{{ fr.v }}</span></span><span class="l2"><small>{{ fr.sub }}</small><small class="v2">{{ fr.v2 }}</small></span><span class="bar" style="background:{{ fr.trackBg }}"><sc-for list="{{ fr.segs }}" as="fsg" hint-placeholder-count="1"><i style="width:{{ fsg.w }};background:{{ fsg.fill }};border-radius:{{ fsg.rad }}"></i></sc-for></span></button>
       <button class="sig-act" onClick="{{ fr.actGo }}" aria-label="{{ fr.actAria }}">{{ fr.act }}</button>
     </div></sc-for></div>
     <div class="sig-foot"><div class="lg"><sc-for list="{{ sigFocus.legend }}" as="flg" hint-placeholder-count="2"><span><i style="background:{{ flg.ink }};border-radius:{{ flg.rad }}"></i>{{ flg.label }}</span></sc-for></div><sc-if value="{{ sigFocus.pager.many }}" hint-placeholder-val="{{ false }}"><div style="margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ sigFocus.pager.label }}</span><button class="fx-btn" onClick="{{ sigFocus.pager.prev }}" aria-label="Previous page" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ sigFocus.pager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ sigFocus.pager.next }}" aria-label="Next page" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ sigFocus.pager.nextOp }}">›</button></div></sc-if></div>
@@ -2588,7 +2594,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', waySet: null, waySetPage: 0, orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0, order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36 }; }
+  constructor(p) { super(p); this.state = { screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', waySet: null, waySetPage: 0, orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0, order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36 }; }
   componentDidUpdate() {
     // Guarded on the instance, not on prevState: comparing against prevState
     // re-entered on the very setState this handler makes, and React counted

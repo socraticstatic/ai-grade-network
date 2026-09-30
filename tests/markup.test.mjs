@@ -270,14 +270,15 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // div 1027 -> 1115, span 837 -> 920, sc-if 429 -> 474, sc-for 234 -> 245, button 322 -> 346, aside 9 -> 10, label 29 -> 31.
 // The flow merged onto Recommended (2026-09-30): each count is Recommended's plus the flow's own move: div 1030 -> 1118, span 864 -> 947, sc-if 432 -> 477, sc-for 236 -> 247, button 332 -> 356, aside 9 -> 10, label 29 -> 31.
 // Signals merged onto the connect flow (2026-09-30): each count is the flow's plus Signals' own move: div 1118 -> 1099, span 947 -> 928, sc-if 477 -> 484, sc-for 247 -> 250, button 356 -> 367.
+// Signals, second round (2026-09-30): Egress growth's labels under its first and last week became the buttons that open those weeks: span 928 -> 926, button 367 -> 369.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 1099],
-    ['span', /<span\b/g, /<\/span>/g, 928],
+    ['span', /<span\b/g, /<\/span>/g, 926],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 484],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 250],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 367],
+    ['button', /<button\b/g, /<\/button>/g, 369],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

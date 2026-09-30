@@ -50,7 +50,9 @@ test('the finding behind the card says what the card says', () => {
 test('no bar says 1 weeks; the axis ends carry the reference dollars', () => {
   const g = ins('partial').iw.growth;
   assert.ok(g.weeks.every(w => !/\b1 weeks\b/.test(w.title)));
-  assert.equal(g.thenLabel, '$64,800/mo · 12 weeks ago');
+  // The first of twelve columns is 11 weeks before this one, as its bar's title says (2026-09-30): it read "12 weeks ago".
+  assert.equal(g.thenLabel, '$64,800/mo · 11 weeks ago');
+  assert.match(g.weeks[0].title, /^11 weeks ago/);
   assert.equal(g.nowLabel, 'this week · $71,600/mo');
   // The nine Signals cards share one loop (2026-09-30): Egress growth's figure and axis ends are its card's.
   assert.ok(HTML.includes('{{ sg.head }}') && HTML.includes('{{ sg.thenLabel }}') && HTML.includes('{{ sg.nowLabel }}'));

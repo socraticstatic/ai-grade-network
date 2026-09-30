@@ -83,7 +83,8 @@ await beat('0 NaaS home: the whole network at a glance', async () => {
   for (const [i, want] of [[0, '25 sites · 3 clouds'], [1, '5 of 7 regions'], [2, '1 of 2 connections'], [4, '$41,500/mo']]) if (!tiles[i].includes(want)) throw new Error(`tile ${i + 1} reads "${tiles[i].replace(/\n/g, ' | ')}", not ${want}`);
   const neteng = await briefing();
   // Blind regions and regions over SLO are Network Eng's (2026-09-30, "make sure mock data
-  // matches persona"): five things wait on the role, so the line reads "Of five things
+  // matches persona"), and one path to eastus went to the Architect with the other coverage
+  // and topology findings: four things wait on the role, so the line reads "Of four things
   // waiting on network engineering, three come first".
   if (!/(For|waiting on) network engineering/.test(neteng)) throw new Error('the briefing is not Network Eng\'s');
   await tab('Executive', 'section[aria-label="NaaS home"]');

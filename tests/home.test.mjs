@@ -97,7 +97,9 @@ test('Accept and Defer on the home move the finding Your actions shows', () => {
 });
 
 test('All N in Your actions opens Insights > Your actions', () => {
-  const c = home('partial', { persona: 'finops' });
+  // Network Eng, who has more than three (2026-09-30): cross-cloud went to the Architect with
+  // the other coverage and topology findings, so FinOps holds two on Growing.
+  const c = home('partial', { persona: 'neteng' });
   const v = vals(c);
   assert.equal(v.homeWaiting.length, 3);
   assert.equal(v.homeWaitingMore, `All ${v.roleActAll.length} in Your actions ›`);

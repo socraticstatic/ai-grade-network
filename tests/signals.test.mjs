@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { vals, defaults } from '../naas-app.js';
 import * as SG from '../naas-signals.js';
+import * as CF from '../naas-connect-flow.js';
+import { ESTATES } from '../naas-data.js';
 import { mkC } from './harness.mjs';
 
 // Insights opens on Signals again (Micah, 2026-09-30: "Observe insights is
@@ -72,19 +74,20 @@ test('a card with nothing to show says so, and an estate with no traffic gets a 
   assert.equal(slo.rows.length, 0);
   assert.equal(slo.noRows, true);
   assert.match(slo.empty, /No flow/);
-  // The slowest flow still reads, so an empty card says how close it runs.
-  assert.match(slo.empty, /The slowest, .+, takes \d+ ms\.$/);
+  // The closest flow still reads, so an empty card says how close it runs, against its own SLO (2026-09-30).
+  assert.match(slo.empty, /The closest, .+, takes \d+ ms against \d+ ms\.$/);
   assert.deepEqual(slo.legend, [], 'no bars, no key to them');
   const sm = card(vals(ins('small')), 'capacity');
   assert.equal(sm.noRows, true);
   assert.match(sm.empty, /No connection/);
   assert.notEqual(sm.head, sm.empty.replace(/\.$/, ''), 'the figure and the empty line say two things');
-  // Nothing attached: the card offers the first step, and it lands on Compose for the busiest public region.
+  // Nothing attached: the card offers the first step, and it starts the connect flow for the busiest
+  // public region, named in the order (2026-09-30: it landed on a Compose that never named it).
   assert.equal(sm.hasEmptyAct, true);
   assert.equal(sm.emptyAct, 'Attach');
   const cs = ins('small'); card(vals(cs), 'capacity').emptyGo();
   assert.equal(cs.state.screen, 's4');
-  assert.equal(cs.state.compose.prefillRegion, 'us-east-1');
+  assert.deepEqual(CF.flowOf(cs.state.compose, ESTATES.small).regions, ['AWS us-east-1']);
   assert.match(HTML, /<sc-if value="\{\{ sg\.hasEmptyAct \}\}"[^>]*><button class="sig-act" onClick="\{\{ sg\.emptyGo \}\}">\{\{ sg\.emptyAct \}\}<\/button>/);
   const e = vals(ins('empty'));
   assert.equal(e.sigHas, false);
@@ -126,8 +129,10 @@ const LANDS = {
   Policies: (st) => st.tab === 'govern' && st.govPanel === 'policies',
   'Ask Andi': (st) => st.andiOpen === true && !!st.andiScope,
   Steer: (st, r) => (st.steered || []).includes(r.id) && (st.events || []).some(e => /^Steered /.test(e.text)),
-  Attach: (st, r) => st.screen === 's4' && st.compose.prefillRegion === r.region,
-  'Add a port': (st, r) => st.screen === 's4' && st.compose.prefillRegion === r.region,
+  // Attach and Add a port start the connect flow for the region, as Connect > Recommended does,
+  // and its banner says which and why (2026-09-30).
+  Attach: (st, r) => st.screen === 's4' && st.compose.prefillSets.regions.join() === r.region && /^Attach /.test(st.compose.note),
+  'Add a port': (st, r) => st.screen === 's4' && st.compose.prefillSets.regions.join() === r.region && /^Add a port to /.test(st.compose.note),
   Resize: (st) => st.screen === 's6' && /^Resize /.test(st.order.title),
   Trace: (st) => st.obPage === 'perf' && st.obPanel === 'paths' && !!st.pathSel,
   Optimize: (st) => st.tab === 'cost' && st.costPanel === 'optimize',
@@ -179,7 +184,9 @@ test('each title and headline opens its full list; a card\'s list holds every ro
   const c0 = ins('partial');
   const v0 = vals(c0);
   const iw = v0.iw;
-  const full = { talkers: iw.talkersAll.length, newdest: iw.newDestN, shadow: iw.shadowAll.length, multi: iw.multi.totalN, slo: iw.sloN };
+  // Latency over SLO holds the spikes Health calls Over SLO beside the flows, and Egress growth its twelve weeks (2026-09-30).
+  const spikes = (v0.problemRows || []).filter(p => /^an-(?!link-|sat-)/.test(p.key) && p.state === 'slo').length;
+  const full = { talkers: iw.talkersAll.length, newdest: iw.newDestN, shadow: iw.shadowAll.length, multi: iw.multi.totalN, slo: iw.sloN + spikes, growth: 12 };
   for (const [k, n] of Object.entries(full)) {
     const c = ins('partial');
     card(vals(c), k).open();
@@ -194,7 +201,7 @@ test('each title and headline opens its full list; a card\'s list holds every ro
   }
   assert.equal(iw.newDestN, 6, 'Growing counts six new destinations and the card shows four');
   // The lists that already have a page open it.
-  const lands = { growth: (st) => st.obPage === 'perf' && st.obPanel === 'time', health: (st) => st.obPage === 'perf' && st.obPanel === 'health', capacity: (st) => st.obPage === 'perf' && st.obPanel === 'conn', spend: (st) => st.tab === 'cost' && st.costPanel === 'bucket' };
+  const lands = { health: (st) => st.obPage === 'perf' && st.obPanel === 'health', capacity: (st) => st.obPage === 'perf' && st.obPanel === 'conn', spend: (st) => st.tab === 'cost' && st.costPanel === 'bucket' };
   for (const [k, ok] of Object.entries(lands)) { const c = ins('partial'); card(vals(c), k).open(); assert.ok(ok(c.state), `${k} title`); }
   // Latency over SLO counts every flow over, not the five it draws (it undercounted past five).
   const t = vals(ins('trust'));
@@ -210,8 +217,12 @@ test('each row\'s figure opens the one thing it counts', () => {
   assert.ok(x.v.hasLogs, 'the destination\'s records page is empty');
   x = at('shadow');
   assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.label, x.r.label); assert.ok(x.v.hasLogs);
-  x = at('slo');
+  // A flow opens its region on the map in the SLO view; a spike opens its problem, as Health's row does.
+  const sloRows = card(vals(ins('partial')), 'slo').rows;
+  x = at('slo', sloRows.findIndex(r => r.id));
   assert.equal(x.st.obPage, 'perf'); assert.equal(x.st.mapMode, 'slo'); assert.ok(x.st.mapRegion);
+  x = at('slo', sloRows.findIndex(r => !r.id));
+  assert.equal(x.st.fdKey, x.r.key); assert.equal(x.v.fdOpen, true);
   x = at('multi');
   assert.equal(x.st.obPage, 'perf'); assert.equal(x.st.mapMode, 'state'); assert.ok(x.st.mapRegion);
   x = at('health');
@@ -220,8 +231,9 @@ test('each row\'s figure opens the one thing it counts', () => {
   assert.equal(x.st.obPanel, 'conn'); assert.equal(x.st.mapSel, x.r.key);
   x = at('spend');
   assert.equal(x.st.tab, 'cost'); assert.equal(x.st.costPanel, 'bucket');
+  // A week opens the twelve in place with that week marked (2026-09-30): Over time is another series.
   const c = ins('partial'); card(vals(c), 'growth').cols[11].go();
-  assert.equal(c.state.obPanel, 'time');
+  assert.equal(c.state.sigOpen, 'growth'); assert.equal(c.state.sigWeek, 'w11');
 });
 
 test('only traffic figures open Logs', () => {
@@ -239,7 +251,8 @@ test('only traffic figures open Logs', () => {
 
 test('each card\'s count opens its findings, and the lead cards\' findings belong to that persona', () => {
   for (const view of ['partial', 'mature', 'trust']) {
-    for (const p of ['security', 'finops', 'neteng']) {
+    // The Architect too (2026-09-30): coverage and topology are its own now.
+    for (const p of ['architect', 'security', 'finops', 'neteng']) {
       const v = vals(ins(view, { persona: p }));
       for (const k of SG.orderOf(p).slice(0, 3)) {
         const c = ins(view, { persona: p });
@@ -260,21 +273,19 @@ test('each card\'s count opens its findings, and the lead cards\' findings belon
 
 test('the rows speak to the persona that leads with them', () => {
   const tk = (p, view = 'partial') => card(vals(ins(view, { persona: p })), 'talkers');
+  // FinOps reads the Gbps that bills as public egress, the buckets' dollars as the total (2026-09-30).
   const fin = tk('finops');
-  assert.match(fin.title, /by cost/);
-  assert.ok(fin.rows.every(r => /^\$[\d,]+\/mo$/.test(r.v) || r.v === 'On AT&T'), fin.rows.map(r => r.v).join(', '));
-  assert.match(fin.head, /modelled/);
+  assert.match(fin.title, /by egress/);
+  assert.ok(fin.rows.every(r => /^\d+\.\d Gbps$/.test(r.v)), fin.rows.map(r => r.v).join(', '));
   const sec = tk('security');
   assert.match(sec.title, /exposure/);
   const firstPriv = sec.rows.findIndex(r => r.priv);
   assert.ok(firstPriv === -1 || sec.rows.slice(firstPriv).every(r => r.priv), 'the public internet leads Security\'s exposure');
   assert.ok(sec.rows.filter(r => !r.priv).every(r => r.act === 'Set policy'));
   for (const p of ['architect', 'exec']) assert.ok(tk(p).rows.filter(r => !r.priv).every(r => r.act === 'Attach'), p);
-  // FinOps' public egress by region adds up to the buckets' public spend.
+  // FinOps' total is the buckets' public spend, the figure Spend and Egress growth show.
   const pubMo = vals(ins('partial')).buckets.filter(b => b.today > b.fabric).reduce((a, b) => a + b.today, 0);
-  const all = vals(ins('partial', { persona: 'finops', sigOpen: 'talkers' })).sigFocus.all;
-  const sum = all.filter(r => !r.priv).reduce((a, r) => a + +r.v.replace(/[$,/mo]/g, ''), 0);
-  assert.ok(Math.abs(sum - pubMo) <= all.length * 100, `${sum} against ${pubMo}`);
+  assert.ok(fin.head.startsWith('$' + pubMo.toLocaleString('en-US') + '/mo public egress'), fin.head);
 });
 
 test('the cards paint from theme tokens, in both themes', () => {

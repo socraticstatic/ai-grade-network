@@ -42,18 +42,18 @@ export function problems(est, conns, ob, apps = [], chg = [], now = Date.now()) 
   const out = [];
   (conns.rows || []).filter(r => r.degraded).forEach(r => {
     const t = cloudEdgeThing(regs.find(x => x.region === r.region) || r), key = 'an-link-' + r.region;
-    out.push({ key, kind: 'link', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: t.label, what: `BGP flapping · ${r.drops} drops`, owner: t.owner, ownerLabel: OWNER_LABEL[t.owner] || t.owner, state: 'down', sev: 1, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('flap', now, INCIDENT_MIN.flap), change: changeFor(key), connId: r.id, action: 'impact', actionLabel: 'See impact' });
+    out.push({ key, kind: 'link', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: t.label, what: `BGP flapping · ${r.drops} drops`, short: 'BGP flapping', fig: `${r.drops} drops`, owner: t.owner, ownerLabel: OWNER_LABEL[t.owner] || t.owner, state: 'down', sev: 1, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('flap', now, INCIDENT_MIN.flap), change: changeFor(key), connId: r.id, action: 'impact', actionLabel: 'See impact' });
   });
   (conns.rows || []).filter(r => r.hot && !r.degraded).forEach(r => {
     const t = cloudEdgeThing(regs.find(x => x.region === r.region) || r), key = 'an-sat-' + r.region;
-    out.push({ key, kind: 'sat', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: t.label, what: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'} purchased`, owner: t.owner, ownerLabel: OWNER_LABEL[t.owner] || t.owner, state: 'risk', sev: 2, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('sat', now, INCIDENT_MIN.sat), change: changeFor(key), connId: r.id, action: 'port', actionLabel: 'Add a port' });
+    out.push({ key, kind: 'sat', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: t.label, what: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'} purchased`, short: 'near full', fig: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, owner: t.owner, ownerLabel: OWNER_LABEL[t.owner] || t.owner, state: 'risk', sev: 2, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('sat', now, INCIDENT_MIN.sat), change: changeFor(key), connId: r.id, action: 'port', actionLabel: 'Add a port' });
   });
   // A spike is as bad as the one latency rule says (review, 2026-09-30): 86 ms
   // at peak is At risk, 100 ms is not over 100, and a peak within it is no problem.
   regs.filter(r => r.rel === 'warn').forEach(r => {
     const key = 'an-' + r.region, peak = r.pub + 40, state = F.healthOf(peak, F.SLO);
     if (state === 'ok') return;
-    out.push({ key, kind: 'spike', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: 'Public internet', what: `Latency spike · p95 ${peak} ms at peak, 0.3% loss`, owner: 'public', ownerLabel: OWNER_LABEL.public, state, sev: 3, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('spike', now, INCIDENT_MIN.spike), change: changeFor(key), connId: null, action: 'impact', actionLabel: 'See impact' });
+    out.push({ key, kind: 'spike', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: 'Public internet', what: `Latency spike · p95 ${peak} ms at peak, 0.3% loss`, short: 'Latency spike', fig: `p95 ${peak} ms`, ms: peak, owner: 'public', ownerLabel: OWNER_LABEL.public, state, sev: 3, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('spike', now, INCIDENT_MIN.spike), change: changeFor(key), connId: null, action: 'impact', actionLabel: 'See impact' });
   });
   return out.sort((a, b) => b.apps.length - a.apps.length || a.sev - b.sev || b.wl - a.wl);
 }

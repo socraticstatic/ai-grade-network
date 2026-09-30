@@ -9,6 +9,8 @@
 //   - nothing boxed: no element that scrolls its own overflow
 //     (nothing-boxed, 2026-09-29), except the allowlist below;
 //   - no button within 10px of its card's padding box;
+//   - no word the Signals panel clips with an ellipsis ("clipped", 2026-09-30),
+//     on both of its pages, for every role its chips pick;
 //   - the words on screen (body innerText and SVG <text>) carry no em dash
 //     and no ramp code (ER, DX, EQX, GCI) where the product has a name
 //     ("words", with the snippet around each hit).
@@ -158,7 +160,15 @@ function measure({ allow, edge, width }) {
     const d = Math.min(r.left - L, R - r.right, r.top - T, B - r.bottom);
     if (d < edge) edges.push(`${(b.getAttribute('aria-label') || b.textContent || '').trim().slice(0, 32)} ${d.toFixed(1)}px`);
   }
-  return { scrollHeight, scrollWidth, wide, words, boxed, edges };
+  // Clipped words in Signals (skeptic, 2026-09-30: "Over SLO · Latency spike ·
+  // p95 1…" hid the number that makes it Over SLO): any text the Signals panel
+  // cuts with an ellipsis. Shorten the words; never truncate the figure.
+  const clipped = [];
+  for (const el of document.querySelectorAll('[aria-label="Signals"] *')) {
+    if (!shown(el) || getComputedStyle(el).textOverflow !== 'ellipsis') continue;
+    if (el.scrollWidth > el.clientWidth + 1) clipped.push(`"${(el.textContent || '').trim().slice(0, 48)}" ${el.clientWidth}/${el.scrollWidth}`);
+  }
+  return { scrollHeight, scrollWidth, wide, words, boxed, edges, clipped };
 }
 
 // Runs in the page: the rail, as [{ group, label }].
@@ -219,6 +229,7 @@ function report(estate, th, page, tab, m, errors) {
   if (m.words.length) bad.push(`words ${m.words.slice(0, 4).join(', ')}${m.words.length > 4 ? ` (+${m.words.length - 4})` : ''}`);
   if (m.boxed.length) bad.push(`boxed ${m.boxed.join(', ')}`);
   if (m.edges.length) bad.push(`edge ${m.edges.join(', ')}`);
+  if (m.clipped.length) bad.push(`clipped ${m.clipped.slice(0, 4).join(', ')}${m.clipped.length > 4 ? ` (+${m.clipped.length - 4})` : ''}`);
   if (errors.length) bad.push(`console ${errors.slice(0, 2).join(' | ')}`);
   const key = `${estate} ${th} ${page} > ${tab}`;
   const base = BASELINE.includes(key);
@@ -259,6 +270,33 @@ try {
           const m = await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT });
           report(estate, th, pageName, trail || '(landing)', m, errors);
           if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail || 'landing'}`.replace(/[^\w.-]+/g, '_') + '.png') });
+          // Signals pages its cards (2026-09-30): the second page is measured too,
+          // and, where it lands, every role's cards on both pages (the role chips
+          // sit in the panel, so the tab walk never reaches them).
+          const sigPage2 = async (name) => {
+            const nextSig = page.locator('button[aria-label="Next signals"]:visible');
+            if (!(await nextSig.count())) return;
+            await nextSig.first().click(); await settle(page);
+            errors.length = 0;
+            report(estate, th, pageName, `${name} > page 2`, await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT }), errors);
+            if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${name}-p2`.replace(/[^\w.-]+/g, '_') + '.png') });
+            await page.locator('button[aria-label="Previous signals"]:visible').first().click(); await settle(page);
+          };
+          await sigPage2(trail || '(landing)');
+          const chips = page.locator('[aria-label="Signals for"] [role="tab"]:visible');
+          if (!trail && await chips.count()) {
+            const on = await chips.evaluateAll(els => els.findIndex(e => e.getAttribute('aria-selected') === 'true'));
+            for (let i = 0; i < await chips.count(); i++) {
+              if (i === on) continue;
+              const role = ((await chips.nth(i).textContent()) || '').trim();
+              await chips.nth(i).click(); await settle(page);
+              errors.length = 0;
+              report(estate, th, pageName, `Signals for ${role}`, await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT }), errors);
+              if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${role}`.replace(/[^\w.-]+/g, '_') + '.png') });
+              await sigPage2(`Signals for ${role}`);
+            }
+            if (on >= 0) { await chips.nth(on).click(); await settle(page); }
+          }
           if (depth >= 2) return;
           const tabs = (await page.evaluate(tabLabels)).filter(t => !seen.has(t));
           tabs.forEach(t => seen.add(t));
