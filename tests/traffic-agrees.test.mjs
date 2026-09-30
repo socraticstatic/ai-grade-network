@@ -57,7 +57,8 @@ test('in the Traffic view, the Over SLO ink means over SLO, the same as the tile
     const redR = v.mapNodes.filter(n => n.side === 'r' && n.fill === RED).map(n => n.id).sort();
     const overR = v.mapNodes.filter(n => n.side === 'r' && n.health === 'slo').map(n => n.id).sort();
     assert.deepEqual(redR, overR, JSON.stringify(patch));
-    const over = v.mapNodes.filter(n => (n.side === 'm' || n.side === 'r') && n.health === 'slo').length;
+    // The tile counts the links over SLO the filter lights (2026-09-30, "the healthy sankey doesn't work").
+    const over = v.mapRibbons.filter(r => String(r.from).startsWith('mid:') && r.state === 'slo').length;
     assert.equal(tile(v, 'slo').v, String(over));
     const sleeves = v.mapRibbons.filter(r => r.sleeve === RED).length;
     const perfRed = at({ ...patch, mapMode: 'slo' }).mapRibbons.filter(r => r.fill === RED).length;

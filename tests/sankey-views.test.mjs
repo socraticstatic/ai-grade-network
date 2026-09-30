@@ -43,8 +43,10 @@ test('the tiles are the map\'s own numbers, in every scope', () => {
   for (const patch of [{}, { obDim: 'first', obScope: 'first:avpn' }, { obDim: 'app', obScope: 'app:PCI' }, { obDim: 'cloud', obScope: 'cloud:AWS' }]) {
     const v = vals(at(patch));
     assert.equal(tile(v, 'traffic').v, v.mapTotal.toFixed(1), JSON.stringify(patch));
-    const red = v.mapNodes.filter(n => (n.side === 'm' || n.side === 'r') && n.health === 'slo').length;
-    assert.equal(tile(v, 'slo').v, String(red), `${JSON.stringify(patch)}: Over SLO ${tile(v, 'slo').v} vs ${red} red on the map`);
+    // The tile counts the path-to-destination links over SLO, the same links the Over SLO filter lights
+    // (2026-09-30, "the healthy sankey doesn't work": it counted nodes, and read 0 beside an Over SLO ribbon).
+    const red = v.mapRibbons.filter(r => String(r.from).startsWith('mid:') && r.state === 'slo').length;
+    assert.equal(tile(v, 'slo').v, String(red), `${JSON.stringify(patch)}: Over SLO ${tile(v, 'slo').v} vs ${red} links over SLO on the map`);
     assert.equal(tile(v, 'p95').v, String(v.mapP95));
   }
   const pci = vals(at({ obDim: 'app', obScope: 'app:PCI' }));
@@ -67,11 +69,13 @@ test('Since sets the map\'s window; Replay plays that window', () => {
 test('Health filters the map', () => {
   const c = at();
   const v0 = vals(c);
-  assert.deepEqual(v0.healthChips.map(h => h.label), ['All', 'Healthy', 'At risk', 'Over SLO']);
+  // One rule since 2026-09-30 ("the healthy sankey doesn't work"): Down is a state, the lit chip clears
+  // itself, and a state lights its links and the nodes at their ends (tests/map-health.test.mjs).
+  assert.deepEqual(v0.healthChips.map(h => h.label), ['Healthy', 'At risk', 'Over SLO', 'Down']);
   v0.healthChips.find(h => h.label === 'Over SLO').go();
   const v = vals(c);
-  const red = v.mapNodes.filter(n => n.health === 'slo'), rest = v.mapNodes.filter(n => n.health && n.health !== 'slo');
-  assert.ok(red.length && red.every(n => n.op === 1), red.map(n => n.label + ' ' + n.op).join(', '));
-  assert.ok(rest.every(n => n.op <= 0.35));
+  const on = v.mapRibbons.filter(r => r.op >= 0.35), ends = new Set(on.flatMap(r => [r.from, r.to]));
+  assert.ok(on.every(r => r.state === 'slo'));
+  assert.ok(v.mapNodes.filter(n => n.nodeKey && n.side !== 'ctx').every(n => (n.op === 1) === ends.has(n.nodeKey)));
   assert.ok(HTML.includes('aria-label="Health"'));
 });
