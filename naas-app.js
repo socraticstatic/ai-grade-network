@@ -1050,7 +1050,7 @@ export function pageRows(rows, size, page, setPage) {
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
 const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
-  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
+  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 function pageLists(out, s, set) {
   for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
     if (!Array.isArray(out[list])) continue;
@@ -1985,7 +1985,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   ].map(([k, l, v, u, patch]) => { const on = !!tileOn(k);
     // Since is the window the tiles compare against (2026-09-29 audit): now vs the prior window.
     const tr = ({ traffic: 'thr', p95: 'p95' })[k] ? (winTrends.find(x => x.key === ({ traffic: 'thr', p95: 'p95' })[k]) || null) : null;
-    return { key: k, l, v, u, on, go: () => set(patch), border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)',
+    return { key: k, l, v, u, on, go: () => set(patch), title: k === 'cost' ? 'Traffic on this map, at your AT&T rate and public egress rates. Site access, AT&T charges and cloud ports are in Cost, By leg.' : l, border: on ? 'var(--border-active)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)',
       d: tr ? `${tr.delta} vs prior ${winLabelOf(s)}` : '', dShort: tr ? tr.delta : '', hasD: !!tr, dTone: tr ? tr.deltaTone : 'var(--text-light)' }; });
   const seg = (on) => ({ bg: on ? 'var(--bg-base)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 600 : 500, shadow: on ? '0 1px 2px rgba(16,24,40,.10), 0 0 0 1px var(--border-secondary)' : 'none' });
   // Over time (2026-09-28): the same traffic, by day, week or month.
@@ -2412,6 +2412,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
     obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelHealth: obPanel === 'health', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0 && !!s.obPickOpen, scopeLabel, mapTotal: mapG.total, mapP95: perf.p95,
+    // The Cost view prices traffic only; the door opens the three legs (notes, 2026-09-30, A2).
+    costScopeOn: mapMode === 'cost', costScopeLine: 'Traffic only · every leg in Cost ›', costScopeGo: () => go('s3', { layer: 'cloud', tab: 'cost', costPanel: 'legs' })(),
     // The legend says what the colors mean in the view you are in.
     mapLegend: (mapMode === 'cost' ? [['#0057b8', 'On AT&T, at your AT&T rate'], [dark ? '#ffa25e' : '#e07b00', 'Outside AT&T, at egress rates']]
       : mapMode === 'slo' ? [[HEALTH_FILL.ok, 'Within SLO'], [HEALTH_FILL.risk, 'Near SLO'], [HEALTH_FILL.slo, 'Over SLO']]
@@ -3153,7 +3155,7 @@ function connectVals(s, set, est, go, ob) {
 }
 /** Cost's views. Savings (Banked) and Forecast are part of Spend now; their old doors land there. */
 // Cost lands on Optimize (2026-09-30); the panels that folded into Spend still land there.
-const costPanelOf = (k) => (['optimize', 'spend', 'money', 'dest', 'mile', 'bucket', 'charges'].includes(k) ? k : ['banked', 'forecast', 'savings'].includes(k) ? 'spend' : 'optimize');
+const costPanelOf = (k) => (['optimize', 'spend', 'legs', 'money', 'dest', 'mile', 'bucket', 'charges'].includes(k) ? k : ['banked', 'forecast', 'savings'].includes(k) ? 'spend' : 'optimize');
 const COST_DOOR = { 'sec-optimize': 'optimize', 'sec-spend': 'spend' };
 function egressBaseFor(est, ob) { const bucketToday = (est.buckets || []).reduce((a, b) => a + b.today, 0); return bucketToday || ob.egressMo || 0; }
 /** AT&T's own monthly charges for an estate: on-ramps, hosted VPCs, L3
@@ -3326,9 +3328,17 @@ function costVals(s, set, est, invAll, ob, go, c) {
     // One slot per Cost panel (2026-09-29 audit): the summary or its arithmetic, never both stacked.
     costDetail: !!s.costDetail, costSummary: !s.costDetail, toggleCostDetail: () => set({ costDetail: !s.costDetail }), costDetailWord: s.costDetail ? 'Show the summary' : 'Show the arithmetic',
     // One panel at a time (2026-09-28, no scrolling).
+    // Cost in three legs (notes, 2026-09-30, A2): site access, cloud connectivity, the cloud provider.
+    ...(() => { const legs = R.costLegs(est, invAll, ob.utilRows);
+      const row = (r) => ({ key: r.key, label: r.label, sub: r.sub, title: r.title || r.sub, vF: fmt(Math.round(r.v)), modelled: !!r.modelled, mark: r.modelled ? 'Modelled' : '' });
+      const share = (v) => (legs.total > 0 ? Math.round(v / legs.total * 100) : 0);
+      return { legTiles: [legs.access, legs.connect, legs.cloud].map(l => ({ key: l.key, l: l.label, v: fmt(Math.round(l.total)), u: '/mo', sub: `${share(l.total)}% of ${fmt(Math.round(legs.total))}` })),
+        legAccessRows: legs.access.rows.map(row), legConnectRows: legs.connect.rows.map(row), legCloudRows: legs.cloud.rows.map(row),
+        hasLegs: legs.total > 0, noLegs: !(legs.total > 0), legEmpty: legs.total > 0 ? '' : 'No egress seen yet.',
+        legLine: `${fmt(Math.round(legs.total))}/mo end to end. AT&T charges are catalog prices; other providers' list prices are marked Modelled.` }; })(),
     ...(() => { const cpk = costPanelOf(s.costPanel); void hasBank;
-      return { costPanels: [['optimize', 'Optimize'], ['spend', 'Spend'], ['money', 'By region'], ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['charges', 'AT&T charges']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
-        costPanelOptimize: cpk === 'optimize', costPanelSpend: cpk === 'spend', costPanelMoney: cpk === 'money', costPanelCharges: cpk === 'charges', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
+      return { costPanels: [['optimize', 'Optimize'], ['spend', 'Spend'], ['legs', 'By leg'], ['money', 'By region'], ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['charges', 'AT&T charges']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
+        costPanelOptimize: cpk === 'optimize', costPanelSpend: cpk === 'spend', costPanelLegs: cpk === 'legs', costPanelMoney: cpk === 'money', costPanelCharges: cpk === 'charges', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
     bySite, hasBySite: bySite.length > 0, bySiteTotalF: fmt(bySiteTotal), bySiteNote: `${fmt(siteRows.reduce((a, r) => a + r.pubPart, 0))}/mo still on a public first mile`, goSites: go('s1'),
     costDonuts, hasCostDonuts: costDonuts.length > 0,
     arbitrage: arb.map(a => ({ ...a, fabW: Math.round(a.saveN / 0.07 * 0.02 / maxNow * 100) + '%', premW: Math.round(a.saveN / maxNow * 100) + '%',

@@ -7,7 +7,8 @@
  */
 import * as S from './naas-sites.js';
 // Stakeholder round 2: path tradeoffs, health, endpoints/resources, Observe cuts, Cost arbitrage.
-import { fmt, pct, connModeOf, attHolds } from './naas-logic.js';
+import { fmt, pct, connModeOf, attHolds, siteModeOf } from './naas-logic.js';
+import { CATALOG } from './naas-data.js';
 import { agoOf, hhmm, startOf, INCIDENT_MIN } from './naas-schedule.js';
 import { regionState, RAMP_NAME } from './naas-flowmap.js';
 
@@ -275,10 +276,88 @@ export function attChargeRows(est, invAll) {
   const vpcsAll = (invAll || []).flatMap(c => (c.regions || []).filter(r => nb.has(r.region)).flatMap(r => r.vpcs || []));
   const hostedN = vpcsAll.filter(v => v.managed).length, l3N = vpcsAll.filter(v => v.priv && !v.managed).length;
   return [
-    { key: 'nb', label: 'NetBond on-ramps', sub: `${nb.size} ${nb.size === 1 ? 'region' : 'regions'} × $1,800`, v: nb.size * 1800 },
+    { key: 'nb', label: 'NetBond on-ramps', sub: `${nb.size} ${nb.size === 1 ? 'region' : 'regions'} × $1,800`, v: nb.size * 1800, regions: [...nb] },
     { key: 'hv', label: 'Hosted VPC / VNet', sub: `${hostedN} × $2,400`, v: hostedN * 2400 },
     { key: 'l3', label: 'Customer L3 attach', sub: `${l3N} × $400`, v: l3N * 400 },
   ].filter(r => r.v > 0);
+}
+
+// ---------- Cost in three legs (notes, 2026-09-30, A2) ----------
+// What the estate costs end to end: the sites' access, the connectivity into the
+// clouds, and what the cloud provider bills. AT&T charges read the catalog; any
+// price we apply for someone else is a public list price, marked modelled.
+//
+// Cloud provider port list prices, per port per month, US, verified 2026-09-30:
+//   AWS Direct Connect dedicated: 1G $219.00, 10G $1,642.50 (https://aws.amazon.com/directconnect/pricing/,
+//     Price List API us-east-1 published 2026-09-17). Flat rate (announced 2026-09-15, 10G and 100G dedicated only,
+//     transfer out included): 10G Tier 1 $10.96/hr, about $8,001/mo (https://aws.amazon.com/directconnect/pricing/flat-rate/).
+//   Azure ExpressRoute Standard Metered, Zone 1: 1G $436, 10G $3,400 (https://azure.microsoft.com/en-us/pricing/details/expressroute/,
+//     read through https://prices.azure.com/api/retail/prices because the page renders "$-" without script).
+//   Google Cloud Dedicated Interconnect: 10G $1,699.44, plus $73.00 per VLAN attachment
+//     (https://cloud.google.com/network-connectivity/docs/interconnect/pricing).
+//   Oracle FastConnect port: 1G $155.13, 10G $930.75 (https://www.oracle.com/cloud/networking/pricing/, part B88326).
+//   AWS Site-to-Site VPN: $36.50 per connection (https://aws.amazon.com/vpn/pricing/).
+export const CSP_PORT = {
+  AWS: { product: 'AWS Direct Connect', '1G': 219, '10G': 1642.5, flat10G: 8001 },
+  Azure: { product: 'Azure ExpressRoute', '1G': 436, '10G': 3400 },
+  GCP: { product: 'Google Cloud Interconnect', '10G': 1699.44, vlan: 73 },
+  Oracle: { product: 'Oracle FastConnect', '1G': 155.13, '10G': 930.75 },
+};
+export const CSP_VPN = 36.5;
+// Not a vendor list price: a typical colo cross-connect, modelled.
+const XC_RATE = 350;
+// A rolled-up remote site buys a smaller circuit than a named one: 0.3x the catalog "Starting at".
+const REMOTE_RATE = 0.3;
+const PRICE_OF = { avpn: 'avpn', aseod: 'ase', adi: 'adi', abf: 'abf', aiab: 'mobility' };
+const catPrice = (id) => ((CATALOG.find(p => p.id === id) || {}).price) || 0;
+const each = (v) => (Number.isInteger(v) ? fmt(v) : '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+export function costLegs(est, inv, utilRows) {
+  const sites = est.sites || [], regs = est.regionsList || [];
+  const leg = (key, label, rows) => ({ key, label, rows, total: rows.reduce((a, r) => a + r.v, 0) });
+  // Site access: every service a site buys, primary and backup, at the catalog's "Starting at".
+  const acc = {};
+  for (const st of sites) {
+    const n = S.countOf(st.name), remote = n > 1;
+    for (const sv of S.servicesOf(st)) {
+      const id = PRICE_OF[sv.key], carrier = !id;
+      const key = carrier ? sv.key : sv.key + (remote ? ':remote' : '');
+      const g = acc[key] = acc[key] || { key, label: carrier ? sv.label : sv.label + (remote ? ' · remote sites' : ''), n: 0, primary: 0, backup: 0, unit: carrier ? 0 : catPrice(id) * (remote ? REMOTE_RATE : 1), carrier, modelled: remote && !carrier };
+      g.n += n; g[sv.role === 'backup' ? 'backup' : 'primary'] += n;
+    }
+  }
+  const access = Object.values(acc).map(g => ({ key: g.key, label: g.label, n: g.n, v: g.unit * g.n, modelled: g.modelled,
+    sub: `${g.n.toLocaleString('en-US')} ${g.n === 1 ? 'circuit' : 'circuits'}${g.backup ? ` · ${g.backup.toLocaleString('en-US')} backup` : ''} · ${g.carrier ? 'billed by another carrier' : `${each(g.unit)} each${g.modelled ? ' at the remote-site rate' : ''}`}` }))
+    .sort((a, b) => b.v - a.v || b.n - a.n);
+  // Cloud connectivity: the AT&T charges, then what the customer runs themselves.
+  const xcN = regs.filter(r => r.priv && r.xc && r.xc.by === 'yours').length + sites.filter(x => x.xc && x.xc.by === 'yours').length;
+  const ipsecN = sites.filter(x => siteModeOf(x) === 'ipsec').reduce((a, x) => a + S.countOf(x.name), 0);
+  const sdwanN = sites.filter(x => siteModeOf(x) === 'sdwan').reduce((a, x) => a + S.countOf(x.name), 0);
+  const connect = [
+    ...attChargeRows(est, inv).map(r => ({ ...r, n: r.key === 'nb' ? r.regions.length : +String(r.sub).split(' ')[0] || 1, modelled: false })),
+    ...(sdwanN ? [{ key: 'sdwan', label: 'SD-WAN', n: sdwanN, v: sdwanN * catPrice('sdwan'), sub: `${sdwanN.toLocaleString('en-US')} sites × ${fmt(catPrice('sdwan'))}`, modelled: false }] : []),
+    ...(xcN ? [{ key: 'xc', label: 'Your cross-connects', n: xcN, v: xcN * XC_RATE, sub: `${xcN} × ${fmt(XC_RATE)} at a typical colo rate`, modelled: true }] : []),
+    ...(ipsecN ? [{ key: 'ipsec', label: 'IPsec tunnels', n: ipsecN, v: ipsecN * CSP_VPN, sub: `${ipsecN.toLocaleString('en-US')} tunnels × ${each(CSP_VPN)} cloud VPN list price`, modelled: true }] : []),
+  ];
+  // Cloud provider: each cloud's ports at its list price, then this month's egress.
+  const ports = {};
+  for (const u of utilRows || []) {
+    const r = regs.find(x => x.region === u.region); if (!r || !r.priv) continue;
+    const P = CSP_PORT[r.cloud], size = /(^|\D)1G/.test(u.bwShort || '') && !/10G/.test(u.bwShort || '') ? '1G' : '10G';
+    const key = P ? P.product : r.cloud;
+    const g = ports[key] = ports[key] || { key: 'port:' + r.cloud, label: P ? P.product : r.cloud, cloud: r.cloud, n: 0, v: 0, regions: 0, priced: !!P };
+    g.n += u.ports || 1; g.regions += 1;
+    if (P) g.v += (u.ports || 1) * (P[size] || P['10G']) + (P.vlan || 0);
+  }
+  const cloudRows = Object.values(ports).map(g => { const P = CSP_PORT[g.cloud];
+    const ports = `${g.n} ${g.n === 1 ? 'port' : 'ports'}`, regions = `${g.regions} ${g.regions === 1 ? 'region' : 'regions'}`;
+    const sub = !g.priced ? `${ports} · not on a public price list` : `${ports} × ${each(P['10G'])}${P.vlan ? ` + ${fmt(P.vlan)} a region` : ''}${P.flat10G ? ' · flat rate offered' : ''}`;
+    const title = !g.priced ? sub : `${ports} in ${regions} at the ${g.label} list price, ${each(P['10G'])} per 10G port${P.vlan ? `, plus ${fmt(P.vlan)} per VLAN attachment` : ''}. Metered.${P.flat10G ? ` A flat rate is offered at about ${fmt(P.flat10G)} per 10G port a month, transfer out included.` : ''}`;
+    return { key: g.key, label: g.label, n: g.n, v: g.v, sub, title, modelled: true, billing: P && P.flat10G ? 'metered' : undefined }; }).sort((a, b) => b.v - a.v);
+  const egress = (est.buckets || []).reduce((a, b) => a + b.today, 0);
+  const cloud = [...cloudRows, ...(egress || regs.length ? [{ key: 'egress', label: 'Egress', n: (est.buckets || []).length, v: egress, sub: 'Data out of the clouds, this month', modelled: false }] : [])];
+  const L = { access: leg('access', 'Site access', access), connect: leg('connect', 'Cloud connectivity', connect), cloud: leg('cloud', 'Cloud provider', cloud) };
+  return { ...L, total: L.access.total + L.connect.total + L.cloud.total };
 }
 
 // ---------- What should I change first (notes, 2026-09-30) ----------

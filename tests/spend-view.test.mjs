@@ -17,7 +17,8 @@ const rail = (c) => vals(c).railGroups.flatMap(g => g.items);
 // Cost opens on Optimize since 2026-09-30 (notes: "Cost --> Optimize"); Spend still holds Savings and Forecast.
 test('Cost opens on Optimize; Savings and Forecast are in Spend, not beside it', () => {
   const v0 = vals(cost());
-  assert.deepEqual(v0.costPanels.map(p => p.label), ['Optimize', 'Spend', 'By region', 'By destination', 'By first mile', 'By bucket', 'AT&T charges']);
+  // By leg (2026-09-30, A2): the three cost legs sit beside Spend, which stays egress (D-7).
+  assert.deepEqual(v0.costPanels.map(p => p.label), ['Optimize', 'Spend', 'By leg', 'By region', 'By destination', 'By first mile', 'By bucket', 'AT&T charges']);
   assert.equal(v0.costPanelOptimize, true);
   const v = vals(cost('partial', { costPanel: 'spend' }));
   assert.equal(v.costPanelSpend, true);
