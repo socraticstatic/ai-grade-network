@@ -126,6 +126,8 @@ export function onrampChildren(est, flows) {
 // 2026-09-29: "cloud provider direct connect - use that instead of expressroute").
 const NATIVE = 'Cloud provider direct connect';
 export const RAMP_NAME = { NetBond: 'NetBond', ER: NATIVE, DX: NATIVE, Interconnect: NATIVE, EQX: 'Equinix Fabric' };
+/** The direct connect path's name, which the Cost view prices at the cloud provider's list price (2026-09-30). */
+export const DIRECT = NATIVE;
 const rampOf = (r) => RAMP_NAME[r.ramp] || 'NetBond';
 /** Your own data centers take a share of what the other sites send, over the private WAN. */
 export const DC_SHARE = 0.15;
@@ -148,6 +150,14 @@ export function rightRoots(est, flows, by = 'cloud', left = null) {
   const dcs = dcSites(est);
   const dc = sp.dcV > 0.001 ? [{ kind: 'dc', key: 'dc:yours', name: `Your data centers · ${dcs.length}`, v: sp.dcV, fabV: sp.dcV, pubV: 0, byRamp: {}, wan: sp.dcV, hasChildren: dcs.length > 1, state: 'ok' }] : [];
   return [...dests, ...dc];
+}
+/** What each private path carries across the whole estate, before a window
+ *  scales it: Gbps by on-ramp, and on the private WAN. The Cost view divides
+ *  each path's bill by it (2026-09-30, owner decision a). */
+export function pathGbps(est, flows) {
+  const ramps = {}; let wan = 0;
+  rightRoots(est, flows).forEach(d => { Object.entries(d.byRamp || {}).forEach(([r, v]) => { ramps[r] = (ramps[r] || 0) + v; }); wan += d.wan || 0; });
+  return { ramps, wan };
 }
 /** The destinations a volume lands on, grouped by cloud or by app (2026-09-29).
  *  On-AT&T traffic lands on the private regions, the rest on the public ones,
@@ -404,10 +414,28 @@ export function buildMap(est, inv, flows0, opts = {}) {
   // The Cost view weighs the same map in dollars: on AT&T at the AT&T rate,
   // outside at the egress rate (Micah, 2026-09-29: "cost and performance don't
   // show cost and performance"). Children follow their parents (fitKids).
-  if (opts.weigh) { const a = +opts.weigh.fab || 0, b = +opts.weigh.pub || 0;
-    const w = (x) => { const f = (x.fabV || 0) * a, u = Math.max(0, x.v - (x.fabV || 0)) * b; return { ...x, fabV: f, v: f + u, ...(x.ipsecV != null ? { ipsecV: x.ipsecV * b } : {}), ...(x.pubV != null ? { pubV: x.pubV * b } : {}), ...(x.wan != null ? { wan: x.wan * a } : {}),
-      ...(x.byRamp ? { byRamp: Object.fromEntries(Object.entries(x.byRamp).map(([r, v]) => [r, v * a])) } : {}), ...(x.parts ? { parts: x.parts.map(pt => ({ ...pt, fab: pt.fab * a, pub: pt.pub * b })) } : {}) }; };
-    L0 = L0.map(w); R0 = R0.map(w); ctxRows = ctxRows.map(w); }
+  // Each path at its own price (2026-09-30, owner decision a): weigh.ramp gives
+  // an on-ramp its own rate (direct connect at the cloud provider's list price;
+  // 0 for a path with no price), and every other AT&T-side path takes fab. A
+  // destination prices each part at its path's rate. A site's AT&T-side share
+  // splits across the paths as the destinations take it, so every site carries
+  // the same blend and each path stays whole. A bar with no price leaves the map.
+  if (opts.weigh) { const a = +opts.weigh.fab || 0, b = +opts.weigh.pub || 0, rr = opts.weigh.ramp || {}, perPath = Object.keys(rr).length > 0;
+    const rate = (r) => (r in rr ? +rr[r] || 0 : a);
+    let blend = a;
+    if (perPath) {
+      const rg = {}; let wanG = 0;
+      R0.forEach(x => { Object.entries(x.byRamp || {}).forEach(([r, v]) => { rg[r] = (rg[r] || 0) + v; }); wanG += x.wan || 0; });
+      const fabG = Object.values(rg).reduce((s, v) => s + v, 0) + wanG;
+      if (fabG > 0) blend = (Object.entries(rg).reduce((s, [r, v]) => s + v * rate(r), 0) + wanG * a) / fabG;
+    }
+    const fabOf = (x) => { if (!perPath) return (x.fabV || 0) * a;
+      const known = Object.values(x.byRamp || {}).reduce((s, v) => s + v, 0) + (x.wan || 0);
+      return Object.entries(x.byRamp || {}).reduce((s, [r, v]) => s + v * rate(r), 0) + (x.wan || 0) * a + Math.max(0, (x.fabV || 0) - known) * blend; };
+    const w = (x) => { const f = fabOf(x), u = Math.max(0, x.v - (x.fabV || 0)) * b; return { ...x, fabV: f, v: f + u, ...(x.ipsecV != null ? { ipsecV: x.ipsecV * b } : {}), ...(x.pubV != null ? { pubV: x.pubV * b } : {}), ...(x.wan != null ? { wan: x.wan * a } : {}),
+      ...(x.byRamp ? { byRamp: Object.fromEntries(Object.entries(x.byRamp).map(([r, v]) => [r, v * rate(r)])) } : {}), ...(x.parts ? { parts: x.parts.map(pt => ({ ...pt, fab: pt.fab * rate(rampOf(pt.r)), pub: pt.pub * b })) } : {}) }; };
+    const priced = (x) => !perPath || x.v > 0.0005;
+    L0 = L0.map(w).filter(priced); R0 = R0.map(w).filter(priced); ctxRows = ctxRows.map(w).filter(priced); }
   const L = expand(L0, open, est, inv, flows), R = expand(R0, open, est, inv, flows);
   const scale = (nd) => nd;
   // Ramesh's first pattern (19:09): what stays within the region. Workload groups carry east-west traffic that never leaves the region; it gets its own band.

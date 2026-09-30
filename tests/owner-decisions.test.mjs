@@ -107,3 +107,14 @@ test('(e) every Traffic tile carries a title that says more than its label', () 
     }
   }
 });
+
+// The skeptic's catch (2026-09-30): one site "buys AT&T access and reach" read wrong.
+test('one site on AT&T reaches, not reach', async () => {
+  const { vals } = await import('../naas-app.js');
+  const { mkC } = await import('./harness.mjs');
+  const c = mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf' });
+  const one = vals(c).scopeMembers ? null : null;
+  const t = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obScope: 'site:Ashburn DC' })).flowTiles.find(x => x.key === 'onatt').title;
+  assert.doesNotMatch(t, /\b1 of 1 site buys AT&T access and reach\b/, t);
+  assert.match(t, /^1 of 1 site buys AT&T access and reaches /, t);
+});
