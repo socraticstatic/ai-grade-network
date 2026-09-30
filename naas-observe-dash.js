@@ -166,7 +166,7 @@ export function workloadPanel(sel, ctx) {
     ],
     children: (w.endpoints || []).length ? {
       title: `${n(w.endpoints.length)} ${w.endpoints.length === 1 ? 'application' : 'applications'} on ${w.name}`,
-      note: `Volume is this workload's ${n(Math.round(top.gbPerWl || 42))} GB/mo split across its listeners — the same figure Cost prices egress with.`,
+      note: `Volume is this workload's ${n(Math.round(top.gbPerWl || 42))} GB/mo split across its listeners. Cost prices egress with the same figure.`,
       // Internet-reachable first: that one is a finding, the rest is
       // inventory.
       rows: w.endpoints.map((e, k) => {

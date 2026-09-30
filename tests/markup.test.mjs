@@ -386,7 +386,7 @@ test('each of the three column headers carries a door', () => {
 });
 
 test('the hero svg still balances after the header edits', () => {
-  const [from, to] = block('aria-label="Fabric picture"', '</svg>');
+  const [from, to] = block('aria-label="AT&amp;T network picture"', '</svg>');
   assertBalanced(from, to, 'the hero svg');
 });
 

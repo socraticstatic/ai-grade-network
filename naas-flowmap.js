@@ -519,8 +519,8 @@ export function litFor(map, key) {
 /** The five patterns Ramesh named (19:04), in his order. */
 export const PATTERNS = [
   ['region', 'In the region', 'Traffic that starts and ends inside one cloud region. It never crosses a region boundary, so it costs nothing in egress.'],
-  ['regions', 'Across regions', 'Traffic between two regions of the SAME cloud — us-east-1 to us-west-2. It leaves a region, so the hyperscaler bills egress on it.'],
-  ['clouds', 'Across clouds', 'Traffic between DIFFERENT clouds — AWS to Azure. Billed egress at both ends unless it rides the AT&T network.'],
+  ['regions', 'Across regions', 'Traffic between two regions of the same cloud, such as us-east-1 to us-west-2. It leaves a region, so the hyperscaler bills egress on it.'],
+  ['clouds', 'Across clouds', 'Traffic between different clouds, such as AWS to Azure. Billed egress at both ends unless it rides the AT&T network.'],
   ['internet', 'To the internet', 'Traffic leaving your estate for the public internet or SaaS. The most expensive path per GB and the least visible.'],
   ['inbound', 'Coming in', 'Traffic arriving from your sites and users into the cloud. Usually free to receive; the first mile decides how fast it is.'],
 ];
