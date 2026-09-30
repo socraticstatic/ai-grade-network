@@ -51,12 +51,70 @@ test('the ERP app group names the ERP apps Oracle found, never a generic one', (
   const top = row.label.split(' → ')[1];
   assert.ok(!generic.includes(top), `erp group reads "${row.label}"`);
   assert.ok(seeds.has(top), `erp top app ${top} is one of the Oracle seed apps (${[...seeds].join(', ')})`);
-  // Every Oracle workload's apps are Oracle's, in every app group, so no ERP region carries a storefront.
+  // Every workload in an Oracle ERP VCN runs one of Oracle's ERP apps, so no ERP VCN carries a
+  // storefront (review 2, 2026-10-01: the seed stays on the VCNs tagged erp or finance; the
+  // Data lake VCN keeps its own apps, below).
   const inv = A.inventory(SCH.withSources(D.ESTATES.partial, [{ provider: 'Oracle', at: Date.parse(NOW), estId: 'partial' }]));
   const ora = inv.find(cl => cl.name === 'Oracle');
-  const apps = ora.regions.flatMap(r => r.vpcs.flatMap(v => v.subnets.flatMap(s => s.workloads.flatMap(w => w.endpoints.map(e => e.app)))));
-  assert.equal(apps.length, 70, 'one app per Oracle workload');
-  assert.ok(apps.every(a => seeds.has(a)), [...new Set(apps.filter(a => !seeds.has(a)))].join(', '));
+  const erpVpcs = ora.regions.flatMap(r => r.vpcs.filter(v => ['erp', 'finance'].includes(v.tags[0])));
+  assert.equal(erpVpcs.length, 2, 'one ERP VCN in Ashburn, one in Frankfurt');
+  const erpWl = erpVpcs.flatMap(v => v.subnets.flatMap(s => s.workloads));
+  assert.ok(erpWl.length > 0 && erpWl.every(w => w.endpoints.length === 1 && seeds.has(w.endpoints[0].app)), 'one ERP app per workload in an ERP VCN');
+});
+
+// Review 2, 2026-10-01: the Oracle seed ran region-wide, so Ashburn's Data lake VCN
+// (tags analytics, erp) ran ERP app servers and the analytics group read
+// "analytics → erp-ledger". The seed runs only where the VCN's own tag is erp or
+// finance; analytics keeps its own apps, on every estate Oracle is added to.
+for (const view of ['partial', 'small', 'empty']) {
+  test(`${view}: with Oracle added, erp reads erp → erp-ledger and analytics keeps its own apps`, () => {
+    const seeds = new Set(D.FOUND_SOURCES.Oracle.regions.flatMap(r => (r.apps || []).map(x => x[0])));
+    const c = sources(view);
+    const health = () => { c.setState({ screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' }); return vals(c).pathFlowAll; };
+    const before = health().find(r => r.tag === 'analytics');
+    c.setState({ screen: 's1', discoverView: 'sources' });
+    addOracle(c);
+    const rows = health();
+    assert.equal((rows.find(r => r.tag === 'erp') || {}).label, 'erp → erp-ledger');
+    const analytics = rows.find(r => r.tag === 'analytics');
+    assert.ok(analytics, 'Ashburn\'s Data lake VCN is an analytics group');
+    const top = analytics.label.split(' → ')[1];
+    assert.ok(top && !seeds.has(top), `analytics reads "${analytics.label}"`);
+    if (before) assert.equal(analytics.label, before.label, 'Oracle leaves the analytics group reading as it did');
+    const inv = A.inventory(SCH.withSources(D.ESTATES[view], [{ provider: 'Oracle', at: Date.parse(NOW), estId: view }]));
+    const lake = inv.find(cl => cl.name === 'Oracle').regions.flatMap(r => r.vpcs).filter(v => v.tags[0] === 'analytics');
+    assert.equal(lake.length, 1, 'one Data lake VCN, in Ashburn');
+    const apps = lake.flatMap(v => v.subnets.flatMap(s => s.workloads.flatMap(w => w.endpoints.map(e => e.app))));
+    assert.ok(apps.length && apps.every(a => !seeds.has(a)), [...new Set(apps.filter(a => seeds.has(a)))].join(', '));
+  });
+}
+
+// Review 2, 2026-10-01: endpointsFor named only Azure and GCP, so an Oracle
+// workload fell through to AWS (arn:aws, EC2, EKS) in the inventory tree, and so
+// did a CoreWeave one. Each reads in its own cloud's names.
+const treeWls = (v, cloud) => v.invTree.filter(cl => cl.name === cloud).flatMap(cl => cl.regions.flatMap(r => r.vpcs.flatMap(vp => vp.azGroups.flatMap(az => az.subnets.flatMap(sn => sn.wls))))).map(w => ({ endpoint: w.endpoint, resource: w.resource }));
+test('an Oracle workload reads in OCI names, never AWS ones', () => {
+  const c = sources('partial');
+  addOracle(c);
+  c.setState({ inv: {} });
+  vals(c).expandAll();
+  const wls = treeWls(vals(c), 'Oracle');
+  assert.equal(wls.length, 70, 'every Oracle workload is in the tree');
+  for (const w of wls) {
+    assert.doesNotMatch(JSON.stringify(w), /aws|arn:|\bEC2\b|\bEKS\b|\bENI\b/i);
+    assert.match(w.resource.arn, /^ocid1\.[a-z]+\.oc1\./);
+  }
+  const svcs = new Set(wls.map(w => w.resource.svc));
+  for (const s of ['Compute', 'OKE', 'Load Balancer']) assert.ok(svcs.has(s), `${s} is among ${[...svcs].join(', ')}`);
+  assert.ok(wls.some(w => /^ocid1\.instance\.oc1\./.test(w.resource.arn)), 'a compute instance reads ocid1.instance.oc1');
+});
+
+test('a CoreWeave workload never reads as AWS either', () => {
+  const c = mkC({ view: 'mature', estateParam: null, screen: 's1', nowIso: NOW, inv: {} });
+  vals(c).expandAll();
+  const wls = treeWls(vals(c), 'CoreWeave');
+  assert.ok(wls.length > 0, 'Established carries CoreWeave workloads');
+  for (const w of wls) assert.doesNotMatch(JSON.stringify(w), /aws|arn:|\bEC2\b|\bEKS\b|p5\.48xl/i);
 });
 
 test('See what it found drills into the new cloud, in place', () => {

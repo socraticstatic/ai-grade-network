@@ -73,14 +73,31 @@ export function health(est, ob, steered, now = Date.now()) {
 
 // ---------- Endpoints and resources (below subnet) ----------
 const RES = { alb: ['ALB', 'Load balancer'], api: ['API GW', 'API gateway'], web: ['EC2', 'Web tier'], nat: ['Bastion', 'Bastion host'], app: ['EKS', 'App service'], db: ['RDS', 'Database'], cache: ['ElastiCache', 'Cache'], worker: ['Batch', 'Batch worker'], gpu: ['p5.48xl', 'GPU inference'], queue: ['SQS', 'Message queue'] };
+// Each cloud's own name for the service RES names in AWS. Oracle and CoreWeave fell
+// through to AWS (review 2, 2026-10-01): arn:aws, EC2 and EKS on an Oracle workload.
+const SVC_OF = {
+  Azure: { EC2: 'VM', EKS: 'AKS', RDS: 'Azure SQL', ElastiCache: 'Redis Cache', ALB: 'App Gateway', 'API GW': 'APIM', SQS: 'Service Bus' },
+  GCP: { EC2: 'GCE', EKS: 'GKE', RDS: 'Cloud SQL', ElastiCache: 'Memorystore', ALB: 'Cloud LB', 'API GW': 'Apigee', SQS: 'Pub/Sub' },
+  Oracle: { EC2: 'Compute', VM: 'Compute', Batch: 'Compute', EKS: 'OKE', RDS: 'Base Database', ElastiCache: 'OCI Cache', ALB: 'Load Balancer', 'API GW': 'API Gateway', SQS: 'Queue', 'p5.48xl': 'BM.GPU.H100.8' },
+  // CoreWeave runs its workloads on its Kubernetes service; a GPU one is an H100 node.
+  CoreWeave: { EC2: 'CKS', VM: 'CKS', Batch: 'CKS', EKS: 'CKS', RDS: 'CKS', ElastiCache: 'CKS', 'API GW': 'CKS', SQS: 'CKS', ALB: 'Load Balancer', 'p5.48xl': 'gd-8xh100ib-i128' },
+};
+// The OCID resource type an OCI service's resources carry; everything else is a compute instance.
+const OCID_TYPE = { 'Load Balancer': 'loadbalancer', 'Base Database': 'dbsystem', 'OCI Cache': 'rediscluster', 'API Gateway': 'apigateway', Queue: 'queue', Bastion: 'bastion' };
 export function endpointsFor(w, cloud) {
   const kind = w.name.split('-')[0];
   const [svc, role] = RES[kind] || ['VM', 'Compute'];
-  const svcName = cloud === 'Azure' ? { EC2: 'VM', EKS: 'AKS', RDS: 'Azure SQL', ElastiCache: 'Redis Cache', ALB: 'App Gateway', 'API GW': 'APIM', SQS: 'Service Bus' }[svc] || svc : cloud === 'GCP' ? { EC2: 'GCE', EKS: 'GKE', RDS: 'Cloud SQL', ElastiCache: 'Memorystore', ALB: 'Cloud LB', 'API GW': 'Apigee', SQS: 'Pub/Sub' }[svc] || svc : svc;
-  const eni = `eni-${(w.ip || '').split('.').slice(2).join('')}${kind.length}a`;
+  const svcName = (SVC_OF[cloud] || {})[svc] || svc;
+  const tag = w.tag || 'default', uid = `${(w.ip || '').split('.').slice(2).join('')}${kind.length}a`;
+  const oci = cloud === 'Oracle';
+  const arn = cloud === 'Azure' ? `/subscriptions/…/resourceGroups/${tag}/providers/${svcName}/${w.name}`
+    : cloud === 'GCP' ? `projects/${tag}/zones/…/${svcName.toLowerCase()}/${w.name}`
+    : oci ? `ocid1.${OCID_TYPE[svcName] || 'instance'}.oc1.…${uid}`
+    : cloud === 'CoreWeave' ? `/api/v1/namespaces/${tag}/${svcName === 'Load Balancer' ? 'services' : 'pods'}/${w.name}`
+    : `arn:aws:${svc.toLowerCase().replace(/\s/g, '')}:…:${w.name}`;
   return {
-    endpoint: { name: eni, type: w.exposed ? 'Public ENI · EIP attached' : 'Private ENI', ip: w.ip, dns: `${w.name}.${w.tag || 'default'}.internal`, sg: `sg-${kind}-${w.tag || 'default'}`.toLowerCase(), ports: w.exposed ? '443, 80' : kind === 'db' ? '5432' : kind === 'cache' ? '6379' : '8080' },
-    resource: { name: `${w.tag || 'default'}/${w.name}`, arn: cloud === 'Azure' ? `/subscriptions/…/resourceGroups/${w.tag || 'default'}/providers/${svcName}/${w.name}` : cloud === 'GCP' ? `projects/${w.tag || 'default'}/zones/…/${svcName.toLowerCase()}/${w.name}` : `arn:aws:${svc.toLowerCase().replace(/\s/g, '')}:…:${w.name}`, svc: svcName, role, owner: ({ pci: 'payments-platform', prod: 'platform-eng', finance: 'fin-systems', 'internet-facing': 'web-team', gpu: 'ml-infra', ai: 'ml-infra' })[(w.tag || '').toLowerCase()] || 'platform-eng' },
+    endpoint: { name: (oci ? 'vnic-' : 'eni-') + uid, type: oci ? (w.exposed ? 'Public VNIC · public IP' : 'Private VNIC') : w.exposed ? 'Public ENI · EIP attached' : 'Private ENI', ip: w.ip, dns: `${w.name}.${tag}.${oci ? 'oraclevcn.com' : 'internal'}`, sg: `${oci ? 'nsg' : 'sg'}-${kind}-${tag}`.toLowerCase(), ports: w.exposed ? '443, 80' : kind === 'db' ? '5432' : kind === 'cache' ? '6379' : '8080' },
+    resource: { name: `${tag}/${w.name}`, arn, svc: svcName, role, owner: ({ pci: 'payments-platform', prod: 'platform-eng', finance: 'fin-systems', 'internet-facing': 'web-team', gpu: 'ml-infra', ai: 'ml-infra' })[tag.toLowerCase()] || 'platform-eng' },
   };
 }
 
