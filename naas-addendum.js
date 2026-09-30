@@ -23,6 +23,7 @@ export function apportion(total, weights, min = 0) {
 // Addendum 01: inventory tree, station track, Observe at full weight. Pure derivations from an estate.
 import { fmt, pct } from './naas-logic.js';
 import { regionState, SLO, SLO_PRIVATE } from './naas-flowmap.js';
+import { rampName } from './naas-things.js';
 
 const CITY = { 'us-east-1': 'N. Virginia', 'us-east-2': 'Ohio', 'us-west-2': 'Oregon', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'Ireland', 'ap-southeast-1': 'Singapore', eastus: 'Virginia', eastus2: 'Virginia', westeurope: 'Netherlands', centralus: 'Iowa', 'uk-south': 'London', 'us-central1': 'Iowa', 'europe-west1': 'Belgium', 'us-east-04': 'Weehawken', 'us-east-04a': 'Weehawken', 'eu-north1': 'Finland', 'us-ashburn-1': 'Ashburn' };
 const GPU_CLOUDS = ['CoreWeave', 'Nebius', 'Lambda'];
@@ -198,7 +199,7 @@ export function observe(est, steered, inv, split) {
     ['AI endpoints', 'object storage', 'public internet'].forEach((d, k) => {
       const id = `f-${i}-${k}`;
       const controlled = r.priv || steered.includes(id);
-      flows.push({ id, name: `${tagGroup} → ${d}`, from: tagGroup, to: d, kind: 'App', gbps: +(total * split[k]).toFixed(1), latency: controlled ? r.fab : r.pub, perGb: controlled ? 0.02 : 0.09, controlled, steerable: !r.priv, steered: steered.includes(id), diverse: controlled && k === 0 && r.wl > 150, region: `${r.cloud} ${r.region}`, path: controlled ? `AT&T mid-mile · ${r.ramp || 'NetBond'} · PE-${peCode(r.region)}-02` : 'Hyperscaler-native · public internet', rel: r.rel });
+      flows.push({ id, name: `${tagGroup} → ${d}`, from: tagGroup, to: d, kind: 'App', gbps: +(total * split[k]).toFixed(1), latency: controlled ? r.fab : r.pub, perGb: controlled ? 0.02 : 0.09, controlled, steerable: !r.priv, steered: steered.includes(id), diverse: controlled && k === 0 && r.wl > 150, region: `${r.cloud} ${r.region}`, path: controlled ? `AT&T mid-mile · ${rampName(r)} · PE-${peCode(r.region)}-02` : 'Hyperscaler-native · public internet', rel: r.rel });
     });
   });
   (est.arcs || []).forEach((a, i) => {

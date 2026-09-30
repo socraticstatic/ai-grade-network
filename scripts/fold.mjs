@@ -1,12 +1,21 @@
 // Fold harness (2026-09-30). One headless walk of every rail page and every
 // in-page tab, on every estate, in light and dark, at 1440x900.
 //
-// It checks the three standing rulings:
+// It checks the standing rulings:
 //   - no page scroll: document.documentElement.scrollHeight <= 900
 //     (dashboard-fits-the-fold, 2026-09-28);
+//   - no sideways scroll: scrollWidth <= 1440 ("wide"), and no visible
+//     element whose right edge lands past the viewport ("past edge");
 //   - nothing boxed: no element that scrolls its own overflow
 //     (nothing-boxed, 2026-09-29), except the allowlist below;
-//   - no button within 10px of its card's padding box.
+//   - no button within 10px of its card's padding box;
+//   - the words on screen (body innerText and SVG <text>) carry no em dash
+//     and no ramp code (ER, DX, EQX, GCI) where the product has a name
+//     ("words", with the snippet around each hit).
+//
+// After the walk, on every estate with a Sources page, it adds a source
+// (Add a source > Oracle > Add and scan) and measures Sources again: the
+// added row's Remove button exists only then. --no-add skips that beat.
 //
 // Headless only. It never opens a window and never touches Micah's Comet or
 // Chrome (verification-is-headless, 2026-09-19). Files are served from this
@@ -16,7 +25,7 @@
 // Usage:
 //   node scripts/fold.mjs [--estates partial,mature,trust,small,empty]
 //                         [--pages observe,cost] [--theme light|dark|both]
-//                         [--shots <dir>] [--quiet]
+//                         [--shots <dir>] [--quiet] [--no-add]
 // --pages matches a rail group title (Discover, Connect, Observe, Govern,
 // Cost) or a rail link label, case-insensitive. Exit 1 on any FAIL.
 //
@@ -25,7 +34,11 @@
 //
 // Baseline at e7298bf (2026-09-30): 274 checks across 5 estates x light/dark,
 // 0 FAIL. BASELINE is empty; any FAIL is new. FOLD_LIMIT=850 proves the
-// scroll check bites (every page then fails).
+// scroll check bites (every page then fails); FOLD_WIDTH=1300 does the same
+// for the two width checks. The width and word checks landed at 90f511e with
+// 20 FAIL: Sources after Add and scan scrolled to 1474px on four estates in
+// both themes (the Remove button), and Traffic > Where it goes and > Paths
+// printed em-dash placeholders on three. 422 checks, 0 FAIL, once fixed.
 
 import { readFile, mkdir } from 'node:fs/promises';
 import { join, dirname, extname } from 'node:path';
@@ -36,6 +49,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ORIGIN = 'http://naas.fold';
 const W = 1440, H = 900, EDGE = 10;
 const LIMIT = +(process.env.FOLD_LIMIT || H); // lower it to prove the check bites
+const WLIMIT = +(process.env.FOLD_WIDTH || W); // the same for the width checks
 
 // Scrolling regions that are allowed to scroll: the rail (it scrolls silently
 // on screens shorter than 900), Andi's dock, and the detail overlays.
@@ -52,6 +66,7 @@ const theme = opt('--theme', 'both');
 const themes = theme === 'both' ? ['light', 'dark'] : [theme];
 const shots = opt('--shots', null);
 const quiet = args.includes('--quiet');
+const addBeat = !args.includes('--no-add');
 if (shots) await mkdir(shots, { recursive: true });
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json', '.ttf': 'font/ttf', '.otf': 'font/otf' };
@@ -68,16 +83,62 @@ async function serve(route) {
   }
 }
 
-// Runs in the page: the three checks.
-function measure({ allow, edge }) {
+// Runs in the page: the checks.
+function measure({ allow, edge, width }) {
   const say = (el) => {
     const id = el.id ? '#' + el.id : '';
     const lab = el.getAttribute('aria-label') ? `[${el.getAttribute('aria-label')}]` : '';
     const cls = typeof el.className === 'string' && el.className ? '.' + el.className.split(/\s+/)[0] : '';
-    return `${el.tagName.toLowerCase()}${id}${cls}${lab}`;
+    const txt = !lab && el.children.length === 0 ? `"${(el.textContent || '').trim().slice(0, 24)}"` : '';
+    return `${el.tagName.toLowerCase()}${id}${cls}${lab}${txt}`;
   };
   const shown = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
   const scrollHeight = document.documentElement.scrollHeight;
+  const scrollWidth = document.documentElement.scrollWidth;
+  // Past the right edge: any visible element whose right edge, after every
+  // clipping ancestor below <body> has cut it, still lands beyond the
+  // viewport. An element an ancestor clips inside the viewport shows nothing
+  // past the edge, so it is not counted; <body> and <html> clipping does not
+  // excuse anything, since that is the cut-off this check exists to catch.
+  // The outermost offender is named, not each of its descendants.
+  const clipRight = (el) => {
+    let right = el.getBoundingClientRect().right;
+    for (let n = el; n; ) {
+      if (getComputedStyle(n).position === 'fixed') break;
+      const p = n.parentElement;
+      if (!p || p === document.body || p === document.documentElement) break;
+      if (/(hidden|clip|auto|scroll)/.test(getComputedStyle(p).overflowX)) right = Math.min(right, p.getBoundingClientRect().right);
+      n = p;
+    }
+    return right;
+  };
+  const wide = [];
+  const over = new Set();
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.closest('svg') && el.tagName.toLowerCase() !== 'svg') continue;
+    if (!shown(el)) continue;
+    if (el.getBoundingClientRect().right <= width + 0.5) continue;
+    const right = clipRight(el);
+    if (right <= width + 0.5) continue;
+    if ([...over].some(o => o.contains(el))) continue;
+    over.add(el);
+    wide.push(`${say(el)} right ${right.toFixed(0)}`);
+  }
+  // Words a person reads: no em dash, and no ramp code where the product has a
+  // name (ExpressRoute, Direct Connect, Equinix Fabric, Interconnect). Body
+  // innerText plus SVG <text>, which innerText can skip.
+  const svgText = [...document.querySelectorAll('svg text')].filter(t => { const r = t.getBoundingClientRect(); return r.width > 0 && getComputedStyle(t).visibility !== 'hidden'; }).map(t => t.textContent).join('\n');
+  const read = `${document.body.innerText}\n${svgText}`;
+  const words = [];
+  const bad = /\u2014|\b(?:ER|DX|EQX|GCI)\b/g;
+  const seenSnip = new Set();
+  for (const m of read.matchAll(bad)) {
+    const a = Math.max(0, m.index - 28), b = Math.min(read.length, m.index + m[0].length + 28);
+    const snip = read.slice(a, b).replace(/\s+/g, ' ').trim();
+    if (seenSnip.has(snip)) continue;
+    seenSnip.add(snip);
+    words.push(`${m[0] === '\u2014' ? 'em dash' : m[0]} in "${snip}"`);
+  }
   const boxed = [];
   for (const el of document.querySelectorAll('body *')) {
     const cs = getComputedStyle(el);
@@ -97,7 +158,7 @@ function measure({ allow, edge }) {
     const d = Math.min(r.left - L, R - r.right, r.top - T, B - r.bottom);
     if (d < edge) edges.push(`${(b.getAttribute('aria-label') || b.textContent || '').trim().slice(0, 32)} ${d.toFixed(1)}px`);
   }
-  return { scrollHeight, boxed, edges };
+  return { scrollHeight, scrollWidth, wide, words, boxed, edges };
 }
 
 // Runs in the page: the rail, as [{ group, label }].
@@ -153,6 +214,9 @@ let fails = 0;
 function report(estate, th, page, tab, m, errors) {
   const bad = [];
   if (m.scrollHeight > LIMIT) bad.push(`scroll ${m.scrollHeight}`);
+  if (m.scrollWidth > WLIMIT) bad.push(`wide ${m.scrollWidth}`);
+  if (m.wide.length) bad.push(`past edge ${m.wide.slice(0, 4).join(', ')}${m.wide.length > 4 ? ` (+${m.wide.length - 4})` : ''}`);
+  if (m.words.length) bad.push(`words ${m.words.slice(0, 4).join(', ')}${m.words.length > 4 ? ` (+${m.words.length - 4})` : ''}`);
   if (m.boxed.length) bad.push(`boxed ${m.boxed.join(', ')}`);
   if (m.edges.length) bad.push(`edge ${m.edges.join(', ')}`);
   if (errors.length) bad.push(`console ${errors.slice(0, 2).join(' | ')}`);
@@ -192,7 +256,7 @@ try {
         const seen = new Set();
         const walk = async (depth, trail) => {
           errors.length = 0;
-          const m = await page.evaluate(measure, { allow: ALLOW, edge: EDGE });
+          const m = await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT });
           report(estate, th, pageName, trail || '(landing)', m, errors);
           if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail || 'landing'}`.replace(/[^\w.-]+/g, '_') + '.png') });
           if (depth >= 2) return;
@@ -205,6 +269,29 @@ try {
         };
         await walk(0, '');
         await clickRail(page, l.label);
+      }
+      // The added-source beat (2026-09-30), last so every page above is
+      // measured on the estate as it loads: Sources > Add a source > Oracle >
+      // Add and scan, then measure. The added row's Remove button only exists
+      // after it, and it once ran past the right edge.
+      const src = want.find(l => l.label === 'Sources');
+      if (addBeat && src) {
+        const pageName = `${src.group}/Sources`;
+        const trail = 'after Add a source > Oracle > Add and scan';
+        await clickRail(page, 'Sources');
+        await page.waitForTimeout(3600);
+        const steps = ['Add a source', 'Oracle', 'Add and scan'];
+        let missed = null;
+        for (const s of steps) {
+          const b = page.locator('button:visible', { hasText: s }).first();
+          if (!(await b.count())) { missed = s; break; }
+          await b.click();
+          await settle(page);
+        }
+        errors.length = 0;
+        const m = await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT });
+        report(estate, th, pageName, trail, m, missed ? [`no "${missed}" button`, ...errors] : errors);
+        if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail}`.replace(/[^\w.-]+/g, '_') + '.png') });
       }
       await ctx.close();
     }
