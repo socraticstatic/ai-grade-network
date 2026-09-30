@@ -1053,6 +1053,7 @@ export function vals(c) {
     ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll, probs, segCtx, incChanges),
   };
   Object.assign(out, briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }));
+  Object.assign(out, homeVals(out, s, set, { observeHead, ob, go, isEmpty }));
   if (s.screen === 's3' && s.tab === 'observe' && s.obPage === 'insights' && out.insPanelBrief) Object.assign(out, { andiSub: out.briefText, hasAndiSub: true });
   return pageLists(out, s, set);
 }
@@ -1101,6 +1102,42 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
   return { comingSoon: true, roleVisuals, roleNoVisuals: !roleVisuals.length, briefText, briefTitle: `Andi's monthly briefing for ${role.short}`, briefWho, briefCadence: cadence,
     setBriefCadence: (e) => set({ briefCfg: { ...cfg, cadence: e.target.value === 'off' ? 'off' : 'monthly' } }),
     briefLast: at(SCH.prevRunAt(monthly, nowMs)), briefNext: cadence === 'off' ? 'Off' : at(SCH.nextRunAt(monthly, nowMs)) };
+}
+
+// The NaaS home (spec 2026-09-30-naas-home-design.md): the whole network at a
+// glance, by persona. Every figure is a field vals() already computed for the
+// page it opens; the home adds its greeting and its layout, never a number.
+// It reads problemRows before pageLists pages them, so "+N more" counts them all.
+const chicagoHour = (ms) => +new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Chicago' }).formatToParts(new Date(ms)).find(p => p.type === 'hour').value;
+export function homeVals(out, s, set, { observeHead, ob, go, isEmpty }) {
+  const rk = roleKeyOf(s), hr = chicagoHour(SCH.nowOf(s));
+  const sev1 = (out.opsFacts || {}).sev1 || 0;
+  const stat = (k) => String(((out.invStats || []).find(x => x.key === k) || {}).v ?? '');
+  const one = (n, a, b) => `${n} ${n === '1' ? a : b}`;
+  const step = { line: 'Add a source to see your network', cta: 'Add a source', go: () => { go('s1', { discoverView: 'sources' })(); if (out.openAddSource) out.openAddSource(); } };
+  const discover = isEmpty
+    ? { key: 'discover', label: 'Discover', value: 'Nothing discovered yet', sub: 'starts with the first source', door: 'Add a source', go: step.go }
+    : { key: 'discover', label: 'Discover', value: `${one(stat('s'), 'site', 'sites')} · ${one(stat('c'), 'cloud', 'clouds')}`, sub: out.newPill30 || '', door: 'Estate', go: go('s1') };
+  // The four rollup tiles as Connect read them; only the look is the home's.
+  const homeStrip = [discover, ...(out.rollup || []).map(r => ({ key: r.key, label: r.label, value: r.value, sub: r.sub, door: r.door, go: r.go, primary: !!r.primary }))]
+    .map(t => ({ ...t, title: `${t.label} · ${t.value}${t.sub ? ' · ' + t.sub : ''}`, edge: t.primary ? 'var(--border-active)' : 'var(--border-secondary)', ring: t.primary ? 'inset 0 0 0 1px var(--border-active)' : 'none' }));
+  const acts = out.roleActAll || [], probs = out.problemRows || [];
+  const homeNow = probs.slice(0, 3).map(p => ({ key: p.key, stateWord: p.stateWord, dot: p.dot, rad: p.rad, where: p.where, thing: p.thing, what: p.what, startedF: p.startedF,
+    trace: () => { go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf' })(); p.trace(); } }));
+  return {
+    homeGreeting: `${hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'}, ${ROLE_OF[rk].short}`,
+    homeHead: [observeHead || (ob && ob.verdict) || '', sev1 ? `${sev1} Sev 1 open now.` : ''].filter(Boolean).join(' '),
+    homeBrief: isEmpty ? '' : (out.briefText || ''),
+    homeWaiting: acts.slice(0, 3), hasHomeWaiting: acts.length > 0, homeWaitingNone: acts.length ? '' : (out.roleEmpty || ''),
+    homeWaitingMore: acts.length ? `All ${acts.length} in Your actions ›` : '', hasHomeWaitingMore: acts.length > 0,
+    homeWaitingGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0 }),
+    homeStrip,
+    homeNow, hasHomeNow: homeNow.length > 0,
+    homeNowMore: probs.length > 3 ? `+${probs.length - 3} more in Health ›` : '', hasHomeNowMore: probs.length > 3,
+    homeNowMoreGo: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' }),
+    homeNowNone: probs.length ? '' : 'Nothing is down or over SLO.',
+    homeEmpty: !!isEmpty, homeBand: !isEmpty, homeStep: step,
+  };
 }
 
 // A list longer than the fold pages; it never scrolls in a box and never sits
@@ -1554,6 +1591,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const newUnlabeled = [...newVpcs, ...newSites].filter(x => !LK.labelsOf(x.id).length).length;
   const newPublic = newVpcs.filter(v => !v.priv).length + newWls.filter(w => w.exposed).length + newSites.filter(x => !x.priv).length;
   const nn = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  // The home's Discover tile reads the pill at Discover's own 30 days, so Since never moves the strip (2026-09-30).
+  const new30 = [...allVpcs, ...allWls, ...allSites].filter(x => !!x && x.since != null && x.since <= WIN['30d'][0]).length;
+  const newPill30 = new30 ? `${new30} new · ${WIN['30d'][1]}` : '';
   const newStrip = {
     title: newOnly ? `Showing only what is new in the last ${winLabel}` : 'Act on it',
     text: newN
@@ -2842,7 +2882,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         else { set({ jumpHit: `Jumped to ${hit.label}`, tagView: false, treeOrMap: 'tree', inv: { ...(s.inv || {}), [hit.cloudId]: true, [hit.regionId]: true, [hit.vpcId]: true } }); after('vpc:' + hit.vpcId); }
       };
       return { jumpQ: s.jumpQ || '', setJumpQ: (e) => set({ jumpQ: e.target.value, jumpHit: '' }), jumpKey: (e) => { if (e.key === 'Enter') jumpTo(); }, jumpGo: jumpTo, jumpHit: s.jumpHit || '', hasJumpHit: !!s.jumpHit,
-        newStrip, newOnly, haveCards, glanceRings, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
+        newStrip, newPill30, newOnly, haveCards, glanceRings, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
         // Three tabs, one panel at a time (2026-09-28, no scrolling).
         // Group the picture's sites (notes, 2026-09-29): by region, or by how they attach.
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
