@@ -375,7 +375,8 @@ export function changes(est, conns, activity, now = Date.now()) {
   const rows = [
     ...activity.filter(a => a.change).map(a => ({ key: a.key, at: a.at, kind: 'config', text: `${a.verb}: ${a.target}`, region: a.region, source: a.who, linedUp: lined(a.region, a.at), upcoming: false })),
     ...(conns.rows || []).filter(r => r.degraded).map(r => ({ key: 'route:' + r.region, at: flap - 3 * MIN, kind: 'route', text: `Routes withdrawn toward ${r.cloud} ${r.region}`, region: r.region, source: 'BGP session', linedUp: 'an-link-' + r.region, upcoming: false })),
-    ...(conns.rows || []).filter(r => r.terminated === 'att').flatMap((r, i) => [
+    // AT&T announces maintenance only on what AT&T holds (2026-09-30: an Equinix port read "AT&T planned maintenance").
+    ...(conns.rows || []).filter(r => r.terminated === 'att' && ((est.regionsList || []).find(x => x.region === r.region) || {}).slaHolder === 'att').flatMap((r, i) => [
       { key: 'mnt:' + r.region + ':done', at: now - (9 + i) * DAYMS, kind: 'maintenance', text: `AT&T planned maintenance on the ${r.cloud} ${r.region} on-ramp`, region: r.region, source: 'AT&T', linedUp: null, upcoming: false },
       { key: 'mnt:' + r.region + ':next', at: now + (4 + i) * DAYMS, kind: 'maintenance', text: `AT&T planned maintenance on the ${r.cloud} ${r.region} on-ramp`, region: r.region, source: 'AT&T', linedUp: null, upcoming: true },
     ]),
@@ -402,4 +403,71 @@ export function capacity(conns, win = '30d') {
     const oversized = state === 'ok' && ports > 1 && peakPct <= 50 && resizePct <= 80;
     return { id: r.id, region: r.region, cloud: r.cloud, ramp: r.ramp, ports, portG, capG, peakG, avgG, peakPct, avg6mPct, headroomG: +(capG - peakG).toFixed(1), toFull, fullIn, state, oversized, resizeTo: oversized ? ports - 1 : null, resizePct };
   });
+}
+
+// ---------- Operations (notes, 2026-09-30, C1) ----------
+// Closed tickets, as a sample relative to now: there is no ticket store yet, and
+// the page says so. Growing's seven fixes in the last 30 days average 1,231
+// minutes (20h 31m); the windows hold 1 (24h), 3 (7d), 7 (30d) and 15 (90d).
+const H = (ago, fix, sev, what) => ({ ago, fix, sev, what });
+const GROWING_HISTORY = [
+  H(0.4, 190, 2, 'Port errors on the on-ramp'), H(3, 845, 2, 'Latency over SLO'), H(6, 2295, 2, 'BGP session reset'),
+  H(11, 1560, 2, 'Route leak from a branch'), H(17, 582, 1, 'Link down'), H(23, 2069, 2, 'Packet loss at peak'), H(28, 1076, 3, 'Flow logs stopped'),
+  H(34, 1320, 2, 'Latency over SLO'), H(41, 640, 3, 'Tag drift on a VPC'), H(48, 1880, 2, 'Port errors on the on-ramp'), H(55, 930, 3, 'Certificate renewal'),
+  H(62, 2410, 2, 'BGP flapping'), H(70, 715, 3, 'Flow logs stopped'), H(77, 1150, 2, 'Packet loss at peak'), H(85, 1705, 2, 'Route leak from a branch'),
+  H(120, 2600, 1, 'Link down'), H(190, 980, 2, 'Latency over SLO'), H(260, 1430, 3, 'Tag drift on a VPC'), H(330, 1210, 2, 'BGP session reset'),
+];
+const scaled = (hs, k) => hs.map(h => ({ ...h, fix: Math.round(h.fix * k) }));
+export const HISTORY = {
+  partial: GROWING_HISTORY,
+  mature: scaled(GROWING_HISTORY, 0.85),
+  trust: [...scaled(GROWING_HISTORY, 0.7), ...GROWING_HISTORY.map(h => ({ ...h, ago: +(h.ago * 0.5 + 0.2).toFixed(2), fix: Math.round(h.fix * 0.6), sev: Math.max(2, h.sev) }))],
+  small: scaled(GROWING_HISTORY.filter((h, i) => i % 2 === 0), 1.4),
+  empty: [],
+};
+/** 1,231 minutes reads 20h 31m; two days or more reads in days and hours. */
+export function durF(min) {
+  const m = Math.round(min || 0);
+  if (m < 60) return `${m}m`;
+  if (m < 2880) return `${Math.floor(m / 60)}h ${m % 60}m`;
+  return `${Math.floor(m / 1440)}d ${Math.floor((m % 1440) / 60)}h`;
+}
+const HOLDER = { att: 'AT&T', cloud: 'Cloud provider', third: 'Third party', public: 'Public internet' };
+const TARGET = { att: 99.99, cloud: 99.9, third: 99.9, public: 99.5 };
+// A sample Sev 1 lands on the connection the estate already shows in trouble (a
+// degraded link, else a public region marked warn), never on a healthy one; the
+// rest spread over the private connections.
+const closedOf = (est, now) => { const regs = est.regionsList || []; const pool = regs.filter(r => r.priv).length ? regs.filter(r => r.priv) : regs;
+  const trouble = regs.find(r => r.link === 'degraded') || regs.find(r => r.rel === 'warn') || null;
+  return (HISTORY[est.id] || []).map((h, i) => { const r = h.sev === 1 ? trouble : pool.length ? pool[(i * 3) % pool.length] : null;
+    if (h.sev === 1 && !r) return null;
+    return { key: `hist-${i}`, closedAt: now - h.ago * DAYMS, fixMin: h.fix, sev: h.sev, what: h.what, region: r ? r.region : null, where: r ? `${r.cloud} ${r.region}` : '', owner: HOLDER[(r && r.slaHolder) || 'att'] }; }).filter(Boolean); };
+
+/**
+ * Tickets: every open problem, every finding in progress with a ticket, and the
+ * sample history. Open counts ignore the window; fixes and time to fix follow it.
+ */
+export function ticketStats(est, { probs = [], tickets = [], now = Date.now(), days = 30 } = {}) {
+  const from = now - days * DAYMS;
+  const seen = new Set(probs.map(p => p.key));
+  const open = [
+    ...probs.map(p => ({ key: p.key, kind: 'problem', sev: p.sev, where: p.where, thing: p.thing, what: p.what, owner: p.ownerLabel, openedAt: p.startedAt })),
+    ...tickets.filter(t => !seen.has(t.key)).map(t => ({ ...t, kind: 'finding' })),
+  ];
+  const closed = closedOf(est, now).filter(c => c.closedAt >= from).sort((a, b) => b.closedAt - a.closedAt);
+  const mttr = closed.length ? closed.reduce((a, c) => a + c.fixMin, 0) / closed.length : null;
+  return { open, closed, sev1Open: open.filter(t => t.sev === 1).length, openN: open.length, fixedN: closed.length, mttrMin: mttr, mttrF: mttr == null ? '' : durF(mttr), hasHistory: (HISTORY[est.id] || []).length > 0 };
+}
+
+/** Availability per connection over the window: 1 - Sev 1 outage minutes / window, against the holder's target. */
+export function availability(est, { probs = [], now = Date.now(), days = 30 } = {}) {
+  const from = now - days * DAYMS, winMin = days * 1440;
+  const closed = closedOf(est, now).filter(c => c.sev === 1 && c.closedAt >= from);
+  return (est.regionsList || []).map(r => {
+    const past = closed.filter(c => c.region === r.region).reduce((a, c) => a + Math.min(c.fixMin, winMin), 0);
+    const live = probs.filter(p => p.sev === 1 && p.region === r.region && p.startedAt).reduce((a, p) => a + Math.max(0, (now - Math.max(from, p.startedAt)) / 60000), 0);
+    const outage = Math.min(winMin, past + live), uptime = Math.max(0, Math.min(1, 1 - outage / winMin));
+    const holder = r.slaHolder || 'public', target = TARGET[holder];
+    return { key: r.region, where: `${r.cloud} ${r.region}`, owner: HOLDER[holder], holder, target, uptime, outageMin: Math.round(outage), met: uptime * 100 >= target };
+  }).sort((a, b) => a.uptime - b.uptime || b.target - a.target);
 }

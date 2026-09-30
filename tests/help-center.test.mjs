@@ -36,9 +36,16 @@ test('the seven NetBond resources keep their names; the ones with nothing behind
   assert.ok(r.every(x => x.desc.length < 48), 'one line each');
   // The four with nothing behind them fold into one line (2026-09-28 review).
   const v = vals(help());
-  // Support Tickets opens the Health tab's open problems since 2026-09-30.
+  // Support Tickets opens Operations > Tickets since 2026-09-30 (Task 3.4).
   assert.deepEqual(v.helpLive.map(x => x.title), ['Network Glossary', 'Support Tickets', 'Interactive Tour', 'Contact Support']);
   assert.match(v.helpSoonLine, /^Coming soon: Knowledge Base · Video Tutorials · Documentation$/);
+});
+
+// Support Tickets opens Insights > Operations > Tickets since Task 3.4 (2026-09-30, C1).
+test('Support Tickets opens the tickets list in Operations', () => {
+  const c = help();
+  vals(c).helpLive.find(x => x.title === 'Support Tickets').go();
+  assert.deepEqual([c.state.tab, c.state.obPage, c.state.insPanel, c.state.opsPanel], ['observe', 'insights', 'ops', 'tickets']);
 });
 
 test('the glossary is the storefront\'s own words, one line each, and the search narrows it', () => {

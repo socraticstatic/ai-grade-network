@@ -34,7 +34,12 @@ export const HEADSTART = [
 // x: { link: 'ok'|'degraded', paths: 1|2, acct: string } for the Observe connections panel (2026-09-09).
 // x.xc: a cross-connect the customer ordered themselves, { by: 'yours', at: colo }. Only
 // a dedicated port has one; a partner-hosted port (NetBond) is cross-connected by the partner.
-const REG = (cloud, region, wl, priv, ramp, pub, fab, tags, rel, x) => ({ cloud, region, wl, priv, ramp, pub, fab, tags: tags || [], rel: rel || 'ok', link: (x && x.link) || 'ok', paths: (x && x.paths) || 1, acct: (x && x.acct) || null, xc: (x && x.xc) || null });
+// slaHolder (notes, 2026-09-30, C1): who answers for the connection's availability.
+// NetBond is AT&T's; a direct Direct Connect, ExpressRoute or Interconnect is the
+// cloud provider's; an Equinix port is a third party's; the internet is no one's.
+// An entry may state its own in x.slaHolder.
+const SLA_OF = (priv, ramp) => (!priv ? 'public' : ramp === 'EQX' ? 'third' : !ramp || ramp === 'NetBond' ? 'att' : 'cloud');
+const REG = (cloud, region, wl, priv, ramp, pub, fab, tags, rel, x) => ({ cloud, region, wl, priv, ramp, pub, fab, tags: tags || [], rel: rel || 'ok', link: (x && x.link) || 'ok', paths: (x && x.paths) || 1, acct: (x && x.acct) || null, xc: (x && x.xc) || null, slaHolder: (x && x.slaHolder) || SLA_OF(priv, ramp) });
 
 // What a newly added source finds (notes, 2026-09-30: "add a new source, and rerun
 // discovery"). Oracle is the demo: two regions on the public internet with ERP on

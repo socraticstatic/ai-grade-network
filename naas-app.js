@@ -173,7 +173,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathsPage: 0, changesPage: 0, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -890,7 +890,7 @@ export function vals(c) {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', themeTitle: s.theme === 'light' ? 'Dark mode' : 'Light mode', themeIsLight: s.theme !== 'dark', themeIsDark: s.theme === 'dark', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
     // An estate switch starts clean (2026-09-30): a By pick or a drill the new
     // estate lacks drew an empty map with a phantom "Internet 1.0 Gbps".
-    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathsPage: 0, changesPage: 0 }),
+    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0 }),
     resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null }); },
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
     // which nulled s.order even when the live compose had not started an
@@ -978,7 +978,7 @@ export function vals(c) {
       const soon = { soon: true, go: () => {} };
       const resources = [
         { key: 'glossary', icon: 'grid', title: 'Network Glossary', desc: 'The words on these screens', tags: ['Access', 'Core', 'SLO'], cta: 'Open glossary', go: () => set({ helpPanel: 'terms' }) },
-        { key: 'tickets', icon: 'checklist', title: 'Support Tickets', desc: 'Open problems and their tickets', tags: ['Trouble report', 'Change'], cta: 'Open problems', live: true, go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' }) },
+        { key: 'tickets', icon: 'checklist', title: 'Support Tickets', desc: 'Open problems and their tickets', tags: ['Trouble report', 'Change'], cta: 'Open tickets', live: true, go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'ops', opsPanel: 'tickets' }) },
         { key: 'tour', icon: 'hub', title: 'Interactive Tour', desc: 'A guided walk through the picture', tags: ['Overview', 'Navigation'], cta: 'Start tour', go: () => { set({ openHintSeen: false }); try { localStorage.removeItem('naas.openHint'); } catch (e) {} go('s3', { layer: 'cloud', tab: 'connect', drill: [], cloudPick: null })(); } },
         { key: 'kb', icon: 'apps', title: 'Knowledge Base', desc: 'Articles and FAQs', tags: ['Common issues', 'Use cases'], cta: 'Browse articles', ...soon },
         { key: 'video', icon: 'smart-meter', title: 'Video Tutorials', desc: 'Short how-to videos', tags: ['Quickstart', 'Troubleshooting'], cta: 'Watch videos', ...soon },
@@ -1050,7 +1050,7 @@ export function pageRows(rows, size, page, setPage) {
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
 const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
-  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
+  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 function pageLists(out, s, set) {
   for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
     if (!Array.isArray(out[list])) continue;
@@ -2322,7 +2322,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const insightVals = {
     insBand,
     insightRows: insightRowsShown, hasInsights: insightRowsShown.length > 0, noInsights: insightRowsShown.length === 0, findChips, insDrill, findAll: every.map(toRow),
-    ...(() => { const ik = s.insPanel === 'findings' ? 'findings' : 'signals'; return { insPanels: [['signals', 'Signals'], ['findings', `Findings · ${openN}`]].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings' }; })(),
+    ...(() => { const ik = ['findings', 'ops'].includes(s.insPanel) ? s.insPanel : 'signals'; return { insPanels: [['signals', 'Signals'], ['findings', `Findings · ${openN}`], ['ops', 'Operations']].map(([k, l]) => { const on = ik === k; return { key: k, label: l, on, go: () => set({ insPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), insPanelSignals: ik === 'signals', insPanelFindings: ik === 'findings', insPanelOps: ik === 'ops' }; })(),
     hasInsFocus: !!insFocus, insFocusLabel: insFocus ? CARD_FINDS[insFocus][0] : '', clearInsFocus: () => set({ insFocus: null, findPage: 0 }),
     hasFindings: every.length > 0,
     insightCount: `${openN} open`,
@@ -2348,6 +2348,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // cell per segment; and the open problems, ranked by apps affected, with Open
   // ticket (a lifecycle move, no second store) and Trace (the Traffic map).
   const INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: '#c9362c', down: 'var(--error)' };
+  // One ticket number per problem key, shared by Health and Operations.
+  const tid = (k) => 'T-' + (1000 + [...k].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9000, 7));
   const healthVals = (() => {
     if (!segCtx) return { pathFlowAll: [], pathFlowRows: [], segHeads: [], healthTiles: [], problemRows: [], healthViews: [], segRows: [], segDrillRows: [], segCrumbs: [], pathTimeAll: [], pathTimeRows: [], changeAll: [], changeRows: [], chgTicks: [], chgBands: [], chgLegend: [], noPaths: true, noChanges: true };
     const all = G.pathFlow(segCtx);
@@ -2389,7 +2391,6 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const pctOf = (t) => `${Math.max(0, Math.min(100, (t - fromMs) / winMs * 100)).toFixed(2)}%`;
     const chgTicks = changeAll.filter(x => !x.upcoming).map(x => ({ key: x.key, left: pctOf(x.at), color: x.dot, title: `${x.whenF} · ${x.kind} · ${x.text}` }));
     const chgBands = probs.filter(p => p.startedAt).map(p => ({ key: p.key, left: `${Math.min(98.8, parseFloat(pctOf(Math.max(fromMs, p.startedAt))))}%`, width: `${Math.max(1.2, (nowMs - Math.max(fromMs, p.startedAt)) / winMs * 100).toFixed(2)}%`, title: `${p.where} · ${p.thing}: ${p.what} · started ${SCH.hhmm(p.startedAt)}` }));
-    const tid = (k) => 'T-' + (1000 + [...k].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9000, 7));
     const stateOfKey = (k) => { const ev = (life[k] && life[k].events) || []; return ev.length ? ev[ev.length - 1].state : 'open'; };
     const problemRows = probs.map(p => { const st = stateOfKey(p.key), n = p.apps.length;
       return { key: p.key, dot: INK[p.state] || 'var(--warning)', where: p.where, thing: p.thing, what: p.what, ownerLabel: p.ownerLabel,
@@ -2432,7 +2433,48 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       healthViews, healthByApp: healthView === 'app', healthBySegment: healthView === 'segment', segRows, segOpen: !!segKey, segTable: healthView === 'segment' && !segKey, segLevel: drill ? drill.level : null, segDrillRows, segCrumbs,
       segOwner: segHead ? segHead.ownerLabel : '', segSource: segHead ? segHead.source : '', segLimited: !!(segHead && segHead.limited) };
   })();
-  const dash = { ...mixVals, ...insightVals, ...healthVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
+  // Insights > Operations (notes, 2026-09-30, C1): tickets, how long fixes take,
+  // availability against each holder's target, and what changed. Open counts
+  // ignore Since; fixes and time to fix follow it. The closed history is a sample.
+  const opsVals = (() => {
+    const days = winDaysOf(s), nowMs = SCH.nowOf(s), winL = winLabelOf(s);
+    const dayF = (t) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
+    const noteTicket = (k) => { const e = (((life[k] || {}).events) || []).slice().reverse().find(x => /^Ticket T-\d{4}/.test(x.note || '')); return e ? e.note.match(/T-\d{4}/)[0] : null; };
+    const tickets = lifeRows.filter(x => x.l.state === 'progress' && noteTicket(x.f.key)).map(x => { const ev = x.l.events || [];
+      return { key: x.f.key, sev: 2, where: x.f.where || '', thing: '', what: x.f.title || x.f.kind, owner: 'AT&T', openedAt: ev.length ? +new Date(ev[ev.length - 1].at) : nowMs }; });
+    const T = OD.ticketStats(est0, { probs, tickets, now: nowMs, days });
+    const AV = OD.availability(est0, { probs, now: nowMs, days });
+    const andiOn = s.andiTickets !== false;
+    const opsPanel = ['overview', 'tickets', 'avail', 'changes'].includes(s.opsPanel) ? s.opsPanel : 'overview';
+    const opsPanels = [['overview', 'Overview'], ['tickets', `Tickets · ${T.openN}`], ['avail', 'Availability'], ['changes', 'Maintenance & Changes']].map(([k, l]) => { const on = opsPanel === k;
+      return { key: k, label: l, on, go: () => set({ opsPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; });
+    const none = !T.openN && !T.hasHistory;
+    const opsLine = none ? 'No tickets yet. Nothing has been opened or fixed.' : `${T.sev1Open} Sev 1 open now. ${T.openN} ${T.openN === 1 ? 'ticket' : 'tickets'} open. ${T.fixedN ? `Fixes took ${T.mttrF} on average.` : `Nothing was fixed in the last ${winL}.`}`;
+    const opsTiles = [
+      { key: 'sev1', l: 'Sev 1 open', v: String(T.sev1Open), u: 'now', tone: T.sev1Open ? 'var(--error)' : 'var(--text-heading)' },
+      { key: 'open', l: 'Open tickets', v: String(T.openN), u: 'now', tone: 'var(--text-heading)' },
+      { key: 'fixed', l: 'Fixed', v: String(T.fixedN), u: `in ${winL}`, tone: 'var(--text-heading)' },
+      { key: 'mttr', l: 'Time to fix', v: T.fixedN ? T.mttrF : '—', u: T.fixedN ? 'on average' : '', tone: 'var(--text-heading)' },
+    ];
+    const ticketAll = T.open.map(t => { const manual = noteTicket(t.key), id = manual || (andiOn && t.kind === 'problem' ? tid(t.key) : null);
+      return { key: t.key, sevF: `Sev ${t.sev}`, sevTone: t.sev === 1 ? 'var(--error)' : 'var(--warning)', what: t.what, where: t.thing ? `${t.where} · ${t.thing}` : t.where, owner: t.owner,
+        openedF: t.openedAt ? `${SCH.hhmm(t.openedAt)} · ${SCH.agoOf(t.openedAt, nowMs)}` : '', ticketF: manual ? `${manual} · In progress` : id ? `${id} · opened by Andi` : 'No ticket yet', canTicket: !id,
+        ticket: moveF({ key: t.key }, 'progress', { note: `Ticket ${tid(t.key)} opened, routed to ${t.owner}` }) }; });
+    const fixAll = T.closed.map(x => ({ key: x.key, whenF: dayF(x.closedAt), sevF: `Sev ${x.sev}`, what: x.what, where: x.where, owner: x.owner, tookF: OD.durF(x.fixMin) }));
+    const pctF = (u) => (u >= 1 ? '100%' : `${(Math.floor(u * 10000) / 100).toFixed(2)}%`);
+    const availRows = AV.map(r => ({ key: r.key, where: r.where, owner: r.owner, targetF: `${r.target}%`, uptimeF: pctF(r.uptime), outageF: r.outageMin ? OD.durF(r.outageMin) : 'None', metF: r.met ? 'Met' : 'Missed', metTone: r.met ? 'var(--success)' : 'var(--error)' }));
+    const chg = healthVals.changeAll || [];
+    const maintAll = chg.filter(x => x.kind === 'Maintenance');
+    const comingUp = maintAll.filter(x => x.upcoming && x.at > nowMs);
+    return { opsPanels, opsPanelOverview: opsPanel === 'overview', opsPanelTickets: opsPanel === 'tickets', opsPanelAvail: opsPanel === 'avail', opsPanelChanges: opsPanel === 'changes',
+      opsLine, opsTiles,
+      ticketAll, ticketRows: ticketAll, hasTickets: ticketAll.length > 0, noTickets: !ticketAll.length,
+      andiTicketsLabel: `Andi opens a ticket for each new incident: ${andiOn ? 'On' : 'Off'}`, andiTicketsOn: andiOn, toggleAndiTickets: () => set({ andiTickets: !andiOn }),
+      fixAll, fixRows: fixAll, hasFixes: fixAll.length > 0, noFixes: !fixAll.length, fixLabel: `Fixed in the last ${winL} · sample history`, fixEmpty: `Nothing was fixed in the last ${winL}.`,
+      availAll: AV, availRows, hasAvail: AV.length > 0, noAvail: !AV.length, availLine: AV.length ? `${AV.filter(r => r.met).length} of ${AV.length} connections met their target over the last ${winL}. Uptime counts Sev 1 outage minutes, open ones and the sample history; targets are NetBond 99.99%, cloud provider 99.9%, public internet 99.5%.` : 'No connections to measure yet.',
+      maintAll, comingUp, hasComing: comingUp.length > 0, opsChangeRows: chg.filter(x => !x.upcoming), hasOpsChanges: chg.some(x => !x.upcoming), noOpsChanges: !chg.some(x => !x.upcoming), opsChangeEmpty: `No changes in the last ${winL}.`, opsChangeLabel: `In the last ${winL}` };
+  })();
+  const dash = { ...mixVals, ...insightVals, ...healthVals, ...opsVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
     // Node names read as labels (13px) and their numbers as meta (12px) on screen.
     obPanels, obPanelMap: obPanel === 'map', obPanelTime: obPanel === 'time', obPanelWhere: obPanel === 'where', obPanelHealth: obPanel === 'health', obPanelPaths: obPanel === 'paths', obPanelChanges: obPanel === 'changes', obPanelConn: obPanel === 'conn', flowTiles, flowViews, flowPaths, otBars, otTiles, otGrains, hasOverTime: otBars.length > 0, otFrom: otEnds[0], otTo: otEnds[1], otOutFill: dark ? '#ffa25e' : '#e07b00', otFabFill: dark ? '#3374cc' : '#0057b8', mapNodes: mapNodes.map(n => ({ ...n, labelFs: graphUnits(13, map.W) + 'px', valueFs: graphUnits(12, map.W) + 'px' })), mapRibbons, mapTrace, mapHeads, mapVB: `0 0 ${map.W} ${map.H}`, patternWhy, patterns,
     scopeDims, scopeMembers, hasScopeMembers: scopeMembers.length > 0 && !!s.obPickOpen, scopeLabel, mapTotal: mapG.total, mapP95: perf.p95,

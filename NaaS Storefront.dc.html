@@ -1096,6 +1096,74 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 </div>
 </sc-if>
 </sc-if>
+<!-- Operations (notes, 2026-09-30, C1): tickets open and fixed, how long fixes take, availability against each holder's target, and what changed. Theme tokens only. -->
+<sc-if value="{{ insPanelOps }}" hint-placeholder-val="{{ false }}">
+<div aria-label="Operations" style="display:grid;gap:10px;padding-top:4px">
+  <div role="tablist" aria-label="Operations views" style="display:flex;align-items:center;border-bottom:1px solid var(--border-secondary)"><sc-for list="{{ opsPanels }}" as="op" hint-placeholder-count="4"><button role="tab" aria-selected="{{ op.on }}" onClick="{{ op.go }}" style="border:0;border-bottom:2px solid {{ op.line }};background:transparent;padding:4px 2px;margin-right:16px;font:inherit;font-size:13px;line-height:20px;font-weight:{{ op.weight }};color:{{ op.color }};cursor:pointer;white-space:nowrap">{{ op.label }}</button></sc-for></div>
+  <div style="font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading)">{{ opsLine }}</div>
+  <sc-if value="{{ opsPanelOverview }}" hint-placeholder-val="{{ true }}">
+  <div style="display:grid;gap:10px">
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px"><sc-for list="{{ opsTiles }}" as="ot" hint-placeholder-count="4"><div style="display:grid;gap:2px;padding:8px 12px;border:1px solid var(--border-secondary);border-radius:10px;min-width:0"><span style="font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);white-space:nowrap">{{ ot.l }}</span><span style="font-size:20px;line-height:26px;font-weight:700;color:{{ ot.tone }};white-space:nowrap">{{ ot.v }} <small style="font-size:12px;font-weight:500;color:var(--text-light)">{{ ot.u }}</small></span></div></sc-for></div>
+    <sc-if value="{{ hasFixes }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid">
+      <div style="font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);padding-bottom:4px">{{ fixLabel }}</div>
+      <div style="display:grid;grid-template-columns:84px 56px minmax(0,1.6fr) minmax(0,1.2fr) 120px 80px;gap:12px;padding:0 0 6px;font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);border-bottom:1px solid var(--border-secondary)"><span>Closed</span><span>Sev</span><span>What</span><span>Where</span><span>SLA holder</span><span style="text-align:right">Took</span></div>
+      <sc-for list="{{ fixRows }}" as="fx" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:84px 56px minmax(0,1.6fr) minmax(0,1.2fr) 120px 80px;gap:12px;align-items:center;min-height:34px;border-bottom:1px solid var(--border-secondary);font-size:12px;line-height:16px;color:var(--text-body)"><span style="white-space:nowrap">{{ fx.whenF }}</span><span style="white-space:nowrap">{{ fx.sevF }}</span><span title="{{ fx.what }}" style="color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ fx.what }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ fx.where }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ fx.owner }}</span><span style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ fx.tookF }}</span></div></sc-for>
+      <sc-if value="{{ fixPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding-top:6px;font-size:12px;color:var(--text-light)"><button class="fx-btn" onClick="{{ fixPager.prev }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ fixPager.prevOp }}">‹</button><span>{{ fixPager.label }}</span><button class="fx-btn" onClick="{{ fixPager.next }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ fixPager.nextOp }}">›</button></div></sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ noFixes }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--text-light)">{{ fixEmpty }}</div></sc-if>
+  </div>
+  </sc-if>
+  <sc-if value="{{ opsPanelTickets }}" hint-placeholder-val="{{ false }}">
+  <div style="display:grid">
+    <div style="display:flex;justify-content:flex-end;padding-bottom:6px"><button class="fx-btn" onClick="{{ toggleAndiTickets }}" aria-pressed="{{ andiTicketsOn }}" style="height:28px;padding:0 12px;font-size:12px;white-space:nowrap">{{ andiTicketsLabel }}</button></div>
+    <sc-if value="{{ hasTickets }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;grid-template-columns:56px minmax(0,1.6fr) minmax(0,1.3fr) 120px 130px 200px;gap:12px;padding:0 0 6px;font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);border-bottom:1px solid var(--border-secondary)"><span>Sev</span><span>What</span><span>Where</span><span>SLA holder</span><span>Opened</span><span style="text-align:right">Ticket</span></div>
+    <sc-for list="{{ ticketRows }}" as="tk" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:56px minmax(0,1.6fr) minmax(0,1.3fr) 120px 130px 200px;gap:12px;align-items:center;min-height:40px;border-bottom:1px solid var(--border-secondary);font-size:12px;line-height:16px;color:var(--text-body)">
+      <span style="font-weight:700;color:{{ tk.sevTone }};white-space:nowrap">{{ tk.sevF }}</span>
+      <span title="{{ tk.what }}" style="color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tk.what }}</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tk.where }}</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tk.owner }}</span>
+      <span style="white-space:nowrap">{{ tk.openedF }}</span>
+      <span style="display:flex;justify-content:flex-end;align-items:center;gap:8px;min-width:0"><span style="color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tk.ticketF }}</span><sc-if value="{{ tk.canTicket }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ tk.ticket }}" style="height:28px;padding:0 10px;font-size:12px;white-space:nowrap">Open ticket</button></sc-if></span>
+    </div></sc-for>
+    <sc-if value="{{ ticketPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding-top:6px;font-size:12px;color:var(--text-light)"><button class="fx-btn" onClick="{{ ticketPager.prev }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ ticketPager.prevOp }}">‹</button><span>{{ ticketPager.label }}</span><button class="fx-btn" onClick="{{ ticketPager.next }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ ticketPager.nextOp }}">›</button></div></sc-if>
+    </sc-if>
+    <sc-if value="{{ noTickets }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--text-light)">No open tickets.</div></sc-if>
+  </div>
+  </sc-if>
+  <sc-if value="{{ opsPanelAvail }}" hint-placeholder-val="{{ false }}">
+  <div style="display:grid">
+    <div style="font-size:12px;line-height:16px;color:var(--text-light);padding-bottom:6px">{{ availLine }}</div>
+    <sc-if value="{{ hasAvail }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;grid-template-columns:minmax(0,1.4fr) 130px 80px 90px 110px 70px;gap:12px;padding:0 0 6px;font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);border-bottom:1px solid var(--border-secondary)"><span>Connection</span><span>SLA holder</span><span style="text-align:right">Target</span><span style="text-align:right">Uptime</span><span style="text-align:right">Sev 1 outage</span><span style="text-align:right"></span></div>
+    <sc-for list="{{ availRows }}" as="av" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:minmax(0,1.4fr) 130px 80px 90px 110px 70px;gap:12px;align-items:center;min-height:34px;border-bottom:1px solid var(--border-secondary);font-size:12px;line-height:16px;color:var(--text-body)"><span style="color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ av.where }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ av.owner }}</span><span style="text-align:right;font-variant-numeric:tabular-nums">{{ av.targetF }}</span><span style="text-align:right;font-weight:600;color:var(--text-heading);font-variant-numeric:tabular-nums">{{ av.uptimeF }}</span><span style="text-align:right;white-space:nowrap">{{ av.outageF }}</span><span style="text-align:right;font-weight:600;color:{{ av.metTone }}">{{ av.metF }}</span></div></sc-for>
+    <sc-if value="{{ availPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding-top:6px;font-size:12px;color:var(--text-light)"><button class="fx-btn" onClick="{{ availPager.prev }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ availPager.prevOp }}">‹</button><span>{{ availPager.label }}</span><button class="fx-btn" onClick="{{ availPager.next }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ availPager.nextOp }}">›</button></div></sc-if>
+    </sc-if>
+  </div>
+  </sc-if>
+  <sc-if value="{{ opsPanelChanges }}" hint-placeholder-val="{{ false }}">
+  <div style="display:grid;gap:12px">
+    <sc-if value="{{ hasComing }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid">
+      <div style="font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);padding-bottom:4px">Coming up</div>
+      <sc-for list="{{ comingUp }}" as="cu" hint-placeholder-count="2"><div style="display:grid;grid-template-columns:96px 100px minmax(0,2fr) minmax(0,1fr) 100px minmax(0,1.4fr);gap:12px;align-items:center;min-height:34px;border-bottom:1px solid var(--border-secondary);font-size:12px;line-height:16px;color:var(--text-body)"><span style="white-space:nowrap">{{ cu.whenF }}</span><span style="white-space:nowrap">{{ cu.kind }}</span><span style="color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ cu.text }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ cu.touched }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ cu.source }}</span><span></span></div></sc-for>
+    </div>
+    </sc-if>
+    <div style="display:grid">
+      <div style="font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);padding-bottom:4px">{{ opsChangeLabel }}</div>
+      <sc-if value="{{ hasOpsChanges }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:96px 100px minmax(0,2fr) minmax(0,1fr) 100px minmax(0,1.4fr);gap:12px;padding:0 0 6px;font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);border-bottom:1px solid var(--border-secondary)"><span>When</span><span>Kind</span><span>Change</span><span>What it touched</span><span>Source</span><span>Lined up with</span></div>
+      <sc-for list="{{ opsChangeRows }}" as="oc" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:96px 100px minmax(0,2fr) minmax(0,1fr) 100px minmax(0,1.4fr);gap:12px;align-items:center;min-height:34px;border-bottom:1px solid var(--border-secondary);font-size:12px;line-height:16px;color:var(--text-body)"><span style="white-space:nowrap">{{ oc.whenF }}</span><span style="white-space:nowrap">{{ oc.kind }}</span><span title="{{ oc.text }}" style="color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ oc.text }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ oc.touched }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ oc.source }}</span><span title="{{ oc.lineF }}" style="color:var(--error);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ oc.lineF }}</span></div></sc-for>
+      <sc-if value="{{ opsChangePager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding-top:6px;font-size:12px;color:var(--text-light)"><button class="fx-btn" onClick="{{ opsChangePager.prev }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ opsChangePager.prevOp }}">‹</button><span>{{ opsChangePager.label }}</span><button class="fx-btn" onClick="{{ opsChangePager.next }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ opsChangePager.nextOp }}">›</button></div></sc-if>
+      </sc-if>
+      <sc-if value="{{ noOpsChanges }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--text-light)">{{ opsChangeEmpty }}</div></sc-if>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</sc-if>
 <sc-if value="{{ insPanelFindings }}" hint-placeholder-val="{{ false }}">
 <sc-if value="{{ hasFindings }}" hint-placeholder-val="{{ true }}">
 <div id="sec-insights" style="display:grid;gap:12px">
