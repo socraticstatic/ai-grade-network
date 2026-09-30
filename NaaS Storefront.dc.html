@@ -1305,10 +1305,21 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   <sc-if value="{{ tCost }}" hint-placeholder-val="{{ false }}">
   <div style="display:grid;gap:16px">
     <div class="fx-filters"><div role="tablist" aria-label="Cost views" style="display:flex;align-items:center;min-width:0"><sc-for list="{{ costPanels }}" as="cp" hint-placeholder-count="4"><button role="tab" aria-selected="{{ cp.on }}" onClick="{{ cp.go }}" style="border:0;border-bottom:2px solid {{ cp.line }};background:transparent;padding:6px 2px;margin-right:18px;font:inherit;font-size:15px;line-height:22px;font-weight:{{ cp.weight }};color:{{ cp.color }};cursor:pointer;white-space:nowrap">{{ cp.label }}</button></sc-for></div><span class="fx-spacer"></span><button class="fx-btn" onClick="{{ goMarketplace }}">Catalog prices</button></div>
-    <!-- Two moves, not a paragraph (2026-09-28). -->
-    <sc-if value="{{ hasCostMoves }}" hint-placeholder-val="{{ true }}">
-    <div aria-label="Moves" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
-      <sc-for list="{{ costMoves }}" as="cm" hint-placeholder-count="2"><div class="fx-card" style="padding:14px 18px"><div style="display:flex;align-items:center;gap:16px"><div style="display:grid;gap:2px;flex:1;min-width:0"><span style="font-size:11px;line-height:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cm.l }}</span><span style="display:flex;align-items:baseline;gap:6px;white-space:nowrap"><span style="font-size:22px;line-height:28px;font-weight:700;color:var(--text-heading)">{{ cm.v }}</span><span style="font-size:12px;color:var(--text-light)">{{ cm.u }}</span></span></div><button onClick="{{ cm.go }}" style="flex:none;height:36px;padding:0 18px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--cta-hover)">{{ cm.cta }}</button></div></div></sc-for>
+    <!-- What should I change first (notes, 2026-09-30): four moves in the stakeholder's words; it replaced the two-moves strip. -->
+    <sc-if value="{{ costPanelOptimize }}" hint-placeholder-val="{{ true }}">
+    <div id="sec-optimize" aria-label="What should I change first" style="display:grid;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h3 style="margin:0;font-size:18px;line-height:24px;font-weight:700;color:var(--text-heading)">What should I change first?</h3><span style="font-size:13px;line-height:18px;color:var(--text-light)">{{ optLine }}</span></div>
+      <sc-if value="{{ hasOptRows }}" hint-placeholder-val="{{ true }}">
+      <div style="border-top:1px solid var(--border-secondary)"><sc-for list="{{ optRows }}" as="o" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:120px minmax(0,1fr) 220px 200px;gap:16px;align-items:center;min-height:64px;padding:12px 0;border-bottom:1px solid var(--border-secondary);opacity:{{ o.op }}">
+          <div style="display:grid;gap:4px;justify-items:start"><b style="font-size:14px;line-height:20px;color:var(--text-heading)">{{ o.label }}</b><sc-if value="{{ o.hasStart }}" hint-placeholder-val="{{ false }}"><span class="fx-badge new">Start here</span></sc-if></div>
+          <div style="display:grid;gap:2px;min-width:0"><span style="font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading)">{{ o.head }}</span><sc-for list="{{ o.lineRows }}" as="ln" hint-placeholder-count="2"><small title="{{ ln.text }}" style="font-size:12px;line-height:16px;color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ln.text }}</small></sc-for></div>
+          <div style="display:grid;gap:2px;justify-items:end;text-align:right"><span style="font-size:16px;line-height:22px;font-weight:700;color:var(--text-heading);white-space:nowrap;font-variant-numeric:tabular-nums">{{ o.figureF }}</span><sc-if value="{{ o.hasState }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:16px;color:var(--text-light)">{{ o.state }}</span></sc-if></div>
+          <div style="display:flex;justify-content:flex-end"><sc-if value="{{ o.hasCta }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ o.go }}" style="height:32px;padding:0 14px;white-space:nowrap">{{ o.cta }}</button></sc-if></div>
+        </div>
+      </sc-for></div>
+      </sc-if>
+      <sc-if value="{{ optIsEmpty }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:14px;line-height:20px;color:var(--text-light)">{{ optEmpty }}</p></sc-if>
     </div>
     </sc-if>
     <!-- AT&T charges, a Cost tab (2026-09-29). -->

@@ -14,14 +14,17 @@ const cost = (view = 'partial', patch = {}) => mkC({ view, screen: 's3', layer: 
 const money = (s) => +String(s).replace(/[^0-9.]/g, '');
 const rail = (c) => vals(c).railGroups.flatMap(g => g.items);
 
-test('Cost opens on Spend; Savings and Forecast are in it, not beside it', () => {
-  const v = vals(cost());
-  assert.deepEqual(v.costPanels.map(p => p.label), ['Spend', 'By region', 'By destination', 'By first mile', 'By bucket', 'AT&T charges']);
+// Cost opens on Optimize since 2026-09-30 (notes: "Cost --> Optimize"); Spend still holds Savings and Forecast.
+test('Cost opens on Optimize; Savings and Forecast are in Spend, not beside it', () => {
+  const v0 = vals(cost());
+  assert.deepEqual(v0.costPanels.map(p => p.label), ['Optimize', 'Spend', 'By region', 'By destination', 'By first mile', 'By bucket', 'AT&T charges']);
+  assert.equal(v0.costPanelOptimize, true);
+  const v = vals(cost('partial', { costPanel: 'spend' }));
   assert.equal(v.costPanelSpend, true);
   assert.deepEqual(v.spendTiles.map(t => t.l), ['Spend this month', 'Banked to date', 'Could save', 'In 90 days']);
 });
 
-test('the rail has one Cost door, Spend, and it lights on the Spend view', () => {
+test('the rail keeps one Spend door, and it lights on the Spend view', () => {
   const c = cost('partial', { tab: 'connect' });
   const items = rail(c).filter(i => ['Spend', 'Savings', 'Forecast'].includes(i.label)).map(i => i.label);
   assert.deepEqual(items, ['Spend']);

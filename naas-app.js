@@ -6,7 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 import * as D from './naas-data.js';
-import { filterSites, buRows, regionRows, regionOf, onAtt, fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits , connModeOf, CONN_LABEL } from './naas-logic.js';
+import { filterSites, buRows, regionRows, regionOf, onAtt, fmt, pct, plural, estatePhrase, heroLayout, edgePath, arcPath, drillLevel, sankey, RX, FOLDED_SIDE, SITES_END, headUnits, graphUnits , connModeOf, CONN_LABEL, siteModeOf } from './naas-logic.js';
 import * as A from './naas-addendum.js';
 import * as R from './naas-round2.js';
 import * as S from './naas-sites.js';
@@ -98,8 +98,10 @@ export const SECTIONS = {
     ['sec-policies', 'Violations', 'check-shield'],
     ['sec-starting', 'Policies', 'grid'],
   ],
-  // One Cost door (Micah, 2026-09-29: "combine savings and forecast with spend").
+  // One Cost door (Micah, 2026-09-29: "combine savings and forecast with spend"), then
+  // Optimize ahead of it (notes, 2026-09-30: "Cost --> Optimize ... What should I change first?").
   cost: [
+    ['sec-optimize', 'Optimize', 'high-meter'],
     ['sec-spend', 'Spend', 'bill'],
   ],
 };
@@ -2897,12 +2899,12 @@ function shellVals(s, set, go, est, c, sched) {
             : isPanel ? (onS3('cloud', tab) && s.sub && s.sub.page === tab && s.sub.panel === id)
             : id === 'sec-paths' ? (onS3('cloud', 'connect') && s.cnPage === 'options')
             : tab === 'govern' ? (onS3('cloud', tab) && (id === 'sec-starting' ? 'templates' : 'policies') === (s.govPanel || 'policies'))
-            : tab === 'cost' ? (onS3('cloud', tab) && costPanelOf(s.costPanel) === 'spend' && !(s.sub && s.sub.page === 'cost'))
+            : tab === 'cost' ? (onS3('cloud', tab) && costPanelOf(s.costPanel) === (COST_DOOR[id] || 'spend') && !(s.sub && s.sub.page === 'cost'))
             : (onS3('cloud', tab) && activeSec === id && (tab !== 'observe' || !['insights', 'logs'].includes(s.obPage)));
           const goTo = isView ? (view === 'insights' || view === 'logs' ? go('s3', { layer: 'cloud', tab: 'observe', obPage: view, sub: null }) : view === 'estate' ? go('s1') : view === 'sources' ? go('s1', { discoverView: 'sources' }) : go('s4'))
             : isPanel ? () => { go('s3', { layer: 'cloud', tab })(); set({ sub: { page: tab, panel: id } }); }
             : id === 'sec-paths' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })
-            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: 'spend' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
+            : () => { go('s3', { layer: 'cloud', tab, ...(tab === 'observe' ? { obPage: 'perf', obPanel: 'map' } : {}), ...(tab === 'cost' ? { costPanel: COST_DOOR[id] || 'spend' } : {}), ...(tab === 'govern' ? { govPanel: id === 'sec-starting' ? 'templates' : 'policies' } : {}) })(); set({ scrollToSec: id, scrollNonce: (s.scrollNonce || 0) + 1 }); };
           // A section sits one step in from the category that owns it.
           return { ...item(label, ic, goTo, cur, false, sub, isPanel || isView), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
         };
@@ -3073,13 +3075,38 @@ function connectVals(s, set, est, go, ob) {
   return { lenses, lens, lensQ, lensVerdict: R.lensVerdict(est, lens), matrix, pathsSub, matrixHeads: R.LENSES.map(l => ({ key: l.id, label: l.label, hi: l.id === lens, color: l.id === lens ? 'var(--link)' : 'var(--text-light)' })), lensRegions, hasLensRegions: rs.length > 0, isCloudLayer: s.layer === 'cloud', notCloudLayer: s.layer !== 'cloud' };
 }
 /** Cost's views. Savings (Banked) and Forecast are part of Spend now; their old doors land there. */
-const costPanelOf = (k) => (['spend', 'money', 'dest', 'mile', 'bucket', 'charges'].includes(k) ? k : 'spend');
+// Cost lands on Optimize (2026-09-30); the panels that folded into Spend still land there.
+const costPanelOf = (k) => (['optimize', 'spend', 'money', 'dest', 'mile', 'bucket', 'charges'].includes(k) ? k : ['banked', 'forecast', 'savings'].includes(k) ? 'spend' : 'optimize');
+const COST_DOOR = { 'sec-optimize': 'optimize', 'sec-spend': 'spend' };
 function egressBaseFor(est, ob) { const bucketToday = (est.buckets || []).reduce((a, b) => a + b.today, 0); return bucketToday || ob.egressMo || 0; }
 /** AT&T's own monthly charges for an estate: on-ramps, hosted VPCs, L3
  *  attaches. Cost › AT&T charges lists them; the Sankey's Cost view prices
  *  the on-AT&T paths with them, so the two agree (2026-09-29). */
 function costVals(s, set, est, invAll, ob, go, c) {
   const base = egressBaseFor(est, ob);
+  // What should I change first (notes, 2026-09-30): four moves, each landing on a real flow.
+  const optNow = new Date(SCH.nowOf(s)), optLife = lifeState(s, est);
+  const optOpen = findingList(est, est, ob, optNow).map(f => ({ ...f, state: LC.lifeOf(f, optLife, optNow).state })).filter(f => OPEN_STATES.includes(f.state));
+  const optCap = OD.capacity(X.connections(est, ob), s.obWindow || '30d');
+  const optBase = R.optimizeRows(est, { open: optOpen, capacity: optCap, apps: appsOf(est, invAll, ob.flows || []) });
+  const ipsecSites = (est.sites || []).filter(x => siteModeOf(x) === 'ipsec');
+  const optGo = {
+    spend: () => { const r = est.regionsList.find(x => !x.priv) || est.regionsList[0] || {}; const n = ipsecSites.reduce((a, x) => a + S.countOf(x.name), 0);
+      if (n) go('s4', { ...newOrder({ ...prefillAttach(r), source: ['Branch'], bulk: `${n} IPsec ${n === 1 ? 'site' : 'sites'}`, qty: n, sourceLabel: 'Optimize', noteStep: 5, note: `Move ${n} ${n === 1 ? 'site' : 'sites'} off IPsec onto AT&T: ${ipsecSites.map(x => x.name).join(', ')}.` }) })();
+      else go('s4', { ...newOrder({ outcome: 'u2', source: ['A cloud region'], dest: ['The Internet'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Cost-aware routing'], sourceLabel: 'Optimize', noteStep: 0, note: 'Steer the internet egress onto AT&T.' }) })(); },
+    routing: () => { go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'policies' })(); set({ authoring: { match: 'region *', scope: 'any cloud', req: ['Cost-aware routing'] } }); },
+    resiliency: (r) => { if (!r) return; const metro = REGION_GEO[r.region] || 'Ashburn', group = REGION_OF_METRO(metro), second = (D.COMPOSE_CHIPS.regions[group] || []).find(m => m !== metro) || 'Atlanta';
+      go('s4', { ...newOrder({ outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: group, metros: [metro, second], resiliency: 'Geodiversity', resiliencyChosen: true, control: ['Private path required'], step: 4, prefilled: true, prefillRegion: `${r.cloud} ${r.region}`, prefillWl: r.wl, sourceLabel: 'Optimize', noteStep: 4, note: `Add a second path for ${r.cloud} ${r.region}: a second metro, for geodiversity.` }) })(); },
+    capacity: (cp, resize) => { if (!cp) return; const r = est.regionsList.find(x => x.region === cp.region) || {};
+      if (!resize) return composeFor(go, r)();
+      go('s6', { term: 36, order: { title: `Resize ${cp.cloud} ${cp.region}`, lines: [{ line: 1, product: `Port change, ${F.RAMP_NAME[cp.ramp] || 'NetBond'} ${cp.region}: ${cp.ports} × ${cp.portG} Gbps to ${cp.resizeTo} × ${cp.portG} Gbps`, qty: 1, term: '36-month', monthly: 0, unpriced: true }], policies: [], monthly: 0, savings: 0, days: 1, pathDesc: 'Sized to what it carries, with the peak under 80%' } })(); },
+  };
+  const optTop = optBase.slice(0, 2).reduce((w, r) => (r.figure > (w ? w.figure : 0) ? r : w), null);
+  const optRows = optBase.map(r => ({ ...r, go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(r.target, r.resize) : optGo[r.key],
+    hasCta: !r.empty, hasStart: !!optTop && optTop.key === r.key, hasState: !!r.state, op: r.empty ? 0.6 : 1, lineRows: r.lines.slice(0, 2).map((t, i) => ({ key: r.key + i, text: t })) }));
+  const optSave = optBase[0].figure + optBase[1].figure;
+  const optVals = { optRows, hasOptRows: est.regionsList.length > 0, optIsEmpty: !est.regionsList.length, optEmpty: 'No egress seen yet.',
+    optLine: optSave ? `Save ${fmt(Math.round(optSave / 100) * 100)}/mo across Spend and Routing` : 'Nothing priced to move today' };
   const bT = (est.buckets || []).reduce((a, b) => a + b.today, 0), bF = (est.buckets || []).reduce((a, b) => a + b.fabric, 0);
   const targetSave = bT > bF ? bT - bF : 0;
   const arb = R.arbitrage(est, base, targetSave);
@@ -3168,7 +3195,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
       { label: 'Base after steering', v: residual, color: 'var(--viz-2)', sub: 'the bytes still cost something' },
     ], { key: 'move', title: 'What can actually move', sub: 'Every bucket, by whether steering changes the bill', centre: kF(recover), centreSub: 'recoverable' }),
   ].filter(d => d.total > 1).map(d => ({ ...d, rows: d.rows.map(r => ({ ...r, key: d.key + ':' + r.label })) }));
-  return { attCharges, hasAttCharges: attCharges.length > 0, attTotalF: fmt(attTotal), attNetF: (attNet >= 0 ? '+' : '−') + fmt(Math.abs(attNet)), attNetLabel: attNet >= 0 ? 'Net saving after charges' : 'Net cost after savings', attNetColor: attNet >= 0 ? 'var(--success)' : 'var(--warning)', attNote: `${fmt(attTotal)}/mo · carries ${fmt(ob.savingsMo || 0)}/mo of savings`, goMarketplace: go('s7'),
+  return { ...optVals, attCharges, hasAttCharges: attCharges.length > 0, attTotalF: fmt(attTotal), attNetF: (attNet >= 0 ? '+' : '−') + fmt(Math.abs(attNet)), attNetLabel: attNet >= 0 ? 'Net saving after charges' : 'Net cost after savings', attNetColor: attNet >= 0 ? 'var(--success)' : 'var(--warning)', attNote: `${fmt(attTotal)}/mo · carries ${fmt(ob.savingsMo || 0)}/mo of savings`, goMarketplace: go('s7'),
     // Two moves, not a paragraph (2026-09-28): the biggest region to attach and
     // the sites still outside AT&T, each a figure and one button.
     // Spend, savings and forecast in one view (Micah, 2026-09-29: "combine
@@ -3221,16 +3248,10 @@ function costVals(s, set, est, invAll, ob, go, c) {
     bankFrom: bankSeries.length ? monthName(bankSeries[0].month) : '', bankTo: bankSeries.length ? monthName(bankSeries[bankSeries.length - 1].month) : '',
     // One slot per Cost panel (2026-09-29 audit): the summary or its arithmetic, never both stacked.
     costDetail: !!s.costDetail, costSummary: !s.costDetail, toggleCostDetail: () => set({ costDetail: !s.costDetail }), costDetailWord: s.costDetail ? 'Show the summary' : 'Show the arithmetic',
-    costMoves: [
-      ...(top ? [{ key: 'attach', l: `Attach ${top.region}`, v: fmt(top.saveN), u: '/mo to save', cta: 'Attach', go: go('s4', { ...newOrder(prefillAttach(top)) }) }] : []),
-      ...(pubSite ? [{ key: 'sites', l: `${pubSite.label} sites`, v: fmt(pubSite.pubPart), u: '/mo egress outside AT&T', cta: 'Move to AT&T', go: go('s1') }] : []),
-    ],
-    hasCostMoves: !!(top || pubSite),
     // One panel at a time (2026-09-28, no scrolling).
     ...(() => { const cpk = costPanelOf(s.costPanel); void hasBank;
-      return { costPanels: [['spend', 'Spend'], ['money', 'By region'], ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['charges', 'AT&T charges']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
-        costPanelSpend: cpk === 'spend', costPanelMoney: cpk === 'money', costPanelCharges: cpk === 'charges', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
-    costStrip: { has: !!(top || pubSite), title: 'Act on it', text: [pubSite ? `${fmt(pubSite.pubPart)}/mo of egress still leaves ${pubSite.label.toLowerCase()} on a public first mile.` : '', top ? `Attaching ${top.region} moves ${top.wl} workloads to $0.02/GB and saves ${fmt(top.saveN)}/mo, the largest single move on the table.` : 'Every region is attached; the remaining lever is the commit table below.'].filter(Boolean).join(' '), cta: top ? `Attach ${top.region}` : 'Drill sites', go: top ? go('s4', { ...newOrder(prefillAttach(top)) }) : go('s1') },
+      return { costPanels: [['optimize', 'Optimize'], ['spend', 'Spend'], ['money', 'By region'], ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['charges', 'AT&T charges']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
+        costPanelOptimize: cpk === 'optimize', costPanelSpend: cpk === 'spend', costPanelMoney: cpk === 'money', costPanelCharges: cpk === 'charges', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
     bySite, hasBySite: bySite.length > 0, bySiteTotalF: fmt(bySiteTotal), bySiteNote: `${fmt(siteRows.reduce((a, r) => a + r.pubPart, 0))}/mo still on a public first mile`, goSites: go('s1'),
     costDonuts, hasCostDonuts: costDonuts.length > 0,
     arbitrage: arb.map(a => ({ ...a, fabW: Math.round(a.saveN / 0.07 * 0.02 / maxNow * 100) + '%', premW: Math.round(a.saveN / maxNow * 100) + '%',

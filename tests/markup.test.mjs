@@ -221,12 +221,13 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Reset demo at the rail foot (2026-09-30): button 261 -> 262.
 // Your sites: Service and Bandwidth columns (2026-09-30): span 660 -> 662.
 // Your clouds: How they connect (2026-09-30): div 889 -> 892, span 662 -> 665, sc-for 197 -> 199.
+// Cost > Optimize replaced the two-moves strip (2026-09-30): div 892 -> 896, span 665 -> 666, sc-if 346 -> 351, sc-for 199 -> 200, button 262 -> 262.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 892],
-    ['span', /<span\b/g, /<\/span>/g, 665],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 346],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 199],
+    ['div', /<div\b/g, /<\/div>/g, 896],
+    ['span', /<span\b/g, /<\/span>/g, 666],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 351],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 200],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 262],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],

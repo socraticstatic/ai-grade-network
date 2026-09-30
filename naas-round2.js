@@ -280,3 +280,39 @@ export function attChargeRows(est, invAll) {
     { key: 'l3', label: 'Customer L3 attach', sub: `${l3N} × $400`, v: l3N * 400 },
   ].filter(r => r.v > 0);
 }
+
+// ---------- What should I change first (notes, 2026-09-30) ----------
+// Cost > Optimize: four moves in the stakeholder's order and words. Spend and
+// Routing read the open priced findings (so a snoozed or dismissed one leaves
+// its row, and the two add up to the Observe head's savings); Resiliency reads
+// the apps an enforced policy calls business-critical that ride one path;
+// Capacity reads the one capacity function.
+const STATE_WORD = { ack: 'Acknowledged', progress: 'In progress' };
+export function optimizeRows(est, { open = [], capacity = [], apps = [] } = {}) {
+  const money = (v) => fmt(Math.round(v / 100) * 100);
+  const pick = (kinds) => open.filter(f => kinds.includes(f.kind));
+  const chip = (fs) => [...new Set(fs.map(f => STATE_WORD[f.state]).filter(Boolean))].join(' · ');
+  const sum = (fs) => fs.reduce((a, f) => a + (f.save || 0), 0);
+  const spendF = pick(['ipsecegress', 'avoidable']), routF = pick(['crosscloud']);
+  const critical = new Set((est.policies || []).filter(p => p.state === 'enforced').map(p => String(p.match || '').replace(/^(tag|remote-site)\s+/, '').toLowerCase()));
+  const byReg = {};
+  apps.filter(a => critical.has(String(a.tag).toLowerCase())).forEach(a => (a.parts || []).filter(pt => pt.share >= 0.05).forEach(pt => {
+    const r = (est.regionsList || []).find(x => x.region === pt.region);
+    if (r && r.priv && (r.paths || 1) < 2) (byReg[r.region] = byReg[r.region] || { r, apps: [] }).apps.push(a.tag);
+  }));
+  const resil = Object.values(byReg).sort((a, b) => b.r.wl - a.r.wl);
+  const over = capacity.filter(c => c.oversized), hot = capacity.filter(c => c.state === 'risk');
+  const resilWl = resil.reduce((a, x) => a + (x.r.wl || 0), 0), spare = over.reduce((a, c) => a + c.portG, 0);
+  return [
+    { key: 'spend', label: 'Spend', cta: 'Update connection type', figure: sum(spendF), figureF: sum(spendF) ? `Save ${money(sum(spendF))}/mo` : '', lines: spendF.map(f => f.head), state: chip(spendF),
+      head: spendF.length ? 'Egress through the cloud provider costs more than it would on AT&T' : 'Every connection already takes the cheaper path', empty: !spendF.length },
+    { key: 'routing', label: 'Routing', cta: 'Update routing policy', figure: sum(routF), figureF: sum(routF) ? `Save ${money(sum(routF))}/mo` : '', lines: routF.map(f => f.head), state: chip(routF),
+      head: routF.length ? 'Cross-cloud traffic takes the public internet' : 'Every route already takes the cheapest path', empty: !routF.length },
+    { key: 'resiliency', label: 'Resiliency', cta: 'Add backup path', figure: resilWl, figureF: resilWl ? `${resilWl.toLocaleString('en-US')} workloads on one path` : '', lines: resil.map(x => `${x.r.cloud} ${x.r.region} · ${x.apps.join(', ')} · critical by your enforced policies`), state: '',
+      head: resil.length ? `${resil.length} business-critical ${resil.length === 1 ? 'path has' : 'paths have'} no backup` : 'Every business-critical app has a second path', empty: !resil.length, target: resil.length ? resil[0].r : null },
+    { key: 'capacity', label: 'Capacity', cta: over.length || !hot.length ? 'Resize' : 'Add a port', figure: spare, figureF: over.length ? `${spare} Gbps to spare` : hot.length ? `${hot.length} near full` : '', state: '',
+      lines: over.length ? over.map(c => `${c.cloud} ${c.region}: ${c.ports} × ${c.portG} Gbps bought, peak ${c.peakPct}%, ${c.avg6mPct}% on average over 6 months. ${c.resizeTo} × ${c.portG} Gbps holds the peak at ${c.resizePct}%.`) : hot.map(c => `${c.cloud} ${c.region}: ${c.peakPct}% of ${c.capG} Gbps at peak, full ${c.fullIn}.`),
+      head: over.length ? `${over.length} ${over.length === 1 ? 'connection is' : 'connections are'} bought bigger than ${over.length === 1 ? 'it is' : 'they are'} used` : hot.length ? `${hot.length} ${hot.length === 1 ? 'connection runs' : 'connections run'} near full` : 'Every port is sized to what it carries',
+      empty: !over.length && !hot.length, target: over[0] || hot[0] || null, resize: !!over.length },
+  ];
+}
