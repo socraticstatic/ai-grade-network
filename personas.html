@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NaaS personas · AT&amp;T</title>
+<meta name="description" content="What AT&amp;T NaaS is, the nine roles it serves, and what each one does with it.">
+<meta property="og:title" content="NaaS personas · AT&amp;T">
+<meta property="og:description" content="What NaaS is, who uses it, and what they do with it.">
+<meta name="theme-color" content="#001a3d">
+<link rel="icon" href="brand/att-globe.svg" type="image/svg+xml">
+<!--
+  Personas: who uses the table, and what they come to do.
+
+  Restored 2026-09-30 from the /stack deck's Personas tab in the retired React
+  prototype (src/features/stack-deck/PersonasView.tsx, last at 8ba3151). The
+  nine roles, their questions, sources and footprints are carried over as they
+  were. The day lines, feature chips and tension lines named features the
+  storefront no longer has (the twin, the time machine, the command bar), so
+  they gave way to tasks. Every task names the storefront screen it happens on,
+  in the rail's own words; a task with no screen yet says so.
+
+  Tokens follow the storefront's light theme (NaaS Storefront.dc.html).
+-->
+<style>
+@font-face{font-family:'Aleck';src:url('fonts/ATTAleckSans_Regular.woff2') format('woff2'),url('fonts/AleckSans-Rg.ttf');font-weight:400;font-display:swap}
+@font-face{font-family:'Aleck';src:url('fonts/ATTAleckSans_Medium.woff2') format('woff2'),url('fonts/AleckSans-Md.ttf');font-weight:500;font-display:swap}
+@font-face{font-family:'Aleck';src:url('fonts/ATTAleckSans_Bold.woff2') format('woff2'),url('fonts/AleckSans-Bd.ttf');font-weight:700;font-display:swap}
+:root{
+  --bg-base:#ffffff;--bg-wash:#f8fafb;--bg-neutral:#f3f4f6;--bg-accent:#e6f0fa;
+  --text-heading:#13171b;--text-body:#454b52;--text-light:#686e74;--text-disabled:#878c94;
+  --link:#0057b8;--link-hover:#00388f;--sky:#009fdb;--sky-soft:#99daf5;
+  --border-primary:#bdc2c7;--border-secondary:#dcdfe3;--rule:#eceef0;
+  --warning:#a85600;--warning-bg:#fff6ed;
+  --navy:#001a3d;--navy-deep:#001435;--on-navy:rgba(255,255,255,.74);--on-navy-faint:rgba(255,255,255,.5);
+  --cell-0:#eef0f2;--cell-1:#b3d4f0;--cell-2:#0057b8;
+  --r-card:16px;--gutter:64px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg-base);color:var(--text-body);font-family:'Aleck','Helvetica Neue',Helvetica,Arial,sans-serif;letter-spacing:-0.02em;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:var(--link)}
+a:hover{color:var(--link-hover)}
+a:focus-visible{outline:2px solid var(--sky);outline-offset:3px;border-radius:4px}
+h1,h2,h3{text-wrap:balance}
+p,li{text-wrap:pretty}
+.wrap{max-width:1312px;margin:0 auto;padding:0 var(--gutter)}
+.kicker{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--link);margin:0 0 16px}
+h2{font-size:40px;font-weight:700;letter-spacing:-.035em;line-height:1.12;color:var(--text-heading);margin:0 0 20px}
+.lede{font-size:17px;font-weight:500;line-height:1.6;max-width:720px;margin:0 0 12px}
+.lede.strong{color:var(--text-heading)}
+
+/* Cover */
+.cover{background:var(--navy);background-image:radial-gradient(1200px 520px at 85% 110%,rgba(0,159,219,.22),transparent 60%),radial-gradient(900px 420px at 0% -10%,rgba(0,87,184,.35),transparent 60%);color:#fff}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:28px}
+.nw{white-space:nowrap}
+.brand{display:inline-flex;align-items:center;gap:10px;white-space:nowrap;font-size:14px;font-weight:700;letter-spacing:-.01em;color:#fff;text-decoration:none}
+.brand img{width:28px;height:28px;display:block}
+.brand span{color:var(--on-navy)}
+.toplink{white-space:nowrap;font-size:14px;font-weight:500;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:8px 16px;transition:background-color .2s ease-out,border-color .2s ease-out}
+.toplink:hover{color:#fff;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.5)}
+.cover-body{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:64px;align-items:center;padding:88px 0 104px}
+.cover .kicker{color:var(--sky);margin-bottom:24px}
+.cover h1{font-size:64px;font-weight:700;line-height:1.02;letter-spacing:-.045em;color:#fff;margin:0 0 32px}
+.cover .bar{width:64px;height:4px;border-radius:2px;background:var(--sky);margin-bottom:32px}
+.cover-copy p{font-size:20px;font-weight:500;line-height:1.55;max-width:560px;color:var(--on-navy);margin:0}
+
+/* The table, all nine stacked: the cover's one picture. */
+.stack{justify-self:end;width:100%;max-width:440px}
+.stack-grid{display:grid;grid-template-columns:auto repeat(4,minmax(0,1fr));gap:8px;align-items:center}
+.stack-grid .ch{font-size:11px;font-weight:500;letter-spacing:.02em;color:var(--on-navy-faint);text-align:center;padding-bottom:2px}
+.stack-grid .rh{font-size:11px;font-weight:500;color:var(--on-navy-faint);text-align:right;padding-right:8px;line-height:1.25}
+.stack-grid .sc{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;border:1px solid rgba(255,255,255,.08)}
+.stack-grid .bd{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--on-navy);text-align:center;padding-bottom:6px;margin:0 4px 4px;border-bottom:2px solid var(--link)}
+.stack-grid .bd.d1{border-bottom-color:var(--sky)}
+.stack-cap{text-wrap:balance;font-size:12px;font-weight:500;line-height:1.5;color:var(--on-navy-faint);margin:16px 0 0}
+
+/* Day zero, day one */
+.days{padding:96px 0 0}
+.day-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-top:40px}
+/* Subgrid: the two panels' tag, question, line and stages sit on shared rows. */
+.day{display:grid;grid-template-rows:subgrid;grid-row:span 4;row-gap:0;align-content:start;position:relative;border:1px solid var(--border-secondary);border-radius:var(--r-card);padding:32px 32px 28px 36px;background:var(--bg-base);overflow:hidden;box-shadow:0 1px 2px rgba(19,23,27,.04),0 4px 16px -8px rgba(19,23,27,.08)}
+.day::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--link)}
+.day.one::before{background:var(--sky)}
+.day-tag{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--link);margin:0 0 12px}
+.day h3{font-size:26px;font-weight:700;letter-spacing:-.03em;line-height:1.2;color:var(--text-heading);margin:0 0 6px}
+.day-sub{font-size:15px;font-weight:500;color:var(--text-light);margin:0}
+.stages{list-style:none;margin:24px 0 0;padding:0}
+.stages li{display:grid;grid-template-columns:104px minmax(0,1fr);gap:16px;padding:14px 0;border-top:1px solid var(--rule)}
+.stages li:last-child{padding-bottom:0}
+.stages b{font-size:15px;font-weight:700;color:var(--text-heading)}
+.stages span{font-size:15px;font-weight:500;line-height:1.5;color:var(--text-body)}
+
+/* The nine */
+.nine{padding:88px 0}
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:10px 24px;font-size:13px;font-weight:500;color:var(--text-light);margin:28px 0 40px;padding-top:20px;border-top:1px solid var(--rule)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:14px;height:14px;border-radius:4px;display:inline-block}
+.sw.gap{background:var(--warning-bg);border:1px dashed var(--warning)}
+.sw.built{background:var(--bg-accent);border:1px solid var(--link)}
+.legend .axes{margin-left:auto;color:var(--text-light)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+/* Subgrid: head, day zero, day one and source line up across every card in a row. */
+.card{background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:var(--r-card);overflow:hidden;display:grid;grid-template-rows:subgrid;grid-row:span 4;gap:0;box-shadow:0 1px 2px rgba(19,23,27,.04),0 4px 16px -8px rgba(19,23,27,.08)}
+.card-head{background:var(--bg-wash);border-bottom:1px solid var(--border-secondary);padding:24px 24px 20px}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.mono{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:48px;height:48px;border-radius:12px;font-size:16px;font-weight:700;letter-spacing:-.02em}
+.fp{display:grid;grid-template-columns:auto repeat(4,16px);gap:4px}
+.fp b{font-size:9px;font-weight:700;color:var(--text-light);text-align:center;line-height:16px}
+.fp b.row{text-align:right;padding-right:4px}
+.fp i{width:16px;height:16px;border-radius:4px;display:block}
+.card h3{font-size:19px;font-weight:700;letter-spacing:-.025em;line-height:1.25;color:var(--text-heading);margin:16px 0 4px}
+.one{font-size:14px;font-weight:500;line-height:1.4;color:var(--text-light);margin:0}
+.q{font-size:14px;font-weight:500;font-style:italic;line-height:1.45;color:var(--link);margin:12px 0 0}
+.card-day{padding:20px 24px 18px}
+.card-day.d1{border-top:1px solid var(--rule);padding-bottom:24px}
+.day-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--link);margin:0 0 14px}
+.day-label::before{content:'';width:8px;height:8px;border-radius:2px;background:var(--link)}
+.d1 .day-label::before{background:var(--sky)}
+.day-label em{font-style:normal;font-weight:500;letter-spacing:.02em;text-transform:none;font-size:12px;color:var(--text-light)}
+.tasks{list-style:none;margin:0;padding:0;counter-reset:t}
+.tasks li{counter-increment:t;position:relative;padding:0 0 0 30px;margin:0 0 14px}
+.tasks li:last-child{margin-bottom:0}
+.tasks li::before{content:counter(t);position:absolute;left:0;top:0;width:20px;height:20px;border-radius:6px;background:var(--bg-accent);color:var(--link);font-size:11px;font-weight:700;line-height:20px;text-align:center}
+.task{font-size:14px;font-weight:500;line-height:1.45;color:var(--text-heading);margin:0}
+.where{font-size:12px;font-weight:500;line-height:1.4;color:var(--link);margin:4px 0 0}
+.where .sep{color:var(--text-disabled);padding:0 5px}
+.tasks li.gap::before{background:var(--warning-bg);border:1px dashed var(--warning);color:var(--warning);line-height:18px}
+.tasks li.gap .task{color:var(--text-body)}
+.tasks li.gap .where{color:var(--warning)}
+.card-foot{border-top:1px solid var(--rule);padding:14px 24px 16px}
+.src{font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;line-height:1.5;color:var(--text-light);margin:0}
+
+/* Coverage */
+.proof{padding:0 0 104px}
+.cov{margin-top:40px;border:1px solid var(--border-secondary);border-radius:var(--r-card);overflow:hidden;box-shadow:0 1px 2px rgba(19,23,27,.04)}
+.cov-grid{display:grid;grid-template-columns:200px repeat(4,minmax(0,1fr))}
+.cov-grid>div{border-bottom:1px solid var(--rule)}
+.cov-grid .hd{background:var(--bg-wash);border-bottom:1px solid var(--border-secondary);padding:14px 16px;font-size:13px;font-weight:700;color:var(--text-heading);text-align:center}
+.cov-grid .hd:first-child{text-align:left}
+.cov-grid .rl{padding:20px 24px;font-size:14px;font-weight:700;color:var(--text-heading);display:flex;align-items:center}
+.cov-grid .cell{border-left:1px solid var(--rule);padding:20px 12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;align-content:center;gap:6px}
+.cov-grid .last{border-bottom:0}
+.cov-grid .cb{background:var(--bg-wash);padding-top:14px}
+.cov-grid .bd{position:relative;background:var(--bg-wash);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-align:center;color:var(--link);padding:14px 12px 11px}
+.cov-grid .bd::after{content:'';position:absolute;left:12px;right:12px;bottom:0;height:3px;border-radius:2px;background:var(--link)}
+.cov-grid .bd.d1::after{background:var(--sky)}
+.chip{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:-.01em}
+.chip.visits{background:var(--bg-base);color:var(--text-light);border:1px solid var(--border-secondary)}
+.cov-note{background:var(--bg-wash);border-top:1px solid var(--border-secondary);padding:16px 24px;font-size:14px;font-weight:500;line-height:1.6;color:var(--text-light);margin:0}
+
+/* The point */
+.point{background:var(--navy-deep);background-image:radial-gradient(900px 400px at 100% 0%,rgba(0,159,219,.16),transparent 60%);padding:88px 0}
+.point p{font-size:30px;font-weight:700;line-height:1.3;letter-spacing:-.03em;color:#fff;max-width:820px;margin:0}
+.point a{display:inline-flex;align-items:center;gap:8px;margin-top:32px;font-size:16px;font-weight:500;color:#fff;text-decoration:none;background:var(--link);border-radius:999px;padding:12px 22px;transition:background-color .2s ease-out}
+.point a:hover{background:#0064d6;color:#fff}
+.point .asof{font-size:12px;font-weight:500;color:var(--on-navy-faint);margin:40px 0 0}
+
+@media (max-width:1320px){.cover h1{font-size:56px}}
+@media (max-width:1180px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cover-body{grid-template-columns:minmax(0,1fr);gap:56px}
+  .stack{justify-self:start}
+  .legend .axes{margin-left:0}
+}
+@media (max-width:760px){
+  :root{--gutter:16px}
+  .topbar{padding-top:20px}
+  .brand{font-size:13px}
+  .toplink{font-size:13px;padding:7px 14px}
+  .toplink .long{display:none}
+  .toplink::first-letter{text-transform:uppercase}
+  .cover-body{padding:48px 0 64px;gap:44px}
+  .cover h1{font-size:42px}
+  .cover-copy p{font-size:17px}
+  h2{font-size:30px}
+  .lede{font-size:16px}
+  .days{padding-top:64px}
+  .day-grid{grid-template-columns:minmax(0,1fr);gap:16px;margin-top:32px}
+  .day{padding:24px 20px 22px 26px}
+  .day h3{font-size:22px}
+  .stages li{grid-template-columns:84px minmax(0,1fr);gap:12px}
+  .stages b,.stages span{font-size:14px}
+  .nine{padding:64px 0}
+  .grid{grid-template-columns:minmax(0,1fr);gap:16px}
+  .card-head{padding:20px 20px 16px}
+  .card-day{padding:16px 20px 14px}
+  .card-day.d1{padding-bottom:20px}
+  .card-foot{padding:12px 20px 14px}
+  .where{font-size:12.5px}
+  .proof{padding-bottom:72px}
+  .cov-grid{grid-template-columns:76px repeat(4,minmax(0,1fr))}
+  .cov-grid .hd{padding:10px 2px;font-size:11px}
+  .cov-grid .bd{padding:10px 4px 9px;font-size:9px;letter-spacing:.08em}
+  .cov-grid .bd::after{left:4px;right:4px}
+  .cov-grid .rl{padding:14px 8px;font-size:11px;line-height:1.25}
+  .cov-grid .cell{padding:12px 3px;gap:4px}
+  .chip{width:26px;height:26px;font-size:10px;border-radius:7px}
+  .cov-note{padding:14px 16px;font-size:13px}
+  .point{padding:64px 0}
+  .point p{font-size:23px}
+}
+@media print{
+  .cover,.point{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .toplink{display:none}
+  .card,.cov,.day{break-inside:avoid;box-shadow:none}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="wrap">
+    <nav class="topbar" aria-label="Site">
+      <a class="brand" href="NaaS%20Storefront.dc.html"><img src="brand/att-globe.svg" alt="" width="28" height="28">AT&amp;T <span>NaaS</span></a>
+      <a class="toplink" href="NaaS%20Storefront.dc.html"><span class="long">Open the </span>storefront</a>
+    </nav>
+    <div class="cover-body">
+      <div class="cover-copy">
+        <p class="kicker">NaaS · Who it serves</p>
+        <h1>Nine roles.<br>One table, <span class="nw">nine shapes.</span></h1>
+        <div class="bar"></div>
+        <p>NaaS puts a customer's whole network on one table: the four layers of the
+          stack, from the access circuit to the AI endpoint, and what they do with each.
+          Every role that touches it lives somewhere on that table. The footprint beside
+          each persona is that somewhere.</p>
+      </div>
+      <figure class="stack" style="margin:0">
+        <div class="stack-grid" id="stack" role="img" aria-label="All nine footprints stacked on the lifecycle and layer table"></div>
+        <figcaption class="stack-cap">All nine footprints, stacked. Each figure counts the roles in that cell.</figcaption>
+      </figure>
+    </div>
+  </div>
+</header>
+
+<main>
+<section class="days">
+  <div class="wrap">
+    <p class="kicker">What we're building</p>
+    <h2>Day zero, then day one.</h2>
+    <p class="lede">NaaS carries a customer from the first connection through every day after it.
+      The storefront's rail follows the customer: which one they see is decided by what is
+      already on AT&amp;T, not by the page they are standing on.</p>
+    <div class="day-grid">
+      <article class="day zero">
+        <p class="day-tag">Day zero</p>
+        <h3>How and where do I connect?</h3>
+        <p class="day-sub">A line with an end: get connected.</p>
+        <ul class="stages">
+          <li><b>Discover</b><span>See the estate as it is: clouds, sites, business units, and the sources that find them.</span></li>
+          <li><b>Connect</b><span>The best way onto AT&amp;T for each site and region, compared, then ordered.</span></li>
+        </ul>
+      </article>
+      <article class="day one">
+        <p class="day-tag">Day one</p>
+        <h3>It's running. What are the problems, and the good outcomes?</h3>
+        <p class="day-sub">A loop: keep it right.</p>
+        <ul class="stages">
+          <li><b>Observe</b><span>Traffic, the health of every path, capacity, what changed, and the findings, money first.</span></li>
+          <li><b>Govern</b><span>Where policy is enforced, and where it is only written.</span></li>
+          <li><b>Cost</b><span>What to change first, and where every dollar goes.</span></li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="nine">
+  <div class="wrap">
+    <p class="kicker">The personas</p>
+    <h2>Who uses NaaS, and what they do with it.</h2>
+    <p class="lede">A discovered set, each cited to its research. Six roles run the network today.
+      Two arrived with the token layer and the egress bill. The ninth, the platform
+      engineer consuming the network as an API, comes straight from where TM Forum
+      and GSMA CAMARA say NaaS is going: into the deploy pipeline.</p>
+    <p class="lede strong" id="tally"></p>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--cell-2)"></i>Lives here</span>
+      <span><i class="sw" style="background:var(--cell-1)"></i>Visits</span>
+      <span><i class="sw built"></i>Built, and the NaaS screen it lives on</span>
+      <span><i class="sw gap"></i>To build</span>
+      <span class="axes">Columns: Connect is day zero; Govern, Observe and Cost are day one. Rows: the stack, top down.</span>
+    </div>
+    <div class="grid" id="cards"></div>
+  </div>
+</section>
+
+<section class="proof">
+  <div class="wrap">
+    <p class="kicker">The proof</p>
+    <h2>Tile the nine shapes, and the table fills.</h2>
+    <p class="lede">Every persona overlaid on the same table. None fits inside a single column,
+      and no cell that matters is unclaimed. That is the NaaS argument, drawn once with
+      all nine at the same time.</p>
+    <div class="cov" data-testid="persona-coverage">
+      <div class="cov-grid" id="coverage"></div>
+      <p class="cov-note">Solid monograms live in a cell; outlined ones visit. The thin Transport and access row is
+        the point, not a gap: its personas arrive with the fiber, wireless and satellite strata, and
+        their columns are already waiting.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="point">
+  <div class="wrap">
+    <p>The org chart and the nav are the same drawing. Teams pick their layer, verbs
+      carry their day, and the columns are where they meet.</p>
+    <a href="NaaS%20Storefront.dc.html">Open the storefront <span aria-hidden="true">→</span></a>
+    <p class="asof">Built means on a NaaS screen in the September 30, 2026 build.</p>
+  </div>
+</footer>
+
+<script>
+// Footprint rows: AI Fabric, Cloud, Network services, Transport and access.
+// Columns: Connect, Govern, Observe, Cost. 0 none, 1 visits, 2 lives.
+//
+// Jobs split the way the storefront's rail does (railFor, naas-app.js):
+// day zero is a line with an end, get connected (Discover, Connect); day one
+// is a loop, keep it right (Observe, Govern, Cost).
+//
+// A job's `where` is the NaaS screen in the rail's own labels: rail group,
+// rail page, then the in-page tab (scripts/fold.mjs walks the same tree).
+// `where: null` means it is still to build.
+const PERSONAS = [
+  {
+    key: 'architect', name: 'Network Architect', monogram: 'NA', accent: '#0057b8',
+    oneLiner: 'Owns the shape of the estate.',
+    question: '“Can I defend this path in front of the review board?”',
+    source: 'Role blueprint research · architecture review boards',
+    footprint: [[1, 1, 0, 0], [2, 1, 0, 1], [2, 2, 1, 1], [1, 1, 0, 0]],
+    day0: [
+      { task: 'Map the estate before designing it: clouds, sites and business units.', where: ['Discover', 'Estate'] },
+      { task: 'Compare the ways to connect each site and region, and pick the one to defend.', where: ['Connect', 'Options', 'Ways to connect'] },
+      { task: 'Compose a connection from the outcome: reach a cloud privately, control what leaves it, or join two clouds.', where: ['Connect', 'Orders'] },
+    ],
+    day1: [
+      { task: 'Give business-critical apps a second path where they ride only one.', where: ['Cost', 'Optimize', 'Resiliency'] },
+      { task: 'Steer the cloud-to-cloud paths onto AT&T, so egress is not paid twice.', where: ['Observe', 'Insights', 'Signals'] },
+    ],
+  },
+  {
+    key: 'planner', name: 'Network Planner', monogram: 'NP', accent: '#009fdb',
+    oneLiner: 'Moves before the constraint does.',
+    question: '“What breaks next quarter, and what does the fix cost today?”',
+    source: 'Role blueprint research · capacity before incident',
+    footprint: [[0, 0, 0, 1], [1, 0, 0, 1], [2, 0, 1, 2], [1, 0, 0, 1]],
+    day0: [
+      { task: 'Turn the sites and regions still off AT&T into orders, best option first.', where: ['Connect', 'Options'] },
+      { task: 'Choose the metro and the resiliency for each new connection.', where: ['Connect', 'Orders'] },
+    ],
+    day1: [
+      { task: 'See what each connection has bought, what it uses, and when it fills.', where: ['Observe', 'Traffic', 'Capacity'] },
+      { task: 'Read the trend by day, week and month before writing the quarter’s plan.', where: ['Observe', 'Traffic', 'Over time'] },
+      { task: 'Resize a connection bought bigger than it is used, or add a port where one runs near full.', where: ['Cost', 'Optimize', 'Capacity'] },
+    ],
+  },
+  {
+    key: 'netops', name: 'NetOps Engineer', monogram: 'NO', accent: '#1d2329',
+    oneLiner: 'Keeps it standing.',
+    question: '“What did it look like right before it went wrong?”',
+    source: 'NOC function research · baseline, triage, change window',
+    footprint: [[0, 0, 1, 0], [0, 0, 1, 0], [1, 2, 2, 0], [0, 0, 1, 0]],
+    day0: [
+      { task: 'Know every site, region by region down to the state, and which ones are on AT&T.', where: ['Discover', 'Estate', 'Your sites'] },
+    ],
+    day1: [
+      { task: 'Follow every app’s path segment by segment, and work the problems ranked by the apps they hit.', where: ['Observe', 'Traffic', 'Health', 'By app'] },
+      { task: 'See who answers for each segment, and what AT&T can see there.', where: ['Observe', 'Traffic', 'Health', 'By segment'] },
+      { task: 'See what changed right before it went wrong.', where: ['Observe', 'Traffic', 'Changes'] },
+      { task: 'Work the tickets, availability and maintenance windows in one place.', where: ['Observe', 'Insights', 'Operations'] },
+    ],
+  },
+  {
+    key: 'cloudeng', name: 'Cloud Network Engineer', monogram: 'CN', accent: '#0057b8',
+    oneLiner: 'Owns the on-ramps and every VPC that touches the fabric.',
+    question: '“Which account, which region, which path, and what does attaching cost?”',
+    source: '2026 hiring research · its own archetype',
+    footprint: [[1, 0, 0, 0], [2, 1, 1, 1], [2, 1, 1, 0], [0, 0, 0, 0]],
+    day0: [
+      { task: 'Add a cloud account as a source, and watch it find its clouds.', where: ['Discover', 'Sources'] },
+      { task: 'See which regions ride a private path and which still ride the internet.', where: ['Discover', 'Estate', 'Your clouds'] },
+      { task: 'Attach a region from its candidate, straight into the order.', where: ['Connect', 'Options'] },
+    ],
+    day1: [
+      { task: 'Trace where cloud traffic goes once it leaves the region.', where: ['Observe', 'Traffic', 'Where it goes'] },
+      { task: 'Move cross-cloud traffic off the public internet.', where: ['Cost', 'Optimize', 'Routing'] },
+    ],
+  },
+  {
+    key: 'platformeng', name: 'Platform Engineer', monogram: 'PE', accent: '#009fdb',
+    oneLiner: 'Consumes the network as an API, from the pipeline.',
+    question: '“Can my pipeline ask for the path my service needs, without a ticket?”',
+    source: 'TM Forum NaaS · GSMA CAMARA network-as-API',
+    footprint: [[1, 1, 0, 0], [1, 0, 1, 0], [1, 0, 1, 0], [0, 0, 0, 0]],
+    day0: [
+      { task: 'Say what a service needs and let AT&T compose it: reach a cloud privately, control what leaves it, or join two clouds.', where: ['Connect', 'Orders'] },
+      { task: 'Take insights, provisioning and billing as an API or Terraform, not only the portal.', where: ['Marketplace', 'APIs'] },
+      { task: 'Ask for a path from the deploy pipeline, with no ticket.', where: null },
+    ],
+    day1: [
+      { task: 'Read their own service’s path, segment by segment.', where: ['Observe', 'Traffic', 'Health', 'By app'] },
+      { task: 'Check that the path their service rides is fast.', where: ['Observe', 'Traffic', 'Paths'] },
+    ],
+  },
+  {
+    key: 'aianalyst', name: 'AI Platform Analyst', monogram: 'AI', accent: '#009fdb',
+    oneLiner: 'Governs the token layer.',
+    question: '“Whose tokens rode the public internet today, and what did they cost?”',
+    source: 'The token layer’s own arrival · AI platform practice',
+    footprint: [[2, 2, 2, 2], [1, 0, 0, 0], [0, 0, 1, 1], [0, 0, 0, 0]],
+    // "Untracked AI traffic" is a finding kind (naas-data.js KINDS) that no
+    // estate raises, and its three tiers map to no catalog product yet.
+    day0: [
+      { task: 'Find the AI traffic nobody tracks, and start a 14-day AI traffic assessment from it.', where: null },
+      { task: 'Add the AI providers to AI Fabric, with virtual keys and team limits.', where: null },
+    ],
+    day1: [
+      { task: 'See which AI endpoints the clouds reach straight over the internet.', where: ['Observe', 'Traffic', 'Where it goes'] },
+      { task: 'See what GPU inference egress costs on the public internet.', where: ['Cost', 'Spend', 'By bucket'] },
+      { task: 'Cap a team’s token spend and set guardrails on the AI Fabric layer.', where: null },
+    ],
+  },
+  {
+    key: 'finops', name: 'FinOps Analyst', monogram: 'FO', accent: '#1d2329',
+    oneLiner: 'Accountable for spend across every layer.',
+    question: '“Which flow is burning money, and who signs off on moving it?”',
+    source: 'FinOps discipline · egress accountability',
+    footprint: [[0, 0, 0, 2], [0, 0, 0, 2], [0, 1, 1, 2], [0, 0, 0, 1]],
+    day0: [
+      { task: 'Price a product before it is ordered: each one says what it starts at.', where: ['Marketplace'] },
+      { task: 'Put sites into business units, so every dollar lands with an owner.', where: ['Discover', 'Estate', 'Business units'] },
+    ],
+    day1: [
+      { task: 'Start with what is on the table: the Spend and Routing moves, each priced.', where: ['Cost', 'Optimize'] },
+      { task: 'Split spend by leg, region, destination, first mile and bucket.', where: ['Cost', 'Spend'] },
+      { task: 'Preview a finding’s before and after, acknowledge it, and start the order.', where: ['Observe', 'Insights', 'Findings'] },
+    ],
+  },
+  {
+    key: 'seclead', name: 'Security & Compliance Lead', monogram: 'SC', accent: '#1d2329',
+    oneLiner: 'The approval gate on high-risk change.',
+    question: '“Show me every path, every policy, and who changed what, when.”',
+    source: 'GRC three-lines research · high-risk change approval',
+    footprint: [[0, 2, 1, 0], [0, 2, 0, 0], [0, 2, 1, 0], [0, 1, 0, 0]],
+    day0: [
+      { task: 'Order connections that ship with the policy: private path required, no direct internet path, inline inspection.', where: ['Connect', 'Orders'] },
+    ],
+    day1: [
+      { task: 'Read where policy is enforced and where it is only written.', where: ['Govern', 'Policies', 'Violations & policies'] },
+      { task: 'Close the PCI workloads that reach the internet directly.', where: ['Observe', 'Insights', 'Findings'] },
+      { task: 'Set policy on new destinations and shadow SaaS before they become normal.', where: ['Observe', 'Insights', 'Signals'] },
+      { task: 'Pull who changed what, and when.', where: ['Observe', 'Logs', 'User activity'] },
+    ],
+  },
+  {
+    key: 'sponsor', name: 'Executive Sponsor', monogram: 'ES', accent: '#0057b8',
+    oneLiner: 'Answers for the program, in business language.',
+    question: '“Are we safer, faster, and cheaper than last quarter? Provably?”',
+    source: 'GRC & NaaS transformation research · visible sponsorship',
+    footprint: [[0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 0, 0]],
+    day0: [
+      { task: 'See the estate at a glance: what is on AT&T and what is not.', where: ['Discover', 'Estate', 'At a glance'] },
+    ],
+    day1: [
+      { task: 'Read one number: how much of what crosses a mid mile rides the AT&T network.', where: ['Observe', 'Traffic'] },
+      { task: 'See the savings still open, and which moves are already in progress.', where: ['Cost', 'Optimize'] },
+      { task: 'See availability, tickets and maintenance in one place.', where: ['Observe', 'Insights', 'Operations'] },
+      { task: 'See the top talkers, and how much of each rides AT&T.', where: ['Observe', 'Insights', 'Signals'] },
+    ],
+  },
+];
+
+const ROW_SHORT = ['AI', 'Cloud', 'Net', 'T&A'];
+const ROW_FULL = ['AI Fabric', 'Cloud', 'Network services', 'Transport and access'];
+const COL_SHORT = ['C', 'G', 'O', '$'];
+const COL_FULL = ['Connect', 'Govern', 'Observe', 'Cost'];
+const CELL = ['var(--cell-0)', 'var(--cell-1)', 'var(--cell-2)'];
+// White fails AA on the sky accent, so sky monograms take navy ink.
+const ink = (p) => p.accent === '#009fdb' ? 'var(--navy)' : '#ffffff';
+
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function footprint(p) {
+  let h = '<b></b>' + COL_SHORT.map(c => `<b>${esc(c)}</b>`).join('');
+  p.footprint.forEach((row, r) => {
+    h += `<b class="row">${esc(ROW_SHORT[r])}</b>` + row.map(v => `<i style="background:${CELL[v]}"></i>`).join('');
+  });
+  return `<div class="fp" role="img" aria-label="Where the ${esc(p.name)} lives on the lifecycle and layer table">${h}</div>`;
+}
+
+function task(t) {
+  if (!t.where) return `<li class="gap"><p class="task">${esc(t.task)}</p><p class="where">To build</p></li>`;
+  const path = t.where.map(esc).join('<span class="sep" aria-hidden="true">›</span>');
+  return `<li><p class="task">${esc(t.task)}</p><p class="where">${path}</p></li>`;
+}
+
+const day = (cls, tag, sub, jobs) => `
+    <div class="card-day ${cls}">
+      <p class="day-label">${tag} <em>${sub}</em></p>
+      <ol class="tasks">${jobs.map(task).join('')}</ol>
+    </div>`;
+
+document.getElementById('cards').innerHTML = PERSONAS.map(p => `
+  <article class="card" data-testid="persona-${p.key}">
+    <div class="card-head">
+      <div class="card-top">
+        <span class="mono" style="background:${p.accent};color:${ink(p)}" aria-hidden="true">${esc(p.monogram)}</span>
+        ${footprint(p)}
+      </div>
+      <h3>${esc(p.name)}</h3>
+      <p class="one">${esc(p.oneLiner)}</p>
+      <p class="q">${esc(p.question)}</p>
+    </div>${day('d0', 'Day zero', 'Connecting', p.day0)}${day('d1', 'Day one', 'Running', p.day1)}
+    <div class="card-foot"><p class="src">${esc(p.source)}</p></div>
+  </article>`).join('');
+
+const d0 = PERSONAS.flatMap(p => p.day0), d1 = PERSONAS.flatMap(p => p.day1), all = [...d0, ...d1];
+const gaps = all.filter(t => !t.where).length;
+document.getElementById('tally').textContent =
+  `${all.length} jobs: ${d0.length} on day zero, ${d1.length} on day one. ${all.length - gaps} are built into NaaS today, each named by the screen it happens on; ${gaps} are still to build.`;
+
+// Day zero is the Connect column; day one is Govern, Observe and Cost.
+const band = (cls) => `<span class="${cls} bd d0">Day zero</span><span class="${cls} bd d1" style="grid-column:span 3">Day one</span>`;
+
+// The cover: every footprint stacked. A cell's glow follows how many roles touch it.
+const touch = (r, c) => PERSONAS.filter(p => p.footprint[r][c] > 0).length;
+const peak = Math.max(...ROW_FULL.flatMap((_, r) => COL_FULL.map((__, c) => touch(r, c))));
+let stack = '<span></span>' + band('sb') + '<span></span>' + COL_FULL.map(c => `<span class="ch">${esc(c)}</span>`).join('');
+ROW_FULL.forEach((label, r) => {
+  stack += `<span class="rh">${esc(label)}</span>`;
+  COL_FULL.forEach((_, c) => {
+    const n = touch(r, c), a = n ? 0.14 + 0.78 * (n / peak) : 0.04;
+    stack += `<span class="sc" style="background:rgba(0,159,219,${a.toFixed(2)})" title="${n} of 9 roles in ${esc(label)} · ${esc(COL_FULL[c])}">${n || ''}</span>`;
+  });
+});
+document.getElementById('stack').innerHTML = stack;
+
+let cov = '<span class="cb"></span>' + band('cb') + '<div class="hd">Layer</div>' + COL_FULL.map(c => `<div class="hd">${esc(c)}</div>`).join('');
+ROW_FULL.forEach((label, r) => {
+  const last = r === ROW_FULL.length - 1 ? ' last' : '';
+  cov += `<div class="rl${last}">${esc(label)}</div>`;
+  COL_FULL.forEach((_, c) => {
+    const lives = PERSONAS.filter(p => p.footprint[r][c] === 2);
+    const visits = PERSONAS.filter(p => p.footprint[r][c] === 1);
+    const chips = lives.map(p => `<span class="chip" title="${esc(p.name)} lives here" style="background:${p.accent};color:${ink(p)}">${esc(p.monogram)}</span>`).join('')
+      + visits.map(p => `<span class="chip visits" title="${esc(p.name)} visits">${esc(p.monogram)}</span>`).join('');
+    cov += `<div class="cell${last}">${chips}</div>`;
+  });
+});
+document.getElementById('coverage').innerHTML = cov;
+</script>
+</body>
+</html>
