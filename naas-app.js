@@ -178,7 +178,7 @@ export function defaults() {
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
     order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null,
-    simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: 'j.martinez@meridianlogistics.com', term: 36,
+    simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36,
   };
 }
 
@@ -798,11 +798,18 @@ export function vals(c) {
 
   // ---- review ----
   const ord = s.order || composed;
-  const orderLines = (ord.lines || []).map((l, i) => ({ ...l, key: 'l' + i, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? 'Priced after survey' : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : fmt(l.monthly) + '/mo', color: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
+  const orderLines = (ord.lines || []).map((l, i) => ({ ...l, key: 'l' + i, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? (l.priceNote || 'Priced after survey') : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : fmt(l.monthly) + '/mo', color: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
   const pricedTotal = (ord.lines || []).filter(l => !l.unpriced).reduce((a, l) => a + l.monthly, 0);
   const termDisc = { 0: 0, 12: 15, 24: 30, 36: 50 }[s.term];
   const termTotal = Math.round(pricedTotal * (1 - termDisc / 100));
+  // An order with no monthly price never reads $0 or a saving on $0 (final
+  // review, 2026-09-30: Resize read "$0/mo · save 50% vs on-demand").
+  const hasPrice = pricedTotal > 0, hasTermSave = hasPrice && termDisc > 0;
   const unpriced = (ord.lines || []).filter(l => l.unpriced).map((l, i) => ({ key: 'u' + i, product: l.product }));
+  // The path's two ends are names the order carries; the split is for orders that only carry "X to Y · ...".
+  const pathEnds = String(ord.pathDesc || '').split(' to ');
+  const reviewSrc = ord.pathSrc || pathEnds[0] || 'Source', reviewDst = ord.pathDst || (pathEnds[1] || 'Destination').split(' · ')[0];
+  const orderDays = ord.days || 10;
   const orderPolicies = (ord.policies || []).map((p, i) => ({ ...p, key: 'p' + i }));
   const orderInspection = (ord.lines || []).some(l => /hosted VPC|hosted VNet|Hosted VPC/i.test(l.product || '')) ? ', with inspection from the vSRX pair' : '';
   const termOptions = [0, 12, 24, 36].map(t => ({ key: 't' + t, label: t ? t + '-month' : 'On-demand', on: s.term === t, click: () => set({ term: t }) }));
@@ -1023,7 +1030,7 @@ export function vals(c) {
     ...wizardVals(s, est, cp, setC, outcome, constraint, summary, set, c),
     outcomeCards, hasOutcome: !!outcome, sourceChips: chipRow('source', D.COMPOSE_CHIPS.source), destChips: chipRow('dest', D.COMPOSE_CHIPS.dest), regionTabs, metroChips, resChips: chipRow('resiliency', D.COMPOSE_CHIPS.resiliency, true), controlChips: chipRow('control', D.COMPOSE_CHIPS.control), constraint, hasConstraint: !!constraint, summary, freeText: s.freeText, setFreeText: (e) => set({ freeText: e.target.value }), parseText: () => parseText(c, s.freeText), reviewOrder: () => { if (!summary.ready) return; set({ order: composed, screen: 's6', term: 36 }); window.scrollTo(0, 0); syncHash('s6'); }, reviewBg: summary.ready ? 'var(--cta)' : 'var(--bg-neutral)', reviewColor: summary.ready ? '#fff' : 'var(--text-disabled)',
     // review
-    hasOrder: orderLines.length > 0, noOrder: orderLines.length === 0, orderLines, orderPolicies, orderInspection, unpriced, hasUnpriced: unpriced.length > 0, pricedTotalF: fmt(pricedTotal) + '/mo', termTotalF: fmt(termTotal) + '/mo', termDisc, termLabel: s.term ? `${s.term}-month` : 'On-demand', termOptions, orderSave: ord.savings ? `save ${fmt(ord.savings)}/mo vs public egress` : '', hasOrderSave: !!ord.savings, orderTimeline: `${ord.days || 10} business days`, approver: s.approver, setApprover: (e) => set({ approver: e.target.value }), orderTitle: ord.title || 'Order', pathDesc: ord.pathDesc || '', submit: () => { set({ submitted: true, pendingDismissed: false, screen: 's2' }); window.scrollTo(0, 0); syncHash('s2'); }, saveProposal: () => set({ proposalSaved: true }), proposalSaved: !!s.proposalSaved, reviewShield: !!ord.shield, reviewWires: ord.wires || 1,
+    hasOrder: orderLines.length > 0, noOrder: orderLines.length === 0, orderLines, orderPolicies, orderInspection, unpriced, hasUnpriced: hasPrice && unpriced.length > 0, orderPriced: hasPrice, orderUnpriced: !hasPrice, priceNote: ord.priceNote || 'Priced by AT&T after review', pricedTotalF: hasPrice ? fmt(pricedTotal) + '/mo' : '', termTotalF: hasPrice ? fmt(termTotal) + '/mo' : '', termDisc, hasTermSave, termSaveF: hasTermSave ? `save ${termDisc}% vs on-demand` : '', termLabel: s.term ? `${s.term}-month` : 'On-demand', termOptions, orderSave: ord.savings ? `save ${fmt(ord.savings)}/mo vs public egress` : '', hasOrderSave: !!ord.savings, orderTimeline: `${orderDays} business ${orderDays === 1 ? 'day' : 'days'}`, reviewSrc, reviewDst, approver: s.approver == null ? `j.martinez@${mailDomain(est)}` : s.approver, setApprover: (e) => set({ approver: e.target.value }), orderTitle: ord.title || 'Order', pathDesc: ord.pathDesc || '', submit: () => { set({ submitted: true, pendingDismissed: false, screen: 's2' }); window.scrollTo(0, 0); syncHash('s2'); }, saveProposal: () => set({ proposalSaved: true }), proposalSaved: !!s.proposalSaved, reviewShield: !!ord.shield, reviewWires: ord.wires || 1,
     // browse
     browseQuery: s.browseQuery, setQuery: (e) => set({ browseQuery: e.target.value }), browseSort: s.browseSort, setSort: (e) => set({ browseSort: e.target.value }), filtersOpen: s.filtersOpen, toggleFilters: () => set({ filtersOpen: !s.filtersOpen }), filterCount, filterLabel: filterCount ? `Filters (${filterCount})` : 'Filters', categories, curated, results, resultCount: results.length, browsing, backToMarket: () => set({ browseQuery: '', browseCat: null, filterProviders: [], priceCeil: 0 }), providerChips: providers.map(p => ({ key: p, label: p, on: s.filterProviders.includes(p), click: () => set({ filterProviders: s.filterProviders.includes(p) ? s.filterProviders.filter(x => x !== p) : [...s.filterProviders, p] }) })), priceChips: [1000, 2500, 5000].map(v => ({ key: 'p' + v, label: `Under ${fmt(v)}/mo`, on: s.priceCeil === v, click: () => set({ priceCeil: s.priceCeil === v ? 0 : v }) })), visionTiles, browseCatLabel: s.browseCat ? D.CATEGORIES.find(cc => cc.id === s.browseCat).label : q ? `Results for "${s.browseQuery}"` : 'Results',
     lmccHero: productCard(c, D.CATALOG.find(p => p.id === 'lmcc'), est), catalogAll: D.CATALOG,
@@ -1042,6 +1049,13 @@ export function vals(c) {
   Object.assign(out, briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }));
   if (s.screen === 's3' && s.tab === 'observe' && s.obPage === 'insights' && out.insPanelBrief) Object.assign(out, { andiSub: out.briefText, hasAndiSub: true });
   return pageLists(out, s, set);
+}
+
+/** The estate's mail domain: Acme Corp is acme.com. The briefing's mailboxes
+ *  and the order's approver read this one helper (final review, 2026-09-30:
+ *  Acme's Resize asked j.martinez@meridianlogistics.com to approve). */
+export function mailDomain(est) {
+  return String((est && est.name) || 'example').toLowerCase().replace(/\b(corp|co|inc|llc)\b\.?/g, '').replace(/[^a-z]/g, '') + '.com';
 }
 
 // Your actions' visuals and Andi's monthly briefing (notes, 2026-09-30, C2, C3):
@@ -1072,7 +1086,7 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
   const of = out.opsFacts || { sev1: 0, openN: 0, mttrF: '' }, av = out.availAll || [], next = (out.comingUp || [])[0];
   const briefText = VD.briefingFor(rk, { open: openF.length, onTableF: openSave ? fmt(openSave) : '', bankedLastF: fmt(bankedLast), found, resolved, sev1: of.sev1, ticketsOpen: of.openN, mttrF: of.mttrF,
     availMet: av.filter(r => r.met).length, availN: av.length, top: (out.roleActAll || []).slice(0, 3).map(a => a.head), nextMaint: next ? `${next.touched}, ${next.whenF.replace(/, planned$/, '')}` : '' });
-  const domain = String(est0.name || 'example').toLowerCase().replace(/\b(corp|co|inc|llc)\b\.?/g, '').replace(/[^a-z]/g, '') + '.com';
+  const domain = mailDomain(est0);
   const briefWho = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk;
     return { key: k, role: ROLE_OF[k].name, mail: `${ROLE_OF[k].mailbox}@${domain}`, on, bg: on ? 'var(--bg-accent)' : 'transparent', go: () => set({ persona: k }) }; });
   const cfg = s.briefCfg || { cadence: 'monthly' }, cadence = cfg.cadence === 'off' ? 'off' : 'monthly';
@@ -3323,7 +3337,10 @@ function costVals(s, set, est, invAll, ob, go, c) {
       go('s4', { ...newOrder({ outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: group, metros: [metro, second], resiliency: 'Geodiversity', resiliencyChosen: true, control: ['Private path required'], step: 4, prefilled: true, prefillRegion: `${r.cloud} ${r.region}`, prefillWl: r.wl, sourceLabel: 'Optimize', noteStep: 4, note: `Add a second path for ${r.cloud} ${r.region}: a second metro, for geodiversity.` }) })(); },
     capacity: (cp, resize) => { if (!cp) return; const r = est.regionsList.find(x => x.region === cp.region) || {};
       if (!resize) return composeFor(go, r)();
-      go('s6', { term: 36, order: { title: `Resize ${cp.cloud} ${cp.region}`, lines: [{ line: 1, product: `Port change, ${F.RAMP_NAME[cp.ramp] || 'NetBond'} ${cp.region}: ${cp.ports} × ${cp.portG} Gbps to ${cp.resizeTo} × ${cp.portG} Gbps`, qty: 1, term: '36-month', monthly: 0, unpriced: true }], policies: [], monthly: 0, savings: 0, days: 1, pathDesc: 'Sized to what it carries, with the peak under 80%' } })(); },
+      // The review says what changes (final review, 2026-09-30): the ports before and after and where the peak lands. No catalog price, so AT&T prices it.
+      const where = `${cp.cloud} ${cp.region}`, before = `${cp.ports} × ${cp.portG} Gbps`, after = `${cp.resizeTo} × ${cp.portG} Gbps`, gone = cp.ports - cp.resizeTo;
+      go('s6', { term: 36, order: { title: `Resize ${where}`, lines: [{ line: 1, product: gone === 1 ? `Remove a ${cp.portG} Gbps port` : `Remove ${cp.portG} Gbps ports`, qty: gone, term: '36-month', monthly: 0, unpriced: true, priceNote: 'Priced after review' }], policies: [], monthly: 0, savings: 0, days: 1,
+        pathSrc: 'Your sites', pathDst: where, pathDesc: `${where} on ${F.RAMP_NAME[cp.ramp] || 'NetBond'}: ${before} to ${after}. The peak goes from ${cp.peakPct}% to about ${cp.resizePct}% of what is bought.` } })(); },
   };
   const optTop = optBase.slice(0, 2).reduce((w, r) => (r.figure > (w ? w.figure : 0) ? r : w), null);
   const optRows = optBase.map(r => ({ ...r, go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(r.target, r.resize) : optGo[r.key],

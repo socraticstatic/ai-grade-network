@@ -233,11 +233,12 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Insights > Operations (2026-09-30): four underline subtabs, tiles, the sample fixes, tickets with the Andi toggle, availability, maintenance and changes: div 944 -> 977, span 751 -> 812, sc-if 383 -> 401, sc-for 219 -> 226, button 286 -> 297.
 // Your actions and Monthly briefing (2026-09-30): role chips, the role's visuals and actions (Do it disabled), the briefing, who gets it, the longhand cadence select: div 977 -> 1005, span 812 -> 825, sc-if 401 -> 413, sc-for 226 -> 231, button 297 -> 310, label 27 -> 28.
 // Down and Over SLO apart (review, 2026-09-30): each problem row prints its state word beside the dot: span 825 -> 827.
+// Resize reviews the real change (final review, 2026-09-30): the totals and the term saving hide when the order carries no price, and its price line shows instead: div 1005 -> 1006, sc-if 413 -> 416 (merged after the state words: span stays 827).
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1005],
+    ['div', /<div\b/g, /<\/div>/g, 1006],
     ['span', /<span\b/g, /<\/span>/g, 827],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 413],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 416],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 231],
     ['section', /<section\b/g, /<\/section>/g, 11],
     ['button', /<button\b/g, /<\/button>/g, 310],
