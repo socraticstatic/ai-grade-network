@@ -1663,7 +1663,7 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
             <span style="color:var(--text-body);white-space:nowrap" title="Who holds the SLA">{{ pb.ownerLabel }}</span>
             <span style="color:var(--text-body);white-space:nowrap">{{ pb.appsF }}</span>
             <span style="display:flex;justify-content:flex-end;min-width:0"><sc-if value="{{ pb.ticketed }}" hint-placeholder-val="{{ false }}"><span style="color:var(--text-light);white-space:nowrap">{{ pb.ticketF }}</span></sc-if><sc-if value="{{ pb.canTicket }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ pb.ticket }}" style="height:28px;padding:0 12px;font-size:12px;white-space:nowrap">Open ticket</button></sc-if></span>
-            <span style="display:flex;justify-content:flex-end"><button class="fx-btn" onClick="{{ pb.trace }}" style="height:28px;padding:0 12px;font-size:12px;white-space:nowrap">Trace</button></span>
+            <span style="display:flex;justify-content:flex-end"><button class="fx-btn" onClick="{{ pb.move }}" style="height:28px;padding:0 12px;font-size:12px;white-space:nowrap">{{ pb.moveLabel }}</button></span>
           </div></sc-for>
           <sc-if value="{{ probPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding-top:6px;font-size:12px;color:var(--text-light)"><button class="fx-btn" onClick="{{ probPager.prev }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ probPager.prevOp }}">‹</button><span>{{ probPager.label }}</span><button class="fx-btn" onClick="{{ probPager.next }}" style="height:24px;padding:0 8px;font-size:12px;opacity:{{ probPager.nextOp }}">›</button></div></sc-if>
         </div>

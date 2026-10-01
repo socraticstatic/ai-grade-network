@@ -269,6 +269,18 @@ export function gbPerWlExport(est, base) { return gbPerWl(est, base); }
 // This week is the window's own volumes, to the tenth (third round, 2026-09-30: it
 // read 0.5% under them, 27.4 Gbps public beside Top talkers' 27.5); the weeks
 // before keep the same shape, so every ratio and dollar holds.
+/**
+ * A flow can be steered onto AT&T only where one of its own ends is on AT&T
+ * (third round, 2026-09-30); otherwise its first step is Attach. An App flow's
+ * one end is its region. Signals, Andi and the map share this one rule (w2,
+ * 2026-09-30: Andi's "Steer worst offender" put unattached flows on AT&T).
+ */
+export function canSteerFlow(regions, f) {
+  if (!f || !f.steerable || f.controlled) return false;
+  const privName = new Set((regions || []).filter(r => r.priv).map(r => `${r.cloud} ${r.region}`));
+  const ends = f.kind === 'App' ? [f.region] : String(f.name || '').split(' ↔ ');
+  return ends.some(n => privName.has(n));
+}
 export function egressWeeks(ob) {
   const pub = ob.pub || 0, fab = ob.fab || 0;
   const p = (i) => Math.pow(1.02, i) * (0.9 + 0.1 * Math.sin(i)), f = (i) => 0.97 + 0.03 * Math.cos(i * 0.6);
@@ -329,9 +341,7 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   // round, 2026-09-30: Growing offered Steer on us-west-2 to us-central1 and on the
   // westeurope flows, none of them attached, and one click put them "on AT&T");
   // otherwise its first step is Attach. An App flow's one end is its region.
-  const privName = new Set(rs.filter(r => r.priv).map(r => `${r.cloud} ${r.region}`));
-  const endsOf = (f) => (f.kind === 'App' ? [f.region] : f.name.split(' ↔ '));
-  const canSteer = (f) => !!f.steerable && !f.controlled && endsOf(f).some(n => privName.has(n));
+  const canSteer = (f) => canSteerFlow(rs, f);
   const pathOf = (f) => (f.controlled ? 'on AT&T' : 'public internet');
   // A cloud-to-cloud pair reads by its regions, its clouds on the line under it, so
   // "GCP us-central1 ↔ CoreWeave us-east-04" never clips on a card (2026-09-30).

@@ -82,12 +82,17 @@ const COUNT = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eig
 const COMMON_LEAD = /^(?:Both|Every|All|Each|No|None|Some|Most|One|Two|Three|Four|Five|Finance|Object|Hosted|Public|New)\b/;
 const clause = (h) => { const c = String(h).split(/(?<=\.)\s+/)[0].replace(/\.$/, ''); return COMMON_LEAD.test(c) ? c[0].toLowerCase() + c.slice(1) : c; };
 const listOf = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join('; ')}; and ${xs[xs.length - 1]}`);
-function actionsLine(who, heads) {
+// What waits is what the role's home chips list (w2, 2026-09-30: Security's briefing said
+// two things wait where its home showed one, the other already accepted). What is
+// accepted or under way is counted after it, never said to wait.
+function actionsLine(who, heads, moving = 0) {
   const all = heads || [], named = all.slice(0, 3).map(clause), word = COUNT[all.length] || String(all.length);
-  if (!all.length) return `Nothing waits on ${who} this month.`;
-  if (all.length > named.length) return `Of ${word} things waiting on ${who}, ${COUNT[named.length]} come first: ${listOf(named)}.`;
-  return `For ${who}, ${word} ${all.length === 1 ? 'thing waits' : 'things wait'}: ${listOf(named)}.`;
+  const under = moving ? ` ${cap(COUNT[moving] || String(moving))} more ${moving === 1 ? 'is' : 'are'} under way.` : '';
+  if (!all.length) return moving ? `Nothing new waits on ${who};${under.replace(/^ \w/, (m) => m.toLowerCase())}` : `Nothing waits on ${who} this month.`;
+  if (all.length > named.length) return `Of ${word} things waiting on ${who}, ${COUNT[named.length]} come first: ${listOf(named)}.${under}`;
+  return `For ${who}, ${word} ${all.length === 1 ? 'thing waits' : 'things wait'}: ${listOf(named)}.${under}`;
 }
+const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : '');
 export function briefingFor(role, f) {
   const n = (x, one, many) => `${x} ${x === 1 ? one : many}`;
   const who = ROLE_WORD[role] || 'you';
@@ -100,7 +105,7 @@ export function briefingFor(role, f) {
       ? `Operations has ${f.sev1} Sev 1 open now, ${n(f.ticketsOpen, 'ticket', 'tickets')} open${f.mttrF ? `, and fixes took ${f.mttrF} on average` : ''}.`
       : `No Sev 1 is open now; Operations has ${n(f.ticketsOpen, 'ticket', 'tickets')} open${f.mttrF ? `, and fixes took ${f.mttrF} on average` : ''}.`,
     f.availN ? `${f.availMet} of ${f.availN} connections met their availability target.` : '',
-    actionsLine(who, f.top),
+    actionsLine(who, f.top, f.moving || 0),
     f.nextMaint ? `Next AT&T maintenance: ${f.nextMaint}.` : '',
   ].filter(Boolean).join(' ');
 }

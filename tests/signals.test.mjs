@@ -132,8 +132,10 @@ const LANDS = {
   // Attach and Add a port start the connect flow for the region, as Connect > Recommended does,
   // and its banner says which and why (2026-09-30).
   Attach: (st, r) => st.screen === 's4' && st.compose.prefillSets.regions.join() === r.region && /^Attach /.test(st.compose.note),
-  'Add a port': (st, r) => st.screen === 's4' && st.compose.prefillSets.regions.join() === r.region && /^Add a port to /.test(st.compose.note),
-  Resize: (st) => st.screen === 's6' && /^Resize /.test(st.order.title),
+  // w2 (2026-09-30): one connection, one move. Where AT&T sells the port, Add a port and Resize
+  // open Modify bandwidth in place at the size they name, as Optimize does; never the retired review.
+  'Add a port': (st, r) => (!!st.bwFor && !!st.bwPick && st.screen === 's3') || (st.screen === 's4' && st.compose.prefillSets.regions.join() === r.region && /^Add a port to /.test(st.compose.note)),
+  Resize: (st, r) => st.bwFor === r.key && !!st.bwPick && st.screen === 's3',
   Trace: (st) => st.obPage === 'perf' && st.obPanel === 'paths' && !!st.pathSel,
   Optimize: (st) => st.tab === 'cost' && st.costPanel === 'optimize',
   'By bucket': (st) => st.tab === 'cost' && st.costPanel === 'bucket',

@@ -61,12 +61,12 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 
 ## 7. Insights: Signals, Your actions and Operations
 
-- Rail: **Insights**. It lands on **Signals** for Network Eng: **Health** ("2 problems · 2 apps affected"), **Latency over SLO** and **Capacity** lead. Each row carries its move beside its figure: **Trace** on the eastus flap and the eu-west-1 spike, **Attach** on the westeurope flows over the 100 ms SLO (westeurope is not on AT&T yet), **Resize** on us-east-1. Cloud-to-cloud offers **Steer** only on us-east-1 to eastus, whose two ends are on AT&T.
+- Rail: **Insights**. It lands on **Signals** for Network Eng: **Health** ("2 problems · 2 apps affected"), **Latency over SLO** and **Capacity** lead. Each row carries its move beside its figure: **Trace** on the eastus flap and the eu-west-1 spike, **Attach** on the westeurope flows over the 100 ms SLO (westeurope is not on AT&T yet), **Resize** on us-east-1, which opens Modify bandwidth in place at the size it names, as Optimize's Resize does. Cloud-to-cloud offers **Steer** only on us-east-1 to eastus, whose two ends are on AT&T.
 - Every figure is a door. A row opens the one thing it counts, a card's title opens its full list in place, and the count at its foot opens those findings. The role chips over the cards change which three lead.
 - Tab: **Your actions**, that role's findings, each with its recommendation. **Do it** is visible, disabled, and reads "Coming soon". **Accept** and **Defer** work; Defer snoozes the finding to the next monthly briefing.
 - Tab: **Operations**. "1 Sev 1 open now. N tickets open. Fixes took 20h 31m on average." The fixed list is labelled sample history.
 - Tab: **Tickets**. The eastus incident carries the T-nnnn Health showed in beat 4, opened by Andi. With Andi off, an incident with no ticket still lists here as "No ticket yet", and the line counts it as an incident, not a ticket.
-- Optional: **Monthly briefing**, Andi's four to six sentences for the role, built from the same figures. Nothing sends.
+- Optional: **Monthly briefing**, Andi's four to six sentences for the role, built from the same figures. What it says waits is what the role's home chips list; what is accepted or under way is counted after it. Nothing sends.
 
 ## 8. The Estate switch (F2)
 
