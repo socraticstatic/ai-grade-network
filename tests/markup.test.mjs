@@ -326,13 +326,14 @@ test('every container the markup opens, it closes', () => {
   // Your sites gains the same crumb row (span +1, sc-if +2, sc-for +1, button +3) and rows (div +1, span +1, sc-if +1,
   // sc-for +1, button +2); a source's scope is a button (button +1):
   // div 1134 -> 1139, span 969 -> 962, sc-if 522 -> 528, sc-for 268 -> 278, button 413 -> 445.
+  // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 1139],
     ['span', /<span\b/g, /<\/span>/g, 962],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 528],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 278],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 279],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 445],
+    ['button', /<button\b/g, /<\/button>/g, 446],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

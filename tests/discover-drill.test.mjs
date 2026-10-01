@@ -78,7 +78,7 @@ function expectActs(r, what) {
       assert.equal(s.andiOpen, true, where);
       assert.equal(s.andiScope.kind, 'set', where);
       assert.ok(s.andiScope.label, where);
-      assert.ok(vals(c).andiLead.length > 0, `${where}: Andi says nothing about the set`);
+      assert.ok(s.andiScope.lead && vals(c).andiLead === s.andiScope.lead, `${where}: Andi does not read the set ("${vals(c).andiLead}")`);
     } else assert.fail(`${where}: an unknown move ${a.key}`);
   }
 }
@@ -329,6 +329,35 @@ test('Business units and Sources: each count opens its set', () => {
   }
 });
 
+test('what an added source found: its regions, its VCNs and its workloads each open their set; Attach carries them all', () => {
+  const NOW = '2026-10-05T15:00:00Z';
+  const c = disc('partial', { discoverView: 'sources', nowIso: NOW });
+  vals(c).openAddSource(); vals(c).sourceTiles.find(t => /Oracle/.test(t.name)).pick(); vals(c).addSource();
+  const mk = () => disc('partial', { discoverView: 'sources', nowIso: NOW, addedSources: JSON.parse(JSON.stringify(c.state.addedSources)) });
+  const v = vals(mk());
+  assert.equal(v.hasFound, true, 'the found line is gone');
+  assert.equal(v.foundParts.map(p => p.t).join(''), v.foundLine, 'the found line\'s doors do not read as the line');
+  const doors = v.foundParts.filter(p => p.can);
+  assert.equal(doors.length, 3, `three counts in "${v.foundLine}"`);
+  for (const p of doors) { const r = land(mk, x => x.foundParts.find(y => y.key === p.key).go); expectList(r, 'clouds', num(p.t), `found "${p.t}"`); expectActs(r, `found ${p.t}`); }
+  const ca = mk(); vals(ca).foundAttach(EV);
+  assert.equal(ca.state.screen, 's4');
+  assert.deepEqual([...ca.state.compose.prefillSets.regions].sort(), ['eu-frankfurt-1', 'us-ashburn-1'], 'Attach on what it found carries one region');
+});
+
+test('with what an added source found over Estate, the lists give up the rows the alert takes', () => {
+  const NOW = '2026-10-05T15:00:00Z';
+  const plain = vals(disc('partial', { estPanel: 'clouds', cloudFilter: { unit: 'workload' } }));
+  const c = disc('partial', { discoverView: 'sources', nowIso: NOW });
+  vals(c).openAddSource(); vals(c).sourceTiles.find(t => /Oracle/.test(t.name)).pick(); vals(c).addSource();
+  const v = vals(disc('partial', { estPanel: 'clouds', cloudFilter: { unit: 'workload' }, nowIso: NOW, addedSources: JSON.parse(JSON.stringify(c.state.addedSources)) }));
+  assert.equal(v.hasFound, true);
+  assert.equal(v.cloudPageSize, plain.cloudPageSize - 2, 'Your clouds keeps its nine rows under the alert (973 on the fold)');
+  assert.equal(v.appPageSize, plain.appPageSize - 1, 'the apps keep their five rows under the alert (905 on the fold)');
+  assert.equal(v.placePageSize, plain.placePageSize - 2);
+  assert.equal(v.cloudRows.length, v.cloudPageSize);
+});
+
 test('integrate costs: each cloud, region and site row carries the month Cost shows for it, its door opening that Cost row', () => {
   for (const view of ESTATES) {
     // Clouds: the cloud's egress is the head of Egress, By cloud, the cloud picked.
@@ -414,7 +443,7 @@ test('the markup: every figure is a real button, the ring too, and no loop insid
   const disc0 = between('<!-- ===== S1 DISCOVER ===== -->', '<!-- ===== S2 FLOOR');
   for (const bind of ['{{ k.go }}', '{{ newStrip.go }}', '{{ gr.pick }}', '{{ gr.headGo }}', '{{ lg.go }}', '{{ ap.nameGo }}', '{{ ap.wlGo }}', '{{ ap.runsGo }}', '{{ ap.onAttGo }}', '{{ ap.exposedGo }}', '{{ ap.gbpsGo }}', '{{ ap.p95Go }}',
     '{{ gp.go }}', '{{ gs.go }}', '{{ ct.go }}', '{{ cm.go }}', '{{ mp.go }}', '{{ cp.go }}', '{{ bp.go }}', '{{ cr.go }}', '{{ cr.costGo }}', '{{ pp.go }}', '{{ pr.go }}', '{{ pr.costGo }}', '{{ bl.countGo }}', '{{ bl.go }}', '{{ sr.scopeGo }}',
-    '{{ clearCloudFilter }}', '{{ clearPlaceFilter }}', '{{ ca.go }}', '{{ pa.go }}', '{{ glanceSpend.totalGo }}', '{{ gl.go }}']) onButton(disc0, bind);
+    '{{ clearCloudFilter }}', '{{ clearPlaceFilter }}', '{{ ca.go }}', '{{ pa.go }}', '{{ glanceSpend.totalGo }}', '{{ gl.go }}', '{{ fp.go }}']) onButton(disc0, bind);
   assert.ok(!/class="fx-ring" role="img"/.test(disc0), 'the ring is still an image');
   for (const host of ['svg', 'table', 'select']) {
     const re = new RegExp(`<${host}\\b[\\s\\S]*?</${host}>`, 'g');

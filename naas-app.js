@@ -1242,9 +1242,14 @@ export function pageRows(rows, size, page, setPage) {
 }
 const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
   segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 4, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], bankRows: ['bankPage', 5, 'bankPager', 'bankPageSize'], regionSaveRows: ['regSavePage', 6, 'regSavePager', 'regSavePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
+// What an added source found sits over Discover's Estate (2026-09-30): its lists give up the rows
+// the alert takes, so the page keeps the fold (At a glance read 905 with it, a filtered Your clouds 973).
+const FOUND_SHRINK = { appRows: 1, cloudRows: 2, placeRows: 2 };
 function pageLists(out, s, set) {
-  for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
+  const found = !!out.hasFound && s.screen === 's1';
+  for (const [list, [key, size0, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
     if (!Array.isArray(out[list])) continue;
+    const size = size0 - (found ? FOUND_SHRINK[list] || 0 : 0);
     const pg = pageRows(out[list], size, s[key], (n) => set({ [key]: n }));
     out[list] = pg.rows; out[pagerName] = pg.pager; out[sizeName] = size;
   }
@@ -3108,12 +3113,19 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const foundVals = (() => {
     const mine = (s.addedSources || []).filter(a => a.estId === est.id), last = mine[mine.length - 1];
     const regs = last ? est.regionsList.filter(r => r.fresh && r.via === (last.name || last.provider)) : [];
-    if (!last || !regs.length) return { hasFound: false, foundLine: '', seeFound: () => {}, foundAttach: () => {} };
+    if (!last || !regs.length) return { hasFound: false, foundLine: '', foundParts: [], seeFound: () => {}, foundAttach: () => {} };
     const cloud = regs[0].cloud, noun = cloud === 'Azure' ? 'VNets' : cloud === 'Oracle' ? 'VCNs' : 'VPCs';
     const vpcN = inv.flatMap(c => c.regions || []).filter(r => regs.some(x => x.region === r.region)).reduce((a, r) => a + (r.vpcs || []).length, 0);
     const wl = regs.reduce((a, r) => a + (r.wl || 0), 0), pub = regs.every(r => !r.priv);
-    return { hasFound: true, foundLine: `Discovery found ${regs.length} ${cloud} ${regs.length === 1 ? 'region' : 'regions'}, ${vpcN} ${noun} and ${wl.toLocaleString('en-US')} workloads. ${pub ? (regs.length === 2 ? 'Both ride' : regs.length === 1 ? 'It rides' : 'All ride') : 'Some ride'} the public internet.`,
-      seeFound: () => set({ screen: 's1', discoverView: 'estate', estPanel: 'clouds', cloudTrailE: ['cloud:' + cloud], cloudPage: 0 }), foundAttach: composeFor(go, regs[0]) };
+    // Each count in the line opens what it found (drill rule, 2026-09-30), and Attach carries every region it found.
+    const found = regs.map(r => r.region), regsT = `${regs.length} ${cloud} ${regs.length === 1 ? 'region' : 'regions'}`;
+    const tail = `. ${pub ? (regs.length === 2 ? 'Both ride' : regs.length === 1 ? 'It rides' : 'All ride') : 'Some ride'} the public internet.`;
+    const foundParts = partsOf(['Discovery found ', { key: 'regs', t: regsT, go: dd.clouds({ unit: 'region', regions: found }) }, ', ',
+      { key: 'vpcs', t: `${vpcN} ${noun}`, go: vpcN ? dd.clouds({ unit: 'vpc', regions: found }) : null }, ' and ',
+      { key: 'wl', t: `${wl.toLocaleString('en-US')} workloads`, go: wl ? dd.clouds({ unit: 'workload', regions: found }) : null }, tail]);
+    return { hasFound: true, foundParts, foundLine: `Discovery found ${regsT}, ${vpcN} ${noun} and ${wl.toLocaleString('en-US')} workloads${tail}`,
+      seeFound: () => set({ screen: 's1', discoverView: 'estate', estPanel: 'clouds', cloudTrailE: ['cloud:' + cloud], cloudFilter: null, newOnly: false, cloudPage: 0 }),
+      foundAttach: ((pubFound) => dd.order({ regions: pubFound.length ? pubFound : found, note: `Attach the ${regsT} discovery just found.` }))(regs.filter(r => !r.priv).map(r => r.region)) };
   })();
   const credScanned = sources.filter(x => x.state === 'Connected').length;
   const gapVals = { gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
@@ -3345,13 +3357,17 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           const scopeWord = trail.length ? cloudCrumbsE[cloudCrumbsE.length - 1].label : 'All clouds';
           const setWord = cf ? set0.label : scopeWord;
           const scopeReg = trail[1] ? String(trail[1]).slice(7) : null, scopeCl = trail[0] ? String(trail[0]).slice(6) : null;
-          const match = tagged ? `tag ${tagged}` : scopeReg ? `region ${scopeReg}` : scopeCl ? `cloud ${scopeCl}` : setWord.toLowerCase();
+          // The policy's subject, in the words its sentence reads ("When tag finance reaches any cloud, ..."): one thing, never a plural.
+          const ONE = { region: { priv: 'a private region', pub: 'a region on the internet' }, vpc: { attached: 'an attached VPC' }, workload: { exposed: 'an exposed workload', att: 'a workload on AT&T', internet: 'a workload on the internet' } };
+          const match = tagged ? `tag ${tagged}` : scopeReg ? `region ${scopeReg}` : scopeCl ? `cloud ${scopeCl}`
+            : cf ? ((ONE[cf.unit] || {})[cf.state] || { region: 'any region', vpc: 'any VPC', subnet: 'any subnet', workload: 'any workload', app: 'any app', new: 'anything new' }[cf.unit] || 'any workload') : 'any workload';
+          const listOf = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
           const fKeys = exposedSet ? (tagged === 'pci' ? ['pci'] : tagged === 'internet-facing' ? ['uninspected'] : ['uninspected', 'pci'])
             : tagged === 'pci' ? ['pci'] : cloudSetPub.length ? ['onecloud', 'blindspots', 'avoidable'] : ['degraded', 'single', 'unmonitored'];
           const fd0 = DR.findingFor((est.findings || []).map(f => ({ key: f.kind })), fKeys);
           const regsIn = new Set(items.flatMap(x => x.kind === 'app' ? x.regions : x.r ? [x.r.region] : [])).size;
           const MOVES = {
-            attach: cloudSetPub.length ? { key: 'attach', label: cloudSetPub.length === 1 ? `Attach ${cloudSetPub[0]}` : `Attach ${cloudSetPub.length} regions`, go: dd.order({ regions: cloudSetPub, note: `Attach ${cloudSetPub.length === 1 ? cloudSetPub[0] : `the ${cloudSetPub.length} regions`} behind ${setWord.toLowerCase()}, from Discover.` }) } : null,
+            attach: cloudSetPub.length ? { key: 'attach', label: cloudSetPub.length === 1 ? `Attach ${cloudSetPub[0]}` : `Attach ${cloudSetPub.length} regions`, go: dd.order({ regions: cloudSetPub, note: `From Discover, ${setWord} · ${cloudLine}: attach ${listOf(cloudSetPub)}, on the public internet today.` }) } : null,
             policy: { key: 'policy', label: 'Set policy', go: dd.policy(match, exposedSet ? 'No direct internet path' : 'Private path required') },
             finding: fd0 ? { key: 'finding', label: 'Open its finding', go: dd.finding(fd0.key) } : null,
             andi: { key: 'andi', label: 'Ask Andi', go: dd.andi({ id: 'clouds:' + (cf ? JSON.stringify(cf) : trail.join('>')), label: `${setWord} · ${cloudLine}`,
@@ -3463,10 +3479,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           const placeWord = filterWords || (trail.length ? crumbs[crumbs.length - 1].label : 'All sites');
           const fdS = DR.findingFor((est.findings || []).map(f => ({ key: f.kind })), ['ipsec', 'nothub']);
           const SMOVES = {
-            move: outside.length ? { key: 'move', label: `Move ${nounS(outN)} to AT&T`, go: dd.order({ sites: outside.map(x => x.name), note: `Move the ${nounS(outN)} outside AT&T onto the AT&T network, from Discover.` }) } : null,
-            backup: singles.length ? { key: 'backup', label: 'Add a backup', go: dd.order({ sites: singles.map(x => x.name), tier: 'geodiversity', note: `A second path at the ${nounS(singleN)} on one circuit, from Discover.` }) } : null,
+            move: outside.length ? { key: 'move', label: `Move ${nounS(outN)} to AT&T`, go: dd.order({ sites: outside.map(x => x.name), note: `From Discover, ${placeWord}: move the ${nounS(outN)} outside AT&T onto the AT&T network.` }) } : null,
+            backup: singles.length ? { key: 'backup', label: 'Add a backup', go: dd.order({ sites: singles.map(x => x.name), tier: 'geodiversity', note: `From Discover, ${placeWord}: a second path at the ${nounS(singleN)} on one circuit.` }) } : null,
             finding: outside.length && fdS ? { key: 'finding', label: 'Open its finding', go: dd.finding(fdS.key) } : null,
-            policy: heldN ? { key: 'policy', label: 'Set policy', go: dd.policy(tSi ? `site ${tSi}` : `sites · ${placeWord}`) } : null,
+            // The policy's subject is one thing in its sentence's words ("When branch HQ reaches any cloud, ...").
+            policy: heldN ? { key: 'policy', label: 'Set policy', go: dd.policy(tSi ? `site ${tSi}` : pkeys.find(k => k.startsWith('bu:')) ? `branch ${pkeys.find(k => k.startsWith('bu:')).slice(3)}`
+              : pkeys.includes('att') ? 'a site on AT&T' : pkeys.includes('outside') ? 'a site outside AT&T' : tRg ? `a site in ${crumbs[crumbs.length - 1].label}` : 'any site') } : null,
             andi: { key: 'andi', label: 'Ask Andi', go: dd.andi({ id: 'sites:' + [...pkeys, newOnly ? 'new' : ''].join('&') + '|' + trail.join('>'), label: `${placeWord} · ${nounS(heldN)}`,
               lead: `${placeWord}: ${nounS(heldN)}, ${nfP(heldN - outN)} on AT&T${outN ? ` and ${nfP(outN)} outside it` : ''}${singleN ? `, ${nounS(singleN)} on one path` : ''}.`,
               sub: 'Ask which sites to move first, where a backup path matters, or what their access costs.', qs: ['Where are my sites attached?', 'Which region should I attach first?'] }) },

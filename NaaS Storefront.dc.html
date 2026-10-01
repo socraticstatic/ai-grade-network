@@ -898,7 +898,7 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
   <!-- What the added source found (2026-09-30): said once, with the way in. -->
   <sc-if value="{{ hasFound }}" hint-placeholder-val="{{ false }}">
   <div class="fx-alert" role="status" aria-label="Discovery found" style="animation:fadeIn .3s">
-    <div class="fx-alert-body"><span class="fx-alert-icon" aria-hidden="true"></span><div style="display:grid;gap:2px;min-width:0"><div class="fx-alert-title">Discovery found something new</div><div class="fx-alert-text">{{ foundLine }}</div></div></div>
+    <div class="fx-alert-body"><span class="fx-alert-icon" aria-hidden="true"></span><div style="display:grid;gap:2px;min-width:0"><div class="fx-alert-title">Discovery found something new</div><div class="fx-alert-text" title="{{ foundLine }}"><sc-for list="{{ foundParts }}" as="fp" hint-placeholder-count="3"><button class="fx-fig pt" onClick="{{ fp.go }}" disabled="{{ fp.cant }}" style="white-space:pre-wrap">{{ fp.t }}</button></sc-for></div></div></div>
     <button class="fx-btn" onClick="{{ seeFound }}">See what it found</button>
     <button class="fx-btn" onClick="{{ foundAttach }}">Attach</button>
   </div>
