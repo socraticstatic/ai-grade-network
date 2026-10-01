@@ -63,12 +63,16 @@ function expectActs(r, what) {
       assert.equal(s.screen, 's4', where);
       const sets = s.compose && s.compose.prefillSets;
       assert.ok(sets && sets.regions.length, `${where}: the order carries no regions`);
-      assert.deepEqual([...sets.regions].sort(), [...r.v.cloudSetPub].sort(), `${where}: the order is not the set's public regions`);
+      // One cloud an order (skeptic, 2026-10-01): the set's public regions on the cloud it attaches first.
+      assert.deepEqual([...sets.regions].sort(), [...r.v.cloudAttachRegions].sort(), `${where}: the order is not the set's public regions on one cloud`);
+      assert.ok(r.v.cloudAttachRegions.every(x => r.v.cloudSetPub.includes(x)), `${where}: the order reaches past the set`);
     } else if (a.key === 'move' || a.key === 'backup') {
       assert.equal(s.screen, 's4', where);
       const sets = s.compose && s.compose.prefillSets;
-      assert.ok(sets && sets.sites.length, `${where}: the order carries no sites`);
+      // A place's share of a rollup goes as that many sites there (2026-10-01): bulk and qty, the named ones by name.
+      assert.ok(sets && (sets.sites.length || s.compose.bulk), `${where}: the order carries no sites`);
       assert.deepEqual([...sets.sites].sort(), [...(a.key === 'move' ? r.v.placeSetOutside : r.v.placeSetSingles)].sort(), `${where}: the order is not the set's sites`);
+      if (s.compose.bulk) assert.equal(s.compose.qty, a.key === 'move' ? r.v.placeOutN : r.v.placeSingleN, `${where}: the order counts ${s.compose.qty}`);
     } else if (a.key === 'policy') {
       assert.equal(s.screen, 's3', where); assert.equal(s.tab, 'govern', where);
       assert.ok(s.authoring && s.authoring.match && s.authoring.req.length, `${where}: no policy started`);
@@ -188,8 +192,9 @@ test('the apps table: every cell opens its own set, and only Traffic reaches Log
       else assert.equal(a.exposedCan, false, `${where}: None is not a door`);
       const t = land(() => disc(view), at('gbpsGo'));
       assert.equal(t.s.obPage, 'logs', `${where} traffic`); assert.equal(t.s.logQ, a.name, `${where} traffic`);
+      // p95 opens the app's workloads on the path that sets it, reading that latency (2026-10-01; it opened Paths).
       const p = land(() => disc(view), at('p95Go'));
-      assert.equal(p.s.tab, 'observe', `${where} p95`); assert.equal(p.s.obPanel, 'paths', `${where} p95`);
+      assert.equal(p.at, 'clouds', `${where} p95`); assert.ok(String(p.v.cloudLine).includes(a.p95F), `${where} p95: "${p.v.cloudLine}"`);
       logsCheck(p, `${where} p95`);
       const row = land(() => disc(view), at('go'));
       expectList(row, 'clouds', a.wl, `${where} row`);
@@ -230,7 +235,7 @@ test('the gaps: "Private path for 5 sites" and every count in a gap opens its se
       const sets = c.state.compose.prefillSets;
       assert.ok(sets, `${view} ${g.cta}: the order carries no set`);
       const lt = land(() => disc(view), x => x.glanceGaps.find(y => y.key === g.key).titleParts.find(y => y.can).go);
-      if (lt.at === 'clouds') assert.deepEqual([...sets.regions].sort(), [...lt.v.cloudSetPub].sort(), `${view} ${g.cta}: not every region in the order`);
+      if (lt.at === 'clouds') assert.deepEqual([...sets.regions].sort(), [...lt.v.cloudAttachRegions].sort(), `${view} ${g.cta}: not the regions the set's Attach carries`);
       else assert.deepEqual([...sets.sites].sort(), [...(/backup/i.test(g.title) ? lt.v.placeSetSingles : lt.v.placeSetOutside)].sort(), `${view} ${g.cta}: not every site in the order`);
     }
   }
@@ -383,7 +388,12 @@ test('integrate costs: each cloud, region and site row carries the month Cost sh
       const mk = () => disc(view, { estPanel: 'sites', placeTrail: trail.slice() });
       const v = vals(mk());
       for (const row of v.placeRows) {
-        if (row.costCan) {
+        if (row.costCan && /^(region|state):/.test(row.key)) {
+          // A region or a country is its Cost place on By region (2026-10-01): the Site access tile.
+          const r = land(mk, x => x.placeRows.find(y => y.key === row.key).costGo);
+          assert.equal(r.s.costBy, 'region', `${view} ${row.name}`);
+          assert.equal(num(r.v.legTiles.find(t => t.key === 'access').v), num(row.costF), `${view} ${row.name}`);
+        } else if (row.costCan) {
           const r = land(mk, x => x.placeRows.find(y => y.key === row.key).costGo);
           if (r.at === 'sites') {
             // Two services: the site's services, each priced as Cost prices it.
@@ -408,7 +418,7 @@ test('integrate costs: each cloud, region and site row carries the month Cost sh
             assert.equal(num(hit.vF), num(row.costF), `${view} ${row.name}: ${row.costF} here, ${hit.vF} on Cost`);
           }
         }
-        if (depth < 3 && row.canGo && !row.costCan) { const c = mk(); vals(c).placeRows.find(y => y.key === row.key).go(EV); walk(c.state.placeTrail.slice(), depth + 1); }
+        if (depth < 3 && row.canGo && (!row.costCan || /^(region|state):/.test(row.key))) { const c = mk(); vals(c).placeRows.find(y => y.key === row.key).go(EV); walk(c.state.placeTrail.slice(), depth + 1); }
       }
     };
     walk([], 0);

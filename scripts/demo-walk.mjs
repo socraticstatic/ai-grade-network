@@ -133,7 +133,9 @@ await beat('2 Your sites and Your clouds', async () => {
   await tab('At a glance');
   await expect(/Spend\s*\$135,650/);
   await page.locator('[aria-label="Estate at a glance"] button', { hasText: '70 workloads exposed' }).first().click(); await settle();
-  await expect('Exposed workloads', '70 workloads', 'Set policy', 'Open its finding');
+  // No finding is written about all 70, so the moves are the policy and Andi (2026-10-01: "Open its
+  // finding" opened a snoozed one about 7 others in eu-west-1).
+  await expect('Exposed workloads', '70 workloads', 'Set policy', 'Ask Andi');
 });
 
 await beat('3 Traffic: a GCP pick, in proportion', async () => {

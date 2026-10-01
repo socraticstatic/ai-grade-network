@@ -281,7 +281,12 @@ export function siteDrillRows(est, trail, opts = {}) {
     const name = String(trail[0]).slice('region:'.length);
     const region = regionRows(est).find(r => r.name === name);
     if (!region) return null;
-    return placeDrill(est, name, region.sites, trail.slice(1), opts);
+    // A filter keeps some of the region's sites (Discover's figures, 2026-10-01). It keeps them
+    // inside the whole estate, so a rollup splits across the metros it always does: filtering
+    // the estate first re-seeded the split, and Established's AVPN sites read "Texas 83".
+    const sites = typeof opts.keep === 'function' ? region.sites.filter(opts.keep) : region.sites;
+    if (!sites.length) return null;
+    return placeDrill(est, name, sites, trail.slice(1), opts);
   }
   const tree = S.siteTree(est);
   const all = P.allSites(est);

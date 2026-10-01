@@ -30,7 +30,7 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 
 - **Your sites**: region, then state, then the state's sites with their service and bandwidth. Never a flat list.
 - **Your clouds**: the tiles count clouds and how they attach, and they follow the drill. Each cloud and region carries its egress a month, the number Cost shows for it: AWS reads $51,000/mo egress.
-- **At a glance**: every count is a door. Click "70 workloads exposed" on the Apps ring: Your clouds lists exactly those 70, named "Exposed workloads", with **Set policy** and **Open its finding** beside them. Spend beside the rings reads $135,650/mo, Cost's own figure.
+- **At a glance**: every count is a door. Click "70 workloads exposed" on the Apps ring: Your clouds lists exactly those 70, named "Exposed workloads", with **Set policy** and **Ask Andi** beside them. Set policy carries the 70 into Govern: Simulate reads "70 matched". Spend beside the rings reads $135,650/mo, Cost's own figure.
 
 Say: every number opens what it counts, and where it lands you can act on it.
 
