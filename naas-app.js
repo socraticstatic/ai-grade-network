@@ -1843,9 +1843,17 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // (Ramesh). Every aggregate figure carries the cut that produced it, Logs
   // applies that cut, and says which figure it is explaining.
   const explain = s.explain || null;
+  // A region's figure cuts to its region, and a pair's to its path, where the sample has such a
+  // record (w2, 2026-09-30); the explanation says the records are a sample.
+  const inRegion = (r) => `${r.srcSub} ${r.dstSub}`.includes(explain.region);
+  const ofPattern = logAll.filter(r => !(explain && explain.pattern) || r.pattern === explain.pattern);
+  const byRegion = !!(explain && explain.region) && ofPattern.some(inRegion);
+  const inCut = ofPattern.filter(r => !byRegion || inRegion(r));
+  const byPath = !!(explain && explain.path) && (!explain.region || inCut.some(r => r.path === explain.path));
   const logMatch = logAll.filter(r => {
+    if (byRegion && !inRegion(r)) return false;
     if (explain && explain.pattern && r.pattern !== explain.pattern) return false;
-    if (explain && explain.path && r.path !== explain.path) return false;
+    if (byPath && r.path !== explain.path) return false;
     if (logPath === 'private' && r.path !== 'private') return false;
     if (logPath === 'public' && r.path !== 'public') return false;
     if (logAct === 'allow' && r.deny) return false;
@@ -2882,10 +2890,18 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const openWeek = (key) => () => { const at = model.growth.rows.findIndex(r => r.key === key); set({ sigOpen: 'growth', sigWeek: key, sigListPage: at >= 0 ? Math.floor(at / listN('growth')) : 0 }); };
     // Each figure opens the one thing it counts. A sample destination has no
     // records of its own, so it opens the records of the path it takes, and says so.
+    // A traffic figure on a row (a region's Gbps, a pair's, a flow's latency) opens the records
+    // of that traffic with the figure named on the landing (w2, 2026-09-30: they opened the
+    // Traffic map scoped to the region, which draws the sites' traffic to it, 43 Mbps under
+    // "AWS us-west-2 7.3 Gbps", and ran past the fold). Logs is for traffic figures; this is one.
+    const pubLens = sigLens === 'egress' || sigLens === 'exposure';
+    const recsOf = (r, ex) => explainNav(c, { label: r.label, value: r.v, region: r.region || '', parts: [], ...ex,
+      sub: `${r.sub}. Sample data: the records on the path it takes${r.region ? `, ${r.region}'s where any names it` : ''}.` });
     const FIG = {
-      map: (r) => toObserve({ obPage: 'perf', obPanel: 'map', mapRegion: r.region }),
-      'map-slo': (r) => toObserve({ obPage: 'perf', obPanel: 'map', mapMode: 'slo', mapRegion: r.region }),
-      'map-state': (r) => toObserve({ obPage: 'perf', obPanel: 'map', mapMode: 'state', mapRegion: r.region }),
+      map: (r) => recsOf(r, pubLens || !r.priv ? { cut: `Records outside AT&T from ${r.label}.`, pattern: 'internet', path: 'public' } : { cut: `Records from ${r.label}.`, pattern: '', path: '' }),
+      'map-slo': (r) => recsOf(r, /public/.test(r.sub) ? { cut: `Records outside AT&T on ${r.label}.`, pattern: 'internet', path: 'public' } : { cut: `Records on ${r.label}.`, pattern: 'internet', path: '' }),
+      // A pair inside one cloud ("AWS · public internet") is across regions; across two ("AWS ↔ Azure"), across clouds.
+      'map-state': (r) => recsOf(r, { cut: `${/↔/.test(r.sub) ? 'Cloud-to-cloud' : 'Region-to-region'} records, ${/public/.test(r.sub) ? 'outside AT&T' : 'on AT&T'}.`, pattern: /↔/.test(r.sub) ? 'clouds' : 'regions', path: /public/.test(r.sub) ? 'public' : 'private' }),
       logs: (r) => explainNav(c, { label: r.label, value: r.v, sub: `${r.sub}. Sample data: no record names it yet, so these are the records on the path it takes.`, cut: 'Records to the internet, outside AT&T.', pattern: 'internet', path: 'public', parts: [] }),
       finding: (r) => () => set({ fdKey: r.key }),
       conn: (r) => toObserve({ obPage: 'perf', obPanel: 'conn', mapSel: r.key, mapRegion: r.region }),

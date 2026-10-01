@@ -87,12 +87,12 @@ const listOf = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(';
 // accepted or under way is counted after it, never said to wait.
 function actionsLine(who, heads, moving = 0) {
   const all = heads || [], named = all.slice(0, 3).map(clause), word = COUNT[all.length] || String(all.length);
-  const under = moving ? ` ${cap(COUNT[moving] || String(moving))} more ${moving === 1 ? 'is' : 'are'} under way.` : '';
-  if (!all.length) return moving ? `Nothing new waits on ${who};${under.replace(/^ \w/, (m) => m.toLowerCase())}` : `Nothing waits on ${who} this month.`;
-  if (all.length > named.length) return `Of ${word} things waiting on ${who}, ${COUNT[named.length]} come first: ${listOf(named)}.${under}`;
-  return `For ${who}, ${word} ${all.length === 1 ? 'thing waits' : 'things wait'}: ${listOf(named)}.${under}`;
+  // One sentence still (the briefing holds to four to six).
+  const more = COUNT[moving] || String(moving), under = moving ? ` and ${more} more ${moving === 1 ? 'is' : 'are'} under way` : '';
+  if (!all.length) return moving ? `Nothing new waits on ${who}; ${more} ${moving === 1 ? 'is' : 'are'} under way.` : `Nothing waits on ${who} this month.`;
+  if (all.length > named.length) return `Of ${word} things waiting on ${who}${moving ? ` (${more} more ${moving === 1 ? 'is' : 'are'} under way)` : ''}, ${COUNT[named.length]} come first: ${listOf(named)}.`;
+  return `For ${who}, ${word} ${all.length === 1 ? 'thing waits' : 'things wait'}${under}: ${listOf(named)}.`;
 }
-const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : '');
 export function briefingFor(role, f) {
   const n = (x, one, many) => `${x} ${x === 1 ? one : many}`;
   const who = ROLE_WORD[role] || 'you';

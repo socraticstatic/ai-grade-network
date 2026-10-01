@@ -212,21 +212,23 @@ test('each title and headline opens its full list; a card\'s list holds every ro
 
 test('each row\'s figure opens the one thing it counts', () => {
   const at = (k, i = 0, view = 'partial', patch = {}) => { const c = ins(view, patch); const r = card(vals(c), k).rows[i]; r.figGo(); return { st: c.state, r, v: vals(c) }; };
+  // w2 (2026-09-30): a region's traffic, a pair's and a flow's latency open their records with
+  // the row's figure on the landing; the Traffic map scoped to the region drew the sites' traffic to it.
   let x = at('talkers');
-  assert.equal(x.st.obPage, 'perf'); assert.equal(x.st.obPanel, 'map'); assert.equal(x.st.mapRegion, x.r.region);
+  assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.label, x.r.label); assert.equal(x.st.explain.value, x.r.v); assert.equal(x.st.explain.region, x.r.region);
   x = at('newdest');
   assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.label, x.r.label); assert.equal(x.st.explain.pattern, 'internet');
   assert.ok(x.v.hasLogs, 'the destination\'s records page is empty');
   x = at('shadow');
   assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.label, x.r.label); assert.ok(x.v.hasLogs);
-  // A flow opens its region on the map in the SLO view; a spike opens its problem, as Health's row does.
+  // A flow opens its records with its latency named; a spike opens its problem, as Health's row does.
   const sloRows = card(vals(ins('partial')), 'slo').rows;
   x = at('slo', sloRows.findIndex(r => r.id));
-  assert.equal(x.st.obPage, 'perf'); assert.equal(x.st.mapMode, 'slo'); assert.ok(x.st.mapRegion);
+  assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.value, x.r.v); assert.ok(x.v.hasLogs);
   x = at('slo', sloRows.findIndex(r => !r.id));
   assert.equal(x.st.fdKey, x.r.key); assert.equal(x.v.fdOpen, true);
   x = at('multi');
-  assert.equal(x.st.obPage, 'perf'); assert.equal(x.st.mapMode, 'state'); assert.ok(x.st.mapRegion);
+  assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.pattern, 'clouds'); assert.equal(x.st.explain.value, x.r.v); assert.ok(x.v.hasLogs);
   x = at('health');
   assert.equal(x.st.fdKey, x.r.key); assert.equal(x.v.fdOpen, true, 'the problem opens in place, in the finding drawer');
   x = at('capacity');

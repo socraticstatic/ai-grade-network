@@ -119,9 +119,31 @@ test('Each role\'s briefing names what waits as its home chips do, and no more',
     const home = vals(mkC({ view, estateParam: null, persona, screen: 's0' }));
     const brief = vals(ins(view, { persona, insPanel: 'brief' })).briefText.toLowerCase();
     const waits = home.roleActAll.filter(a => a.waiting), moving = home.roleActAll.filter(a => !a.waiting);
-    const line = (brief.match(/(nothing[^.]*waits[^.]*\.|for [^,.]*, [a-z]+ things? waits?: [^.]*\.|of [a-z]+ things waiting on [^:]*: [^.]*\.)/) || [''])[0];
+    const line = (brief.match(/(nothing[^.]*waits[^.]*\.|for [^,.]*, [a-z]+ things? waits?(?: and [a-z]+ more (?:is|are) under way)?: [^.]*\.|of [a-z]+ things waiting on [^:]*: [^.]*\.)/) || [''])[0];
     for (const a of home.homeWaiting) assert.ok(line.includes(first(a.head)), `${view} ${persona}: the home's chip "${a.head}" is not in the briefing's "${line}"`);
     for (const a of moving) assert.ok(!line.includes(first(a.head)), `${view} ${persona}: the briefing says "${a.head}" waits; the home says it is under way`);
     if (!waits.length) assert.match(line, /^nothing/, `${view} ${persona}: nothing waits on the home, yet the briefing reads "${line}"`);
   }
+});
+
+test('A Signals traffic figure opens its records with that figure, never a map scoped to a figure it does not print', () => {
+  let seen = 0;
+  for (const view of VIEWS) for (const persona of ['architect', 'neteng', 'security', 'finops']) {
+    const v = vals(ins(view, { persona }));
+    for (const k of ['talkers', 'multi', 'slo']) {
+      const cd = card(v, k); if (!cd) continue;
+      cd.all.forEach((r, i) => {
+        if (r.fig === 'finding') return;
+        const c = ins(view, { persona });
+        card(vals(c), k).all[i].figGo();
+        const st = c.state;
+        assert.equal(st.obPage, 'logs', `${view} ${persona} ${k} ${r.label}: ${r.v} opens ${st.obPage}/${st.obPanel}, not its records`);
+        assert.equal(st.explain.value, r.v, `${view} ${persona} ${k} ${r.label}: the landing explains ${st.explain.value}, the row reads ${r.v}`);
+        assert.ok(st.explain.label.includes(r.label), `${view} ${persona} ${k}: the landing names "${st.explain.label}", the row "${r.label}"`);
+        if (persona === 'neteng') assert.ok(vals(c).hasLogs, `${view} ${k} ${r.label}: the records page is empty`);
+        seen += 1;
+      });
+    }
+  }
+  assert.ok(seen > 20, `only ${seen} figures checked`);
 });

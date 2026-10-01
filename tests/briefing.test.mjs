@@ -114,11 +114,14 @@ test('the briefing reads as English on every estate, for every role', () => {
       readsAsEnglish(t, where);
       if (['small', 'empty'].includes(view)) assert.match(t, /Nothing was banked last month/, where);
       else assert.match(t, /Acting banked \$[1-9][\d,]* last month/, where);
-      const n = acts.length, w = COUNT[n] || String(n);
-      if (!n) assert.match(t, /Nothing waits on /, where);
-      else if (n <= 3) assert.ok(t.includes(`, ${w} ${n === 1 ? 'thing waits' : 'things wait'}: `), `${where}: ${n} waiting: ${t}`);
+      // w2 (2026-09-30): what waits is what the home's chips list, the open ones; what is
+      // accepted or under way is counted in the same sentence, never said to wait.
+      const waits = acts.filter(a => a.waiting), moving = acts.length - waits.length;
+      const n = waits.length, w = COUNT[n] || String(n), more = moving ? ` and ${COUNT[moving]} more ${moving === 1 ? 'is' : 'are'} under way` : '';
+      if (!n) assert.match(t, moving ? /Nothing new waits on [^;]*; \w+ (is|are) under way\./ : /Nothing waits on /, where);
+      else if (n <= 3) assert.ok(t.includes(`, ${w} ${n === 1 ? 'thing waits' : 'things wait'}${more}: `), `${where}: ${n} waiting: ${t}`);
       else assert.ok(t.includes(`Of ${w} things waiting on `) && t.includes(', three come first: '), `${where}: ${n} waiting: ${t}`);
-      for (const a of acts.slice(0, 3)) {
+      for (const a of waits.slice(0, 3)) {
         const c = lead(a.head);
         assert.ok(t.includes(c) || t.includes(c[0].toLowerCase() + c.slice(1)), `${where}: "${c}" missing from ${t}`);
       }
