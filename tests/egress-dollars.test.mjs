@@ -20,7 +20,8 @@ test('Growing: the card reads in dollars, then, now and the difference', () => {
   assert.equal(g.nowF, '$71,600');
   assert.equal(g.thenF, '$64,800');
   assert.equal(g.deltaF, '+$6,800');
-  assert.match(g.subF, /^Public egress \+\$6,800\/mo in 12 weeks · \+\d+%$/);
+  // The first column is 11 weeks ago, so the change runs 11 weeks (third round, 2026-09-30: the head said 12).
+  assert.match(g.subF, /^Public egress \+\$6,800\/mo in 11 weeks · \+\d+%$/);
 });
 
 test('Established: this week equals the public egress the Cost verdict counts', () => {

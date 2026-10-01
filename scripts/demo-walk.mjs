@@ -149,7 +149,8 @@ await beat('6 Cost: the four moves, then By leg', async () => {
 // three lead, each row with its move; Your actions is the next tab, unchanged.
 await beat('7 Insights: Signals, Your actions and Operations', async () => {
   await rail('Insights');
-  await expect('Health', '2 problems · 2 apps affected', 'Latency over SLO', 'Capacity', 'Trace', 'Steer', 'Resize');
+  // westeurope is not on AT&T, so its flows offer Attach; Steer stays on us-east-1 to eastus (third round, 2026-09-30).
+  await expect('Health', '2 problems · 2 apps affected', 'Latency over SLO', 'Capacity', 'Trace', 'Attach', 'Steer', 'Resize');
   const lead = await page.locator('[aria-label="Signal cards"] .sig-head .t').allInnerTexts();
   if (!/^Health/.test(lead[0] || '') || !/^Latency over SLO/.test(lead[1] || '') || !/^Capacity/.test(lead[2] || '')) throw new Error(`Network Eng leads with ${lead.slice(0, 3).join(', ')}`);
   await tab('Your actions', '[aria-label="Insights views"]');

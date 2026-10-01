@@ -137,7 +137,7 @@ export function anomalies(est, ob, now = Date.now()) {
   if (newDest) out.push({ key: 'an-dest', when: 'Yesterday', sev: 'amber', head: `New destination from ${newDest.region}: files.slack-edge.com`, cause: `Workloads tagged Prod began sending 3.1 GB/day to a destination not seen in the prior 30 days.`, did: 'Logged and classified as SaaS; no policy matched, so nothing was blocked.', can: 'Author a policy: when tag Prod reaches the Internet, require inline inspection.', region: newDest.region });
   // The same series the Signals card draws (2026-09-30): the card's drill lands here.
   const ew = egressWeeks(ob), ePct = ew[0].pub > 0 ? Math.round((ew[11].pub / ew[0].pub - 1) * 100) : 0;
-  if (ob.pub > 0) out.push({ key: 'an-egress', when: 'This week', sev: 'info', head: `Public egress ${(ePct >= 0 ? '+' : '') + ePct}% in 12 weeks`, cause: `Growth is concentrated in object-storage reads from ${est.regionsList.filter(r => !r.priv).map(r => r.region).slice(0, 2).join(' and ') || 'unattached regions'}.`, did: 'Priced the same bytes on AT&T.', can: `Steer the object-storage flow: ${fmt(Math.round(ob.pub * 1000 * 0.07 * 30 / 10) * 10)}/mo back.` });
+  if (ob.pub > 0) out.push({ key: 'an-egress', when: 'This week', sev: 'info', head: `Public egress ${(ePct >= 0 ? '+' : '') + ePct}% in 11 weeks`, cause: `Growth is concentrated in object-storage reads from ${est.regionsList.filter(r => !r.priv).map(r => r.region).slice(0, 2).join(' and ') || 'unattached regions'}.`, did: 'Priced the same bytes on AT&T.', can: `Steer the object-storage flow: ${fmt(Math.round(ob.pub * 1000 * 0.07 * 30 / 10) * 10)}/mo back.` });
   return out;
 }
 export function insights(est, ob) {
@@ -237,9 +237,13 @@ export function gbPerWlExport(est, base) { return gbPerWl(est, base); }
 // ---------- Insight widgets: data shaped for drawing, not reading ----------
 /** Twelve weeks of egress, AT&T under public, from this window's volumes (2026-09-30:
  *  one series for the Signals card and the an-egress finding; no 1.0 Gbps stand-ins). */
+// This week is the window's own volumes, to the tenth (third round, 2026-09-30: it
+// read 0.5% under them, 27.4 Gbps public beside Top talkers' 27.5); the weeks
+// before keep the same shape, so every ratio and dollar holds.
 export function egressWeeks(ob) {
   const pub = ob.pub || 0, fab = ob.fab || 0;
-  return Array.from({ length: 12 }, (_, i) => ({ pub: pub * Math.pow(1.02, i) * (0.9 + 0.1 * Math.sin(i)), fab: fab * (0.97 + 0.03 * Math.cos(i * 0.6)) }));
+  const p = (i) => Math.pow(1.02, i) * (0.9 + 0.1 * Math.sin(i)), f = (i) => 0.97 + 0.03 * Math.cos(i * 0.6);
+  return Array.from({ length: 12 }, (_, i) => ({ pub: i === 11 ? pub : pub * p(i) / p(11), fab: i === 11 ? fab : fab * f(i) / f(11) }));
 }
 export function insightWidgets(est, ob, win = 30, price = {}) {
   const rs = est.regionsList; if (!rs.length) return null;
@@ -249,7 +253,13 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   // Every region, so Signals' full list holds what the card counts (2026-09-30); the card draws five.
   const tk = rs.map(r => ({ r, gbps: regGbps(r) })).sort((a, b) => b.gbps - a.gbps);
   const tMax = Math.max(1, ...tk.map(t => t.gbps)), tTot = ob.total || 1;
-  const talkersAll = tk.map(({ r, gbps }) => ({ key: r.region, region: r.region, cloud: r.cloud, label: `${r.cloud} ${r.region}`, sub: `${r.priv ? rampName(r) : 'public internet'} · ${r.tags.slice(0, 2).join(' · ') || 'untagged'}`, gbps, v: gbps.toFixed(1) + ' Gbps', share: pct(gbps, tTot) + '%', w: Math.round(gbps / tMax * 100) + '%', priv: r.priv, fill: r.priv ? 'var(--viz-1)' : 'var(--viz-6)' }));
+  // What each region sends outside AT&T, its cross-cloud pairs included at their first
+  // end (third round, 2026-09-30): Top talkers by egress and by exposure gave all public
+  // traffic to the public regions while Cloud-to-cloud and Coverage counted a public pair
+  // between two attached ones. The sum is ob.pub, Egress growth's this week.
+  const pubOf = (r) => +flows.filter(f => !f.controlled && f.region === `${r.cloud} ${r.region}`).reduce((a, f) => a + f.gbps, 0).toFixed(1);
+  const talkersAll = tk.map(({ r, gbps }) => ({ key: r.region, region: r.region, cloud: r.cloud, label: `${r.cloud} ${r.region}`, sub: `${r.priv ? rampName(r) : 'public internet'} · ${r.tags.slice(0, 2).join(' · ') || 'untagged'}`, gbps, v: gbps.toFixed(1) + ' Gbps', share: pct(gbps, tTot) + '%', w: Math.round(gbps / tMax * 100) + '%', priv: r.priv, fill: r.priv ? 'var(--viz-1)' : 'var(--viz-6)',
+    ramp: r.priv ? rampName(r) : '', pubG: pubOf(r) }));
   const talkers = talkersAll.slice(0, 5);
   // The region a flow belongs to, so its row opens that region on the map.
   const regionOf = (f) => (rs.find(r => `${r.cloud} ${r.region}` === f.region) || {}).region || null;
@@ -278,15 +288,19 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   const pctOf = (a, b) => (b > 0 ? sgn(Math.round((a / b - 1) * 100) || 0) : '');
   const thenMo = mo(wk[0].pub), nowMo = mo(wk[11].pub), deltaMo = nowMo - thenMo, priced = rate > 0 && nowMo > 0;
   const pubPctF = pctOf(wk[11].pub, wk[0].pub), fabPctF = pctOf(wk[11].fab, wk[0].fab);
+  // The change runs from the first column, 11 weeks ago, to this week: the head says 11 (third round, 2026-09-30).
   const growth = { weeks, pubPct: (wk[0].pub > 0 ? Math.round((wk[11].pub / wk[0].pub - 1) * 100) : 0), fabPct: (wk[0].fab > 0 ? Math.round((wk[11].fab / wk[0].fab - 1) * 100) : 0), pubNow: wk[11].pub.toFixed(1), fabNow: wk[11].fab.toFixed(1), pubThen: wk[0].pub.toFixed(1), pubPctF, fabPctF,
     thenMo, nowMo, deltaMo, thenF: priced ? money(thenMo) : '', nowF: priced ? money(nowMo) : '', deltaF: priced ? (deltaMo >= 0 ? '+' : '-') + money(Math.abs(deltaMo)) : '',
-    subF: priced ? `Public egress ${(deltaMo >= 0 ? '+' : '-') + money(Math.abs(deltaMo))}/mo in 12 weeks · ${pubPctF}` : `Public ${pubPctF || 'none'} · AT&T ${fabPctF || 'none'}`,
+    subF: priced ? `Public egress ${(deltaMo >= 0 ? '+' : '-') + money(Math.abs(deltaMo))}/mo in 11 weeks · ${pubPctF}` : `Public ${pubPctF || 'none'} · AT&T ${fabPctF || 'none'}`,
     thenLabel: priced ? `${money(thenMo)}/mo · 11 weeks ago` : '11 weeks ago', nowLabel: priced ? `this week · ${money(nowMo)}/mo` : 'this week' };
   // 5. Multi-cloud paths: every cloud-to-cloud flow.
-  // A flow can be steered onto AT&T only where AT&T already carries something (2026-09-30:
-  // Small offered Steer with nothing attached); otherwise its first step is Attach.
-  const onAtt = rs.some(r => r.priv);
-  const canSteer = (f) => onAtt && !!f.steerable && !f.controlled;
+  // A flow can be steered onto AT&T only where one of its own ends is on AT&T (third
+  // round, 2026-09-30: Growing offered Steer on us-west-2 to us-central1 and on the
+  // westeurope flows, none of them attached, and one click put them "on AT&T");
+  // otherwise its first step is Attach. An App flow's one end is its region.
+  const privName = new Set(rs.filter(r => r.priv).map(r => `${r.cloud} ${r.region}`));
+  const endsOf = (f) => (f.kind === 'App' ? [f.region] : f.name.split(' ↔ '));
+  const canSteer = (f) => !!f.steerable && !f.controlled && endsOf(f).some(n => privName.has(n));
   const pathOf = (f) => (f.controlled ? 'on AT&T' : 'public internet');
   // A cloud-to-cloud pair reads by its regions, its clouds on the line under it, so
   // "GCP us-central1 ↔ CoreWeave us-east-04" never clips on a card (2026-09-30).

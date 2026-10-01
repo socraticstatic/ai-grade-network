@@ -23,7 +23,9 @@ const MOVES = {
   snoozed: ['open', 'ack', 'progress', 'dismissed'],
   dismissed: ['open'],
 };
-const OWNER = { FinOps: 'FinOps · J. Rivera', 'FinOps & SRE': 'FinOps · J. Rivera', 'Security & Compliance': 'Security · M. Chen', 'Network Engineering': 'Network Eng · R. Patel', 'Security and Compliance': 'Security · M. Chen' };
+// The Architect owns coverage and topology (2026-09-30), so its findings carry
+// its owner: with no entry here they fell back to Network Eng (third round).
+const OWNER = { FinOps: 'FinOps · J. Rivera', 'FinOps & SRE': 'FinOps · J. Rivera', 'Security & Compliance': 'Security · M. Chen', 'Network Engineering': 'Network Eng · R. Patel', 'Security and Compliance': 'Security · M. Chen', 'Cloud & Platform Architect': 'Architect · A. Okafor' };
 // The day the demo's seeded history is written against.
 const ANCHOR = Date.UTC(2026, 8, 29);
 const DAY = 86400000;

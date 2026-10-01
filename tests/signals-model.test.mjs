@@ -50,7 +50,8 @@ const T = [
 test('Top talkers by egress: the Gbps that bills as public egress, and the buckets\' dollars as its total', () => {
   const t = SG.talkers(T, 'egress', { pubMo: 8000, covPct: 68 });
   assert.equal(t.title, 'Top talkers by egress');
-  assert.equal(t.head, '$8,000/mo public egress · 2 regions');
+  // The head is Growth's this week, dollars and Gbps, and names no region count the dollars are not split by (third round, 2026-09-30).
+  assert.equal(t.head, '$8,000/mo public egress · 8.0 Gbps');
   const pub = t.rows.filter(r => !r.priv);
   assert.deepEqual(pub.map(r => r.key), ['b', 'c'], 'the most public first');
   assert.deepEqual(pub.map(r => [r.v, r.v2]), [['6.0 Gbps', '75% of public'], ['2.0 Gbps', '25% of public']]);
@@ -58,7 +59,7 @@ test('Top talkers by egress: the Gbps that bills as public egress, and the bucke
   assert.deepEqual(pub.map(r => r.segs[0].w), ['100.0%', '33.3%'], 'on the public regions\' own scale');
   assert.ok(t.rows.filter(r => r.priv).every(r => r.v2 === 'On AT&T' && r.act === 'Ask Andi' && !r.segs.length));
   assert.ok(pub.every(r => r.act === 'Optimize' && r.actKind === 'optimize'));
-  assert.equal(SG.talkers(T, 'egress', { pubMo: 0 }).head, '8.0 Gbps public from 2 regions', 'scoped: no dollars it cannot split');
+  assert.equal(SG.talkers(T, 'egress', { pubMo: 0 }).head, '8.0 Gbps public egress', 'scoped: no dollars it cannot split');
 });
 
 test('Top talkers by exposure: the public internet first, each with Set policy', () => {
@@ -67,7 +68,8 @@ test('Top talkers by exposure: the public internet first, each with Set policy',
   assert.deepEqual(t.rows.map(r => r.key), ['b', 'c', 'a', 'd']);
   assert.ok(t.rows.filter(r => !r.priv).every(r => r.act === 'Set policy' && r.actKind === 'policy-region'));
   assert.ok(t.rows.filter(r => r.priv).every(r => r.act === 'Policies' && r.actKind === 'policies'));
-  assert.match(t.head, /^2 regions on the public internet · 8\.0 Gbps$/);
+  // The public Gbps and its share of traffic, Coverage's complement (third round, 2026-09-30).
+  assert.equal(t.head, '8.0 Gbps public · 32% of traffic');
 });
 
 test('Top talkers by coverage: what rides AT&T, and Attach for what does not', () => {

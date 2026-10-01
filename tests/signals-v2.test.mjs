@@ -79,7 +79,8 @@ test('Add a port lands on an order that names the connection and the port; Attac
   assert.equal(st.screen, 's4');
   const f0 = CF.flowOf(st.compose, ESTATES.mature);
   assert.deepEqual(f0.regions, [row.label]);
-  assert.equal(f0.note, `Add a port to ${row.label}: it peaks at 84% of 2 × 10 Gbps.`);
+  // And that it is a second port beside the connection it relieves (third round, 2026-09-30).
+  assert.equal(f0.note, `Add a port to ${row.label}: it peaks at 84% of 2 × 10 Gbps. This order adds a 10 Gbps port beside the Direct Connect.`);
   // Your actions' Architect row is the same move, so it lands the same way.
   const a = mkC({ view: 'mature', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'role', persona: 'architect' });
   const port = vals(a).roleActAll.find(x => x.doorLabel === 'Add a port');
@@ -210,7 +211,9 @@ test('an empty card never leads', () => {
 test('Top talkers by exposure draws the exposed: public bars on their own scale, nothing for what rides AT&T', () => {
   for (const view of ['partial', 'mature', 'trust']) {
     const all = listOf(view, 'security', 'talkers');
-    const pub = all.filter(r => !r.priv), priv = all.filter(r => r.priv);
+    // A region on AT&T whose cross-cloud pair rides the public internet is exposed too (third
+    // round, 2026-09-30); what rides AT&T whole reads On AT&T and draws nothing.
+    const pub = all.filter(r => r.v2 !== 'On AT&T'), priv = all.filter(r => r.v2 === 'On AT&T');
     if (pub.length) assert.equal(pub[0].segs[0].w, '100.0%', `${view}: the most exposed region is not the longest bar`);
     for (const r of priv) assert.equal(r.segs.length, 0, `${view} ${r.label} rides AT&T and still draws a bar`);
   }

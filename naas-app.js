@@ -1078,9 +1078,13 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
   const V = {
     talkers: () => bars('talkers', 'Top talkers', `Last ${iw.winLabel || '30 days'}`, iw.talkers || []),
     newdest: () => bars('newdest', 'New destinations', `Last ${iw.winLabel || '30 days'}`, iw.newDest || []),
-    shadow: () => bars('shadow', 'Shadow SaaS', 'no policy covers these', iw.shadow || []),
+    // What its sub-line says: no policy covers these, so a covered domain is not one (third round, 2026-09-30).
+    shadow: () => bars('shadow', 'Shadow SaaS', 'no policy covers these', (iw.shadowAll || iw.shadow || []).filter(r => !r.covered)),
     multi: () => bars('multi', 'Cloud to cloud', 'pairs and the path they take', (iw.multi || {}).rows || []),
-    slo: () => bars('slo', 'Latency over SLO', iw.sloLegend || '', iw.slo || []),
+    // One list called Latency over SLO (third round, 2026-09-30): the Signals card's rows,
+    // spikes and flows by the one rule, worst first; iw.slo held the flows alone.
+    slo: () => bars('slo', 'Latency over SLO', iw.sloLegend || '', ((out.sigAll || []).find(x => x.key === 'slo') || { all: [] }).all
+      .map(r => ({ key: r.key, label: r.label, sub: r.sub, v: r.v, w: r.segs[0] ? r.segs[0].w : '0%', fill: r.segs[0] ? r.segs[0].fill : F.HEALTH_INK.slo }))),
     problems: () => bars('problems', 'Health problems', 'ranked by apps affected', (out.problemRows || []).map(p => ({ key: p.key, label: `${p.where} · ${p.thing}`, sub: p.what, v: p.appsF.split(' · ')[0], w: '100%', fill: p.dot }))),
     growth: () => bars('growth', 'Public egress', 'the last four weeks', weeks.map((w, i) => ({ key: 'w' + i, label: WEEK[i + 4 - weeks.length], sub: `AT&T ${w.fab.toFixed(1)} Gbps`, v: `${w.pub.toFixed(1)} Gbps`, w: `${(w.pub / wMax * 100).toFixed(1)}%`, fill: 'var(--viz-6)' }))),
     idle: () => bars('idle', 'Idle capacity', 'ports bought and not used', idle.map(r => ({ key: r.region, label: `${r.cloud} ${r.region}`, sub: `${r.ports} ports bought; ${r.resizeTo} hold the peak`, v: `${r.peakPct}% peak`, w: `${r.peakPct}%`, fill: 'var(--viz-2)' }))),
@@ -1497,16 +1501,23 @@ function composeFor(go, r) {
  * banner says what and why (2026-09-30: Signals' Attach and Add a port landed on
  * a Compose that never named the region or said port).
  */
-function flowFor(go, est, r, note) {
+function flowFor(go, est, r, note, extra = {}) {
   const metro = REGION_GEO[r.region];
-  const sets = { sites: [], regions: [r.region], tier: 'standard', connectionType: 'DataCenter/CoLocation to Cloud', sourceLabel: 'Signals' };
+  const sets = { sites: [], regions: [r.region], tier: 'standard', connectionType: 'DataCenter/CoLocation to Cloud', sourceLabel: 'Signals', ...extra };
   return go('s4', { ...newOrder({ ...prefillCompose(est), metros: metro ? [metro] : [], regionTab: metro ? REGION_OF_METRO(metro) : 'US East',
     prefilled: false, prefillRegion: `${r.cloud} ${r.region}`, prefillWl: r.wl || 0, prefillSets: sets, sourceLabel: 'Signals', noteStep: 0, note }) });
 }
-/** Add a port to a connection near full: the connect flow for its region, saying which and why. Signals and Your actions share it. */
+/**
+ * Add a port to a connection near full: the connect flow for its region, saying
+ * which and why. Signals and Your actions share it. The port is the size of the
+ * ones beside it, and the banner says the order is a second connection beside
+ * the one it relieves (third round, 2026-09-30: it read as a new connection, size
+ * not chosen).
+ */
 function portFlow(go, est, cp) {
   const r = (est.regionsList || []).find(x => x.region === cp.region) || { region: cp.region, cloud: cp.cloud, wl: 0 };
-  return flowFor(go, est, r, `Add a port to ${cp.cloud} ${cp.region}: it peaks at ${cp.peakPct}% of ${cp.ports} × ${cp.portG} Gbps.`);
+  const ramp = rampName({ ramp: cp.ramp }), size = `${cp.portG} Gbps`;
+  return flowFor(go, est, r, `Add a port to ${cp.cloud} ${cp.region}: it peaks at ${cp.peakPct}% of ${cp.ports} × ${cp.portG} Gbps. This order adds a ${size} port beside the ${ramp}.`, { bandwidth: size });
 }
 // One findings list (notes, 2026-09-29): what AT&T found to act on, plus the
 // events it saw, each with a life. The Observe head, the Findings tab and its
@@ -2426,7 +2437,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // Which findings a card holds is naas-signals.js's (2026-09-30): Top talkers
   // follows the persona's lens, and Health and Capacity take the incidents.
   const spikesOver = new Set((probs || []).filter(p => p.kind === 'spike' && p.state === 'slo').map(p => p.key));
-  const sigLens = SG.lensOf(roleKeyOf(s)), sigCtx = { spikesOver };
+  const sigLens = SG.lensOf(roleKeyOf(s)), sigCtx = { spikesOver, persona: roleKeyOf(s) };
   const cardFinds = (k) => SG.findsOf(k, sigLens, sigCtx);
   const insFocus = SG.CARDS.includes(s.insFocus) ? s.insFocus : null;
   const findsFor = (k, label) => { const hit = cardFinds(k), n = lifeRows.filter(x => hit(x.f.key) && bucket(x.l.state) === 'open').length;
@@ -2727,7 +2738,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       'andi-region': (r) => () => set({ andiScope: { kind: 'region', id: r.region, label: r.label }, andiOpen: true }),
       'andi-flow': (r) => () => set({ andiScope: { kind: 'flow', id: r.id, label: r.label }, andiOpen: true }),
       attach: (r) => attachGo(r.region),
-      port: (r) => { const cp = capRows.find(x => x.id === r.key); return cp ? portFlow(go, est0, cp) : () => {}; },
+      // A Health row names its connection by region; a Capacity row by its id.
+      port: (r) => { const cp = capRows.find(x => x.id === r.key) || capRows.find(x => x.region === r.region); return cp ? portFlow(go, est0, cp) : () => {}; },
       resize: (r) => { const cp = capRows.find(x => x.id === r.key); return cp && cp.oversized ? resizeGo(go, cp) : () => {}; },
       'policy-region': (r) => author('region ' + r.region),
       'policy-dest': (r) => author('destination ' + r.label),
@@ -2758,8 +2770,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // FinOps' Top talkers carries the buckets' public egress as its total, never a
     // dollar per region: the buckets price egress by cloud (2026-09-30). Scoped, no dollars.
     const probsAll = probs || [];
+    // Each cloud a bucket still bills above the AT&T rate, by the buckets' names (third round, 2026-09-30).
+    const billsPub = obScope === 'all' ? (est0.buckets || []).filter(b => b.today > b.fabric).reduce((a, b) => ({ ...a, [b.cloud]: [...(a[b.cloud] || []), b.name] }), {}) : {};
     const model = {
-      talkers: SG.talkers(iwRaw.talkersAll, sigLens, { pubMo: obScope === 'all' ? pubMo : 0, covPct: ob.covPct || 0 }),
+      talkers: SG.talkers(iwRaw.talkersAll, sigLens, { pubMo: obScope === 'all' ? pubMo : 0, covPct: ob.covPct || 0, billsPub }),
       newdest: SG.newdest(iwRaw.newDest, { n: iwRaw.newDestN, win: winLabelOf(s) }),
       shadow: SG.shadow(iwRaw.shadowAll, { n: iwRaw.shadowN, gb: iwRaw.shadowGb }),
       growth: SG.growth(iwRaw.growth),
@@ -2767,7 +2781,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       // The one rule Health uses: each flow against its path's SLO, and the spikes Health calls Over SLO.
       slo: SG.slo(iwRaw.sloAll, { total: iwRaw.sloTotal, closest: iwRaw.sloClosest,
         spikes: probsAll.filter(p => p.kind === 'spike' && p.state === 'slo').map(p => ({ key: p.key, region: p.region, where: p.where, ms: p.ms })) }),
-      health: SG.health(probsAll.map(p => ({ key: p.key, region: p.region, state: p.state, where: p.where, thing: p.thing, what: p.what, short: p.short, fig: p.fig, appsN: (p.apps || []).length, wlN: p.wl, apps: p.apps || [] }))),
+      health: SG.health(probsAll.map(p => ({ key: p.key, kind: p.kind, region: p.region, state: p.state, where: p.where, thing: p.thing, what: p.what, short: p.short, fig: p.fig, appsN: (p.apps || []).length, wlN: p.wl, apps: p.apps || [] }))),
       capacity: SG.capacity(capRows),
       spend: SG.spend(est0.buckets || []),
     };

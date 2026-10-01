@@ -220,6 +220,9 @@ export function flowOf(cp, est) {
     const t = sets.map(x => typeOf(x.connectionType)).find(Boolean);
     est_('ctype', t ? t.label : null);
     est_('tier', sets.map(x => normTier(x.tier)).find(Boolean) || null);
+    // A port an entry sized (Signals' Add a port, third round 2026-09-30): the size of the ports beside it.
+    const bw = sets.map(x => x.bandwidth).find(Boolean);
+    if (bw && bandwidthsFor(f).includes(bw)) est_('bandwidth', bw);
     const label = sets.map(x => x.sourceLabel).find(Boolean);
     f.noteTitle = label || cp.sourceLabel || 'From Options';
     // Past two, the banner names two and says there are others; the panel's "All N" opens every one.

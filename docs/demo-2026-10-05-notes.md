@@ -59,7 +59,7 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 
 ## 7. Insights: Signals, Your actions and Operations
 
-- Rail: **Insights**. It lands on **Signals** for Network Eng: **Health** ("2 problems · 2 apps affected"), **Latency over SLO** and **Capacity** lead. Each row carries its move beside its figure: **Trace** on the eastus flap and the eu-west-1 spike, **Steer** on the westeurope flows over the 100 ms SLO, **Resize** on us-east-1.
+- Rail: **Insights**. It lands on **Signals** for Network Eng: **Health** ("2 problems · 2 apps affected"), **Latency over SLO** and **Capacity** lead. Each row carries its move beside its figure: **Trace** on the eastus flap and the eu-west-1 spike, **Attach** on the westeurope flows over the 100 ms SLO (westeurope is not on AT&T yet), **Resize** on us-east-1. Cloud-to-cloud offers **Steer** only on us-east-1 to eastus, whose two ends are on AT&T.
 - Every figure is a door. A row opens the one thing it counts, a card's title opens its full list in place, and the count at its foot opens those findings. The role chips over the cards change which three lead.
 - Tab: **Your actions**, that role's findings, each with its recommendation. **Do it** is visible, disabled, and reads "Coming soon". **Accept** and **Defer** work; Defer snoozes the finding to the next monthly briefing.
 - Tab: **Operations**. "1 Sev 1 open now. N tickets open. Fixes took 20h 31m on average." The fixed list is labelled sample history.
@@ -68,10 +68,10 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 
 ## 8. The Estate switch (F2)
 
-- Rail: **Options**. It still reads the Connect verdict: Growing reads "7 of 9 regions still ride the public internet" (Oracle's two regions joined it in beat 1).
+- Rail: **Recommended**. It still reads the Connect verdict: Growing reads "7 of 9 regions still ride the public internet" (Oracle's two regions joined it in beat 1).
 - Rail: **NaaS**. The home reads "14 findings open" and "25 sites · 4 clouds" now that Oracle is in.
 - Estate, at the foot of the rail: **Established**, while on the home. Every figure recomputes: "10 findings open", "221 sites · 4 clouds", and Waiting on you lists Established's "3 paths send no telemetry", not Growing's rows.
-- Rail: **Options**: "1 of 8 regions still ride the public internet."
+- Rail: **Recommended**: "1 of 8 regions still ride the public internet."
 - The answer to the stakeholder's question is Appendix A of the plan (docs/superpowers/plans/2026-09-30-notes-monday-demo.md).
 
 ## If something goes sideways
