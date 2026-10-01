@@ -44,11 +44,13 @@ test('the flow records page to fit the fold, and say where you are', () => {
   const c = mkC({ view: 'partial', screen: 's3', tab: 'observe', obPage: 'logs', estateParam: null });
   let v = vals(c);
   assert.ok(v.flowRecords.length > 0 && v.flowRecords.length <= v.logPageSize);
-  assert.equal(v.logPager.label, `1–${v.logPageSize} of 20`);
+  // 24, not 20 (w2 second pass, 2026-09-30): every region now has its internet and its
+  // across-regions record, and every cloud-to-cloud pair one record on its own path.
+  assert.equal(v.logPager.label, `1–${v.logPageSize} of 24`);
   assert.equal(v.logPager.prevOp, 0.4, 'no page before the first');
   v.logPager.next();
   v = vals(c);
-  assert.equal(v.logPager.label, `${v.logPageSize + 1}–${v.logPageSize * 2} of 20`);
+  assert.equal(v.logPager.label, `${v.logPageSize + 1}–${v.logPageSize * 2} of 24`);
   v.setLogQ({ target: { value: 'prod' } });
   assert.equal(vals(c).logPager.label.startsWith('1–'), true, 'a new filter starts at the first page');
 });

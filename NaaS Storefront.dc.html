@@ -1537,7 +1537,7 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
   </div>
   <sc-if value="{{ logPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ logPager.label }}</span><button class="fx-btn" onClick="{{ logPager.prev }}" aria-label="Previous page" style="opacity:{{ logPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ logPager.next }}" aria-label="Next page" style="opacity:{{ logPager.nextOp }}">›</button></div></sc-if>
   </sc-if>
-  <sc-if value="{{ noLogs }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px">Nothing matches these filters.</div></sc-if>
+  <sc-if value="{{ noLogs }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px">{{ logEmptyLine }}</div></sc-if>
   </sc-if>
   <sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}">
   <label class="fx-search" style="width:100%"><span aria-hidden="true"></span><input value="{{ actQ }}" onChange="{{ setActQ }}" placeholder="Person, action, region, policy" aria-label="Search user activity"></input></label>

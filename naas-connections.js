@@ -140,16 +140,29 @@ export function records(est, inv, ob, pattern = 'all') {
   const push = (id, pat, src, dst, path, action, seed) => out.push({ id, pattern: pat, time: `14:0${hash(seed) % 10}:${String(10 + hash(seed + 'x') % 50)}`, srcName: src.name, srcSub: src.sub, dstName: dst.name, dstSub: dst.sub, proto: pick(seed + 'p', PROTO), bytes: (0.2 + (hash(seed + 'b') % 900) / 100).toFixed(1) + ' GB', path, action, deny: action === 'deny' });
   const wlRef = (w) => ({ name: `${w.tag || w.vpc}/${w.name}`, sub: `${w.ip} · ${w.region}` });
   const hit = (ip) => resolveDest(inv, ip);
-  regionsOf.slice(0, 4).forEach((r, i) => {
+  const flows = (ob && ob.flows) || [];
+  // Every region's traffic to the internet has a record, and every cloud-to-cloud pair has one on
+  // the path the pair takes (w2, 2026-09-30): only the first four regions had records, and a
+  // cross-cloud record ran from each of them to the first workload in another cloud, so a Signals
+  // figure for westeurope, or for the us-east-1 ↔ eastus pair outside AT&T, landed on records of
+  // other regions and other pairs, on AT&T.
+  regionsOf.forEach((r, i) => {
     const mine = wls.filter(w => w.region === r.region); if (mine.length < 2) return;
     const a = mine[0], b = mine[Math.min(3, mine.length - 1)];
-    push(`rec-region-${i}`, 'region', wlRef(a), hit(b.ip) || { name: b.ip, sub: 'unresolved' }, r.priv ? 'private' : 'public', 'allow', `r${i}`);
-    const other = wls.find(w => w.cloud === r.cloud && w.region !== r.region);
-    if (other) push(`rec-regions-${i}`, 'regions', wlRef(a), hit(other.ip) || { name: other.ip, sub: 'unresolved' }, r.priv && other.priv ? 'private' : 'public', 'allow', `x${i}`);
-    const xc = wls.find(w => w.cloud !== r.cloud);
-    if (xc) push(`rec-clouds-${i}`, 'clouds', wlRef(a), hit(xc.ip) || { name: xc.ip, sub: 'unresolved' }, r.priv && xc.priv ? 'private' : 'public', 'allow', `c${i}`);
+    // Each record rides the path its region's flow of that kind takes: on AT&T where the flow is
+    // controlled (attached, or steered), else outside it.
+    const flowOf = (to) => flows.find(f => f.kind === 'App' && f.region === `${r.cloud} ${r.region}` && f.to === to);
+    if (i < 4) push(`rec-region-${i}`, 'region', wlRef(a), hit(b.ip) || { name: b.ip, sub: 'unresolved' }, r.priv ? 'private' : 'public', 'allow', `r${i}`);
+    const other = wls.find(w => w.cloud === r.cloud && w.region !== r.region), fo = flowOf('object storage');
+    if (other) push(`rec-regions-${i}`, 'regions', wlRef(a), hit(other.ip) || { name: other.ip, sub: 'unresolved' }, (fo ? fo.controlled : r.priv && other.priv) ? 'private' : 'public', 'allow', `x${i}`);
+    const fi = flowOf('AI endpoints');
     const pd = PUBLIC_DST[i % PUBLIC_DST.length];
-    push(`rec-internet-${i}`, 'internet', wlRef(mine[1]), { name: pd[0], sub: pd[1] }, 'public', r.priv && (a.tag === 'pci' || a.tag === 'prod') ? 'deny' : 'allow', `n${i}`);
+    push(`rec-internet-${i}`, 'internet', wlRef(mine[1]), { name: pd[0], sub: pd[1] }, (fi ? fi.controlled : r.priv) ? 'private' : 'public', r.priv && (a.tag === 'pci' || a.tag === 'prod') ? 'deny' : 'allow', `n${i}`);
+  });
+  (est.arcs || []).forEach((arc, i) => {
+    const a = wls.find(w => w.region === arc.from), b = wls.find(w => w.region === arc.to); if (!a || !b) return;
+    const f = flows.find(x => x.id === `x-${i}`);
+    push(`rec-clouds-${i}`, 'clouds', wlRef(a), hit(b.ip) || { name: b.ip, sub: 'unresolved' }, (f ? f.controlled : arc.priv) ? 'private' : 'public', 'allow', `c${i}`);
   });
   sites.slice(0, 4).forEach((st, i) => {
     const target = wls.find(w => w.priv) || wls[0]; if (!target) return;

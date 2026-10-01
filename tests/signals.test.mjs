@@ -187,7 +187,8 @@ test('each title and headline opens its full list; a card\'s list holds every ro
   const v0 = vals(c0);
   const iw = v0.iw;
   // Latency over SLO holds the spikes Health calls Over SLO beside the flows, and Egress growth its twelve weeks (2026-09-30).
-  const spikes = (v0.problemRows || []).filter(p => /^an-(?!link-|sat-)/.test(p.key) && p.state === 'slo').length;
+  // A region over its SLO is a Health problem too (w2 second pass, 2026-09-30); its flows are already the card's rows.
+  const spikes = (v0.problemRows || []).filter(p => /^an-(?!link-|sat-|slo-)/.test(p.key) && p.state === 'slo').length;
   const full = { talkers: iw.talkersAll.length, newdest: iw.newDestN, shadow: iw.shadowAll.length, multi: iw.multi.totalN, slo: iw.sloN + spikes, growth: 12 };
   for (const [k, n] of Object.entries(full)) {
     const c = ins('partial');
@@ -215,7 +216,8 @@ test('each row\'s figure opens the one thing it counts', () => {
   // w2 (2026-09-30): a region's traffic, a pair's and a flow's latency open their records with
   // the row's figure on the landing; the Traffic map scoped to the region drew the sites' traffic to it.
   let x = at('talkers');
-  assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.label, x.r.label); assert.equal(x.st.explain.value, x.r.v); assert.equal(x.st.explain.region, x.r.region);
+  // w2 second pass (2026-09-30): a region's figure counts what it sends, so its records are the ones from it (src).
+  assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.label, x.r.label); assert.equal(x.st.explain.value, x.r.v); assert.equal(x.st.explain.src, x.r.region);
   x = at('newdest');
   assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.label, x.r.label); assert.equal(x.st.explain.pattern, 'internet');
   assert.ok(x.v.hasLogs, 'the destination\'s records page is empty');

@@ -22,9 +22,12 @@ const growing = (patch = {}) => mkC({ view: 'partial', estateParam: null, nowIso
 // Each page's ticket cell, read the way the markup shows it: Health prints
 // ticketF only when the row is ticketed; Operations prints it always, and
 // "No ticket yet" is no ticket.
+// Health pages three to a page; every page is read (w2 second pass, 2026-09-30: Growing has three
+// problems since westeurope's latency over SLO joined the eastus flap and the eu-west-1 spike).
 function both(c) {
-  c.setState(HEALTH);
-  const h = vals(c).problemRows;
+  c.setState({ ...HEALTH, probPage: 0 });
+  let hv = vals(c); const h = [...hv.problemRows];
+  while (hv.probPager.many && hv.probPager.nextOp === 1) { hv.probPager.next(); hv = vals(c); h.push(...hv.problemRows); }
   c.setState(OPS);
   const o = vals(c);
   const health = Object.fromEntries(h.map(r => [r.key, { ticket: r.ticketed ? r.ticketF : null, button: !!r.canTicket }]));
@@ -33,27 +36,27 @@ function both(c) {
 }
 const openTile = (o) => o.opsTiles.find(t => t.key === 'open').v;
 
-test('Andi On, the default: both Growing problems carry Andi\'s ticket on Health and on Operations, and neither offers Open ticket', () => {
+test('Andi On, the default: every Growing problem carries Andi\'s ticket on Health and on Operations, and none offers Open ticket', () => {
   const { health, ops, o } = both(growing());
   assert.deepEqual(health, ops);
-  assert.deepEqual(Object.keys(health).sort(), ['an-eu-west-1', 'an-link-eastus']);
+  assert.deepEqual(Object.keys(health).sort(), ['an-eu-west-1', 'an-link-eastus', 'an-slo-westeurope']);
   for (const k of Object.keys(health)) {
     assert.match(health[k].ticket || '', /^T-\d{4} · opened by Andi$/, k);
     assert.equal(health[k].button, false, k);
   }
-  assert.equal(o.opsLine, '1 Sev 1 open now. 2 tickets open. Fixes took 20h 31m on average.');
-  assert.equal(o.opsPanels[1].label, 'Tickets · 2');
-  assert.equal(openTile(o), '2');
+  assert.equal(o.opsLine, '1 Sev 1 open now. 3 tickets open. Fixes took 20h 31m on average.');
+  assert.equal(o.opsPanels[1].label, 'Tickets · 3');
+  assert.equal(openTile(o), '3');
 });
 
 test('Andi Off: no ticket on either page, Open ticket on both, and the line calls them incidents, not tickets', () => {
   const { health, ops, o } = both(growing({ andiTickets: false }));
   assert.deepEqual(health, ops);
   for (const k of Object.keys(health)) assert.deepEqual(health[k], { ticket: null, button: true }, k);
-  assert.equal(o.opsLine, '1 Sev 1 open now. 0 tickets open, 2 incidents without one. Fixes took 20h 31m on average.');
+  assert.equal(o.opsLine, '1 Sev 1 open now. 0 tickets open, 3 incidents without one. Fixes took 20h 31m on average.');
   assert.equal(o.opsPanels[1].label, 'Tickets · 0');
   assert.equal(openTile(o), '0');
-  assert.equal(o.ticketAll.length, 2, 'an incident with no ticket still lists under Tickets');
+  assert.equal(o.ticketAll.length, 3, 'an incident with no ticket still lists under Tickets');
   assert.ok(o.ticketAll.every(r => r.ticketF === 'No ticket yet'));
 });
 
@@ -65,7 +68,7 @@ test('Open ticket on Health, Andi Off: eastus reads In progress on both pages, e
   assert.match(health['an-link-eastus'].ticket || '', /^T-\d{4} · In progress$/);
   assert.equal(health['an-link-eastus'].button, false);
   assert.deepEqual(health['an-eu-west-1'], { ticket: null, button: true });
-  assert.equal(o.opsLine, '1 Sev 1 open now. 1 ticket open, 1 incident without one. Fixes took 20h 31m on average.');
+  assert.equal(o.opsLine, '1 Sev 1 open now. 1 ticket open, 2 incidents without one. Fixes took 20h 31m on average.');
   assert.equal(o.opsPanels[1].label, 'Tickets · 1');
   assert.equal(openTile(o), '1');
 });
@@ -82,8 +85,8 @@ test('a ticket opened on Operations keeps Andi\'s number, and turning Andi back 
   assert.deepEqual(health, ops);
   assert.deepEqual(health['an-link-eastus'], { ticket: `${num('an-link-eastus')} · In progress`, button: false });
   assert.deepEqual(health['an-eu-west-1'], { ticket: `${num('an-eu-west-1')} · opened by Andi`, button: false });
-  assert.equal(o.opsLine, '1 Sev 1 open now. 2 tickets open. Fixes took 20h 31m on average.');
-  assert.equal(o.opsPanels[1].label, 'Tickets · 2');
+  assert.equal(o.opsLine, '1 Sev 1 open now. 3 tickets open. Fixes took 20h 31m on average.');
+  assert.equal(o.opsPanels[1].label, 'Tickets · 3');
 });
 
 test('every estate: the open-ticket count is the rows that carry a ticket, on both pages, with Andi On and Off', () => {

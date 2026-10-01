@@ -118,7 +118,10 @@ test('Latency over SLO follows the one rule Health uses: 20 ms on AT&T, 100 ms o
     const o = observe(ESTATES[view], [], null);
     const want = o.flows.filter(f => F.healthOf(f.latency, f.controlled ? F.SLO_PRIVATE : F.SLO) === 'slo').map(f => f.id).sort();
     assert.deepEqual(all.filter(r => r.id).map(r => r.id).sort(), want, `${view}: the flows over their path's SLO`);
-    const spikes = (v.problemRows || []).filter(p => /^an-(?!link-|sat-)/.test(p.key) && p.state === 'slo').map(p => p.key).sort();
+    // A region over its SLO is a Health problem too (w2 second pass, 2026-09-30); its flows are the card's rows, so only spikes add one.
+    const pc = ins(view); let pv = vals(pc); const probAll = [...pv.problemRows];
+    while (pv.probPager.many && pv.probPager.nextOp === 1) { pv.probPager.next(); pv = vals(pc); probAll.push(...pv.problemRows); }
+    const spikes = probAll.filter(p => /^an-(?!link-|sat-|slo-)/.test(p.key) && p.state === 'slo').map(p => p.key).sort();
     assert.deepEqual(all.filter(r => !r.id).map(r => r.key).sort(), spikes, `${view}: a spike Health calls Over SLO is on the card`);
     assert.doesNotMatch(x.head, /100 ms/, `${view}: "${x.head}" applies one flat SLO`);
     for (const r of all) assert.equal(r.segs[0].fill, F.HEALTH_INK.slo);

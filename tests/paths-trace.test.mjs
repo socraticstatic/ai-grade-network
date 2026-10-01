@@ -111,8 +111,10 @@ test('Established us-west-2 saturation traces to its own default row; the ap-sou
   assert.equal(c.state.pathSel, own.key);
   assert.ok(v.pathTimeRows.find(r => r.key === own.key).sel);
   assert.equal(c.state.pathsPage, 0);
+  // Health pages three to a page; ap-southeast-1 sits on its second since westeurope's latency joined it (w2 second pass, 2026-09-30).
   const c2 = at('mature', { obPanel: 'health' });
-  const v2 = vals(c2);
+  let v2 = vals(c2);
+  while (!v2.problemRows.some(p => p.where === 'AWS ap-southeast-1') && v2.probPager.nextOp === 1) { v2.probPager.next(); v2 = vals(c2); }
   const j = v2.problemRows.findIndex(p => p.where === 'AWS ap-southeast-1');
   assert.ok(j >= 0);
   assert.ok(!v2.pathTimeAll.some(r => r.region === 'ap-southeast-1'), 'no default row sits on ap-southeast-1');

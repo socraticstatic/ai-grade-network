@@ -24,12 +24,16 @@ const probsOf = (view) => {
 };
 const obs = (patch = {}) => vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', ...patch }));
 
+// Three on Growing (w2 second pass, 2026-09-30): westeurope runs over its latency SLO, which the
+// home's chip and Signals named while Health called it Healthy. It is the degraded finding already,
+// so it is not a second finding event.
 test('Alerts, the Home hero and the findings events count one list', () => {
-  assert.equal(obs().queueCount, '2');
-  assert.equal(vals(mkC({ view: 'partial', estateParam: null, screen: 's0' })).healthIncidents.length, 2);
+  assert.equal(obs().queueCount, '3');
+  assert.equal(vals(mkC({ view: 'partial', estateParam: null, screen: 's0' })).healthIncidents.length, 3);
   const v = obs({ obPage: 'insights', insPanel: 'findings', findFilter: 'all' });
-  const keys = new Set(probsOf('partial').map(p => p.key));
+  const keys = new Set(probsOf('partial').filter(p => p.kind !== 'latency').map(p => p.key));
   assert.deepEqual(v.findAll.filter(r => keys.has(r.key)).map(r => r.key).sort(), [...keys].sort(), 'every problem is a finding event');
+  assert.ok(probsOf('partial').some(p => p.kind === 'latency') && v.findAll.some(r => r.key === 'degraded'), 'a region over its SLO is the degraded finding');
 });
 
 test('Growing: the first problem is the eastus flap, owned by the cloud provider', () => {

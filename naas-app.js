@@ -236,7 +236,7 @@ export function scrollToResult(label) {
  * Driven off the key names the panel builders already emit, so every kind —
  * site, workload, connection, node — gets it without rewriting its builder.
  */
-const PANEL_TILE_KEYS = ['Traffic', 'Latency to the on-ramp', 'Utilization', 'Current · in / out', 'Reaches', 'Share of all traffic', 'On AT&T', 'Instances sharing this app'];
+const PANEL_TILE_KEYS = ['Traffic', 'From your sites', 'Latency to the on-ramp', 'Utilization', 'Current · in / out', 'Reaches', 'Share of all traffic', 'On AT&T', 'Instances sharing this app'];
 const PANEL_STATE_KEYS = ['State', 'Reachability'];
 const PANEL_GROUPS = [
   { title: 'Identity', keys: ['Resource', 'Address', 'Type', 'App tag', 'Class', 'Access'] },
@@ -255,14 +255,17 @@ function panelShape(pairs) {
   const groups = PANEL_GROUPS.map(g => ({ key: g.title, title: g.title, rows: take(g.keys).map(([k, v]) => ({ key: k, k, v })) })).filter(g => g.rows.length);
   if (left.length) groups.push({ key: 'more', title: 'Also', rows: left.map(([k, v]) => ({ key: k, k, v })) });
   const word = statePair ? String(statePair[1]) : '';
-  const bad = /degrad|exposed|public|saturat|blind|over/i.test(word);
-  const warn = /single|no |unresolved/i.test(word);
+  // A Health word wears Health's ink (w2, 2026-09-30): At risk read green and Over SLO red.
+  const health = Object.keys(F.HEALTH_WORD).find(k => F.HEALTH_WORD[k] === word);
+  const bad = health ? health === 'down' : /degrad|exposed|public|saturat|blind|over/i.test(word);
+  const warn = health ? health === 'risk' : /single|no |unresolved/i.test(word);
+  const slo = health === 'slo';
   return {
     tiles, hasTiles: tiles.length > 0, groups, hasGroups: groups.length > 0,
     stateWord: word, hasState: !!word,
-    stateInk: bad ? '#8a1c14' : warn ? '#7a4b00' : '#14532d',
-    stateBg: bad ? 'rgba(201,54,44,.12)' : warn ? 'rgba(212,140,0,.14)' : 'rgba(30,122,60,.12)',
-    stateDot: bad ? 'var(--error)' : warn ? 'var(--warning)' : 'var(--success)',
+    stateInk: slo ? 'var(--text-heading)' : bad ? '#8a1c14' : warn ? '#7a4b00' : '#14532d',
+    stateBg: slo ? 'var(--bg-neutral)' : bad ? 'rgba(201,54,44,.12)' : warn ? 'rgba(212,140,0,.14)' : 'rgba(30,122,60,.12)',
+    stateDot: health ? F.HEALTH_INK[health] : bad ? 'var(--error)' : warn ? 'var(--warning)' : 'var(--success)',
   };
 }
 
@@ -1640,7 +1643,8 @@ export function findingList(est, est0, ob, now) {
   const events = ob && ob.total ? R.anomalies(est0, ob, +now) : [];
   // A degraded link and a port near full are findings too (2026-09-30): the
   // same incident list Home and Alerts read, so the head counts them once.
-  const incidents = ob && ob.total ? OD.problems(est0, X.connections(est0, ob), ob, [], [], +now).filter(p => p.kind !== 'spike') : [];
+  // A region over its latency SLO is the degraded finding already (w2, 2026-09-30); it is not counted twice.
+  const incidents = ob && ob.total ? OD.problems(est0, X.connections(est0, ob), ob, [], [], +now).filter(p => p.kind !== 'spike' && p.kind !== 'latency') : [];
   const incidentEvent = (p) => ({ key: p.key, when: `Started ${SCH.hhmm(p.startedAt)} · ${SCH.agoOf(p.startedAt, +now)}`, sev: p.sev === 1 ? 'red' : 'amber', region: p.region,
     head: p.kind === 'link' ? `BGP flapping on ${p.thing} in ${p.where}` : `${p.where} at ${p.what}`,
     cause: p.kind === 'link' ? `The ${p.thing} session to ${p.where} keeps dropping and re-forming: ${p.what.replace(/^BGP flapping · /, '')}.` : `Peak use is ${p.what}.`,
@@ -1856,17 +1860,25 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // (Ramesh). Every aggregate figure carries the cut that produced it, Logs
   // applies that cut, and says which figure it is explaining.
   const explain = s.explain || null;
-  // A region's figure cuts to its region, and a pair's to its path, where the sample has such a
-  // record (w2, 2026-09-30); the explanation says the records are a sample.
-  const inRegion = (r) => `${r.srcSub} ${r.dstSub}`.includes(explain.region);
-  const ofPattern = logAll.filter(r => !(explain && explain.pattern) || r.pattern === explain.pattern);
-  const byRegion = !!(explain && explain.region) && ofPattern.some(inRegion);
-  const inCut = ofPattern.filter(r => !byRegion || inRegion(r));
-  const byPath = !!(explain && explain.path) && (!explain.region || inCut.some(r => r.path === explain.path));
+  // The cut is the set the figure counts, every part of it, never a fallback (w2, 2026-09-30:
+  // a region with no record of its own fell back to every region's, and a pair's path filter
+  // dropped silently, so "outside AT&T" listed two records on AT&T). An explanation names the
+  // region its records come from (src), a region they touch (region), a pair (both ends), the
+  // patterns and the path; where no sample record carries all of it, the landing says so.
+  const endsOf = (r) => [r.srcSub, r.dstSub].map(x => String(x).split(' · ').pop());
+  const pats = explain && explain.pattern ? [].concat(explain.pattern) : [];
+  const inCut = (r) => {
+    if (!explain) return true;
+    const [from, to] = endsOf(r);
+    if (explain.src && from !== explain.src) return false;
+    if (explain.region && from !== explain.region && to !== explain.region) return false;
+    if (explain.pair && !((from === explain.pair[0] && to === explain.pair[1]) || (from === explain.pair[1] && to === explain.pair[0]))) return false;
+    if (pats.length && !pats.includes(r.pattern)) return false;
+    if (explain.path && r.path !== explain.path) return false;
+    return true;
+  };
   const logMatch = logAll.filter(r => {
-    if (byRegion && !inRegion(r)) return false;
-    if (explain && explain.pattern && r.pattern !== explain.pattern) return false;
-    if (byPath && r.path !== explain.path) return false;
+    if (!inCut(r)) return false;
     if (logPath === 'private' && r.path !== 'private') return false;
     if (logPath === 'public' && r.path !== 'public') return false;
     if (logAct === 'allow' && r.deny) return false;
@@ -1946,7 +1958,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     explainSub: explain ? explain.sub : '',
     explainCut: explain ? explain.cut : '',
     explainParts, hasExplainParts: explainParts.length > 0,
-    explainCount: `${logMatch.length} of ${logAll.length} records carry it`,
+    explainCount: logMatch.length ? `${logMatch.length} of ${logAll.length} records carry it` : 'No sample record carries it yet.',
     clearExplain: () => set({ explain: null, logQ: '' }),
   };
   const logVals = {
@@ -1956,6 +1968,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     logCount: `${logMatch.length.toLocaleString('en-US')} of ${logAll.length.toLocaleString('en-US')} records`,
     logNote: logMatch.length ? `${logDeny} denied · ${logPub} outside AT&T · public destinations stay unresolved` : 'Nothing matches these filters.',
     hasLogs: logMatch.length > 0, noLogs: logMatch.length === 0,
+    logEmptyLine: explain && !logAll.filter(inCut).length ? 'No sample record carries it yet. Show every record to see the rest.' : 'Nothing matches these filters.',
     logFiltersOpen: logFiltersOn,
     logFiltersShut: !logFiltersOn,
     toggleLogFilters: () => set({ logFiltersOpen: !logFiltersOn, logPage: 0 }),
@@ -2407,14 +2420,16 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // Steer only a flow with an end on AT&T, the one rule Signals and Andi use (w2, 2026-09-30: eu-west-1's node,
   // nothing attached, put shared-services on AT&T in one click); with none, the node offers Attach instead.
   const steerFlowOf = (title) => (ob.flows || []).filter(x => (x.name === title || (x.region || '').includes(title)) && R.canSteerFlow(est0.regionsList, x)).sort((a, b) => b.gbps - a.gbps)[0] || null;
+  // Trace on a connection that is down opens its Health problem's path, as Health and Signals do (w2, 2026-09-30).
+  const tracePanel = (a) => () => { const p = (healthVals.problemRows || []).find(x => x.key === 'an-link-' + a.region); set({ mapSel: null }); if (p) p.trace(); };
   const panel0 = panel00 ? { ...panel00, actions: panel00.actions.filter(a => a.key !== 'steer' || steerFlowOf(panel00.title)).map(a => ((a.key === 'bandwidth' || a.key === 'port') && BW.inFlight(s.orders, est0.id, a.id, bwNow) ? { ...a, label: 'In progress' } : a)) } : null;
   const panelTab = s.panelTab || 'overview';
-  const panel = panel0 ? { ...panel0, trail: (panel0.trail || []).map((t, i, a) => ({ ...t, key: 'pt' + i, go: () => set({ mapSel: t.key }), last: i === a.length - 1, notLast: i < a.length - 1 })), overview: panel0.overview.map(([k, v]) => ({ key: k, k, v })), ...panelShape(panel0.overview), hasImpact: !!panel0.impact, noImpact: !panel0.impact, noRecords: panel0.records.length === 0, impact: panel0.impact ? { ...panel0.impact, isHit: panel0.impact.kind !== 'none', vpcs: panel0.impact.vpcs.map(v => ({ ...v, key: v.name, wlF: v.wl.toLocaleString('en-US'), tagsF: (v.tags || []).join(' · ') })), downstream: panel0.impact.downstream.map(d => ({ ...d, key: d.label, vpcsF: d.vpcs.map(v => v.name).join(', ') })), hasDown: panel0.impact.downstream.length > 0, tone: panel0.impact.kind === 'direct' ? 'var(--error)' : panel0.impact.kind === 'possible' ? 'var(--warning)' : 'var(--success)' } : null, records: panel0.records.map(r => ({ ...r, key: r.id })), hasRecords: panel0.records.length > 0, actions: panel0.actions.map(a => ({ ...a, key: a.key, go: a.key === 'bandwidth' ? openBw(a.id) : a.key === 'port' ? capMove(go, set, s, est0, capRows.find(x => x.id === a.id) || capRows.find(x => x.region === a.region)) : a.key === 'attach' && a.site ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Attach ${a.site}: one circuit onto the AT&T network.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'path' ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Add a second path for ${a.site}: a second metro for geodiversity.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'failover' ? () => set({ events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `Failover test on ${panel0.title} · secondary path healthy` }], panelTab: 'overview' }) : a.key === 'attach' ? composeFor(go, est0.regionsList.find(x => x.region === a.region) || {}) : a.key === 'policy' ? () => { go('s3', { layer: 'cloud', tab: 'govern' })(); set({ authoring: true }); } : a.key === 'steer' ? () => { const f = steerFlowOf(panel0.title); if (f) set({ steered: [...(s.steered || []), f.id] }); } : () => set({ panelTab: 'records' }) })), isSite: panel0.kind === 'site' || panel0.kind === 'workload', paths: (panel0.paths || []).map(x => ({ ...x, key: x.key, msF: x.ms + ' ms', gbpsF: x.gbps >= 1 ? x.gbps.toFixed(1) + ' Gbps' : Math.round(x.gbps * 1000) + ' Mbps', dot: F.HEALTH_INK[x.state] || 'var(--text-disabled)', rad: F.healthRadius(x.state), word: x.priv ? 'AT&T network' : 'public internet' })), children: panel0.children ? { ...panel0.children, hasNote2: !!panel0.children.note, rows: panel0.children.rows.map((r, i) => ({ ...r, key: r.key || ('leaf' + i), go: r.key ? (r.key.startsWith('vol:') ? () => { const [cls, metro] = r.key.slice(4).split('|'); openVolume(cls, metro); } : () => set({ mapSel: r.key, panelTab: 'overview' })) : () => {}, isLeaf: !r.key, notLeaf: !!r.key, cursor: r.key ? 'pointer' : 'default', hasPort: !!r.port, hasVer: !!r.ver, hasRate: !!r.rate, noteBg: r.warn ? 'rgba(212,140,0,.16)' : 'var(--bg-wash)', dot: r.warn ? 'var(--warning)' : 'var(--success)', portBg: r.warn ? 'rgba(212,140,0,.14)' : 'var(--bg-wash)', portInk: r.warn ? '#7a4b00' : 'var(--text-body)', ink: r.warn ? 'var(--warning)' : 'var(--text-light)', hasNote: !!r.note })) } : null,
+  const panel = panel0 ? { ...panel0, trail: (panel0.trail || []).map((t, i, a) => ({ ...t, key: 'pt' + i, go: () => set({ mapSel: t.key }), last: i === a.length - 1, notLast: i < a.length - 1 })), overview: panel0.overview.map(([k, v]) => ({ key: k, k, v })), ...panelShape(panel0.overview), hasImpact: !!panel0.impact, noImpact: !panel0.impact, noRecords: panel0.records.length === 0, impact: panel0.impact ? { ...panel0.impact, isHit: panel0.impact.kind !== 'none', vpcs: panel0.impact.vpcs.map(v => ({ ...v, key: v.name, wlF: v.wl.toLocaleString('en-US'), tagsF: (v.tags || []).join(' · ') })), downstream: panel0.impact.downstream.map(d => ({ ...d, key: d.label, vpcsF: d.vpcs.map(v => v.name).join(', ') })), hasDown: panel0.impact.downstream.length > 0, tone: panel0.impact.kind === 'direct' ? 'var(--error)' : panel0.impact.kind === 'possible' ? 'var(--warning)' : 'var(--success)' } : null, records: panel0.records.map(r => ({ ...r, key: r.id })), hasRecords: panel0.records.length > 0, actions: panel0.actions.map(a => ({ ...a, key: a.key, go: a.key === 'bandwidth' ? openBw(a.id) : a.key === 'trace' ? tracePanel(a) : a.key === 'port' ? capMove(go, set, s, est0, capRows.find(x => x.id === a.id) || capRows.find(x => x.region === a.region)) : a.key === 'attach' && a.site ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Attach ${a.site}: one circuit onto the AT&T network.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'path' ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Add a second path for ${a.site}: a second metro for geodiversity.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'failover' ? () => set({ events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `Failover test on ${panel0.title} · secondary path healthy` }], panelTab: 'overview' }) : a.key === 'attach' ? composeFor(go, est0.regionsList.find(x => x.region === a.region) || {}) : a.key === 'policy' ? () => { go('s3', { layer: 'cloud', tab: 'govern' })(); set({ authoring: true }); } : a.key === 'steer' ? () => { const f = steerFlowOf(panel0.title); if (f) set({ steered: [...(s.steered || []), f.id] }); } : () => set({ panelTab: 'records' }) })), isSite: panel0.kind === 'site' || panel0.kind === 'workload', paths: (panel0.paths || []).map(x => ({ ...x, key: x.key, msF: x.ms + ' ms', gbpsF: x.gbps >= 1 ? x.gbps.toFixed(1) + ' Gbps' : Math.round(x.gbps * 1000) + ' Mbps', dot: F.HEALTH_INK[x.state] || 'var(--text-disabled)', rad: F.healthRadius(x.state), word: x.priv ? 'AT&T network' : 'public internet' })), children: panel0.children ? { ...panel0.children, hasNote2: !!panel0.children.note, rows: panel0.children.rows.map((r, i) => ({ ...r, key: r.key || ('leaf' + i), go: r.key ? (r.key.startsWith('vol:') ? () => { const [cls, metro] = r.key.slice(4).split('|'); openVolume(cls, metro); } : () => set({ mapSel: r.key, panelTab: 'overview' })) : () => {}, isLeaf: !r.key, notLeaf: !!r.key, cursor: r.key ? 'pointer' : 'default', hasPort: !!r.port, hasVer: !!r.ver, hasRate: !!r.rate, noteBg: r.warn ? 'rgba(212,140,0,.16)' : 'var(--bg-wash)', dot: r.warn ? 'var(--warning)' : 'var(--success)', portBg: r.warn ? 'rgba(212,140,0,.14)' : 'var(--bg-wash)', portInk: r.warn ? '#7a4b00' : 'var(--text-body)', ink: r.warn ? 'var(--warning)' : 'var(--text-light)', hasNote: !!r.note })) } : null,
     hasChildren2: !!(panel0.children && panel0.children.rows.length),
     talks: (() => { const ts = panel0.talks || []; const max = Math.max(0.0001, ...ts.map(t => t.gbps || 0)); return ts.map(t => ({ ...t, key: t.key, gbpsF: t.gbps >= 1 ? t.gbps.toFixed(1) + ' Gbps' : Math.round(t.gbps * 1000) + ' Mbps', barW: Math.max(3, Math.round((t.gbps || 0) / max * 100)) + '%' })); })(), hasTalks: !!(panel0.talks && panel0.talks.length), backToList: () => set({ mapSel: null }), hasList: !!(s.drawerOpen && s.vol), isPaths: panelTab === 'paths', tabs: (panel0.kind === 'vpc' || panel0.kind === 'subnet' ? [['overview', 'Overview'], ['actions', 'Actions']] : panel0.kind === 'site' || panel0.kind === 'workload' ? [['overview', 'Overview'], ['paths', 'Paths'], ['records', 'Records'], ['actions', 'Actions']] : [['overview', 'Overview'], ['impact', 'Impact'], ['records', 'Records'], ['actions', 'Actions']]).map(([k, l]) => ({ key: k, label: l, on: panelTab === k, go: () => set({ panelTab: k }),
       // A segmented control: the chosen tab rises out of the tray on a white card.
       bg: panelTab === k ? 'var(--bg-base)' : 'transparent', color: panelTab === k ? 'var(--text-heading)' : 'var(--text-light)', weight: panelTab === k ? 600 : 500,
-      shadow: panelTab === k ? '0 1px 2px rgba(16,24,40,.10), 0 1px 3px rgba(16,24,40,.08), 0 0 0 1px var(--border-secondary)' : 'none', border: 'transparent' })), isOverview: panelTab === 'overview', isImpact: panelTab === 'impact', isRecords: panelTab === 'records', isActions: panelTab === 'actions', close: () => set({ mapSel: null }), primary: (() => { const a = panel0.actions.find(x => x.key !== 'logs'); return a ? { label: a.label.replace(/ for these workloads| here$/, ''), go: a.key === 'steer' ? () => { const f = steerFlowOf(panel0.title); if (f) set({ steered: [...(s.steered || []), f.id] }); } : a.key === 'bandwidth' ? openBw(a.id) : a.key === 'port' ? capMove(go, set, s, est0, capRows.find(x => x.id === a.id) || capRows.find(x => x.region === a.region)) : a.key === 'attach' && a.site ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Attach ${a.site}: one circuit onto the AT&T network.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'path' ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Add a second path for ${a.site}: a second metro for geodiversity.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'failover' ? () => set({ events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `Failover test on ${panel0.title} · secondary path healthy` }], panelTab: 'overview' }) : a.key === 'attach' ? composeFor(go, est0.regionsList.find(x => x.region === a.region) || {}) : a.key === 'policy' ? () => { go('s3', { layer: 'cloud', tab: 'govern' })(); set({ authoring: true }); } : () => set({ panelTab: 'actions' }) } : null; })(), hasPrimary: panel0.actions.some(x => x.key !== 'logs') } : null;
+      shadow: panelTab === k ? '0 1px 2px rgba(16,24,40,.10), 0 1px 3px rgba(16,24,40,.08), 0 0 0 1px var(--border-secondary)' : 'none', border: 'transparent' })), isOverview: panelTab === 'overview', isImpact: panelTab === 'impact', isRecords: panelTab === 'records', isActions: panelTab === 'actions', close: () => set({ mapSel: null }), primary: (() => { const a = panel0.actions.find(x => x.key !== 'logs'); return a ? { label: a.label.replace(/ for these workloads| here$/, ''), go: a.key === 'steer' ? () => { const f = steerFlowOf(panel0.title); if (f) set({ steered: [...(s.steered || []), f.id] }); } : a.key === 'bandwidth' ? openBw(a.id) : a.key === 'trace' ? tracePanel(a) : a.key === 'port' ? capMove(go, set, s, est0, capRows.find(x => x.id === a.id) || capRows.find(x => x.region === a.region)) : a.key === 'attach' && a.site ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Attach ${a.site}: one circuit onto the AT&T network.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'path' ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Add a second path for ${a.site}: a second metro for geodiversity.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'failover' ? () => set({ events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `Failover test on ${panel0.title} · secondary path healthy` }], panelTab: 'overview' }) : a.key === 'attach' ? composeFor(go, est0.regionsList.find(x => x.region === a.region) || {}) : a.key === 'policy' ? () => { go('s3', { layer: 'cloud', tab: 'govern' })(); set({ authoring: true }); } : () => set({ panelTab: 'actions' }) } : null; })(), hasPrimary: panel0.actions.some(x => x.key !== 'logs') } : null;
   const PATTERN_ALL = ['all', 'All', 'Every flow the estate carries, whichever way it goes.'];
   // The map draws the site story, so its chips are the patterns that have
   // ribbons - ingress and the internet path. All five patterns keep their
@@ -2672,7 +2687,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // AT&T against 3.1 Gbps of traffic): the regions' own traffic, cross-cloud pairs included.
   const tAll = (iwRaw && iwRaw.talkersAll) || [];
   const tPub = tAll.reduce((a, t) => a + (t.pubG != null ? +t.pubG : t.priv ? 0 : t.gbps), 0), tCov = ob.covPct || 0;
-  const pubRecs = explainNav(c, { label: 'Traffic outside AT&T', value: tPub.toFixed(1) + ' Gbps', sub: 'What the regions send over the public internet, cross-cloud pairs included. Sample data: the records on the path it takes.', cut: 'Records outside AT&T, to the internet.', pattern: 'internet', path: 'public', parts: [] });
+  const pubRecs = explainNav(c, { label: 'Traffic outside AT&T', value: tPub.toFixed(1) + ' Gbps', sub: 'What the regions send over the public internet, cross-cloud pairs included. Sample records.', cut: 'Records the regions send outside AT&T.', pattern: ['internet', 'regions', 'clouds'], path: 'public', parts: [] });
   const PERSONA_LENS = {
     'Executive': { line: `${tCov}% of your traffic rides the AT&T network; ${tPub.toFixed(1)} Gbps still rides outside it.`, cta: 'See the records', go: explainNav(c, { label: 'Traffic on the AT&T network', value: `${tCov}% of traffic`, sub: 'What the regions send on the AT&T network. Sample data: the records on the path it takes.', cut: 'Records on the AT&T network.', pattern: '', path: 'private', parts: [] }) },
     'Cloud & Platform Architect': plTopCloud ? { line: `${plTopCloud.name} takes the most of what your sites send, ${(plTopCloud.tot || plTopCloud.v).toFixed(1)} Gbps. Open it to the region level.`, cta: `Open ${plTopCloud.name}`, go: () => set({ mapOpen: (s.mapOpen || []).includes(plTopCloud.key) ? (s.mapOpen || []) : [...(s.mapOpen || []), plTopCloud.key], mapSel: plTopCloud.key, panelTab: 'overview' }) } : null,
@@ -2925,13 +2940,23 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // Traffic map scoped to the region, which draws the sites' traffic to it, 43 Mbps under
     // "AWS us-west-2 7.3 Gbps", and ran past the fold). Logs is for traffic figures; this is one.
     const pubLens = sigLens === 'egress' || sigLens === 'exposure';
-    const recsOf = (r, ex) => explainNav(c, { label: r.label, value: r.v, region: r.region || '', parts: [], ...ex,
-      sub: `${r.sub}. Sample data: the records on the path it takes${r.region ? `, ${r.region}'s where any names it` : ''}.` });
+    // Each figure lands on the records of exactly what it counts (w2, 2026-09-30): a region's
+    // traffic is what it sends (its flows: to the internet, to object storage across regions,
+    // and its cross-cloud pairs at their first end); outside AT&T, only what leaves on the
+    // public internet; a pair, its own two ends on the path it takes; a flow over SLO, its
+    // region's records of that kind on that path. Where no sample record carries it, Logs says so.
+    const FLOW_PATS = ['internet', 'regions', 'clouds'];
+    const recsOf = (r, ex) => explainNav(c, { label: r.label, value: r.v, parts: [], ...ex, sub: `${r.sub}. Sample records.` });
+    const pairCut = (r, priv) => { const [a, b] = r.label.split(' ↔ '); const cross = (est0.regionsList.find(x => x.region === a) || {}).cloud !== (est0.regionsList.find(x => x.region === b) || {}).cloud;
+      return { cut: `${cross ? 'Cloud-to-cloud' : 'Region-to-region'} records between ${a} and ${b}, ${priv ? 'on AT&T' : 'outside AT&T'}.`, pair: [a, b], pattern: 'clouds', path: priv ? 'private' : 'public' }; };
     const FIG = {
-      map: (r) => recsOf(r, pubLens || !r.priv ? { cut: `Records outside AT&T from ${r.label}.`, pattern: 'internet', path: 'public' } : { cut: `Records from ${r.label}.`, pattern: '', path: '' }),
-      'map-slo': (r) => recsOf(r, /public/.test(r.sub) ? { cut: `Records outside AT&T on ${r.label}.`, pattern: 'internet', path: 'public' } : { cut: `Records on ${r.label}.`, pattern: 'internet', path: '' }),
-      // A pair inside one cloud ("AWS · public internet") is across regions; across two ("AWS ↔ Azure"), across clouds.
-      'map-state': (r) => recsOf(r, { cut: `${/↔/.test(r.sub) ? 'Cloud-to-cloud' : 'Region-to-region'} records, ${/public/.test(r.sub) ? 'outside AT&T' : 'on AT&T'}.`, pattern: /↔/.test(r.sub) ? 'clouds' : 'regions', path: /public/.test(r.sub) ? 'public' : 'private' }),
+      map: (r) => recsOf(r, /cross-cloud/.test(r.sub) ? { cut: `Records from ${r.label} to another cloud, outside AT&T.`, src: r.region, pattern: 'clouds', path: 'public' }
+        : pubLens && r.v2 === 'On AT&T' ? { cut: `Records from ${r.label}, on AT&T.`, src: r.region, pattern: FLOW_PATS, path: 'private' }
+        : pubLens ? { cut: `Records from ${r.label}, outside AT&T.`, src: r.region, pattern: FLOW_PATS, path: 'public' }
+          : { cut: `Records from ${r.label}.`, src: r.region, pattern: FLOW_PATS, path: '' }),
+      'map-slo': (r) => { const on = / · on AT&T$/.test(r.sub); return recsOf(r, / ↔ /.test(r.label) ? pairCut(r, on)
+        : { cut: `Records from ${r.sub.split(' · ')[0]} ${/object storage/.test(r.label) ? 'to object storage across regions' : 'to the internet'}, ${on ? 'on AT&T' : 'outside AT&T'}.`, src: r.region, pattern: /object storage/.test(r.label) ? 'regions' : 'internet', path: on ? 'private' : 'public' }); },
+      'map-state': (r) => recsOf(r, pairCut(r, !/public/.test(r.sub))),
       logs: (r) => explainNav(c, { label: r.label, value: r.v, sub: `${r.sub}. Sample data: no record names it yet, so these are the records on the path it takes.`, cut: 'Records to the internet, outside AT&T.', pattern: 'internet', path: 'public', parts: [] }),
       finding: (r) => () => set({ fdKey: r.key }),
       conn: (r) => toObserve({ obPage: 'perf', obPanel: 'conn', mapSel: r.key, mapRegion: r.region }),

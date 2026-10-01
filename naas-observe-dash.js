@@ -65,6 +65,14 @@ export function problems(est, conns, ob, apps = [], chg = [], now = Date.now()) 
     if (state === 'ok') return;
     out.push({ key, kind: 'spike', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: 'Public internet', what: `Latency spike · p95 ${peak} ms at peak, 0.3% loss`, short: 'Latency spike', fig: `p95 ${peak} ms`, ms: peak, owner: 'public', ownerLabel: OWNER_LABEL.public, state, sev: 3, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('spike', now, INCIDENT_MIN.spike), change: changeFor(key), connId: null, action: 'impact', actionLabel: 'See impact' });
   });
+  // A region whose path runs over its SLO by the one rule is a problem too (w2, 2026-09-30: the
+  // home's chip and Signals named westeurope above the latency SLO while Health, and so the map's
+  // dot, called it Healthy). One row per region, a spike's region already has its own.
+  regs.filter(r => r.link !== 'degraded' && F.regionState(r) === 'slo' && !out.some(p => p.region === r.region && p.kind === 'spike')).forEach(r => {
+    const key = 'an-slo-' + r.region, ms = r.priv ? r.fab : r.pub, slo = r.priv ? F.SLO_PRIVATE : F.SLO;
+    const t = r.priv ? cloudEdgeThing(r) : { label: 'Public internet', owner: 'public' };
+    out.push({ key, kind: 'latency', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: t.label, what: `Latency over SLO · p95 ${ms} ms against ${slo} ms`, short: 'Latency', fig: `p95 ${ms} ms`, ms, owner: t.owner, ownerLabel: OWNER_LABEL[t.owner] || t.owner, state: 'slo', sev: 3, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('slo', now, INCIDENT_MIN.slo), change: changeFor(key), connId: null, action: 'impact', actionLabel: 'See impact' });
+  });
   return out.sort((a, b) => b.apps.length - a.apps.length || a.sev - b.sev || b.wl - a.wl);
 }
 
@@ -74,6 +82,14 @@ export function queue(probs, now = Date.now()) {
   return probs.map(p => ({ key: p.key, sev: p.sev, state: WORD[p.kind], health: p.state, what: p.kind === 'link' ? `${p.what.replace(/^BGP flapping/, 'BGP flapping on ' + p.thing)}` : p.what, where: p.where, age: agoOf(p.startedAt, now), wl: p.wl, action: p.action, actionLabel: p.actionLabel, connId: p.connId, region: p.region }));
 }
 
+// One connection, one move (w2, 2026-09-30): a connection that is down is traced first, as Health
+// and Signals trace it, never given a port; one near full gets a port.
+const connMove = (row) => (row.degraded ? [{ key: 'trace', label: 'Trace', region: row.region, id: row.id }] : row.hot ? [{ key: 'port', label: 'Add a port', region: row.region, id: row.id }] : []);
+// A region's state by the one rule Health uses: its path's latency against its SLO, its connection's
+// (down on a degraded link, at risk near full), the worst of them.
+const RANK = ['ok', 'risk', 'slo', 'down'];
+const regionHealth = (est, region, row) => { const r = (est.regionsList || []).find(x => x.region === region); if (!r) return null;
+  return [F.regionState(r), row ? (row.degraded ? 'down' : row.hot ? 'risk' : 'ok') : 'ok'].reduce((a, s) => (RANK.indexOf(s) > RANK.indexOf(a) ? s : a), 'ok'); };
 // A connection's peak as Capacity and Modify bandwidth read it: Gbps, then the share of what is bought.
 const gbF = (g) => (g < 1 ? `${Math.round(g * 1000)} Mbps` : `${+g.toFixed(1)} Gbps`);
 const connPeakF = (row) => { const cap = row.cap || 10, peak = row.peakG != null ? row.peakG : +(cap * row.pct / 100).toFixed(1); return `${gbF(peak)}, ${row.pct}% of ${gbF(cap)}`; };
@@ -88,7 +104,7 @@ export function panelFor(sel, ctx) {
     return { kind: 'connection', title: `${row.cloud} ${row.region}`, sub: `${rampName(row)} · ${row.bw || row.ports + ' × 10 Gbps'} purchased`, trail: [{ key: sel, name: `${row.cloud} ${row.region}` }],
       // Current never reads above the peak Modify bandwidth opens on (w2, 2026-09-30: 12.4 over a 12.3 peak, the peak's percent rounded).
       overview: [['Current · in / out', (() => { const cap = row.cap || 10, pk = row.peakG != null ? row.peakG : +(cap * row.pct / 100).toFixed(1), cur = Math.min(row.gbps, pk); return `${cur} / ${(cur * 0.62).toFixed(1)} Gbps`; })()], ['6-month average · in / out', `${avgOf(row)} / ${(avgOf(row) * 0.62).toFixed(1)} Gbps`], ['Purchased', `${row.bw || row.ports + ' × 10 Gbps'}`], ['Utilization', `${row.pct}% of ${row.cap} Gbps`], ['State', row.state], ['BGP', row.bgp], ['Drops', row.drops], ['Workloads behind it', n(row.wl)]],
-      impact: imp, records: recs, actions: [...bwActs(row), ...(row.hot ? [{ key: 'port', label: 'Add a port', region: row.region, id: row.id }] : []), { key: 'policy', label: 'Author a policy for these workloads', region: row.region }, { key: 'logs', label: 'All records for this connection', region: row.region }] };
+      impact: imp, records: recs, actions: [...(row.degraded ? [...connMove(row), ...bwActs(row)] : [...bwActs(row), ...connMove(row)]), { key: 'policy', label: 'Author a policy for these workloads', region: row.region }, { key: 'logs', label: 'All records for this connection', region: row.region }] };
   }
   // An opened node is replaced by its children on the map; its trail still knows it.
   if (sel.startsWith('asset:')) return sitePanel(sel.slice(6), ctx);
@@ -123,13 +139,17 @@ export function panelFor(sel, ctx) {
       })),
     };
   })();
+  // A cloud region reads its Health state, its connection included, in Health's words (w2, 2026-09-30:
+  // the chip read Healthy over a Connection line reading Saturating that Health lists At risk), and
+  // its traffic says what the map draws: what your sites send it.
+  const rh = region && (node.kind === 'region' || /^cloud:[^/]+\/./.test(node.key || sel)) ? regionHealth(est, region, row) : null;
   return { kind: node.kind, title: node.name, sub: node.sub || '', trail: tr, children: kids,
-    overview: [...(node.opened ? [['Opened', 'children shown in place']] : []), ['Traffic', `${node.v.toFixed(2)} Gbps`], ['On AT&T', `${node.v ? Math.round(node.fabV / node.v * 100) : 0}%`], ['Share of all traffic', `${share}%`], ['Change vs prior window', (node.delta >= 0 ? '+' : '') + node.delta + '%'], ['State', node.state === 'ok' ? 'Healthy' : node.state === 'degraded' ? 'Degraded' : 'Over SLO or public'],
+    overview: [...(node.opened ? [['Opened', 'children shown in place']] : []), [rh ? 'From your sites' : 'Traffic', `${node.v.toFixed(2)} Gbps`], ['On AT&T', `${node.v ? Math.round(node.fabV / node.v * 100) : 0}%`], ['Share of all traffic', `${share}%`], ['Change vs prior window', (node.delta >= 0 ? '+' : '') + node.delta + '%'], ['State', rh ? F.HEALTH_WORD[rh] : node.state === 'ok' ? 'Healthy' : node.state === 'degraded' ? 'Degraded' : 'Over SLO or public'],
       // State is the paths'; the region's connection says its own, in Capacity's words and figure (skeptic, 2026-09-30), so Add a port has its reason.
       // Its peak in Gbps too, the figure Modify bandwidth opens on (w2, 2026-09-30: the node read 14.13 Gbps of the
       // map's site traffic and its Add a port opened a drawer at a 40.5 Gbps peak, with nothing between to say why).
       ...(row ? [['Connection', `${rampName(row)} · ${row.degraded ? 'Degraded' : row.hot ? 'Saturating' : 'Healthy'}, peak ${connPeakF(row)}`]] : []), ...(resolved ? [['Resource', resolved.name], ['Address', resolved.sub]] : [])],
-    impact: imp, records: recs, actions: [...(node.state !== 'ok' && node.fabV < node.v ? [{ key: 'steer', label: 'Steer onto the AT&T network' }] : []), ...(region && !(row) ? [{ key: 'attach', label: `Attach ${region}`, region }] : []), ...(row && row.hot ? [{ key: 'port', label: 'Add a port', region, id: row.id }] : []), { key: 'policy', label: 'Author a policy here', region }] };
+    impact: imp, records: recs, actions: [...(node.state !== 'ok' && node.fabV < node.v ? [{ key: 'steer', label: 'Steer onto the AT&T network' }] : []), ...(region && !(row) ? [{ key: 'attach', label: `Attach ${region}`, region }] : []), ...(row ? connMove(row) : []), { key: 'policy', label: 'Author a policy here', region }] };
 }
 
 /** Find a site by id or name: a named site of the estate, or one generated inside a metro. */
