@@ -317,6 +317,26 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // w2-consistency (2026-09-30): the Traffic map's region chip moves into the card head, under its own obPanelMap sc-if, so it no longer wraps the By chips past the fold: sc-if 522 -> 523.
 // w2-consistency (2026-09-30): AT&T charges with nothing attached says so and opens By leg (an sc-if, its line div and span, and the button): div 1134 -> 1135, span 969 -> 970, sc-if 523 -> 524, button 413 -> 414.
 // Discover's drills merged onto the consistency pass (2026-10-01): each count is integ's plus both moves: div 1135 -> 1140, span 970 -> 963, sc-if 524 -> 530, sc-for 268 -> 279, button 414 -> 447.
+// Govern made drillable (w2-govern, 2026-09-30): every count a button that opens its set. The drill under Govern's tabs
+// (its wrapper, the trail row with the finding's move, the line and rule, the rows, the pager: div +7, span +7, sc-if +5, sc-for +2, button +6);
+// the page head's verdict as parts (div +1, span +1, sc-if +4, sc-for +1, button +1); a finding's head (span +1, sc-if +2,
+// sc-for +1, button +1); the policy total and its filter chip (span +2, sc-if +3, button +2); a row's matched (span +2,
+// sc-if +2, button +1) and violations (sc-if +2, button +1); the list gates govListPolicies, govListTags and
+// govListTemplates (sc-if +3); Tags' line and filter chip (span +3, sc-if +3, sc-for +1, button +2), a row's footprint
+// (span +1, sc-if +2, sc-for +1, button +1) and its two exposure figures (span +2, sc-if +4, button +2); a template
+// card stops being one button for its figure and Start from this (div +1, span +1, sc-if +2, button +1); Back to Govern
+// on Your clouds and Your sites (sc-if +2, button +2); Optimize's figure, its parts and +N more (span +1, sc-if +4,
+// button +3): div 1134 -> 1143, span 969 -> 990, sc-if 522 -> 560, sc-for 268 -> 274, button 413 -> 436.
+// Discover's figures as doors (skeptic, 2026-10-01): a ring's centre, head and legend entry each a button where a list
+// counts them (sc-if +6, button +3, span +1: the legend's button holds its label span); an app's row stops being one
+// button to the records and becomes a div of figure buttons, workloads, runs in, on AT&T, exposed and traffic (div +1,
+// span +1, sc-if +4, button +4); Back to Discover on Govern (sc-if +1, button +1):
+// div 1143 -> 1144, span 990 -> 991, sc-if 560 -> 571, button 436 -> 444.
+// A drill's moves, one per region its set sits in (skeptic, 2026-10-01): the one move button becomes a list (sc-for +1):
+// sc-for 274 -> 275.
+// Govern merged onto Discover's drills (2026-10-01): Discover's rings and apps table win over Govern's own version of them
+// (its ring and app-row markup dropped), Govern's Back button rides Discover's filter rows; recounted from the file, every
+// tag balanced: div 1140 -> 1149, span 963 -> 984, sc-if 530 -> 569, sc-for 279 -> 286, button 447 -> 471.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -331,12 +351,12 @@ test('every container the markup opens, it closes', () => {
   // div 1134 -> 1139, span 969 -> 962, sc-if 522 -> 528, sc-for 268 -> 278, button 413 -> 445.
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1140],
-    ['span', /<span\b/g, /<\/span>/g, 963],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 530],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 279],
+    ['div', /<div\b/g, /<\/div>/g, 1149],
+    ['span', /<span\b/g, /<\/span>/g, 984],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 569],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 286],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 447],
+    ['button', /<button\b/g, /<\/button>/g, 471],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

@@ -38,11 +38,14 @@ export function connectVerdict(est, layer = 'cloud', items = []) {
   return `${exposedN} of ${totalN} ${noun[1]} ${noun[2]}. ${onFabric ? privSay : 'None is on the AT&T network yet.'}`;
 }
 
-export function governVerdict(est) {
+// The head counts the policies the page lists (w2-govern, 2026-09-30): Established's "14 policies
+// enforced" sat over six rows. The estate's policiesEnforced is a tally nothing on Govern shows.
+export function governVerdict(est, custom = []) {
   if (est.stage === 'empty') return 'No policies yet. Three starting points below.';
+  const all = [...(est.policies || []), ...(custom || [])], on = all.filter(p => p.state === 'enforced').length;
   const pci = (est.findings.find(f => f.kind === 'pci') || {}).head;
-  const tail = pci || `${est.policiesAuthored - est.policiesEnforced} authored but not enforced`;
-  return `${est.policiesEnforced} policies enforced. ${tail.replace(/\.$/, '')}.`;
+  const tail = pci || `${all.length - on} authored but not enforced`;
+  return `${on} ${on === 1 ? 'policy' : 'policies'} enforced. ${tail.replace(/\.$/, '')}.`;
 }
 
 export function costVerdict(est, ob, totalSave, buckets = []) {

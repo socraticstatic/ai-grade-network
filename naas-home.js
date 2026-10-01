@@ -202,7 +202,8 @@ export function waffleOf(n, of, ink = 'var(--text-heading)') {
  * and its cells each open the set they count, on a page that prints them.
  *
  * f: { glance, health, flows, spend, spendCols, exposed, workloads, govern, tags }
- * doors: { picture, options, sitesOn, sitesOff, health, appPath, spend, discover, tags, tag, policies }
+ * doors: { picture, options, sitesOn, sitesOff, health, appPath, spend, discover, tags, tag, policies,
+ *   tagsBare (Govern > Tags, just the tags with no policy), violations (the policies that carry violations) }
  */
 export function snapshotCards(rk, f, doors) {
   const g = f.glance || {};
@@ -269,7 +270,7 @@ export function snapshotCards(rk, f, doors) {
   const exposed = card('exposed', 'Exposed', {
     door: 'Discover', go: doors.discover(), value: `${f.exposed} of ${f.workloads}`, unit: 'workloads exposed', swatch: INK_SET, valueGo: doors.discover(), valueOff: !exN, isWaffle: true,
     waffle: waffleOf(exN, wlN, INK_SET), wafTitle: exTitle, wafGo: doors.discover(), wafOff: !exN,
-    figs: [{ key: 'violations', v: String(gv.value), u: numOf(gv.value) === 1 ? 'policy violation' : 'policy violations', swatch: '', go: doors.policies(), off: !numOf(gv.value) }],
+    figs: [{ key: 'violations', v: String(gv.value), u: numOf(gv.value) === 1 ? 'policy violation' : 'policy violations', swatch: '', go: (doors.violations || doors.policies)(), off: !numOf(gv.value) }],
   });
 
   // Tags with no policy: Govern > Tags, one mark a tag in Govern's order. A bare tag is the set
@@ -278,7 +279,7 @@ export function snapshotCards(rk, f, doors) {
   const bare = tagRows.filter(t => !t.covered).length;
   const tagMark = (covered) => (covered ? { ink: 'transparent', ring: OUTLINE } : { ink: INK_SET, ring: 'none' });
   const tags = card('tags', 'Tags', {
-    door: 'Govern', go: doors.tags(), value: `${enf(bare)} of ${enf(tagRows.length)}`, unit: 'tags with no policy', swatch: INK_SET, valueGo: doors.tags(), valueOff: !bare, isDots: true,
+    door: 'Govern', go: doors.tags(), value: `${enf(bare)} of ${enf(tagRows.length)}`, unit: 'tags with no policy', swatch: INK_SET, valueGo: (doors.tagsBare || doors.tags)(), valueOff: !bare, isDots: true,
     dots: tagRows.map((t, i) => ({ key: t.key, ...tagMark(t.covered), rad: '9999px', title: `${t.name} · ${t.covered ? t.coverLabel : 'No policy'}`, go: doors.tag(i) })),
     legend: [['bare', 'No policy', false, bare], ['covered', 'Covered', true, tagRows.length - bare]].filter(x => x[3] > 0).map(([key, word, covered]) => ({ key, word, ...tagMark(covered), rad: '9999px' })),
   });

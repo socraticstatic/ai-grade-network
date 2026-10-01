@@ -53,14 +53,18 @@ test('P6: the home counts exposed workloads in Discover\'s own word, never "reac
 
 // ---- P6: the PCI finding counts from the estate ----
 
-// Govern > Tags' pci row, and the exposed workloads in PCI-tagged VPCs of one region.
-function pciOf(view, region) {
+// Govern > Tags' pci row, and the exposed workloads in its PCI-tagged VPCs, estate-wide.
+function pciOf(view) {
   const inv = A.inventory(D.ESTATES[view]);
-  const vpcs = inv.flatMap(cl => cl.regions.filter(r => !region || r.region === region).flatMap(r => r.vpcs)).filter(v => v.tags.includes('pci'));
-  return { wl: vpcs.reduce((a, v) => a + v.wl, 0), exposed: vpcs.reduce((a, v) => a + v.subnets.reduce((b, sn) => b + (sn.workloads || []).filter(w => w.exposed).length, 0), 0) };
+  const vpcs = inv.flatMap(cl => cl.regions.flatMap(r => r.vpcs.map(v => ({ ...v, region: r.region })))).filter(v => v.tags.includes('pci'));
+  const exposedIn = vpcs.filter(v => v.subnets.some(sn => (sn.workloads || []).some(w => w.exposed))).map(v => v.region);
+  return { wl: vpcs.reduce((a, v) => a + v.wl, 0), exposed: vpcs.reduce((a, v) => a + v.subnets.reduce((b, sn) => b + (sn.workloads || []).filter(w => w.exposed).length, 0), 0), regions: [...new Set(exposedIn)] };
 }
 
-test('P6: every PCI finding names a PCI-tagged region and counts its exposed PCI-tagged workloads, which the PCI policy counts as violations', () => {
+// One rule on every estate (w2-govern, 2026-09-30): the PCI finding counts every exposed PCI workload, wherever it
+// runs, and names each region it runs in; Bank scale's spans us-east-1 and us-east-2, and Established carries one
+// too. tests/govern-rule.test.mjs holds the apps table, Tags, the policy and the finding to the same count.
+test('P6: every PCI finding names its PCI-tagged regions and counts the exposed PCI-tagged workloads, which the PCI policy counts as violations', () => {
   let seen = 0;
   for (const view of LIVE) {
     const est = D.ESTATES[view], f = est.findings.find(x => x.kind === 'pci');
@@ -71,20 +75,21 @@ test('P6: every PCI finding names a PCI-tagged region and counts its exposed PCI
     }
     if (!f) { if (pol) assert.equal(pol.viol, 0, `${view}: PCI violations with no finding`); continue; }
     seen++;
-    const region = f.pathDst.replace(/^\S+ /, '');
-    const reg = est.regionsList.find(r => r.region === region);
-    assert.ok(reg && reg.tags.includes('PCI'), `${view}: the PCI finding is about ${f.pathDst}, which carries no PCI tag`);
-    const here = pciOf(view, region);
+    const here = pciOf(view);
+    for (const region of here.regions) {
+      const reg = est.regionsList.find(r => r.region === region);
+      assert.ok(reg && reg.tags.includes('PCI'), `${view}: ${region} carries no PCI tag`);
+      assert.ok(f.ev.includes(region), `${view}: the PCI finding does not name ${region}`);
+    }
     const m = f.head.match(/^([\d,]+) PCI-tagged workloads? reach(?:es)? the internet directly$/);
     assert.ok(m, `${view}: "${f.head}"`);
-    assert.equal(n(m[1]), here.exposed, `${view}: ${m[1]} PCI-tagged workloads, but ${here.exposed} are exposed in ${region}`);
-    // The basis named (w2 second pass, 2026-09-30): VPCs tagged PCI, as Govern > Tags counts, not Discover's app tag.
-    assert.equal(f.ev, `${m[1]} of ${here.wl.toLocaleString('en-US')} workloads in PCI-tagged VPCs in ${region} have a public address and a default route to an internet gateway.`, view);
+    assert.equal(n(m[1]), here.exposed, `${view}: ${m[1]} PCI-tagged workloads, but ${here.exposed} are exposed`);
+    assert.equal(f.ev, `${m[1]} of ${here.wl.toLocaleString('en-US')} PCI-tagged workloads in ${here.regions.join(' and ')} have a public address and a default route to an internet gateway.`, view);
     assert.equal(pol.viol, here.exposed, `${view}: the PCI policy counts ${pol.viol} violations`);
     // A part never outgrows its whole: the PCI ones are among the exposed workloads the home counts.
     assert.ok(here.exposed <= n(stat(vals(home(view)), 'e')), view);
   }
-  assert.equal(seen, 2, 'Growing and Bank scale each carry a PCI finding');
+  assert.equal(seen, 3, 'Growing, Established and Bank scale each carry a PCI finding');
 });
 
 // ---- P5: FinOps prints Spend's condition ----

@@ -252,15 +252,18 @@ test('Could save is one figure: the Traffic map\'s tile names its own basis, the
   }
 });
 
-test('The PCI finding names the basis of its count, the VPCs tagged PCI, which Discover\'s app tag does not share', async () => {
+// Govern's one rule won the merge (2026-10-01): PCI counts the workloads carrying Discover's pci tag, so the
+// finding names PCI-tagged workloads, the set Discover's apps table and Govern > Tags list.
+test('The PCI finding names the basis of its count, the PCI-tagged workloads Discover and Govern list', async () => {
   const { ESTATES } = await import('../naas-data.js');
   let seen = 0;
   for (const view of VIEWS) {
     const f = (ESTATES[view].findings || []).find(x => x.kind === 'pci'); if (!f) continue;
-    assert.match(f.ev, /^[\d,]+ of [\d,]+ workloads in PCI-tagged VPCs in [\w-]+ /, `${view}: the evidence reads "${f.ev}"`);
+    assert.match(f.ev, /^[\d,]+ of [\d,]+ PCI-tagged workloads in [\w -]+ have/, `${view}: the evidence reads "${f.ev}"`);
     seen += 1;
   }
-  assert.equal(seen, 2);
+  // Established's PCI workloads are exposed too under Govern's one rule (w2-govern), so three estates carry the finding.
+  assert.equal(seen, 3);
 });
 
 test('Spend by bucket names its blue as Cost does, AT&T price, and never calls a bucket\'s dollars on AT&T', async () => {

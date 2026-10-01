@@ -153,15 +153,18 @@ export const ESTATES = {
     regionsExtra: 5,
     arcs: [{ from: 'us-east-1', to: 'eastus', priv: false }, { from: 'us-west-2', to: 'us-central1', priv: false }],
     policies: [
-      // The PCI row counts from the estate (third skeptic, 2026-09-30): matched is Govern > Tags' pci
-      // workloads, and a violation is an exposed one in the finding's region (tests/home-colour.test.mjs).
-      { name: 'PCI private path', match: 'tag PCI', req: 'Private path required', matched: 89, viol: 10, state: 'enforced' },
-      { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 19, viol: 7, state: 'enforced' },
-      { name: 'Finance segmentation', match: 'remote-site Finance', req: 'Segment intra-tag only', matched: 26, viol: 0, state: 'enforced' },
-      { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 133, viol: 0, state: 'enforced' },
-      { name: 'GPU latency SLO', match: 'tag GPU', req: 'Latency SLO 15 ms', matched: 41, viol: 18, state: 'simulated' },
+      // Every policy counts by Govern's one rule (naas-govern.js, w2-govern 2026-09-30): matched is the
+      // workloads that carry the tag, each its own (Discover's apps table and Govern > Tags, 2026-10-01),
+      // a violation one that reaches the internet directly, and a figure with no source is null, "Not yet
+      // measured" (tests/govern-rule.test.mjs). No workload carries GPU (the GPUs run in the AI-tagged
+      // ones), so the GPU latency SLO matches none, as Cost > Optimize's Resiliency rule already read it.
+      { name: 'PCI private path', match: 'tag PCI', req: 'Private path required', matched: 58, viol: 6, state: 'enforced' },
+      { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 31, viol: 31, state: 'enforced' },
+      { name: 'Finance segmentation', match: 'remote-site Finance', req: 'Segment intra-tag only', matched: null, viol: null, state: 'enforced' },
+      { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 28, viol: 28, state: 'enforced' },
+      { name: 'GPU latency SLO', match: 'tag GPU', req: 'Latency SLO 15 ms', matched: 0, viol: 0, state: 'simulated' },
       { name: 'EU residency', match: 'region eu-*', req: 'Private path required', matched: 89, viol: 89, state: 'authored' },
-      { name: 'AI provider private', match: 'tag AI', req: 'Private path required', matched: 41, viol: 41, state: 'authored' },
+      { name: 'AI provider private', match: 'tag AI', req: 'Private path required', matched: 27, viol: 27, state: 'authored' },
     ],
     buckets: [
       { id: 'gpu', name: 'GPU inference egress', cloud: 'GCP', today: 31200, fabric: 12400, finding: 'avoidable' },
@@ -176,8 +179,8 @@ export const ESTATES = {
       { kind: 'ipsecegress', layer: 'cloud', tab: 'cost', pillar: 'Cost control', persona: 'FinOps', pathSrc: '5 IPsec sites', pathDst: 'AWS and Azure', head: '$8,600/mo of egress rides IPsec tunnels over the internet', ev: 'Every byte the five IPsec sites pull from AWS and Azure bills as internet egress, last 30 days.', priced: true, save: 5500, why: 'All five metros have AT&T access in reach. On AT&T the same bytes bill at the private rate.', ladder: ['Steer this bucket on AT&T', 'Hosted VPC with AT&T egress for the region', 'Connection Hubs in Atlanta and Chicago'] },
       { kind: 'avoidable', layer: 'cloud', tab: 'cost', pillar: 'Cost control', persona: 'FinOps', pathSrc: 'GCP and AWS', pathDst: 'The internet', head: '$40,800/mo of internet egress the AT&T network would carry for $17,600', ev: 'GPU inference and misc internet buckets on GCP and AWS, last 30 days of egress spend.', priced: true, save: 23200, why: 'Both buckets already terminate in metros with a NetBond on-ramp. Steering them changes the path, not the workload.', ladder: ['Steer this bucket on AT&T', 'Steer every internet bucket', 'Hosted VPC with AT&T egress for the region'] },
       { kind: 'crosscloud', layer: 'cloud', tab: 'cost', pillar: 'Cost control', persona: 'Cloud & Platform Architect', pathSrc: 'Your AWS regions', pathDst: 'Azure and GCP', head: '$22,200/mo of cross-cloud traffic crosses the public internet', ev: 'us-east-1 to eastus and us-west-2 to us-central1, both over public egress.', priced: true, save: 12800, why: 'Both pairs sit in metros where AT&T already has on-ramps for each cloud. A Cloud to Cloud path removes the hyperscaler egress charge.', ladder: ['Cloud to Cloud for the pair', 'Multi-region, multi-cloud routing', 'Neocloud reach via Equinix Fabric'] },
-      { kind: 'pci', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'Your sites', pathDst: 'AWS us-east-1', head: '10 PCI-tagged workloads reach the internet directly', ev: '10 of 89 workloads in PCI-tagged VPCs in us-east-1 have a public address and a default route to an internet gateway.', priced: false, why: 'The PCI private path policy is enforced on the private path, but these workloads sit in public subnets with their own route out.', ladder: ['Author "private path required" for tag PCI', 'Hosted VPC in us-east-1 with the policy enforced', 'Hosted VPC plus inline inspection'] },
-      { kind: 'uninspected', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'AWS eu-west-1', pathDst: 'The internet', head: '7 internet-facing workloads have no inspection in path', ev: '7 of 19 Internet-facing workloads in eu-west-1 egress without an NGFW (next-generation firewall).', priced: false, why: 'No hosted VPC exists in eu-west-1, so no inspection point is in the path.', ladder: ['Author "inline security inspection"', 'NGFW (Palo Alto) in path', 'Hosted VPC with the vSRX pair and AT&T egress'] },
+      { kind: 'pci', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'Your sites', pathDst: 'AWS us-east-1', head: '6 PCI-tagged workloads reach the internet directly', ev: '6 of 58 PCI-tagged workloads in us-east-1 have a public address and a default route to an internet gateway.', priced: false, why: 'The PCI private path policy is enforced on the private path, but these workloads sit in public subnets with their own route out.', ladder: ['Author "private path required" for tag PCI', 'Hosted VPC in us-east-1 with the policy enforced', 'Hosted VPC plus inline inspection'] },
+      { kind: 'uninspected', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'AWS eu-west-1', pathDst: 'The internet', head: '31 internet-facing workloads have no inspection in path', ev: 'All 31 Internet-facing workloads in eu-west-1 egress without an NGFW (next-generation firewall).', priced: false, why: 'No hosted VPC exists in eu-west-1, so no inspection point is in the path.', ladder: ['Author "inline security inspection"', 'NGFW (Palo Alto) in path', 'Hosted VPC with the vSRX pair and AT&T egress'] },
       // One path means one path (2026-09-30): the data centers each declare a backup; Azure eastus does not.
       { kind: 'single', layer: 'transport', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your sites', pathDst: 'Azure eastus', head: 'Azure eastus has one path, and finance rides it', ev: 'The eastus ExpressRoute is the only way in for 40 finance workloads, and it is flapping today.', priced: false, why: 'A second path in a second metro keeps finance up when one link drops.', ladder: ['Add a second path to eastus', 'Geodiversity tier with a second metro', 'Maximum resiliency with a second provider'] },
       { kind: 'unmonitored', layer: 'net', tab: 'observe', pillar: 'Observability', persona: 'Network Engineering', pathSrc: 'Your sites', pathDst: 'Your clouds', head: '6 paths send no telemetry', ev: 'us-west-2, eu-west-1, westeurope, us-central1, europe-west1 and the five IPsec sites send no flow logs to AT&T.', priced: false, why: 'Telemetry starts at the first attach. These regions are not attached yet.', ladder: ['Enable flow logs on the public paths', 'Advanced Network Monitoring for the estate', 'Managed NOC with path telemetry'] },
@@ -227,11 +230,12 @@ export const ESTATES = {
     // Signals' Cloud-to-cloud read "3 of 3 on AT&T" beside them.
     arcs: [{ from: 'us-east-1', to: 'eastus', priv: true }, { from: 'us-central1', to: 'us-east-04', priv: true }, { from: 'us-west-2', to: 'us-central1', priv: false }],
     policies: [
-      { name: 'PCI private path', match: 'tag PCI', req: 'Private path required', matched: 179, viol: 0, state: 'enforced' },
-      { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 61, viol: 0, state: 'enforced' },
-      { name: 'Finance segmentation', match: 'remote-site Finance', req: 'Segment intra-tag only', matched: 228, viol: 0, state: 'enforced' },
-      { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 478, viol: 52, state: 'enforced' },
-      { name: 'GPU latency SLO', match: 'tag GPU', req: 'Latency SLO 15 ms', matched: 174, viol: 0, state: 'enforced' },
+      // Govern's one rule (w2-govern, 2026-09-30): the DMZ VPCs ride the public internet, so what faces it is uninspected.
+      { name: 'PCI private path', match: 'tag PCI', req: 'Private path required', matched: 116, viol: 6, state: 'enforced' },
+      { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 86, viol: 86, state: 'enforced' },
+      { name: 'Finance segmentation', match: 'remote-site Finance', req: 'Segment intra-tag only', matched: null, viol: null, state: 'enforced' },
+      { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 162, viol: 46, state: 'enforced' },
+      { name: 'GPU latency SLO', match: 'tag GPU', req: 'Latency SLO 15 ms', matched: 0, viol: 0, state: 'enforced' },
       { name: 'APAC residency', match: 'region ap-*', req: 'Private path required', matched: 52, viol: 52, state: 'simulated' },
     ],
     buckets: [
@@ -245,6 +249,9 @@ export const ESTATES = {
       // Established prices its savings (2026-09-30): the misc and AWS West/EU buckets, the same premiums Cost shows.
       { kind: 'avoidable', layer: 'cloud', tab: 'cost', pillar: 'Cost control', persona: 'FinOps', pathSrc: 'Your AWS regions', pathDst: 'The internet', head: '$11,800/mo of internet egress the AT&T network would carry for $6,400', ev: 'The misc internet bucket on AWS, last 30 days of egress spend.', priced: true, save: 5400, why: 'The bucket already terminates in a metro with a NetBond on-ramp. Steering it changes the path, not the workload.', ladder: ['Steer this bucket on AT&T', 'Steer every internet bucket', 'Hosted VPC with AT&T egress for the region'] },
       { kind: 'crosscloud', layer: 'cloud', tab: 'cost', pillar: 'Cost control', persona: 'Cloud & Platform Architect', pathSrc: 'AWS West and EU', pathDst: 'Your other clouds', head: '$21,000/mo of cross-cloud traffic crosses the public internet', ev: 'us-west-2 to us-central1, over public egress, last 30 days.', priced: true, save: 12100, why: 'Both clouds already have AT&T on-ramps in these metros. A Cloud to Cloud path removes the hyperscaler egress charge.', ladder: ['Cloud to Cloud for the pair', 'Multi-region, multi-cloud routing', 'Neocloud reach via Equinix Fabric'] },
+      // Established's PCI workloads are exposed too (w2-govern, 2026-09-30): one rule on every estate, so the PCI
+      // policy counts them and this finding says so, as Discover's apps table already did.
+      { kind: 'pci', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'Your sites', pathDst: 'AWS us-east-1', head: '6 PCI-tagged workloads reach the internet directly', ev: '6 of 116 PCI-tagged workloads in us-east-1 have a public address and a default route to an internet gateway.', priced: false, why: 'The PCI private path policy is enforced on the private path, but these workloads sit in public subnets with their own route out.', ladder: ['Author "private path required" for tag PCI', 'Hosted VPC in us-east-1 with the policy enforced', 'Hosted VPC plus inline inspection'] },
       { kind: 'unmonitored', layer: 'net', tab: 'observe', pillar: 'Observability', persona: 'Network Engineering', pathSrc: 'Your Singapore sites', pathDst: 'AWS ap-southeast-1', head: '3 paths send no telemetry', ev: 'ap-southeast-1 and two Singapore ADI (Dedicated Internet) circuits send no flow logs.', priced: false, why: 'Singapore is the only site not attached to the AT&T network.', ladder: ['Enable flow logs on the public paths', 'Advanced Network Monitoring for APAC', 'Managed NOC with path telemetry'] },
     ],
     tailored: {
@@ -292,9 +299,10 @@ export const ESTATES = {
     regionsExtra: 8,
     arcs: [{ from: 'us-east-1', to: 'eastus', priv: true }, { from: 'us-west-2', to: 'centralus', priv: false }],
     policies: [
-      { name: 'PCI private path', match: 'tag PCI', req: 'Private path required', matched: 1047, viol: 10, state: 'enforced' },
-      { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 380, viol: 140, state: 'enforced' },
-      { name: 'Finance segmentation', match: 'remote-site Finance', req: 'Segment intra-tag only', matched: 770, viol: 0, state: 'enforced' },
+      // Govern's one rule (w2-govern, 2026-09-30); the remote sites count as sites, at their rollup counts.
+      { name: 'PCI private path', match: 'tag PCI', req: 'Private path required', matched: 678, viol: 12, state: 'enforced' },
+      { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 401, viol: 401, state: 'enforced' },
+      { name: 'Finance segmentation', match: 'remote-site Finance', req: 'Segment intra-tag only', matched: null, viol: null, state: 'enforced' },
       { name: 'Remote sites, no direct internet', match: 'tag RemoteSite', req: 'No direct internet path', matched: 4030, viol: 2850, state: 'simulated' },
     ],
     buckets: [
@@ -307,7 +315,7 @@ export const ESTATES = {
     findings: [
       { kind: 'avoidable', layer: 'cloud', tab: 'cost', pillar: 'Cost control', persona: 'FinOps', pathSrc: 'Your 3 clouds', pathDst: 'The internet', head: '$128,000/mo of internet egress the AT&T network would carry for $57,000', ev: 'GPU inference and misc internet buckets across 3 clouds, last 30 days of egress spend.', priced: true, save: 71000, why: 'Every bucket terminates in a metro with an AT&T on-ramp already carrying this estate.', ladder: ['Steer this bucket on AT&T', 'Steer every internet bucket', 'Hosted VPC with AT&T egress for the region'] },
       { kind: 'crosscloud', layer: 'cloud', tab: 'cost', pillar: 'Cost control', persona: 'Cloud & Platform Architect', pathSrc: 'Your clouds', pathDst: 'Your other clouds', head: '$100,000/mo of cross-cloud traffic crosses the public internet', ev: 'us-west-2 to centralus, over public egress, last 30 days.', priced: true, save: 61000, why: 'Each pair has an on-ramp for both clouds in the same metro.', ladder: ['Cloud to Cloud for the pair', 'Multi-region, multi-cloud routing', 'Neocloud reach via Equinix Fabric'] },
-      { kind: 'pci', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'Your sites', pathDst: 'AWS us-east-2', head: '10 PCI-tagged workloads reach the internet directly', ev: '10 of 357 workloads in PCI-tagged VPCs in us-east-2 have a public address and a default route to an internet gateway.', priced: false, why: 'us-east-2 rides Direct Connect, with no hosted VPC to enforce the policy on.', ladder: ['Author "private path required" for tag PCI', 'Hosted VPC in us-east-2 with the policy enforced', 'Hosted VPC plus inline inspection'] },
+      { kind: 'pci', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'Your sites', pathDst: '2 AWS regions', head: '12 PCI-tagged workloads reach the internet directly', ev: '12 of 678 PCI-tagged workloads in us-east-1 and us-east-2 have a public address and a default route to an internet gateway.', priced: false, why: 'us-east-1 rides NetBond and us-east-2 Direct Connect, but these workloads sit in public subnets with their own route out, and us-east-2 has no hosted VPC to enforce the policy on.', ladder: ['Author "private path required" for tag PCI', 'Hosted VPC in us-east-2 with the policy enforced', 'Hosted VPC plus inline inspection'] },
       { kind: 'unsegmented', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'Your sites', pathDst: 'Azure centralus', head: 'Finance and non-finance workloads share a routing domain', ev: 'centralus: 210 workloads, 84 Finance-tagged, one route table.', priced: false, why: 'Segmentation needs a hosted VNet in the region to hold the per-tag routing domains.', ladder: ['Author "segment intra-tag only"', 'Segmentation across the region\'s hosted VNet', 'Segmentation plus latency SLO per tag'] },
       { kind: 'nothub', layer: 'transport', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your branches', pathDst: 'Your clouds', head: '2,850 connections route outside a Connection Hub', ev: 'Branches East and Central reach the clouds over SD-WAN internet paths with no Connection Hub in the metro.', priced: false, why: 'Two Connection Hubs, Atlanta and Chicago, would carry both branch groups privately.', ladder: ['Connection Hub in Atlanta', 'Connection Hubs in Atlanta and Chicago', 'Hubs plus SD-WAN steer on AT&T'] },
       { kind: 'unmonitored', layer: 'net', tab: 'observe', pillar: 'Observability', persona: 'Network Engineering', pathSrc: 'Branches and ATMs', pathDst: 'Your clouds', head: '2,898 paths send no telemetry', ev: 'Branches East and Central and ATMs send no flow logs to AT&T.', priced: false, why: 'Telemetry starts at the first attach.', ladder: ['Enable flow logs on the public paths', 'Advanced Network Monitoring for the estate', 'Managed NOC with path telemetry'] },
@@ -315,7 +323,7 @@ export const ESTATES = {
   },
 };
 
-export const KINDS = { blindspots: 'Blind spots', degraded: 'Degraded paths', avoidable: 'Avoidable egress', crosscloud: 'Cross-cloud over the internet', pci: 'PCI on public paths', uninspected: 'Uninspected internet-facing', unsegmented: 'Unsegmented', single: 'Single path', onecloud: 'One cloud', nothub: 'Not in a hub', month: 'Month to month', unmonitored: 'Unmonitored', aiuntracked: 'Untracked AI traffic' };
+export const KINDS = { ipsec: 'IPsec on the internet', blindspots: 'Blind spots', degraded: 'Degraded paths', avoidable: 'Avoidable egress', crosscloud: 'Cross-cloud over the internet', pci: 'PCI on public paths', uninspected: 'Uninspected internet-facing', unsegmented: 'Unsegmented', single: 'Single path', onecloud: 'One cloud', nothub: 'Not in a hub', month: 'Month to month', unmonitored: 'Unmonitored', aiuntracked: 'Untracked AI traffic' };
 
 export const CATEGORIES = [
   { id: 'hosted', label: 'Hosted VPC and control' },

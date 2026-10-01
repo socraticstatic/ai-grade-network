@@ -524,15 +524,21 @@ export function optimizeRows(est, { open = [], capacity = [], apps = [] } = {}) 
   const resil = Object.values(byReg).sort((a, b) => b.r.wl - a.r.wl);
   const over = capacity.filter(c => c.oversized), hot = capacity.filter(c => c.state === 'risk');
   const resilWl = resil.reduce((a, x) => a + (x.r.wl || 0), 0), spare = over.reduce((a, c) => a + c.portG, 0);
+  // Each line's own share of the row's figure (w2-govern, 2026-09-30): the figure opens its row to
+  // these, and they add up to it. A finding saves its own; a region holds its workloads; a resize
+  // frees one port (resizeTo is ports - 1); a port near full is one of the count.
+  const saves = (fs) => fs.map(f => ({ n: f.save || 0, f: `save ${money(f.save || 0)}/mo`, finding: f.key || f.kind }));
   return [
-    { key: 'spend', label: 'Spend', cta: 'Update connection type', figure: sum(spendF), figureF: sum(spendF) ? `Save ${money(sum(spendF))}/mo` : '', lines: spendF.map(f => f.head), state: chip(spendF),
+    { key: 'spend', label: 'Spend', cta: 'Update connection type', figure: sum(spendF), figureF: sum(spendF) ? `Save ${money(sum(spendF))}/mo` : '', lines: spendF.map(f => f.head), parts: saves(spendF), state: chip(spendF),
       head: spendF.length ? 'Egress through the cloud provider costs more than it would on AT&T' : 'Every connection already takes the cheaper path', empty: !spendF.length },
-    { key: 'routing', label: 'Routing', cta: 'Update routing policy', figure: sum(routF), figureF: sum(routF) ? `Save ${money(sum(routF))}/mo` : '', lines: routF.map(f => f.head), state: chip(routF),
+    { key: 'routing', label: 'Routing', cta: 'Update routing policy', figure: sum(routF), figureF: sum(routF) ? `Save ${money(sum(routF))}/mo` : '', lines: routF.map(f => f.head), parts: saves(routF), state: chip(routF),
       head: routF.length ? 'Cross-cloud traffic takes the public internet' : 'Every route already takes the cheapest path', empty: !routF.length },
     { key: 'resiliency', label: 'Resiliency', cta: 'Add backup path', figure: resilWl, figureF: resilWl ? `${resilWl.toLocaleString('en-US')} workloads on one path` : '', lines: resil.map(x => `${x.r.cloud} ${x.r.region} · ${x.apps.join(', ')} · critical by your enforced policies`), state: '',
+      parts: resil.map(x => ({ n: x.r.wl || 0, f: `${(x.r.wl || 0).toLocaleString('en-US')} workloads`, region: x.r.region, cloud: x.r.cloud })),
       head: resil.length ? `${resil.length} business-critical ${resil.length === 1 ? 'path has' : 'paths have'} no backup` : 'Every business-critical app has a second path', empty: !resil.length, target: resil.length ? resil[0].r : null },
     { key: 'capacity', label: 'Capacity', cta: over.length || !hot.length ? 'Resize' : 'Add a port', figure: spare, figureF: over.length ? `${spare} Gbps to spare` : hot.length ? `${hot.length} near full` : '', state: '',
       lines: over.length ? over.map(c => `${c.cloud} ${c.region}: ${c.ports} × ${c.portG} Gbps bought, peak ${c.peakPct}%, ${c.avg6mPct}% on average over 6 months. ${c.resizeTo} × ${c.portG} Gbps holds the peak at ${c.resizePct}%.`) : hot.map(c => `${c.cloud} ${c.region}: ${c.peakPct}% of ${c.capG} Gbps at peak, full ${c.fullIn.toLowerCase()}.`),
+      parts: over.length ? over.map(c => ({ n: c.portG, f: `${c.portG} Gbps to spare`, conn: c.id, region: c.region })) : hot.map(c => ({ n: 1, f: 'near full', conn: c.id, region: c.region })),
       head: over.length ? `${over.length} ${over.length === 1 ? 'connection is' : 'connections are'} bought bigger than ${over.length === 1 ? 'it is' : 'they are'} used` : hot.length ? `${hot.length} ${hot.length === 1 ? 'connection runs' : 'connections run'} near full` : 'Every port is sized to what it carries',
       empty: !over.length && !hot.length, target: over[0] || hot[0] || null, resize: !!over.length },
   ];

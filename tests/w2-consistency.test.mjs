@@ -353,7 +353,8 @@ test('A region never sends more outside AT&T than it carries, and the regions ho
 test('A policy\'s matched count reads as Govern > Tags reads the same number', () => {
   const v = vals(mkC({ view: 'trust', estateParam: null, screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies' }));
   const pci = v.polRows.find(p => p.match === 'tag PCI');
-  assert.equal(pci.appliesTo, 'tag PCI · 1,047 matched');
+  // Govern's one rule (2026-10-01 merge): the workloads carrying the pci tag, as Govern > Tags and Discover count them.
+  assert.equal(pci.appliesTo, 'tag PCI · 678 workloads');
 });
 
 test('A By leg tile is the sum of the rows it opens, to the dollar', () => {

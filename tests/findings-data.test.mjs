@@ -13,8 +13,9 @@ if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: ()
 
 test('Established prices its savings, and the head says so', () => {
   const v = vals(mkC({ view: 'mature', estateParam: null, screen: 's3', tab: 'observe' }));
-  // 8 open since Task 1.4 (its two incidents joined), plus the two priced findings.
-  assert.equal(v.pageVerdict, '10 findings open. $17,500/mo potential savings.');
+  // 8 open since Task 1.4 (its two incidents joined), plus the two priced findings; plus its PCI finding (w2-govern,
+  // 2026-09-30): one rule on every estate, and Established's own inventory holds 6 exposed PCI workloads.
+  assert.equal(v.pageVerdict, '11 findings open. $17,500/mo potential savings.');
 });
 
 test('Established Spend: Still open equals Could save', () => {
