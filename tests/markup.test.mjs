@@ -247,6 +247,12 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // swatch, a ring of arc buttons, health dots, an egress sparkline, an exposed bar, the foot's figures and legend),
 // Waiting on you as three chips (open, Accept, a door) and Empty's one step with its picture came in:
 // div 1027 -> 1028, span 836 -> 827, sc-if 430 -> 434, sc-for 235 -> 240, button 323 -> 326, label 29 -> 28.
+// Insights opens on Signals, nine cards in one loop (2026-09-30, "Observe insights is light"): the six hand-written cards
+// (44 div, 40 span, 5 sc-if, 6 sc-for, 6 button, their rows clickable divs) become the persona chips, the pager, one card
+// loop whose title, figures, weeks and count are buttons with each row's move beside its figure, the in-place full list
+// an empty card's first step (Capacity with nothing attached offers Attach) and the empty estate's first step
+// (25 div, 21 span, 12 sc-if, 9 sc-for, 17 button):
+// div 1027 -> 1008, span 836 -> 817, sc-if 430 -> 437, sc-for 235 -> 238, button 323 -> 334.
 // Connect > Recommended replaced Options (2026-09-30, Micah: "The options don't make much sense"): the two
 // candidate columns (group loop, row loop, pager, Attach per row) became one ranked list of moves: a head row
 // with the pager and Attach N selected, the "With AT&T" caption over the tiers, a row per move (rank checkbox,
@@ -274,14 +280,17 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // and Violations & policies prints its total beside the Policies head, Your actions its count beside its title (span 938 -> 940).
 // The home's third skeptic (2026-09-30): the map's legend draws a dot for a Health state as well as a line,
 // one more span under one more sc-if (lg.isDot): span 940 -> 941, sc-if 481 -> 482.
+// Signals merged onto the connect flow (2026-09-30): each count is the flow's plus Signals' own move: div 1118 -> 1099, span 947 -> 928, sc-if 477 -> 484, sc-for 247 -> 250, button 356 -> 367.
+// Signals, second round (2026-09-30): Egress growth's labels under its first and last week became the buttons that open those weeks: span 928 -> 926, button 367 -> 369.
+// Signals merged onto the home v2 (2026-09-30): each count is the home's plus Signals' own move: div 1118 -> 1099, span 941 -> 920, sc-if 482 -> 489, sc-for 252 -> 255, button 359 -> 372.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1118],
-    ['span', /<span\b/g, /<\/span>/g, 941],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 482],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 252],
+    ['div', /<div\b/g, /<\/div>/g, 1099],
+    ['span', /<span\b/g, /<\/span>/g, 920],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 489],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 255],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 359],
+    ['button', /<button\b/g, /<\/button>/g, 372],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 30],
   ];

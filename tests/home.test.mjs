@@ -305,6 +305,17 @@ test('a chip opens its finding in place; All N opens Your actions', () => {
   assert.deepEqual(at(d, ['screen', 'tab', 'obPage', 'insPanel']), ['s3', 'observe', 'insights', 'role']);
 });
 
+test('All N in Your actions opens Insights > Your actions', () => {
+  // Network Eng, who has more than three (2026-09-30): cross-cloud went to the Architect with
+  // the other coverage and topology findings, so FinOps holds two on Growing.
+  const c = home('partial', { persona: 'neteng' });
+  const v = vals(c);
+  assert.equal(v.homeWaiting.length, 3);
+  assert.equal(v.homeWaitingMore, `All ${v.roleActAll.length} in Your actions ›`);
+  v.homeWaitingGo();
+  assert.deepEqual([c.state.screen, c.state.tab, c.state.obPage, c.state.insPanel], ['s3', 'observe', 'insights', 'role']);
+});
+
 test('Andi\'s briefing is one link to Insights > Monthly briefing, never prose on the home', () => {
   const c = home('partial');
   const v = vals(c);

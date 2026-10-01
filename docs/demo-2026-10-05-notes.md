@@ -57,10 +57,11 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 - Spend plus Routing equals the Observe head's potential savings.
 - Tab: **By leg**. Site access, Cloud connectivity, Cloud provider. AT&T charges are catalog prices. Other providers' list prices wear **Modelled**, and the source for each price is in the code. Spend this month stays egress.
 
-## 7. Insights: Your actions and Operations
+## 7. Insights: Signals, Your actions and Operations
 
-- Rail: **Insights**. It lands on **Your actions** for Network Eng: health problems and latency over SLO on the left, and that role's findings on the right.
-- **Do it** is visible, disabled, and reads "Coming soon". **Accept** and **Defer** work; Defer snoozes the finding to the next monthly briefing.
+- Rail: **Insights**. It lands on **Signals** for Network Eng: **Health** ("2 problems · 2 apps affected"), **Latency over SLO** and **Capacity** lead. Each row carries its move beside its figure: **Trace** on the eastus flap and the eu-west-1 spike, **Attach** on the westeurope flows over the 100 ms SLO (westeurope is not on AT&T yet), **Resize** on us-east-1. Cloud-to-cloud offers **Steer** only on us-east-1 to eastus, whose two ends are on AT&T.
+- Every figure is a door. A row opens the one thing it counts, a card's title opens its full list in place, and the count at its foot opens those findings. The role chips over the cards change which three lead.
+- Tab: **Your actions**, that role's findings, each with its recommendation. **Do it** is visible, disabled, and reads "Coming soon". **Accept** and **Defer** work; Defer snoozes the finding to the next monthly briefing.
 - Tab: **Operations**. "1 Sev 1 open now. N tickets open. Fixes took 20h 31m on average." The fixed list is labelled sample history.
 - Tab: **Tickets**. The eastus incident carries the T-nnnn Health showed in beat 4, opened by Andi. With Andi off, an incident with no ticket still lists here as "No ticket yet", and the line counts it as an incident, not a ticket.
 - Optional: **Monthly briefing**, Andi's four to six sentences for the role, built from the same figures. Nothing sends.

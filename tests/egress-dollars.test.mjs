@@ -20,7 +20,8 @@ test('Growing: the card reads in dollars, then, now and the difference', () => {
   assert.equal(g.nowF, '$71,600');
   assert.equal(g.thenF, '$64,800');
   assert.equal(g.deltaF, '+$6,800');
-  assert.match(g.subF, /^Public egress \+\$6,800\/mo in 12 weeks · \+\d+%$/);
+  // The first column is 11 weeks ago, so the change runs 11 weeks (third round, 2026-09-30: the head said 12).
+  assert.match(g.subF, /^Public egress \+\$6,800\/mo in 11 weeks · \+\d+%$/);
 });
 
 test('Established: this week equals the public egress the Cost verdict counts', () => {
@@ -50,7 +51,12 @@ test('the finding behind the card says what the card says', () => {
 test('no bar says 1 weeks; the axis ends carry the reference dollars', () => {
   const g = ins('partial').iw.growth;
   assert.ok(g.weeks.every(w => !/\b1 weeks\b/.test(w.title)));
-  assert.equal(g.thenLabel, '$64,800/mo · 12 weeks ago');
+  // The first of twelve columns is 11 weeks before this one, as its bar's title says (2026-09-30): it read "12 weeks ago".
+  assert.equal(g.thenLabel, '$64,800/mo · 11 weeks ago');
+  assert.match(g.weeks[0].title, /^11 weeks ago/);
   assert.equal(g.nowLabel, 'this week · $71,600/mo');
-  assert.ok(HTML.includes('{{ iw.growth.subF }}') && HTML.includes('{{ iw.growth.thenLabel }}') && HTML.includes('{{ iw.growth.nowLabel }}'));
+  // The nine Signals cards share one loop (2026-09-30): Egress growth's figure and axis ends are its card's.
+  assert.ok(HTML.includes('{{ sg.head }}') && HTML.includes('{{ sg.thenLabel }}') && HTML.includes('{{ sg.nowLabel }}'));
+  const card = ins('partial').sigAll.find(x => x.key === 'growth');
+  assert.deepEqual([card.head, card.thenLabel, card.nowLabel], [g.subF, g.thenLabel, g.nowLabel]);
 });

@@ -29,7 +29,9 @@ const EXPECT = {
     govern: '14 policies enforced. 2 authored but not enforced.',
     // Established prices its savings (2026-09-30), so Cost leads with what is on the table.
     cost: '$17,500/mo on the table across 2 priced findings. $61,400/mo already saved on AT&T.',
-    observe: '95% of all traffic on AT&T, saving $61.4k/mo. 1 region is blind.',
+    // us-west-2 to us-central1 rides the public internet (2026-09-30), as the AWS West/EU cross-cloud
+    // bucket and the crosscloud finding already billed it: 3.2 Gbps left AT&T, 95% became 92%.
+    observe: '92% of all traffic on AT&T, saving $61.4k/mo. 1 region is blind.',
   },
   trust: {
     // Re-pinned (2026-09-30, owner decision b).
