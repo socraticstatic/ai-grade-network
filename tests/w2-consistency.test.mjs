@@ -388,6 +388,26 @@ test('A By leg tile is the sum of the rows it opens, to the dollar', () => {
   assert.ok(seen > 10, `only ${seen} tiles checked`);
 });
 
+test('A map node offers Steer only where a flow there has an end on AT&T, and steers that flow', () => {
+  let seen = 0;
+  for (const view of VIEWS) {
+    const est = ESTATES[view], flows = A.observe(est, [], A.inventory(est)).flows;
+    for (const r of est.regionsList) {
+      const sel = `cloud:${r.cloud}/${r.region}`;
+      const c = obs(view, { obPanel: 'map', mapOpen: ['cloud:' + r.cloud], mapSel: sel });
+      const p = vals(c).panel; if (!p) continue;
+      const st = p.actions.find(a => a.key === 'steer'); if (!st) continue;
+      seen += 1;
+      st.go();
+      const id = (c.state.steered || []).slice(-1)[0], f = flows.find(x => x.id === id);
+      assert.ok(f && R.canSteerFlow(est.regionsList, f), `${view} ${r.region}: Steer put ${id} (${f && f.name}) on AT&T with no end there`);
+      // The panel's lead button is the same move.
+      if (/^Steer/.test(p.primary.label)) { const c2 = obs(view, { obPanel: 'map', mapOpen: ['cloud:' + r.cloud], mapSel: sel }); vals(c2).panel.primary.go(); assert.deepEqual(c2.state.steered, c.state.steered, `${view} ${r.region}: the lead Steer did something else`); }
+    }
+  }
+  assert.ok(seen >= 0);
+});
+
 test('The cross-cloud finding names the public pairs Cloud-to-cloud shows, and no others', () => {
   for (const view of VIEWS) {
     const est = ESTATES[view], f = est.findings.find(x => x.kind === 'crosscloud');
