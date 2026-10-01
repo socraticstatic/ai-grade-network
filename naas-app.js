@@ -21,7 +21,7 @@ import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
 import * as SG from './naas-signals.js';
-import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS, pairOutcome } from './naas-policy-layers.js';
+import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
 import * as M from './naas-moves.js';
 import { rampName } from './naas-things.js';
@@ -191,7 +191,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -4068,7 +4068,7 @@ function wizardVals(s, est, set, c) {
     // govern
     notAuthoring: !au,
     // Two tabs, one at a time (2026-09-28, no scrolling).
-    ...(() => { const gk = ['templates', 'tags'].includes(s.govPanel) ? s.govPanel : 'policies'; return { govPanels: [['policies', 'Violations & policies'], ['templates', 'Templates'], ['tags', 'Tags']].map(([k, l]) => { const on = gk === k; return { key: k, label: l, on, go: () => set({ govPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), govPanelPolicies: gk === 'policies', govPanelTemplates: gk === 'templates', govPanelTags: gk === 'tags' }; })(),
+    ...(() => { const gk = ['templates', 'tags', 'engine'].includes(s.govPanel) ? s.govPanel : 'policies'; return { govPanels: [['policies', 'Violations & policies'], ['templates', 'Templates'], ['engine', 'Policy engine'], ['tags', 'Tags']].map(([k, l]) => { const on = gk === k; return { key: k, label: l, on, go: () => set({ govPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), govPanelPolicies: gk === 'policies', govPanelTemplates: gk === 'templates', govPanelEngine: gk === 'engine', govPanelTags: gk === 'tags' }; })(),
     authoring: !!au, openAuthor: openAuthor(), closeAuthor: () => set({ authoring: null }), aMatch: A_MATCH.map(v => aCard('match', v, true)), aScope: A_SCOPE.map(v => aCard('scope', v, true)), aReq: D.COMPOSE_CHIPS.control.map(v => aCard('req', v, false)),
     ...(() => { // Intent | Route policy (Advanced): NetBond Advanced's rules, each direction its own toggle (2026-10-01).
       const tabK = au && ['route', 'services', 'outcome'].includes(au.tab) ? au.tab : 'intent', rt = (au && au.route) || {}, paths = (au && au.path) || [];
@@ -4116,8 +4116,21 @@ function wizardVals(s, est, set, c) {
       actBg: p.viol ? 'var(--cta)' : 'transparent',
       actInk: p.viol ? '#fff' : 'var(--link)',
       actBorder: p.viol ? 'var(--cta)' : 'var(--border-primary)' })),
+    // The policy engine (2026-10-01): every policy in precedence order, what each compiles onto each connection, conflicts.
+    ...(() => { const all = [...(s.layer === 'cloud' ? layerPolicies(s, est, 'all') : []), ...(s.customPolicies || [])];
+      const e = evalPolicies(est, all), RANKW = ['Asset pair', 'To a region', 'Tag or branch', 'Region pattern', 'Any'];
+      return { engineSummary: e.summary, engineRows: e.ordered.slice(0, 7).map((p, i) => ({ key: 'e' + i, n: i + 1, name: p.name || p.match, line: `When ${p.match} reaches ${p.scope || 'any cloud'}${p.req ? `, require ${String(p.req).toLowerCase()}` : ''}${(p.path || []).length ? `, ${p.path.map(x => x.replace(/^\w/, ch => ch.toLowerCase())).join(', ')}` : ''}`, rank: RANKW[p.rank], state: p.state || 'enforced' })),
+        engineMore: e.ordered.length > 7 ? `+${e.ordered.length - 7} more, lower precedence` : '', hasEngineMore: e.ordered.length > 7,
+        engineConns: e.connections.map(c => ({ key: c.key, label: c.label, rules: c.rules.slice(0, 6).map((r, i) => ({ key: c.key + i, text: r.text, from: r.from })) })), hasEngineConns: e.connections.length > 0, noEngineConns: !e.connections.length,
+        engineConflicts: e.conflicts, hasEngineConflicts: e.conflicts.length > 0, noEngineConflicts: !e.conflicts.length,
+        engineStart: () => set({ govPanel: 'templates', govTplKind: 'between' }) }; })(),
+    tplKinds: [['between', 'Between assets'], ['layered', 'Layered']].map(([k, l]) => { const on = (s.govTplKind || 'layered') === k; return { key: k, label: l, on, go: () => set({ govTplKind: k }), bg: on ? 'var(--bg-base)' : 'transparent', weight: on ? 700 : 500 }; }),
     // Multi-layer starting points: a rule at every layer, carried into the author.
-    examplePolicies: MULTI_LAYER.map(t => ({ key: t.key, t: t.name, m: t.match, why: t.why, r: t.layers.core,
+    examplePolicies: (s.govTplKind || 'layered') === 'between' ? BETWEEN_TEMPLATES.map(t => { const r = resolveTemplate(est, t);
+      const layerText = (lk) => { const xs = SERVICE_GROUPS.flatMap(g => g.opts).filter(o => r.path.includes(o.label) && o.layer === lk).map(o => o.label); const rt = lk === 'edge' ? Object.keys(r.route).length : 0;
+        return [...xs, ...(rt ? [`${rt} route ${rt === 1 ? 'rule' : 'rules'}`] : [])].join(' · ') || 'Any'; };
+      return { key: t.key, t: t.name, m: `${r.match} ↔ ${r.scope}`, why: t.why, r: r.path[0] || 'Route policy', layers: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: layerText(l.key) })),
+        go: () => set({ govPanel: 'policies', authoring: { ...r, tab: 'outcome' } }) }; }) : MULTI_LAYER.map(t => ({ key: t.key, t: t.name, m: t.match, why: t.why, r: t.layers.core,
       layers: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: t.layers[l.key] })),
       go: () => set({ govPanel: 'policies', authoring: { match: t.match, scope: 'any cloud', req: [t.layers.core], layers: t.layers, templateName: t.name } }) })),
   };

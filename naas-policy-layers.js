@@ -114,3 +114,57 @@ export function pairOutcome(est, au, price = {}) {
     : `Today this pair rides ${today.path === 'Public internet' ? 'the public internet' : 'the AT&T network'} at ${today.ms} ms. With this policy: ${after.path === 'Public internet' ? 'still public' : 'private'}, ${after.ms} ms, ${delta ? `+${fmt$(delta)}/mo` : 'no added cost'}.${missing.length ? ` ${missing[0].text}.` : ''}`;
   return { today, after, lines, delta, deltaF: delta ? `+${fmt$(delta)}/mo` : '$0', missing, pushed, tip };
 }
+
+// Templates between two assets (2026-10-01): each names its sides by kind, and resolves to the estate's own.
+export const BETWEEN_TEMPLATES = [
+  { key: 'pc-hsp', name: 'Private cloud to a hyperscaler, private and inspected', why: 'Your colo private cloud reaches a cloud region over the AT&T network only, through a firewall, encrypted.',
+    a: 'private-cloud', b: 'public-region', path: ['Via the AT&T network', 'Never the internet', 'NGFW inline', 'Encrypt in transit'], route: { 'deny:block-default-routes': { o2p: true, p2o: false } } },
+  { key: 'c2c', name: 'Cloud to cloud over AT&T, two paths', why: 'Two clouds talk over the AT&T network on diverse metros, active/active, never the internet.',
+    a: 'region', b: 'other-cloud-region', path: ['Via the AT&T network', 'Two paths, diverse metros', 'Active/active', 'Never the internet'], route: {} },
+  { key: 'egress', name: 'Controlled egress for internet-facing apps', why: 'Internet-bound traffic leaves only through AT&T, to allow-listed destinations, inspected.',
+    a: 'tag Internet-facing', b: 'the Internet', path: ['Internet egress only through AT&T', 'Allow-listed destinations only', 'NGFW inline'], route: {} },
+  { key: 'branch-zt', name: 'Branches to cloud, zero-trust', why: 'Users at branches reach the clouds through zero-trust access, encrypted, over the AT&T network.',
+    a: 'bu', b: 'any cloud', path: ['Zero-trust access for users', 'Encrypt in transit', 'Via the AT&T network'], route: {} },
+  { key: 'advertise', name: 'Advertise only what the partner needs', why: 'The cloud learns only your matching routes, tagged for its route table; no default route leaks.',
+    a: 'private-cloud', b: 'public-region', path: [], route: { 'allow:matching-routes': { o2p: true, p2o: false }, 'deny:block-default-routes': { o2p: true, p2o: false }, 'manip:selective-cv-tagging': { o2p: true, p2o: false } } },
+];
+/** A template's sides, named from this estate: its first private cloud, its first public region, a region on another cloud. */
+export function resolveTemplate(est, t) {
+  const regs = est.regionsList || [], sites = est.sites || [];
+  const pcSite = sites.find(st => st.colo && st.colo.kind === 'Private cloud');
+  const pc = pcSite ? `Private cloud · ${pcSite.colo.provider} ${pcSite.colo.facility}, ${pcSite.metro}` : (sites.find(st => /DC\b/.test(st.name)) || {}).name;
+  const pub = regs.find(r => !r.priv) || regs[0] || {}, any = regs[0] || {};
+  const other = regs.find(r => r.cloud !== any.cloud) || regs[1] || any;
+  const side = (k) => k === 'private-cloud' ? pc : k === 'public-region' ? `${pub.cloud} ${pub.region}` : k === 'region' ? `${any.cloud} ${any.region}`
+    : k === 'other-cloud-region' ? `${other.cloud} ${other.region}` : k === 'bu' ? 'branch Finance' : k;
+  return { match: side(t.a), scope: side(t.b), path: t.path.slice(), route: JSON.parse(JSON.stringify(t.route)), req: [], templateName: t.name };
+}
+
+// The policy engine (2026-10-01): every policy in precedence order (an asset pair beats a tag or branch,
+// which beats a region pattern, which beats any), the rules each compiles onto the connection that carries
+// it, and the conflicts between them (one allows what another denies, for the same pair and direction).
+const RANK = (p) => /^Private cloud · |^site /.test(p.match || '') && /^(AWS|Azure|GCP|Oracle|CoreWeave) /.test(p.scope || '') ? 0
+  : /^(AWS|Azure|GCP|Oracle|CoreWeave) /.test(p.scope || '') ? 1 : /^(tag|branch|remote-site) /.test(p.match || '') ? 2 : /\*/.test(p.match || '') ? 3 : 4;
+export function evalPolicies(est, policies = []) {
+  const live = policies.filter(p => p.state !== 'draft');
+  const ordered = live.map((p, i) => ({ ...p, rank: RANK(p), i })).sort((x, y) => x.rank - y.rank || x.i - y.i);
+  const byConn = new Map(), conflicts = [];
+  for (const p of ordered) {
+    const r = (est.regionsList || []).find(x => p.scope === `${x.cloud} ${x.region}`);
+    if (!r) continue;
+    const k = r.region, c = byConn.get(k) || { key: k, region: r.region, label: `${r.cloud} ${r.region}`, rules: [] };
+    for (const pick of p.path || []) c.rules.push({ text: pick, from: p.name });
+    for (const rr of ROUTE_RULES) { const v = (p.route || {})[`${rr.section}:${rr.id}`] || {};
+      for (const [dir, word] of [['o2p', 'on premise → partner'], ['p2o', 'partner → on premise']]) if (v[dir])
+        c.rules.push({ text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${word})`, from: p.name, sec: rr.section, id: rr.id, dir, word, pair: `${p.match}→${p.scope}` }); }
+    byConn.set(k, c);
+  }
+  for (const c of byConn.values()) {
+    const denies = c.rules.filter(x => x.sec === 'deny'), allows = c.rules.filter(x => x.sec === 'allow');
+    for (const d of denies) for (const a of allows) if (d.id === a.id && d.dir === a.dir && d.pair === a.pair && d.from !== a.from)
+      conflicts.push({ key: `${c.key}:${d.id}:${d.dir}`, text: `${d.from} denies and ${a.from} allows ${ROUTE_RULES.find(x => x.id === d.id).label.toLowerCase()}, ${d.word}, on ${c.label}`, conn: c.label });
+  }
+  const connections = [...byConn.values()], ruleN = connections.reduce((s, c) => s + c.rules.length, 0);
+  const pl = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+  return { ordered, connections, conflicts, summary: `${pl(ordered.length, 'policy', 'policies')} · ${pl(connections.length, 'connection', 'connections')} · ${pl(ruleN, 'rule', 'rules')} pushed · ${pl(conflicts.length, 'conflict', 'conflicts')}` };
+}

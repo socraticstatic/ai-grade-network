@@ -18,7 +18,7 @@ const gate = (name) => { const a = HTML.indexOf(`<sc-if value="{{ ${name} }}"`);
 test('Observe has no drawer tabs; Tags is a Govern tab and Policies is Govern\'s own table', () => {
   assert.deepEqual(vals(mkC({ view: 'mature', screen: 's3', tab: 'observe', estateParam: null, sub: { page: 'observe', panel: 'tags' } })).subTabs, []);
   const g = vals(at('tags'));
-  assert.deepEqual(g.govPanels.map(p => p.label), ['Violations & policies', 'Templates', 'Tags']);
+  assert.deepEqual(g.govPanels.map(p => p.label), ['Violations & policies', 'Templates', 'Policy engine', 'Tags']);
   assert.equal(g.govPanelTags, true);
   assert.equal(HTML.indexOf('subIsPolicies'), -1);
 });
