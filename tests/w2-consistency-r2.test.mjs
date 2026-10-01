@@ -198,6 +198,29 @@ test('The briefing says under way only of what is accepted or in progress, never
   assert.equal(opt.cta, 'In progress', `Optimize's Capacity reads In progress beside a button reading ${opt.cta}`);
 });
 
+test('Signals\' Add a port and Attach name the data center the order serves, never "No data centers in" the region\'s metro', async () => {
+  const CF = await import('../naas-connect-flow.js');
+  const { ESTATES } = await import('../naas-data.js');
+  let seen = 0;
+  for (const view of ['partial', 'mature', 'trust']) for (const persona of ['architect', 'neteng']) {
+    for (const k of ['capacity', 'health', 'talkers']) {
+      const cd = card(vals(ins(view, { persona })), k); if (!cd) continue;
+      cd.all.forEach((r, i) => {
+        if (!/^(Add a port|Attach)$/.test(r.act)) return;
+        const c = ins(view, { persona });
+        card(vals(c), k).all[i].actGo();
+        if (c.state.screen !== 's4') return; // Modify bandwidth opens in place where AT&T sells the port
+        const f = CF.flowOf(c.state.compose, ESTATES[view]);
+        const sites = CF.wipRows(f, ESTATES[view]).find(x => x.key === 'sites');
+        assert.ok(sites, `${view} ${persona} ${r.act} ${r.label}: the order has no Sites row`);
+        assert.doesNotMatch(String(sites.value), /^No /, `${view} ${persona} ${r.act} ${r.label}: Sites reads "${sites.value}"`);
+        seen += 1;
+      });
+    }
+  }
+  assert.ok(seen >= 3, `only ${seen} orders checked`);
+});
+
 test('Spend by bucket names its blue as Cost does, AT&T price, and never calls a bucket\'s dollars on AT&T', async () => {
   const CV = await import('../naas-cost-view.js');
   for (const view of VIEWS) {

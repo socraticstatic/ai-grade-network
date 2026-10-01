@@ -1596,8 +1596,16 @@ function composeFor(go, r) {
  * a Compose that never named the region or said port).
  */
 function flowFor(go, est, r, note, extra = {}) {
-  const metro = REGION_GEO[r.region];
-  const sets = { sites: [], regions: [r.region], tier: 'standard', connectionType: 'DataCenter/CoLocation to Cloud', sourceLabel: 'Signals', ...extra };
+  // The order names the data center it serves (w2, 2026-09-30: Add a port on Established us-west-2
+  // read "Sites: No data centers in Seattle", the region's metro, where the estate has none): the
+  // estate's data center in the region's part of the map (US West, Europe), on AT&T first, else the
+  // one on AT&T sending it the most, and the location is its metro.
+  const near = REGION_OF_METRO(REGION_GEO[r.region] || '');
+  const dc = (P.allSites(est) || []).filter(x => x.core !== 'third' && /data center/i.test(x.cls || ''))
+    .map((x, i) => ({ x, i, same: REGION_OF_METRO(x.metro) === near ? 0 : 1, off: x.priv ? 0 : 1, g: P.gbps(est, x, r) || 0 }))
+    .filter(d => !d.same || !d.off).sort((a, b) => a.same - b.same || a.off - b.off || b.g - a.g || a.i - b.i)[0];
+  const metro = dc ? dc.x.metro : REGION_GEO[r.region];
+  const sets = { sites: dc ? [dc.x.name] : [], regions: [r.region], tier: 'standard', connectionType: 'DataCenter/CoLocation to Cloud', sourceLabel: 'Signals', ...extra };
   return go('s4', { ...newOrder({ ...prefillCompose(est), metros: metro ? [metro] : [], regionTab: metro ? REGION_OF_METRO(metro) : 'US East',
     prefilled: false, prefillRegion: `${r.cloud} ${r.region}`, prefillWl: r.wl || 0, prefillSets: sets, sourceLabel: 'Signals', noteStep: 0, note }) });
 }
