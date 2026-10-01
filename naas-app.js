@@ -2311,7 +2311,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     ['p95', 'P95 latency', String(perf.p95), 'ms', { mapMode: 'slo', mapPath: 'all', mapHealth: 'all' }, 'The 95th percentile latency across the paths on this map'],
     ['onatt', 'Sites on AT&T', onAttTile.v, '', { mapMode: 'state', mapPath: 'att' }, onAttTile.title],
     ['cost', 'Cost', costNone ? 'Not priced' : money(costT), costNone ? '' : '/mo', { mapMode: 'cost', mapPath: 'all', mapHealth: 'all' }, costTitle],
-    ['could', 'Could save', money(couldT), '/mo', { mapMode: 'cost', mapPath: 'out', mapHealth: 'all' }, 'What the traffic outside AT&T on this map would save on the AT&T network, per month'],
+    // Its own basis in its name (w2 second pass, 2026-09-30): "Could save" is Spend's figure everywhere
+    // else ($41,500 on Growing, the page head's); this tile is what the sites' traffic it draws would save.
+    ['could', 'Sites could save', money(couldT), '/mo', { mapMode: 'cost', mapPath: 'out', mapHealth: 'all' }, 'What your sites\' traffic outside AT&T on this map would save on the AT&T network, per month. The page head counts every open finding.'],
     ['slo', 'Over SLO', String(map.ribbons.filter((r, i) => String(r.from).startsWith('mid:') && ribState(r, i) === 'slo').length), 'links', { mapMode: 'slo', mapPath: 'all', mapHealth: 'slo' }, 'Links from a path to a destination on this map over their latency SLO; the Over SLO filter lights the same links'],
   ].map(([k, l, v, u, patch, title]) => { const on = !!tileOn(k);
     // Since is the window the tiles compare against (2026-09-29 audit): now vs the prior window.

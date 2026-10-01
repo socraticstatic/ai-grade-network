@@ -221,6 +221,15 @@ test('Signals\' Add a port and Attach name the data center the order serves, nev
   assert.ok(seen >= 3, `only ${seen} orders checked`);
 });
 
+test('Could save is one figure: the Traffic map\'s tile names its own basis, the sites\' traffic it draws', () => {
+  for (const view of VIEWS) {
+    const spend = vals(mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'cost', costPanel: 'spend' })).spendTiles.find(t => t.l === 'Could save');
+    const tiles = vals(mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'map' })).flowTiles;
+    for (const t of tiles.filter(x => x.l === 'Could save')) assert.equal(t.v, spend.v, `${view}: Traffic's Could save reads ${t.v}, Spend's ${spend.v}`);
+    assert.ok(tiles.some(x => x.key === 'could' && /^Sites could save$/.test(x.l)), `${view}: the map's tile reads ${tiles.map(x => x.l).join(', ')}`);
+  }
+});
+
 test('Spend by bucket names its blue as Cost does, AT&T price, and never calls a bucket\'s dollars on AT&T', async () => {
   const CV = await import('../naas-cost-view.js');
   for (const view of VIEWS) {
