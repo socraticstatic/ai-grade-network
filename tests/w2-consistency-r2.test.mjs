@@ -84,6 +84,16 @@ test('A Signals traffic figure lands on the records it counts, or says no sample
   assert.ok(empty < seen / 4, `${empty} of ${seen} figures land on no record`);
 });
 
+test('An explanation no sample record carries says so, on its count and in the empty list, never falling back to other records', () => {
+  const c = mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'logs', explain: { label: 'A flow', value: '1 Gbps', sub: '', cut: 'Records from nowhere.', src: 'nowhere', pattern: 'internet', path: 'public', parts: [] } });
+  const v = vals(c);
+  assert.equal(v.flowRecords.length, 0, 'the cut fell back to other records');
+  assert.equal(v.explainCount, 'No sample record carries it yet.');
+  assert.match(v.logEmptyLine, /^No sample record carries it yet\./);
+  const plain = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'logs', logQ: 'zzzz' }));
+  assert.equal(plain.logEmptyLine, 'Nothing matches these filters.');
+});
+
 // The Traffic map with a cloud opened and one of its regions selected, or a connection's own panel.
 const mapAt = (view, cloud, sel) => mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'map', mapOpen: cloud ? ['cloud:' + cloud] : [], mapSel: sel });
 const WORST = ['ok', 'risk', 'slo', 'down'];
