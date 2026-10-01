@@ -2013,7 +2013,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const byCloudRegs = {}; eRegs.forEach(r => { byCloudRegs[r.cloud] = (byCloudRegs[r.cloud] || 0) + 1; });
   const exposedN = apps.reduce((a, x) => a + x.exposed, 0);
   const glanceRings = [
-    ringOf('sites', 'Sites', Object.values(eSvcTally).sort((a, b) => b.n - a.n).map((t, i) => ({ label: t.v.label, v: t.n, color: t.v.onAtt ? `var(--viz-${[1, 2, 3, 5][i % 4]})` : 'var(--viz-4)' })), enf(eSiteN), 'sites', eAttN === eSiteN ? 'All on AT&T' : `${enf(eAttN)} on AT&T`, 'Your sites', eToSites),
+    ringOf('sites', 'Sites', Object.values(eSvcTally).sort((a, b) => b.n - a.n).map((t, i) => ({ label: t.v.label, v: t.n, color: t.v.onAtt ? `var(--viz-${[1, 2, 3, 5][i % 4]})` : 'var(--viz-4)' })), enf(eSiteN), 'sites', eAttN === eSiteN ? 'All on AT&T' : `${enf(eAttN)} on AT&T`, 'Your sites', eToSites,
+      // A first mile's sites, in place: Your sites grouped by access (2026-10-01).
+      { legend: (l) => { const t = Object.values(eSvcTally).find(x => x.v.label === l); return t ? () => set({ estPanel: 'sites', placeTrail: ['access:' + t.v.key], placePage: 0 }) : null; },
+        centre: eSiteN ? () => set({ estPanel: 'sites', placeTrail: [], placePage: 0 }) : null }),
     // A cloud's regions, in place: Your clouds one step down.
     ringOf('clouds', 'Clouds', Object.entries(byCloudRegs).sort((a, b) => b[1] - a[1]).map(([c, n]) => ({ label: c, v: n })), enf(eRegs.length), eRegs.length === 1 ? 'region' : 'regions', `${ePrivRegs.length} private`, 'Your clouds', () => set({ estPanel: 'clouds' }),
       { legend: (cl) => () => set({ estPanel: 'clouds', cloudTrailE: ['cloud:' + cl], cloudPage: 0 }) }),

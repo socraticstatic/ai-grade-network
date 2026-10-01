@@ -107,6 +107,48 @@ test('the Apps ring: each legend entry, the centre and the door open what they c
   }
 });
 
+// The Workloads ring counts every workload by where its region rides; the Clouds ring a cloud's regions.
+test('the Workloads ring and the Clouds legend open what they count', () => {
+  for (const view of ESTATES) {
+    const c = glance(view), snap = { ...c.state };
+    const wr = vals(c).glanceRings.find(r => r.key === 'workloads');
+    for (const lg of wr.legend.filter(x => num(x.n) > 0)) {
+      fresh(c, snap); vals(c).glanceRings.find(r => r.key === 'workloads').legend.find(x => x.key === lg.key).go();
+      landsOn(c, num(lg.n), `${view} Workloads ${lg.label}`);
+    }
+    fresh(c, snap); vals(c).glanceRings.find(r => r.key === 'workloads').centreGo(); landsOn(c, num(wr.centre), `${view} Workloads centre`);
+    const m = /^([\d,]+) on the internet$/.exec(wr.head);
+    if (m) { fresh(c, snap); vals(c).glanceRings.find(r => r.key === 'workloads').headGo(); landsOn(c, num(m[1]), `${view} ${wr.head}`); }
+    // A cloud's regions, one step down Your clouds.
+    const cr = vals(c).glanceRings.find(r => r.key === 'clouds');
+    for (const lg of cr.legend) {
+      fresh(c, snap); vals(c).glanceRings.find(r => r.key === 'clouds').legend.find(x => x.key === lg.key).go();
+      const v = vals(c);
+      assert.equal(c.state.estPanel, 'clouds'); assert.deepEqual(c.state.cloudTrailE, ['cloud:' + lg.label]);
+      assert.equal(v.cloudRows.length, num(lg.n), `${view} ${lg.label}: the legend says ${lg.n} regions, Your clouds lists ${v.cloudRows.length}`);
+    }
+  }
+});
+
+// The Sites ring's legend counts sites by their first mile: each opens Your sites on that access, in place.
+test('the Sites legend opens Your sites on that first mile, at its count', () => {
+  for (const view of ESTATES) {
+    const c = glance(view), snap = { ...c.state };
+    for (const lg of vals(c).glanceRings.find(r => r.key === 'sites').legend) {
+      fresh(c, snap); vals(c).glanceRings.find(r => r.key === 'sites').legend.find(x => x.key === lg.key).go();
+      const v = vals(c);
+      assert.equal(c.state.screen, 's1'); assert.equal(c.state.estPanel, 'sites', `${view} ${lg.label}`);
+      assert.equal(v.placeCrumbs.at(-1).label, lg.label, `${view}: the trail ends "${v.placeCrumbs.at(-1).label}", not ${lg.label}`);
+      assert.match(v.placeLine, new RegExp(`· ${lg.n} sites?$`), `${view} ${lg.label} ${lg.n}: lands on "${v.placeLine}"`);
+    }
+    // "25 sites" opens Your sites at the top, every region, the same 25.
+    const ring = vals(c).glanceRings.find(r => r.key === 'sites');
+    fresh(c, snap); ring.centreGo();
+    assert.equal(c.state.estPanel, 'sites'); assert.deepEqual(c.state.placeTrail, []);
+    assert.match(vals(c).placeLine, new RegExp(`· ${ring.centre} sites?$`), view);
+  }
+});
+
 test('the markup: the apps row is no longer one button to the records; each figure is', () => {
   assert.ok(!HTML.includes('onClick="{{ ap.go }}"'), 'the row still opens the records');
   assert.equal((HTML.match(/title="Open \{\{ ap\.name \}\}'s records"/g) || []).length, 1, 'only Traffic opens the records');
