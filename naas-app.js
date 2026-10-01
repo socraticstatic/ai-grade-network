@@ -1763,7 +1763,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const nn = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   // The home's Discover tile reads the pill at Discover's own 30 days, so Since never moves the strip (2026-09-30).
   const new30 = [...allVpcs, ...allWls, ...allSites].filter(x => !!x && x.since != null && x.since <= WIN['30d'][0]).length;
-  const newPill30 = new30 ? `${new30} new · ${WIN['30d'][1]}` : '';
+  const newPill30 = new30 ? `${new30.toLocaleString('en-US')} new · ${WIN['30d'][1]}` : '';
   // Every figure opens what it counts (Micah, 2026-09-30: "it all should be drillable"). One set
   // of doors for Discover: each lands on the one list that holds the figure's set, filtered to
   // it. Sites land on Your sites by place; clouds, regions, VPCs, workloads and apps on Your
@@ -1800,7 +1800,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     text: newN
       ? `${nn(newN, 'resource was', 'resources were')} discovered ${DR.inTheLast(winLabel)}: ${nn(newVpcs.length, 'VPC', 'VPCs')}, ${nn(newWls.length, 'workload', 'workloads')} and ${nn(newSites.length, 'site', 'sites')}. ${newUnlabeled === 0 ? 'All of them carry a label' : `${newUnlabeled} ${newUnlabeled === 1 ? 'has' : 'have'} no label yet`}${newPublic === 0 ? ' and none reach the internet directly.' : ` and ${newPublic} ${newPublic === 1 ? 'reaches' : 'reach'} the internet directly. Label them, then bring the exposed ones under a private-path policy.`}`
       : `Nothing new was discovered ${DR.inTheLast(winLabel)}. Widen the range in the title row to look further back.`,
-    cta: newOnly ? 'Show everything' : 'Review new', hasNew: newN > 0, pill: newOnly ? `${newN} new · showing only these` : `${newN} new · ${winLabel}`,
+    cta: newOnly ? 'Show everything' : 'Review new', hasNew: newN > 0, pill: newOnly ? `${newN.toLocaleString('en-US')} new · showing only these` : `${newN.toLocaleString('en-US')} new · ${winLabel}`,
     toggle: () => set({ newOnly: !newOnly, inv: newOnly ? openMap : { ...openMap, ...Object.fromEntries(inv.flatMap(cl => [cl.id, ...cl.regions.map(r => r.id)]).map(k => [k, true])) }, siteOpen: newOnly ? (s.siteOpen || {}) : Object.fromEntries(S.siteTree(est).flatMap(cl => [cl.key, ...cl.children.map(ch => ch.key)]).map(k => [k, true])) }),
     // The pill filters Your clouds and Your sites to what is new, and lands where most of it is (2026-09-30).
     // Where the filter is on, the pill turns it off; anywhere else it opens what is new (2026-10-01).

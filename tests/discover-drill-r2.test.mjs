@@ -337,6 +337,14 @@ test('7. leaving Estate, for another page or for Sources, clears the new filter;
   }
 });
 
+test('8. the new pill writes its number as its landing does ("1,341 new", never "1341 new")', () => {
+  const c = disc('trust', { obWindow: '6m' });
+  const v = vals(c);
+  assert.match(v.newStrip.pill, /^\d{1,3}(,\d{3})+ new · /, `the pill reads "${v.newStrip.pill}"`);
+  v.newStrip.go(EV);
+  assert.ok(vals(c).cloudLine.startsWith(v.newStrip.pill.split(' new')[0]) || vals(c).placeLine.includes(v.newStrip.pill.split(' new')[0]) || num(v.newStrip.pill) === vals(c).cloudNewN + vals(c).siteNewN, v.newStrip.pill);
+});
+
 test('8. a window\'s words read once: never "the last the last hour"', () => {
   for (const view of ESTATES) {
     for (const w of ['1h', '24h', '7d', '30d']) {
