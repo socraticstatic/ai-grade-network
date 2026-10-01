@@ -347,6 +347,7 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Simulate the pair (2026-10-01): the composer's Outcome tab (tip, today, with the policy, price, pushed by layer, missing with its order); recounted, balanced.
 // The policy engine and between-asset templates (2026-10-01): Govern's Policy engine tab (summary, conflicts, precedence list, pushed to connections) and the templates' kind switch; recounted, balanced.
 // Recommended, fewer words (Micah, 2026-10-01: "way too crammed with words"): the sub-line, the With AT&T caption, each row's reason (now the title's hover), Today's note and each tier's fit line left; recounted, balanced.
+// The policy engine, evaluated (2026-10-01): a flow picker, the decision per layer, the trace, shadowed policies and intended vs configured replace the list; recounted, balanced.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -361,12 +362,12 @@ test('every container the markup opens, it closes', () => {
   // div 1134 -> 1139, span 969 -> 962, sc-if 522 -> 528, sc-for 268 -> 278, button 413 -> 445.
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1232],
-    ['span', /<span\b/g, /<\/span>/g, 1054],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 575],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 303],
+    ['div', /<div\b/g, /<\/div>/g, 1243],
+    ['span', /<span\b/g, /<\/span>/g, 1062],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 576],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 308],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 477],
+    ['button', /<button\b/g, /<\/button>/g, 480],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

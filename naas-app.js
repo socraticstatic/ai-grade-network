@@ -21,7 +21,7 @@ import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
 import * as SG from './naas-signals.js';
-import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies } from './naas-policy-layers.js';
+import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies, effectivePolicy, shadowedPolicies, intendedVsConfigured, engineFlows } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
 import * as M from './naas-moves.js';
 import { rampName } from './naas-things.js';
@@ -191,7 +191,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -4123,7 +4123,25 @@ function wizardVals(s, est, set, c) {
         engineMore: e.ordered.length > 7 ? `+${e.ordered.length - 7} more, lower precedence` : '', hasEngineMore: e.ordered.length > 7,
         engineConns: e.connections.map(c => ({ key: c.key, label: c.label, rules: c.rules.slice(0, 6).map((r, i) => ({ key: c.key + i, text: r.text, from: r.from })) })), hasEngineConns: e.connections.length > 0, noEngineConns: !e.connections.length,
         engineConflicts: e.conflicts, hasEngineConflicts: e.conflicts.length > 0, noEngineConflicts: !e.conflicts.length,
-        engineStart: () => set({ govPanel: 'templates', govTplKind: 'between' }) }; })(),
+        engineStart: () => set({ govPanel: 'templates', govTplKind: 'between' }),
+        // Evaluated (2026-10-01, "not a real policy engine"): one flow, every policy, one decision.
+        ...(() => { const flows = engineFlows(est, all), froms = [...new Set(flows.map(x => x.from))].slice(0, 5), tos = [...new Set(flows.map(x => x.to))].slice(0, 8);
+          const tags = [...new Set(flows.map(x => x.tag).filter(Boolean))].slice(0, 5);
+          const pub = (est.regionsList || []).find(r => !r.priv) || (est.regionsList || [])[0] || {};
+          const ef = { from: froms[0] || '', to: tos.includes(`${pub.cloud} ${pub.region}`) ? `${pub.cloud} ${pub.region}` : tos[0] || '', tag: tags.includes('Prod') ? 'Prod' : '', ...(s.engFlow || {}) };
+          const chip = (k, v, lab) => { const on = ef[k] === v; return { key: k + v, label: lab || v, on, bg: on ? 'var(--cta)' : 'var(--bg-base)', ink: on ? '#fff' : 'var(--text-body)', go: () => set({ engFlow: { ...ef, [k]: v } }) }; };
+          const r = ef.from && ef.to ? effectivePolicy(est, all, ef) : null;
+          const hit = r ? r.trace.filter(t => t.result !== 'Does not match') : [];
+          const sh = shadowedPolicies(est, all), iv = intendedVsConfigured(est, all);
+          const INK = { 'In sync': 'var(--success)', Drift: 'var(--error)', 'Not pushed': 'var(--warning)' };
+          return { engFrom: froms.map(v => chip('from', v)), engTo: tos.map(v => chip('to', v)), engTag: [chip('tag', '', 'Nothing tagged'), ...tags.map(v => chip('tag', v, `tag ${v}`))],
+            engHas: !!r, engVerdict: r ? r.verdict : '', engVerdictInk: r && r.verdict === 'Denied' ? 'var(--error)' : 'var(--success)', engDecided: r ? r.decidedBy : '',
+            engLayers: r ? r.layers.map(l => ({ ...l, byLine: l.by ? `by ${l.by}` : 'no policy sets it' })) : [],
+            engTrace: hit.slice(0, 6).map((t, i) => ({ key: 'tr' + i, n: i + 1, name: t.name, result: t.result, ink: t.result === 'Won' ? 'var(--success)' : 'var(--text-light)' })),
+            engTraceMore: r ? `${r.trace.length - hit.length} more ${r.trace.length - hit.length === 1 ? 'policy does' : 'policies do'} not match this flow` : '',
+            engShadow: sh.slice(0, 4).map(x => ({ key: x.name, text: `${x.name}: never decides; ${x.by} always wins first` })), hasEngShadow: sh.length > 0, noEngShadow: !sh.length,
+            engIv: iv.slice(0, 2).map(c => ({ key: c.key, label: c.label, rows: c.rows.slice(0, 4).map(x => ({ ...x, ink: INK[x.status] || 'var(--text-body)' })) })), hasEngIv: iv.length > 0, noEngIv: !iv.length }; })(),
+      }; })(),
     tplKinds: [['between', 'Between assets'], ['layered', 'Layered']].map(([k, l]) => { const on = (s.govTplKind || 'layered') === k; return { key: k, label: l, on, go: () => set({ govTplKind: k }), bg: on ? 'var(--bg-base)' : 'transparent', weight: on ? 700 : 500 }; }),
     // Multi-layer starting points: a rule at every layer, carried into the author.
     examplePolicies: (s.govTplKind || 'layered') === 'between' ? BETWEEN_TEMPLATES.map(t => { const r = resolveTemplate(est, t);

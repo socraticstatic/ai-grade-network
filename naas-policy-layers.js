@@ -168,3 +168,91 @@ export function evalPolicies(est, policies = []) {
   const pl = (n, a, b) => `${n} ${n === 1 ? a : b}`;
   return { ordered, connections, conflicts, summary: `${pl(ordered.length, 'policy', 'policies')} · ${pl(connections.length, 'connection', 'connections')} · ${pl(ruleN, 'rule', 'rules')} pushed · ${pl(conflicts.length, 'conflict', 'conflicts')}` };
 }
+
+// ---- The policy engine, evaluated (2026-10-01: "not a real policy engine") ----
+// A flow is { from, to, tag }: from a private cloud, a site or a tag; to a cloud region (its label) or 'the Internet'.
+const CLOUD_LABEL = /^(AWS|Azure|GCP|Oracle|CoreWeave) /;
+const glob = (pat, s) => new RegExp('^' + String(pat).replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$').test(s);
+function sideA(p, f) {
+  const m = p.match || '';
+  if (m === f.from) return true;
+  if (/^tag /.test(m)) return !!f.tag && m.slice(4) === f.tag;
+  if (/^region /.test(m)) return CLOUD_LABEL.test(f.to) && glob(m.slice(7), f.to.split(' ').slice(1).join(' '));
+  return false;
+}
+function sideB(p, f) {
+  const sc = p.scope || 'any cloud';
+  if (sc === f.to) return true;
+  if (sc === 'any cloud') return CLOUD_LABEL.test(f.to);
+  if (sc === 'the Internet') return f.to === 'the Internet';
+  return false;
+}
+/** What a policy sets, layer by layer, and whether it denies or allows routes. */
+function contributions(p) {
+  const out = [];
+  for (const q of String(p.req || '').split(' and ').map(x => x.trim()).filter(Boolean)) out.push({ layer: layerOfReq(q), text: q });
+  for (const g of SERVICE_GROUPS) for (const o of g.opts) if ((p.path || []).includes(o.label)) out.push({ layer: o.layer, text: o.label });
+  let deny = false, allow = false;
+  for (const rr of ROUTE_RULES) { const v = (p.route || {})[`${rr.section}:${rr.id}`] || {};
+    for (const [dir, word] of [['o2p', 'on premise → partner'], ['p2o', 'partner → on premise']]) if (v[dir]) {
+      // Only denying the matching routes stops the flow; blocking a default route or filtering CVs shapes it.
+      if (rr.section === 'deny' && rr.id === 'matching-routes') deny = true; if (rr.section === 'allow' && rr.id === 'matching-routes') allow = true;
+      out.push({ layer: 'edge', text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${word})` }); } }
+  return { out, deny, allow };
+}
+/** Precedence: an explicit priority, then the most specific, then deny before allow, then the order written. */
+const precedence = (ps) => ps.map((p, i) => ({ p, i, c: contributions(p), rank: RANK(p) }))
+  .sort((x, y) => (x.p.priority ?? 99) - (y.p.priority ?? 99) || x.rank - y.rank || (y.c.deny - x.c.deny) || x.i - y.i);
+export function effectivePolicy(est, policies, flow) {
+  const live = policies.filter(p => p.state !== 'draft');
+  const ranked = precedence(live), layers = {}, trace = [];
+  let verdict = 'Allowed', decidedBy = '';
+  for (const { p, c } of ranked) {
+    if (!(sideA(p, flow) && sideB(p, flow))) { trace.push({ name: p.name, result: 'Does not match' }); continue; }
+    let won = false, blocker = '';
+    if (c.deny && verdict !== 'Denied') { verdict = 'Denied'; decidedBy = p.name; won = true; }
+    for (const x of c.out) { if (!layers[x.layer]) { layers[x.layer] = { text: x.text, by: p.name }; won = true; } else if (layers[x.layer].by !== p.name && !blocker) blocker = layers[x.layer].by; }
+    if (won && !decidedBy) decidedBy = p.name;
+    trace.push({ name: p.name, result: won ? 'Won' : `Overridden by ${blocker || decidedBy}` });
+  }
+  return { verdict, decidedBy: decidedBy || 'No policy: the default path', trace,
+    layers: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: (layers[l.key] || {}).text || 'Default', by: (layers[l.key] || {}).by || '' })) };
+}
+/** The flows the engine checks: every private cloud, data center and tag against every region and the Internet. */
+export function engineFlows(est, policies = []) {
+  const sites = est.sites || [];
+  const froms = [...sites.filter(st => st.colo && st.colo.kind === 'Private cloud').map(st => `Private cloud · ${st.colo.provider} ${st.colo.facility}, ${st.metro}`),
+    ...sites.filter(st => /\bDC\b|data cent/i.test(st.name) && !(st.colo && st.colo.kind === 'Private cloud')).map(st => st.name)];
+  const tags = [...new Set(policies.map(p => p.match || '').filter(m => /^tag /.test(m)).map(m => m.slice(4)))];
+  const tos = [...(est.regionsList || []).map(r => `${r.cloud} ${r.region}`), 'the Internet'];
+  const out = [];
+  for (const from of froms) for (const to of tos) for (const tag of ['', ...tags]) out.push({ from, to, tag });
+  return out;
+}
+/** Policies that match some flow and never decide anything, with the policy that most often beats them. */
+export function shadowedPolicies(est, policies) {
+  const live = policies.filter(p => p.state !== 'draft'), seen = {};
+  for (const f of engineFlows(est, live)) for (const t of effectivePolicy(est, live, f).trace) {
+    if (t.result === 'Does not match') continue;
+    const s = seen[t.name] = seen[t.name] || { won: 0, by: {} };
+    if (t.result === 'Won') s.won += 1; else { const b = t.result.replace(/^Overridden by /, ''); s.by[b] = (s.by[b] || 0) + 1; }
+  }
+  return Object.entries(seen).filter(([, s]) => !s.won).map(([name, s]) => ({ name, by: Object.entries(s.by).sort((a, b) => b[1] - a[1])[0][0] }));
+}
+/** Per connection: what the policies intend, what the connection has today, and whether they agree. */
+export function intendedVsConfigured(est, policies) {
+  const byReg = new Map();
+  for (const p of policies.filter(x => x.state !== 'draft')) {
+    const r = (est.regionsList || []).find(x => p.scope === `${x.cloud} ${x.region}`); if (!r) continue;
+    const c = byReg.get(r.region) || { key: r.region, region: r.region, label: `${r.cloud} ${r.region}`, rows: [] };
+    for (const x of contributions(p).out) {
+      const privateIntent = ['Via the AT&T network', 'Never the internet'].includes(x.text);
+      const row = privateIntent
+        ? (r.priv ? { configured: 'Private on the AT&T network', status: 'In sync' } : { configured: 'Rides the public internet today', status: 'Drift' })
+        : p.state === 'enforced' ? { configured: 'On the connection', status: 'In sync' } : { configured: 'Not on the connection', status: 'Not pushed' };
+      c.rows.push({ key: `${p.name}:${x.text}`, rule: x.text, layer: x.layer, from: p.name, ...row });
+    }
+    byReg.set(r.region, c);
+  }
+  return [...byReg.values()];
+}
