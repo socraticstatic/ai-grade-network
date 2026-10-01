@@ -96,10 +96,11 @@ test('Bank scale: the Traffic map\'s Add a port opens Modify bandwidth in place 
   const cap = vals(observe('trust')).gaugeRows.find(x => x.id === 'cx-us-central1');
   const conn = node.overview.find(o => o.k === 'Connection');
   assert.ok(conn, node.overview.map(o => o.k).join(' | '));
-  assert.equal(conn.v, `NetBond · ${cap.stateWord}, ${cap.pct}% at peak`);
-  assert.equal(conn.v, 'NetBond · Saturating, 81% at peak');
+  // w2 (2026-09-30): and the peak in Gbps, the figure its Add a port opens Modify bandwidth on.
+  assert.equal(conn.v, `NetBond · ${cap.stateWord}, peak ${cap.peakF}, ${cap.pct}% of ${cap.capG} Gbps`);
+  assert.equal(conn.v, 'NetBond · Saturating, peak 40.5 Gbps, 81% of 50 Gbps');
   const quiet = vals(observe('partial', { obPanel: 'map', mapOpen: ['cloud:AWS'], mapSel: 'cloud:AWS/us-east-1' })).panel;
-  assert.equal(quiet.overview.find(o => o.k === 'Connection').v, 'NetBond · Healthy, 41% at peak');
+  assert.equal(quiet.overview.find(o => o.k === 'Connection').v, 'NetBond · Healthy, peak 12.3 Gbps, 41% of 30 Gbps');
   // The node still offers no Modify bandwidth of its own.
   assert.ok(!vals(observe('trust', { obPanel: 'map', mapOpen: ['cloud:GCP'], mapSel: 'cloud:GCP/us-central1' })).panel.actions.some(a => a.label === 'Modify bandwidth'));
 });

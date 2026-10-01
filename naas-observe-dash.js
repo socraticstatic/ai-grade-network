@@ -72,6 +72,9 @@ export function queue(probs, now = Date.now()) {
   return probs.map(p => ({ key: p.key, sev: p.sev, state: WORD[p.kind], health: p.state, what: p.kind === 'link' ? `${p.what.replace(/^BGP flapping/, 'BGP flapping on ' + p.thing)}` : p.what, where: p.where, age: agoOf(p.startedAt, now), wl: p.wl, action: p.action, actionLabel: p.actionLabel, connId: p.connId, region: p.region }));
 }
 
+// A connection's peak as Capacity and Modify bandwidth read it: Gbps, then the share of what is bought.
+const gbF = (g) => (g < 1 ? `${Math.round(g * 1000)} Mbps` : `${+g.toFixed(1)} Gbps`);
+const connPeakF = (row) => { const cap = row.cap || 10, peak = row.peakG != null ? row.peakG : +(cap * row.pct / 100).toFixed(1); return `${gbF(peak)}, ${row.pct}% of ${gbF(cap)}`; };
 /** What the panel shows for a selection: a map node key or a connection id. */
 export function panelFor(sel, ctx) {
   const { est, inv, flows, map, conns } = ctx;
@@ -81,7 +84,8 @@ export function panelFor(sel, ctx) {
     const imp = impacted(est, inv, row);
     const recs = records(est, inv, { flows }, 'all').filter(r => (r.srcSub + ' ' + r.dstSub).includes(row.region)).slice(0, 8);
     return { kind: 'connection', title: `${row.cloud} ${row.region}`, sub: `${rampName(row)} · ${row.bw || row.ports + ' × 10 Gbps'} purchased`, trail: [{ key: sel, name: `${row.cloud} ${row.region}` }],
-      overview: [['Current · in / out', `${row.gbps} / ${(row.gbps * 0.62).toFixed(1)} Gbps`], ['6-month average · in / out', `${avgOf(row)} / ${(avgOf(row) * 0.62).toFixed(1)} Gbps`], ['Purchased', `${row.bw || row.ports + ' × 10 Gbps'}`], ['Utilization', `${row.pct}% of ${row.cap} Gbps`], ['State', row.state], ['BGP', row.bgp], ['Drops', row.drops], ['Workloads behind it', n(row.wl)]],
+      // Current never reads above the peak Modify bandwidth opens on (w2, 2026-09-30: 12.4 over a 12.3 peak, the peak's percent rounded).
+      overview: [['Current · in / out', (() => { const cap = row.cap || 10, pk = row.peakG != null ? row.peakG : +(cap * row.pct / 100).toFixed(1), cur = Math.min(row.gbps, pk); return `${cur} / ${(cur * 0.62).toFixed(1)} Gbps`; })()], ['6-month average · in / out', `${avgOf(row)} / ${(avgOf(row) * 0.62).toFixed(1)} Gbps`], ['Purchased', `${row.bw || row.ports + ' × 10 Gbps'}`], ['Utilization', `${row.pct}% of ${row.cap} Gbps`], ['State', row.state], ['BGP', row.bgp], ['Drops', row.drops], ['Workloads behind it', n(row.wl)]],
       impact: imp, records: recs, actions: [...bwActs(row), ...(row.hot ? [{ key: 'port', label: 'Add a port', region: row.region, id: row.id }] : []), { key: 'policy', label: 'Author a policy for these workloads', region: row.region }, { key: 'logs', label: 'All records for this connection', region: row.region }] };
   }
   // An opened node is replaced by its children on the map; its trail still knows it.
@@ -120,7 +124,9 @@ export function panelFor(sel, ctx) {
   return { kind: node.kind, title: node.name, sub: node.sub || '', trail: tr, children: kids,
     overview: [...(node.opened ? [['Opened', 'children shown in place']] : []), ['Traffic', `${node.v.toFixed(2)} Gbps`], ['On AT&T', `${node.v ? Math.round(node.fabV / node.v * 100) : 0}%`], ['Share of all traffic', `${share}%`], ['Change vs prior window', (node.delta >= 0 ? '+' : '') + node.delta + '%'], ['State', node.state === 'ok' ? 'Healthy' : node.state === 'degraded' ? 'Degraded' : 'Over SLO or public'],
       // State is the paths'; the region's connection says its own, in Capacity's words and figure (skeptic, 2026-09-30), so Add a port has its reason.
-      ...(row ? [['Connection', `${rampName(row)} · ${row.degraded ? 'Degraded' : row.hot ? 'Saturating' : 'Healthy'}, ${row.pct}% at peak`]] : []), ...(resolved ? [['Resource', resolved.name], ['Address', resolved.sub]] : [])],
+      // Its peak in Gbps too, the figure Modify bandwidth opens on (w2, 2026-09-30: the node read 14.13 Gbps of the
+      // map's site traffic and its Add a port opened a drawer at a 40.5 Gbps peak, with nothing between to say why).
+      ...(row ? [['Connection', `${rampName(row)} · ${row.degraded ? 'Degraded' : row.hot ? 'Saturating' : 'Healthy'}, peak ${connPeakF(row)}`]] : []), ...(resolved ? [['Resource', resolved.name], ['Address', resolved.sub]] : [])],
     impact: imp, records: recs, actions: [...(node.state !== 'ok' && node.fabV < node.v ? [{ key: 'steer', label: 'Steer onto the AT&T network' }] : []), ...(region && !(row) ? [{ key: 'attach', label: `Attach ${region}`, region }] : []), ...(row && row.hot ? [{ key: 'port', label: 'Add a port', region, id: row.id }] : []), { key: 'policy', label: 'Author a policy here', region }] };
 }
 

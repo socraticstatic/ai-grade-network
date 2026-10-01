@@ -318,6 +318,23 @@ test('Cost > By region\'s Steer on an attached region changes its routing, never
   assert.ok(seen > 0, 'no attached region with egress to steer');
 });
 
+test('A map node\'s Add a port opens a drawer whose peak the node\'s Connection line prints', () => {
+  for (const [view, cloud, region] of [['trust', 'GCP', 'us-central1'], ['partial', 'AWS', 'us-east-1']]) {
+    const node = vals(obs(view, { obPanel: 'map', mapOpen: ['cloud:' + cloud], mapSel: `cloud:${cloud}/${region}` })).panel;
+    const line = node.overview.find(o => o.k === 'Connection').v;
+    const peak = vals(obs(view, { bwFor: 'cx-' + region })).bw.stats.find(x => x.l === 'Peak');
+    assert.ok(line.includes(`peak ${peak.v}`) && line.includes(peak.sub), `${view} ${region}: the node reads "${line}", the drawer "${peak.v}, ${peak.sub}"`);
+  }
+});
+
+test('A connection\'s current never reads above the peak its Modify bandwidth opens on', () => {
+  for (const [view, id] of [['partial', 'cx-us-east-1'], ['trust', 'cx-us-central1'], ['trust', 'cx-us-east-1']]) {
+    const cur = vals(obs(view, { mapSel: id, panelTab: 'overview' })).panel.overview.find(o => /^Current/.test(o.k)).v;
+    const peak = vals(obs(view, { bwFor: id })).bw.stats.find(x => x.l === 'Peak').v;
+    assert.ok(parseFloat(cur) <= parseFloat(peak), `${view} ${id}: current ${cur} over a ${peak} peak`);
+  }
+});
+
 test('The cross-cloud finding names the public pairs Cloud-to-cloud shows, and no others', () => {
   for (const view of VIEWS) {
     const est = ESTATES[view], f = est.findings.find(x => x.kind === 'crosscloud');
