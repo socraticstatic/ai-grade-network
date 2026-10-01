@@ -317,7 +317,8 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   // 3. Shadow SaaS: domains by volume, colored by whether a policy covers them.
   const SAAS = [['slack-edge.com', 3.1, false], ['datadoghq.com', 2.4, false], ['zoom.us', 1.8, true], ['github.com', 1.6, true], ['notion.so', 0.9, false], ['figma.com', 0.7, false]].slice(0, 3 + Math.min(3, pubN));
   const sMax = Math.max(...SAAS.map(s => s[1]));
-  const shadow = SAAS.map(([n, gb, covered]) => ({ key: n, name: n, sub: covered ? 'covered by a policy' : 'no policy matches', v: gb + ' GB/d', w: Math.round(gb / sMax * 100) + '%', fill: covered ? 'var(--viz-1)' : 'var(--warning)', covered })).sort((a, b) => (a.covered === b.covered ? 0 : a.covered ? 1 : -1));
+  // A covered domain is neutral (w2, 2026-09-30): blue is Cost's AT&T price, amber is no policy.
+  const shadow = SAAS.map(([n, gb, covered]) => ({ key: n, name: n, sub: covered ? 'covered by a policy' : 'no policy matches', v: gb + ' GB/d', w: Math.round(gb / sMax * 100) + '%', fill: covered ? 'var(--text-disabled)' : 'var(--warning)', covered })).sort((a, b) => (a.covered === b.covered ? 0 : a.covered ? 1 : -1));
   const shadowN = shadow.filter(s => !s.covered).length, shadowGb = SAAS.filter(s => !s[2]).reduce((a, s) => a + s[1], 0);
   // 4. Egress growth: twelve weekly columns, fabric under public.
   const wk = egressWeeks(ob);

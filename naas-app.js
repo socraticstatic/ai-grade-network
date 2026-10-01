@@ -4389,15 +4389,16 @@ function costVals(s, set, est, invAll, ob, go, c) {
     // replaces the per-region Attach door or that per-region arithmetic"). A row's today is its By region bar's egress
     // outside AT&T, and its door opens that share in By leg; its saving is its Savings list row, and opens the moves.
     regionSaveRows: arb.map(a => { const geo = CV.geoOfRegion(a.regionId), metro = REGION_GEO[a.regionId] || 'Ashburn';
-      // A public region attaches; an attached one whose cloud still bills outside AT&T steers that egress (2026-09-30).
-      const steer = { outcome: 'u2', source: ['A cloud region'], dest: ['The Internet'], regionTab: REGION_OF_METRO(metro), metros: [metro], resiliency: 'Standard', control: ['Cost-aware routing'],
-        prefilled: true, prefillRegion: a.label, prefillWl: a.wl, sourceLabel: 'Cost', noteStep: 0, note: `Steer ${a.label}'s egress onto AT&T.` };
+      // A public region attaches; an attached one whose cloud still bills outside AT&T steers that egress
+      // with a cost-aware routing rule on the connection it has (w2, 2026-09-30: Steer opened an Internet
+      // to Cloud order, a new circuit at the public rate, under "no new circuit").
+      const steer = () => { go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'policies' })(); set({ authoring: { match: 'region ' + a.regionId, scope: 'any cloud', req: ['Cost-aware routing'] } }); };
       return { key: a.key, label: a.label, regionId: a.regionId, cloud: a.cloud, wl: a.wl, nowN: a.nowN, afterN: a.fabricN, saveN: a.saveN, nowF: a.now, afterF: a.fabric, saveF: a.save, math: a.math, act: a.act,
         sub: `${a.wl.toLocaleString('en-US')} workloads · ${geo}${a.priv ? ' · attached' : ''}`, nowW: (a.nowN / maxNow * 100).toFixed(1) + '%', saveW: (a.saveN / maxNow * 100).toFixed(1) + '%',
         title: `${a.label}: ${a.now}/mo outside AT&T today; ${a.save}/mo to save; ${a.fabric}/mo at the AT&T price. ${a.alt}`,
         goNow: () => set({ costPanel: 'legs', costBy: 'region', costPick: geo, legDrill: { leg: 'cloud', row: 'egress' }, legAPage: 0, legCPage: 0, legPPage: 0 }),
         goSave: () => set({ costPanel: 'optimize' }),
-        attach: go('s4', { ...newOrder(a.priv ? steer : prefillAttach({ region: a.label, wl: a.wl })) }) }; }),
+        attach: a.priv ? steer : go('s4', { ...newOrder(prefillAttach({ region: a.label, wl: a.wl })) }) }; }),
     hasRegionSave: arb.length > 0, regionSaveTotalF: fmt(arb.reduce((a, r) => a + r.saveN, 0)), regionSaveNowF: fmt(arb.reduce((a, r) => a + r.nowN, 0)),
     hasArbitrage: arb.length > 0, arbTotal: fmt(arb.reduce((a, r) => a + r.saveN, 0)), arbTotalYr: fmt(arb.reduce((a, r) => a + r.saveN, 0) * 12),
     // Cost figures reach the same records. A dollar figure is bytes times a

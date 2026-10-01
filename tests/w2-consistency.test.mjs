@@ -301,3 +301,28 @@ test('A Signals card keys only the inks its rows draw', () => {
     }
   }
 });
+
+test('Cost > By region\'s Steer on an attached region changes its routing, never buys an internet circuit', () => {
+  let seen = 0;
+  for (const view of VIEWS) {
+    const base = vals(mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'cost', costPanel: 'legs', costBy: 'region' }));
+    for (const r of (base.regionSaveRows || []).filter(x => / · attached$/.test(x.sub))) {
+      const c = mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'cost', costPanel: 'legs', costBy: 'region' });
+      vals(c).regionSaveRows.find(x => x.key === r.key).attach();
+      assert.notEqual(c.state.screen, 's4', `${view} ${r.label}: Steer starts a new order`);
+      assert.equal(c.state.tab, 'govern', `${view} ${r.label}: Steer lands on ${c.state.tab}`);
+      assert.ok(c.state.authoring && c.state.authoring.req.includes('Cost-aware routing') && c.state.authoring.match === 'region ' + r.regionId, `${view} ${r.label}: ${JSON.stringify(c.state.authoring)}`);
+      seen += 1;
+    }
+  }
+  assert.ok(seen > 0, 'no attached region with egress to steer');
+});
+
+test('The cross-cloud finding names the public pairs Cloud-to-cloud shows, and no others', () => {
+  for (const view of VIEWS) {
+    const est = ESTATES[view], f = est.findings.find(x => x.kind === 'crosscloud');
+    if (!f) continue;
+    for (const a of (est.arcs || []).filter(x => !x.priv)) assert.ok(f.ev.includes(`${a.from} to ${a.to}`), `${view}: "${f.ev}" does not name ${a.from} to ${a.to}`);
+    assert.doesNotMatch(f.ev, /other pairs|regions to the other clouds/, `${view}: "${f.ev}" counts pairs the card does not show`);
+  }
+});
