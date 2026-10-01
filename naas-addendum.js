@@ -100,7 +100,10 @@ function region(r, i, est) {
   const suffix = ['prod-01', 'data-02', 'dmz-03'];
   const azs = [3, 2, 2];
   const base = 10 + i * 3;
-  const tagsFor = (k) => k === 0 ? [...r.tags.map(t => t.toLowerCase()), 'shared-services'] : k === 1 ? (r.tags.includes('PCI') ? ['finance-invoices', 'pci', 'finance'] : ['analytics', ...r.tags.slice(0, 1).map(t => t.toLowerCase())]) : ['internet-facing'];
+  // The PCI tag lives on the VPC whose workloads carry it (w2-govern, 2026-09-30): the data lake
+  // beside it is finance-invoices and finance, so Discover's apps table (a workload's own tag) and
+  // Govern > Tags (its VPC's tags) count one PCI set, and the PCI policy and finding count it too.
+  const tagsFor = (k) => k === 0 ? [...r.tags.map(t => t.toLowerCase()), 'shared-services'] : k === 1 ? (r.tags.includes('PCI') ? ['finance-invoices', 'finance'] : ['analytics', ...r.tags.slice(0, 1).map(t => t.toLowerCase())]) : ['internet-facing'];
   // Shares are apportioned whole, so VPCs add up to their region exactly (2026-09-29).
   const vpcWl = apportion(r.wl, [0.55, 0.3, 0.15].slice(0, n), Math.min(4, Math.floor(r.wl / n)));
   const vpcs = Array.from({ length: n }, (_, k) => {

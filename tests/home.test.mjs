@@ -281,7 +281,8 @@ test('Waiting on you is the first three of the role\'s Your actions still waitin
   }
   const v = vals(home('partial', { persona: 'finops' }));
   assert.equal(v.homeWaitingMore, `All ${v.roleActAll.length} in Your actions ›`);
-  assert.equal(vals(home('mature', { persona: 'security' })).homeWaitingNone, 'No finding waits on you');
+  // Small business's Security waits on nothing; Established's now has its PCI finding (w2-govern, 2026-09-30).
+  assert.equal(vals(home('small', { persona: 'security' })).homeWaitingNone, 'No finding waits on you');
 });
 
 test('Accept on a chip moves the finding Your actions shows, and it leaves Waiting on you', () => {

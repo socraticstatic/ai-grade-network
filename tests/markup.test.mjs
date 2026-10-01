@@ -314,14 +314,24 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Orders, and loses its Logs doors and the per-row Monthly column (div +13, span -7, sc-if +4, sc-for +1, button +5, label +1):
 // div 1148 -> 1160, span 976 -> 975, sc-if 488 -> 491, sc-for 250 -> 251, button 371 -> 368, label 31 -> 32.
 // Modify bandwidth merged onto Cost, Signals and the home (2026-09-30): each count is theirs plus Modify bandwidth's own move: div 1092 -> 1134, span 941 -> 969, sc-if 508 -> 522, sc-for 264 -> 268, button 401 -> 413, aside 10 -> 11, label 30 -> 31.
+// Govern made drillable (w2-govern, 2026-09-30): every count a button that opens its set. The drill under Govern's tabs
+// (its wrapper, the trail row with the finding's move, the line and rule, the rows, the pager: div +7, span +7, sc-if +5, sc-for +2, button +6);
+// the page head's verdict as parts (div +1, span +1, sc-if +4, sc-for +1, button +1); a finding's head (span +1, sc-if +2,
+// sc-for +1, button +1); the policy total and its filter chip (span +2, sc-if +3, button +2); a row's matched (span +2,
+// sc-if +2, button +1) and violations (sc-if +2, button +1); the list gates govListPolicies, govListTags and
+// govListTemplates (sc-if +3); Tags' line and filter chip (span +3, sc-if +3, sc-for +1, button +2), a row's footprint
+// (span +1, sc-if +2, sc-for +1, button +1) and its two exposure figures (span +2, sc-if +4, button +2); a template
+// card stops being one button for its figure and Start from this (div +1, span +1, sc-if +2, button +1); Back to Govern
+// on Your clouds and Your sites (sc-if +2, button +2); Optimize's figure, its parts and +N more (span +1, sc-if +4,
+// button +3): div 1134 -> 1143, span 969 -> 990, sc-if 522 -> 560, sc-for 268 -> 274, button 413 -> 436.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1134],
-    ['span', /<span\b/g, /<\/span>/g, 969],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 522],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 268],
+    ['div', /<div\b/g, /<\/div>/g, 1143],
+    ['span', /<span\b/g, /<\/span>/g, 990],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 560],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 274],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 413],
+    ['button', /<button\b/g, /<\/button>/g, 436],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

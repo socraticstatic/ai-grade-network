@@ -117,6 +117,8 @@ test('the ends say where the order goes', () => {
   assert.deepEqual(endsOf('Growing: tier single|Maximum resiliency with a second provider'), { src: 'Your sites', dst: 'Azure eastus' });
   assert.deepEqual(endsOf('Growing: tier pci|Hosted VPC in us-east-1 with the policy enforced'), { src: 'Your sites', dst: 'AWS us-east-1' });
   // Bank scale's PCI finding is us-east-2's, the region with the PCI tag (third skeptic, 2026-09-30).
+  // It spans us-east-1 and us-east-2 since one rule counts every exposed PCI workload (w2-govern, 2026-09-30);
+  // a tier that names its region still ends there.
   assert.deepEqual(endsOf('Bank scale: tier pci|Hosted VPC in us-east-2 with the policy enforced'), { src: 'Your sites', dst: 'AWS us-east-2' });
   assert.deepEqual(endsOf('Growing: tier uninspected|NGFW (Palo Alto) in path'), { src: 'AWS eu-west-1', dst: 'The internet' });
   // A tier whose product is itself the far end says so, whatever the finding was about.

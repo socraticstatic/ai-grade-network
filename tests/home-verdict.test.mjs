@@ -122,7 +122,8 @@ test('V3: Violations & policies prints the violation total the home counts', () 
     assert.equal(v.polViolLine, `${g.value} policy violations`, view);
   }
   const i = HTML.indexOf('<sc-if value="{{ govPanelPolicies }}"');
-  assert.ok(HTML.slice(i, HTML.indexOf('id="sec-policies"', i) + 400).includes('{{ polViolLine }}'), 'the Policies head does not print the total');
+  // The total is a button since w2-govern (2026-09-30), so it sits a little further into the head.
+  assert.ok(HTML.slice(i, HTML.indexOf('id="sec-policies"', i) + 700).includes('{{ polViolLine }}'), 'the Policies head does not print the total');
 });
 
 test('V4: the Security line counts no policies of its own: its one part is Govern\'s violations', () => {
@@ -192,7 +193,8 @@ test('V7, V15: Waiting on you lists only findings still waiting, each with a rea
 });
 
 test('V7: nothing waiting reads plainly, never as an all-clear under a warning', () => {
-  const v = vals(home('mature', { persona: 'security' }));
+  // Small business's Security waits on nothing; Established's now has its PCI finding (w2-govern, 2026-09-30).
+  const v = vals(home('small', { persona: 'security' }));
   assert.equal(v.homeWaiting.length, 0);
   assert.equal(v.homeWaitingNone, 'No finding waits on you');
   const i = HTML.indexOf('{{ noHomeWaiting }}');

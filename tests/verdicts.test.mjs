@@ -17,7 +17,8 @@ const EXPECT = {
     // Re-pinned (2026-09-30, owner decision b): private is private; a direct connect is not the AT&T network.
     connect: '5 of 7 regions still ride the public internet. 2 are private: 1 on NetBond, 1 on a direct connect.',
     // Re-pinned (third skeptic, 2026-09-30): the PCI finding counts its region's exposed PCI-tagged workloads.
-    govern: '4 policies enforced. 10 PCI-tagged workloads reach the internet directly.',
+    // Re-pinned (w2-govern, 2026-09-30): one rule for a PCI workload, so the apps table's 58 and 6 exposed are Govern's too.
+    govern: '4 policies enforced. 6 PCI-tagged workloads reach the internet directly.',
     // The IPsec egress finding (2026-09-28) adds $5,500 and a third priced finding;
     // saved money counts on any estate with something attached, not only mature.
     cost: '$41,500/mo on the table across 3 priced findings. $36,000/mo already saved on AT&T.',
@@ -26,7 +27,9 @@ const EXPECT = {
   mature: {
     // Re-pinned (2026-09-30, owner decision b).
     connect: '1 of 8 regions still ride the public internet. 7 are private: 2 on NetBond, 4 on direct connects, 1 on Equinix Fabric.',
-    govern: '14 policies enforced. 2 authored but not enforced.',
+    // Re-pinned (w2-govern, 2026-09-30): the head counts the six policies Govern lists, not a tally it never shows,
+    // and Established's exposed PCI workloads carry a finding, as on every estate.
+    govern: '5 policies enforced. 6 PCI-tagged workloads reach the internet directly.',
     // Established prices its savings (2026-09-30), so Cost leads with what is on the table.
     cost: '$17,500/mo on the table across 2 priced findings. $61,400/mo already saved on AT&T.',
     // us-west-2 to us-central1 rides the public internet (2026-09-30), as the AWS West/EU cross-cloud
@@ -37,7 +40,8 @@ const EXPECT = {
     // Re-pinned (2026-09-30, owner decision b).
     connect: '2 of 6 regions still ride the public internet. 4 are private: 2 on NetBond, 2 on direct connects.',
     // Re-pinned (third skeptic, 2026-09-30): us-east-2 carries the PCI tag; us-west-2 never did.
-    govern: '9 policies enforced. 10 PCI-tagged workloads reach the internet directly.',
+    // Re-pinned (w2-govern, 2026-09-30): the four policies Govern lists, three enforced; the PCI rule counts both PCI regions.
+    govern: '3 policies enforced. 12 PCI-tagged workloads reach the internet directly.',
     cost: '$132,000/mo on the table across 2 priced findings. $148,000/mo already saved on AT&T.',
     observe: '77% of all traffic on AT&T, saving $148k/mo. 2 regions are blind.',
   },

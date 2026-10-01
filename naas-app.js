@@ -29,6 +29,7 @@ import * as HM from './naas-home.js';
 import * as CV from './naas-cost-view.js';
 import * as BW from './naas-bandwidth.js';
 import * as CF from './naas-connect-flow.js';
+import * as GV from './naas-govern.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product', s9: 'Help' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
@@ -201,6 +202,9 @@ export function defaults() {
     // Modify bandwidth (2026-09-30): the connection it is open on, the size picked ({ id, ports, mbps }),
     // the step (pick, confirm, review). The orders it places live in orders, the one list Connect > Orders shows.
     bwFor: null, bwPick: null, bwStep: null,
+    // Govern's drills (w2-govern, 2026-09-30): the set a figure opened ({ panel, kind, ... }), its page, the policy
+    // and tag list filters, the way back from the thing itself on Discover, and the Optimize row opened to its parts.
+    govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null, govBack: null, optShow: null,
   };
 }
 
@@ -271,6 +275,9 @@ export function vals(c) {
   const steered = s.steered || [];
   const persona = PERSONA_NAME[s.persona] || 'Cloud & Platform Architect';
   const est0 = { ...estRaw, regionsList: estRaw.regionsList.map(r => r.region === s.landed ? { ...r, priv: true, ramp: r.ramp || 'NetBond', rel: 'ok', landed: true } : r), attachedRegions: estRaw.attachedRegions + (s.landed ? 1 : 0) };
+  // Every policy counts by Govern's one rule (w2-govern, 2026-09-30), off this estate as it stands:
+  // a region attached or a source added this session moves its figures, and every page reads them.
+  est0.policies = GV.figured(est0, A.inventory(est0), { siteTags: ((s.siteTags || {})[est0.id]) || {} });
   const inv = A.inventory({ ...est0, regionsList: est0.regionsList.filter((r, i) => facetPass(r, i, s.chips || [])) });
   const obScope = s.obScope || 'all';
   const skSplit = s.skSplit ? X.splitSources(est0, A.observe(R.applyScope(est0, obScope), steered, inv).flows, s.skSplit) : null;
@@ -287,7 +294,7 @@ export function vals(c) {
   // Who answers for each piece of every path, read once from the whole estate (2026-09-30).
   const segCtx = G.segCtxOf(est0, { inv: A.inventory(est0), ob: obAll, conns, probs });
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, obAll), ...est0.findings] };
-  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !composeStarted(s.compose) ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4 && !(extra && extra.scanStep >= 4)) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, bwFor: null, bwPick: null, bwStep: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
+  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !composeStarted(s.compose) ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4 && !(extra && extra.scanStep >= 4)) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, bwFor: null, bwPick: null, bwStep: null, govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null, govBack: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -727,9 +734,10 @@ export function vals(c) {
   const connectEmptyHead = isEmpty ? 'Nothing connected yet' : connectVerdict;
   const catalogRow = layerProducts(s.layer).sort((a, b) => (a.id === 'hosted-vpc' ? -1 : b.id === 'hosted-vpc' ? 1 : b.popular - a.popular)).map(p => productCard(c, p, est));
   const visionRow = D.VISION.filter(v => v.layer === s.layer).map(v => ({ key: v.name, name: v.name }));
-  const policies = [...layerPolicies(s, est, 'all'), ...(s.layer === 'cloud' ? (s.customPolicies || []) : [])].map(p => ({ ...p, key: p.name, dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-body)', matched: p.matched.toLocaleString('en-US'), viol: p.viol.toLocaleString('en-US') }));
+  const policies = [...layerPolicies(s, est, 'all'), ...(s.layer === 'cloud' ? (s.customPolicies || []) : [])].map(p => ({ ...p, key: p.name, dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-body)', matched: p.matched == null ? 'Not yet measured' : p.matched.toLocaleString('en-US'), viol: p.viol == null ? 'Not yet measured' : p.viol.toLocaleString('en-US') }));
   const pciViol = (est.findings.find(f => f.kind === 'pci') || {}).head;
-  const governVerdict = VD.governVerdict(est);
+  // The head counts the list it sits over, the policies authored here among them (w2-govern, 2026-09-30).
+  const governVerdict = VD.governVerdict(est, s.customPolicies || []);
   // A bucket says On AT&T only when it is (CV.bucketInk, 2026-09-30): Small business's base bucket pays the same rate either way, but nothing of it is attached.
   const buckets = layerBuckets(s, est).map(b => { const onAtt = CV.bucketInk(est, b) === 'att'; return { ...b, key: b.id, todayF: fmt(b.today), fabricF: fmt(b.fabric),
     explainGo: explainNav(c, CV.bucketExplain(b)), savedF: b.today > b.fabric ? fmt(b.today - b.fabric) : onAtt ? 'On AT&T' : '$0', saved: b.today - b.fabric, action: b.today > b.fabric ? 'Steer this bucket' : onAtt ? 'Already steered' : 'Same price on AT&T', canSteer: b.today > b.fabric, steer: () => steerBucket(c, b, est), arb: `${fmt(b.today)}/mo today on ${b.cloud} · ${fmt(b.fabric)}/mo on AT&T · save ${fmt(b.today - b.fabric)}/mo` }; });
@@ -928,7 +936,7 @@ export function vals(c) {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', themeTitle: s.theme === 'light' ? 'Dark mode' : 'Light mode', themeIsLight: s.theme !== 'dark', themeIsDark: s.theme === 'dark', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
     // An estate switch starts clean (2026-09-30): a By pick or a drill the new
     // estate lacks drew an empty map with a phantom "Internet 1.0 Gbps".
-    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, bwFor: null, bwPick: null, bwStep: null }),
+    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, bwFor: null, bwPick: null, bwStep: null, govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null, govBack: null, optShow: null }),
     resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], andiTickets: d.andiTickets, heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null, pathSel: null, pathPin: null, bwFor: null, bwPick: null, bwStep: null,
       // A bandwidth change rehearsed is cleared with the rest (skeptic, 2026-09-30); the connect flow's own orders stay, as before.
       orders: (s.orders || []).filter(o => !o || o.kind !== 'bandwidth') }); },
@@ -946,7 +954,7 @@ export function vals(c) {
     ...shellVals(s, set, go, est, c, sched),
     headOpen: s.headOpen !== false, headClosed: s.headOpen === false, toggleHead: () => { const v = s.headOpen === false; set({ headOpen: v }); try { localStorage.setItem('naas.headOpen', String(v)); } catch (e) {} }, headRot: s.headOpen === false ? 'rotate(-90deg)' : 'rotate(0deg)',
     ...andiVals(s, set, go, est, ob, { conns, floorVerdict, connectVerdict, governVerdict, costVerdict, discoverVerdict, stageKicker, findingCard, sortF, findingsFor, isEmpty, totalSave, persona, personaTab }),
-    pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? (observeHead || ob.verdict) : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on AT&T · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${est.policiesEnforced} of ${est.policiesAuthored} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
+    pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? (observeHead || ob.verdict) : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on AT&T · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${[...(est.policies || []), ...(s.customPolicies || [])].filter(p => p.state === 'enforced').length} of ${(est.policies || []).length + (s.customPolicies || []).length} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
     persona: s.persona || 'neteng', personaName: persona, setPersona: (e) => set({ persona: e.target.value }), personas: PERSONAS.map(p => ({ key: p, label: p })), moreByTab, hasMoreByTab: moreByTab.length > 0, pendingTitle: (s.order && s.order.title) || 'Hosted VPC order', dismissPending: () => set({ pendingDismissed: true }),
     estateName: est.name, isEmpty, isPartial, isMature, notEmpty: !isEmpty, stageKicker, floorVerdict,
     // Discover has two views: the estate, and its sources (source management).
@@ -1089,6 +1097,8 @@ export function vals(c) {
   };
   Object.assign(out, briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }));
   Object.assign(out, homeVals(out, s, set, { go, isEmpty, openSave }));
+  // After the home, which reads Govern's whole lists: Govern's filters narrow only its own page.
+  Object.assign(out, governVals(out, s, set, { go, est, invAll: A.inventory(est0) }));
   if (s.screen === 's3' && s.tab === 'observe' && s.obPage === 'insights' && out.insPanelBrief) Object.assign(out, { andiSub: out.briefText, hasAndiSub: true });
   return pageLists(out, s, set);
 }
@@ -1182,7 +1192,11 @@ export function homeVals(out, s, set, { go, isEmpty, openSave }) {
     spend: () => go('s3', { ...cloud, tab: 'cost', costPanel: 'spend' }),
     optimize: () => go('s3', { ...cloud, tab: 'cost', costPanel: 'optimize' }),
     tags: () => go('s3', { ...cloud, tab: 'govern', govPanel: 'tags', tagPage: 0 }),
+    // The tags a card counts as having no policy open filtered to just those (w2-govern, 2026-09-30).
+    tagsBare: () => go('s3', { ...cloud, tab: 'govern', govPanel: 'tags', tagPage: 0, tagFilter: 'bare' }),
     policies: () => go('s3', { ...cloud, tab: 'govern', govPanel: 'policies' }),
+    // "N policy violations" opens the policies that carry them, the total printed on the landing.
+    violations: () => go('s3', { ...cloud, tab: 'govern', govPanel: 'policies', polFilter: 'viol', polPage: 0 }),
   };
   const sitesG = ring('sites'), cloudsG = ring('clouds'), wlG = ring('workloads');
   const glance = { sitesTotal: HM.numOf(sitesG.centre), sitesOn: /^All\b/.test(sitesG.head || '') ? HM.numOf(sitesG.centre) : HM.numOf(sitesG.head),
@@ -1201,7 +1215,7 @@ export function homeVals(out, s, set, { go, isEmpty, openSave }) {
     moves: () => go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0, persona: rk }),
     optimize: doors.optimize,
     spend: doors.spend,
-    violations: doors.policies,
+    violations: doors.violations,
     exposed: doors.discover,
     discover: doors.discover,
     options: doors.options,
@@ -1232,6 +1246,193 @@ export function homeVals(out, s, set, { go, isEmpty, openSave }) {
   };
 }
 
+// ---------- Govern: every figure a door (w2-govern, 2026-09-30) ----------
+// Micah: "it all should be drillable". Every count Govern prints opens the set it
+// counts, in place: a filter on the policy or tag list, or a drill under the tabs
+// that names what it lists and how many (workloads, sites, VPCs, regions, clouds),
+// each row opening the thing itself on Discover, with a way back. The counts come
+// from one rule (naas-govern.js), so a figure is the length of the list it opens.
+// A count of things never lands on Logs.
+const GOV_PANEL = { policies: 'Violations & policies', tags: 'Tags', templates: 'Templates' };
+// The set a finding's head counts: the violations of the rule it names.
+const FINDING_RULE = { pci: { match: 'tag PCI', req: 'Private path required' }, uninspected: { match: 'tag Internet-facing', req: 'Inline security inspection' } };
+const POL_FILTERS = ['enforced', 'unenforced', 'viol'];
+export function governVals(out, s, set, { go, est, invAll }) {
+  const gk = out.govPanelTags ? 'tags' : out.govPanelTemplates ? 'templates' : 'policies';
+  const onGov = s.screen === 's3' && s.tab === 'govern' && s.layer === 'cloud';
+  const siteTags = ((s.siteTags || {})[est.id]) || {};
+  const nf = (x) => Number(x || 0).toLocaleString('en-US');
+  const nOf = (x, one, many) => `${nf(x)} ${x === 1 ? one : many}`;
+  const UNIT = { workload: ['workload', 'workloads'], site: ['site', 'sites'], vpc: ['VPC', 'VPCs'], region: ['region', 'regions'], cloud: ['cloud', 'clouds'] };
+  const lead = (t) => { const m = /^([\d,]+)\b/.exec(String(t || '')); return m ? +m[1].replace(/,/g, '') : null; };
+  const OK = 'var(--success)', WARN = 'var(--warning)';
+  // Every figure registers what it shows and where it lands, so tests/govern-drill.test.mjs clicks each one and counts.
+  const figs = [];
+  const fig = (key, n, lands, fn) => { if (onGov) figs.push({ key, n, lands, go: fn }); return fn; };
+  const pols = [...(est.policies || []), ...(s.customPolicies || [])];
+  const setsOf = (p) => GV.policySets(est, invAll, p, { siteTags });
+  const drill = onGov && s.govDrill && s.govDrill.panel === gk ? s.govDrill : null;
+  const openDrill = (d) => () => set({ govPanel: d.panel, govDrill: d, govDrillPage: 0, polFilter: null, tagFilter: null });
+  const closeDrill = () => set({ govDrill: null, govDrillPage: 0 });
+
+  // ---- the thing itself, on Discover, and the way back ----
+  const here = { govPanel: gk, govDrill: drill, govDrillPage: s.govDrillPage || 0 };
+  const toClouds = (trail) => () => { go('s1', { discoverView: 'estate', estPanel: 'clouds', cloudTrailE: trail, cloudPage: 0, scanStep: 4, scanBusy: false })(); set({ govBack: { ...here, panel: 'clouds' } }); };
+  const siteTrail = (st) => { const full = ['region:' + regionOf(st), 'state:' + (S.stateOf(st.metro) || '—'), 'metro:' + st.metro, 'site:' + st.name];
+    for (let k = full.length; k > 0; k--) { const t = full.slice(0, k); if (X.siteDrillRows(est, t)) return t; } return []; };
+  const toSite = (st) => () => { go('s1', { discoverView: 'estate', estPanel: 'sites', placeTrail: siteTrail(st), placePage: 0, scanStep: 4, scanBusy: false })(); set({ govBack: { ...here, panel: 'sites' } }); };
+  const back = s.govBack && s.screen === 's1' && s.estPanel === s.govBack.panel ? s.govBack : null;
+  const govBackGo = () => { if (!back) return; go('s3', { layer: 'cloud', tab: 'govern', govPanel: back.govPanel, govDrill: back.govDrill, govDrillPage: back.govDrillPage })(); };
+
+  // ---- the rows a drill lists ----
+  const wlRow = (r, req) => { const brk = req ? GV.breaker(req, 'workload') : null, bad = brk ? brk(r) : (!r.vpc.priv || !!r.w.exposed);
+    return { key: r.w.id, name: r.w.name || r.w.id, sub: [r.w.ip, r.w.type].filter(Boolean).join(' · '), where: `${r.vpc.name} · ${r.cloud} ${r.region}`,
+      why: GV.whyOf(r, req || 'Private path required'), dot: bad ? WARN : OK, go: toClouds(['cloud:' + r.cloud, 'region:' + r.region, 'vpc:' + r.vpc.id, 'sn:' + r.sn.id]) }; };
+  const siteRow = (st) => { const att = onAtt(st), k = S.countOf(st.name);
+    return { key: st.name, name: st.name, sub: [st.metro && st.metro !== 'Various' ? st.metro : '', st.access].filter(Boolean).join(' · '), where: k > 1 ? nOf(k, 'site', 'sites') : regionOf(st),
+      why: att ? 'On AT&T' : 'Outside AT&T', dot: att ? OK : WARN, go: toSite(st) }; };
+  const vpcRow = (x) => ({ key: x.v.id, name: x.v.name, sub: x.v.purpose || 'VPC', where: `${x.cloud} ${x.region}`, why: `${nOf(x.v.wl, 'workload', 'workloads')} · ${x.v.priv ? 'on AT&T' : 'public internet'}`,
+    dot: x.v.priv ? OK : WARN, go: toClouds(['cloud:' + x.cloud, 'region:' + x.region, 'vpc:' + x.v.id]) });
+  const groupRow = (ts, key, name, trail, vs) => { const wl = vs.reduce((a, y) => a + (y.v.wl || 0), 0), priv = vs.every(y => y.v.priv);
+    return { key, name, sub: `${nOf(vs.length, 'VPC', 'VPCs')} with the tag`, where: nOf(wl, 'workload', 'workloads'), why: priv ? 'On AT&T' : vs.some(y => y.v.priv) ? 'Partly on the public internet' : 'Public internet', dot: priv ? OK : WARN, go: toClouds(trail) }; };
+
+  // ---- a drill: what it lists, how many, and its trail back ----
+  const resolve = (d) => {
+    if (!d) return null;
+    const u = (unit) => UNIT[unit] || UNIT.workload;
+    if (d.kind === 'policy') {
+      const p = pols.find(x => x.name === d.name); if (!p) return null;
+      const ps = setsOf(p), list = d.what === 'viol' ? ps.viol : ps.matched; if (!list) return null;
+      const n = GV.count(list, ps.unit), w = u(ps.unit);
+      return { crumb: p.name, last: d.what === 'viol' ? nOf(n, 'violation', 'violations') : `${nf(n)} matched`, n, unit: ps.unit,
+        line: d.what === 'viol' ? `${nOf(n, w[0], w[1])} break ${p.name}` : `${nOf(n, w[0], w[1])} matched by ${p.match}`,
+        rule: d.what === 'viol' ? GV.ruleLine(p.req, ps.unit) : `${p.name} requires ${String(p.req).toLowerCase()}.`,
+        rows: ps.unit === 'site' ? list.map(siteRow) : list.map(r => wlRow(r, d.what === 'viol' ? p.req : null)) };
+    }
+    if (d.kind === 'finding') {
+      const f = (est.findings || []).find(x => x.kind === d.key); if (!f) return null;
+      if (d.key === 'ipsec') { const list = (est.sites || []).filter(x => siteModeOf(x) === 'ipsec'), n = GV.count(list, 'site');
+        return { crumb: D.KINDS[f.kind] || 'Finding', last: nOf(n, 'site', 'sites'), n, unit: 'site', line: f.head, rule: 'An IPsec tunnel on another carrier\'s internet, to a public cloud VPN gateway.', rows: list.map(siteRow) }; }
+      const rule = FINDING_RULE[d.key]; if (!rule) return null;
+      const ps = setsOf(rule); if (!ps.viol) return null;
+      const n = GV.count(ps.viol, ps.unit);
+      return { crumb: D.KINDS[f.kind] || 'Finding', last: nOf(n, 'workload', 'workloads'), n, unit: 'workload', line: f.head, rule: GV.ruleLine(rule.req, ps.unit), rows: ps.viol.map(r => wlRow(r, rule.req)) };
+    }
+    if (d.kind === 'tag') {
+      const ts = GV.tagSet(invAll, d.tag), t = d.tag;
+      const W = {
+        vpcs: [ts.vpcs.map(vpcRow), 'vpc', (n) => `${nOf(n, 'VPC', 'VPCs')} ${n === 1 ? 'carries' : 'carry'} ${t}`, 'Amber marks the ones on the public internet.'],
+        public: [ts.publicVpcs.map(vpcRow), 'vpc', (n) => `${nOf(n, 'VPC', 'VPCs')} carrying ${t} ${n === 1 ? 'rides' : 'ride'} the public internet`, 'No private path to AT&T.'],
+        wl: [ts.workloads.map(r => wlRow(r, null)), 'workload', (n) => `${nOf(n, 'workload', 'workloads')} in the VPCs that carry ${t}`, 'Amber marks the ones that reach the internet directly.'],
+        exposed: [ts.exposed.map(r => wlRow(r, null)), 'workload', (n) => `${nOf(n, 'workload', 'workloads')} carrying ${t} ${n === 1 ? 'is' : 'are'} exposed`, 'Exposed: a public address with its own route out.'],
+        regions: [ts.regions.map(x => groupRow(ts, x.cloud + ' ' + x.region, `${x.cloud} ${x.region}`, ['cloud:' + x.cloud, 'region:' + x.region], ts.vpcs.filter(y => y.cloud === x.cloud && y.region === x.region))), 'region', (n) => `${nOf(n, 'region', 'regions')} ${n === 1 ? 'holds' : 'hold'} ${t}`, ''],
+        clouds: [ts.clouds.map(cl => groupRow(ts, cl, cl, ['cloud:' + cl], ts.vpcs.filter(y => y.cloud === cl))), 'cloud', (n) => `${nOf(n, 'cloud', 'clouds')} ${n === 1 ? 'holds' : 'hold'} ${t}`, ''],
+      }[d.what];
+      if (!W) return null;
+      const n = W[0].length, w = u(W[1]);
+      return { crumb: t, last: nOf(n, w[0], w[1]), n, unit: W[1], line: W[2](n), rule: W[3], rows: W[0] };
+    }
+    if (d.kind === 'template') {
+      const t = MULTI_LAYER.find(x => x.key === d.key); if (!t) return null;
+      const ps = setsOf({ match: t.match, req: t.layers.core }); if (!ps.matched) return null;
+      const n = GV.count(ps.matched, ps.unit), w = u(ps.unit);
+      return { crumb: t.name, last: nOf(n, w[0], w[1]), n, unit: ps.unit, line: `${nOf(n, w[0], w[1])} ${n === 1 ? 'matches' : 'match'} ${t.match} today`, rule: 'Start from this to carry every layer into the author.',
+        rows: ps.unit === 'site' ? ps.matched.map(siteRow) : ps.matched.map(r => wlRow(r, t.layers.core)) };
+    }
+    return null;
+  };
+  const dr = resolve(drill);
+  // The move that closes what a drill lists, where a finding names one: the finding's own recommendation.
+  const POLICY_FINDING = { 'tag PCI': 'pci', 'tag Internet-facing': 'uninspected' };
+  const actKind = !drill ? null : drill.kind === 'finding' ? drill.key : drill.kind === 'policy' && drill.what === 'viol' ? POLICY_FINDING[(pols.find(x => x.name === drill.name) || {}).match] : null;
+  const actF = actKind ? (out.governFindings || []).find(f => f.kind === actKind) : null;
+  const crumbInk = (last) => ({ notLast: !last, weight: last ? 700 : 500, color: last ? 'var(--text-heading)' : 'var(--link)' });
+  const drillVals = dr ? {
+    govDrillOn: true, govDrillN: dr.n, govDrillUnit: dr.unit, govDrillLine: dr.line, govDrillRule: dr.rule, hasGovDrillRule: !!dr.rule,
+    govDrillCrumbs: [{ key: 'panel', label: GOV_PANEL[gk], go: closeDrill, ...crumbInk(false) }, { key: 'name', label: dr.crumb, go: closeDrill, ...crumbInk(false) }, { key: 'last', label: dr.last, go: () => {}, ...crumbInk(true) }],
+    govDrillRows: dr.rows.map(r => ({ ...r, caret: '›' })), closeGovDrill: closeDrill,
+    hasGovDrillAct: !!(actF && actF.rec), govDrillAct: actF && actF.rec ? { label: actF.rec.name, go: actF.rec.choose } : { label: '', go: () => {} },
+  } : { hasGovDrillAct: false, govDrillAct: { label: '', go: () => {} }, govDrillOn: false, govDrillN: 0, govDrillUnit: '', govDrillLine: '', govDrillRule: '', hasGovDrillRule: false, govDrillCrumbs: [], govDrillRows: [], closeGovDrill: closeDrill };
+
+  // ---- Violations & policies: the head, the findings, the list and its filters ----
+  const pf = POL_FILTERS.includes(s.polFilter) ? s.polFilter : null;
+  const polIn = (p, f) => (f === 'enforced' ? p.state === 'enforced' : f === 'unenforced' ? p.state !== 'enforced' : f === 'viol' ? p.viol > 0 : true);
+  const setPf = (f) => () => set({ govPanel: 'policies', polFilter: f, polPage: 0, govDrill: null, govDrillPage: 0 });
+  const polAll = (out.polRows || []).map(p => {
+    const unit = p.unit || setsOf(p).unit, w = UNIT[unit] || UNIT.workload;
+    const mGo = p.matched > 0 ? fig(`g-pol-${p.name}-matched`, p.matched, 'drill', openDrill({ panel: 'policies', kind: 'policy', name: p.name, what: 'matched' })) : null;
+    const vGo = p.viol > 0 ? fig(`g-pol-${p.name}-viol`, p.viol, 'drill', openDrill({ panel: 'policies', kind: 'policy', name: p.name, what: 'viol' })) : null;
+    return { ...p, appliesTo: `${p.match} · ${p.matched == null ? 'Not yet measured' : nOf(p.matched, w[0], w[1])}`,
+      matchedLabel: p.matched == null ? 'Not yet measured' : nOf(p.matched, w[0], w[1]), hasMatchedGo: !!mGo, noMatchedGo: !mGo, matchedGo: mGo || (() => {}),
+      violLabel: p.viol == null ? (p.matched == null ? '' : 'Not yet measured') : p.viol ? nOf(p.viol, 'violation', 'violations') : 'no violations',
+      hasViolGo: !!vGo, noViolGo: !vGo, violGo: vGo || (() => {}), violColor: p.viol ? 'var(--error)' : 'var(--text-light)',
+      // "See what is breaking it" opens the very set its violations count, here; it went to an unfiltered map.
+      actGo: p.viol > 0 ? openDrill({ panel: 'policies', kind: 'policy', name: p.name, what: 'viol' }) : p.actGo };
+  });
+  const polRows = pf ? polAll.filter(p => polIn(p, pf)) : polAll;
+  const violSum = polAll.reduce((a, p) => a + (p.viol || 0), 0), enforcedN = polAll.filter(p => p.state === 'enforced').length;
+  const pfLabel = !pf ? '' : pf === 'enforced' ? `${nOf(polRows.length, 'policy', 'policies')} enforced` : pf === 'unenforced' ? `${nOf(polRows.length, 'policy', 'policies')} authored but not enforced`
+    : `${nOf(violSum, 'violation', 'violations')} in ${nOf(polRows.length, 'policy', 'policies')}`;
+  const polViolGo = violSum && gk === 'policies' && !drill ? fig('g-viol-total', violSum, 'polFilter:viol', setPf('viol')) : null;
+  // The page head: each figure in the sentence opens what it counts.
+  let verdictParts = null;
+  const vm = /^(\d+) (polic(?:y|ies) enforced)\. (.*)\.$/.exec(out.governVerdict || '');
+  if (onGov && vm) {
+    const tail = vm[3], tf = /^(\d+) authored but not enforced$/.exec(tail), find = (est.findings || []).find(f => f.tab === 'govern' && f.head.replace(/\.$/, '') === tail);
+    const tailGo = tf ? (+tf[1] > 0 ? fig('g-verdict-unenforced', +tf[1], 'polFilter:unenforced', setPf('unenforced')) : null)
+      : find && (FINDING_RULE[find.kind] || find.kind === 'ipsec') && lead(tail) != null ? fig('g-verdict-finding', lead(tail), 'drill', openDrill({ panel: 'policies', kind: 'finding', key: find.kind })) : null;
+    const enfGo = +vm[1] > 0 ? fig('g-verdict-enforced', +vm[1], 'polFilter:enforced', setPf('enforced')) : null;
+    verdictParts = [{ text: `${vm[1]} ${vm[2]}`, go: enfGo }, { text: '. ' }, { text: tail, go: tailGo }, { text: '.' }]
+      .map((p, i) => ({ key: 'vp' + i, text: p.text, isFig: !!p.go, isText: !p.go, go: p.go || (() => {}) }));
+  }
+  const governFindings = (out.governFindings || []).map(f => {
+    const n = lead(f.head), can = !drill && n != null && (FINDING_RULE[f.kind] || f.kind === 'ipsec');
+    const g = can ? fig(`g-find-${f.kind}`, n, 'drill', openDrill({ panel: 'policies', kind: 'finding', key: f.kind })) : null;
+    return { ...f, headParts: [{ key: 'h', text: f.head, isFig: !!g, isText: !g, go: g || (() => {}) }] };
+  });
+
+  // ---- Tags: each row's footprint and exposure, and the tags with no policy ----
+  const tf = s.tagFilter === 'bare' ? 'bare' : null;
+  const tagAll = (out.drawerTags || []).map(t => {
+    const ts = GV.tagSet(invAll, t.key), k = GV.tagKey(t.key);
+    const part = (what, n, one, many) => { const g = !drill && gk === 'tags' && n > 0 ? fig(`g-tag-${k}-${what}`, n, 'drill', openDrill({ panel: 'tags', kind: 'tag', tag: t.key, what })) : null; return { key: what, text: nOf(n, one, many), isFig: !!g, isText: !g, go: g || (() => {}) }; };
+    const sep = (x) => ({ key: 'sep' + x, text: x, isFig: false, isText: true, go: () => {} });
+    const pub = part('public', ts.publicVpcs.length, 'VPC', 'VPCs'), exp = part('exposed', ts.exposed.length, 'workload', 'workloads');
+    return { ...t, wl: ts.workloads.length, exposedN: ts.exposed.length,
+      subParts: [part('vpcs', ts.vpcs.length, 'VPC', 'VPCs'), sep(' · '), part('wl', ts.workloads.length, 'workload', 'workloads'), sep(' · '), part('regions', ts.regions.length, 'region', 'regions'), sep(' in '), part('clouds', ts.clouds.length, 'cloud', 'clouds')].map((p, i) => ({ ...p, key: 'tp' + i })),
+      expo: ts.publicVpcs.length ? { ...pub, text: `${pub.text} on the public internet`, ink: WARN } : { key: 'public', text: 'All on AT&T', isFig: false, isText: true, go: () => {}, ink: 'var(--text-light)' },
+      expoWl: ts.exposed.length ? { ...exp, text: `${exp.text} exposed`, ink: WARN } : { key: 'exposed', text: 'None exposed', isFig: false, isText: true, go: () => {}, ink: 'var(--text-light)' } };
+  });
+  const bareN = tagAll.filter(t => !t.covered).length;
+  const tagFigOk = gk === 'tags' && !drill;
+  const tagAllGo = tagFigOk && tagAll.length ? fig('g-tags-all', tagAll.length, 'tagFilter:all', () => set({ tagFilter: null, tagPage: 0, govDrill: null })) : null;
+  const tagBareGo = tagFigOk && bareN ? fig('g-tags-bare', bareN, 'tagFilter:bare', () => set({ tagFilter: 'bare', tagPage: 0, govDrill: null })) : null;
+  const tagSubParts = [{ text: nOf(tagAll.length, 'tag', 'tags'), go: tagAllGo }, { text: ' · ' }, { text: bareN ? `${nf(bareN)} with no policy` : 'every one covered by a policy', go: tagBareGo }]
+    .map((p, i) => ({ key: 'ts' + i, text: p.text, isFig: !!p.go, isText: !p.go, go: p.go || (() => {}) }));
+  const tagRows = tf ? tagAll.filter(t => !t.covered) : tagAll;
+
+  // ---- Templates: what each would match here today ----
+  const examplePolicies = (out.examplePolicies || []).map(e => {
+    const t = MULTI_LAYER.find(x => x.key === e.key) || { match: e.m, layers: { core: e.r } }, ps = setsOf({ match: t.match, req: t.layers.core }), n = GV.count(ps.matched, ps.unit), w = UNIT[ps.unit] || UNIT.workload;
+    const g = gk === 'templates' && !drill && n > 0 ? fig(`g-tpl-${e.key}`, n, 'drill', openDrill({ panel: 'templates', kind: 'template', key: e.key })) : null;
+    return { ...e, figLabel: n == null ? 'Not yet measured' : n ? `Matches ${nOf(n, w[0], w[1])} today` : `Matches no ${w[1]} today`, hasFigGo: !!g, noFigGo: !g, figGo: g || (() => {}) };
+  });
+
+  return {
+    ...drillVals,
+    govListPolicies: !!out.govPanelPolicies && !dr, govListTags: !!out.govPanelTags && !dr, govListTemplates: !!out.govPanelTemplates && !dr,
+    govPanels: (out.govPanels || []).map(g => ({ ...g, go: () => set({ govPanel: g.key, govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null }) })),
+    polRows, governFindings, hasGovernFindings: governFindings.length > 0,
+    polFilterOn: !!pf, polFilterLabel: pfLabel, clearPolFilter: () => set({ polFilter: null, polPage: 0 }),
+    hasPolViolGo: !!polViolGo, noPolViolGo: !polViolGo, polViolGo: polViolGo || (() => {}),
+    verdictParts: verdictParts || [], hasVerdictParts: !!verdictParts, verdictPlain: !verdictParts,
+    drawerTags: onGov && gk === 'tags' ? tagRows : tagAll, tagSubParts, tagFilterOn: !!tf && tagFigOk, tagFilterLabel: tf ? `${nOf(bareN, 'tag', 'tags')} with no policy` : '', clearTagFilter: () => set({ tagFilter: null, tagPage: 0 }),
+    examplePolicies,
+    govBackOn: !!back, govBackGo, govBackLabel: 'Back to Govern',
+    govFigs: figs, govEnforcedN: enforcedN,
+  };
+}
+
 // A list longer than the fold pages; it never scrolls in a box and never sits
 // in a card (Micah, 2026-09-29: "why are you containerizing things like logs").
 export function pageRows(rows, size, page, setPage) {
@@ -1239,7 +1440,7 @@ export function pageRows(rows, size, page, setPage) {
   return { rows: rows.slice(p * size, p * size + size), pager: { label: n ? `${p * size + 1}–${Math.min(n, (p + 1) * size)} of ${n}` : '0 of 0', many: pages > 1,
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
-const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
+const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], govDrillRows: ['govDrillPage', 8, 'govDrillPager', 'govDrillPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
   segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 4, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], bankRows: ['bankPage', 5, 'bankPager', 'bankPageSize'], regionSaveRows: ['regSavePage', 6, 'regSavePager', 'regSavePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 function pageLists(out, s, set) {
   for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
@@ -1453,7 +1654,10 @@ function chooseTier(c, f, tierName, prod, est) {
   if (f.pathSrc && f.pathDst) {
     const own = prod && OWN_END[prod.id] !== undefined ? productEnds(prod) : null;
     order.pathSrc = own && OWN_END[prod.id] === 0 ? own.pathSrc : f.pathSrc;
-    order.pathDst = own && OWN_END[prod.id] === 1 ? own.pathDst : f.pathDst;
+    // A tier that names one region ends there (w2-govern, 2026-09-30): Bank scale's PCI finding spans two
+    // regions, and "Hosted VPC in us-east-2" is us-east-2's order.
+    const named = (est.regionsList || []).find(r => new RegExp(`\\b${r.region}\\b`).test(tierName));
+    order.pathDst = own && OWN_END[prod.id] === 1 ? own.pathDst : named ? `${named.cloud} ${named.region}` : f.pathDst;
   } else if (!prod) Object.assign(order, endsOf(GENERIC_ENDS));
   if (f.priced) order.savings = f.save;
   if (f.kind === 'pci') order.policies = [{ match: 'tag PCI', req: 'Private path required', state: 'will be enforced on delivery' }];
@@ -3151,7 +3355,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
             if (trail.length === 2) { level = 'vpc'; rows = reg ? reg.vpcs.map(v => ({ key: v.id, name: v.name, sub: `${v.purpose || 'VPC'} · ${nf(v.wl)} workloads`, bw: '', priv: !!v.priv, into: 'vpc:' + v.id, next: 'subnets' })) : []; }
             else { const vpc = reg && reg.vpcs.find(v => 'vpc:' + v.id === trail[2]);
               if (trail.length === 3) { level = 'subnet'; rows = vpc ? vpc.subnets.map(sn => ({ key: sn.id, name: sn.name, sub: `${sn.cidr || ''} · ${nf((sn.workloads || []).length)} workloads`, bw: '', priv: !/pub/.test(sn.id), into: 'sn:' + sn.id, next: 'workloads' })) : []; }
-              else { level = 'workload'; const sn = vpc && vpc.subnets.find(x => 'sn:' + x.id === trail[3]); rows = sn ? (sn.workloads || []).map(w => ({ key: w.id, name: w.name || w.id, sub: [w.ip, w.tag].filter(Boolean).join(' · '), bw: '', priv: !w.public, into: null, next: '' })) : []; } }
+              else { level = 'workload'; const sn = vpc && vpc.subnets.find(x => 'sn:' + x.id === trail[3]); rows = sn ? (sn.workloads || []).map(w => ({ key: w.id, name: w.name || w.id, sub: [w.ip, w.tag, w.exposed ? 'exposed' : ''].filter(Boolean).join(' · '), bw: '', priv: !w.exposed, into: null, next: '' })) : []; } }
           }
           const LV = { cloud: ['cloud', 'clouds'], region: ['region', 'regions'], vpc: ['VPC', 'VPCs'], subnet: ['subnet', 'subnets'], workload: ['workload', 'workloads'] }[level];
           const cloudRows = rows.map(r => ({ ...r, dot: r.priv ? 'var(--success)' : 'var(--warning)', level: r.into ? r.next : '', caret: r.into ? '›' : '', cursor: r.into ? 'pointer' : 'default',
@@ -3302,7 +3506,9 @@ function wizardVals(s, est, set, c) {
   const aSet = (p) => set({ authoring: { ...(au || { match: null, scope: null, req: [] }), ...p } });
   const aCard = (field, v, single) => { const cur = au ? au[field] : (single ? null : []); const on = single ? cur === v : (cur || []).includes(v); return { key: v, label: v, desc: field === 'req' ? CARD_DESC.control[v] : '', on, click: () => { if (single) return aSet({ [field]: v }); aSet({ [field]: on ? cur.filter(x => x !== v) : [...(cur || []), v] }); }, border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', check: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)' }; };
   const aReady = !!(au && au.match && au.scope && au.req && au.req.length);
-  const commit = (state) => () => { if (!aReady) return; const matched = { 'tag PCI': 34, 'tag Prod': 478, 'tag Internet-facing': 19, 'branch Finance': 228, 'tag GPU': 174, 'region ap-*': 52 }[au.match] || (est.regionsList.find(r => 'region ' + r.region === au.match) || {}).wl || 40; const viol = state === 'simulated' ? Math.round(matched * 0.18) : 0; const pol = { name: au.templateName || `${au.match.replace(/^tag |^branch |^region /, '')} · ${au.req[0]}`, match: au.match, scope: au.scope, req: au.req.join(' and '), matched, viol, state, custom: true, ...(au.layers ? { layers: au.layers } : {}) }; set({ customPolicies: [...(s.customPolicies || []), pol], authoring: null, simulated: state === 'simulated' ? true : s.simulated,
+  // What it matches and what breaks it count by Govern's one rule (w2-govern, 2026-09-30), never a
+  // table of guesses or a share of the matches: the figures open the sets they count.
+  const commit = (state) => () => { if (!aReady) return; const pol0 = { name: au.templateName || `${au.match.replace(/^tag |^branch |^region /, '')} · ${au.req[0]}`, match: au.match, scope: au.scope, req: au.req.join(' and '), state, custom: true, ...(au.layers ? { layers: au.layers } : {}) }; const fig = GV.policyFigures(est, A.inventory(est), pol0, { siteTags: ((s.siteTags || {})[est.id]) || {} }); const pol = { ...pol0, matched: fig.matched, viol: fig.viol, unit: fig.unit }; set({ customPolicies: [...(s.customPolicies || []), pol], authoring: null, simulated: state === 'simulated' ? true : s.simulated,
     // The list opens on the page that holds what you just authored.
     polPage: Math.floor(((s.layer === 'cloud' ? layerPolicies(s, est, 'all').length : 0) + (s.customPolicies || []).length) / PAGE_SIZE.polRows[1]) }); };
   const openAuthor = (m, r) => () => set({ authoring: { match: m || null, scope: 'any cloud', req: r ? [r] : [] } });
@@ -4092,8 +4298,17 @@ function costVals(s, set, est, invAll, ob, go, c) {
   const optTargets = (r) => (r.key !== 'capacity' || r.empty ? [] : optCap.filter(c => (r.resize ? c.oversized : c.state === 'risk')));
   const optState = (r) => (r.key === 'capacity' && BW.moveState(optTargets(r), s.orders, est.id, +optNow)) || r.state;
   const optFirst = (r) => optTargets(r).find(c => !BW.inFlight(s.orders, est.id, c.id, +optNow)) || r.target;
-  const optRows = optBase.map(r => ({ ...r, state: optState(r), go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(optFirst(r), r.resize) : optGo[r.key],
-    hasCta: !r.empty, hasStart: !!optTop && optTop.key === r.key, hasState: !!optState(r), op: r.empty ? 0.6 : 1, lineRows: r.lines.slice(0, 2).map((t, i) => ({ key: r.key + i, text: t })) }));
+  // A row's figure opens the row to every part it adds up (the drill rule, w2-govern 2026-09-30): each
+  // line with its own share, and each share opens its own thing: a finding, a region, a connection.
+  const partGo = (pt) => pt.finding ? () => set({ fdKey: pt.finding })
+    : pt.conn ? go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn', mapSel: pt.conn, mapRegion: pt.region })
+    : pt.region ? go('s1', { discoverView: 'estate', estPanel: 'clouds', cloudTrailE: ['cloud:' + pt.cloud, 'region:' + pt.region], cloudPage: 0, scanStep: 4, scanBusy: false }) : () => {};
+  const optRows = optBase.map(r => { const shown = s.optShow === r.key, parts = r.parts || [];
+    return { ...r, state: optState(r), go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(optFirst(r), r.resize) : optGo[r.key],
+      hasCta: !r.empty, hasStart: !!optTop && optTop.key === r.key, hasState: !!optState(r), op: r.empty ? 0.6 : 1,
+      hasFigGo: !r.empty && !!r.figureF, noFigGo: r.empty || !r.figureF, figGo: () => set({ optShow: shown ? null : r.key }), figOpen: shown,
+      moreLines: !shown && r.lines.length > 2 ? `+${r.lines.length - 2} more` : '', hasMoreLines: !shown && r.lines.length > 2,
+      lineRows: (shown ? r.lines : r.lines.slice(0, 2)).map((t, i) => ({ key: r.key + i, text: t, partN: (parts[i] || {}).n || 0, partF: shown && parts[i] ? parts[i].f : '', hasPart: shown && !!parts[i], partGo: parts[i] ? partGo(parts[i]) : () => {} })) }; });
   const optSave = optBase[0].figure + optBase[1].figure;
   // The line names only the moves it prices (the skeptic, 2026-09-30: Small business read "across Spend and Routing"
   // where Routing prices nothing), the same moves the Could save tile names.
