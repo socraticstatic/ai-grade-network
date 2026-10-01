@@ -89,7 +89,9 @@ await beat('0 NaaS home: the take-away, the snapshot, the map below', async () =
   await takes('Azure eastus is down', 'Finance rides it · 40 workloads · 22 min', 'Trace it');
   // Waiting on you lists only what still waits (skeptic, 2026-09-30): the IPsec finding is acknowledged, so it is not here.
   const chips = await inHome('[aria-label="Waiting on you"] button:has-text("Accept")').count();
-  if (chips !== 2) throw new Error(`Waiting on you offers Accept on ${chips} chips, not 2`);
+  // Network Eng owns blind regions, latency over SLO and telemetry since Insights v2 ("make sure mock data matches
+  // persona", 2026-09-30); one path to eastus went to the Architect. Three still wait.
+  if (chips !== 3) throw new Error(`Waiting on you offers Accept on ${chips} chips, not 3`);
   if ((await inHome('[aria-label="Waiting on you"]').innerText()).includes('IPsec')) throw new Error('the acknowledged IPsec finding still waits on the home');
   const c = await cards();
   if (c.length !== 4) throw new Error(`${c.length} snapshot cards, not 4`);
@@ -185,15 +187,15 @@ await beat('8 Estate switch to Established', async () => {
   // Switched while on the home, the new estate's own figures show, with no stale role list.
   // v2 home (2026-09-30): the On AT&T card counts Oracle's two public regions (2 of 7 became 2 of 9).
   await rail('NaaS');
-  await expect('Azure eastus has one path');
+  await expect('1 region runs above the latency SLO.');
   await takes('Azure eastus is down');
   if (!(await cards())[1].includes('2 of 9')) throw new Error(`On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 2 of 9`);
   await page.selectOption('select[aria-label="View as"]', 'mature'); await settle(600);
-  await expect('3 paths send no telemetry');
+  await expect('3 paths send no telemetry', '2 regions run above the latency SLO.');
   // The outage leads, not the at-risk region (skeptic, 2026-09-30).
   await takes('AWS eu-central-1 is down', '2 apps ride it · 96 workloads');
   if (!(await cards())[1].includes('7 of 8')) throw new Error(`Established's On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 7 of 8`);
-  if ((await text()).includes('Azure eastus has one path')) throw new Error('Growing\'s role list stayed on the Established home');
+  if ((await text()).includes('1 region runs above the latency SLO.')) throw new Error('Growing\'s role list stayed on the Established home');
   await rail('Recommended');
   await expect('1 of 8 regions still ride the public internet');
 });
