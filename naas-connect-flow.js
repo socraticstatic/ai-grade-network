@@ -111,6 +111,14 @@ export const termTitle = (m) => (TERMS.find(t => t.m === m) || {}).title || '';
 export const ORDER_STAGE = 'Submitted for approval';
 export const MODELLED = 'Modelled · list price';
 export const PRICE_NOTE = 'Priced by AT&T after review';
+// One price rule for the bandwidth a catalog price covers (skeptic, 2026-09-30): a product's
+// "Up to N Gbps" line (NetBond for Cloud: Up to 10 Gbps, a connection or a port). Past it, AT&T
+// prices it after review, here and in Modify bandwidth (naas-bandwidth.js PORT_CEIL_MBPS).
+const UNIT_MBPS = { M: 1, G: 1000 };
+/** '100 Gbps' is 100000; '500 Mbps' is 500; anything else is 0. */
+export const mbpsOf = (label) => { const m = /^(\d+(?:\.\d+)?) (M|G)bps$/.exec(String(label || '')); return m ? +m[1] * UNIT_MBPS[m[2]] : 0; };
+/** The bandwidth a product's catalog price covers, in Mbps; Infinity where the catalog names none. */
+export const ceilMbpsOf = (p) => [...((p && p.included) || []), ...((p && p.limits) || [])].map(x => /^Up to (\d+(?:\.\d+)?) (M|G)bps$/.exec(x)).filter(Boolean).map(m => +m[1] * UNIT_MBPS[m[2]])[0] ?? Infinity;
 
 // ---------- Places (moved from naas-app.js) ----------
 // The metro nearest a cloud region, the storefront's one table of it. GCP europe-west1 is in Belgium; Amsterdam is
@@ -427,12 +435,14 @@ export function flowOrder(f, est, tierOverride) {
   const tier = tierOverride || tierOf(f);
   const mult = isLmcc(f) || f.ctype === LAST_MILE.label ? 1 : TIER_MULT[tier] || 1;
   const lines = [];
-  const add = (p, qty, note, perSite) => { if (!p) return; const unitPrice = Math.round((p.price || 0) * mult); lines.push({ line: lines.length + 1, product: note ? `${p.name} (${note})` : p.name, qty, unitPrice, perSite: !!perSite, monthly: unitPrice * qty, unpriced: p.price === null }); };
+  const add = (p, qty, note, perSite, past) => { if (!p) return; const unpriced = p.price === null || !!past, unitPrice = unpriced ? 0 : Math.round(p.price * mult); lines.push({ line: lines.length + 1, product: note ? `${p.name} (${note})` : p.name, qty, unitPrice, perSite: !!perSite, monthly: unitPrice * qty, unpriced }); };
   const pid = isLmcc(f) ? 'lmcc' : TYPE_PRODUCT[f.ctype];
+  // A bandwidth past what the connection's catalog price covers is priced after review, and so is the order.
+  const past = !!pid && mbpsOf(f.bandwidth) > ceilMbpsOf(productOf(pid));
   if (pid) {
     const siteQty = f.bulk && f.qty > 1 ? f.qty : 0;
     const conns = isColo(f) || isLmcc(f) || f.ctype === 'Cloud to Cloud' ? 1 : Math.max(1, f.regions.length);
-    add(productOf(pid), siteQty || conns, null, !!siteQty);
+    add(productOf(pid), siteQty || conns, past ? f.bandwidth : null, !!siteQty, past);
     if (f.ctype === 'Cloud to Cloud') add(productOf('hub'), Math.max(1, f.loc.length));
   }
   if (f.policy.includes('Inline inspection')) add(productOf('ngfw'), 1);
@@ -447,7 +457,7 @@ export function flowOrder(f, est, tierOverride) {
     : f.ctype === 'Cloud to Cloud' ? [f.regions[0] || 'Your cloud region', regionEnd(f.regions.slice(1)) === 'Your clouds' ? 'Your other clouds' : regionEnd(f.regions.slice(1))]
     : [isInternet(f) && !sites.length && !f.bulk ? 'The internet' : siteEnd, regionEnd(f.regions)];
   const pathSrc = fits(ends[0]) ? ends[0] : 'Your sites', pathDst = fits(ends[1]) ? ends[1] : 'Your clouds';
-  return { lines, policies, monthly, priced: monthly > 0, tier, title: f.name.trim() || defaultName(f), pathSrc, pathDst, pathDesc: [f.ctype, regionsWords(f), locWords(f)].filter(Boolean).join(' · '), shield: f.policy.includes('Inline inspection') || f.policy.includes('No direct internet path'), wires: tier === 'Standard' ? 1 : 2, savings: 0, days: 10 };
+  return { lines, policies, monthly, priced: monthly > 0 && !past, tier, title: f.name.trim() || defaultName(f), pathSrc, pathDst, pathDesc: [f.ctype, regionsWords(f), locWords(f)].filter(Boolean).join(' · '), shield: f.policy.includes('Inline inspection') || f.policy.includes('No direct internet path'), wires: tier === 'Standard' ? 1 : 2, savings: 0, days: 10 };
 }
 /** StandardWizard.tsx deriveStandardName: type, providers, location. */
 export function defaultName(f) {
@@ -480,7 +490,8 @@ export function tierGets(f, est, tier) {
     security: p.sec.split(' · ')[0],
     securitySub: p.sec.split(' · ').slice(1).join(' · '),
     performance: r ? p.latLabel(r) : 'Pick a region for its latency',
-    cost: priceable(f) && o.priced ? `${fmt(o.monthly)}/mo` : 'Priced once the type and region are chosen',
+    // Chosen but past what the catalog price covers reads AT&T's words, not "once chosen" (2026-09-30).
+    cost: !priceable(f) ? 'Priced once the type and region are chosen' : o.priced ? `${fmt(o.monthly)}/mo` : PRICE_NOTE,
     costSub: priceable(f) && o.priced ? MODELLED : '',
   };
 }

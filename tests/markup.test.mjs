@@ -299,16 +299,31 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // The skeptic's third read (2026-09-30): Insights' New destinations draws every class in one ink, named in its row, so its
 // colour legend (an sc-if, a div and three swatch spans) left: div 1111 -> 1110, span 968 -> 965, sc-if 496 -> 495.
 // Cost merged onto Signals and the home (2026-09-30): Cost's own move, less its edit to the old insight cards Signals replaced (div -1, span -3, sc-if -1): div 1099 -> 1092, span 920 -> 941, sc-if 489 -> 508, sc-for 255 -> 264, button 372 -> 401.
+// Modify bandwidth (Micah, 2026-09-30: "option to resize bandwidth like the netbond advanced flow"). Capacity's rows stop being one
+// button: a row div holds nine figure buttons (name, Ports with its Modify bandwidth line and in-progress note, bar, Avg, Peak,
+// Headroom, Trend, Full in, State), inside one new grid div: div +1, span -5, sc-if +2, button +8. The drawer is one aside with its
+// head, the current size, three figures (Logs buttons or a plain Headroom), the AWS note, the ports stepper, the size ladder, the
+// legend, the price change, a footer row of when (and a pick short of the peak) or the order line beside Cancel / Apply change:
+// div +29, span +34, sc-if +9, sc-for +3, button +7, aside +1.
+// div 1027 -> 1057, span 836 -> 865, sc-if 430 -> 441, sc-for 235 -> 238, button 323 -> 338, aside 9 -> 10.
+// Modify bandwidth merged onto the connect flow (2026-09-30): each count is the flow's plus Modify bandwidth's own move:
+// div 1118 -> 1148, span 947 -> 976, sc-if 477 -> 488, sc-for 247 -> 250, button 356 -> 371, aside 10 -> 11.
+// Modify bandwidth round 2 (skeptic, 2026-09-30): Capacity's rows are one button again, as on 3659e9a (div -1, span +5,
+// sc-if -2, button -8), with the in-progress size under Ports (span +1, sc-if +1); the drawer gains a scrim, a heading,
+// the review step (its rows, the drop-traffic note, an Approver label), the second confirm, the sent footer with View in
+// Orders, and loses its Logs doors and the per-row Monthly column (div +13, span -7, sc-if +4, sc-for +1, button +5, label +1):
+// div 1148 -> 1160, span 976 -> 975, sc-if 488 -> 491, sc-for 250 -> 251, button 371 -> 368, label 31 -> 32.
+// Modify bandwidth merged onto Cost, Signals and the home (2026-09-30): each count is theirs plus Modify bandwidth's own move: div 1092 -> 1134, span 941 -> 969, sc-if 508 -> 522, sc-for 264 -> 268, button 401 -> 413, aside 10 -> 11, label 30 -> 31.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1092],
-    ['span', /<span\b/g, /<\/span>/g, 941],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 508],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 264],
+    ['div', /<div\b/g, /<\/div>/g, 1134],
+    ['span', /<span\b/g, /<\/span>/g, 969],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 522],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 268],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 401],
-    ['aside', /<aside\b/g, /<\/aside>/g, 10],
-    ['label', /<label\b/g, /<\/label>/g, 30],
+    ['button', /<button\b/g, /<\/button>/g, 413],
+    ['aside', /<aside\b/g, /<\/aside>/g, 11],
+    ['label', /<label\b/g, /<\/label>/g, 31],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);
