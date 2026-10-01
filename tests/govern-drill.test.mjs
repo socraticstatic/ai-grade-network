@@ -150,13 +150,192 @@ test('See what is breaking it opens the set its violations count, with the move 
   assert.equal(c.state.tab, 'govern', 'it left for the map');
   assert.equal(v.govDrillOn, true); assert.equal(v.govDrillN, pci.viol);
   assert.equal(v.hasGovDrillAct, true);
-  assert.equal(v.govDrillAct.label, 'Hosted VPC in us-east-1 with the policy enforced');
+  assert.equal(v.govDrillActs[0].label, 'Hosted VPC in us-east-1 with the policy enforced');
   const first = v.govDrillRows[0];
   first.go();
   const row = vals(c).cloudRows.find(r => r.key === first.key);
   // Discover's own word and amber for an exposed workload; its rows read w.public, which no workload carries.
   assert.equal(row.dot, 'var(--warning)');
   assert.match(row.sub, /exposed/);
+});
+
+// The skeptic, 2026-10-01: Growing > Govern > Internet-facing inspection "31 violations" > web-a03 is
+// amber ("Its VPC rides the public internet") and opened Discover's public-a, where web-a03 read green.
+// Discover marked only "exposed"; Govern's rule also counts a workload whose VPC has no private path.
+test('a workload a drill marks amber reads amber on the Discover row it opens, for the reason the drill gives', () => {
+  let seen = 0;
+  for (const view of ['partial', 'mature', 'trust', 'small']) {
+    const c = at(view), snap = { ...c.state };
+    const reset = (to) => { for (const k of Object.keys(c.state)) if (!(k in to)) delete c.state[k]; Object.assign(c.state, to); };
+    const done = new Set(); // a set two figures open is walked once
+    for (const fig of vals(c).govFigs.filter(f => f.lands === 'drill')) {
+      reset(snap); fig.go();
+      const id = JSON.stringify(c.state.govDrill); if (done.has(id)) continue; done.add(id);
+      const v = vals(c), open = { ...c.state };
+      if (v.govDrillUnit !== 'workload') continue;
+      // The first page's first rows and its last row: the set's amber and its green alike.
+      for (const r of [...v.govDrillRows.slice(0, 2), v.govDrillRows.at(-1)]) {
+        reset(open); vals(c).govDrillRows.find(x => x.key === r.key).go();
+        const on = vals(c).cloudRows.find(x => x.key === r.key);
+        assert.ok(on, `${view} ${fig.key}: ${r.name} is not on the subnet it opens`);
+        assert.equal(on.dot, r.dot, `${view} ${fig.key}: ${r.name} reads ${r.dot} on Govern ("${r.why}") and ${on.dot} on Discover ("${on.sub}")`);
+        if (/public internet/i.test(r.why)) assert.match(on.sub, /public internet/, `${view} ${r.name}: Discover does not say why`);
+        if (/Public address/.test(r.why)) assert.match(on.sub, /exposed/, `${view} ${r.name}: Discover does not say why`);
+        // One step up the trail, the subnet that holds an amber workload is amber too.
+        if (r.dot === 'var(--warning)') { const sn = c.state.cloudTrailE.at(-1); c.state.cloudTrailE = c.state.cloudTrailE.slice(0, -1);
+          const up = vals(c).cloudRows.find(x => 'sn:' + x.key === sn);
+          assert.equal(up && up.dot, 'var(--warning)', `${view} ${r.name}: its subnet reads green over it`); }
+        seen++;
+      }
+    }
+  }
+  assert.ok(seen > 60, `${seen} rows walked`);
+});
+
+// The skeptic, 2026-10-01: Established > Templates > Remote sites to cloud > "Remote sites (212) · 212 sites"
+// landed on "Nationwide › Unplaced › Various · 1 site", Field (wireless): another site, reading 1. A site row
+// lands where Your sites lists that site, and a rollup where its own sites are listed, at its count.
+test('a site a drill lists opens Your sites on that site, a rollup on its own sites at its count', () => {
+  let seen = 0;
+  for (const view of ['partial', 'mature', 'trust', 'small']) {
+    const c = at(view), snap = { ...c.state };
+    const reset = (to) => { for (const k of Object.keys(c.state)) if (!(k in to)) delete c.state[k]; Object.assign(c.state, to); };
+    for (const panel of ['policies', 'templates']) {
+      reset({ ...snap, govPanel: panel });
+      const figs = vals(c).govFigs.filter(f => f.lands === 'drill'), here = { ...c.state };
+      for (const fig of figs) {
+        reset(here); fig.go();
+        const v = vals(c), open = { ...c.state };
+        if (v.govDrillUnit !== 'site') continue;
+        for (const r of v.govDrillRows) {
+          reset(open); vals(c).govDrillRows.find(x => x.key === r.key).go();
+          const on = vals(c), k = /^([\d,]+) sites$/.test(r.where) ? num(r.where) : 1;
+          assert.equal(c.state.estPanel, 'sites', `${view} ${fig.key} ${r.name}`);
+          if (k === 1) assert.ok(on.placeCrumbs.at(-1).label === r.name || on.placeRows.some(x => x.name === r.name), `${view} ${fig.key}: ${r.name} lands on "${on.placeCrumbs.map(x => x.label).join(' › ')}", which does not list it`);
+          else {
+            assert.match(on.placeLine, new RegExp(`^${k.toLocaleString('en-US')} sites\\b`), `${view} ${fig.key}: ${r.name} (${k}) lands on "${on.placeCrumbs.map(x => x.label).join(' › ')} · ${on.placeLine}"`);
+            assert.ok(!on.placeRows.some(x => x.name === 'Field (wireless)'), `${view} ${r.name}: lands among other sites`);
+          }
+          seen++;
+        }
+      }
+    }
+  }
+  assert.ok(seen >= 10, `${seen} site rows walked`);
+});
+
+// The skeptic, 2026-10-01: Bank scale's "12 PCI-tagged workloads reach the internet directly" lists 6 in
+// us-east-1 and 6 in us-east-2, and its one move was "Hosted VPC in us-east-2 with the policy enforced":
+// half the set. And Growing's inspection drill offered "NGFW (Palo Alto) in path", which inspects only what
+// rides a hosted VPC, so under the rule it closed none of the 31. A drill's moves name every region its set
+// sits in, each the move that puts that region's traffic through the AT&T path, and each orders that region.
+test('a drill\'s moves cover every region its set sits in, and each orders its own region', () => {
+  const regionOf = (r) => r.where.split(' ').at(-1);
+  let seen = 0;
+  for (const view of ['partial', 'mature', 'trust', 'small']) {
+    const c = at(view), snap = { ...c.state };
+    const reset = (to) => { for (const k of Object.keys(c.state)) if (!(k in to)) delete c.state[k]; Object.assign(c.state, to); };
+    for (const fig of vals(c).govFigs.filter(f => f.lands === 'drill')) {
+      reset(snap); fig.go();
+      const v = vals(c), open = { ...c.state };
+      if (!v.hasGovDrillAct || v.govDrillUnit !== 'workload') continue;
+      const rows = []; for (let p = 0; p < 100; p++) { c.state.govDrillPage = p; const w = vals(c); rows.push(...w.govDrillRows); if (!w.govDrillPager.many || rows.length >= v.govDrillN) break; }
+      const want = [...new Set(rows.filter(r => r.dot === 'var(--warning)').map(regionOf))].sort();
+      const named = v.govDrillActs.map(a => (/ in (\S+) with /.exec(a.label) || [])[1]).sort();
+      assert.deepEqual(named, want, `${view} ${fig.key}: the moves name ${named}, the set sits in ${want}`);
+      for (const a of v.govDrillActs) {
+        reset(open); vals(c).govDrillActs.find(x => x.key === a.key).go();
+        assert.ok(c.state.order && c.state.order.pathDst.endsWith(' ' + (/ in (\S+) with /.exec(a.label) || [])[1]), `${view} ${a.label}: orders ${c.state.order && c.state.order.pathDst}`);
+        if (/inspection/i.test(v.govDrillRule) || fig.key.includes('uninspected') || fig.key.includes('Internet-facing')) assert.match(a.label, /AT&T egress/, `${view} ${a.label}: an NGFW inspects only what rides the AT&T path`);
+        seen++;
+      }
+    }
+  }
+  assert.ok(seen >= 6, `${seen} moves walked`);
+  const t = at('trust'); vals(t).govFigs.find(f => f.key === 'g-find-pci').go();
+  assert.deepEqual(vals(t).govDrillActs.map(a => a.label), ['Hosted VPC in us-east-1 with the policy enforced', 'Hosted VPC in us-east-2 with the policy enforced']);
+});
+
+// The finding's own button on Violations & policies is the drill's move: Growing's inspection finding offered
+// "NGFW (Palo Alto) in path" beside a drill whose move routes egress through AT&T; a set over two regions
+// opens the drill, where both moves sit.
+test('a finding\'s button is its drill\'s move, or opens the drill where the moves sit', () => {
+  for (const view of ['partial', 'mature', 'trust']) {
+    const c = at(view), snap = { ...c.state };
+    for (const f of vals(c).governFindings.filter(x => ['pci', 'uninspected'].includes(x.kind))) {
+      for (const k of Object.keys(c.state)) if (!(k in snap)) delete c.state[k]; Object.assign(c.state, snap);
+      vals(c).govFigs.find(g => g.key === 'g-find-' + f.kind).go();
+      const acts = vals(c).govDrillActs.map(a => a.label);
+      if (acts.length === 1) assert.equal(f.rec.name, acts[0], `${view} ${f.kind}: the row offers "${f.rec.name}", the drill "${acts[0]}"`);
+      else {
+        assert.equal(f.rec.name, `Hosted VPC in ${acts.length} regions`, `${view} ${f.kind}`);
+        for (const k of Object.keys(c.state)) if (!(k in snap)) delete c.state[k]; Object.assign(c.state, snap);
+        vals(c).governFindings.find(x => x.kind === f.kind).rec.choose();
+        assert.deepEqual(vals(c).govDrillActs.map(a => a.label), acts, `${view} ${f.kind}: the row's button does not open the moves`);
+      }
+    }
+  }
+});
+
+// The skeptic, 2026-10-01: a template's drill said "Start from this to carry every layer into the author." and
+// showed no Start button: the card that holds it hides while the drill is open.
+test('a template\'s drill carries its own Start from this', () => {
+  const c = at('partial', { govPanel: 'templates' });
+  vals(c).govFigs.find(f => f.key === 'g-tpl-pci').go();
+  const v = vals(c);
+  assert.equal(v.hasGovDrillAct, true);
+  assert.deepEqual(v.govDrillActs.map(a => a.label), ['Start from this']);
+  v.govDrillActs[0].go();
+  assert.ok(c.state.authoring && c.state.authoring.match === 'tag PCI', 'Start from this did not open the author on the template');
+});
+
+// The skeptic, 2026-10-01: "4 policies enforced" opened the filter, and beside its chip the head still read
+// "244 policy violations" while the four rows listed added to 87. The head counts the list it sits over.
+test('the Policies head counts the rows it sits over, filtered or not', () => {
+  for (const view of ['partial', 'mature', 'trust', 'small']) {
+    for (const f of [null, 'enforced', 'unenforced', 'viol']) {
+      const c = at(view, { polFilter: f });
+      const rows = []; for (let p = 0; p < 20; p++) { c.state.polPage = p; const w = vals(c); rows.push(...w.polRows); if (!w.polPager.many || rows.length >= num(w.polPager.label.split(' of ')[1])) break; }
+      c.state.polPage = 0;
+      const v = vals(c), sum = rows.reduce((a, p) => a + (p.viol || 0), 0);
+      assert.equal(v.polViolLine, sum ? `${sum.toLocaleString('en-US')} policy ${sum === 1 ? 'violation' : 'violations'}` : 'No policy violations', `${view} ${f}: the head reads "${v.polViolLine}" over rows adding to ${sum}`);
+    }
+  }
+});
+
+// The skeptic, 2026-10-01: every matched drill printed "<policy> requires <req>.", so "PCI private path
+// requires private path required."; the IPsec finding's trail read "Violations & policies › Finding › 5 sites".
+test('a drill\'s words: a requirement in plain words, and every trail names what it opened', () => {
+  for (const view of ['partial', 'mature', 'trust', 'small']) {
+    // Bank scale's Tags and Templates drills are the same kinds as Growing's; its Policies carry the site rule.
+    for (const panel of view === 'trust' ? ['policies'] : ['policies', 'tags', 'templates']) {
+      const c = at(view, { govPanel: panel }), snap = { ...c.state };
+      for (const fig of vals(c).govFigs.filter(f => f.lands === 'drill')) {
+        for (const k of Object.keys(c.state)) if (!(k in snap)) delete c.state[k];
+        Object.assign(c.state, snap); fig.go();
+        const v = vals(c);
+        assert.doesNotMatch(v.govDrillRule, /requires .*required|requires .*only\.|requires latency slo/i, `${view} ${fig.key}: "${v.govDrillRule}"`);
+        assert.ok(v.govDrillCrumbs.every(x => x.label && x.label !== 'Finding'), `${view} ${fig.key}: "${v.govDrillCrumbs.map(x => x.label).join(' › ')}"`);
+        assert.doesNotMatch(`${v.govDrillLine} ${v.govDrillRule}`, /—/, 'an em dash');
+      }
+    }
+  }
+  const c = at('partial'); vals(c).govFigs.find(f => f.key === 'g-pol-PCI private path-matched').go();
+  assert.equal(vals(c).govDrillRule, 'PCI private path requires a private path to AT&T.');
+});
+
+// The skeptic, 2026-10-01 (low): the rail's Govern > "Policies" opened Templates ("Starting points"), not the
+// list that carries the matched and enforced counts. Each Govern rail entry is named for the tab it opens.
+test('each Govern rail entry is named for the tab it opens', () => {
+  const items = (v) => v.railGroups.flatMap(g => g.items || []).filter(x => ['Violations', 'Policies', 'Templates', 'Tags'].includes(x.label));
+  const labels = items(vals(at('partial'))).map(x => x.label);
+  assert.ok(labels.length >= 2, `the rail lists ${labels}`);
+  for (const label of labels) {
+    const c = at('partial', { screen: 's0' });
+    items(vals(c)).find(x => x.label === label).go();
+    const tab = vals(c).govPanels.find(g => g.on);
+    assert.ok(tab.label.startsWith(label), `the rail's "${label}" opens "${tab.label}"`);
+  }
 });
 
 test('a tab, the rail or a door from elsewhere opens Govern with no drill or filter left over', () => {

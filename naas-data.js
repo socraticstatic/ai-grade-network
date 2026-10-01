@@ -154,15 +154,17 @@ export const ESTATES = {
     arcs: [{ from: 'us-east-1', to: 'eastus', priv: false }, { from: 'us-west-2', to: 'us-central1', priv: false }],
     policies: [
       // Every policy counts by Govern's one rule (naas-govern.js, w2-govern 2026-09-30): matched is the
-      // workloads in the VPCs carrying the tag (Govern > Tags), a violation one that reaches the internet
-      // directly, and a figure with no source is null, "Not yet measured" (tests/govern-rule.test.mjs).
+      // workloads that carry the tag, each its own (Discover's apps table and Govern > Tags, 2026-10-01),
+      // a violation one that reaches the internet directly, and a figure with no source is null, "Not yet
+      // measured" (tests/govern-rule.test.mjs). No workload carries GPU (the GPUs run in the AI-tagged
+      // ones), so the GPU latency SLO matches none, as Cost > Optimize's Resiliency rule already read it.
       { name: 'PCI private path', match: 'tag PCI', req: 'Private path required', matched: 58, viol: 6, state: 'enforced' },
       { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 31, viol: 31, state: 'enforced' },
       { name: 'Finance segmentation', match: 'remote-site Finance', req: 'Segment intra-tag only', matched: null, viol: null, state: 'enforced' },
-      { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 102, viol: 50, state: 'enforced' },
-      { name: 'GPU latency SLO', match: 'tag GPU', req: 'Latency SLO 15 ms', matched: 27, viol: 27, state: 'simulated' },
+      { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 28, viol: 28, state: 'enforced' },
+      { name: 'GPU latency SLO', match: 'tag GPU', req: 'Latency SLO 15 ms', matched: 0, viol: 0, state: 'simulated' },
       { name: 'EU residency', match: 'region eu-*', req: 'Private path required', matched: 89, viol: 89, state: 'authored' },
-      { name: 'AI provider private', match: 'tag AI', req: 'Private path required', matched: 41, viol: 41, state: 'authored' },
+      { name: 'AI provider private', match: 'tag AI', req: 'Private path required', matched: 27, viol: 27, state: 'authored' },
     ],
     buckets: [
       { id: 'gpu', name: 'GPU inference egress', cloud: 'GCP', today: 31200, fabric: 12400, finding: 'avoidable' },
@@ -232,8 +234,8 @@ export const ESTATES = {
       { name: 'PCI private path', match: 'tag PCI', req: 'Private path required', matched: 116, viol: 6, state: 'enforced' },
       { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 86, viol: 86, state: 'enforced' },
       { name: 'Finance segmentation', match: 'remote-site Finance', req: 'Segment intra-tag only', matched: null, viol: null, state: 'enforced' },
-      { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 366, viol: 78, state: 'enforced' },
-      { name: 'GPU latency SLO', match: 'tag GPU', req: 'Latency SLO 15 ms', matched: 102, viol: 0, state: 'enforced' },
+      { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 162, viol: 46, state: 'enforced' },
+      { name: 'GPU latency SLO', match: 'tag GPU', req: 'Latency SLO 15 ms', matched: 0, viol: 0, state: 'enforced' },
       { name: 'APAC residency', match: 'region ap-*', req: 'Private path required', matched: 52, viol: 52, state: 'simulated' },
     ],
     buckets: [
@@ -321,7 +323,7 @@ export const ESTATES = {
   },
 };
 
-export const KINDS = { blindspots: 'Blind spots', degraded: 'Degraded paths', avoidable: 'Avoidable egress', crosscloud: 'Cross-cloud over the internet', pci: 'PCI on public paths', uninspected: 'Uninspected internet-facing', unsegmented: 'Unsegmented', single: 'Single path', onecloud: 'One cloud', nothub: 'Not in a hub', month: 'Month to month', unmonitored: 'Unmonitored', aiuntracked: 'Untracked AI traffic' };
+export const KINDS = { ipsec: 'IPsec on the internet', blindspots: 'Blind spots', degraded: 'Degraded paths', avoidable: 'Avoidable egress', crosscloud: 'Cross-cloud over the internet', pci: 'PCI on public paths', uninspected: 'Uninspected internet-facing', unsegmented: 'Unsegmented', single: 'Single path', onecloud: 'One cloud', nothub: 'Not in a hub', month: 'Month to month', unmonitored: 'Unmonitored', aiuntracked: 'Untracked AI traffic' };
 
 export const CATEGORIES = [
   { id: 'hosted', label: 'Hosted VPC and control' },

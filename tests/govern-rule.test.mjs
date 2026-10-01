@@ -12,15 +12,15 @@ import { mkC } from './harness.mjs';
 // Established's policy 0 while its own inventory held exposed PCI workloads.
 //
 // One rule now, in naas-govern.js, read by every page:
-//   - a tag policy matches the workloads in the VPCs that carry the tag (Govern > Tags);
+//   - a tag policy matches the workloads that carry the tag, each its own (Govern > Tags and
+//     Discover's apps table alike, 2026-10-01; it read the VPCs' tags before);
 //   - a path policy (private path, no direct internet path, inline inspection) is broken
 //     by a workload that reaches the internet directly: its VPC has no private path to
 //     AT&T, or it has a public address with its own route out (Discover's "exposed");
 //   - a latency SLO is broken by a workload whose region runs above it;
 //   - a site policy counts sites, and is broken by a site outside the AT&T network;
 //   - anything the estate has no source for reads "Not yet measured".
-// The PCI tag lives on the VPC whose workloads carry it, so the apps table (by a
-// workload's own tag) and Govern > Tags (by its VPC's tags) count the same PCI set.
+// The apps table, Govern > Tags and every tag policy count a workload by its own tag.
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 const store = {};
@@ -64,6 +64,80 @@ test('one rule for a PCI violation: the apps table, Govern > Tags, the PCI polic
   assert.equal(seen, 3, 'Growing, Established and Bank scale carry PCI');
 });
 
+// One rule for every tag, not PCI alone (skeptic, 2026-10-01): Discover's Apps ring read "8 apps,
+// finance 68" and its door "Tags ›" opened Govern > Tags reading "9 tags, finance · 3 VPCs · 99
+// workloads" (prod 28 against 102, ai 27 against 41, shared-services 30 against 242, gpu absent
+// against 27). A workload carries one tag, its own: the apps table, Tags and every tag policy count it.
+test('one rule for every tag: Govern > Tags and every tag policy count what Discover\'s apps table counts, on every estate', () => {
+  for (const view of ESTATES) {
+    const apps = discover(view).appAll || [];
+    const tags = [];
+    for (let p = 0; p < 20; p++) { const v = at(view, { govPanel: 'tags', tagPage: p }); tags.push(...v.drawerTags); if (!v.tagPager.many || tags.length >= n(v.tagPager.label.split(' of ')[1])) break; }
+    assert.deepEqual(tags.map(t => t.key).sort(), apps.map(a => a.key).sort(), `${view}: Tags lists ${tags.map(t => t.key)}, the apps table ${apps.map(a => a.key)}`);
+    for (const a of apps) {
+      const t = tags.find(x => x.key === a.key);
+      assert.equal(t.wl, a.wl, `${view} ${a.key}: Tags counts ${t.wl} workloads, the apps table ${a.wl}`);
+      assert.equal(t.exposedN, a.exposed, `${view} ${a.key}: Tags says ${t.exposedN} exposed, the apps table ${a.exposed}`);
+    }
+    for (const p of at(view).polRows.filter(x => /^tag /i.test(x.match) && !/remotesite/i.test(x.match))) {
+      const a = apps.find(x => x.key === GV.tagKey(p.match.slice(4)));
+      assert.equal(p.matched, a ? a.wl : 0, `${view} ${p.name}: matches ${p.matched}, the apps table counts ${a ? a.wl : 0} ${p.match.slice(4)}`);
+    }
+  }
+});
+
+// A starting point or an authoring card over a tag no workload carries matches nothing, anywhere.
+test('every template and every authoring card names a tag some estate\'s workloads carry', () => {
+  const carried = new Set(ESTATES.flatMap(view => (discover(view).appAll || []).map(a => a.key)));
+  const c = mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'govern', nowIso: NOW, authoring: { match: null, scope: 'any cloud', req: [] } });
+  const cards = vals(c).aMatch.map(x => x.label).filter(m => /^tag /i.test(m));
+  const tpls = at('partial', { govPanel: 'templates' }).examplePolicies.map(e => e.m).filter(m => /^tag /i.test(m) && !/remotesite/i.test(m));
+  for (const m of [...cards, ...tpls]) assert.ok(carried.has(GV.tagKey(m.slice(4))), `"${m}" names a tag no workload carries`);
+});
+
+// The skeptic, 2026-10-01: with landed 'eu-west-1' (what Go live sets after an eu-west-1 order) Growing's
+// policy row read "Internet-facing inspection · 31 workloads · 6 violations" and the totals moved, but the
+// finding still read "31 internet-facing workloads have no inspection in path", a figure registered at 31
+// over a drill of 6. A finding's head and evidence count by the rule, off the estate as it stands.
+test('a finding counts by the rule as the estate stands: a region gone live moves its head with the policy', () => {
+  let seen = 0;
+  for (const view of ['partial', 'mature', 'trust', 'small']) {
+    for (const landed of [null, ...D.ESTATES[view].regionsList.map(r => r.region)]) {
+      const v = at(view, { landed });
+      for (const f of v.governFindings) {
+        const fig = (v.govFigs || []).find(g => g.key === 'g-find-' + f.kind);
+        if (!fig) continue;
+        const pol = v.polRows.find(p => p.match === { pci: 'tag PCI', uninspected: 'tag Internet-facing' }[f.kind]);
+        assert.equal(n(f.head), fig.n, `${view} landed ${landed}: "${f.head}"`);
+        if (pol) assert.equal(fig.n, pol.viol, `${view} landed ${landed}: "${f.head}" over a policy of ${pol.viol} violations`);
+        if (pol) assert.ok(String(f.ev).includes(fig.n.toLocaleString('en-US')), `${view} landed ${landed}: the evidence "${f.ev}" does not count ${fig.n}`);
+        seen++;
+      }
+      // Nothing left to count, no finding: a PCI finding stands only over PCI violations.
+      const pci = v.polRows.find(p => p.match === 'tag PCI');
+      if (pci && !pci.viol) assert.ok(!v.governFindings.some(f => f.kind === 'pci'), `${view} landed ${landed}: a PCI finding over none`);
+    }
+  }
+  assert.ok(seen >= 20, `${seen} findings read`);
+  // The skeptic's case.
+  const g = at('partial', { landed: 'eu-west-1' });
+  const un = g.governFindings.find(f => f.kind === 'uninspected');
+  assert.equal(n(un.head), g.polRows.find(p => p.name === 'Internet-facing inspection').viol);
+});
+
+// Bank scale's segmentation finding read "centralus: 210 workloads, 84 Finance-tagged, one route table",
+// a number nothing lists (the rule finds 116 finance-tagged there, the apps table's count).
+test('the segmentation finding\'s evidence counts what the inventory lists', () => {
+  const est = D.ESTATES.trust, inv = A.inventory(est);
+  const f = at('trust').governFindings.find(x => x.kind === 'unsegmented');
+  const reg = inv.flatMap(cl => cl.regions).find(r => r.region === 'centralus');
+  const fin = GV.tagSet(inv, 'finance').workloads.filter(r => r.region === 'centralus').length;
+  assert.equal(fin, 116);
+  const m = /^centralus: ([\d,]+) workloads in (\d+) VNets on one Virtual WAN hub, ([\d,]+) of them finance-tagged\.$/.exec(f.ev);
+  assert.ok(m, `"${f.ev}"`);
+  assert.equal(n(m[1]), reg.wl); assert.equal(+m[2], reg.vpcs.length); assert.equal(n(m[3]), fin);
+});
+
 test('the rule: what a policy matches and what breaks it', () => {
   const est = D.ESTATES.partial, inv = A.inventory(est);
   // A path policy: a workload in a VPC with no private path breaks it, and so does an exposed one on AT&T.
@@ -76,7 +150,8 @@ test('the rule: what a policy matches and what breaks it', () => {
   assert.ok(pci.matched.every(r => r.vpc.priv), 'the PCI VPCs are on AT&T');
   assert.deepEqual(pci.viol.map(r => r.w.id), pci.matched.filter(r => r.w.exposed).map(r => r.w.id), 'on AT&T, only the exposed break it');
   // A latency SLO is broken where the region runs above it.
-  const gpu = GV.policySets(est, inv, { match: 'tag GPU', req: 'Latency SLO 15 ms' });
+  const gpu = GV.policySets(est, inv, { match: 'tag AI', req: 'Latency SLO 15 ms' });
+  assert.ok(gpu.viol.length > 0, 'us-central1 runs above 15 ms');
   assert.ok(gpu.viol.every(r => r.latency > 15) && gpu.matched.filter(r => r.latency > 15).length === gpu.viol.length);
   // A site policy counts sites, rollups at their own count.
   const remote = GV.policySets(D.ESTATES.trust, A.inventory(D.ESTATES.trust), { match: 'tag RemoteSite', req: 'No direct internet path' });
@@ -133,6 +208,13 @@ test('Govern\'s headline figures equal what its pages list, and the home\'s door
       assert.ok(String(landed.polViolLine).startsWith(part.t.split(' ')[0]), `${view}: the home says "${part.t}", the landing "${landed.polViolLine}"`);
     }
   }
+});
+
+// A tag no workload carries matches none, in words, as "no violations" reads beside it (2026-10-01).
+test('a policy over a tag no workload carries reads "no workloads", not a zero', () => {
+  const gpu = at('partial').polRows.find(p => p.match === 'tag GPU');
+  assert.equal(gpu.matchedLabel, 'no workloads');
+  assert.equal(gpu.hasMatchedGo, false);
 });
 
 test('a figure with no source says so', () => {

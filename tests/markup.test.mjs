@@ -324,14 +324,21 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // card stops being one button for its figure and Start from this (div +1, span +1, sc-if +2, button +1); Back to Govern
 // on Your clouds and Your sites (sc-if +2, button +2); Optimize's figure, its parts and +N more (span +1, sc-if +4,
 // button +3): div 1134 -> 1143, span 969 -> 990, sc-if 522 -> 560, sc-for 268 -> 274, button 413 -> 436.
+// Discover's figures as doors (skeptic, 2026-10-01): a ring's centre, head and legend entry each a button where a list
+// counts them (sc-if +6, button +3, span +1: the legend's button holds its label span); an app's row stops being one
+// button to the records and becomes a div of figure buttons, workloads, runs in, on AT&T, exposed and traffic (div +1,
+// span +1, sc-if +4, button +4); Back to Discover on Govern (sc-if +1, button +1):
+// div 1143 -> 1144, span 990 -> 991, sc-if 560 -> 571, button 436 -> 444.
+// A drill's moves, one per region its set sits in (skeptic, 2026-10-01): the one move button becomes a list (sc-for +1):
+// sc-for 274 -> 275.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1143],
-    ['span', /<span\b/g, /<\/span>/g, 990],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 560],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 274],
+    ['div', /<div\b/g, /<\/div>/g, 1144],
+    ['span', /<span\b/g, /<\/span>/g, 991],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 571],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 275],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 436],
+    ['button', /<button\b/g, /<\/button>/g, 444],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

@@ -45,7 +45,7 @@ export const MULTI_LAYER = [
     layers: { site: 'AVPN or Switched Ethernet, no internet breakout', edge: 'Inspect at the AT&T edge', core: 'Private path required', cloud: 'PCI subnets only' } },
   { key: 'remote', name: 'Remote sites to cloud', match: 'remote-site any', why: 'Remote sites reach the cloud through AT&T, not around it.',
     layers: { site: 'SD-WAN or Third Party Access tunnels to the AT&T edge', edge: 'Terminate tunnels at the AT&T edge', core: 'No direct internet path', cloud: 'Private on-ramp into the region' } },
-  { key: 'gpu', name: 'AI and GPU traffic', match: 'tag GPU', why: 'Training data moves on capacity that is sized and measured for it.',
+  { key: 'gpu', name: 'AI and GPU traffic', match: 'tag AI', why: 'Training data moves on capacity that is sized and measured for it.',
     layers: { site: 'Data centers on 10G Switched Ethernet', edge: 'Dedicated 10G on-ramp port', core: 'Latency SLO 15 ms', cloud: 'GPU regions on a private path' } },
   { key: 'inet', name: 'Internet-facing apps', match: 'tag Internet-facing', why: 'What faces the internet is inspected once, at the edge, for every cloud.',
     layers: { site: 'No local internet breakout', edge: 'DDoS protection and inline inspection', core: 'Egress through AT&T, never direct', cloud: 'Public subnets behind the edge' } },

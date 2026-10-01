@@ -40,10 +40,12 @@ test('the apps: every workload, one row per app, largest first, paged to fit', (
   assert.equal(num(v.invStats.find(k => k.l === 'exposed workloads').v), all.reduce((a, x) => a + x.exposed, 0));
 });
 
-test('an app opens its own records', () => {
+// Only an app's traffic opens its records (skeptic, 2026-10-01): the whole row did, and with it the workloads
+// and exposed counts, a count of things on Logs. tests/discover-apps-drill.test.mjs walks the counts.
+test('an app\'s traffic opens its own records', () => {
   const c = est();
   const top = vals(c).appRows[0];
-  top.go();
+  top.gbpsGo();
   assert.equal(c.state.screen, 's3');
   assert.equal(c.state.obPage, 'logs');
   assert.equal(c.state.logQ, top.name);

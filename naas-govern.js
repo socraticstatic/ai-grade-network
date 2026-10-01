@@ -8,8 +8,10 @@
 // Govern's one rule (w2-govern, 2026-09-30). What a policy matches and what
 // breaks it, read off the estate's own inventory, so every figure Govern prints
 // is the size of a set it can open:
-//   - `tag X` matches the workloads in the VPCs that carry tag X: the count
-//     Govern > Tags prints. `tag RemoteSite` names the remote sites;
+//   - `tag X` matches the workloads that carry tag X, each its own: the count
+//     Discover's apps table and Govern > Tags print (2026-10-01; a VPC's other
+//     labels make no workload in it carry them). `tag RemoteSite` names the
+//     remote sites;
 //   - `region P` matches the workloads in the regions P names (`*`, or an area
 //     such as `eu-*`, which counts each cloud's own name for it);
 //   - `remote-site any` matches the remote sites; `remote-site X`, `branch X`
@@ -41,23 +43,28 @@ export const RULE = {
 export function workloadsOf(inv) {
   const out = [];
   (inv || []).forEach(cl => (cl.regions || []).forEach(rg => (rg.vpcs || []).forEach(v => (v.subnets || []).forEach(sn => (sn.workloads || []).forEach(w =>
-    out.push({ w, cloud: cl.name, region: rg.region, latency: rg.latency, vpc: v, sn }))))));
+    out.push({ w, cloud: cl.name, region: rg.region, latency: rg.latency, attached: !!rg.priv, vpc: v, sn }))))));
   return out;
 }
 
-/** One tag's footprint: the VPCs that carry it, their workloads, regions and clouds. */
+/** One tag's footprint: the workloads that carry it (each its own tag, the one Discover's apps
+ *  table groups by), the VPCs they sit in, their regions and clouds. A VPC's other labels make no
+ *  workload in it carry them (skeptic, 2026-10-01: Tags read "finance · 99" over the apps' 68). */
 export function tagSet(inv, tag) {
-  const k = tagKey(tag), vpcs = [];
-  (inv || []).forEach(cl => (cl.regions || []).forEach(rg => (rg.vpcs || []).forEach(v => {
-    if ((v.tags || []).map(tagKey).includes(k)) vpcs.push({ cloud: cl.name, region: rg.region, latency: rg.latency, v });
-  })));
-  const workloads = vpcs.flatMap(x => (x.v.subnets || []).flatMap(sn => (sn.workloads || []).map(w => ({ w, cloud: x.cloud, region: x.region, latency: x.latency, vpc: x.v, sn }))));
+  return setOf(workloadsOf(inv).filter(r => tagKey(r.w.tag || 'untagged') === tagKey(tag)));
+}
+/** Every tag at once: the estate's workloads, read the way one tag's are. */
+export const allSet = (inv) => setOf(workloadsOf(inv));
+function setOf(workloads) {
+  const vpcs = uniq(workloads.map(r => r.vpc)).map(v => { const r = workloads.find(x => x.vpc === v); return { cloud: r.cloud, region: r.region, latency: r.latency, v }; });
   return {
     vpcs, workloads,
     regions: uniq(vpcs.map(x => `${x.cloud} ${x.region}`)).map(k2 => vpcs.find(x => `${x.cloud} ${x.region}` === k2)),
     clouds: uniq(vpcs.map(x => x.cloud)),
     publicVpcs: vpcs.filter(x => !x.v.priv),
     exposed: workloads.filter(x => x.w.exposed),
+    // On AT&T as Discover's apps table counts it: the workload's region is attached.
+    onAtt: workloads.filter(x => x.attached),
   };
 }
 
@@ -110,6 +117,21 @@ export function breaker(req, unit) {
   return preds.length ? (r) => preds.some(f => f(r)) : null;
 }
 
+/** A requirement in plain words, as a sentence's object: "requires a private path to AT&T" (2026-10-01:
+ *  a drill read "PCI private path requires private path required."). */
+export function reqPhrase(req) {
+  return String(req || '').split(/\s+and\s+/i).map(cl => {
+    const slo = SLO_REQ.exec(cl);
+    if (slo) return `latency under ${slo[1]} ms`;
+    if (/private path/i.test(cl)) return 'a private path to AT&T';
+    if (/direct internet/i.test(cl)) return 'no direct path to the internet';
+    if (/inspection/i.test(cl)) return 'inline security inspection in path';
+    if (/segment/i.test(cl)) return 'traffic kept within the tag';
+    if (/cost-aware/i.test(cl)) return 'cost-aware routing';
+    return cl.trim().toLowerCase();
+  }).join(' and ');
+}
+
 /** The sentence a drill prints under its count: when a thing breaks the requirement. */
 export function ruleLine(req, unit) {
   const r = String(req || '');
@@ -142,4 +164,38 @@ export function whyOf(r, req) {
   if (!r.vpc.priv) return 'Its VPC rides the public internet';
   if (r.w.exposed) return 'Public address, its own route out';
   return 'On a private path';
+}
+
+// ---------- findings that count by the rule (skeptic, 2026-10-01) ----------
+// A finding's head and evidence were strings in naas-data.js: a region gone live moved its policy's
+// figures but not the finding over them ("31 internet-facing workloads have no inspection in path"
+// over a drill of 6). The ones that count a rule's set now read it off the estate as it stands, and
+// a finding with nothing left to count goes.
+export const FINDING_RULE = { pci: { match: 'tag PCI', req: 'Private path required' }, uninspected: { match: 'tag Internet-facing', req: 'Inline security inspection' } };
+const andList = (xs) => (xs.length <= 1 ? (xs[0] || '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+const plural = (n, one, many) => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
+const WORDS = {
+  pci: (n, m, where) => ({ head: `${plural(n, 'PCI-tagged workload', 'PCI-tagged workloads')} ${n === 1 ? 'reaches' : 'reach'} the internet directly`,
+    ev: `${n.toLocaleString('en-US')} of ${plural(m, 'PCI-tagged workload', 'PCI-tagged workloads')} in ${where} ${n === 1 ? 'has' : 'have'} a public address and a default route to an internet gateway.` }),
+  uninspected: (n, m, where, rows) => ({ head: `${plural(n, 'internet-facing workload has', 'internet-facing workloads have')} no inspection in path`,
+    ev: `${n === m ? `All ${n.toLocaleString('en-US')}` : `${n.toLocaleString('en-US')} of ${m.toLocaleString('en-US')}`} Internet-facing workloads in ${where} egress without an NGFW (next-generation firewall).`,
+    why: rows.every(r => r.attached) ? 'Their regions are on the AT&T network, but these sit in public subnets with their own route out, around the inspection point.'
+      : `No hosted VPC exists in ${andList(uniq(rows.filter(r => !r.attached).map(r => r.region)))}, so no inspection point is in the path.` }),
+};
+export function findingsOf(est, inv) {
+  return (est.findings || []).flatMap(f => {
+    if (f.kind === 'unsegmented') {
+      const reg = (inv || []).flatMap(cl => cl.regions || []).find(r => (f.pathDst || '').endsWith(' ' + r.region));
+      if (!reg) return [f];
+      const fin = tagSet(inv, 'finance').workloads.filter(r => r.region === reg.region).length, word = reg.cloud === 'Azure' ? 'VNets' : 'VPCs';
+      return [{ ...f, ev: `${reg.region}: ${reg.wl.toLocaleString('en-US')} workloads in ${reg.vpcs.length} ${word} on one ${reg.cloud === 'Azure' ? 'Virtual WAN hub' : 'transit gateway'}, ${fin.toLocaleString('en-US')} of them finance-tagged.` }];
+    }
+    const rule = FINDING_RULE[f.kind];
+    if (!rule) return [f];
+    const ps = policySets(est, inv, rule);
+    if (!ps.viol) return [f];
+    if (!ps.viol.length) return [];
+    const words = WORDS[f.kind](ps.viol.length, ps.matched.length, andList(uniq(ps.viol.map(r => r.region))), ps.viol);
+    return [{ ...f, ...words }];
+  });
 }
