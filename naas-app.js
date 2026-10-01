@@ -3948,7 +3948,7 @@ function bwVals(s, set, est0, conns, go) {
   const back = () => set({ bwStep: 'pick' });
   const submit = () => {
     if (locked || !p.changed || step !== 'review') return;
-    const rec = BW.orderOf(cp, { ports: p.ports, mbps: p.mbps }, now, est0.id, { n: orders.length + 1, approver, unit });
+    const rec = BW.orderOf(cp, { ports: p.ports, mbps: p.mbps }, now, est0.id, { id: BW.nextId(orders), approver, unit });
     set({ orders: [...orders, rec], bwStep: 'pick', bwPick: null });
   };
   // The radios rove (WAI-ARIA radio group): the arrow keys move the pick, Home and End jump, Tab leaves.

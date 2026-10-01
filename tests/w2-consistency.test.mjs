@@ -4,6 +4,10 @@ import { vals } from '../naas-app.js';
 import * as BW from '../naas-bandwidth.js';
 import * as R from '../naas-round2.js';
 import { ESTATES } from '../naas-data.js';
+import * as A from '../naas-addendum.js';
+import * as X from '../naas-connections.js';
+import * as OD from '../naas-observe-dash.js';
+import * as FB from '../naas-fabric.js';
 import { mkC } from './harness.mjs';
 
 // The skeptics' leftovers on the v2 builds, integrated (w2-consistency,
@@ -203,4 +207,33 @@ test('The home legend\'s third party and public internet keys are two marks, as 
   const pubWires = v.heroEdges.filter(e => !e.priv && !e.ghost);
   assert.ok(pubWires.length, 'a public wire');
   for (const w of pubWires) assert.equal(w.dash, '2 4', `the public wire ${w.key} is not dotted, as its key is`);
+});
+
+
+// Orders on the one clock (SCH.nowOf): ordered Tue Sep 29, read Mon Oct 5, the Monday demo.
+const ORDERED = Date.parse('2026-09-29T15:00:00Z'), LATER = Date.parse('2026-10-05T15:00:00Z');
+const landedOf = (view, id, pick) => {
+  const est = ESTATES[view], inv = A.inventory(est), ob = A.observe(est, [], inv);
+  const cp = OD.capacity(X.connections(est, ob)).find(r => r.id === id);
+  const o = BW.orderOf(cp, pick, ORDERED, est.id, { id: BW.nextId([]) });
+  const landed = BW.landUtil(ob, [o], est.id, LATER);
+  return { est, inv, landed, cap: OD.capacity(X.connections(est, landed)).find(r => r.id === id) };
+};
+
+test('A landed size reads the same in the AT&T network band as on Capacity: the port size and its use', () => {
+  const { est, inv, landed, cap } = landedOf('partial', 'cx-us-east-1', { ports: 3, mbps: 1000 });
+  assert.ok(cap.peakPct > 100, `the landed 3 x 1 Gbps reads ${cap.peakPct}%`);
+  const fac = FB.facilities(est, inv, landed).find(f => f.regions.some(r => r.region === 'us-east-1'));
+  assert.equal(fac.regions.length, 1, 'one region on that facility');
+  assert.match(fac.sub, new RegExp(`· ${cap.peakPct}% used$`), `the facility reads "${fac.sub}", Capacity ${cap.peakPct}%`);
+  for (const p of FB.ports(fac)) assert.match(p.sub, /^1 Gbps · /, `a landed 1 Gbps port reads "${p.sub}"`);
+  assert.ok(FB.ports(fac).some(p => p.pct > 99), 'the ports are capped at 99% under a 410% connection');
+});
+
+test('Order ids never repeat, whatever Reset demo leaves', () => {
+  const flow = { id: 'o2', title: 'Rehearsed connection', stage: 'Submitted for approval' };
+  const a = BW.nextId([flow]);
+  const b = BW.nextId([flow, { id: a, kind: 'bandwidth' }]);
+  assert.notEqual(a, 'o2'); assert.notEqual(b, a); assert.notEqual(b, 'o2');
+  assert.notEqual(BW.nextId([{ id: 'o1', kind: 'bandwidth' }, flow]), 'o2');
 });

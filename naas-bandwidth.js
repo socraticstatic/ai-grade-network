@@ -185,14 +185,20 @@ export const dayF = (t) => DAY.format(new Date(t));
  * at, stage. kind, est and conn say which connection of which estate it
  * changes; atMs and effectiveAt put it on the one clock.
  */
-export function orderOf(cp, pick, at, est = null, { n = 1, approver = '', unit = null } = {}) {
+export function orderOf(cp, pick, at, est = null, { n = 1, id = '', approver = '', unit = null } = {}) {
   const p = plan(cp, pick, unit), on = effectiveAt(at);
-  return { id: `o${n}`, kind: 'bandwidth', est, conn: cp.id, title: `Modify bandwidth, ${p.where}`, type: RAMP_NAME[cp.ramp] || cp.ramp, what: `${p.now.label} to ${p.pick.label}`,
+  return { id: id || `o${n}`, kind: 'bandwidth', est, conn: cp.id, title: `Modify bandwidth, ${p.where}`, type: RAMP_NAME[cp.ramp] || cp.ramp, what: `${p.now.label} to ${p.pick.label}`,
     monthly: monthlyWords(p), term: '', policy: '', at: HHMM.format(new Date(at)), atMs: at, stage: ORDER_STAGE, approver,
     where: p.where, cloud: cp.cloud, region: cp.region, from: p.now.label, to: p.pick.label, toShort: p.pick.short, ports: p.ports, mbps: p.mbps,
     days: EFFECT_DAYS, effectiveAt: on, effectiveF: dayF(on) };
 }
 
+/**
+ * The next bandwidth order's id (w2, 2026-09-30): orders.length + 1 repeated an id once Reset
+ * demo had cleared the bandwidth changes and kept a connect flow order (o2 and o2). Bandwidth
+ * orders count their own ids, and never share the connect flow's o-numbers.
+ */
+export const nextId = (orders) => 'bw' + (1 + Math.max(0, ...(orders || []).map(o => +((/^bw(\d+)$/.exec((o && o.id) || '') || [])[1] || 0))));
 /** An order's stage on the one clock: pending before its day, live from it. */
 export const stageOf = (o, now) => (now >= o.effectiveAt ? 'live' : 'pending');
 /** The bandwidth orders of one estate, from the app's one order list. */
