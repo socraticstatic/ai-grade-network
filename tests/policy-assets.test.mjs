@@ -55,3 +55,20 @@ test('step 2b: multipath, inline services, access, encryption and egress are cho
   assert.match(vals(c).aSent.route, /two paths, diverse metros; encrypt in transit/);
   assert.equal(vals(c).aReady, true);
 });
+
+import { pairOutcome } from '../naas-policy-layers.js';
+test('step 3: the outcome of the worked example, before you simulate', () => {
+  const au = { match: 'Private cloud · Equinix DC2, Ashburn', scope: 'AWS us-west-2', req: [], path: ['Via the AT&T network', 'NGFW inline', 'Encrypt in transit'], route: { 'deny:matching-routes': { o2p: true, p2o: false } } };
+  const o = pairOutcome(ESTATES.partial, au, { netbond: 1800, ngfw: 1400, xc: 350 });
+  const r = ESTATES.partial.regionsList.find(x => x.region === 'us-west-2');
+  assert.equal(o.today.path, 'Public internet');
+  assert.equal(o.today.ms, r.pub);
+  assert.equal(o.after.path, 'Private on the AT&T network');
+  assert.equal(o.after.ms, r.fab);
+  assert.equal(o.delta, 1800 + 1400 + 350);
+  assert.ok(o.missing.some(m => /cross-connect at Equinix DC2/.test(m.text)));
+  const L = ['site', 'edge', 'core', 'cloud'], ix = o.pushed.map(p => L.indexOf(p.layer));
+  assert.deepEqual(ix, [...ix].sort((x, y) => x - y), 'pushed in the order a flow crosses the layers');
+  assert.ok(o.pushed.some(p => p.layer === 'edge' && /Deny matching routes \(on premise → partner\)/.test(p.text)));
+  assert.match(o.tip, /^Today this pair rides the public internet at \d+ ms\. With this policy: private, \d+ ms, \+\$3,550\/mo\. Needs a cross-connect at Equinix DC2\.$/);
+});

@@ -21,7 +21,7 @@ import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
 import * as SG from './naas-signals.js';
-import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS } from './naas-policy-layers.js';
+import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS, pairOutcome } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
 import * as M from './naas-moves.js';
 import { rampName } from './naas-things.js';
@@ -4071,14 +4071,22 @@ function wizardVals(s, est, set, c) {
     ...(() => { const gk = ['templates', 'tags'].includes(s.govPanel) ? s.govPanel : 'policies'; return { govPanels: [['policies', 'Violations & policies'], ['templates', 'Templates'], ['tags', 'Tags']].map(([k, l]) => { const on = gk === k; return { key: k, label: l, on, go: () => set({ govPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), govPanelPolicies: gk === 'policies', govPanelTemplates: gk === 'templates', govPanelTags: gk === 'tags' }; })(),
     authoring: !!au, openAuthor: openAuthor(), closeAuthor: () => set({ authoring: null }), aMatch: A_MATCH.map(v => aCard('match', v, true)), aScope: A_SCOPE.map(v => aCard('scope', v, true)), aReq: D.COMPOSE_CHIPS.control.map(v => aCard('req', v, false)),
     ...(() => { // Intent | Route policy (Advanced): NetBond Advanced's rules, each direction its own toggle (2026-10-01).
-      const tabK = au && ['route', 'services'].includes(au.tab) ? au.tab : 'intent', rt = (au && au.route) || {}, paths = (au && au.path) || [];
+      const tabK = au && ['route', 'services', 'outcome'].includes(au.tab) ? au.tab : 'intent', rt = (au && au.route) || {}, paths = (au && au.path) || [];
       const tog = (k, dir) => () => { const cur = rt[k] || { o2p: false, p2o: false }; aSet({ route: { ...rt, [k]: { ...cur, [dir]: !cur[dir] } } }); };
       const look = (on) => ({ bg: on ? 'var(--cta)' : 'var(--bg-base)', ink: on ? '#fff' : 'var(--text-body)' });
       const words = [];
       ROUTE_RULES.forEach(r => { const v = rt[`${r.section}:${r.id}`] || {}; const ds = [v.o2p && 'on premise → partner', v.p2o && 'partner → on premise'].filter(Boolean);
         if (ds.length) words.push(`${({ deny: 'deny', manip: 'apply', allow: 'allow', advanced: 'apply' })[r.section]} ${r.label.toLowerCase()} (${ds.join(', ')})`); });
-      return { aTabs: [['intent', 'Intent'], ['services', 'Path & services'], ['route', 'Route policy · Advanced']].map(([k, l]) => ({ key: k, label: l, on: tabK === k, go: () => aSet({ tab: k }), line: tabK === k ? 'var(--cta)' : 'transparent', color: tabK === k ? 'var(--text-heading)' : 'var(--text-light)' })),
-        aIntent: tabK === 'intent', aRouteOn: tabK === 'route', aSvcOn: tabK === 'services',
+      return { aTabs: [['intent', 'Intent'], ['services', 'Path & services'], ['route', 'Route policy · Advanced'], ['outcome', 'Outcome']].map(([k, l]) => ({ key: k, label: l, on: tabK === k, go: () => aSet({ tab: k }), line: tabK === k ? 'var(--cta)' : 'transparent', color: tabK === k ? 'var(--text-heading)' : 'var(--text-light)' })),
+        aIntent: tabK === 'intent', aRouteOn: tabK === 'route', aSvcOn: tabK === 'services', aOutOn: tabK === 'outcome',
+        // Simulate the pair (step 3): the catalog's prices, Cost's cross-connect rate.
+        aOut: (() => { const cat = (id) => ((D.CATALOG.find(p => p.id === id) || {}).price) || 0;
+          const o = pairOutcome(est, au, { netbond: cat('netbond'), ngfw: cat('ngfw'), xc: 350 }); if (!o) return { has: false, missing: [], pushed: [], lines: [] };
+          const toWays = () => set({ authoring: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'ways' });
+          return { has: true, ...o, todayMs: o.today.ms == null ? 'Not measured' : `${o.today.ms} ms p95`, afterMs: o.after.ms == null ? 'Not measured' : `${o.after.ms} ms p95`,
+            lines: o.lines.map(x => ({ ...x, vF: `+$${x.v.toLocaleString('en-US')}/mo` })), hasLines: o.lines.length > 0, hasMissing: o.missing.length > 0,
+            missing: o.missing.map(m => ({ ...m, label: m.order === 'colo' ? 'Order Colo to Cloud' : 'Order NetBond', go: toWays })),
+            pushed: o.pushed.map((p, i) => ({ key: 'p' + i, ...p, layerLabel: (POLICY_LAYERS.find(l => l.key === p.layer) || {}).label || p.layer })), hasPushed: o.pushed.length > 0 }; })(),
         aRoute: ROUTE_SECTIONS.map(([sk, sl]) => ({ key: sk, label: sl, rules: ROUTE_RULES.filter(r => r.section === sk).map(r => { const k = `${sk}:${r.id}`, v = rt[k] || {};
           return { key: k, id: r.id, section: sk, label: r.label, o2pOff: !r.o2p, p2oOff: !r.p2o, o2pGo: r.o2p ? tog(k, 'o2p') : () => {}, p2oGo: r.p2o ? tog(k, 'p2o') : () => {},
             o2pBg: look(!!v.o2p).bg, o2pInk: look(!!v.o2p).ink, p2oBg: look(!!v.p2o).bg, p2oInk: look(!!v.p2o).ink }; }) })),

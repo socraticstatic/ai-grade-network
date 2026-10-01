@@ -344,6 +344,7 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Dev's FinOps view (2026-10-01): the waterfall, what if, who pays and unit cost on the FinOps home and on Signals, with FinOps' own actions; recounted, every tag balanced.
 // Policies between two assets, step 2 (2026-10-01): the composer's Intent | Route policy tabs, the route line, NetBond Advanced's rules with a toggle per direction, and the path chips; recounted, every tag balanced.
 // Path & services (2026-10-01): multi-path, inline services, access, encrypt/decrypt and controlled egress as a third composer tab; recounted, balanced.
+// Simulate the pair (2026-10-01): the composer's Outcome tab (tip, today, with the policy, price, pushed by layer, missing with its order); recounted, balanced.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -358,12 +359,12 @@ test('every container the markup opens, it closes', () => {
   // div 1134 -> 1139, span 969 -> 962, sc-if 522 -> 528, sc-for 268 -> 278, button 413 -> 445.
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1211],
-    ['span', /<span\b/g, /<\/span>/g, 1035],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 568],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 295],
+    ['div', /<div\b/g, /<\/div>/g, 1222],
+    ['span', /<span\b/g, /<\/span>/g, 1046],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 571],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 298],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 474],
+    ['button', /<button\b/g, /<\/button>/g, 475],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

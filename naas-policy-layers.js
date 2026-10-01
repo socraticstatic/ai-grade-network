@@ -79,3 +79,38 @@ export const SERVICE_GROUPS = [
   { key: 'egress', label: 'Controlled egress', opts: [['Internet egress only through AT&T', 'core'], ['Egress only via named regions', 'cloud'], ['Allow-listed destinations only', 'edge']] },
 ].map(g => ({ ...g, opts: g.opts.map(([label, layer]) => ({ label, layer })) }));
 export const ROUTE_PATHS = SERVICE_GROUPS.flatMap(g => g.opts.map(o => o.label));
+
+// Simulate the pair (step 3, 2026-10-01): today's path between the two sides, the path with the policy,
+// what it pushes on each layer, what is missing, the price change and one tip. Pure: prices come in.
+const PRIVATE_PICKS = ['Via the AT&T network', 'Never the internet', 'Two paths, diverse metros', 'Active/active'];
+export function pairOutcome(est, au, price = {}) {
+  if (!au || !au.match || !au.scope) return null;
+  const regs = est.regionsList || [], sites = est.sites || [];
+  const r = regs.find(x => au.scope === `${x.cloud} ${x.region}`) || null;
+  const pc = sites.find(st => st.colo && st.colo.kind === 'Private cloud' && au.match === `Private cloud · ${st.colo.provider} ${st.colo.facility}, ${st.metro}`) || null;
+  const picks = au.path || [], req = au.req || [];
+  const wantsPrivate = picks.some(p => PRIVATE_PICKS.includes(p)) || req.some(q => /private path|no direct internet/i.test(q));
+  const fmt$ = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
+  const today = r ? { path: r.priv ? 'Private on the AT&T network' : 'Public internet', ms: r.priv ? r.fab : r.pub } : { path: 'Not measured', ms: null };
+  const after = r && (r.priv || wantsPrivate) ? { path: 'Private on the AT&T network', ms: r.fab } : today;
+  const lines = [];
+  if (r && wantsPrivate && !r.priv) lines.push({ key: 'nb', text: `NetBond to ${r.cloud} ${r.region}`, v: price.netbond || 0 });
+  if (r && picks.includes('Two paths, diverse metros')) lines.push({ key: 'nb2', text: 'A second NetBond port, another metro', v: price.netbond || 0 });
+  if (picks.some(p => /NGFW|IDS\/IPS/.test(p))) lines.push({ key: 'fw', text: 'NGFW in path', v: price.ngfw || 0 });
+  if (pc && wantsPrivate) lines.push({ key: 'xc', text: `Cross-connect at ${pc.colo.provider} ${pc.colo.facility}`, v: price.xc || 0 });
+  const delta = lines.reduce((a, x) => a + x.v, 0);
+  const missing = [];
+  if (pc && wantsPrivate) missing.push({ key: 'xc', text: `Needs a cross-connect at ${pc.colo.provider} ${pc.colo.facility}`, order: 'colo' });
+  if (r && wantsPrivate && !r.priv) missing.push({ key: 'nb', text: `Needs NetBond to ${r.cloud} ${r.region}`, order: 'netbond' });
+  // What it pushes, layer by layer, in the order a flow crosses them.
+  const pushed = [];
+  for (const g of SERVICE_GROUPS) for (const o of g.opts) if (picks.includes(o.label)) pushed.push({ layer: o.layer, text: o.label });
+  for (const q of req) pushed.push({ layer: layerOfReq(q), text: q });
+  for (const rr of ROUTE_RULES) { const v = (au.route || {})[`${rr.section}:${rr.id}`] || {}; const ds = [v.o2p && 'on premise → partner', v.p2o && 'partner → on premise'].filter(Boolean);
+    if (ds.length) pushed.push({ layer: 'edge', text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${ds.join(', ')})` }); }
+  const ORDER = ['site', 'edge', 'core', 'cloud'];
+  pushed.sort((x, y) => ORDER.indexOf(x.layer) - ORDER.indexOf(y.layer));
+  const tip = today.ms == null ? 'Pick a cloud region on the other side to see the path.'
+    : `Today this pair rides ${today.path === 'Public internet' ? 'the public internet' : 'the AT&T network'} at ${today.ms} ms. With this policy: ${after.path === 'Public internet' ? 'still public' : 'private'}, ${after.ms} ms, ${delta ? `+${fmt$(delta)}/mo` : 'no added cost'}.${missing.length ? ` ${missing[0].text}.` : ''}`;
+  return { today, after, lines, delta, deltaF: delta ? `+${fmt$(delta)}/mo` : '$0', missing, pushed, tip };
+}
