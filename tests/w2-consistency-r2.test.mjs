@@ -149,3 +149,50 @@ test('Health lists every region the latency finding says runs above the SLO, so 
   }
   assert.ok(seen >= 2, `only ${seen} regions over SLO`);
 });
+
+// Orders on the one clock (SCH.nowOf): ordered Tue Sep 29, read Mon Oct 5.
+const ORDERED = Date.parse('2026-09-29T15:00:00Z'), LATER = '2026-10-05T15:00:00Z';
+test('A landed size reads as it landed on the home\'s chip, in Your actions and in the briefing, as Health reads it', async () => {
+  const BW = await import('../naas-bandwidth.js');
+  const cap = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn' })).capRows.find(r => r.region === 'us-east-1');
+  const order = BW.orderOf(cap, { ports: 3, mbps: 1000 }, ORDERED, 'partial', { id: BW.nextId([]) });
+  const at = (patch) => mkC({ view: 'partial', estateParam: null, persona: 'architect', orders: [order], nowIso: LATER, ...patch });
+  const health = allOf(at({ screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' }), 'problemRows', 'probPager').find(p => p.where === 'AWS us-east-1');
+  assert.ok(health && /of 3 × 1 Gbps purchased/.test(health.what), `Health reads "${health && health.what}"`);
+  const home = vals(at({ screen: 's0' }));
+  const chip = home.roleActAll.find(a => /AWS us-east-1 peaks at/.test(a.head));
+  assert.ok(chip, `no us-east-1 chip on the home: ${home.roleActAll.map(a => a.head).join(' / ')}`);
+  assert.match(chip.head, /of 3 × 1 Gbps/, `the home's chip reads "${chip.head}"`);
+  const ya = vals(at({ screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'role' })).roleActAll.find(a => /AWS us-east-1 peaks at/.test(a.head));
+  assert.match(ya.head, /of 3 × 1 Gbps/, `Your actions reads "${ya.head}"`);
+  const brief = vals(at({ screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'brief' })).briefText;
+  assert.doesNotMatch(brief, /3 × 10 Gbps/, `the briefing reads "${brief}"`);
+});
+
+const COUNTW = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
+test('The briefing says under way only of what is accepted or in progress, never of a snoozed finding; a port on order no longer waits', async () => {
+  for (const view of VIEWS) for (const persona of ['architect', 'neteng', 'security', 'finops']) {
+    const ya = vals(ins(view, { persona, insPanel: 'role' })).roleActAll;
+    const under = ya.filter(a => ['Acknowledged', 'In progress'].includes(a.stateLabel)).length;
+    const brief = vals(ins(view, { persona, insPanel: 'brief' })).briefText;
+    const m = brief.match(/(\w+) more (?:is|are) under way|; (\w+) (?:is|are) under way/);
+    const said = m ? COUNTW.indexOf(m[1] || m[2]) : 0;
+    assert.equal(said, under, `${view} ${persona}: the briefing says ${said} under way ("${brief}") over ${ya.map(a => `${a.head.slice(0, 40)} [${a.stateLabel}]`).join(' / ')}`);
+  }
+  // Bank scale, an order in flight on us-central1: the home's chip reads In progress, so nothing says it waits.
+  const BW = await import('../naas-bandwidth.js');
+  const cap = vals(mkC({ view: 'trust', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn' })).capRows.find(r => r.region === 'us-central1');
+  const order = BW.orderOf(cap, { ports: cap.ports + 1, mbps: 10000 }, ORDERED, 'trust', { id: BW.nextId([]) });
+  const at = (patch) => mkC({ view: 'trust', estateParam: null, persona: 'architect', orders: [order], nowIso: '2026-09-29T18:00:00Z', ...patch });
+  const home = vals(at({ screen: 's0' }));
+  assert.ok(!home.homeWaiting.some(a => /us-central1/.test(a.head)), `the home still says us-central1 waits: ${home.homeWaiting.map(a => a.head).join(' / ')}`);
+  const brief = vals(at({ screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'brief' })).briefText;
+  const waits = (brief.match(/(?:wait|waiting)[^.]*\./) || [''])[0];
+  assert.doesNotMatch(waits, /us-central1/, `the briefing says us-central1 waits: "${brief}"`);
+  const row = vals(at({ screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'role' })).roleActAll.find(a => /us-central1/.test(a.head));
+  assert.equal(row.stateLabel, 'In progress', `Your actions reads ${row.stateLabel} on an order in flight`);
+  // Optimize's Capacity move reads what Signals, Health and the panel read.
+  const opt = vals(at({ screen: 's3', layer: 'cloud', tab: 'cost', costPanel: 'optimize' })).optRows.find(r => r.key === 'capacity');
+  assert.equal(opt.state, 'In progress');
+  assert.equal(opt.cta, 'In progress', `Optimize's Capacity reads In progress beside a button reading ${opt.cta}`);
+});

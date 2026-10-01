@@ -455,7 +455,8 @@ export function capacity(conns, win = '30d') {
     const state = r.degraded ? 'down' : r.hot ? 'risk' : 'ok';
     const resizePct = ports > 1 ? Math.round(peakG / (capG - portG) * 100) : null;
     const oversized = state === 'ok' && ports > 1 && peakPct <= 50 && resizePct <= 80;
-    return { id: r.id, region: r.region, cloud: r.cloud, ramp: r.ramp, ports, portG, capG, peakG, avgG, peakPct, avg6mPct, headroomG: +(capG - peakG).toFixed(1), toFull, fullIn, state, oversized, resizeTo: oversized ? ports - 1 : null, resizePct };
+    // The size as bought, as Health and the connection read it: a landed 3 x 1 Gbps read 3 x 10 Gbps on the home (w2, 2026-09-30).
+    return { id: r.id, region: r.region, cloud: r.cloud, ramp: r.ramp, ports, portG, capG, bw: r.bw || `${ports} × ${portG} Gbps`, peakG, avgG, peakPct, avg6mPct, headroomG: +(capG - peakG).toFixed(1), toFull, fullIn, state, oversized, resizeTo: oversized ? ports - 1 : null, resizePct };
   });
 }
 

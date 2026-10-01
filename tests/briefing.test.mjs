@@ -116,7 +116,8 @@ test('the briefing reads as English on every estate, for every role', () => {
       else assert.match(t, /Acting banked \$[1-9][\d,]* last month/, where);
       // w2 (2026-09-30): what waits is what the home's chips list, the open ones; what is
       // accepted or under way is counted in the same sentence, never said to wait.
-      const waits = acts.filter(a => a.waiting), moving = acts.length - waits.length;
+      // Under way is accepted or in progress only; a snoozed finding is deferred, neither (w2 second pass, 2026-09-30).
+      const waits = acts.filter(a => a.waiting), moving = acts.filter(a => a.underWay).length;
       const n = waits.length, w = COUNT[n] || String(n), more = moving ? ` and ${COUNT[moving]} more ${moving === 1 ? 'is' : 'are'} under way` : '';
       if (!n) assert.match(t, moving ? /Nothing new waits on [^;]*; \w+ (is|are) under way\./ : /Nothing waits on /, where);
       else if (n <= 3) assert.ok(t.includes(`, ${w} ${n === 1 ? 'thing waits' : 'things wait'}${more}: `), `${where}: ${n} waiting: ${t}`);

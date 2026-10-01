@@ -1149,7 +1149,7 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
   const bank = LC.banked(est, life, lifeNow), bankedLast = bank.length > 1 ? bank[bank.length - 2].saved : 0;
   const of = out.opsFacts || { sev1: 0, openN: 0, mttrF: '' }, av = out.availAll || [], next = (out.comingUp || [])[0];
   const briefText = VD.briefingFor(rk, { open: openF.length, onTableF: openSave ? fmt(openSave) : '', bankedLastF: fmt(bankedLast), found, resolved, sev1: of.sev1, ticketsOpen: of.openN, mttrF: of.mttrF,
-    availMet: av.filter(r => r.met).length, availN: av.length, top: (out.roleActAll || []).filter(a => a.waiting).map(a => a.head), moving: (out.roleActAll || []).filter(a => !a.waiting).length, nextMaint: next ? `${next.touched}, ${next.whenF.replace(/, planned$/, '')}` : '' });
+    availMet: av.filter(r => r.met).length, availN: av.length, top: (out.roleActAll || []).filter(a => a.waiting).map(a => a.head), moving: (out.roleActAll || []).filter(a => a.underWay).length, nextMaint: next ? `${next.touched}, ${next.whenF.replace(/, planned$/, '')}` : '' });
   const domain = mailDomain(est0);
   const briefWho = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk;
     return { key: k, role: ROLE_OF[k].name, mail: `${ROLE_OF[k].mailbox}@${domain}`, on, bg: on ? 'var(--bg-accent)' : 'transparent', go: () => set({ persona: k }) }; });
@@ -2873,13 +2873,17 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         canDefer: st === 'open', defer: moveF(k, 'snoozed', { snoozeDays: deferDays, note: deferWhen ? `Deferred to the ${deferWhen} briefing` : 'Deferred' }),
         canStart: st === 'ack', start: moveF(k, 'progress'), canSnooze: st === 'ack', snooze: moveF(k, 'snoozed', { snoozeDays: deferDays }), hasDoor: false, doorLabel: '', door: () => {},
         // Still waiting on you: open, so Accept is its action (the home's Waiting on you lists only these).
-        waiting: st === 'open',
+        // Under way: accepted or in progress; a snoozed one is deferred, neither (w2, 2026-09-30).
+        waiting: st === 'open', underWay: st === 'ack' || st === 'progress',
         // The home's chip opens its finding in place (v2 home, 2026-09-30).
         open: () => set({ fdKey: f.key }) }; });
     // A connection that is down is traced first, never given a port (2026-09-30, as Signals' Capacity).
+    // A port on order is under way, never waiting (w2, 2026-09-30: the home's chip read In progress
+    // while the briefing said it waits).
     const ports = rk === 'architect' ? OD.capacity(conns, s.obWindow || '30d').filter(r => r.peakPct >= 80 && r.state !== 'down').map(r => {
-      return { key: 'cap-' + r.region, head: `${r.cloud} ${r.region} peaks at ${r.peakPct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, saveLine: '', hasSave: false, rec: 'Recommended: Add a port', stateLabel: 'Open',
-        canAccept: false, canDefer: false, canStart: false, canSnooze: false, hasDoor: true, doorLabel: capMoveLabel(s, est0, r, 'Add a port'), door: capMove(go, set, s, est0, r), accept: () => {}, defer: () => {}, start: () => {}, snooze: () => {}, waiting: true,
+      const busy = capMoveLabel(s, est0, r, '') === 'In progress';
+      return { key: 'cap-' + r.region, head: `${r.cloud} ${r.region} peaks at ${r.peakPct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, saveLine: '', hasSave: false, rec: 'Recommended: Add a port', stateLabel: busy ? 'In progress' : 'Open', underWay: busy,
+        canAccept: false, canDefer: false, canStart: false, canSnooze: false, hasDoor: true, doorLabel: capMoveLabel(s, est0, r, 'Add a port'), door: capMove(go, set, s, est0, r), accept: () => {}, defer: () => {}, start: () => {}, snooze: () => {}, waiting: !busy,
         open: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn' }) }; }) : [];
     const all = [...acts, ...ports];
     const roleEmpty = all.length ? '' : rk === 'exec' ? 'Nothing priced on the table.' : 'Nothing to act on yet. What AT&T finds for this role lands here.';
@@ -4179,7 +4183,8 @@ function costVals(s, set, est, invAll, ob, go, c) {
   const optTargets = (r) => (r.key !== 'capacity' || r.empty ? [] : optCap.filter(c => (r.resize ? c.oversized : c.state === 'risk')));
   const optState = (r) => (r.key === 'capacity' && BW.moveState(optTargets(r), s.orders, est.id, +optNow)) || r.state;
   const optFirst = (r) => optTargets(r).find(c => !BW.inFlight(s.orders, est.id, c.id, +optNow)) || r.target;
-  const optRows = optBase.map(r => ({ ...r, state: optState(r), go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(optFirst(r), r.resize) : optGo[r.key],
+  // Every connection the move counts on order: the button says so, as Signals and the panel do (w2, 2026-09-30).
+  const optRows = optBase.map(r => ({ ...r, state: optState(r), cta: r.key === 'capacity' && optState(r) === 'In progress' ? 'In progress' : r.cta, go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(optFirst(r), r.resize) : optGo[r.key],
     hasCta: !r.empty, hasStart: !!optTop && optTop.key === r.key, hasState: !!optState(r), op: r.empty ? 0.6 : 1, lineRows: r.lines.slice(0, 2).map((t, i) => ({ key: r.key + i, text: t })) }));
   const optSave = optBase[0].figure + optBase[1].figure;
   // The line names only the moves it prices (the skeptic, 2026-09-30: Small business read "across Spend and Routing"
