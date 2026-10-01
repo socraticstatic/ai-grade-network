@@ -52,3 +52,21 @@ export const MULTI_LAYER = [
   { key: 'fin', name: 'Finance stays segmented', match: 'branch Finance', why: 'Finance traffic has its own lane at every hop.',
     layers: { site: 'Finance sites in their own segment', edge: 'Segment-aware firewall', core: 'Segment intra-tag only', cloud: 'Finance VPCs only' } },
 ];
+
+// NetBond Advanced's route policy (Configure > Policies, RestrictedIPv4Policy.tsx), rule by rule and
+// direction by direction: o2p is On Premise → Partner, p2o is Partner → On Premise (2026-10-01).
+export const ROUTE_SECTIONS = [['deny', 'Deny actions'], ['manip', 'Manipulations'], ['allow', 'Allow actions'], ['advanced', 'Advanced']];
+export const ROUTE_RULES = [
+  { section: 'deny', id: 'matching-routes', label: 'Matching routes', o2p: true, p2o: true },
+  { section: 'deny', id: 'block-default-routes', label: 'Block default routes', o2p: true, p2o: false },
+  { section: 'deny', id: 'community-value-filter-customer', label: 'Community value filter, your BGP CVs', o2p: true, p2o: true },
+  { section: 'deny', id: 'community-value-filter-att', label: 'Community value filter, AT&T BGP CVs', o2p: false, p2o: true },
+  { section: 'manip', id: 'prepend-advertisements', label: 'Prepend extra BGP ASNs', o2p: true, p2o: true },
+  { section: 'manip', id: 'selective-cv-tagging', label: 'Selective CV tagging', o2p: true, p2o: false },
+  { section: 'manip', id: 'community-value-tag', label: 'Community value to tag routes', o2p: false, p2o: true },
+  { section: 'allow', id: 'matching-routes', label: 'Matching routes', o2p: true, p2o: true },
+  { section: 'allow', id: 'community-value-filter-customer', label: 'Community value filter, your BGP CVs', o2p: true, p2o: true },
+  { section: 'allow', id: 'community-value-filter-att', label: 'Community value filter, AT&T BGP CVs', o2p: false, p2o: true },
+  { section: 'advanced', id: 'advertise-static-routes', label: 'Advertise static routes', o2p: true, p2o: true },
+];
+export const ROUTE_PATHS = ['Via the AT&T network', 'Fail over to Equinix Fabric', 'Never the internet'];

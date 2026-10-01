@@ -21,7 +21,7 @@ import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
 import * as SG from './naas-signals.js';
-import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER } from './naas-policy-layers.js';
+import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
 import * as M from './naas-moves.js';
 import { rampName } from './naas-things.js';
@@ -4044,16 +4044,20 @@ function wizardVals(s, est, set, c) {
   // Govern authoring
   const au = s.authoring || null;
   // No workload carries GPU; the GPUs run in the AI-tagged workloads (Govern's one rule, 2026-10-01).
-  const A_MATCH0 = ['tag PCI', 'tag Prod', 'tag Internet-facing', 'branch Finance', 'tag AI', 'region ap-*'];
+  // Either side can be an asset (2026-10-01, between-assets spec): a private cloud at a colo on one side, a cloud region on the other.
+  const A_PCS = S.policyAssets(est).filter(x => x.kind === 'private-cloud').map(x => x.label);
+  const A_MATCH0 = [...A_PCS, 'tag PCI', 'tag Prod', 'tag Internet-facing', 'branch Finance', 'tag AI', ...(A_PCS.length ? [] : ['region ap-*'])];
   const A_MATCH = s.authoring && s.authoring.match && !A_MATCH0.includes(s.authoring.match) ? [s.authoring.match, ...A_MATCH0] : A_MATCH0;
-  const A_SCOPE = ['any cloud', 'the Internet', 'a cloud region', 'the WAN', 'AI providers'];
+  const A_SCOPE0 = ['any cloud', 'the Internet', 'the WAN', ...(est.regionsList || []).slice(0, 3).map(r => `${r.cloud} ${r.region}`)];
+  const A_SCOPE = au && au.scope && !A_SCOPE0.includes(au.scope) ? [au.scope, ...A_SCOPE0] : A_SCOPE0;
   // A count Discover sent belongs to its subject: a new subject drops it (2026-10-01).
   const aSet = (p) => { const next = { ...(au || { match: null, scope: null, req: [] }), ...p }; if (au && p.match !== undefined && p.match !== au.match) { delete next.n; delete next.viol; delete next.from; } set({ authoring: next }); };
   const aCard = (field, v, single) => { const cur = au ? au[field] : (single ? null : []); const on = single ? cur === v : (cur || []).includes(v); return { key: v, label: v, desc: field === 'req' ? CARD_DESC.control[v] : '', on, click: () => { if (single) return aSet({ [field]: v }); aSet({ [field]: on ? cur.filter(x => x !== v) : [...(cur || []), v] }); }, border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', check: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)' }; };
-  const aReady = !!(au && au.match && au.scope && au.req && au.req.length);
+  // Route rules or a path are a policy too (between-assets spec, 2026-10-01), with or without an intent rule.
+  const aReady = !!(au && au.match && au.scope && ((au.req && au.req.length) || (au.path && au.path.length) || Object.values(au.route || {}).some(v => v.o2p || v.p2o)));
   // What it matches and what breaks it count by Govern's one rule (w2-govern, 2026-09-30), never a
   // table of guesses or a share of the matches: the figures open the sets they count.
-  const commit = (state) => () => { if (!aReady) return; const pol0 = { name: au.templateName || `${au.match.replace(/^tag |^branch |^region /, '')} · ${au.req[0]}`, match: au.match, scope: au.scope, req: au.req.join(' and '), state, custom: true, ...(au.layers ? { layers: au.layers } : {}) }; const fig = GV.policyFigures(est, A.inventory(est), pol0, { siteTags: ((s.siteTags || {})[est.id]) || {} }); // A subject Govern's rule does not count (a landing's set, e.g. private regions) keeps the landing's own count (2026-10-01).
+  const commit = (state) => () => { if (!aReady) return; const pol0 = { name: au.templateName || `${au.match.replace(/^tag |^branch |^region /, '')} · ${au.req[0] || (au.path || [])[0] || 'Route policy'}`, match: au.match, scope: au.scope, req: au.req.join(' and '), route: au.route || {}, path: au.path || [], state, custom: true, ...(au.layers ? { layers: au.layers } : {}) }; const fig = GV.policyFigures(est, A.inventory(est), pol0, { siteTags: ((s.siteTags || {})[est.id]) || {} }); // A subject Govern's rule does not count (a landing's set, e.g. private regions) keeps the landing's own count (2026-10-01).
   const pol = { ...pol0, matched: fig.matched ?? (typeof au.n === 'number' ? au.n : null), viol: fig.viol ?? (state === 'simulated' && typeof au.viol === 'number' ? au.viol : 0), unit: fig.unit }; set({ customPolicies: [...(s.customPolicies || []), pol], authoring: null, simulated: state === 'simulated' ? true : s.simulated,
     // The list opens on the page that holds what you just authored.
     polPage: Math.floor(((s.layer === 'cloud' ? layerPolicies(s, est, 'all').length : 0) + (s.customPolicies || []).length) / PAGE_SIZE.polRows[1]) }); };
@@ -4066,7 +4070,21 @@ function wizardVals(s, est, set, c) {
     // Two tabs, one at a time (2026-09-28, no scrolling).
     ...(() => { const gk = ['templates', 'tags'].includes(s.govPanel) ? s.govPanel : 'policies'; return { govPanels: [['policies', 'Violations & policies'], ['templates', 'Templates'], ['tags', 'Tags']].map(([k, l]) => { const on = gk === k; return { key: k, label: l, on, go: () => set({ govPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), govPanelPolicies: gk === 'policies', govPanelTemplates: gk === 'templates', govPanelTags: gk === 'tags' }; })(),
     authoring: !!au, openAuthor: openAuthor(), closeAuthor: () => set({ authoring: null }), aMatch: A_MATCH.map(v => aCard('match', v, true)), aScope: A_SCOPE.map(v => aCard('scope', v, true)), aReq: D.COMPOSE_CHIPS.control.map(v => aCard('req', v, false)),
-    aSent: { match: au && au.match || 'something', scope: au && au.scope || 'somewhere', req: au && au.req && au.req.length ? au.req.map(x => x.toLowerCase()).join(' and ') : '…', matchOn: !!(au && au.match), scopeOn: !!(au && au.scope), reqOn: !!(au && au.req && au.req.length) },
+    ...(() => { // Intent | Route policy (Advanced): NetBond Advanced's rules, each direction its own toggle (2026-10-01).
+      const tabK = au && au.tab === 'route' ? 'route' : 'intent', rt = (au && au.route) || {}, paths = (au && au.path) || [];
+      const tog = (k, dir) => () => { const cur = rt[k] || { o2p: false, p2o: false }; aSet({ route: { ...rt, [k]: { ...cur, [dir]: !cur[dir] } } }); };
+      const look = (on) => ({ bg: on ? 'var(--cta)' : 'var(--bg-base)', ink: on ? '#fff' : 'var(--text-body)' });
+      const words = [];
+      ROUTE_RULES.forEach(r => { const v = rt[`${r.section}:${r.id}`] || {}; const ds = [v.o2p && 'on premise → partner', v.p2o && 'partner → on premise'].filter(Boolean);
+        if (ds.length) words.push(`${({ deny: 'deny', manip: 'apply', allow: 'allow', advanced: 'apply' })[r.section]} ${r.label.toLowerCase()} (${ds.join(', ')})`); });
+      return { aTabs: [['intent', 'Intent'], ['route', 'Route policy · Advanced']].map(([k, l]) => ({ key: k, label: l, on: tabK === k, go: () => aSet({ tab: k }), line: tabK === k ? 'var(--cta)' : 'transparent', color: tabK === k ? 'var(--text-heading)' : 'var(--text-light)' })),
+        aIntent: tabK === 'intent', aRouteOn: tabK === 'route',
+        aRoute: ROUTE_SECTIONS.map(([sk, sl]) => ({ key: sk, label: sl, rules: ROUTE_RULES.filter(r => r.section === sk).map(r => { const k = `${sk}:${r.id}`, v = rt[k] || {};
+          return { key: k, id: r.id, section: sk, label: r.label, o2pOff: !r.o2p, p2oOff: !r.p2o, o2pGo: r.o2p ? tog(k, 'o2p') : () => {}, p2oGo: r.p2o ? tog(k, 'p2o') : () => {},
+            o2pBg: look(!!v.o2p).bg, o2pInk: look(!!v.o2p).ink, p2oBg: look(!!v.p2o).bg, p2oInk: look(!!v.p2o).ink }; }) })),
+        aPaths: ROUTE_PATHS.map(p => { const on = paths.includes(p); return { key: p, label: p, ...look(on), on, go: () => aSet({ path: on ? paths.filter(x => x !== p) : [...paths, p] }) }; }),
+        aRouteLine: [...paths.map(p => p.replace(/^\w/, ch => ch.toLowerCase())), ...words].join('; ') }; })(),
+    aSent: { route: (() => { const rt = (au && au.route) || {}, paths = (au && au.path) || []; const w = []; ROUTE_RULES.forEach(r => { const v = rt[`${r.section}:${r.id}`] || {}; const ds = [v.o2p && 'on premise → partner', v.p2o && 'partner → on premise'].filter(Boolean); if (ds.length) w.push(`${({ deny: 'deny', manip: 'apply', allow: 'allow', advanced: 'apply' })[r.section]} ${r.label.toLowerCase()} (${ds.join(', ')})`); }); return [...paths.map(p => p.replace(/^\w/, ch => ch.toLowerCase())), ...w].join('; '); })(), match: au && au.match || 'something', scope: au && au.scope || 'somewhere', req: au && au.req && au.req.length ? au.req.map(x => x.toLowerCase()).join(' and ') : '…', matchOn: !!(au && au.match), scopeOn: !!(au && au.scope), reqOn: !!(au && au.req && au.req.length) },
     aSimulate: commit('simulated'), aEnforce: commit('enforced'), aReady, aBg: aReady ? 'var(--cta)' : 'var(--bg-neutral)', aColor: aReady ? '#fff' : 'var(--text-disabled)',
     // Policies read by layer (Micah, 2026-09-29: "give me policies that are multi-layer").
     polLayerHeads: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label })),

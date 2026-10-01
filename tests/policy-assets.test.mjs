@@ -19,3 +19,27 @@ test('a policy can name a private cloud, a site, a region, a tag or a business u
   assert.ok(a.some(x => x.kind === 'region' && x.label === 'AWS us-east-1'));
   assert.equal(new Set(a.map(x => x.key)).size, a.length, 'keys are unique');
 });
+
+import { vals } from '../naas-app.js';
+import { mkC } from './harness.mjs';
+import { ROUTE_RULES } from '../naas-policy-layers.js';
+const gov = (au) => mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies', authoring: au });
+
+test('step 2: the composer names a private cloud on one side and a cloud region on the other', () => {
+  const v = vals(gov({ match: null, scope: null, req: [] }));
+  assert.ok(v.aMatch.some(c => c.label === 'Private cloud · Equinix DC2, Ashburn'));
+  assert.ok(v.aScope.some(c => c.label === 'AWS us-east-1'));
+});
+
+test('step 2: route rules follow NetBond Advanced, direction by direction, and ride the policy', () => {
+  assert.equal(ROUTE_RULES.find(r => r.id === 'block-default-routes').p2o, false);
+  assert.equal(ROUTE_RULES.find(r => r.id === 'community-value-filter-att').o2p, false);
+  const c = gov({ match: 'Private cloud · Equinix DC2, Ashburn', scope: 'AWS us-east-1', req: ['Private path required'], tab: 'route' });
+  const v = vals(c);
+  const rule = v.aRoute.flatMap(sec => sec.rules).find(r => r.id === 'matching-routes' && r.section === 'deny');
+  rule.o2pGo();
+  assert.deepEqual(c.state.authoring.route['deny:matching-routes'], { o2p: true, p2o: false });
+  assert.match(vals(c).aSent.route, /deny matching routes \(on premise → partner\)/i);
+  vals(c).aSimulate();
+  assert.deepEqual(c.state.customPolicies.at(-1).route['deny:matching-routes'], { o2p: true, p2o: false });
+});
