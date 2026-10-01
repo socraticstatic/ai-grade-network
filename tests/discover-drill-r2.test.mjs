@@ -299,6 +299,28 @@ test('7. the new filter lives on Your clouds and Your sites, and the tiles besid
   }
 });
 
+test('7. a tile under a filter lands on rows whose every count opens its own set', () => {
+  for (const view of ESTATES) {
+    const r0 = (estateFor(disc(view).state).regionsList || [])[0];
+    for (const cf of [{ unit: 'workload', state: 'exposed' }, { unit: 'workload', tag: 'pci' }, { unit: 'new', days: 30, label: '30 days' }]) {
+      for (const trail of [[], ...(r0 ? [['cloud:' + r0.cloud, 'region:' + r0.region]] : [])]) {
+        const mk0 = () => disc(view, { estPanel: 'clouds', cloudFilter: cf, cloudTrailE: trail.slice() });
+        for (const t of vals(mk0()).cloudTiles.filter(x => x.can)) {
+          const c = mk0(); vals(c).cloudTiles.find(x => x.key === t.key).go(EV);
+          const s0 = JSON.parse(JSON.stringify(c.state));
+          const v = vals(c);
+          for (const row of v.cloudRows) {
+            for (const p of row.parts.filter(x => x.can && /^\d/.test(x.t) && !/Gbps/.test(x.t))) {
+              const c2 = copyOf(s0); vals(c2).cloudRows.find(y => y.key === row.key).parts.find(y => y.key === p.key).go(EV);
+              assert.equal(vals(c2).cloudListN, num(p.t), `${view} ${v.cloudFilterLabel} @ ${trail.join('>') || 'root'}: ${row.name} "${p.t}" opened ${vals(c2).cloudListN}`);
+            }
+          }
+        }
+      }
+    }
+  }
+});
+
 const rail = (c, label) => { const it = vals(c).railGroups.flatMap(g => g.items || []).find(r => r.label === label); assert.ok(it, `no rail item ${label}`); it.go(EV); };
 
 test('7. leaving Estate, for another page or for Sources, clears the new filter; coming back reads everything', () => {

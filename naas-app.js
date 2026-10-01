@@ -3332,15 +3332,19 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           const where = (x) => `${x.cloud} ${x.r.region}`;
           const vpcRowOf = (x, flat) => ({ key: 'vpc:' + x.v.id, name: x.v.name, priv: !!x.v.priv, into: scopeTo(x, 3), next: 'subnets', ...noCost,
             parts: [flat ? `${where(x)} · ${x.v.purpose || 'VPC'}` : (x.v.purpose || 'VPC'), ' · ', wlLink(x.v.wl, scopeTo(x, 3))], bw: [] });
+          // Rows that a unit of another set lists ("Subnets of exposed workloads") count inside that set, so
+          // their doors keep it (2026-10-01: an app row read 12 exposed and opened all 68).
+          const ofP = cf && cf.of && cf.of.unit ? cf.of : null;
+          const keepOf = (f) => (ofP ? { ...f, of: ofP } : f);
           const subnetRowOf = (x, flat) => { const n = (x.sn.workloads || []).length;
             return { key: 'sn:' + x.sn.id, name: x.sn.name, priv: !/pub/.test(x.sn.id), into: scopeTo(x, 4), next: 'workloads', ...noCost,
-              parts: [flat ? `${where(x)} › ${x.v.name} · ${x.sn.cidr || ''}` : (x.sn.cidr || ''), ' · ', { key: 'wl', t: nn(n, 'workload', 'workloads'), go: n ? at({ cloudTrailE: scopeTo(x, 4), cloudFilter: null }) : null }], bw: [] }; };
+              parts: [flat ? `${where(x)} › ${x.v.name} · ${x.sn.cidr || ''}` : (x.sn.cidr || ''), ' · ', { key: 'wl', t: nn(n, 'workload', 'workloads'), go: n ? at({ cloudTrailE: scopeTo(x, 4), cloudFilter: ofP ? keepOf({ unit: 'workload' }) : null }) : null }], bw: [] }; };
           // An exposed workload reads as exposed (2026-09-30: it read `!w.public`, a field no workload carries).
           const workloadRowOf = (x, flat) => ({ key: 'wl:' + x.w.id, name: x.w.name || x.w.id, priv: !x.w.exposed, into: null, next: '', ...noCost,
             parts: [flat ? `${x.w.ip} · ${where(x)} › ${x.v.name}` : (x.w.ip || ''), ' · ', tagLink(x.w.tag || 'untagged')], bw: [] });
-          const appRowOf = (g) => ({ key: g.key, name: g.tag, priv: g.exposed === 0, into: null, filter: { unit: 'workload', tag: g.tag }, next: 'workloads', ...noCost,
-            parts: [{ key: 'wl', t: nn(g.wl, 'workload', 'workloads'), go: at({ cloudFilter: { unit: 'workload', tag: g.tag } }) }, ' · ',
-              { key: 'exp', t: `${nf(g.exposed)} exposed`, go: g.exposed ? at({ cloudFilter: { unit: 'workload', tag: g.tag, state: 'exposed' } }) : null }], bw: [] });
+          const appRowOf = (g) => ({ key: g.key, name: g.tag, priv: g.exposed === 0, into: null, filter: keepOf({ unit: 'workload', tag: g.tag }), next: 'workloads', ...noCost,
+            parts: [{ key: 'wl', t: nn(g.wl, 'workload', 'workloads'), go: at({ cloudFilter: keepOf({ unit: 'workload', tag: g.tag }) }) }, ' · ',
+              { key: 'exp', t: `${nf(g.exposed)} exposed`, go: g.exposed ? at({ cloudFilter: keepOf({ unit: 'workload', tag: g.tag, state: 'exposed' }) }) : null }], bw: [] });
           const U = DR.unitsOf(est, invAll, trail);
           let level = 'cloud', rows = [], set0 = null;
           if (cf) {
