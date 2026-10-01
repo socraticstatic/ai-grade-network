@@ -4022,10 +4022,12 @@ function costLegVals(s, set, est, legs0, go, c) {
   const partWords = (row, p) => {
     const [one, many] = row.nouns || ['item', 'items'], n = `${Math.round(p.n).toLocaleString('en-US')} ${Math.round(p.n) === 1 ? one : many}`;
     if (p.kind === 'bucket') return `${p.cloud} · ${p.ink === 'public' ? 'outside AT&T, at public rates' : 'at your AT&T rate'}`;
-    // A cloud region's share of the egress, split as the Savings list splits (by workloads, public or attached).
-    if (p.kind === 'region' && p.egress) return `${p.ink === 'public' ? 'Outside AT&T' : 'On AT&T'} · ${p.wl.toLocaleString('en-US')} of ${p.poolWl.toLocaleString('en-US')} ${p.ink === 'public' ? 'public' : 'attached'} workloads`;
+    // A cloud region's share of its own cloud's egress, by workloads, in the legend's words (the skeptic, 2026-09-30:
+    // blue is AT&T price, never On AT&T).
+    if (p.kind === 'region' && p.egress) return `${p.ink === 'public' ? 'Outside AT&T' : 'AT&T price'} · ${p.wl.toLocaleString('en-US')} of ${p.poolWl.toLocaleString('en-US')} ${p.poolWord || (p.ink === 'public' ? 'public' : 'attached')} ${p.cloud} workloads`;
     if (p.kind === 'region') return [regionOfPart(p).cloud, n].filter(Boolean).join(' · ');
-    return `${regionOf((est.sites || []).find(x => x.name === p.site) || { name: p.site, metro: '' })} · ${n}${p.role === 'backup' ? ' · backup' : ''}`;
+    // A site reads the place it is listed under: Frankfurt DC is Europe, not International (CV.placeOfSite).
+    return `${CV.placeOfSite((est.sites || []).find(x => x.name === p.site) || { name: p.site, metro: '' })} · ${n}${p.role === 'backup' ? ' · backup' : ''}`;
   };
   const partLabel = (p) => (p.kind === 'bucket' ? p.label : p.kind === 'region' ? [regionOfPart(p).cloud, p.region].filter(Boolean).join(' ') : p.site);
   const rowOf = (leg) => (r) => ({ key: r.key, label: r.label, sub: CV.rowWords(r), title: r.title || CV.rowWords(r), vF: fmt(Math.round(r.v)), modelled: !!r.modelled, mark: r.modelled ? 'Modelled' : '', isPart: false,

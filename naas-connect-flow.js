@@ -113,8 +113,9 @@ export const MODELLED = 'Modelled · list price';
 export const PRICE_NOTE = 'Priced by AT&T after review';
 
 // ---------- Places (moved from naas-app.js) ----------
-// The metro nearest a cloud region, the storefront's one table of it.
-export const REGION_GEO = { 'us-east-1': 'Ashburn', 'us-east-2': 'Chicago', 'us-west-2': 'Seattle', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'London', 'ap-southeast-1': 'Singapore', eastus: 'Ashburn', westeurope: 'Amsterdam', centralus: 'Dallas', 'us-central1': 'Chicago', 'us-east-04': 'New York', 'uk-south': 'London' };
+// The metro nearest a cloud region, the storefront's one table of it. GCP europe-west1 is in Belgium; Amsterdam is
+// the nearest metro Compose offers (the skeptic, 2026-09-30: missing, its Attach door opened US East, no location).
+export const REGION_GEO = { 'us-east-1': 'Ashburn', 'us-east-2': 'Chicago', 'us-west-2': 'Seattle', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'London', 'ap-southeast-1': 'Singapore', eastus: 'Ashburn', westeurope: 'Amsterdam', centralus: 'Dallas', 'us-central1': 'Chicago', 'us-east-04': 'New York', 'uk-south': 'London', 'europe-west1': 'Amsterdam', 'us-ashburn-1': 'Ashburn', 'eu-frankfurt-1': 'Frankfurt' };
 // The policy a control ships as, in Govern's words (moved from naas-app.js).
 export const POLICY_FOR_CONTROL = { 'Private path required': { match: 'tag PCI', req: 'Private path required' }, 'No direct internet path': { match: 'tag Prod', req: 'No direct internet path' }, 'Inline inspection': { match: 'tag Internet-facing', req: 'Inline security inspection' }, 'Inline security inspection': { match: 'tag Internet-facing', req: 'Inline security inspection' }, 'Segment by tag': { match: 'branch Finance', req: 'Segment intra-tag only' }, 'Latency SLO': { match: 'tag GPU', req: 'Latency SLO 15 ms' }, 'Cost-aware routing': { match: 'region *', req: 'Cost-aware routing' } };
 const AREA_ORDER = ['US East', 'US Central', 'US West', 'Europe', 'Asia Pacific', 'International', 'Nationwide'];
