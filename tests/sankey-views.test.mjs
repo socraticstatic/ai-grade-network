@@ -22,7 +22,8 @@ test('Cost shows dollars: every node, the middle, the heads and the legend', () 
   const inet = v.mapNodes.find(n => n.label === 'Internet');
   assert.match(inet.pathSay, /to save/);
   assert.ok(v.mapHeads.some(h => /\$\/mo/.test(h.text)));
-  assert.ok(v.mapLegend.some(l => /AT&T rate/.test(l.label)) && v.mapLegend.some(l => /egress/.test(l.label)));
+  // w2 (2026-09-30): the blue reads AT&T price, as Cost's own legend calls it.
+  assert.ok(v.mapLegend.some(l => /AT&T price/.test(l.label)) && v.mapLegend.some(l => /egress/.test(l.label)));
   // The Cost tile is the map's own total.
   const sum = v.mapNodes.filter(n => n.side === 'l').reduce((a, n) => a + n.tot, 0);
   assert.ok(Math.abs(money(tile(v, 'cost').v) - Math.round(sum / 100) * 100) <= 100, `${tile(v, 'cost').v} vs ${sum}`);

@@ -414,6 +414,15 @@ test('FinOps\' egress head names what its dollars and its Gbps each count', () =
   assert.match(t.head, /^\$[\d,]+\/mo billed public · [\d.]+ Gbps outside AT&T$/, t.head);
 });
 
+test('Blue money reads AT&T price on Cost\'s By bucket and on Traffic\'s Cost view, as Cost\'s legend does', () => {
+  for (const view of ['partial', 'mature', 'trust']) {
+    const bk = vals(mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'cost', costPanel: 'bucket' }));
+    for (const b of bk.buckets) assert.notEqual(b.savedF, 'On AT&T', `${view} ${b.name}`);
+    const map = vals(obs(view, { obPanel: 'map', mapMode: 'cost' }));
+    for (const l of map.mapLegend) assert.doesNotMatch(l.label, /^On AT&T/, `${view}: Traffic's Cost view keys "${l.label}"`);
+  }
+});
+
 test('The cross-cloud finding names the public pairs Cloud-to-cloud shows, and no others', () => {
   for (const view of VIEWS) {
     const est = ESTATES[view], f = est.findings.find(x => x.kind === 'crosscloud');

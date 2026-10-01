@@ -745,7 +745,7 @@ export function vals(c) {
   const governVerdict = VD.governVerdict(est);
   // A bucket says On AT&T only when it is (CV.bucketInk, 2026-09-30): Small business's base bucket pays the same rate either way, but nothing of it is attached.
   const buckets = layerBuckets(s, est).map(b => { const onAtt = CV.bucketInk(est, b) === 'att'; return { ...b, key: b.id, todayF: fmt(b.today), fabricF: fmt(b.fabric),
-    explainGo: explainNav(c, CV.bucketExplain(b)), savedF: b.today > b.fabric ? fmt(b.today - b.fabric) : onAtt ? 'On AT&T' : '$0', saved: b.today - b.fabric, action: b.today > b.fabric ? 'Steer this bucket' : onAtt ? 'Already steered' : 'Same price on AT&T', canSteer: b.today > b.fabric, steer: () => steerBucket(c, b, est), arb: `${fmt(b.today)}/mo today on ${b.cloud} · ${fmt(b.fabric)}/mo on AT&T · save ${fmt(b.today - b.fabric)}/mo` }; });
+    explainGo: explainNav(c, CV.bucketExplain(b)), savedF: b.today > b.fabric ? fmt(b.today - b.fabric) : onAtt ? 'AT&T price' : '$0', saved: b.today - b.fabric, action: b.today > b.fabric ? 'Steer this bucket' : onAtt ? 'Already steered' : 'Same price on AT&T', canSteer: b.today > b.fabric, steer: () => steerBucket(c, b, est), arb: `${fmt(b.today)}/mo today on ${b.cloud} · ${fmt(b.fabric)}/mo on AT&T · save ${fmt(b.today - b.fabric)}/mo` }; });
   const steerable = buckets.filter(b => b.canSteer);
   const bTotal = buckets.reduce((a, b) => a + b.today, 0), bFab = buckets.reduce((a, b) => a + b.fabric, 0);
   const costVerdict = VD.costVerdict(estOpen, ob, totalSave, buckets);
@@ -2992,7 +2992,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // The legend says what the colors mean in the view you are in.
     // A third swatch when the map draws direct connect, priced at a list price (2026-09-30, owner decision a).
     // The Cost view's swatches carry their meaning in Cost's vocabulary (2026-09-30), so one test holds them to Spend, By leg and By region.
-    mapLegend: (mapMode === 'cost' ? [[COST_ATT, 'On AT&T, at your AT&T rate', 'att'], [COST_OUT, 'Outside AT&T, at egress rates', 'public'],
+    mapLegend: (mapMode === 'cost' ? [[COST_ATT, 'AT&T price', 'att'], [COST_OUT, 'Outside AT&T, at egress rates', 'public'],
         ...(map.nodes.some(n => n.side === 'm' && n.ramp === F.DIRECT) ? [[DIRECT_INK, 'Cloud provider direct connect, list price (modelled)', 'list']] : [])]
       : mapMode === 'slo' ? [[HEALTH_FILL.ok, 'Within SLO'], [HEALTH_FILL.risk, 'Near SLO'], [HEALTH_FILL.slo, 'Over SLO']]
       : [['#3374cc', 'On AT&T'], ['#8a949c', 'Outside AT&T'], ['var(--error)', 'Degraded'], [HEALTH_FILL.slo, 'Over SLO']]).map(([color, label, meaning]) => ({ key: label, color, label, meaning: meaning || '', bg: meaning === 'list' ? CV.hatch(color) : color })),
