@@ -144,7 +144,9 @@ export function talkers(T, lens = 'share', { pubMo = 0, covPct = 0, billsPub = {
       ...on.map(t => (bills(t) ? { ...base(t), sub: `${bills(t).join(' and ')} bills public`, v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Optimize', actKind: 'optimize' }
         : { ...base(t), v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Ask Andi', actKind: 'andi-region' })),
     ];
-    const head = pubMo > 0 ? `${money(pubMo)}/mo public egress · ${gb(outG)}` : out.length ? `${gb(outG)} public egress` : 'No public egress';
+    // Each figure says what it counts (w2, 2026-09-30): the dollars are what the buckets bill public, a
+    // bucket on NetBond included (Bank scale's GPU inference); the Gbps are what leaves AT&T.
+    const head = pubMo > 0 ? `${money(pubMo)}/mo billed public · ${gb(outG)} outside AT&T` : out.length ? `${gb(outG)} public egress` : 'No public egress';
     return { key: 'talkers', title: 'Top talkers by egress', head, rows, legend: [{ ...PUB, label: 'Public egress' }, AT], empty: 'No traffic yet.' };
   }
   if (lens === 'exposure') {

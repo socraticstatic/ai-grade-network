@@ -289,7 +289,7 @@ test('the rows speak to the persona that leads with them', () => {
   for (const p of ['architect', 'exec']) assert.ok(tk(p).rows.filter(r => !r.priv).every(r => r.act === 'Attach'), p);
   // FinOps' total is the buckets' public spend, the figure Spend and Egress growth show.
   const pubMo = vals(ins('partial')).buckets.filter(b => b.today > b.fabric).reduce((a, b) => a + b.today, 0);
-  assert.ok(fin.head.startsWith('$' + pubMo.toLocaleString('en-US') + '/mo public egress'), fin.head);
+  assert.ok(fin.head.startsWith('$' + pubMo.toLocaleString('en-US') + '/mo billed public'), fin.head); // w2 (2026-09-30): what the dollars count
 });
 
 test('the cards paint from theme tokens, in both themes', () => {

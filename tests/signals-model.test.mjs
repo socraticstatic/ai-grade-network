@@ -51,7 +51,8 @@ test('Top talkers by egress: the Gbps that bills as public egress, and the bucke
   const t = SG.talkers(T, 'egress', { pubMo: 8000, covPct: 68 });
   assert.equal(t.title, 'Top talkers by egress');
   // The head is Growth's this week, dollars and Gbps, and names no region count the dollars are not split by (third round, 2026-09-30).
-  assert.equal(t.head, '$8,000/mo public egress · 8.0 Gbps');
+  // w2 (2026-09-30): each figure says what it counts.
+  assert.equal(t.head, '$8,000/mo billed public · 8.0 Gbps outside AT&T');
   const pub = t.rows.filter(r => !r.priv);
   assert.deepEqual(pub.map(r => r.key), ['b', 'c'], 'the most public first');
   assert.deepEqual(pub.map(r => [r.v, r.v2]), [['6.0 Gbps', '75% of public'], ['2.0 Gbps', '25% of public']]);

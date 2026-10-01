@@ -408,6 +408,12 @@ test('A map node offers Steer only where a flow there has an end on AT&T, and st
   assert.ok(seen >= 0);
 });
 
+test('FinOps\' egress head names what its dollars and its Gbps each count', () => {
+  // Bank scale: the GPU bucket bills public from a region on NetBond, so the dollars hold it and the Gbps do not.
+  const t = card(vals(ins('trust', { persona: 'finops' })), 'talkers');
+  assert.match(t.head, /^\$[\d,]+\/mo billed public · [\d.]+ Gbps outside AT&T$/, t.head);
+});
+
 test('The cross-cloud finding names the public pairs Cloud-to-cloud shows, and no others', () => {
   for (const view of VIEWS) {
     const est = ESTATES[view], f = est.findings.find(x => x.kind === 'crosscloud');
