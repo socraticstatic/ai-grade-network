@@ -454,7 +454,7 @@ export function vals(c) {
     const hh = e.region && !onHome ? hp.regionHealth[e.region.region] : null;
     const healthStroke = hh === 'red' ? 'var(--error)' : hh === 'amber' ? 'var(--warning)' : null;
     const ov = overlayFor(e, ovS, est0, ob, hp, R, steered, hoverKey);
-    return { ...e, ...ov, key: e.id, d, op: ov.opOverride != null ? Math.min(op, ov.opOverride) : op, landed: !!(e.region && e.region.landed), amber: hh === 'amber' || hh === 'red', openObserve: hh === 'amber' || hh === 'red' ? () => { go('s3', { layer: 'cloud', tab: 'observe', obScope: 'cloud:' + e.region.cloud })(); } : null, stroke: ov.stroke || (e.ghost ? 'var(--border-primary)' : healthStroke || (e.priv ? '#3374cc' : 'var(--text-disabled)')), w: ov.w || (e.priv ? 2 : 1.5), dash: dashed ? '6 6' : 'none', crawl: !e.priv && !e.ghost, mx: (e.x1 + e.x2) / 2, my: (e.y1 + e.y2) / 2, px: e.kind === 'ingress' ? e.x2 : e.x1, py: e.kind === 'ingress' ? e.y2 : e.y1, portFill: e.priv ? '#0057b8' : 'var(--bg-base)', durS: ov.durS || (e.dur ? e.dur + 's' : '2s'), tailBegin: '-0.25s', retBegin: '-' + ((parseFloat(ov.durS || (e.dur ? e.dur + 's' : '2s')) || 2) / 2) + 's', chipW: e.chip ? e.chip.length * 8 + 14 : 0, showChip: !!e.chip && op === 1 || !!e.chip && !hoverKey, pulse: simHit || !!(e.region && e.region.landed) };
+    return { ...e, ...ov, key: e.id, d, op: ov.opOverride != null ? Math.min(op, ov.opOverride) : op, landed: !!(e.region && e.region.landed), amber: hh === 'amber' || hh === 'red', openObserve: hh === 'amber' || hh === 'red' ? () => { go('s3', { layer: 'cloud', tab: 'observe', obScope: 'cloud:' + e.region.cloud })(); } : null, stroke: ov.stroke || (e.ghost ? 'var(--border-primary)' : healthStroke || (e.priv ? '#3374cc' : 'var(--text-disabled)')), w: ov.w || (e.priv ? 2 : 1.5), dash: dashed ? (onHome && !e.priv ? '2 4' : '6 6') : 'none', crawl: !e.priv && !e.ghost, mx: (e.x1 + e.x2) / 2, my: (e.y1 + e.y2) / 2, px: e.kind === 'ingress' ? e.x2 : e.x1, py: e.kind === 'ingress' ? e.y2 : e.y1, portFill: e.priv ? '#0057b8' : 'var(--bg-base)', durS: ov.durS || (e.dur ? e.dur + 's' : '2s'), tailBegin: '-0.25s', retBegin: '-' + ((parseFloat(ov.durS || (e.dur ? e.dur + 's' : '2s')) || 2) / 2) + 's', chipW: e.chip ? e.chip.length * 8 + 14 : 0, showChip: !!e.chip && op === 1 || !!e.chip && !hoverKey, pulse: simHit || !!(e.region && e.region.landed) };
   });
   // A provider card's wires say the same thing ("private") side by side; once is enough.
   const saidOnCard = new Set();
@@ -474,11 +474,22 @@ export function vals(c) {
   // in Health's ink and shape (Down is the square), titled in Health's word.
   const H_RANK = { ok: 0, risk: 1, slo: 2, down: 3 };
   const worseOf = (a, b) => (H_RANK[b] > H_RANK[a] ? b : a);
+  // w2 (2026-09-30): only what Health lists. A dot read At risk by p95 alone (GCP europe-west1, 99 ms
+  // against 100) where Health lists nothing, and a rolled-up row with no data read Healthy; now a
+  // region with no open problem on Health is Healthy, and a row that names no region draws no dot.
+  // On Connect the lens colours the wire outside the network, so a dot there is the lens's score.
+  const onConnectMap = s.screen === 's3' && s.tab === 'connect';
+  const lensNow = s.lens || 'security', lensLabel = (R.LENSES.find(l => l.id === lensNow) || { label: lensNow }).label;
+  const NO_DOT = { relState: null, relFill: 'transparent', relRx: 4, relTitle: '' };
   const dotOf = (names) => {
-    const per = names.map(n => est0.regionsList.find(x => x.region === n)).filter(Boolean).map(r => {
-      const ps = probs.filter(p => p.region === r.region), st = ps.reduce((a, p) => worseOf(a, p.state), F.regionState(r));
-      const p = ps.find(x => x.state === st), ms = r.priv ? r.fab : r.pub;
-      return { r, st, why: p ? p.what : st === 'ok' ? '' : `p95 ${ms} ms against a ${r.priv ? F.SLO_PRIVATE : F.SLO} ms SLO` };
+    const rs = names.map(n => est0.regionsList.find(x => x.region === n)).filter(Boolean);
+    if (!rs.length) return NO_DOT;
+    if (onConnectMap) { const sc = Math.min(...rs.map(r => R.lensScore(r, lensNow)));
+      return { relState: 'lens' + sc, relFill: R.SCORE_COLOR[sc], relRx: 4, relTitle: `${lensLabel} lens: ${R.SCORE_WORD[sc]}` }; }
+    const per = rs.map(r => {
+      const ps = probs.filter(p => p.region === r.region), st = ps.reduce((a, p) => worseOf(a, p.state), 'ok');
+      const p = ps.find(x => x.state === st);
+      return { r, st, why: p ? p.what : '' };
     });
     const st = per.reduce((a, x) => worseOf(a, x.st), 'ok');
     const why = st === 'ok' ? '' : per.filter(x => x.st === st).map(x => `${x.r.cloud} ${x.r.region} · ${x.why}`).join('; ');
@@ -495,7 +506,9 @@ export function vals(c) {
     const ways = [...new Set(rs.map(x => (x.priv ? CONN_LABEL[connModeOf(x)].short : 'internet')))];
     if (r.ghost) return { ...r, key: 'card:' + r.cloud, x: L.rightX, dotX: L.rightX + 226, ...dotAt(L.rightX + 226, r.cy), tip: 'Discover to find them', op: 1, sub: r.cloud === 'Your clouds' ? 'AWS, Azure, GCP, Oracle' : 'CoreWeave, GPU clouds', relState: null, relFill: 'transparent', relRx: 4, relTitle: '', click: () => {}, enter: () => {}, leave: () => {}, dash: '4 4', color: 'var(--text-disabled)', cursor: 'default', caret: '' };
     return { ...r, dash: 'none', color: 'var(--text-heading)', cursor: 'pointer', caret: '›', hasPill: true, pillN: String(rs.length), key: 'card:' + r.cloud, x: L.rightX, dotX: L.rightX + 226, ...dotAt(L.rightX + 226, r.cy), tip: `${r.cloud} · ${plural(r.count, 'region', 'regions')} · ${plural(r.wl, 'workload', 'workloads')}`, op: dimFor(['reg' + r.region]), sub: `${plural(r.count, 'region', 'regions')} · ${ways.length > 2 ? ways.slice(0, 2).join(', ') + ' +' + (ways.length - 2) : ways.join(', ')}`,
-      ...dotOf(rs.map(x => x.region)),
+      // On Connect a cloud's one wire takes one region's lens score, so the card draws no dot of its
+      // own; open it and each region's dot reads the lens as its own wire does (w2, 2026-09-30).
+      ...(onConnectMap ? NO_DOT : dotOf(rs.map(x => x.region))),
       click: () => { seenHint(); set({ cloudPick: r.cloud, cloudDrill: [] }); }, enter: () => set({ hoverNode: 'reg' + r.region }), leave: () => set({ hoverNode: null }) };
   });
   const heroWorkloads0 = L.workloads.map(w => ({ ...w, op: dimFor(['reg' + w.region]), click: () => { const r = est.regionsList.find(x => x.region === w.region); if (r && !cloudDrill.length) set({ cloudDrill: [w.region], cloudPick: r.cloud }); else if (!r && !cloudPick) set({ cloudPick: w.region, cloudDrill: [] }); }, cursor: cloudDrill.length ? 'default' : 'pointer' }));
@@ -4626,13 +4639,14 @@ function homeLegend({ states, third, xc }) {
     ...(third ? [{ key: 'ot', sw: 'var(--text-light)', dash: true, l: 'third party (dashed)' }] : []),
     { key: 'oh', sw: null, l: 'a drop = a handoff off AT&T' },
     ...(xc ? [{ key: 'xc', sw: null, l: '□ your cross-connect (the colo answers for it)' }] : []),
-    { key: 'pub', sw: 'var(--text-disabled)', dash: true, l: 'public internet (dashed)' },
+    // Dotted, as its wire is (w2, 2026-09-30): two grey dashes 1.5:1 apart read as one mark.
+    { key: 'pub', sw: 'var(--text-disabled)', dotted: true, l: 'public internet (dotted)' },
     ...['down', 'slo', 'risk', 'ok'].filter(k => states.has(k)).map(k => ({ key: 'h-' + k, sw: F.HEALTH_INK[k], dot: F.healthRadius(k) === '2px' ? '1px' : '9999px', l: F.HEALTH_WORD[k] })),
   ];
 }
 // A legend key draws a line (solid or dashed) or a dot, never both.
 const legendKey = (x) => ({ ...x, isDot: !!x.dot, isBar: !!x.sw && !x.dot, rad: x.dot || '2px',
-  bar: x.dash ? `repeating-linear-gradient(90deg,${x.sw} 0 4px,transparent 4px 7px)` : (x.sw || 'transparent') });
+  bar: x.dotted ? `repeating-linear-gradient(90deg,${x.sw} 0 2px,transparent 2px 5px)` : x.dash ? `repeating-linear-gradient(90deg,${x.sw} 0 4px,transparent 4px 7px)` : (x.sw || 'transparent') });
 function overlayLegend(s, R) {
   if (s.screen !== 's3') return [];
   const tab = s.tab;
@@ -4643,7 +4657,8 @@ function overlayLegend(s, R) {
     { key: 'oh', sw: null, l: 'a drop = a handoff off AT&T' },
     { key: 'xc', sw: null, l: '□ your cross-connect (the colo answers for it)' },
     { key: 'g', sw: 'var(--success)', l: 'good' }, { key: 'f', sw: 'var(--warning)', l: 'fair' }, { key: 'p', sw: 'var(--error)', l: 'poor' },
-    { key: 'lens', sw: null, l: 'outside the network, wire colour follows the ' + (s.lens || 'security') + ' lens' }];
+    // w2 (2026-09-30): a region's dot on Connect is its lens score too, so the dot and its wire never disagree.
+    { key: 'lens', sw: null, l: 'outside the network, a wire and its region\'s dot follow the ' + (s.lens || 'security') + ' lens' }];
   if (tab === 'observe') return [{ key: 'w', sw: null, l: 'thickness = Gbps' }, { key: 'b', sw: '#0057b8', l: 'AT&T network' }, { key: 'p', sw: '#8a949c', l: 'public internet' }, { key: 'r', sw: 'var(--error)', l: 'red sleeve = over 100 ms' }, { key: 'd', sw: null, l: 'dashed = public path' }];
   if (tab === 'govern') return [{ key: 'g', sw: '#0057b8', l: 'gate = policy on this path' }, { key: 'o', sw: '#00abeb', l: 'matched by the policy you are authoring' }, { key: 'v', sw: 'var(--error)', l: 'violation' }, { key: 'd', sw: null, l: 'dashed = simulated' }];
   if (tab === 'cost') return [{ key: 'w', sw: null, l: 'thickness = $/mo' }, { key: 'r', sw: 'var(--error)', l: 'red sleeve = premium over the AT&T rate' }, { key: 's', sw: null, l: 'slide the forecast to land the moves' }];

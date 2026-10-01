@@ -42,7 +42,8 @@ test('Degraded is one red everywhere', () => {
   }
   const obs = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', tab: 'observe', obPage: 'perf', obTab: 'flow' }));
   assert.equal(obs.mapLegend.find(l => l.label === 'Degraded').color, 'var(--error)');
-  const con = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', tab: 'connect' }));
+  // The home's map carries Health's state; Connect's map colours by its lens, so its cards draw no dot (w2, 2026-09-30).
+  const con = vals(mkC({ view: 'partial', estateParam: null, screen: 's0' }));
   assert.equal(con.heroClouds.find(c => c.cloud === 'Azure').relFill, 'var(--error)', 'Azure carries the degraded eastus');
 });
 

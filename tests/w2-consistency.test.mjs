@@ -147,3 +147,60 @@ test('A Signals traffic figure opens its records with that figure, never a map s
   }
   assert.ok(seen > 20, `only ${seen} figures checked`);
 });
+
+const WORST = { ok: 0, risk: 1, slo: 2, down: 3 };
+test('The home\'s map dots draw only what Health lists, and a rolled-up row draws none', () => {
+  for (const view of VIEWS) {
+    const health = vals(obs(view, { obPanel: 'health' })).problemRows;
+    const home = vals(mkC({ view, estateParam: null, screen: 's0' }));
+    const regs = ESTATES[view].regionsList;
+    const want = (names) => { const rs = regs.filter(r => names.includes(r.region)); if (!rs.length) return null;
+      return rs.reduce((a, r) => health.filter(p => p.where === `${r.cloud} ${r.region}`).reduce((b, p) => (WORST[p.state] > WORST[b] ? p.state : b), a), 'ok'); };
+    for (const r of home.heroRegions) {
+      if (r.ghost) continue;
+      assert.equal(r.relState, want([r.region]), `${view}: ${r.region}'s dot reads ${r.relState} ("${r.relTitle}")`);
+      if (!r.relState) assert.equal(r.relFill, 'transparent', `${view}: ${r.region} draws a dot with no state`);
+    }
+    for (const cc of home.heroClouds.filter(x => !x.ghost)) {
+      const names = regs.filter(x => x.cloud === cc.cloud).map(x => x.region);
+      assert.equal(cc.relState, want(names), `${view}: ${cc.cloud}'s dot reads ${cc.relState} ("${cc.relTitle}")`);
+    }
+  }
+});
+
+test('Every dot a map draws has a key on that map, and on Connect a dot and its wire mean one thing', () => {
+  for (const view of ['partial', 'mature', 'trust']) {
+    for (const [where, patch] of [['home', { screen: 's0' }], ['Connect', { screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'picture' }], ['Connect, performance', { screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'picture', lens: 'performance' }]]) {
+      const v = vals(mkC({ view, estateParam: null, ...patch }));
+      const keys = new Set(v.overlayLegend.filter(l => l.isDot || l.isBar).map(l => l.sw));
+      for (const d of [...v.heroRegions, ...v.heroClouds].filter(x => x.relFill && x.relFill !== 'transparent'))
+        assert.ok(keys.has(d.relFill), `${view} ${where}: ${d.region || d.cloud}'s dot ${d.relFill} ("${d.relTitle}") has no key`);
+      if (where !== 'home') {
+        // On Connect the lens colours the wire outside the network; a dot never says something else in that ink.
+        const lensInks = new Set(['var(--success)', 'var(--warning)', 'var(--error)']);
+        for (const d of [...v.heroRegions, ...v.heroClouds].filter(x => lensInks.has(x.relFill)))
+          assert.match(d.relTitle, /lens/i, `${view} ${where}: ${d.region || d.cloud}'s dot "${d.relTitle}" wears a lens ink`);
+        assert.ok(v.overlayLegend.some(l => /dot/.test(l.l) && /lens/.test(l.l)), `${view} ${where}: the legend does not say the dots follow the lens`);
+        // Opened, each region's dot is its own wire's colour.
+        for (const cloud of ['AWS', 'Azure']) {
+          const o = vals(mkC({ view, estateParam: null, ...patch, cloudPick: cloud }));
+          for (const r of o.heroRegions.filter(x => x.relFill && x.relFill !== 'transparent')) {
+            const wire = o.heroEdges.find(e => e.region && e.region.region === r.region && !e.ghost && e.kind === 'egress');
+            if (wire) assert.equal(wire.stroke, r.relFill, `${view} ${where}: ${r.region}'s dot is ${r.relFill}, its wire ${wire.stroke}`);
+          }
+          for (const cc of o.heroClouds) assert.equal(cc.relFill, 'transparent', `${view} ${where}: the ${cc.cloud} card draws a dot`);
+        }
+      }
+    }
+  }
+});
+
+test('The home legend\'s third party and public internet keys are two marks, as their wires are', () => {
+  const v = vals(mkC({ view: 'mature', estateParam: null, screen: 's0' }));
+  const third = v.overlayLegend.find(l => l.key === 'ot'), pub = v.overlayLegend.find(l => l.key === 'pub');
+  assert.ok(third && pub, 'Established keys both');
+  assert.notEqual(third.bar, pub.bar.replace(pub.sw, third.sw), 'the two keys differ only by a grey');
+  const pubWires = v.heroEdges.filter(e => !e.priv && !e.ghost);
+  assert.ok(pubWires.length, 'a public wire');
+  for (const w of pubWires) assert.equal(w.dash, '2 4', `the public wire ${w.key} is not dotted, as its key is`);
+});

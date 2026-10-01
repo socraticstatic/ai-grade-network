@@ -112,11 +112,12 @@ test('P10: the map head counts regions without flow logs as regions, beside the 
 
 // ---- P14: the map below the home: whose path, and Health's state, keyed ----
 
-// The Health state of a region: the one rule, or worse if Health lists a problem there.
+// The Health state of a region: what Health lists there, else Healthy (w2, 2026-09-30: the one
+// rule alone drew GCP europe-west1 At risk at 99 ms where Health lists nothing).
 function stateOf(view, v, region) {
   const r = D.ESTATES[view].regionsList.find(x => x.region === region);
   const probs = v.problemRows.filter(p => p.where === `${r.cloud} ${r.region}`).map(p => p.state);
-  return worst([F.regionState(r), ...probs]);
+  return worst(['ok', ...probs]);
 }
 
 test('P14: on the home, a wire says whose path it is, never a lens the home has no control for', () => {
@@ -124,11 +125,12 @@ test('P14: on the home, a wire says whose path it is, never a lens the home has 
     const v = vals(home(view));
     for (const e of v.heroEdges.filter(x => x.region && !x.ghost)) {
       assert.equal(e.stroke, e.priv ? '#3374cc' : 'var(--text-disabled)', `${view} ${e.key}: ${e.stroke}`);
-      assert.equal(e.dash, e.priv ? 'none' : '6 6', `${view} ${e.key}`);
+      // Dotted outside AT&T on the home (w2, 2026-09-30), so it never reads as the third party's dash.
+      assert.equal(e.dash, e.priv ? 'none' : '2 4', `${view} ${e.key}`);
       assert.ok(!e.amber, `${view} ${e.key}: an amber pulse on the home`);
     }
     assert.ok(!v.overlayLegend.some(l => /lens|good|fair|poor/.test(l.l)), `${view}: ${v.overlayLegend.map(l => l.l).join(' · ')}`);
-    assert.ok(v.overlayLegend.some(l => l.l === 'public internet (dashed)' && l.sw === 'var(--text-disabled)'), view);
+    assert.ok(v.overlayLegend.some(l => l.l === 'public internet (dotted)' && l.sw === 'var(--text-disabled)'), view);
   }
   // Growing: GCP is not down, so nothing on its wire is red.
   const g = vals(home('partial'));
@@ -139,6 +141,9 @@ test('P14: every node dot on the map is Health\'s state for its regions, in Heal
   for (const view of LIVE) {
     for (const scr of ['s0', 's3']) {
       const v = vals(scr === 's0' ? home(view) : mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', nowIso: NOW }));
+      // On Connect the lens colours the wires outside the network, so a cloud card draws no dot and a
+      // region's dot is its lens score, keyed with the wires (w2, 2026-09-30; tests/w2-consistency).
+      if (scr === 's3') { for (const c of v.heroClouds) assert.equal(c.relFill, 'transparent', `${view} Connect ${c.cloud}`); continue; }
       const drawn = new Set();
       for (const c of v.heroClouds.filter(x => !x.ghost)) {
         const st = worst(D.ESTATES[view].regionsList.filter(r => r.cloud === c.cloud).map(r => stateOf(view, v, r.region)));
