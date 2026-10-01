@@ -193,8 +193,10 @@ function siteMoves(est, ctx) {
     const ms = p95(pts);
     const hToday = F.healthOf(ms, F.SLO);
     const dest = (behind && behind.pathDst) || andList([...new Set(est.regionsList.map(r => r.cloud))]);
+    // The cloud that bills the tunnels is named, the one Cost > By cloud puts them in (R.ipsecCloud, 2026-09-30).
+    const tunnelCloud = mode === 'ipsec' ? R.ipsecCloud(est) : null;
     const reason = mode === 'ipsec'
-      ? `${andList(members.map(x => x.metro))} reach ${dest} over IPsec on another carrier's internet${egBefore ? `; ${fmt(egBefore)}/mo of their egress bills at internet rates` : ''}.`
+      ? `${andList(members.map(x => x.metro))} reach ${dest} over IPsec on another carrier's internet${tunnelCloud ? `; ${tunnelCloud} bills their ${plural(tunnels, 'tunnel', 'tunnels')}${egBefore ? ` and ${fmt(egBefore)}/mo of their egress at internet rates` : ''}` : egBefore ? `; ${fmt(egBefore)}/mo of their egress bills at internet rates` : ''}.`
       : mode === 'sdwan'
         ? `${andList(labels)} reach the clouds over SD-WAN on another carrier's internet${f ? `; ${lowerFirst(f.head)}` : ''}.`
         : `${members.map(x => `${x.name} rides ${x.carrier || x.access}${x.xc && x.xc.at ? `, cross-connected at ${x.xc.at}` : x.via ? ` end to end into ${x.via}` : ''}`).join('; ')}. ${carrier || 'Another carrier'} holds their SLA, not AT&T.`;

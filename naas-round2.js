@@ -366,6 +366,13 @@ const catPrice = (id) => ((CATALOG.find(p => p.id === id) || {}).price) || 0;
 // The words each AT&T charge counts in (By leg reads count × unit, 2026-09-30).
 const ATT_WORDS = { nb: { unit: 1800, nouns: ['region', 'regions'] }, hv: { unit: 2400, nouns: ['hosted VPC', 'hosted VPCs'] }, l3: { unit: 400, nouns: ['L3 attach', 'L3 attaches'] } };
 const each = (v) => (Number.isInteger(v) ? fmt(v) : '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+/**
+ * The cloud that bills an estate's IPsec tunnels: the cloud of its IPsec egress bucket,
+ * whose VPN list price Cost applies. By cloud and Connect > Recommended both read it
+ * (the skeptic, 2026-09-30: By cloud put every tunnel in AWS while Recommended said the
+ * sites reach Azure over IPsec, naming no cloud that bills them).
+ */
+export const ipsecCloud = (est) => ((est.buckets || []).find(b => b.id === 'ipsec') || {}).cloud || null;
 
 export function costLegs(est, inv, utilRows) {
   const sites = est.sites || [], regs = est.regionsList || [];
@@ -406,7 +413,7 @@ export function costLegs(est, inv, utilRows) {
     // A tunnel ends on a cloud's VPN gateway and that cloud bills it: the cloud of the IPsec
     // egress bucket, whose VPN list price we apply (By cloud, 2026-09-30: "by csp").
     ...(ipsecN ? [{ key: 'ipsec', label: 'IPsec tunnels', n: ipsecN, v: ipsecN * CSP_VPN, sub: `${ipsecN.toLocaleString('en-US')} tunnels × ${each(CSP_VPN)} cloud VPN list price`, modelled: true, unit: CSP_VPN, nouns: ['tunnel', 'tunnels'], rateWords: 'the cloud VPN list price',
-      parts: siteParts(ipsecSites, CSP_VPN, 'list', true).map(p => ({ ...p, cloud: ((est.buckets || []).find(b => b.id === 'ipsec') || {}).cloud || undefined })) }] : []),
+      parts: siteParts(ipsecSites, CSP_VPN, 'list', true).map(p => ({ ...p, cloud: ipsecCloud(est) || undefined })) }] : []),
   ];
   // Cloud provider: each cloud's ports at its list price, then this month's egress.
   // direct: the share of it that is direct-connect regions' ports, which the

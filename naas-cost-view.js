@@ -151,9 +151,23 @@ const labelOf = (key) => (key === SITES ? SITES_LABEL : key);
 const LEGS = ['access', 'connect', 'cloud'];
 
 /**
+ * Whole numbers that add to `target` (by default the sum, rounded): each value floored,
+ * then the largest remainders take the rest (the skeptic, 2026-09-30: Growing's five
+ * regions each held one $36.50 tunnel, each rounded up, and the bars read $2 over the
+ * head; the leg tiles read 99% and 101%).
+ */
+export function roundTo(values, target) {
+  const t = target == null ? Math.round(values.reduce((a, x) => a + x, 0)) : target;
+  const floor = values.map(Math.floor);
+  let left = t - floor.reduce((a, x) => a + x, 0);
+  values.map((x, i) => [x - floor[i], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).forEach(([, i]) => { if (left > 0) { floor[i] += 1; left -= 1; } });
+  return floor;
+}
+/**
  * The members of a slice with what each costs a month, largest first. Their sum is
- * the estate's total. A member with parts but no price (CoreWeave's two ports, on no
- * public price list) is still a member: it holds things, it just costs $0 here.
+ * the estate's total; vR is each one's whole dollars, and those add to the total's.
+ * A member with parts but no price (CoreWeave's two ports, on no public price list) is
+ * still a member: it holds things, it just costs $0 here.
  */
 export function costMembers(est, L, by) {
   if (by !== 'region' && by !== 'cloud') return [];
@@ -163,8 +177,10 @@ export function costMembers(est, L, by) {
       g.v += p.v * sh;
       if (p.kind === 'site') g.sites.add(p.site); else if (p.kind === 'region') g.regions.add(p.region); else if (p.kind === 'bucket') g.buckets.add(p.bucket); }
   }
-  return Object.values(m).map(g => ({ key: g.key, label: g.label, v: g.v, sites: [...g.sites], regions: [...g.regions], buckets: [...g.buckets] }))
+  const out = Object.values(m).map(g => ({ key: g.key, label: g.label, v: g.v, sites: [...g.sites], regions: [...g.regions], buckets: [...g.buckets] }))
     .sort((a, b) => b.v - a.v || a.label.localeCompare(b.label));
+  const vR = roundTo(out.map(g => g.v));
+  return out.map((g, i) => ({ ...g, vR: vR[i] }));
 }
 
 /** One row, cut to a member: its parts that land there, at their share. */

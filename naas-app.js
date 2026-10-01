@@ -3728,8 +3728,12 @@ function costVals(s, set, est, invAll, ob, go, c) {
   const optRows = optBase.map(r => ({ ...r, go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(r.target, r.resize) : optGo[r.key],
     hasCta: !r.empty, hasStart: !!optTop && optTop.key === r.key, hasState: !!r.state, op: r.empty ? 0.6 : 1, lineRows: r.lines.slice(0, 2).map((t, i) => ({ key: r.key + i, text: t })) }));
   const optSave = optBase[0].figure + optBase[1].figure;
-  const optVals = { optRows, hasOptRows: est.regionsList.length > 0, optIsEmpty: !est.regionsList.length, optEmpty: 'No egress seen yet.',
-    optLine: optSave ? `Save ${fmt(Math.round(optSave / 100) * 100)}/mo across Spend and Routing` : 'Nothing priced to move today' };
+  // The line names only the moves it prices (the skeptic, 2026-09-30: Small business read "across Spend and Routing"
+  // where Routing prices nothing), the same moves the Could save tile names.
+  const optPriced = optBase.slice(0, 2).filter(r => r.figure > 0).map(r => r.label);
+  // On the empty estate the page head already says No egress seen yet; Optimize does not say it again.
+  const optVals = { optRows, hasOptRows: est.regionsList.length > 0, optIsEmpty: !est.regionsList.length && est.stage !== 'empty', optEmpty: 'No egress seen yet.',
+    optLine: optSave ? `Save ${fmt(Math.round(optSave / 100) * 100)}/mo ${optPriced.length > 1 ? 'across' : 'in'} ${optPriced.join(' and ')}` : 'Nothing priced to move today' };
   const bT = (est.buckets || []).reduce((a, b) => a + b.today, 0), bF = (est.buckets || []).reduce((a, b) => a + b.fabric, 0);
   const targetSave = bT > bF ? bT - bF : 0;
   // AT&T charges (AO-360): catalog prices against what is attached. Fabric egress is the "On AT&T" total from the buckets.
@@ -4056,32 +4060,38 @@ function costLegVals(s, set, est, legs0, go, c) {
   // What a bar holds, counted from the estate: the sites and cloud regions in that place, or that cloud's regions and buckets.
   const counts = (b) => { const k = CV.memberCounts(est, cb, b.key), w = (n, one, many) => (n ? `${n.toLocaleString('en-US')} ${n === 1 ? one : many}` : '');
     return [w(k.sites, 'site', 'sites'), w(k.regions, 'cloud region', 'cloud regions'), cb === 'cloud' ? w(k.buckets, 'egress bucket', 'egress buckets') : ''].filter(Boolean).join(' · '); };
+  // Whole dollars and whole percents that add up (the skeptic, 2026-09-30: the bars read $2 over the head, the tiles
+  // 99% and 101%): a member's figure is its share of the head's dollars, a tile's its share of its member's, by largest remainder.
+  const pickM = pick ? members.find(m => m.key === pick) : null;
+  const legKs = ['access', 'connect', 'cloud'], legTotalR = pickM ? pickM.vR : Math.round(legs.total);
+  const legR = CV.roundTo(legKs.map(k => legs[k].total), legTotalR);
+  const legPct = legs.total > 0 ? CV.roundTo(legKs.map(k => legs[k].total / legs.total * 100), 100) : legKs.map(() => 0);
   return {
-    legTiles: ['access', 'connect', 'cloud'].map(k => { const l = legs[k], segs = CV.inkSegs(l.rows), t = segs.reduce((a, x) => a + x.v, 0) || 1;
+    legTiles: legKs.map((k, i) => { const l = legs[k], segs = CV.inkSegs(l.rows);
       // A picked member's tiles are shares of that member, not of the estate (the skeptic, 2026-09-30).
-      return { key: l.key, l: l.label, v: fmt(Math.round(l.total)), u: '/mo', covers: CV.legCovers(l), sub: pick ? `${legs.total > 0 ? Math.round(l.total / legs.total * 100) : 0}% of ${pickLabel}` : `${legs0.total > 0 ? Math.round(l.total / legs0.total * 100) : 0}% of the total`,
-        title: `${l.label}: ${fmt(Math.round(l.total))}/mo · ${CV.legCovers(l)} · ${segs.map(x => `${I[x.ink].word}${x.modelled ? ', modelled' : ''} ${fmt(Math.round(x.v))}`).join(' · ') || 'nothing priced'}`,
+      return { key: l.key, l: l.label, v: fmt(legR[i]), u: '/mo', covers: CV.legCovers(l), sub: `${legPct[i]}% of ${pick ? pickLabel : 'the total'}`,
+        title: `${l.label}: ${fmt(legR[i])}/mo · ${CV.legCovers(l)} · ${segs.map(x => `${I[x.ink].word}${x.modelled ? ', modelled' : ''} ${fmt(Math.round(x.v))}`).join(' · ') || 'nothing priced'}`,
         go: () => set({ legDrill: null, [PAGE[k]]: 0 }) }; }),
     legAccessRows: rowsOf('access'), legConnectRows: rowsOf('connect'), legCloudRows: rowsOf('cloud'),
     legAHead: headOf('access'), legCHead: headOf('connect'), legPHead: headOf('cloud'),
     // Empty says No egress once, in the page's own line (the skeptic, 2026-09-30).
     hasLegs: legs0.total > 0, noLegs: !(legs0.total > 0) && est.stage !== 'empty', legEmpty: legs0.total > 0 ? '' : 'No egress seen yet.',
     // The line over the legs, its figure a door: the total opens By region, the same money by place.
-    legWho: whose, legTotalF: fmt(Math.round(legs.total)), legRest: 'a month, end to end. Each row is count × unit; open one to see what it counts.',
+    legWho: whose, legTotalF: fmt(legTotalR), legRest: 'a month, end to end. Each row is count × unit; open one to see what it counts.',
     legTotalGo: () => set({ costPanel: 'money', costBy: by === 'cloud' ? 'cloud' : 'region', costPick: null, ...reset }),
     // The filter bar: the house By chips (Observe's grammar), then the members with what each costs.
     costByChips: [['all', 'Whole estate'], ['region', 'By region'], ['cloud', 'By cloud']].map(([k, l]) => { const on = by === k;
       return { key: k, label: l, on, ...chipStyle(on), go: () => set({ costBy: k, costPick: null, ...reset }) }; }),
-    costMembers: members.map(m => { const on = pick === m.key; return { key: m.key, label: m.label, v: m.v, vF: fmt(Math.round(m.v)), on, bg: on ? 'var(--bg-accent)' : 'transparent', color: on ? 'var(--link)' : 'var(--text-heading)', border: on ? 'var(--cta)' : 'var(--border-secondary)',
+    costMembers: members.map(m => { const on = pick === m.key; return { key: m.key, label: m.label, v: m.v, vF: fmt(m.vR), on, bg: on ? 'var(--bg-accent)' : 'transparent', color: on ? 'var(--link)' : 'var(--text-heading)', border: on ? 'var(--cta)' : 'var(--border-secondary)',
       go: () => set({ costPick: on ? null : m.key, ...reset }) }; }),
     hasCostMembers: members.length > 0,
     // By region, the chart: one bar per region (or cloud), from the same slice.
     costChartChips: [['region', 'By region'], ['cloud', 'By cloud']].map(([k, l]) => { const on = cb === k; return { key: k, label: l, on, ...chipStyle(on), go: () => set({ costBy: k, costPick: null, ...reset }) }; }),
-    regionBars: bars.map(b => ({ key: b.key, label: b.label, v: b.v, egressV: b.egressV, vF: fmt(b.v), sub: counts(b), w: (b.v / bmax * 100).toFixed(2) + '%', frac: (b.v / bmax).toFixed(4),
+    regionBars: bars.map(b => ({ key: b.key, label: b.label, v: b.v, egressV: b.egressV, vF: fmt(b.vR), sub: counts(b), w: (b.v / bmax * 100).toFixed(2) + '%', frac: (b.v / bmax).toFixed(4),
       // A member that costs $0 here (CoreWeave's ports) is a not-priced-here outline, so it still shows.
       segs: b.v > 0.005 ? b.segs.map(x => ({ key: x.key, ink: x.ink, modelled: x.modelled, v: x.v, w: (x.v / b.v * 100).toFixed(2) + '%', color: I[x.ink].color, bg: CV.fillOf(x.ink, x.modelled), edge: '0', title: `${I[x.ink].word}${x.modelled ? ', modelled' : ''}: ${fmt(Math.round(x.v))}/mo` }))
         : [{ key: 'other', ink: 'other', modelled: false, v: 0, w: '100%', color: I.other.color, bg: 'transparent', edge: `1px solid ${I.other.color}`, title: `${I.other.word}: counted, on no public price list` }],
-      title: `${b.label}: ${fmt(b.v)}/mo · site access ${fmt(b.legs.access)} · cloud connectivity ${fmt(b.legs.connect)} · cloud provider ${fmt(b.legs.cloud)}. Open it by leg.`,
+      title: `${b.label}: ${fmt(b.vR)}/mo · ${(([a, n, p]) => `site access ${fmt(a)} · cloud connectivity ${fmt(n)} · cloud provider ${fmt(p)}`)(CV.roundTo([b.legs.access, b.legs.connect, b.legs.cloud], b.vR))}. Open it by leg.`,
       go: () => set({ costPanel: 'legs', costBy: cb, costPick: b.key, ...reset }) })),
     hasRegionBars: bars.length > 0, noRegionBars: bars.length === 0 && est.stage !== 'empty', regionEmpty: 'No spend seen yet.',
     regionHead: cb === 'cloud' ? 'a month, by cloud' : 'a month, by region', regionTotalF: fmt(Math.round(legs0.total)),

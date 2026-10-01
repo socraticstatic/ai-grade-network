@@ -180,7 +180,9 @@ test('By region is spend, not the old savings strip: attached regions are on it,
   const v = vals(cost('partial', { costPanel: 'money' }));
   const east = v.regionBars.find(b => b.key === 'US East');
   assert.ok(east && east.segs.some(s => s.ink === 'att' && s.v > 0), 'US East carries us-east-1 on AT&T');
-  for (const b of v.regionBars) { assert.equal(b.vF, '$' + Math.round(b.v).toLocaleString('en-US')); assert.ok(b.segs.every(s => /%$/.test(s.w))); }
+  // Re-pinned (2026-09-30, the skeptic's third read): each bar rounds by largest remainder, so the bars add to the
+  // head to the dollar; a figure is still its value rounded down or up, never further.
+  for (const b of v.regionBars) { assert.ok(Math.abs(+b.vF.replace(/[$,]/g, '') - b.v) < 1, `${b.key}: ${b.vF} vs ${b.v}`); assert.ok(b.segs.every(s => /%$/.test(s.w))); }
   assert.match(panelOf('costPanelMoney'), /\{\{ rb\.vF \}\}/);
 });
 
