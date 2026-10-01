@@ -27,27 +27,22 @@ const egressIn = (e, L, key, ink) => { const row = CV.sliceLegs(e, L, 'region', 
 
 // ---------- P1: egress by region takes the Savings list's split ----------
 
-test('egress outside AT&T lands only in public regions, on AT&T only in attached ones, by workloads, as the Savings list splits', () => {
+// Re-pinned (2026-09-30, the skeptic's third read): pooling every bucket of one ink across the estate put
+// GCP's egress in AWS and Azure regions. Each bucket now lands in its own cloud's regions only (LC.egressByRegion):
+// at the AT&T price in the attached ones; outside AT&T in the public ones, or the attached ones where its cloud
+// has none public. tests/cost-own-cloud.test.mjs pins By region summed by cloud against By cloud.
+test('egress by region: each bucket in its own cloud\'s regions, by workloads, and a place holds what its regions hold', () => {
   for (const view of BUCKETED) {
     const e = D.ESTATES[view], L = legsOf(view);
     const regs = e.regionsList;
-    const out = e.buckets.filter(b => CV.bucketInk(e, b) === 'public').reduce((a, b) => a + b.today, 0);
-    const att = e.buckets.filter(b => CV.bucketInk(e, b) === 'att').reduce((a, b) => a + b.today, 0);
-    const pubW = regs.map(r => (r.priv ? 0 : (r.wl || 1))), attW = regs.map(r => (r.priv ? (r.wl || 1) : 0));
-    const outOf = LC.split(out, pubW), attOf = LC.split(att, attW);
-    // The Savings list, by cloud region, aggregated to the same places.
-    const open = LC.savingsBy(e, 'region', { banked: 0, open: 100000 });
+    const outOf = LC.egressByRegion(e, 'public').byRegion, attOf = LC.egressByRegion(e, 'att').byRegion;
     const members = CV.costMembers(e, L, 'region');
     for (const m of members) {
       const inGeo = regs.map((r, i) => [r, i]).filter(([r]) => CV.geoOfRegion(r.region) === m.key);
       const wantOut = inGeo.reduce((a, [, i]) => a + outOf[i], 0), wantAtt = inGeo.reduce((a, [, i]) => a + attOf[i], 0);
       assert.ok(near(egressIn(e, L, m.key, 'public'), wantOut, 0.5), `${view} ${m.key}: outside ${egressIn(e, L, m.key, 'public')} vs ${wantOut}`);
       assert.ok(near(egressIn(e, L, m.key, 'att'), wantAtt, 0.5), `${view} ${m.key}: on AT&T ${egressIn(e, L, m.key, 'att')} vs ${wantAtt}`);
-      if (!inGeo.some(([r]) => !r.priv)) assert.equal(egressIn(e, L, m.key, 'public'), 0, `${view} ${m.key} has no public region, so no egress outside AT&T`);
-      if (!inGeo.some(([r]) => r.priv)) assert.equal(egressIn(e, L, m.key, 'att'), 0, `${view} ${m.key} has nothing attached, so no egress on AT&T`);
-      // Its share of the egress outside AT&T is its share of the open savings.
-      const openHere = open.filter(o => inGeo.some(([r]) => `${r.cloud} ${r.region}` === o.label)).reduce((a, o) => a + o.open, 0);
-      if (out > 0) assert.ok(Math.abs(wantOut / out - openHere / 100000) < 0.001, `${view} ${m.key}: ${wantOut / out} vs ${openHere / 100000}`);
+      if (!inGeo.some(([r]) => r.priv)) assert.equal(egressIn(e, L, m.key, 'att'), 0, `${view} ${m.key} has nothing attached, so no egress at the AT&T price`);
     }
   }
   // The skeptic's cases: Established's US East is all attached, so none of its egress is outside AT&T.
@@ -147,7 +142,9 @@ test('an egress row leads with its figure, and a member row\'s service list is s
     assert.match(CV.rowWords(eg), /^(\$[\d,]+ outside AT&T|All outside AT&T|All at your AT&T rate) · /, CV.rowWords(eg));
   }
   const t = D.ESTATES.trust, TL = legsOf('trust');
-  assert.match(CV.rowWords(CV.sliceLegs(t, TL, 'region', 'US Central').cloud.rows.find(r => r.key === 'egress')), /^\$80,067 outside AT&T · 2 cloud regions/, 'Bank scale US Central mixes both');
+  // Re-pinned (2026-09-30, the skeptic's third read): Bank scale's US Central holds GCP's $84,000 and Azure's $38,000,
+  // both outside AT&T, not a pooled mix of every cloud's buckets.
+  assert.match(CV.rowWords(CV.sliceLegs(t, TL, 'region', 'US Central').cloud.rows.find(r => r.key === 'egress')), /^All outside AT&T · 2 cloud regions/, 'Bank scale US Central is its own clouds\' egress');
   assert.match(CV.rowWords(L.cloud.rows.find(r => r.key === 'egress')), /^\$[\d,]+ outside AT&T/);
   for (const view of ['partial', 'mature', 'trust']) for (const by of ['region', 'cloud']) {
     const v = vals(cost(view, { costPanel: 'legs', costBy: by }));
@@ -272,14 +269,16 @@ test('the empty estate says No egress once, and Spend draws no empty savings lis
 
 // ---------- R1: By region keeps its per-region Attach door and its arithmetic ----------
 
-test('By region lists what each public region could save, with an Attach door and the arithmetic', () => {
+test('By region lists what each region could save, with an Attach or Steer door and the arithmetic', () => {
   for (const view of ['partial', 'mature', 'trust', 'small']) {
     const e = D.ESTATES[view], c = cost(view, { costPanel: 'money' });
     const v = vals(c);
-    const pub = e.regionsList.filter(r => !r.priv);
-    assert.equal(v.regionSaveRows.length, pub.length, view);
+    // Re-pinned (2026-09-30, the skeptic's third read): every region carrying egress outside AT&T has a row, its own
+    // cloud's buckets only, so Bank scale's attached GCP us-central1 (GCP has no public region) is one too, and steers.
+    const out = LC.egressByRegion(e, 'public').byRegion;
+    assert.equal(v.regionSaveRows.length, e.regionsList.filter((r, i) => out[i] > 0).length, view);
     // Each row's saving is the Savings list's still-open figure for that region, to the dollar.
-    const open = Object.fromEntries(LC.savingsBy(e, 'region', { banked: 0, open: money(v.bankTiles.find(t => t.l === 'Still open').v) }).map(o => [o.label, o.open]));
+    const open = Object.fromEntries(LC.savingsBy(e, 'region', { open: e.findings.filter(f => f.priced) }).map(o => [o.label, o.open]));
     for (const r of v.regionSaveRows) {
       assert.equal(r.saveN, open[r.label], `${view} ${r.label}`);
       assert.equal(r.nowN - r.saveN, r.afterN, `${view} ${r.label}: today less the saving is the AT&T price`);

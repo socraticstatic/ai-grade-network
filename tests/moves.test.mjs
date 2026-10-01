@@ -97,8 +97,9 @@ test('before values: a public region set reads its public latency and its Cost-p
     const est = D.ESTATES[view];
     const c = on(view);
     const v = vals(c);
-    const bT = est.buckets.reduce((a, b) => a + b.today, 0), bF = est.buckets.reduce((a, b) => a + b.fabric, 0);
-    const arb = R.arbitrage(est, bT, bT - bF);
+    // Re-pinned (2026-09-30, the skeptic's third read): R.arbitrage takes the open priced findings, not a dollar
+    // total; with none passed it reads every priced finding, which is what this estate has open today.
+    const arb = R.arbitrage(est);
     for (const m of v.moveList.filter(x => x.kind === 'region')) {
       const rs = est.regionsList.filter(r => m.regions.includes(r.region));
       assert.equal(m.today.egress, arb.filter(a => m.regions.includes(a.regionId)).reduce((s, a) => s + Math.round(+a.now.replace(/[$,]/g, '')), 0), `${view} ${m.title}`);

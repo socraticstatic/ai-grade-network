@@ -11,8 +11,8 @@ import { fmt, pct, connModeOf, attHolds, siteModeOf } from './naas-logic.js';
 import { CATALOG } from './naas-data.js';
 import { agoOf, hhmm, startOf, INCIDENT_MIN } from './naas-schedule.js';
 import { regionState, RAMP_NAME, HEALTH_INK } from './naas-flowmap.js';
-import { bucketInk, regionWeights } from './naas-cost-view.js';
-import { split as splitDollars } from './naas-lifecycle.js';
+import { bucketInk } from './naas-cost-view.js';
+import { egressByRegion, openByRegion, bucketWeights } from './naas-lifecycle.js';
 
 // ---------- Three paths x four lenses ----------
 export const PATHS = [
@@ -163,33 +163,39 @@ const DEST_CLASSES = [
   { key: 'x', label: 'Inter-cloud', share: 0.18, hyper: 0.18, fabric: 0.02 },
 ];
 /**
- * What each public region pays outside AT&T and could save (Cost > By region, its
- * Attach rows and their arithmetic, restored 2026-09-30). Read off the buckets and
- * split the way the Savings list splits (LC.savingsBy): the egress outside AT&T and
- * the saving each go to the public regions by workloads, to the dollar, so a row's
- * today is its By region bar's egress outside AT&T and its saving is its Savings list
- * row. Today less the saving is what the AT&T network would carry it for.
- * `open` is the saving to split (Still open on Cost); it defaults to the buckets'
- * premium over your AT&T rate, which it equals until a move is acted on.
- * Connect > Recommended prices a region move's egress from these rows (M.egressOf).
+ * What each cloud region pays outside AT&T and could save (Cost > By region, its rows
+ * and their arithmetic). Read off the buckets, each in its own cloud's regions by
+ * workloads (LC.egressByRegion; the skeptic, 2026-09-30: pooled across the estate,
+ * Azure centralus read $80,067 where Azure's whole egress is $38,000). Today is the
+ * region's egress outside AT&T, its By region bar's; to save is what the open priced
+ * findings save on its own cloud's buckets there (LC.openByRegion), its Savings list
+ * row; today less the saving is what the AT&T price would carry it for. Every region
+ * carrying egress outside AT&T has a row: a public one attaches; an attached one whose
+ * cloud bills outside AT&T anyway (Bank scale's GCP) steers.
+ * `open` is the open priced findings (Cost's Still open); it defaults to every priced
+ * finding of the estate. Connect > Recommended prices a region move from these rows
+ * (M.egressOf) with the same open findings, so the two agree after a finding is resolved.
  */
 export function arbitrage(est, base, open) {
   void base;
   const regs = est.regionsList || [], bks = est.buckets || [];
-  const out = bks.filter(b => bucketInk(est, b) === 'public').reduce((a, b) => a + b.today, 0);
-  const prem = bks.reduce((a, b) => a + Math.max(0, b.today - b.fabric), 0);
-  const S = Math.max(0, Math.round(open == null ? prem : open));
-  const w = regionWeights(est, 'public'), wSum = w.reduce((a, x) => a + x, 0);
-  const nowD = splitDollars(Math.round(out), w), saveD = splitDollars(S, w);
+  const openF = (open == null ? est.findings || [] : open).filter(f => f.priced);
+  const nowD = egressByRegion(est, 'public').byRegion, saveD = openByRegion(est, openF).byRegion;
   const nf = (n) => n.toLocaleString('en-US');
-  return regs.map((r, i) => ({ r, i })).filter(({ r }) => !r.priv).map(({ r, i }) => {
+  return regs.map((r, i) => ({ r, i })).filter(({ i }) => nowD[i] > 0).map(({ r, i }) => {
     const now = nowD[i], save = Math.min(saveD[i], now), after = now - save;
+    // The pool this share comes from: its own cloud's buckets outside AT&T, over the regions they land in.
+    const pool = bks.filter(b => b.cloud === r.cloud && bucketInk(est, b) === 'public' && bucketWeights(est, b)[i] > 0);
+    const w = pool.length ? bucketWeights(est, pool[0]) : regs.map((x, j) => (j === i ? (x.wl || 1) : 0)), wSum = w.reduce((a, x) => a + x, 0);
+    const out = pool.reduce((a, b) => a + b.today, 0) || now, saveAll = w.reduce((a, x, j) => a + (x > 0 ? saveD[j] : 0), 0);
     const nearby = regs.find(x => x.priv && x.cloud === r.cloud);
-    const share = `${nf(w[i])} of ${nf(wSum)} workloads in public regions`;
-    return { key: 'arb-' + r.region, region: `${r.cloud} ${r.region}`, label: `${r.cloud} ${r.region}`, cloud: r.cloud, regionId: r.region, wl: r.wl,
+    const share = `${nf(r.wl)} of ${nf(wSum)} ${r.cloud} workloads in ${r.priv ? 'attached' : 'public'} regions`;
+    return { key: 'arb-' + r.region, region: `${r.cloud} ${r.region}`, label: `${r.cloud} ${r.region}`, cloud: r.cloud, regionId: r.region, wl: r.wl, priv: !!r.priv,
+      act: r.priv ? 'Steer' : 'Attach',
       nowN: now, now: fmt(now), fabricN: after, fabric: fmt(after), saveN: save, save: fmt(save), share,
-      math: `${share}: ${fmt(Math.round(out))} × ${nf(w[i])}/${nf(wSum)} = ${fmt(now)} outside AT&T; ${fmt(S)} × ${nf(w[i])}/${nf(wSum)} = ${fmt(save)} to save; ${fmt(now)} − ${fmt(save)} = ${fmt(after)} on AT&T`,
-      alt: nearby ? `Or move the workload to ${nearby.region}, already attached: same saving, no new circuit, +${Math.abs(nearby.fab - r.fab)} ms.` : 'No attached region in this cloud yet; the attach is the move.' };
+      math: `${share}: ${fmt(out)} × ${nf(r.wl)}/${nf(wSum)} = ${fmt(now)} outside AT&T; ${fmt(saveAll)} × ${nf(r.wl)}/${nf(wSum)} = ${fmt(save)} to save; ${fmt(now)} − ${fmt(save)} = ${fmt(after)} at the AT&T price`,
+      alt: r.priv ? `Already attached: steer ${r.cloud}'s egress onto AT&T here, no new circuit.`
+        : nearby ? `Or move the workload to ${nearby.region}, already attached: same saving, no new circuit, +${Math.abs(nearby.fab - r.fab)} ms.` : 'No attached region in this cloud yet; the attach is the move.' };
   }).sort((a, b) => b.saveN - a.saveN || b.nowN - a.nowN);
 }
 /**

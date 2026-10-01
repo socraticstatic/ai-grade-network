@@ -3788,9 +3788,9 @@ function costVals(s, set, est, invAll, ob, go, c) {
   const bankTo = bankSeries.length ? bankSeries[bankSeries.length - 1] : { saved: 0, cumulative: 0 };
   const openMoves = findingList(est, est, ob, bNow).filter(f => f.priced && OPEN_STATES.includes(LC.lifeOf(f, bLife, bNow).state));
   const stillOpen = openMoves.reduce((a, f) => a + f.save, 0);
-  // What each public region pays outside AT&T and could save, split as the Savings list splits
-  // Still open (By region's Attach rows and their arithmetic, restored 2026-09-30).
-  const arb = R.arbitrage(est, base, stillOpen);
+  // What each region pays outside AT&T and could save, its own cloud's buckets and open findings only
+  // (By region's rows and their arithmetic; the skeptic, 2026-09-30: never another cloud's money).
+  const arb = R.arbitrage(est, base, openMoves);
   const fc = R.forecast({ ...ob, egressMo: base }, arb);
   const maxNow = Math.max(1, ...arb.map(a => a.nowN));
   const hasBank = bankTo.cumulative > 0;
@@ -3913,7 +3913,8 @@ function costVals(s, set, est, invAll, ob, go, c) {
     ],
     // Savings by region, business unit or cloud (notes, 2026-09-29): this month's banked and what is still open, split.
     ...(() => { const dim = ['region', 'bu', 'cloud'].includes(s.saveGroup) ? s.saveGroup : 'region';
-      const rows = LC.savingsBy(est, dim, { banked: bankTo.saved, open: stillOpen }, ((s.siteTags || {})[est.id]) || {});
+      // Banked from its sources, each where it names; still open from the open findings, each where its buckets bill (2026-09-30).
+      const rows = LC.savingsBy(est, dim, { sources: LC.bankedSources(est, bLife, bNow), open: openMoves }, ((s.siteTags || {})[est.id]) || {});
       const mx = Math.max(1, ...rows.map(r => r.banked + r.open));
       // Each figure opens what it counts (the skeptic, 2026-09-30): banked opens its share of the banked
       // sources, in place; still open opens the moves on Optimize.
@@ -3951,13 +3952,16 @@ function costVals(s, set, est, invAll, ob, go, c) {
     // By region's per-region Attach rows and their arithmetic, restored (2026-09-30, the skeptic: "nothing on Cost
     // replaces the per-region Attach door or that per-region arithmetic"). A row's today is its By region bar's egress
     // outside AT&T, and its door opens that share in By leg; its saving is its Savings list row, and opens the moves.
-    regionSaveRows: arb.map(a => { const geo = CV.geoOfRegion(a.regionId);
-      return { key: a.key, label: a.label, regionId: a.regionId, cloud: a.cloud, wl: a.wl, nowN: a.nowN, afterN: a.fabricN, saveN: a.saveN, nowF: a.now, afterF: a.fabric, saveF: a.save, math: a.math,
-        sub: `${a.wl.toLocaleString('en-US')} workloads · ${geo}`, nowW: (a.nowN / maxNow * 100).toFixed(1) + '%', saveW: (a.saveN / maxNow * 100).toFixed(1) + '%',
-        title: `${a.label}: ${a.now}/mo outside AT&T today; ${a.save}/mo to save; ${a.fabric}/mo on AT&T. ${a.alt}`,
+    regionSaveRows: arb.map(a => { const geo = CV.geoOfRegion(a.regionId), metro = REGION_GEO[a.regionId] || 'Ashburn';
+      // A public region attaches; an attached one whose cloud still bills outside AT&T steers that egress (2026-09-30).
+      const steer = { outcome: 'u2', source: ['A cloud region'], dest: ['The Internet'], regionTab: REGION_OF_METRO(metro), metros: [metro], resiliency: 'Standard', control: ['Cost-aware routing'],
+        prefilled: true, prefillRegion: a.label, prefillWl: a.wl, sourceLabel: 'Cost', noteStep: 0, note: `Steer ${a.label}'s egress onto AT&T.` };
+      return { key: a.key, label: a.label, regionId: a.regionId, cloud: a.cloud, wl: a.wl, nowN: a.nowN, afterN: a.fabricN, saveN: a.saveN, nowF: a.now, afterF: a.fabric, saveF: a.save, math: a.math, act: a.act,
+        sub: `${a.wl.toLocaleString('en-US')} workloads · ${geo}${a.priv ? ' · attached' : ''}`, nowW: (a.nowN / maxNow * 100).toFixed(1) + '%', saveW: (a.saveN / maxNow * 100).toFixed(1) + '%',
+        title: `${a.label}: ${a.now}/mo outside AT&T today; ${a.save}/mo to save; ${a.fabric}/mo at the AT&T price. ${a.alt}`,
         goNow: () => set({ costPanel: 'legs', costBy: 'region', costPick: geo, legDrill: { leg: 'cloud', row: 'egress' }, legAPage: 0, legCPage: 0, legPPage: 0 }),
         goSave: () => set({ costPanel: 'optimize' }),
-        attach: go('s4', { ...newOrder(prefillAttach({ region: a.label, wl: a.wl })) }) }; }),
+        attach: go('s4', { ...newOrder(a.priv ? steer : prefillAttach({ region: a.label, wl: a.wl })) }) }; }),
     hasRegionSave: arb.length > 0, regionSaveTotalF: fmt(arb.reduce((a, r) => a + r.saveN, 0)), regionSaveNowF: fmt(arb.reduce((a, r) => a + r.nowN, 0)),
     hasArbitrage: arb.length > 0, arbTotal: fmt(arb.reduce((a, r) => a + r.saveN, 0)), arbTotalYr: fmt(arb.reduce((a, r) => a + r.saveN, 0) * 12),
     // Cost figures reach the same records. A dollar figure is bytes times a
@@ -4069,7 +4073,7 @@ function costLegVals(s, set, est, legs0, go, c) {
     hasRegionBars: bars.length > 0, noRegionBars: bars.length === 0 && est.stage !== 'empty', regionEmpty: 'No spend seen yet.',
     regionHead: cb === 'cloud' ? 'a month, by cloud' : 'a month, by region', regionTotalF: fmt(Math.round(legs0.total)),
     regionTotalGo: () => set({ costPanel: 'legs', costBy: 'all', costPick: null, ...reset }),
-    regionNote: cb === 'cloud' ? 'Your sites carry what a site buys: access circuits and SD-WAN. An IPsec tunnel bills in its cloud, and egress stays with its bucket’s cloud.' : 'Egress by region is modelled, as the Savings list splits it: outside AT&T across the public regions, on AT&T across the attached ones, by workloads.',
+    regionNote: cb === 'cloud' ? 'Your sites carry what a site buys: access circuits and SD-WAN. An IPsec tunnel bills in its cloud, and egress stays with its bucket’s cloud.' : 'Egress by region is modelled: each bucket in its own cloud’s regions by workloads, outside AT&T in its public ones (its attached ones where it has none), at the AT&T price in its attached ones.',
     // One legend for By leg and By region: the Cost colours, and what hatching means, said once.
     costLegend: [
       { meaning: 'att', label: 'AT&T price', title: 'What AT&T bills at catalog price, and egress already at your AT&T rate where its cloud is attached', color: I.att.color, bg: I.att.color, edge: '0' },

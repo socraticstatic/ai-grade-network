@@ -56,12 +56,10 @@ export const modelledFill = () => hatch(MODELLED.color);
 /**
  * A bucket is On AT&T only when it already pays your AT&T rate and its cloud has a
  * region attached (the skeptic, 2026-09-30: Small business has nothing attached, yet
- * its base bucket read On AT&T). Anything else bills outside AT&T.
+ * its base bucket read On AT&T). Anything else bills outside AT&T. It lives with the
+ * regional split in naas-lifecycle.js, so the Savings list and Cost read one rule.
  */
-export function bucketInk(est, b) {
-  const attached = (est.regionsList || []).some(r => r.priv && r.cloud === b.cloud);
-  return attached && b.today <= b.fabric ? 'att' : 'public';
-}
+export const bucketInk = LC.bucketInk;
 
 // ---------- Places ----------
 // By region groups by the place a buyer names (the skeptic, 2026-09-30: "a buyer
@@ -101,31 +99,28 @@ export const BY = ['all', 'region', 'cloud'];
 export const byOf = (k) => (BY.includes(k) ? k : 'all');
 
 /**
- * The Savings list's split (LC.savingsBy, 2026-09-30): money outside AT&T lives in
- * the public regions, money on AT&T in the attached ones, each by workloads. With
- * no region of the kind, it spreads evenly, as split() does. Dollars come from the
- * same largest-remainder split, so a region's egress and its savings share one key.
- */
-export function regionWeights(est, ink) {
-  return (est.regionsList || []).map(r => ((ink === 'public') === !r.priv ? (r.wl || 1) : 0));
-}
-/**
- * This month's egress by cloud region: each ink's buckets pooled and split across
- * that ink's regions, by workloads. A share is a model, so every part is modelled.
- * Buckets carry only a cloud and a rate, never a region, so there is no measured
- * regional figure to show instead.
+ * This month's egress by cloud region (the skeptic, 2026-09-30: pooled across the
+ * estate, GCP's $84,000 landed in AWS and Azure regions and By region disagreed with
+ * By cloud). Each bucket lands only in its own cloud's regions, by workloads
+ * (LC.bucketWeights): at your AT&T rate in the attached ones, outside AT&T in the
+ * public ones, or the attached ones where its cloud has none public. So By region
+ * summed by cloud is By cloud, to the dollar. A share is a model, so every part is
+ * modelled; a bucket whose cloud has no region here stays a bucket.
  */
 export function regionalEgress(est, row) {
   const regs = est.regionsList || [];
   if (!regs.length) return row.parts || [];
-  const out = [];
+  const bks = est.buckets || [], out = [];
   for (const ink of ['public', 'att']) {
-    const total = (row.parts || []).filter(p => p.ink === ink).reduce((a, p) => a + p.v, 0);
-    if (!(total > 0)) continue;
-    const w = regionWeights(est, ink), sum = w.reduce((a, x) => a + x, 0);
-    const dollars = LC.split(Math.round(total), w);
-    regs.forEach((r, i) => { const share = sum > 0 ? w[i] / sum : 1 / regs.length; if (!(dollars[i] > 0)) return;
-      out.push({ key: r.region + ':' + ink, kind: 'region', egress: true, region: r.region, cloud: r.cloud, n: 1, v: dollars[i], ink, modelled: true, share, wl: r.wl || 1, poolWl: sum }); });
+    const mine = bks.filter(b => bucketInk(est, b) === ink);
+    const dollars = LC.egressByRegion(est, ink).byRegion;
+    regs.forEach((r, i) => { if (!(dollars[i] > 0)) return;
+      // The pool this region's share comes from: its own cloud's buckets of this kind.
+      const pool = mine.find(b => b.cloud === r.cloud && LC.bucketWeights(est, b)[i] > 0);
+      const w = pool ? LC.bucketWeights(est, pool) : regs.map(() => 0), poolWl = w.reduce((a, x) => a + x, 0) || 1;
+      out.push({ key: r.region + ':' + ink, kind: 'region', egress: true, region: r.region, cloud: r.cloud, n: 1, v: dollars[i], ink, modelled: true, share: (r.wl || 1) / poolWl, wl: r.wl || 1, poolWl,
+        poolWord: r.priv ? 'attached' : 'public' }); });
+    for (const b of mine.filter(x => !LC.bucketWeights(est, x).some(w => w > 0))) out.push(...(row.parts || []).filter(p => p.bucket === b.id));
   }
   return out;
 }

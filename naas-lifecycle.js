@@ -156,20 +156,130 @@ export function split(total, weights) {
   raw.map((x, i) => [x - floor[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { floor[i] += 1; left -= 1; } });
   return floor;
 }
+// ---------- Where the money sits, by cloud region ----------
+// The skeptic, 2026-09-30: pooling every bucket of one kind across the estate put
+// GCP's egress in AWS and Azure regions, so By region and By cloud disagreed. A
+// bucket's money lands only in its own cloud's regions, by workloads; what a finding
+// saves lands where the buckets it prices bill; what was banked lands where its
+// source names. Cost's By region, the Savings list and Recommended all read these.
+
 /**
- * Savings by region, business unit or cloud (notes, 2026-09-29). What was
- * banked follows what is on AT&T; what is still open follows what is not.
- * Sites weigh by count for region and business unit; clouds by workloads.
+ * A bucket bills at your AT&T rate only when it already pays it and its cloud has a
+ * region attached (Small business has nothing attached, so nothing of it is). Anything
+ * else bills outside AT&T. Cost reads it as CV.bucketInk.
  */
-export function savingsBy(est, dim, totals, tags = {}) {
+export function bucketInk(est, b) {
+  const attached = (est.regionsList || []).some(r => r.priv && r.cloud === b.cloud);
+  return attached && b.today <= b.fabric ? 'att' : 'public';
+}
+/**
+ * Where a bucket's money lands, as workloads over est.regionsList, in its own cloud only:
+ * at your AT&T rate, the cloud's attached regions; outside AT&T, its public regions, or its
+ * attached ones where the cloud has none public (Bank scale's GCP). All zero when the
+ * bucket's cloud has no region here.
+ */
+export function bucketWeights(est, b) {
+  const regs = est.regionsList || [];
+  const pub = bucketInk(est, b) === 'public' && regs.some(r => r.cloud === b.cloud && !r.priv);
+  return regs.map(r => (r.cloud === b.cloud && (pub ? !r.priv : r.priv) ? (r.wl || 1) : 0));
+}
+/**
+ * Spread amounts over the cloud regions, to the dollar: items with the same weights pool
+ * first, so one cloud's money splits once. byRegion is dollars per est.regionsList index;
+ * rest is what had no region to land in.
+ */
+export function spread(est, items) {
+  const out = (est.regionsList || []).map(() => 0), pools = new Map();
+  let rest = 0;
+  for (const it of items) {
+    if (!(it.v > 0)) continue;
+    if (!it.w.some(x => x > 0)) { rest += it.v; continue; }
+    const k = it.w.join(','), p = pools.get(k) || { w: it.w, v: 0 };
+    p.v += it.v; pools.set(k, p);
+  }
+  for (const p of pools.values()) split(Math.round(p.v), p.w).forEach((d, i) => { out[i] += d; });
+  return { byRegion: out, rest };
+}
+/** This month's egress by cloud region, of one kind ('public' outside AT&T, 'att' at your AT&T rate), each bucket in its own cloud. */
+export function egressByRegion(est, ink) {
+  return spread(est, (est.buckets || []).filter(b => bucketInk(est, b) === ink).map(b => ({ v: b.today, w: bucketWeights(est, b) })));
+}
+// A finding that prices no bucket lands in the public regions by workloads, or every region where none is public.
+const pubWeights = (est) => { const regs = est.regionsList || [], w = regs.map(r => (r.priv ? 0 : (r.wl || 1))); return w.some(x => x > 0) ? w : regs.map(r => r.wl || 1); };
+/** What each open priced finding saves, bucket by bucket: its saving across the buckets it prices, by their premium. */
+export function openByBucket(est, open) {
+  const bks = est.buckets || [], out = [];
+  for (const f of open || []) {
+    if (!f.priced || !(f.save > 0)) continue;
+    const mine = bks.filter(b => b.finding === f.kind && b.today > b.fabric);
+    if (!mine.length) { out.push({ b: null, f, v: f.save }); continue; }
+    split(Math.round(f.save), mine.map(b => b.today - b.fabric)).forEach((v, i) => out.push({ b: mine[i], f, v }));
+  }
+  return out;
+}
+/** What the open findings save, by cloud region: each bucket's share where that bucket bills. */
+export function openByRegion(est, open) {
+  return spread(est, openByBucket(est, open).map(x => ({ v: x.v, w: x.b ? bucketWeights(est, x.b) : pubWeights(est) })));
+}
+const named = (text, word) => new RegExp(`(^|[^\\w-])${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\w-]|$)`).test(text);
+/**
+ * Where a banked source sits, as weights over est.regionsList (the skeptic, 2026-09-30:
+ * Azure eastus was credited with a hairpin to us-east-1, CoreWeave with an object-storage
+ * steer). Your connections on AT&T: the attached regions, by workloads. A finding that
+ * prices buckets: where those buckets bill. A closed finding: the cloud region its words
+ * name, else the attached regions of the clouds they name, else, naming no place, where
+ * AT&T carries egress at your AT&T rate, by those dollars.
+ */
+export function sourceWeights(est, src) {
+  const regs = est.regionsList || [];
+  const attachedWl = regs.map(r => (r.priv ? (r.wl || 1) : 0));
+  if (src.kind === 'network') return attachedWl;
+  const mine = (est.buckets || []).filter(b => b.finding === src.finding && b.today > b.fabric);
+  if (mine.length) {
+    const w = regs.map(() => 0);
+    for (const b of mine) { const bw = bucketWeights(est, b), t = bw.reduce((a, x) => a + x, 0); if (t) bw.forEach((x, i) => { w[i] += (b.today - b.fabric) * x / t; }); }
+    if (w.some(x => x > 0)) return w;
+  }
+  const text = String(src.label || '');
+  const inRegion = regs.map(r => (named(text, r.region) ? (r.wl || 1) : 0));
+  if (inRegion.some(x => x > 0)) return inRegion;
+  const clouds = new Set(regs.map(r => r.cloud).filter(cl => named(text, cl)));
+  if (clouds.size) {
+    const w = regs.map(r => (clouds.has(r.cloud) && r.priv ? (r.wl || 1) : 0));
+    return w.some(x => x > 0) ? w : regs.map(r => (clouds.has(r.cloud) ? (r.wl || 1) : 0));
+  }
+  const att = egressByRegion(est, 'att').byRegion;
+  return att.some(x => x > 0) ? att : attachedWl;
+}
+/**
+ * Savings by region, business unit or cloud (notes, 2026-09-29), this month: banked
+ * from the sources LC.bankedSources lists, still open from the open priced findings.
+ * By cloud region (2026-09-30, the skeptic): each source sits where it names, each open
+ * finding where its buckets bill, so a cloud's row is its regions' rows summed and no
+ * cloud is credited another's money. By business unit the sources name no unit, so
+ * each splits by the sites on AT&T (class weight × count), and still open by the sites
+ * outside it. bySource is each source's share of a row, to the dollar.
+ */
+export function savingsBy(est, dim, { sources = [], open = [] } = {}, tags = {}) {
   const groups = {};
-  const add = (label, on, off) => { const g = groups[label] = groups[label] || { label, on: 0, off: 0 }; g.on += on; g.off += off; };
-  if (dim === 'cloud') (est.regionsList || []).forEach(r => add(r.cloud, r.priv ? (r.wl || 1) : 0, r.priv ? 0 : (r.wl || 1)));
-  // Savings live where the egress bills: cloud regions, as the Cost page lists them (2026-09-29 audit).
-  else if (dim === 'region') (est.regionsList || []).forEach(r => add(`${r.cloud} ${r.region}`, r.priv ? (r.wl || 1) : 0, r.priv ? 0 : (r.wl || 1)));
-  // Sites weigh by what they carry (class weight × count), so a data center outweighs a branch (2026-09-29 audit: not an even split).
-  else (est.sites || []).forEach(x => { const n = countOf(x.name) * (SITE_W[classOf(x)] || 1), k = dim === 'bu' ? buOf(x, tags) : regionOf(x); add(k, onAtt(x) ? n : 0, onAtt(x) ? 0 : n); });
-  const rows = Object.values(groups);
-  const b = split(Math.round(totals.banked || 0), rows.map(g => g.on)), o = split(Math.round(totals.open || 0), rows.map(g => g.off));
-  return rows.map((g, i) => ({ key: g.label, label: g.label, banked: b[i], open: o[i] })).sort((x, y) => (y.banked + y.open) - (x.banked + x.open));
+  const group = (label) => (groups[label] = groups[label] || { key: label, label, banked: 0, open: 0, bySource: {} });
+  if (dim === 'region' || dim === 'cloud') {
+    const regs = est.regionsList || [];
+    const keyOf = (r) => (dim === 'cloud' ? r.cloud : `${r.cloud} ${r.region}`);
+    regs.forEach(r => group(keyOf(r)));
+    openByRegion(est, open).byRegion.forEach((d, i) => { group(keyOf(regs[i])).open += d; });
+    for (const src of sources) split(Math.round(src.perMo), sourceWeights(est, src)).forEach((d, i) => {
+      if (!d) return; const g = group(keyOf(regs[i])); g.banked += d; g.bySource[src.key] = (g.bySource[src.key] || 0) + d; });
+  } else {
+    // Sites weigh by what they carry (class weight × count), so a data center outweighs a branch (2026-09-29 audit: not an even split).
+    const sites = est.sites || [];
+    const keys = sites.map(x => (dim === 'bu' ? buOf(x, tags) : regionOf(x)));
+    const w = (on) => sites.map(x => (onAtt(x) === on ? countOf(x.name) * (SITE_W[classOf(x)] || 1) : 0));
+    keys.forEach(k => group(k));
+    const openTotal = (open || []).filter(f => f.priced).reduce((a, f) => a + (f.save || 0), 0);
+    split(Math.round(openTotal), w(false)).forEach((d, i) => { group(keys[i]).open += d; });
+    for (const src of sources) split(Math.round(src.perMo), w(true)).forEach((d, i) => {
+      if (!d) return; const g = group(keys[i]); g.banked += d; g.bySource[src.key] = (g.bySource[src.key] || 0) + d; });
+  }
+  return Object.values(groups).sort((x, y) => (y.banked + y.open) - (x.banked + x.open));
 }

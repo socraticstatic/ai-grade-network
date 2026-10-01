@@ -72,13 +72,17 @@ export function p95(pts) {
 }
 
 /**
- * Each public region's egress a month, read off Cost > By region's rows (R.arbitrage,
- * 2026-09-30): now is what it pays outside AT&T today, fabric what the AT&T network
- * would carry it for. One source, so a move's egress is the figure its door opens.
+ * Each region's egress a month, read off Cost > By region's rows (R.arbitrage,
+ * 2026-09-30): now is what it pays outside AT&T today, its own cloud's buckets only,
+ * fabric what the AT&T price would carry it for once the open findings are acted on.
+ * `open` is the open priced findings Cost counts as Still open, so a resolved finding
+ * moves both pages alike (the skeptic, 2026-09-30: Recommended split the whole premium
+ * while Cost split what was still open). A region carrying none reads $0.
  * gb is the volume that AT&T price buys at $0.02/GB, kept for the tiers' words.
  */
-export function egressOf(est, base) {
-  return Object.fromEntries(R.arbitrage(est, base).map(a => [a.regionId, { gb: Math.round(a.fabricN / 0.02), now: a.nowN, fabric: a.fabricN }]));
+export function egressOf(est, base, open) {
+  const arb = Object.fromEntries(R.arbitrage(est, base, open).map(a => [a.regionId, a]));
+  return Object.fromEntries((est.regionsList || []).map(r => { const a = arb[r.region]; return [r.region, a ? { gb: Math.round(a.fabricN / 0.02), now: a.nowN, fabric: a.fabricN } : { gb: 0, now: 0, fabric: 0 }]; }));
 }
 
 // ---------- tiers ----------
@@ -434,7 +438,9 @@ function pathMoves(est, ctx) {
  */
 export function movesOf(est, ctx = {}) {
   if (!est || est.stage === 'empty' || !(est.regionsList || []).length) return [];
-  const c = { findings: (ctx.findings || est.findings || []).filter(f => !f.event), capacity: ctx.capacity || [], apps: ctx.apps || [], inv: ctx.inv || [], egress: egressOf(est, ctx.base) };
+  const findings = (ctx.findings || est.findings || []).filter(f => !f.event);
+  // The open findings price the egress after, as Cost's Still open does.
+  const c = { findings, capacity: ctx.capacity || [], apps: ctx.apps || [], inv: ctx.inv || [], egress: egressOf(est, ctx.base, findings.filter(f => f.priced)) };
   const moves = [...regionMoves(est, c), ...pathMoves(est, c), ...siteMoves(est, c)]
     .map(m => ({ ...m, impact: m.tiers[REC].net, tiers: m.tiers.map(t => ({ ...t, rec: t.i === REC })) }));
   moves.sort((a, b) => Math.max(0, b.impact || 0) - Math.max(0, a.impact || 0) || RISK[b.risk] - RISK[a.risk] || b.size - a.size || a.title.localeCompare(b.title));
