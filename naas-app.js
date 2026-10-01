@@ -1764,11 +1764,11 @@ const PERSONAS = ['Cloud & Platform Architect', 'Network Engineering', 'Security
 // role's chip, the Signals cards it reads (the assignments the retired insight-row
 // map made), and the mailbox its briefing goes to.
 const ROLE_OF = {
-  architect: { name: 'Cloud & Platform Architect', short: 'Architect', visuals: ['multi'], mailbox: 'cloud-architecture' },
-  neteng: { name: 'Network Engineering', short: 'Network Eng', visuals: ['problems', 'slo'], mailbox: 'network-ops' },
-  security: { name: 'Security & Compliance', short: 'Security', visuals: ['newdest', 'shadow'], mailbox: 'security' },
-  finops: { name: 'FinOps & SRE', short: 'FinOps & SRE', visuals: ['growth', 'idle'], mailbox: 'finops' },
-  exec: { name: 'Executive', short: 'Executive', visuals: ['talkers'], mailbox: 'cio' },
+  architect: { name: 'Cloud & Platform Architect', short: 'Architect', visuals: ['multi'], mailbox: 'cloud-architecture', q: 'Is the design right for what matters most?' },
+  neteng: { name: 'Network Engineering', short: 'Network Eng', visuals: ['problems', 'slo'], mailbox: 'network-ops', q: 'Is the network up, fast and holding?' },
+  security: { name: 'Security & Compliance', short: 'Security', visuals: ['newdest', 'shadow'], mailbox: 'security', q: 'Is anything exposed that should not be?' },
+  finops: { name: 'FinOps & SRE', short: 'FinOps & SRE', visuals: ['growth', 'idle'], mailbox: 'finops', q: 'Are we paying for what we use?' },
+  exec: { name: 'Executive', short: 'Executive', visuals: ['talkers'], mailbox: 'cio', q: 'Is the network helping or hurting the business?' },
 };
 const roleKeyOf = (s) => (ROLE_OF[s.persona] ? s.persona : 'neteng');
 const PERSONA_NAME = { architect: 'Cloud & Platform Architect', neteng: 'Network Engineering', security: 'Security & Compliance', finops: 'FinOps & SRE', exec: 'Executive' };
@@ -3262,7 +3262,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       : live.filter(x => personaOf(x.f) === role.name);
     const recOf = (f) => (f.ladder && (f.ladder[1] || f.ladder[0])) || 'Review it with AT&T';
     const acts = picked.map(({ f, l }) => { const st = l.state, rec = recOf(f), k = { key: f.kind };
-      return { key: f.kind, head: f.head, saveLine: f.priced ? `Save ${fmt(f.save)}/mo` : '', hasSave: !!f.priced, rec: `Recommended: ${rec}`, stateLabel: l.label,
+      // What the move gets you, in words (Dev's Insights screens, 2026-10-01): a saving when priced, else the risk it closes.
+      const outcome = f.priced ? `Save ${fmt(f.save)}/mo` : /single|backup|onecloud/.test(f.kind) ? 'Removes outage risk' : /degraded|slo|latency/.test(f.kind) ? 'Brings latency under SLO' : /ipsec|sdwan|nothub/.test(f.kind) ? 'Takes traffic off the internet'
+        : f.pillar === 'Policy control' ? 'Closes a security risk' : f.pillar === 'Observability' ? 'Shows the traffic you cannot see' : f.pillar === 'Private reach' ? 'Takes traffic off the internet' : 'Closes an open finding';
+      return { key: f.kind, head: f.head, saveLine: f.priced ? `Save ${fmt(f.save)}/mo` : '', hasSave: !!f.priced, outcome, outInk: f.priced ? 'var(--success)' : 'var(--text-heading)', rec: `Recommended: ${rec}`, stateLabel: l.label,
         canAccept: st === 'open' || st === 'snoozed', accept: moveF(k, 'ack', { note: `Accepted: ${rec}` }),
         canDefer: st === 'open', defer: moveF(k, 'snoozed', { snoozeDays: deferDays, note: deferWhen ? `Deferred to the ${deferWhen} briefing` : 'Deferred' }),
         canStart: st === 'ack', start: moveF(k, 'progress'), canSnooze: st === 'ack', snooze: moveF(k, 'snoozed', { snoozeDays: deferDays }), hasDoor: false, doorLabel: '', door: () => {},
@@ -3276,7 +3279,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // while the briefing said it waits).
     const ports = rk === 'architect' ? OD.capacity(conns, s.obWindow || '30d').filter(r => r.peakPct >= 80 && r.state !== 'down').map(r => {
       const busy = capMoveLabel(s, est0, r, '') === 'In progress';
-      return { key: 'cap-' + r.region, head: `${r.cloud} ${r.region} peaks at ${r.peakPct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, saveLine: '', hasSave: false, rec: 'Recommended: Add a port', stateLabel: busy ? 'In progress' : 'Open', underWay: busy,
+      return { key: 'cap-' + r.region, head: `${r.cloud} ${r.region} peaks at ${r.peakPct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, saveLine: '', hasSave: false, rec: 'Recommended: Add a port', outcome: 'Adds headroom before it fills', outInk: 'var(--text-heading)', stateLabel: busy ? 'In progress' : 'Open', underWay: busy,
         canAccept: false, canDefer: false, canStart: false, canSnooze: false, hasDoor: true, doorLabel: capMoveLabel(s, est0, r, 'Add a port'), door: capMove(go, set, s, est0, r), accept: () => {}, defer: () => {}, start: () => {}, snooze: () => {}, waiting: !busy,
         open: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn' }) }; }) : [];
     const all = [...acts, ...ports];
@@ -3284,7 +3287,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const roleChips = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk; return { key: k, label: ROLE_OF[k].short, on, ...seg(on), go: () => set({ persona: k, rolePage: 0 }) }; });
     // How many it lists, beside the title: the home's "3 moves" and "All 3 in Your actions" land on their number (2026-09-30).
     const countNoun = rk === 'exec' ? ['move', 'moves'] : ['action', 'actions'];
-    return { roleChips, roleTitle: `Actions for ${role.short}`, roleCountLine: all.length ? `${all.length} ${all.length === 1 ? countNoun[0] : countNoun[1]}` : '', roleHead: plNow.line, roleCta: plNow.cta, roleGo: plNow.go, roleActAll: all, roleActRows: all, hasRoleActs: all.length > 0,
+    return { roleChips, roleQuestion: `For ${role.short}: ${role.q}`, roleTitle: `Actions for ${role.short}`, roleCountLine: all.length ? `${all.length} ${all.length === 1 ? countNoun[0] : countNoun[1]}` : '', roleHead: plNow.line, roleCta: plNow.cta, roleGo: plNow.go, roleActAll: all, roleActRows: all, hasRoleActs: all.length > 0,
       roleEmpty, hasRoleEmpty: !all.length, hasRoleEmptyGo: !all.length && rk === 'exec', roleEmptyGo: () => set({ insPanel: 'ops', opsPanel: 'overview' }) };
   })();
   // Insights > Signals (Micah, 2026-09-30: "Observe insights is light"; "all need to

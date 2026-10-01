@@ -182,7 +182,8 @@ await beat('7 Insights: Signals, Your actions and Operations', async () => {
   const lead = await page.locator('[aria-label="Signal cards"] .sig-head .t').allInnerTexts();
   if (!/^Health/.test(lead[0] || '') || !/^Latency over SLO/.test(lead[1] || '') || !/^Capacity/.test(lead[2] || '')) throw new Error(`Network Eng leads with ${lead.slice(0, 3).join(', ')}`);
   await tab('Your actions', '[aria-label="Insights views"]');
-  await expect('Actions for Network Eng', 'Coming soon');
+  // Each action says what it gets you (Dev's Insights content, 2026-10-01); Do it's "Coming soon" moved to its title.
+  await expect('Actions for Network Eng', 'Brings latency under SLO');
   await tab('Operations', '[aria-label="Insights views"]');
   await expect(/\d+ Sev 1 open now\. \d+ tickets? open\./, 'sample history');
   await tab('Tickets', '[aria-label="Operations views"]');

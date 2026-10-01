@@ -337,6 +337,8 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Govern merged onto Discover's drills (2026-10-01): Discover's rings and apps table win over Govern's own version of them
 // (its ring and app-row markup dropped), Govern's Back button rides Discover's filter rows; recounted from the file, every
 // tag balanced: div 1140 -> 1149, span 963 -> 984, sc-if 530 -> 569, sc-for 279 -> 286, button 447 -> 471.
+// Dev's Insights content (2026-10-01): a role question on the home and on Signals (span +2); the action's outcome replaces its
+// save gate and Coming soon moves to the button's title (sc-if -1, span -1): span 984 -> 985, sc-if 569 -> 568.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -352,8 +354,8 @@ test('every container the markup opens, it closes', () => {
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 1149],
-    ['span', /<span\b/g, /<\/span>/g, 984],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 569],
+    ['span', /<span\b/g, /<\/span>/g, 985],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 568],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 286],
     ['section', /<section\b/g, /<\/section>/g, 12],
     ['button', /<button\b/g, /<\/button>/g, 471],
