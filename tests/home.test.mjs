@@ -71,7 +71,9 @@ test('the take-away is one headline, one line and one action per persona, each f
         // Spend's own words (skeptic, 2026-09-30): Could save, what is banked, the regions that move.
         const pub = +roll(v, 'connect').value.split(' ')[0];
         // Spend's tile whole, its condition with it (third skeptic, 2026-09-30).
-        assert.equal(t.head, `Could save ${tile(v, 'could')}/mo if every public region moves`, where);
+        // Spend's condition, whatever Spend says it is (Cost v2 merged, 2026-09-30).
+        const could = v.spendTiles.find(x => x.key === 'could');
+        assert.equal(t.head, `Could save ${tile(v, 'could')}/mo ${could.sub}`, where);
         assert.equal(t.sub, `${money(tile(v, 'banked')) ? `${tile(v, 'banked')} banked to date` : 'Nothing banked yet'} · ${pub} ${pub === 1 ? 'region' : 'regions'} to move`, where);
         assert.equal(t.cta, 'Optimize', where);
       }

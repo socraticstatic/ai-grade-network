@@ -139,7 +139,8 @@ test('V5: FinOps reads Spend\'s Could save, beside what is banked and the region
     const v = vals(home(view, { persona: 'finops' }));
     const t = v.homeTake;
     // Spend's tile whole, its condition with it (third skeptic, 2026-09-30; tests/home-colour.test.mjs P5).
-    assert.equal(t.head, `Could save ${tile(v, 'could').v}/mo if every public region moves`, view);
+    // Spend's condition, whatever Spend says it is (Cost v2 merged, 2026-09-30).
+    assert.equal(t.head, `Could save ${tile(v, 'could').v}/mo ${tile(v, 'could').sub}`, view);
     const banked = tile(v, 'banked').v;
     const pub = +v.rollup.find(r => r.key === 'connect').value.split(' ')[0];
     assert.equal(t.parts[0].t, /^\$0$/.test(banked) ? 'Nothing banked yet' : `${banked} banked to date`, view);

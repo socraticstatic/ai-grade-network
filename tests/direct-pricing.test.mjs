@@ -58,7 +58,9 @@ for (const id of ['partial', 'mature']) {
     assert.match(mid(v, DIRECT).title, /^Cloud provider direct connect: \$[\d,]+\/mo at the cloud provider's list price \(modelled\)$/);
     assert.equal(v.mapLegend.length, 3);
     assert.equal(v.mapLegend[2].label, 'Cloud provider direct connect, list price (modelled)');
-    assert.equal(mid(v, DIRECT).fill, v.mapLegend[2].color, 'the node wears its swatch');
+    // Re-pinned (2026-09-30, Cost v2): a list price is always hatched, so the node wears its swatch's ink as a hatch.
+    assert.equal(mid(v, DIRECT).ink, v.mapLegend[2].color, 'the node wears its swatch');
+    assert.equal(mid(v, DIRECT).fill, 'url(#cost-hatch-list)');
     // Left, middle and right carry the same dollars.
     assert.ok(near(col(v, 'l'), col(v, 'm')) && near(col(v, 'm'), col(v, 'r')), `left ${col(v, 'l')} middle ${col(v, 'm')} right ${col(v, 'r')}`);
   });
@@ -103,10 +105,12 @@ test('Equinix Fabric has no public list price, so the Cost view leaves it unpric
 test('the direct-connect ribbons wear the swatch and say where their price comes from', () => {
   const v = at('partial', { mapMode: 'cost' });
   const node = mid(v, DIRECT), sw = v.mapLegend[2].color;
-  const through = v.mapRibbons.filter(r => r.fill === sw);
+  // Re-pinned (2026-09-30, Cost v2): the ribbon keeps the swatch's ink and fills with its hatch.
+  const through = v.mapRibbons.filter(r => r.ink === sw);
+  assert.ok(through.every(r => r.fill === 'url(#cost-hatch-list)'));
   assert.ok(through.length >= 2, 'into and out of the path');
   assert.ok(through.every(r => /at the cloud provider's list price \(modelled\)$/.test(r.title)), through.map(r => r.title).join(' | '));
-  assert.ok(!v.mapRibbons.some(r => r.fill !== sw && /list price/.test(r.title)));
+  assert.ok(!v.mapRibbons.some(r => r.ink !== sw && /list price/.test(r.title)));
   assert.ok(node);
 });
 

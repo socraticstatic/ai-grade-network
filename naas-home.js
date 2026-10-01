@@ -256,7 +256,8 @@ export function snapshotCards(rk, f, doors) {
   const spend = f.spend || {};
   const egress = card('egress', 'Egress', {
     door: 'Spend', go: doors.spend(), value: spend.spend, suffix: '/mo', unit: 'egress today', valueGo: doors.spend(), valueOff: !numOf(spend.spend), isSpark: true,
-    spark: sparkOf(past, next.map(x => x.baseN + x.topN), next.map(x => x.baseN)),
+    // Spend's forecast columns carry as is and if you act as their own figures (Cost v2, 2026-09-30).
+    spark: sparkOf(past, next.map(x => x.asIsN), next.map(x => x.movedN)),
     // Spend's own "In 90 days" tile, so it opens Spend (skeptic, 2026-09-30).
     figs: [{ key: 'act', v: `${spend.ahead}/mo`, u: 'in 90 days, if you act', swatch: 'var(--success)', go: doors.spend(), off: !numOf(spend.ahead) }],
   });

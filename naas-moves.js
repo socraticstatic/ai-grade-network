@@ -71,15 +71,18 @@ export function p95(pts) {
   return xs[xs.length - 1].ms;
 }
 
-/** Each public region's egress a month, split the way Cost > By region splits it (R.arbitrage). */
-export function egressOf(est, base) {
-  const bks = est.buckets || [];
-  const bT = bks.reduce((a, b) => a + b.today, 0), bF = bks.reduce((a, b) => a + b.fabric, 0);
-  const target = bT > bF ? bT - bF : 0;
-  const pubRs = (est.regionsList || []).filter(r => !r.priv);
-  const pubWl = pubRs.reduce((a, r) => a + r.wl, 0) || 1;
-  const g = target ? target / 0.07 / pubWl : R.gbPerWlExport(est, base || bT);
-  return Object.fromEntries(pubRs.map(r => { const gb = Math.round(r.wl * g); return [r.region, { gb, now: Math.round(gb * 0.09), fabric: Math.round(gb * 0.02) }]; }));
+/**
+ * Each region's egress a month, read off Cost > By region's rows (R.arbitrage,
+ * 2026-09-30): now is what it pays outside AT&T today, its own cloud's buckets only,
+ * fabric what the AT&T price would carry it for once the open findings are acted on.
+ * `open` is the open priced findings Cost counts as Still open, so a resolved finding
+ * moves both pages alike (the skeptic, 2026-09-30: Recommended split the whole premium
+ * while Cost split what was still open). A region carrying none reads $0.
+ * gb is the volume that AT&T price buys at $0.02/GB, kept for the tiers' words.
+ */
+export function egressOf(est, base, open) {
+  const arb = Object.fromEntries(R.arbitrage(est, base, open).map(a => [a.regionId, a]));
+  return Object.fromEntries((est.regionsList || []).map(r => { const a = arb[r.region]; return [r.region, a ? { gb: Math.round(a.fabricN / 0.02), now: a.nowN, fabric: a.fabricN } : { gb: 0, now: 0, fabric: 0 }]; }));
 }
 
 // ---------- tiers ----------
@@ -190,8 +193,10 @@ function siteMoves(est, ctx) {
     const ms = p95(pts);
     const hToday = F.healthOf(ms, F.SLO);
     const dest = (behind && behind.pathDst) || andList([...new Set(est.regionsList.map(r => r.cloud))]);
+    // The cloud that bills the tunnels is named, the one Cost > By cloud puts them in (R.ipsecCloud, 2026-09-30).
+    const tunnelCloud = mode === 'ipsec' ? R.ipsecCloud(est) : null;
     const reason = mode === 'ipsec'
-      ? `${andList(members.map(x => x.metro))} reach ${dest} over IPsec on another carrier's internet${egBefore ? `; ${fmt(egBefore)}/mo of their egress bills at internet rates` : ''}.`
+      ? `${andList(members.map(x => x.metro))} reach ${dest} over IPsec on another carrier's internet${tunnelCloud ? `; ${tunnelCloud} bills their ${plural(tunnels, 'tunnel', 'tunnels')}${egBefore ? ` and ${fmt(egBefore)}/mo of their egress at internet rates` : ''}` : egBefore ? `; ${fmt(egBefore)}/mo of their egress bills at internet rates` : ''}.`
       : mode === 'sdwan'
         ? `${andList(labels)} reach the clouds over SD-WAN on another carrier's internet${f ? `; ${lowerFirst(f.head)}` : ''}.`
         : `${members.map(x => `${x.name} rides ${x.carrier || x.access}${x.xc && x.xc.at ? `, cross-connected at ${x.xc.at}` : x.via ? ` end to end into ${x.via}` : ''}`).join('; ')}. ${carrier || 'Another carrier'} holds their SLA, not AT&T.`;
@@ -293,7 +298,8 @@ function regionMoves(est, ctx) {
       const msA = p95(rs.map(r => ({ ms: lat(r), w: w(r) })));
       const allPriv = cov.length === rs.length && t.path !== 'internet' && t.products.length > 0;
       const hA = F.healthOf(msA, allPriv ? F.SLO_PRIVATE : F.SLO);
-      const egA = rs.reduce((a, r) => a + (cov.includes(r) && t.products.length ? Math.round(eg[r.region].gb * P0.egress) : eg[r.region].now), 0);
+      // A private path carries a covered region's egress at the AT&T price Cost shows; the internet keeps today's bill.
+      const egA = rs.reduce((a, r) => a + (cov.includes(r) && t.products.length && P0.id !== 'internet' ? eg[r.region].fabric : eg[r.region].now), 0);
       const net = t.monthly === null ? null : egNow - egA - t.monthly;
       const inspect = t.products.some(p => (PROD[p.id] || {}).inspect);
       const ids0 = t.products.map(p => p.id);
@@ -313,7 +319,7 @@ function regionMoves(est, ctx) {
         sec, perf: { value: `${msA} ms p95${healthWord(hA)}`, ...msDelta(ms, msA), tone: TONE_OF_HEALTH[hA] },
         cost: moneyCell(egNow, net, t.monthly),
         perfTitle: `p95 across ${andList(ids)}, weighted by workloads, ${ms} to ${msA} ms; ${allPriv ? `a private path is held to the ${F.SLO_PRIVATE} ms SLO` : `a public path to the ${F.SLO} ms SLO`}`,
-        costTitle: [`Egress ${fmt(egNow)} to ${fmt(egA)}/mo (${t.path === 'internet' || !t.products.length ? '$0.09' : '$0.02'}/GB, modelled)`, t.monthly !== null ? `${t.breakdown} = ${fmt(t.monthly)}/mo` : 'Priced after survey', mo !== null ? `${fmt(mo)}/mo after, ${net >= 0 ? 'saves' : 'adds'} ${fmt(Math.abs(net))}` : ''].filter(Boolean).join(' · ') };
+        costTitle: [`Egress ${fmt(egNow)} to ${fmt(egA)}/mo (${t.path === 'internet' || !t.products.length ? 'at public rates' : 'at the AT&T price Cost > By region shows'}, modelled)`, t.monthly !== null ? `${t.breakdown} = ${fmt(t.monthly)}/mo` : 'Priced after survey', mo !== null ? `${fmt(mo)}/mo after, ${net >= 0 ? 'saves' : 'adds'} ${fmt(Math.abs(net))}` : ''].filter(Boolean).join(' · ') };
     });
     return {
       key: 'region:' + cloud, kind: 'region', cloud, title: rs.length === 1 ? `Put ${cloud} ${ids[0]} on the AT&T network` : `Put ${rs.length} ${cloud} regions on the AT&T network`,
@@ -434,7 +440,9 @@ function pathMoves(est, ctx) {
  */
 export function movesOf(est, ctx = {}) {
   if (!est || est.stage === 'empty' || !(est.regionsList || []).length) return [];
-  const c = { findings: (ctx.findings || est.findings || []).filter(f => !f.event), capacity: ctx.capacity || [], apps: ctx.apps || [], inv: ctx.inv || [], egress: egressOf(est, ctx.base) };
+  const findings = (ctx.findings || est.findings || []).filter(f => !f.event);
+  // The open findings price the egress after, as Cost's Still open does.
+  const c = { findings, capacity: ctx.capacity || [], apps: ctx.apps || [], inv: ctx.inv || [], egress: egressOf(est, ctx.base, findings.filter(f => f.priced)) };
   const moves = [...regionMoves(est, c), ...pathMoves(est, c), ...siteMoves(est, c)]
     .map(m => ({ ...m, impact: m.tiers[REC].net, tiers: m.tiers.map(t => ({ ...t, rec: t.i === REC })) }));
   moves.sort((a, b) => Math.max(0, b.impact || 0) - Math.max(0, a.impact || 0) || RISK[b.risk] - RISK[a.risk] || b.size - a.size || a.title.localeCompare(b.title));

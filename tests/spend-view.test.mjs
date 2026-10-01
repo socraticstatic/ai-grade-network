@@ -53,14 +53,19 @@ test('the figures agree with the rest of the page', () => {
   }
 });
 
-test('one chart: twelve months banked on top of spend, three months ahead with the moves against as is', () => {
+// Re-pinned (2026-09-30, "what does the 51k even mean - make the forecast make sense"): a past month is
+// On AT&T and Outside AT&T in Cost's colours with banked savings on top; the next three months are two
+// lines, as is and if you act, not ghost bars, so the legend names five things instead of four.
+test('one chart: twelve months banked on top of spend, three months ahead as is and if you act', () => {
   const v = vals(cost('partial'));
   const past = v.spendCols.filter(c => c.kind === 'past'), next = v.spendCols.filter(c => c.kind === 'next');
   assert.equal(past.length, 12); assert.equal(next.length, 3);
   assert.ok(past.some(c => c.topN > 0), 'banked savings show');
-  assert.ok(next.every(c => c.topN > 0 && c.baseN > 0), 'the moves save something every month ahead');
-  for (const c of v.spendCols) { assert.ok(parseFloat(c.baseH) + parseFloat(c.topH) <= 100.01, c.key); assert.match(c.title, /\$/); }
-  assert.deepEqual(v.spendLegend.map(l => l.label), ['Spend', 'Banked savings', 'With the moves', 'Could save']);
+  assert.ok(next.every(c => c.asIsN > c.movedN && c.movedN > 0), 'the moves save something every month ahead');
+  for (const c of v.spendCols) { assert.ok(parseFloat(c.attH) + parseFloat(c.outH) + parseFloat(c.topH) <= 100.01, c.key); assert.match(c.title, /\$/); }
+  // Re-pinned (2026-09-30, Cost v2): blue says what it is, AT&T's price, never a claim about the network,
+  // so an estate with nothing attached is never "On AT&T".
+  assert.deepEqual(v.spendLegend.map(l => l.label), ['AT&T price', 'Outside AT&T', 'Banked by acting', 'As is', 'If you act']);
 });
 
 test('the markup: one Spend panel with the chart and the savings list; commitments live with AT&T charges', () => {

@@ -97,8 +97,9 @@ test('before values: a public region set reads its public latency and its Cost-p
     const est = D.ESTATES[view];
     const c = on(view);
     const v = vals(c);
-    const bT = est.buckets.reduce((a, b) => a + b.today, 0), bF = est.buckets.reduce((a, b) => a + b.fabric, 0);
-    const arb = R.arbitrage(est, bT, bT - bF);
+    // Re-pinned (2026-09-30, the skeptic's third read): R.arbitrage takes the open priced findings, not a dollar
+    // total; with none passed it reads every priced finding, which is what this estate has open today.
+    const arb = R.arbitrage(est);
     for (const m of v.moveList.filter(x => x.kind === 'region')) {
       const rs = est.regionsList.filter(r => m.regions.includes(r.region));
       assert.equal(m.today.egress, arb.filter(a => m.regions.includes(a.regionId)).reduce((s, a) => s + Math.round(+a.now.replace(/[$,]/g, '')), 0), `${view} ${m.title}`);
@@ -159,7 +160,10 @@ test('each tier\'s after-values follow its product\'s path', () => {
         const path = R.PATHS.find(p => p.id === t.path);
         assert.ok(path, `${view} ${m.title} ${t.tier}: ${t.path} is not a path`);
         assert.ok(rs.some(r => path.lat(r) === t.ms), `${view} ${m.title} ${t.tier}: ${t.ms} ms is not ${t.path}'s latency`);
-        assert.equal(t.egress, rs.reduce((a, r) => a + Math.round(m.gb[r.region] * path.egress), 0), `${view} ${m.title} ${t.tier}: egress not at ${path.egress}/GB`);
+        // Re-pinned (2026-09-30, Cost v2: one figure, one value): a region's egress is Cost > By region's row
+        // (R.arbitrage, off the buckets); a private path carries it at the AT&T price that row shows, the internet at today's.
+        const arb = Object.fromEntries(R.arbitrage(est).map(a => [a.regionId, a]));
+        assert.equal(t.egress, rs.reduce((a, r) => a + (path.id === 'internet' ? arb[r.region].nowN : arb[r.region].fabricN), 0), `${view} ${m.title} ${t.tier}: egress is not By region's ${path.id === 'internet' ? 'today' : 'AT&T price'}`);
       }
     }
   }

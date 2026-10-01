@@ -283,14 +283,30 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Signals merged onto the connect flow (2026-09-30): each count is the flow's plus Signals' own move: div 1118 -> 1099, span 947 -> 928, sc-if 477 -> 484, sc-for 247 -> 250, button 356 -> 367.
 // Signals, second round (2026-09-30): Egress growth's labels under its first and last week became the buttons that open those weeks: span 928 -> 926, button 367 -> 369.
 // Signals merged onto the home v2 (2026-09-30): each count is the home's plus Signals' own move: div 1118 -> 1099, span 941 -> 920, sc-if 482 -> 489, sc-for 252 -> 255, button 359 -> 372.
+// Cost tells its story (2026-09-30: "what does the 51k even mean"; "cost by leg ... numbers just are confusing";
+// "cost by region needs love"): Spend's tiles are buttons, and the 90-day tile holds two figure buttons; the chart's
+// columns are buttons with a forecast band, two lines and two end labels, and the month labels are their own row; the
+// savings rows are buttons and the Group label went; By leg gains the filter bar (By chips and members), the legend, a
+// back row per leg, tiles that are buttons and a swatch on every row, now a button; By region is a new chart of bars
+// (buttons) with its chips and legend, and the old savings strip and arithmetic table left:
+// div 1027 -> 1006, span 836 -> 848, sc-if 430 -> 437, sc-for 235 -> 241, button 323 -> 340.
+// Cost merged onto the connect flow (2026-09-30): both land, so each count is the flow's plus Cost's own move: div 1118 -> 1097, span 947 -> 959, sc-if 477 -> 484, sc-for 247 -> 253, button 356 -> 373.
+// Cost v2, the skeptic's fixes (2026-09-30): Spend's right column gates on hasSaveList and holds either the Savings list
+// (each row a div with its banked and still-open figures as two buttons) or the banked sources (a back button, a row loop of
+// buttons, the empty line, a pager); By region gains the per-region save column beside the bars (its grid and column, a head
+// with the arithmetic toggle, a summary loop of rows with today, to save and Attach, an arithmetic loop, a pager); By
+// destination's ring and bar are gated: div 1097 -> 1111, span 959 -> 968, sc-if 484 -> 496, sc-for 253 -> 256, button 373 -> 385.
+// The skeptic's third read (2026-09-30): Insights' New destinations draws every class in one ink, named in its row, so its
+// colour legend (an sc-if, a div and three swatch spans) left: div 1111 -> 1110, span 968 -> 965, sc-if 496 -> 495.
+// Cost merged onto Signals and the home (2026-09-30): Cost's own move, less its edit to the old insight cards Signals replaced (div -1, span -3, sc-if -1): div 1099 -> 1092, span 920 -> 941, sc-if 489 -> 508, sc-for 255 -> 264, button 372 -> 401.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1099],
-    ['span', /<span\b/g, /<\/span>/g, 920],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 489],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 255],
+    ['div', /<div\b/g, /<\/div>/g, 1092],
+    ['span', /<span\b/g, /<\/span>/g, 941],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 508],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 264],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 372],
+    ['button', /<button\b/g, /<\/button>/g, 401],
     ['aside', /<aside\b/g, /<\/aside>/g, 10],
     ['label', /<label\b/g, /<\/label>/g, 30],
   ];

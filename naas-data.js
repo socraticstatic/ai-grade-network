@@ -58,7 +58,7 @@ export const FOUND_SOURCES = {
       { ...REG('Oracle', 'us-ashburn-1', 48, false, null, 44, 11, ['ERP', 'Finance']), apps: [ERP_APPS.ledger, ERP_APPS.payables, ERP_APPS.ebs] },
       { ...REG('Oracle', 'eu-frankfurt-1', 22, false, null, 96, 24, ['ERP']), apps: [ERP_APPS.ledger, ERP_APPS.ebs] },
     ],
-    bucket: { id: 'oci', name: 'Oracle egress', cloud: 'Oracle', today: 3400, fabric: 1500 },
+    bucket: { id: 'oci', name: 'Oracle egress', cloud: 'Oracle', today: 3400, fabric: 1500, finding: 'newcloud-oracle' },
     finding: { kind: 'newcloud-oracle', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your sites', pathDst: '2 Oracle regions', head: '2 Oracle regions found on the public internet', ev: 'us-ashburn-1 and eu-frankfurt-1 carry 70 workloads, ERP among them, over public egress.', priced: true, save: 1900, why: 'NetBond reaches Oracle FastConnect in Ashburn and Frankfurt.', ladder: ['Attach over NetBond', 'Oracle FastConnect over NetBond', 'Multi-cloud routing'] },
   },
 };
@@ -90,8 +90,10 @@ export const ESTATES = {
       { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 12, viol: 12, state: 'authored' },
       { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 8, viol: 8, state: 'authored' },
     ],
+    // A bucket's finding is the priced finding whose saving is its premium over your AT&T rate, as that
+    // finding's evidence names it (2026-09-30: a region's saving is its own cloud's open findings, never another's).
     buckets: [
-      { id: 'misc', name: 'Misc internet egress', cloud: 'AWS', today: 2400, fabric: 900 },
+      { id: 'misc', name: 'Misc internet egress', cloud: 'AWS', today: 2400, fabric: 900, finding: 'avoidable' },
       { id: 'base', name: 'Committed base', cloud: 'AWS', today: 1800, fabric: 1800 },
     ],
     findings: [
@@ -162,11 +164,11 @@ export const ESTATES = {
       { name: 'AI provider private', match: 'tag AI', req: 'Private path required', matched: 41, viol: 41, state: 'authored' },
     ],
     buckets: [
-      { id: 'gpu', name: 'GPU inference egress', cloud: 'GCP', today: 31200, fabric: 12400 },
-      { id: 'awsx', name: 'AWS West/EU cross-cloud', cloud: 'AWS', today: 14800, fabric: 6100 },
-      { id: 'azx', name: 'Azure cross-cloud', cloud: 'Azure', today: 7400, fabric: 3300 },
-      { id: 'misc', name: 'Misc internet egress', cloud: 'AWS', today: 9600, fabric: 5200 },
-      { id: 'ipsec', name: 'IPsec site egress (5 sites)', cloud: 'AWS', today: 8600, fabric: 3100 },
+      { id: 'gpu', name: 'GPU inference egress', cloud: 'GCP', today: 31200, fabric: 12400, finding: 'avoidable' },
+      { id: 'awsx', name: 'AWS West/EU cross-cloud', cloud: 'AWS', today: 14800, fabric: 6100, finding: 'crosscloud' },
+      { id: 'azx', name: 'Azure cross-cloud', cloud: 'Azure', today: 7400, fabric: 3300, finding: 'crosscloud' },
+      { id: 'misc', name: 'Misc internet egress', cloud: 'AWS', today: 9600, fabric: 5200, finding: 'avoidable' },
+      { id: 'ipsec', name: 'IPsec site egress (5 sites)', cloud: 'AWS', today: 8600, fabric: 3100, finding: 'ipsecegress' },
       { id: 'base', name: 'Committed base', cloud: 'AWS', today: 18000, fabric: 18000 },
     ],
     findings: [
@@ -234,9 +236,9 @@ export const ESTATES = {
     ],
     buckets: [
       { id: 'gpu', name: 'GPU inference egress', cloud: 'GCP', today: 18400, fabric: 18400 },
-      { id: 'awsx', name: 'AWS West/EU cross-cloud', cloud: 'AWS', today: 21000, fabric: 8900 },
+      { id: 'awsx', name: 'AWS West/EU cross-cloud', cloud: 'AWS', today: 21000, fabric: 8900, finding: 'crosscloud' },
       { id: 'azx', name: 'Azure cross-cloud', cloud: 'Azure', today: 6200, fabric: 6200 },
-      { id: 'misc', name: 'Misc internet egress', cloud: 'AWS', today: 11800, fabric: 6400 },
+      { id: 'misc', name: 'Misc internet egress', cloud: 'AWS', today: 11800, fabric: 6400, finding: 'avoidable' },
       { id: 'base', name: 'Committed base', cloud: 'AWS', today: 64000, fabric: 64000 },
     ],
     findings: [
@@ -296,10 +298,10 @@ export const ESTATES = {
       { name: 'Remote sites, no direct internet', match: 'tag RemoteSite', req: 'No direct internet path', matched: 4030, viol: 2850, state: 'simulated' },
     ],
     buckets: [
-      { id: 'gpu', name: 'GPU inference egress', cloud: 'GCP', today: 84000, fabric: 31000 },
-      { id: 'awsx', name: 'AWS West/EU cross-cloud', cloud: 'AWS', today: 62000, fabric: 24000 },
-      { id: 'azx', name: 'Azure cross-cloud', cloud: 'Azure', today: 38000, fabric: 15000 },
-      { id: 'misc', name: 'Misc internet egress', cloud: 'AWS', today: 44000, fabric: 26000 },
+      { id: 'gpu', name: 'GPU inference egress', cloud: 'GCP', today: 84000, fabric: 31000, finding: 'avoidable' },
+      { id: 'awsx', name: 'AWS West/EU cross-cloud', cloud: 'AWS', today: 62000, fabric: 24000, finding: 'crosscloud' },
+      { id: 'azx', name: 'Azure cross-cloud', cloud: 'Azure', today: 38000, fabric: 15000, finding: 'crosscloud' },
+      { id: 'misc', name: 'Misc internet egress', cloud: 'AWS', today: 44000, fabric: 26000, finding: 'avoidable' },
       { id: 'base', name: 'Committed base', cloud: 'AWS', today: 210000, fabric: 210000 },
     ],
     findings: [

@@ -96,7 +96,8 @@ test('P5: FinOps reads Spend\'s Could save with Spend\'s own condition, so it ne
     assert.equal(v.homeTake.head, `${could.l} ${could.v}${could.u} ${could.sub}`, view);
     assert.ok(words(v.homeTake.head) <= 12, v.homeTake.head);
   }
-  assert.equal(vals(home('partial', { persona: 'finops' })).homeTake.head, 'Could save $41,500/mo if every public region moves');
+  // Spend's condition became the moves it counts when Cost v2 merged (2026-09-30).
+  assert.equal(vals(home('partial', { persona: 'finops' })).homeTake.head, 'Could save $41,500/mo if you act on Spend and Routing');
 });
 
 // ---- P10: the map head names what it counts ----
