@@ -5,6 +5,7 @@ import { mkC } from './harness.mjs';
 import * as CF from '../naas-connect-flow.js';
 import * as S from '../naas-sites.js';
 import { ringHit } from '../naas-drill.js';
+import * as X from '../naas-connections.js';
 
 // Discover > Estate, the skeptic's second pass (2026-10-01). Each test names the
 // failure it pins; the walks are the skeptic's clicks, read from vals.
@@ -98,6 +99,27 @@ test('1. the skeptic\'s repros: Nationwide\'s AVPN sites, Florida outside AT&T',
   const unf = vals(disc('trust', { estPanel: 'sites', placeTrail: into }));
   const keys = new Set(unf.placeRows.map(r => r.key));
   assert.ok(v.placeRows.filter(r => !/^more:/.test(r.key)).every(r => keys.has(r.key)), `Florida outside AT&T lists other sites: ${v.placeRows.map(r => r.name).join(', ')} against ${unf.placeRows.map(r => r.name).join(', ')}`);
+});
+
+test('1. the Connections picture grouped by service keeps the estate\'s places the same way', () => {
+  // The same drill, the same model (a site's place never depends on the group it is read in):
+  // grouped by AVPN, Established's Nationwide read "Texas 83" here too.
+  for (const view of ESTATES) {
+    const est = estateFor(disc(view).state);
+    const groups = [...new Set((est.sites || []).map(x => 'access:' + ((S.servicesOf(x)[0] || {}).key || 'other')))];
+    for (const g of groups) {
+      const top = X.siteDrillRows(est, [g]);
+      for (const r of (top ? top.rows : [])) {
+        const k = r.drillKey || r.key, whole = X.siteDrillRows(est, [k]), part = X.siteDrillRows(est, [g, k]);
+        if (!whole || !part) continue;
+        for (const row of part.rows) {
+          const u = whole.rows.find(x => x.key === row.key);
+          assert.ok(u, `${view} ${g} > ${r.name}: "${row.name}" is not a place the estate has there (${whole.rows.map(x => x.name).join(', ')})`);
+          if (typeof row.count === 'number' && typeof u.count === 'number') assert.ok(row.count <= u.count, `${view} ${g} > ${r.name} ${row.name}: ${row.count} against ${u.count}`);
+        }
+      }
+    }
+  }
 });
 
 // What a move or Andi says it holds, and what the order it starts carries.
