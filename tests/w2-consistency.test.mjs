@@ -423,6 +423,18 @@ test('Blue money reads AT&T price on Cost\'s By bucket and on Traffic\'s Cost vi
   }
 });
 
+test('AT&T charges with nothing attached says so and opens By leg, never a blank panel', async () => {
+  const c = mkC({ view: 'small', estateParam: null, screen: 's3', layer: 'cloud', tab: 'cost', costPanel: 'charges' });
+  const v = vals(c);
+  assert.equal(v.hasAttCharges, false);
+  assert.equal(v.noAttCharges, true, 'Small business shows a blank AT&T charges panel');
+  assert.match(v.attEmpty, /By leg/);
+  v.attEmptyGo();
+  assert.equal(c.state.costPanel, 'legs');
+  const html = (await import('node:fs')).readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
+  assert.ok(html.includes('{{ attEmpty }}') && html.includes('{{ noAttCharges }}'));
+});
+
 test('The cross-cloud finding names the public pairs Cloud-to-cloud shows, and no others', () => {
   for (const view of VIEWS) {
     const est = ESTATES[view], f = est.findings.find(x => x.kind === 'crosscloud');

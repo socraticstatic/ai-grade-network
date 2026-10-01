@@ -315,14 +315,15 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // div 1148 -> 1160, span 976 -> 975, sc-if 488 -> 491, sc-for 250 -> 251, button 371 -> 368, label 31 -> 32.
 // Modify bandwidth merged onto Cost, Signals and the home (2026-09-30): each count is theirs plus Modify bandwidth's own move: div 1092 -> 1134, span 941 -> 969, sc-if 508 -> 522, sc-for 264 -> 268, button 401 -> 413, aside 10 -> 11, label 30 -> 31.
 // w2-consistency (2026-09-30): the Traffic map's region chip moves into the card head, under its own obPanelMap sc-if, so it no longer wraps the By chips past the fold: sc-if 522 -> 523.
+// w2-consistency (2026-09-30): AT&T charges with nothing attached says so and opens By leg (an sc-if, its line div and span, and the button): div 1134 -> 1135, span 969 -> 970, sc-if 523 -> 524, button 413 -> 414.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1134],
-    ['span', /<span\b/g, /<\/span>/g, 969],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 523],
+    ['div', /<div\b/g, /<\/div>/g, 1135],
+    ['span', /<span\b/g, /<\/span>/g, 970],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 524],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 268],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 413],
+    ['button', /<button\b/g, /<\/button>/g, 414],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

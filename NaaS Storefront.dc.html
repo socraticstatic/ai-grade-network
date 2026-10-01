@@ -1822,6 +1822,8 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
         </div>
       </div>
       </sc-if>
+      <!-- Nothing attached, nothing to list (w2, 2026-09-30): the panel says so and opens By leg, where AT&T's access charges are. -->
+      <sc-if value="{{ noAttCharges }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:16px;padding:16px 0;font-size:14px;line-height:20px;color:var(--text-body)"><span style="flex:1;min-width:0">{{ attEmpty }}</span><button class="fx-btn" onClick="{{ attEmptyGo }}" style="height:32px;padding:0 14px;font-size:13px;white-space:nowrap">Open By leg</button></div></sc-if>
     </sc-if>
     <!-- Spend, savings and forecast in one view (Micah, 2026-09-29: "combine savings and forecast with spend"). -->
     <!-- Spend (Micah, 2026-09-30: "on cost spend, what does the 51k even mean - make the forecast make sense"): every tile says what it is, every figure is a door to what it counts, and the chart draws past months in Cost's colours with the two forecasts as two legended lines that land on the tile's two numbers. -->

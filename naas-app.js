@@ -4258,7 +4258,10 @@ function costVals(s, set, est, invAll, ob, go, c) {
     ], { key: 'move', title: 'What can actually move', sub: 'Every bucket, by whether steering changes the bill', centre: kF(recover), centreSub: 'recoverable' }), ringOn: true },
   ].filter(d => d.total > 1).map(d => ({ ...d, rows: d.rows.map(r => ({ ...r, key: d.key + ':' + r.label, barOn: !d.ringOn, w: (r.v / (d.key === 'dest' ? destMax : d.total) * 100).toFixed(1) + '%', bg: d.key === 'dest' ? CV.modelledFill() : r.color })) }));
   void fabPart; void pubPart;
-  return { ...optVals, attCharges, hasAttCharges: attCharges.length > 0, attTotalF: fmt(attTotal), attNetF: (attNet >= 0 ? '+' : '−') + fmt(Math.abs(attNet)), attNetLabel: attNet >= 0 ? 'Net saving after charges' : 'Net cost after savings', attNetColor: attNet >= 0 ? 'var(--success)' : 'var(--warning)', attNote: `${fmt(attTotal)}/mo · carries ${fmt(ob.savingsMo || 0)}/mo of savings`, goMarketplace: go('s7'),
+  // Nothing attached bills no cloud on-ramp; the panel says so and opens what AT&T does bill (w2, 2026-09-30:
+  // Small business showed a blank panel while By leg read $1,500/mo of AT&T access circuits).
+  return { ...optVals, noAttCharges: !attCharges.length && est.stage !== 'empty', attEmpty: 'Nothing is attached yet, so AT&T bills no cloud on-ramp. What AT&T bills for your sites\' access is in By leg.', attEmptyGo: () => set({ costPanel: 'legs', costBy: 'all', costPick: null, legDrill: null }),
+    attCharges, hasAttCharges: attCharges.length > 0, attTotalF: fmt(attTotal), attNetF: (attNet >= 0 ? '+' : '−') + fmt(Math.abs(attNet)), attNetLabel: attNet >= 0 ? 'Net saving after charges' : 'Net cost after savings', attNetColor: attNet >= 0 ? 'var(--success)' : 'var(--warning)', attNote: `${fmt(attTotal)}/mo · carries ${fmt(ob.savingsMo || 0)}/mo of savings`, goMarketplace: go('s7'),
     // Two moves, not a paragraph (2026-09-28): the biggest region to attach and
     // the sites still outside AT&T, each a figure and one button.
     // Spend, savings and forecast in one view (Micah, 2026-09-29: "combine
