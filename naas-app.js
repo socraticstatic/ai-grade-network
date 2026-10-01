@@ -363,7 +363,9 @@ export function vals(c) {
   const OWNER = {
     att: { stroke: '#3374cc', width: 3, dash: 'none', ownerLabel: 'AT&T' },
     cloud: { stroke: 'var(--text-light)', width: 2, dash: 'none', ownerLabel: 'Cloud provider' },
-    third: { stroke: 'var(--viz-5)', width: 2, dash: '5 3', ownerLabel: 'Third party' },
+    // A third party is not AT&T and not the cloud: the cloud provider's grey, dashed (third skeptic,
+    // 2026-09-30). --viz-5 is Over SLO's since the review, and the map's dots now draw Over SLO.
+    third: { stroke: 'var(--text-light)', width: 2, dash: '5 3', ownerLabel: 'Third party' },
   };
   // The things in each segment, named and owned, and the pieces of line between
   // them. A piece takes the style of the thing it belongs to, so a route changes
@@ -424,8 +426,11 @@ export function vals(c) {
     pillFs: folded && sg.side === 'core' ? '14px' : '10px', pillLh: folded && sg.side === 'core' ? 22 : 16, pillH: folded && sg.side === 'core' ? 26 : 18, pillPad: folded && sg.side === 'core' ? 12 : 8,
   }));
   const steeredRegionNames = new Set(steered.filter(id => id.startsWith('f-')).map(id => (estRaw.regionsList[+id.split('-')[1]] || {}).region));
-  // The home repeats Connect's map, so it draws Connect's wires and legend (skeptic, 2026-09-30).
-  const ovS = s.screen === 's0' ? { ...s, screen: 's3', tab: 'connect' } : s;
+  // The home repeats Connect's map without its Lens control, so it draws no lens (third skeptic,
+  // 2026-09-30: a red "poor" wire ran to GCP under "Azure eastus is down"). On the home a wire says
+  // whose path it is, private or the public internet, and the node dots carry Health's state.
+  const onHome = s.screen === 's0';
+  const ovS = s;
   const heroEdges = L.edges.map(e => {
     const keys = [e.site ? 'site' + e.site.name : null, e.region ? 'reg' + e.region.region : null, e.internet ? 'inet' : null].filter(Boolean);
     let op = dimFor(keys);
@@ -437,7 +442,7 @@ export function vals(c) {
     if (e.kind === 'egress' && e.region && legRegions.has(e.region.region)) e = { ...e, chip: null };
     const dashed = !e.priv || simHit;
     const d = edgePath(e);
-    const hh = e.region ? hp.regionHealth[e.region.region] : null;
+    const hh = e.region && !onHome ? hp.regionHealth[e.region.region] : null;
     const healthStroke = hh === 'red' ? 'var(--error)' : hh === 'amber' ? 'var(--warning)' : null;
     const ov = overlayFor(e, ovS, est0, ob, hp, R, steered, hoverKey);
     return { ...e, ...ov, key: e.id, d, op: ov.opOverride != null ? Math.min(op, ov.opOverride) : op, landed: !!(e.region && e.region.landed), amber: hh === 'amber' || hh === 'red', openObserve: hh === 'amber' || hh === 'red' ? () => { go('s3', { layer: 'cloud', tab: 'observe', obScope: 'cloud:' + e.region.cloud })(); } : null, stroke: ov.stroke || (e.ghost ? 'var(--border-primary)' : healthStroke || (e.priv ? '#3374cc' : 'var(--text-disabled)')), w: ov.w || (e.priv ? 2 : 1.5), dash: dashed ? '6 6' : 'none', crawl: !e.priv && !e.ghost, mx: (e.x1 + e.x2) / 2, my: (e.y1 + e.y2) / 2, px: e.kind === 'ingress' ? e.x2 : e.x1, py: e.kind === 'ingress' ? e.y2 : e.y1, portFill: e.priv ? '#0057b8' : 'var(--bg-base)', durS: ov.durS || (e.dur ? e.dur + 's' : '2s'), tailBegin: '-0.25s', retBegin: '-' + ((parseFloat(ov.durS || (e.dur ? e.dur + 's' : '2s')) || 2) / 2) + 's', chipW: e.chip ? e.chip.length * 8 + 14 : 0, showChip: !!e.chip && op === 1 || !!e.chip && !hoverKey, pulse: simHit || !!(e.region && e.region.landed) };
@@ -455,18 +460,33 @@ export function vals(c) {
     const total = lv.rows.reduce((a, r) => a + (r.count || 0), 0), att = lv.rows.reduce((a, r) => a + (r.att || 0), 0);
     return { ...st, priv: att > 0, access: `${total.toLocaleString('en-US')} ${total === 1 ? 'site' : 'sites'} · ${att.toLocaleString('en-US')} AT&T · ${(total - att).toLocaleString('en-US')} non-AT&T` }; };
   const heroSites = L.sites.map(placeCount).map(st => ({ ...st, key: st.key, hasPill: !st.ghost && !st.leaf && !st.more, pillN: pillOf(st), textW: (SITES_END - 24 - 24 - (!st.ghost && !st.more && !st.priv && !st.leaf ? 86 : !st.ghost && !st.leaf ? 44 : 18)) + 'px', op: dimFor(['site' + st.name]), ty: st.y + 15, ty2: st.y + 29, dash: st.ghost || st.more ? '4 4' : 'none', color: st.ghost ? 'var(--text-disabled)' : st.more ? 'var(--link)' : 'var(--text-heading)', click: () => { if (st.ghost || st.leaf) return; if (st.more) { openLevel('sites'); return; } seenHint(); const place = /^(state|metro):/.test(String(st.drillKey || '')); const isSite = !place && ((s.drill.length >= 2 && st.drillKey) || (st.drillKey && /^(site:|(DC|CAM|OFF|PLT|BR|ATM|FLD)-)/.test(String(st.drillKey))) || (!st.rollup && S.countOf(st.name) === 1 && !st.drillKey && !/\(/.test(st.name))); if (isSite) set({ mapSel: 'asset:' + String(st.drillKey || st.name).replace(/^site:/, ''), panelTab: 'overview' }); const key = st.drillKey || S.rollupKeyOf(est, st) || (S.countOf(st.name) > 1 || st.rollup ? S.classOf(st) : st.name); set({ drill: [...s.drill, key] }); }, enter: () => set({ hoverNode: 'site' + st.name }), leave: () => set({ hoverNode: null }), cursor: st.ghost || st.leaf ? 'default' : 'pointer', caret: st.ghost || st.leaf || st.more ? '' : '›', hasAction: !st.ghost && !st.more && !st.priv && !st.leaf, action: 'Attach', act: () => { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); syncHash('s4', s.layer, s.tab); } }));
+  // A node's dot is Health's state for its regions (third skeptic, 2026-09-30: amber meant Over SLO
+  // here and At risk on the Apps card above it): the one rule, or worse where Health lists a problem,
+  // in Health's ink and shape (Down is the square), titled in Health's word.
+  const H_RANK = { ok: 0, risk: 1, slo: 2, down: 3 };
+  const worseOf = (a, b) => (H_RANK[b] > H_RANK[a] ? b : a);
+  const dotOf = (names) => {
+    const per = names.map(n => est0.regionsList.find(x => x.region === n)).filter(Boolean).map(r => {
+      const ps = probs.filter(p => p.region === r.region), st = ps.reduce((a, p) => worseOf(a, p.state), F.regionState(r));
+      const p = ps.find(x => x.state === st), ms = r.priv ? r.fab : r.pub;
+      return { r, st, why: p ? p.what : st === 'ok' ? '' : `p95 ${ms} ms against a ${r.priv ? F.SLO_PRIVATE : F.SLO} ms SLO` };
+    });
+    const st = per.reduce((a, x) => worseOf(a, x.st), 'ok');
+    const why = st === 'ok' ? '' : per.filter(x => x.st === st).map(x => `${x.r.cloud} ${x.r.region} · ${x.why}`).join('; ');
+    return { relState: st, relFill: F.HEALTH_INK[st], relRx: st === 'down' ? 1 : 4, relTitle: why ? `${F.HEALTH_WORD[st]}: ${why}` : F.HEALTH_WORD[st] };
+  };
+  const dotAt = (x, y) => ({ dotRx: x - 4, dotRy: y - 4 });
   // Workload counts live on hover, not in a column beside the picture (Micah, 2026-09-23).
   const wlTip = (name, r) => (r.wl || r.wlLabel ? `${name} · ${r.wlLabel || plural(r.wl, 'workload', 'workloads')}` : name);
-  const heroRegions = L.regions.filter(r => !r.card).map(r => ({ ...r, key: r.key, pillN: '', hasPill: !(r.ghost || r.rollup || r.other || r.pinned || r.leaf), noPill: !!(r.ghost || r.rollup || r.other || r.pinned || r.leaf), tip: wlTip(r.cloud && !r.child ? `${r.cloud} ${r.region}` : r.region, r), op: dimFor(['reg' + r.region]), ty: r.y + 19, dash: r.seeAll ? '3 3' : r.ghost ? '4 4' : 'none', stroke: r.seeAll ? 'var(--cta)' : 'var(--border-primary)', color: r.seeAll ? 'var(--link)' : (r.ghost || r.muted) ? 'var(--text-disabled)' : 'var(--text-heading)', cursor: r.ghost || r.muted ? 'default' : 'pointer', relFill: r.ghost ? 'transparent' : hp.regionHealth[r.region] === 'red' ? 'var(--error)' : hp.regionHealth[r.region] === 'amber' ? 'var(--warning)' : 'var(--success)', relTitle: r.link === 'degraded' ? `Degraded: BGP flapping on ${F.RAMP_NAME[r.ramp] || 'NetBond'}` : hp.regionHealth[r.region] === 'amber' ? 'Degraded: latency spike on the public path' : 'Healthy', rx: L.rightX + (r.indent || 0), dotX: L.rightX + 214, rw: 240 - (r.indent || 0), rh: r.child ? 26 : 28, caret: r.seeAll ? '›' : r.ghost || r.rollup || r.other ? (r.other ? '‹' : '') : (r.pinned ? '‹' : r.leaf ? '' : '›'), action: r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : ''), hasAction: !!(r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : '')), act: () => { if (r.link === 'degraded') { go('s3', { layer: 'cloud', tab: 'observe', mapSel: 'cx-' + r.region, mapRegion: r.region, panelTab: 'impact' })(); return; } composeFor(go, r)(); }, actionBg: r.link === 'degraded' ? 'var(--warning)' : 'var(--cta)', rectFill: r.seeAll ? 'var(--bg-accent)' : r.pinned ? 'var(--bg-accent)' : r.child ? 'var(--bg-wash)' : 'var(--bg-base)', relOp: r.child || r.other ? 0 : 1, click: () => { if (r.ghost) return; if (r.seeAll) { openWorkloads(r.wlScope.region, r.wlScope.vpcId, r.wlScope.snId); return; } if (r.wlSel) { set({ mapSel: r.wlSel, panelTab: 'overview' }); return; } if (r.toRoot) { set(r.toProvider ? { cloudDrill: [], cloudPick } : { cloudDrill: [], cloudPick: null }); return; } if (r.pinned) { set({ cloudDrill: cloudDrill.slice(0, -1), cloudPick }); return; } if (r.rollup) return; if (r.child) { if (r.drill) set({ cloudDrill: [...cloudDrill, r.drill] }); return; } set({ cloudDrill: [r.region], cloudPick: r.cloud, andiScope: { kind: 'region', id: r.region, label: r.cloud + ' ' + r.region } }); }, enter: () => set({ hoverNode: 'reg' + r.region, hoverRegion: r.ghost || r.rollup ? null : r.region }), leave: () => set({ hoverNode: null, hoverRegion: null }) }));
+  const heroRegions = L.regions.filter(r => !r.card).map(r => ({ ...r, key: r.key, pillN: '', hasPill: !(r.ghost || r.rollup || r.other || r.pinned || r.leaf), noPill: !!(r.ghost || r.rollup || r.other || r.pinned || r.leaf), tip: wlTip(r.cloud && !r.child ? `${r.cloud} ${r.region}` : r.region, r), op: dimFor(['reg' + r.region]), ty: r.y + 19, dash: r.seeAll ? '3 3' : r.ghost ? '4 4' : 'none', stroke: r.seeAll ? 'var(--cta)' : 'var(--border-primary)', color: r.seeAll ? 'var(--link)' : (r.ghost || r.muted) ? 'var(--text-disabled)' : 'var(--text-heading)', cursor: r.ghost || r.muted ? 'default' : 'pointer', ...(r.ghost ? { relState: null, relFill: 'transparent', relRx: 4, relTitle: '' } : dotOf([r.region])), ...dotAt(L.rightX + 214, r.cy), rx: L.rightX + (r.indent || 0), dotX: L.rightX + 214, rw: 240 - (r.indent || 0), rh: r.child ? 26 : 28, caret: r.seeAll ? '›' : r.ghost || r.rollup || r.other ? (r.other ? '‹' : '') : (r.pinned ? '‹' : r.leaf ? '' : '›'), action: r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : ''), hasAction: !!(r.ghost || r.child || r.rollup || r.other || r.pinned ? '' : (r.link === 'degraded' ? 'Impact' : !r.priv ? 'Attach' : (conns.rows.find(c => c.region === r.region) || {}).hot ? 'Add port' : '')), act: () => { if (r.link === 'degraded') { go('s3', { layer: 'cloud', tab: 'observe', mapSel: 'cx-' + r.region, mapRegion: r.region, panelTab: 'impact' })(); return; } composeFor(go, r)(); }, actionBg: r.link === 'degraded' ? 'var(--warning)' : 'var(--cta)', rectFill: r.seeAll ? 'var(--bg-accent)' : r.pinned ? 'var(--bg-accent)' : r.child ? 'var(--bg-wash)' : 'var(--bg-base)', relOp: r.child || r.other ? 0 : 1, click: () => { if (r.ghost) return; if (r.seeAll) { openWorkloads(r.wlScope.region, r.wlScope.vpcId, r.wlScope.snId); return; } if (r.wlSel) { set({ mapSel: r.wlSel, panelTab: 'overview' }); return; } if (r.toRoot) { set(r.toProvider ? { cloudDrill: [], cloudPick } : { cloudDrill: [], cloudPick: null }); return; } if (r.pinned) { set({ cloudDrill: cloudDrill.slice(0, -1), cloudPick }); return; } if (r.rollup) return; if (r.child) { if (r.drill) set({ cloudDrill: [...cloudDrill, r.drill] }); return; } set({ cloudDrill: [r.region], cloudPick: r.cloud, andiScope: { kind: 'region', id: r.region, label: r.cloud + ' ' + r.region } }); }, enter: () => set({ hoverNode: 'reg' + r.region, hoverRegion: r.ghost || r.rollup ? null : r.region }), leave: () => set({ hoverNode: null, hoverRegion: null }) }));
   // Provider cards: the first level on the right. Each says how many regions it
   // holds and how they are reached, and opens to those regions.
   const heroClouds = L.regions.filter(r => r.card).map(r => {
     const rs = est.regionsList.filter(x => x.cloud === r.cloud);
     const ways = [...new Set(rs.map(x => (x.priv ? CONN_LABEL[connModeOf(x)].short : 'internet')))];
-    if (r.ghost) return { ...r, key: 'card:' + r.cloud, x: L.rightX, dotX: L.rightX + 226, tip: 'Discover to find them', op: 1, sub: r.cloud === 'Your clouds' ? 'AWS, Azure, GCP, Oracle' : 'CoreWeave, GPU clouds', relFill: 'transparent', relTitle: '', click: () => {}, enter: () => {}, leave: () => {}, dash: '4 4', color: 'var(--text-disabled)', cursor: 'default', caret: '' };
-    const down = rs.some(x => hp.regionHealth[x.region] === 'red'), amber = !down && rs.some(x => hp.regionHealth[x.region] === 'amber');
-    return { ...r, dash: 'none', color: 'var(--text-heading)', cursor: 'pointer', caret: '›', hasPill: true, pillN: String(rs.length), key: 'card:' + r.cloud, x: L.rightX, dotX: L.rightX + 226, tip: `${r.cloud} · ${plural(r.count, 'region', 'regions')} · ${plural(r.wl, 'workload', 'workloads')}`, op: dimFor(['reg' + r.region]), sub: `${plural(r.count, 'region', 'regions')} · ${ways.length > 2 ? ways.slice(0, 2).join(', ') + ' +' + (ways.length - 2) : ways.join(', ')}`,
-      relFill: down ? 'var(--error)' : amber ? 'var(--warning)' : 'var(--success)', relTitle: down ? 'A region here is degraded' : amber ? 'A region here runs over its latency SLO' : 'Healthy',
+    if (r.ghost) return { ...r, key: 'card:' + r.cloud, x: L.rightX, dotX: L.rightX + 226, ...dotAt(L.rightX + 226, r.cy), tip: 'Discover to find them', op: 1, sub: r.cloud === 'Your clouds' ? 'AWS, Azure, GCP, Oracle' : 'CoreWeave, GPU clouds', relState: null, relFill: 'transparent', relRx: 4, relTitle: '', click: () => {}, enter: () => {}, leave: () => {}, dash: '4 4', color: 'var(--text-disabled)', cursor: 'default', caret: '' };
+    return { ...r, dash: 'none', color: 'var(--text-heading)', cursor: 'pointer', caret: '›', hasPill: true, pillN: String(rs.length), key: 'card:' + r.cloud, x: L.rightX, dotX: L.rightX + 226, ...dotAt(L.rightX + 226, r.cy), tip: `${r.cloud} · ${plural(r.count, 'region', 'regions')} · ${plural(r.wl, 'workload', 'workloads')}`, op: dimFor(['reg' + r.region]), sub: `${plural(r.count, 'region', 'regions')} · ${ways.length > 2 ? ways.slice(0, 2).join(', ') + ' +' + (ways.length - 2) : ways.join(', ')}`,
+      ...dotOf(rs.map(x => x.region)),
       click: () => { seenHint(); set({ cloudPick: r.cloud, cloudDrill: [] }); }, enter: () => set({ hoverNode: 'reg' + r.region }), leave: () => set({ hoverNode: null }) };
   });
   const heroWorkloads0 = L.workloads.map(w => ({ ...w, op: dimFor(['reg' + w.region]), click: () => { const r = est.regionsList.find(x => x.region === w.region); if (r && !cloudDrill.length) set({ cloudDrill: [w.region], cloudPick: r.cloud }); else if (!r && !cloudPick) set({ cloudPick: w.region, cloudDrill: [] }); }, cursor: cloudDrill.length ? 'default' : 'pointer' }));
@@ -939,10 +959,11 @@ export function vals(c) {
       // Health's words (skeptic, 2026-09-30): a degraded connection is Down there, and "healthy" names what it counts.
       if (bad.length) parts.push({ key: 'bad', dot: 'var(--error)', text: `${bad.length} ${bad.length === 1 ? 'connection' : 'connections'} down`, title: bad.map(r => r.cloud + ' ' + r.region).join(', ') });
       if (hot.length) parts.push({ key: 'hot', dot: 'var(--warning)', text: `${hot.length} saturating`, title: hot.map(r => r.region + ' at ' + r.pct + '%').join(', ') });
-      if (blind) parts.push({ key: 'blind', dot: 'var(--text-disabled)', text: `${blind} without flow logs`, title: 'Regions sending no flow logs' });
+      // Regions, said so (third skeptic, 2026-09-30): between two connection counts a bare "5" read as 5 of 2 connections.
+      if (blind) parts.push({ key: 'blind', dot: 'var(--text-disabled)', text: `${blind} ${blind === 1 ? 'region' : 'regions'} without flow logs`, title: 'Regions sending no flow logs' });
       if (rows.length) parts.push({ key: 'ok', dot: 'var(--success)', text: `${ok} of ${rows.length} ${rows.length === 1 ? 'connection' : 'connections'} healthy`, title: 'Connections healthy' });
       return parts;
-    })(), clearHover: () => set({ hoverNode: null, hoverRegion: null }), laneY: L.lane.y, laneH: L.lane.h, bandY: L.bandY, bandH: L.bandH, facH: L.H - L.bandY * 2, strataCardH, strataPadY: strataTight ? 6 : 10, strataRowGap: strataTight ? 3 : 6, footY: L.H - 54, footY2: L.H - 48, heroVisible: heroScreen && heroOpen, heroStrip: heroScreen && !heroOpen, heroCanHide: heroScreen && heroOpen && !heroDefault, toggleHero, heroStripText: isEmpty ? 'Your sites, the AT&T network and your clouds, drawn after the first scan' : `${est.attachedRegions} of ${est.regions} regions on AT&T · ${est.regions - est.attachedRegions} on the public internet · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`, inDept, overlayLegend: overlayLegend(ovS, R), hasOverlay: inDept || s.screen === 's0', scrubT: s.scrubT == null ? 100 : s.scrubT, setScrub: (e) => set({ scrubT: +e.target.value }), showScrub: inDept && s.tab === 'observe', showForecast: inDept && s.tab === 'cost', fcT: s.fcT == null ? 0 : s.fcT, setFc: (e) => set({ fcT: +e.target.value }), fcLabel: (s.fcT || 0) === 0 ? 'today' : '+' + Math.round((s.fcT || 0) * 0.9) + ' days', heroRolled: s.screen === 's0', healthStrip: hp.strip, hasHealth: s.screen !== 's3', healthIncidents: probRows.map((x, i) => ({ ...x, text: `${x.where} · ${x.what} · ${x.age}${x.wl ? ` · ${x.wl.toLocaleString('en-US')} workloads behind it` : ''}`, key: 'hi' + i, dot: F.HEALTH_INK[x.health] || 'var(--warning)', rad: F.healthRadius(x.health), go: go('s3', { layer: 'cloud', tab: 'observe', mapSel: conns.rows.some(r => r.region === x.region) ? 'cx-' + x.region : null, mapRegion: x.region, panelTab: 'impact' }) })), hasIncidents: probRows.length > 0 && s.screen !== 's3',
+    })(), clearHover: () => set({ hoverNode: null, hoverRegion: null }), laneY: L.lane.y, laneH: L.lane.h, bandY: L.bandY, bandH: L.bandH, facH: L.H - L.bandY * 2, strataCardH, strataPadY: strataTight ? 6 : 10, strataRowGap: strataTight ? 3 : 6, footY: L.H - 54, footY2: L.H - 48, heroVisible: heroScreen && heroOpen, heroStrip: heroScreen && !heroOpen, heroCanHide: heroScreen && heroOpen && !heroDefault, toggleHero, heroStripText: isEmpty ? 'Your sites, the AT&T network and your clouds, drawn after the first scan' : `${est.attachedRegions} of ${est.regions} regions on AT&T · ${est.regions - est.attachedRegions} on the public internet · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`, inDept, overlayLegend: (onHome ? homeLegend({ states: new Set([...heroClouds, ...heroRegions].map(x => x.relState).filter(Boolean)), third: piecesMeta.some(p => p.owner === 'third') || nodesMeta.some(n => n.owner === 'third' && n.op), xc: xconnectsMeta.length > 0 }) : overlayLegend(ovS, R)).map(legendKey), hasOverlay: inDept || s.screen === 's0', scrubT: s.scrubT == null ? 100 : s.scrubT, setScrub: (e) => set({ scrubT: +e.target.value }), showScrub: inDept && s.tab === 'observe', showForecast: inDept && s.tab === 'cost', fcT: s.fcT == null ? 0 : s.fcT, setFc: (e) => set({ fcT: +e.target.value }), fcLabel: (s.fcT || 0) === 0 ? 'today' : '+' + Math.round((s.fcT || 0) * 0.9) + ' days', heroRolled: s.screen === 's0', healthStrip: hp.strip, hasHealth: s.screen !== 's3', healthIncidents: probRows.map((x, i) => ({ ...x, text: `${x.where} · ${x.what} · ${x.age}${x.wl ? ` · ${x.wl.toLocaleString('en-US')} workloads behind it` : ''}`, key: 'hi' + i, dot: F.HEALTH_INK[x.health] || 'var(--warning)', rad: F.healthRadius(x.health), go: go('s3', { layer: 'cloud', tab: 'observe', mapSel: conns.rows.some(r => r.region === x.region) ? 'cx-' + x.region : null, mapRegion: x.region, panelTab: 'impact' }) })), hasIncidents: probRows.length > 0 && s.screen !== 's3',
     headStart: D.HEADSTART.map(h => ({ ...h, key: h.cat, go: go('s7', { browseCat: h.cat }) })), headStartVerdict: isEmpty ? 'AT&T already sees the metros, clouds and paths you could use. Tell us two things and the store composes the rest.' : `${est.name} is recognized. ${estatePhrase(est)} already visible.`,
     modeTabs: [{ key: 'foryou', label: 'For you', active: !['s7', 's8'].includes(s.screen), click: () => { set({ mode: 'foryou' }); go('s3', { layer: 'cloud', tab: 'connect' })(); } }, { key: 'browse', label: 'Browse the marketplace', active: ['s7', 's8'].includes(s.screen), click: () => { set({ mode: 'browse' }); go('s7')(); } }],
     // The Sources page (a customer with no source yet): each cloud by the
@@ -1152,7 +1173,8 @@ export function homeVals(out, s, set, { go, isEmpty, openSave }) {
     regTotal: HM.numOf(cloudsG.centre), regPriv: HM.numOf(cloudsG.head) };
   const healthy = ((out.healthTiles || []).find(x => x.key === 'ok') || {}).v || '';
   const pubClouds = (out.allRegions || []).filter(r => !r.priv).map(r => r.cloud);
-  const take = isEmpty ? null : HM.takeAway(rk, { probs, acts, onTableF: openSave ? fmt(openSave) : '', spend: tile('spend'), could: tile('could'), banked: tile('banked'),
+  const couldT = (out.spendTiles || []).find(t => t.key === 'could') || {};
+  const take = isEmpty ? null : HM.takeAway(rk, { probs, acts, onTableF: openSave ? fmt(openSave) : '', spend: tile('spend'), could: { l: couldT.l, v: couldT.v || '', u: couldT.u, sub: couldT.sub }, banked: tile('banked'),
     exposed: stat('e'), govern: roll('govern'), connect: roll('connect'), pubWl: (String(wlG.head || '').match(/^[\d,]+/) || ['0'])[0], pubClouds, healthy });
   // The take-away's doors: its action, its headline and each part of its line open the set they name,
   // on a page that prints that figure.
@@ -1184,7 +1206,8 @@ export function homeVals(out, s, set, { go, isEmpty, openSave }) {
     homeCards,
     homeBriefGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'brief' }),
     homeWaiting: waiting.slice(0, 3), hasHomeWaiting: waiting.length > 0, noHomeWaiting: !waiting.length, homeWaitingNone: waiting.length ? '' : 'No finding waits on you',
-    homeWaitingMore: acts.length ? `All ${acts.length} in Your actions ›` : '', hasHomeWaitingMore: acts.length > 0,
+    // "All 1" read as a slip (third skeptic, 2026-09-30): one is just its count.
+    homeWaitingMore: acts.length > 1 ? `All ${acts.length} in Your actions ›` : acts.length ? '1 in Your actions ›' : '', hasHomeWaitingMore: acts.length > 0,
     homeWaitingGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0 }),
     homeEmpty: !!isEmpty, homeBand: !isEmpty, homeStep: step,
     // The map below the home carries the fold marker (scripts/fold-rule.mjs), and its incident strip stays
@@ -2584,7 +2607,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const downN = (conns.rows || []).filter(r => r.degraded).length, riskN = all.filter(r => r.state === 'risk' || r.state === 'slo').length;
     const healthTiles = [
       { key: 'ok', l: 'Apps healthy', v: `${all.filter(r => r.state === 'ok').length} of ${all.length}`, u: '' },
-      { key: 'risk', l: 'At risk', v: String(riskN), u: riskN === 1 ? 'app' : 'apps' },
+      // The tile counts both states, and says so (third skeptic, 2026-09-30): the home's legend keys Over SLO and At risk apart.
+      { key: 'risk', l: 'Over SLO or at risk', v: String(riskN), u: riskN === 1 ? 'app' : 'apps' },
       { key: 'down', l: 'Down', v: String(downN), u: downN === 1 ? 'connection' : 'connections' },
       { key: 'alerts', l: 'Alerts', v: String(probs.length), u: 'open' },
     ];
@@ -4054,13 +4078,29 @@ function overlayFor(e, s, est, ob, hp, R, steered, hoverKey) {
   if (tab === 'cost') { const ft = (s.fcT || 0) / 100; const prem = Math.round(premium * (1 - ft)); return { stroke: r.priv ? '#0057b8' : 'var(--text-disabled)', w: Math.max(2, Math.min(10, dollars / 4000)), sleeve: prem > 0, sleeveW: Math.max(3, Math.min(14, prem / 2500)), label: '$' + (dollars >= 1000 ? (dollars / 1000).toFixed(1) + 'k' : dollars) + '/mo' + (prem ? ' · +$' + (prem / 1000).toFixed(1) + 'k' : ''), lx, ly, hasLabel: true, math: hovered ? gb.toLocaleString('en-US') + ' GB × $' + rate.toFixed(2) + (prem ? ' (AT&T $0.02: −$' + prem.toLocaleString('en-US') + ')' : '') : '', hasMath: hovered && !!gb, cx: e.x2 - 150, cy: e.y2 + 8 }; }
   return {};
 }
+// The map's legend on the home (third skeptic, 2026-09-30): the home has no Lens control, so its key
+// is whose path a wire is, and the Health state each node dot draws, in Health's ink and words. A key
+// is shown for what the map draws; one colour is one thing on it.
+function homeLegend({ states, third, xc }) {
+  return [
+    { key: 'oa', sw: '#3374cc', l: 'AT&T and private paths' }, { key: 'oc', sw: 'var(--text-light)', l: 'cloud provider' },
+    ...(third ? [{ key: 'ot', sw: 'var(--text-light)', dash: true, l: 'third party (dashed)' }] : []),
+    { key: 'oh', sw: null, l: 'a drop = a handoff off AT&T' },
+    ...(xc ? [{ key: 'xc', sw: null, l: '□ your cross-connect (the colo answers for it)' }] : []),
+    { key: 'pub', sw: 'var(--text-disabled)', dash: true, l: 'public internet (dashed)' },
+    ...['down', 'slo', 'risk', 'ok'].filter(k => states.has(k)).map(k => ({ key: 'h-' + k, sw: F.HEALTH_INK[k], dot: F.healthRadius(k) === '2px' ? '1px' : '9999px', l: F.HEALTH_WORD[k] })),
+  ];
+}
+// A legend key draws a line (solid or dashed) or a dot, never both.
+const legendKey = (x) => ({ ...x, isDot: !!x.dot, isBar: !!x.sw && !x.dot, rad: x.dot || '2px',
+  bar: x.dash ? `repeating-linear-gradient(90deg,${x.sw} 0 4px,transparent 4px 7px)` : (x.sw || 'transparent') });
 function overlayLegend(s, R) {
   if (s.screen !== 's3') return [];
   const tab = s.tab;
   // Inside the band a wire's colour says who holds the SLA; outside it, how the
   // path performs. The legend says which is which.
   if (tab === 'connect') return [
-    { key: 'oa', sw: '#3374cc', l: 'AT&T' }, { key: 'oc', sw: 'var(--text-light)', l: 'cloud provider' }, { key: 'ot', sw: 'var(--viz-5)', l: 'third party (dashed)' },
+    { key: 'oa', sw: '#3374cc', l: 'AT&T' }, { key: 'oc', sw: 'var(--text-light)', l: 'cloud provider' }, { key: 'ot', sw: 'var(--text-light)', dash: true, l: 'third party (dashed)' },
     { key: 'oh', sw: null, l: 'a drop = a handoff off AT&T' },
     { key: 'xc', sw: null, l: '□ your cross-connect (the colo answers for it)' },
     { key: 'g', sw: 'var(--success)', l: 'good' }, { key: 'f', sw: 'var(--warning)', l: 'fair' }, { key: 'p', sw: 'var(--error)', l: 'poor' },

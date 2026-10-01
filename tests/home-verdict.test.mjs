@@ -138,7 +138,8 @@ test('V5: FinOps reads Spend\'s Could save, beside what is banked and the region
   for (const view of LIVE) {
     const v = vals(home(view, { persona: 'finops' }));
     const t = v.homeTake;
-    assert.equal(t.head, `Save ${tile(v, 'could').v}/mo on egress`, view);
+    // Spend's tile whole, its condition with it (third skeptic, 2026-09-30; tests/home-colour.test.mjs P5).
+    assert.equal(t.head, `Could save ${tile(v, 'could').v}/mo if every public region moves`, view);
     const banked = tile(v, 'banked').v;
     const pub = +v.rollup.find(r => r.key === 'connect').value.split(' ')[0];
     assert.equal(t.parts[0].t, /^\$0$/.test(banked) ? 'Nothing banked yet' : `${banked} banked to date`, view);
@@ -150,19 +151,20 @@ test('V5: FinOps reads Spend\'s Could save, beside what is banked and the region
 // ---- 4. One figure, one value: the PCI finding counts from the estate ----
 
 // "84 workloads exposed" over "96 PCI-tagged workloads reach the internet directly" read as a part bigger
-// than its whole. They count two things: the inventory's exposed workloads are its internet-facing entry
-// points (a public subnet's load balancer and API gateway), reachable from the internet; the PCI finding
-// counts workloads with an outbound default route to an internet gateway. The home names the direction.
-// (The entry points: a public subnet's load balancer, API gateway, web tier or bastion.)
-test('V6: the home counts what the internet can reach and says so; the PCI finding counts an outbound route', () => {
+// than its whole. The inventory's exposed workloads are its internet-facing entry points (a public
+// subnet's load balancer, API gateway, web tier or bastion). The third skeptic (2026-09-30) found
+// "reachable from the internet" read against the public regions' "52 workloads ride it", and the PCI
+// data wrong: the home now says Discover's own word, and the PCI finding counts the exposed PCI-tagged
+// workloads in a PCI-tagged region, a part of the home's figure (tests/home-colour.test.mjs P6).
+test('V6: the home counts the exposed workloads in Discover\'s word; the PCI finding counts a route to an internet gateway', () => {
   for (const view of LIVE) {
     const inv = A.inventory(D.ESTATES[view]);
     const exposed = inv.flatMap(cl => cl.regions.flatMap(r => r.vpcs.flatMap(vp => vp.subnets.flatMap(sn => (sn.workloads || []).filter(w => w.exposed).map(w => ({ sn, w }))))));
     assert.ok(exposed.length > 0, view);
     assert.ok(exposed.every(x => x.sn.pub && ['Load balancer', 'API gateway', 'Web tier', 'Bastion'].includes(x.w.type)), `${view}: an exposed workload that is not a public entry point`);
     const v = vals(home(view, { persona: 'security' }));
-    assert.equal(v.homeTake.head, `${stat(v, 'e')} workloads reachable from the internet`, view);
-    assert.equal(card(vals(home(view)), 'exposed').unit, 'workloads reachable from the internet', view);
+    assert.equal(v.homeTake.head, `${stat(v, 'e')} workloads exposed`, view);
+    assert.equal(card(vals(home(view)), 'exposed').unit, 'workloads exposed', view);
   }
   for (const id of ['partial', 'trust']) assert.match(D.ESTATES[id].findings.find(f => f.kind === 'pci').ev, /default route to an internet gateway/, id);
   assert.match(HTML.slice(HTML.indexOf('aria-label="Snapshot"'), HTML.indexOf('aria-label="Waiting on you"')), /\{\{ hc\.unit \}\}/);
@@ -232,7 +234,8 @@ test('V9: the Architect\'s line names the clouds the public regions are on, not 
 
 test('V10: the map head says down where Health says down, and whose "healthy" it counts', () => {
   const h = vals(home('partial')).fabricHealth.map(x => x.text);
-  assert.deepEqual(h, ['1 connection down', '5 without flow logs', '1 of 2 connections healthy']);
+  // "5 regions" (third skeptic, 2026-09-30): a bare 5 between two connection counts read as connections.
+  assert.deepEqual(h, ['1 connection down', '5 regions without flow logs', '1 of 2 connections healthy']);
   const m = vals(home('mature')).fabricHealth.map(x => x.text);
   assert.ok(m.includes('1 connection down') && m.includes('5 of 7 connections healthy'), m.join(' · '));
   for (const view of LIVE) assert.ok(!vals(home(view)).fabricHealth.some(x => /degraded/.test(x.text)), view);
@@ -278,13 +281,16 @@ test('V14: the home fills the first screen, so the map\'s title sits at the fold
   assert.match(HTML.slice(i, i + 400), /min-height:calc\(100vh - \d+px\)/, 'the home does not fill the first screen');
 });
 
-test('V14: the map on the home keeps Connect\'s legend and its wire colours', () => {
+// The third skeptic (2026-09-30) found Connect's lens on the home, which has no Lens control: a red
+// "poor" wire to GCP under "Azure eastus is down". The home keeps Connect's ownership keys and drops the
+// lens; its dots are Health's (tests/home-colour.test.mjs P14).
+test('V14: the map on the home keeps Connect\'s ownership keys, with no lens and no slider', () => {
   for (const view of LIVE) {
     const h = vals(home(view)), cn = vals(mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', nowIso: NOW }));
     assert.equal(h.hasOverlay, true, view);
-    assert.deepEqual(h.overlayLegend, cn.overlayLegend, `${view}: the legend is not Connect's`);
-    const wires = (v) => v.heroEdges.filter(e => e.region).map(e => [e.key, e.stroke || null]);
-    assert.deepEqual(wires(h), wires(cn), `${view}: the wires are not coloured as on Connect`);
+    for (const k of ['oc', 'oh']) assert.deepEqual(h.overlayLegend.find(l => l.key === k), cn.overlayLegend.find(l => l.key === k), `${view}: ${k} is not Connect's`);
+    assert.equal(h.overlayLegend.find(l => l.key === 'oa').sw, cn.overlayLegend.find(l => l.key === 'oa').sw, view);
+    assert.ok(!h.overlayLegend.some(l => l.key === 'lens'), `${view}: the home keys a lens it has no control for`);
     assert.equal(h.showScrub || h.showForecast, false, `${view}: a slider on the home`);
   }
 });
@@ -300,7 +306,7 @@ test('V16: Exposed prints how many of how many, and draws the share on a hundred
     assert.equal(x.waffle.length, 100, view);
     const lit = x.waffle.filter(c => c.on).length, share = +e.replace(/,/g, '') / +w.replace(/,/g, '');
     assert.equal(lit, Math.max(1, Math.round(share * 100)), view);
-    assert.match(x.wafTitle, new RegExp(`^${e} of ${w} workloads reachable from the internet$`), view);
+    assert.match(x.wafTitle, new RegExp(`^${e} of ${w} workloads exposed$`), view);
   }
   assert.equal(card(vals(home('trust')), 'exposed').value, '84 of 2,680');
 });
@@ -331,7 +337,9 @@ test('the Tags card counts Govern\'s tags with no policy, one mark a tag, each o
     assert.equal(x.unit, 'tags with no policy');
     assert.equal(x.dots.length, +all, view);
     assert.deepEqual(x.dots.slice(0, g.drawerTags.length).map(d => d.key), g.drawerTags.map(t => t.key), `${view}: the marks are not Govern's tags in order`);
-    assert.equal(x.dots.filter(d => d.ink === 'var(--warning)').length, +(bare || 0), `${view}: a tag with no policy is at risk`);
+    // A tag with no policy is the set the card counts, filled in its swatch's ink (third skeptic, 2026-09-30:
+    // amber read as the Apps card's At risk).
+    assert.equal(x.dots.filter(d => d.ink === x.swatch).length, +(bare || 0), `${view}: the tags with no policy are not the card's set`);
     x.dots.forEach((d, i) => {
       const c = home(view, { persona: 'security' });
       card(vals(c), 'tags').dots[i].go();

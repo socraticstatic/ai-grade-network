@@ -93,21 +93,25 @@ export function takeAway(rk, f) {
   const pub = cm ? numOf(cm[1]) : 0;
   if (rk === 'finops') {
     // Spend's own words and figures (skeptic, 2026-09-30): "Could save" is what
-    // the moves save at today's volume, so it never sits over today and 90 days
-    // ahead as a drop those two figures do not show.
+    // the moves save at today's volume. The headline is Spend's tile whole, its
+    // condition with it (third skeptic: "Save $41,500/mo" read as the Egress
+    // card's drop, and no two figures on that card reproduce it).
+    const could = f.could && typeof f.could === 'object' ? f.could : { l: 'Could save', v: f.could || '', u: '/mo', sub: 'if every public region moves' };
     return out({ key: 'finops', icon: 'pie-chart', ink: 'var(--success)', door: 'optimize', cta: 'Optimize', headDoor: 'spend',
-      head: numOf(f.could) ? `Save ${f.could}/mo on egress` : `Egress runs ${f.spend}/mo`,
+      head: numOf(could.v) ? `${could.l} ${could.v}${could.u} ${could.sub}` : `Egress runs ${f.spend}/mo`,
       parts: [numOf(f.banked) ? { t: `${f.banked} banked to date`, door: 'spend' } : { t: 'Nothing banked yet', door: '' },
         pub ? { t: `${one(pub, 'region', 'regions')} to move`, door: 'options' } : { t: 'every region on AT&T', door: '' }] });
   }
   if (rk === 'security') {
     // One line, Govern's own total; the policies left it (skeptic, 2026-09-30:
-    // the data's policy rows are not Govern's enforced count). Discover's
-    // exposed workloads are the ones the internet can reach, and the headline
-    // says so, so it never reads as the whole of a PCI finding's outbound route.
+    // the data's policy rows are not Govern's enforced count). The headline is
+    // Discover's own word, "exposed", on the page it opens (third skeptic:
+    // "reachable from the internet" read against the public regions' "52
+    // workloads ride it"; an exposed workload has a public address, wherever
+    // its region connects).
     const gv = f.govern || {}, e = String(f.exposed), vn = numOf(gv.value);
     return out({ key: 'security', icon: 'check-shield', ink: numOf(e) ? 'var(--warning)' : 'var(--success)', door: 'violations', cta: 'Review violations',
-      head: numOf(e) ? `${e} ${e === '1' ? 'workload' : 'workloads'} reachable from the internet` : 'No workload reachable from the internet', headDoor: numOf(e) ? 'exposed' : '',
+      head: numOf(e) ? `${e} ${e === '1' ? 'workload' : 'workloads'} exposed` : 'No workload exposed', headDoor: numOf(e) ? 'exposed' : '',
       parts: [vn ? { t: `${gv.value} policy ${vn === 1 ? 'violation' : 'violations'}`, door: 'violations' } : { t: 'No policy violations', door: '' }] });
   }
   if (rk === 'architect') {
@@ -187,9 +191,9 @@ export function sparkOf(past, asIs, moved) {
 }
 
 /** The Exposed card's picture: a hundred cells, the exposed share lit (skeptic, 2026-09-30: a 3% bar read as a dot). */
-export function waffleOf(n, of) {
+export function waffleOf(n, of, ink = 'var(--text-heading)') {
   const lit = n > 0 && of > 0 ? Math.min(100, Math.max(1, Math.round(n / of * 100))) : 0;
-  return Array.from({ length: 100 }, (_, i) => ({ key: 'w' + i, on: i < lit, ink: i < lit ? 'var(--warning)' : 'var(--bg-neutral)' }));
+  return Array.from({ length: 100 }, (_, i) => ({ key: 'w' + i, on: i < lit, ink: i < lit ? ink : 'var(--bg-neutral)' }));
 }
 
 /**
@@ -204,9 +208,23 @@ export function snapshotCards(rk, f, doors) {
   const g = f.glance || {};
   const regPriv = g.regPriv || 0, regTotal = g.regTotal || 0, sitesOn = g.sitesOn || 0, sitesTotal = g.sitesTotal || 0;
   const edge = 'var(--border-secondary)';
-  const INK_PRIV = 'var(--viz-1)', INK_SITE = 'var(--viz-2)', INK_OFF = 'var(--viz-6)', INK_COVERED = 'var(--border-primary)';
+  const INK_PRIV = 'var(--viz-1)', INK_SITE = 'var(--viz-2)', INK_OFF = 'var(--viz-6)';
+  // The set a count card counts and has no health colour for (exposed workloads, tags with no
+  // policy) is drawn in ink, the rest as an outline or a blank cell (third skeptic, 2026-09-30:
+  // amber read as At risk beside the Apps card, a light grey as the ring's public internet).
+  const INK_SET = 'var(--text-heading)', OUTLINE = `inset 0 0 0 2px ${INK_SET}`;
   const card = (key, label, rest) => ({ key, label, edge, suffix: '', unit: '', figs: [], legend: [], segs: [], dots: [], waffle: [], spark: null, wafTitle: '', wafGo: () => {}, wafOff: true,
-    isRing: false, isDots: false, isSpark: false, isWaffle: false, ...rest });
+    isRing: false, isDots: false, isSpark: false, isWaffle: false, dotW: 'auto', ...rest });
+  // A dot picture is a near-square block of large marks, its last row centred, so eight or nine of them
+  // fill the card's middle rather than float in it (third skeptic, 2026-09-30); four or fewer read
+  // larger still, and past sixteen the marks step down to fit.
+  const DOT_GAP = 8;
+  const dotGrid = (c) => {
+    if (!c.isDots) return c;
+    const n = c.dots.length, [btn, size] = n <= 4 ? [76, 56] : n <= 16 ? [52, 36] : [36, 24];
+    const cols = n <= 16 ? Math.max(1, Math.min(4, Math.ceil(Math.sqrt(n)))) : 5;
+    return { ...c, dotW: `${cols * btn + (cols - 1) * DOT_GAP}px`, dots: c.dots.map(d => ({ ...d, btn: `${btn}px`, size: `${size}px` })) };
+  };
 
   // The private regions are Connect's own "N are private"; the map is where they are drawn.
   const onatt = card('onatt', 'On AT&T', {
@@ -227,9 +245,9 @@ export function snapshotCards(rk, f, doors) {
   const seen = new Set(flows.map(r => r.state));
   const apps = card('apps', 'Apps', {
     door: 'Health', go: doors.health(), value: f.health || '0 of 0', unit: 'apps healthy', swatch: HEALTH_INK.ok, valueGo: doors.health(), valueOff: !numOf(f.health), isDots: true,
-    dots: flows.map(r => ({ key: r.tag, ink: HEALTH_INK[r.state] || 'var(--text-disabled)', rad: healthRadius(r.state), title: `${r.label} · ${HEALTH_WORD[r.state] || r.state}`, go: doors.appPath(r.tag) })),
+    dots: flows.map(r => ({ key: r.tag, ink: HEALTH_INK[r.state] || 'var(--text-disabled)', ring: 'none', rad: healthRadius(r.state), title: `${r.label} · ${HEALTH_WORD[r.state] || r.state}`, go: doors.appPath(r.tag) })),
     // Healthy is the unit's own swatch; the legend names the states that are not.
-    legend: ['down', 'slo', 'risk'].filter(k => seen.has(k)).map(k => ({ key: k, word: HEALTH_WORD[k], ink: HEALTH_INK[k], rad: healthRadius(k) })),
+    legend: ['down', 'slo', 'risk'].filter(k => seen.has(k)).map(k => ({ key: k, word: HEALTH_WORD[k], ink: HEALTH_INK[k], ring: 'none', rad: healthRadius(k) })),
   });
 
   const cols = f.spendCols || [];
@@ -243,26 +261,28 @@ export function snapshotCards(rk, f, doors) {
     figs: [{ key: 'act', v: `${spend.ahead}/mo`, u: 'in 90 days, if you act', swatch: 'var(--success)', go: doors.spend(), off: !numOf(spend.ahead) }],
   });
 
-  // Exposed of all, as Discover's At a glance prints them both: the workloads the internet can reach.
+  // Exposed of all, as Discover's At a glance prints them both, in its word: a workload with a public address.
   const exN = numOf(f.exposed), wlN = numOf(f.workloads);
   const gv = f.govern || {};
-  const exTitle = `${f.exposed} of ${f.workloads} workloads reachable from the internet`;
+  const exTitle = `${f.exposed} of ${f.workloads} workloads exposed`;
   const exposed = card('exposed', 'Exposed', {
-    door: 'Discover', go: doors.discover(), value: `${f.exposed} of ${f.workloads}`, unit: 'workloads reachable from the internet', swatch: 'var(--warning)', valueGo: doors.discover(), valueOff: !exN, isWaffle: true,
-    waffle: waffleOf(exN, wlN), wafTitle: exTitle, wafGo: doors.discover(), wafOff: !exN,
+    door: 'Discover', go: doors.discover(), value: `${f.exposed} of ${f.workloads}`, unit: 'workloads exposed', swatch: INK_SET, valueGo: doors.discover(), valueOff: !exN, isWaffle: true,
+    waffle: waffleOf(exN, wlN, INK_SET), wafTitle: exTitle, wafGo: doors.discover(), wafOff: !exN,
     figs: [{ key: 'violations', v: String(gv.value), u: numOf(gv.value) === 1 ? 'policy violation' : 'policy violations', swatch: '', go: doors.policies(), off: !numOf(gv.value) }],
   });
 
-  // Tags with no policy: Govern > Tags, one mark a tag in Govern's order; a bare tag is at risk.
+  // Tags with no policy: Govern > Tags, one mark a tag in Govern's order. A bare tag is the set
+  // the card counts, filled in ink; a covered tag is its outline.
   const tagRows = f.tags || [];
   const bare = tagRows.filter(t => !t.covered).length;
+  const tagMark = (covered) => (covered ? { ink: 'transparent', ring: OUTLINE } : { ink: INK_SET, ring: 'none' });
   const tags = card('tags', 'Tags', {
-    door: 'Govern', go: doors.tags(), value: `${enf(bare)} of ${enf(tagRows.length)}`, unit: 'tags with no policy', swatch: 'var(--warning)', valueGo: doors.tags(), valueOff: !bare, isDots: true,
-    dots: tagRows.map((t, i) => ({ key: t.key, ink: t.covered ? INK_COVERED : 'var(--warning)', rad: '9999px', title: `${t.name} · ${t.covered ? t.coverLabel : 'No policy'}`, go: doors.tag(i) })),
-    legend: [['bare', 'No policy', 'var(--warning)', bare], ['covered', 'Covered', INK_COVERED, tagRows.length - bare]].filter(x => x[3] > 0).map(([key, word, ink]) => ({ key, word, ink, rad: '9999px' })),
+    door: 'Govern', go: doors.tags(), value: `${enf(bare)} of ${enf(tagRows.length)}`, unit: 'tags with no policy', swatch: INK_SET, valueGo: doors.tags(), valueOff: !bare, isDots: true,
+    dots: tagRows.map((t, i) => ({ key: t.key, ...tagMark(t.covered), rad: '9999px', title: `${t.name} · ${t.covered ? t.coverLabel : 'No policy'}`, go: doors.tag(i) })),
+    legend: [['bare', 'No policy', false, bare], ['covered', 'Covered', true, tagRows.length - bare]].filter(x => x[3] > 0).map(([key, word, covered]) => ({ key, word, ...tagMark(covered), rad: '9999px' })),
   });
 
   const by = { onatt, apps, egress, exposed, tags };
-  return (CARD_ORDER[rk] || CARD_ORDER.neteng).map(k => by[k]).map(c => ({ ...c,
+  return (CARD_ORDER[rk] || CARD_ORDER.neteng).map(k => dotGrid(by[k])).map(c => ({ ...c,
     figs: c.figs.map(x => ({ ...x, hasSwatch: !!x.swatch })), hasSwatch: !!c.swatch, hasSuffix: !!c.suffix }));
 }

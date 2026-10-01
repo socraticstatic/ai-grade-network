@@ -95,8 +95,10 @@ await beat('0 NaaS home: the take-away, the snapshot, the map below', async () =
   if (c.length !== 4) throw new Error(`${c.length} snapshot cards, not 4`);
   for (const [i, want] of [[0, '5 of 8'], [1, '2 of 7'], [2, '$89,600'], [3, '54 of 303']]) if (!c[i].includes(want)) throw new Error(`card ${i + 1} reads "${c[i].replace(/\n/g, ' | ')}", not ${want}`);
   if (!(await page.locator('#sec-fabric[data-fold="below"]').count())) throw new Error('no Connect map below the home');
-  // The map's title sits at the fold and its legend is Connect's.
-  await expect('What you have', '1 connection down', 'wire colour follows the security lens');
+  // The map's title sits at the fold. The home has no Lens control, so its legend keys whose path a wire
+  // is and Health's state on each dot (third skeptic, 2026-09-30), never a lens.
+  await expect('What you have', '1 connection down', '5 regions without flow logs', 'AT&T and private paths', 'public internet (dashed)');
+  if ((await page.locator('#sec-fabric').innerText()).includes('security lens')) throw new Error('the home keys a lens it has no control for');
   const neteng = await takeaway();
   await tab('Executive', 'section[aria-label="NaaS home"]');
   const exec = await takeaway();

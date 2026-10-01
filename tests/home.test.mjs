@@ -70,14 +70,16 @@ test('the take-away is one headline, one line and one action per persona, each f
       if (persona === 'finops') {
         // Spend's own words (skeptic, 2026-09-30): Could save, what is banked, the regions that move.
         const pub = +roll(v, 'connect').value.split(' ')[0];
-        assert.equal(t.head, `Save ${tile(v, 'could')}/mo on egress`, where);
+        // Spend's tile whole, its condition with it (third skeptic, 2026-09-30).
+        assert.equal(t.head, `Could save ${tile(v, 'could')}/mo if every public region moves`, where);
         assert.equal(t.sub, `${money(tile(v, 'banked')) ? `${tile(v, 'banked')} banked to date` : 'Nothing banked yet'} · ${pub} ${pub === 1 ? 'region' : 'regions'} to move`, where);
         assert.equal(t.cta, 'Optimize', where);
       }
       if (persona === 'security') {
         // One part, Govern's total; the policy-row count left (skeptic, 2026-09-30).
         const e = stat(v, 'e'), g = roll(v, 'govern');
-        assert.equal(t.head, `${e} ${e === '1' ? 'workload' : 'workloads'} reachable from the internet`, where);
+        // Discover's own word (third skeptic, 2026-09-30).
+        assert.equal(t.head, `${e} ${e === '1' ? 'workload' : 'workloads'} exposed`, where);
         assert.equal(t.sub, `${g.value} policy violations`, where);
         assert.equal(t.cta, 'Review violations', where);
       }

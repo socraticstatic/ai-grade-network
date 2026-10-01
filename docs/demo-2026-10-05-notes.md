@@ -9,9 +9,9 @@ Before you start: open the storefront. It opens on the NaaS home. Click **Reset 
 
 - Rail: **NaaS**. The role chips sit on top, with **Andi's briefing ›** at the right; it opens the Monthly briefing.
 - The take-away is the worst live thing for the role: "Azure eastus is down", then "Finance rides it · 40 workloads · 22 min", and **Trace it**, which opens Paths on finance through eastus. Each counted part opens the set it counts.
-- Four snapshot cards, each a picture and the figure its door opens: Apps "5 of 8" apps healthy (a dot per app), On AT&T "2 of 7" regions private (the ring), Egress "$89,600/mo" today with the fork to "$51,100/mo" in 90 days, Exposed "54 of 303" workloads reachable from the internet (a hundred cells, 18 lit).
+- Four snapshot cards, each a picture and the figure its door opens: Apps "5 of 8" apps healthy (a dot per app), On AT&T "2 of 7" regions private (the ring), Egress "$89,600/mo" today with the fork to "$51,100/mo" in 90 days, Exposed "54 of 303" workloads exposed, Discover's own word (a hundred cells, 18 lit).
 - **Waiting on you** lists only what still waits: two chips, each with **Accept**. The IPsec finding is already acknowledged, so it is in Your actions, not here; "All 3 in Your actions ›" opens them.
-- At the fold: "What you have", "1 connection down", then Connect's network map below, with Connect's legend.
+- At the fold: "What you have", "1 connection down", "5 regions without flow logs", then Connect's network map below. The home has no Lens control, so its wires say whose path each is ("AT&T and private paths", "public internet (dashed)") and each cloud's dot is Health's state, keyed: Azure's square is red (Down), AWS's dot purple (Over SLO).
 - Click **Executive** in the role chips: "$41,500/mo on the table", "3 moves · 1 outage on Finance", and Egress leads the cards. Click **Network Eng** to come back.
 
 Say: one page for every role. The role changes the take-away and the cards; no card repeats the take-away, and every figure opens the page that prints it.

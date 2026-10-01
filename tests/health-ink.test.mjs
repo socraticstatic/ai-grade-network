@@ -134,12 +134,13 @@ test('an open problem colours the rows of the apps it lists, so tiles, grid and 
     }
     const t = Object.fromEntries(v.healthTiles.map(x => [x.l, x.v]));
     assert.equal(t['Apps healthy'], `${v.pathFlowRows.filter(r => r.state === 'ok').length} of ${v.pathFlowRows.length}`);
-    assert.equal(t['At risk'], String(v.pathFlowRows.filter(r => r.state === 'risk' || r.state === 'slo').length));
+    // The tile counts both states and names both (third skeptic, 2026-09-30).
+    assert.equal(t['Over SLO or at risk'], String(v.pathFlowRows.filter(r => r.state === 'risk' || r.state === 'slo').length));
   }
   const small = health('small');
   const t = Object.fromEntries(small.healthTiles.map(x => [x.l, x.v]));
   assert.equal(t['Apps healthy'], '1 of 2');
-  assert.equal(t['At risk'], '1');
+  assert.equal(t['Over SLO or at risk'], '1');
   const inet = small.pathFlowRows.find(r => r.tag === 'internet-facing');
   assert.equal(inet.state, 'risk');
   const onramp = inet.cells.find(c => c.key === 'onramp');

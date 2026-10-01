@@ -16,7 +16,8 @@ const EXPECT = {
   partial: {
     // Re-pinned (2026-09-30, owner decision b): private is private; a direct connect is not the AT&T network.
     connect: '5 of 7 regions still ride the public internet. 2 are private: 1 on NetBond, 1 on a direct connect.',
-    govern: '4 policies enforced. 11 PCI-tagged workloads reach the internet directly.',
+    // Re-pinned (third skeptic, 2026-09-30): the PCI finding counts its region's exposed PCI-tagged workloads.
+    govern: '4 policies enforced. 10 PCI-tagged workloads reach the internet directly.',
     // The IPsec egress finding (2026-09-28) adds $5,500 and a third priced finding;
     // saved money counts on any estate with something attached, not only mature.
     cost: '$41,500/mo on the table across 3 priced findings. $36,000/mo already saved on AT&T.',
@@ -33,7 +34,8 @@ const EXPECT = {
   trust: {
     // Re-pinned (2026-09-30, owner decision b).
     connect: '2 of 6 regions still ride the public internet. 4 are private: 2 on NetBond, 2 on direct connects.',
-    govern: '9 policies enforced. 96 PCI-tagged workloads reach the internet directly.',
+    // Re-pinned (third skeptic, 2026-09-30): us-east-2 carries the PCI tag; us-west-2 never did.
+    govern: '9 policies enforced. 10 PCI-tagged workloads reach the internet directly.',
     cost: '$132,000/mo on the table across 2 priced findings. $148,000/mo already saved on AT&T.',
     observe: '77% of all traffic on AT&T, saving $148k/mo. 2 regions are blind.',
   },

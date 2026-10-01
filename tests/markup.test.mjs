@@ -272,11 +272,13 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // The home v2 merged onto the connect flow (2026-09-30): each count is the flow's plus the home's own move: div 1118 -> 1119, span 947 -> 938, sc-if 477 -> 481, sc-for 247 -> 252, button 356 -> 359, label 31 -> 30.
 // The home skeptic's fixes (2026-09-30): the Exposed bar's track left for a button of a hundred cells (div 1119 -> 1118),
 // and Violations & policies prints its total beside the Policies head, Your actions its count beside its title (span 938 -> 940).
+// The home's third skeptic (2026-09-30): the map's legend draws a dot for a Health state as well as a line,
+// one more span under one more sc-if (lg.isDot): span 940 -> 941, sc-if 481 -> 482.
 test('every container the markup opens, it closes', () => {
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 1118],
-    ['span', /<span\b/g, /<\/span>/g, 940],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 481],
+    ['span', /<span\b/g, /<\/span>/g, 941],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 482],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 252],
     ['section', /<section\b/g, /<\/section>/g, 12],
     ['button', /<button\b/g, /<\/button>/g, 359],
