@@ -341,6 +341,7 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // save gate and Coming soon moves to the button's title (sc-if -1, span -1): span 984 -> 985, sc-if 569 -> 568.
 // Dev's home (2026-10-01): KPI cards, the chart and Do next, Needs attention replace the picture cards and Waiting on you; recounted, every tag balanced.
 // The egress chart's unit cost per GB line (Dev's FinOps home, 2026-10-01): span 1001 -> 1002.
+// Dev's FinOps view (2026-10-01): the waterfall, what if, who pays and unit cost on the FinOps home and on Signals, with FinOps' own actions; recounted, every tag balanced.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -355,12 +356,12 @@ test('every container the markup opens, it closes', () => {
   // div 1134 -> 1139, span 969 -> 962, sc-if 522 -> 528, sc-for 268 -> 278, button 413 -> 445.
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1161],
-    ['span', /<span\b/g, /<\/span>/g, 1002],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 559],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 283],
+    ['div', /<div\b/g, /<\/div>/g, 1202],
+    ['span', /<span\b/g, /<\/span>/g, 1030],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 564],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 290],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 467],
+    ['button', /<button\b/g, /<\/button>/g, 470],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

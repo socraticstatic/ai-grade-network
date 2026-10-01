@@ -191,7 +191,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -1270,6 +1270,29 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
     homeChart: (() => { const eg = homeCards.find(x => x.key === 'egress'); if (!eg) return null; const now = HM.numOf(tile('spend')), ah = HM.numOf(tile('ahead'));
       // Unit cost per GB (Dev's FinOps home, 2026-10-01): the rates the app prices egress at everywhere.
       return { spark: eg.spark, today: tile('spend'), act: tile('ahead'), save: now > ah && ah ? `$${(now - ah).toLocaleString('en-US')}` : '$0', go: eg.go, perGb: 'Per GB: $0.09 on the internet, $0.02 on the AT&T network, 78% lower' }; })(),
+    ...(() => { // Dev's FinOps home (2026-10-01): the waterfall, what if, who pays, unit cost, and FinOps' own work.
+      const isFin = rk === 'finops' && !isEmpty, start = HM.numOf(tile('spend'));
+      if (!isFin || !start) return { homeFin: false, homeFinOff: true };
+      const pr = openF.filter(x => x.priced && x.save).sort((x, y) => y.save - x.save);
+      const INK = { FinOps: 'var(--viz-2)', Engineering: 'var(--viz-1)' }, H = 180, k = H / start;
+      let run = start;
+      const steps = pr.map(x => { const owner = /FinOps/.test(x.persona || '') ? 'FinOps' : 'Engineering', top = run; run -= x.save;
+        return { key: x.kind, label: ({ avoidable: 'Internet egress', crosscloud: 'Cloud to cloud', ipsecegress: 'IPsec branches', ipsec: 'IPsec branches' }[x.kind] || (D.KINDS[x.kind] || x.kind).replace(/^\w/, c => c.toUpperCase())), valF: `-${fmt(x.save)}`, h: `${Math.max(2, Math.round(x.save * k))}px`, mb: `${Math.round(run * k)}px`, ink: INK[owner], owner }; });
+      const wf = [{ key: 'today', label: 'Today', valF: fmt(start), h: `${H}px`, mb: '0px', ink: 'var(--text-light)', owner: '' }, ...steps,
+        { key: 'after', label: 'After', valF: fmt(Math.max(0, run)), h: `${Math.max(2, Math.round(Math.max(0, run) * k))}px`, mb: '0px', ink: 'var(--success)', owner: '' }];
+      const last = (out.spendCols || []).filter(x => x.kind === 'past').slice(-1)[0] || {}, outN = last.outN || 0;
+      const p = Number.isFinite(s.finWhatIf) ? s.finWhatIf : 40, wiSave = Math.round(outN * p / 100 * (0.07 / 0.09) / 10) * 10;
+      const bu = (out.finBu || []).slice(0, 4), buMax = Math.max(1, ...bu.map(x => x.v));
+      const eng = pr.filter(x => !/FinOps/.test(x.persona || '')), engSum = eng.reduce((a, x) => a + x.save, 0);
+      const toSpend = go('s3', { ...cloud, tab: 'cost', costPanel: 'spend' }), toLegs = go('s3', { ...cloud, tab: 'cost', costPanel: 'legs' });
+      const finActs = [
+        bu.length && { key: 'showback', head: 'Send each business unit its share', sub: bu.map(x => x.label).join(', '), outcome: `${bu.length} to send`, outInk: 'var(--warning)', label: 'Showback', go: toLegs },
+        eng.length && { key: 'owners', head: 'Send savings to the people who can make them', sub: `${eng.length} engineering ${eng.length === 1 ? 'move' : 'moves'}, worth ${fmt(engSum)}/mo`, outcome: 'Without an owner', outInk: 'var(--warning)', label: 'Assign owners', go: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0 }) },
+        { key: 'alert', head: 'Set an alert on cloud exit fees', sub: `${fmt(outN)}/mo leaves outside AT&T today`, outcome: 'No alert set', outInk: 'var(--warning)', label: 'Set alert', go: toSpend },
+        { key: 'verify', head: 'Confirm savings on the invoice', sub: `${tile('banked') || '$0'} banked to date`, outcome: 'Confirm', outInk: 'var(--success)', label: 'Verify', go: toSpend },
+      ].filter(Boolean);
+      return { homeFin: true, homeFinOff: false, finWf: wf, finWhatIf: p, setFinWhatIf: (e) => set({ finWhatIf: +e.target.value }), finWhatIfSave: `${fmt(wiSave)}/mo`,
+        finBuRows: bu.map(x => ({ ...x, vF: fmt(x.v), w: `${Math.round(x.v / buMax * 100)}%` })), hasFinBu: bu.length > 0, finActs }; })(),
     homeAttn: probs.slice(0, 5).map(p => ({ key: p.key, word: F.HEALTH_WORD[p.state] || p.state, ink: F.HEALTH_INK[p.state] || 'var(--warning)', what: p.what, where: `${p.where} · ${p.thing}`, impact: p.appsF || '', go: p.trace || p.go || (() => {}) })),
     hasHomeAttn: probs.length > 0,
     homeBriefGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'brief' }),
@@ -2186,6 +2209,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // (R.costLegs, as costVals reads it), so every figure is the one its Cost door shows.
   const costL = R.costLegs(est, A.inventory(est), obAll.utilRows);
   const costIx = DR.costIndex(est, costL);
+  // Who pays, by business unit (Dev's FinOps home, 2026-10-01): each site's access bill from Cost, grouped by the
+  // site's business unit as Discover tags it (its class until someone tags it).
+  const finBu = (() => { const by = {}, tags = (s.siteTags || {})[est.id] || {};
+    for (const st of est.sites || []) { const v = (costIx.site[st.name] || {}).v || 0; if (!v) continue; const k = S.buOf(st, tags); by[k] = (by[k] || 0) + v; }
+    return Object.entries(by).sort((x, y) => y[1] - x[1]).map(([k, v]) => ({ key: k, label: k, v })); })();
   const glanceSpend = (() => { const ks = ['access', 'connect', 'cloud'], tot = Math.round(costL.total || 0), legR = CV.roundTo(ks.map(k => (costL[k] || {}).total || 0), tot);
     const segs = CV.inkSegs(ks.flatMap(k => (costL[k] || {}).rows || [])), segT = segs.reduce((a, x) => a + x.v, 0) || 1;
     return { has: tot > 0, totalF: fmt(tot), totalGo: dd.cost({ costPanel: 'legs' }), title: `${fmt(tot)} a month, end to end, from Cost`,
@@ -3421,7 +3449,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const fc = LIST.has(s.sigOpen) ? sigAll.find(x => x.key === s.sigOpen) : null;
     const fpg = fc ? pageRows(fc.all, listN(fc.key), s.sigListPage, (n) => set({ sigListPage: n })) : null;
     const sigFocus = fc ? { key: fc.key, title: fc.title, head: fc.head, total: fc.all.length, all: fc.all, rows: fpg.rows, pager: fpg.pager, legend: fc.legend, finds: fc.finds, back: () => set({ sigOpen: null, sigListPage: 0, sigWeek: null }) } : null;
-    return { sigChips, sigHas: true, sigEmpty: false, sigEmptyGo, sigAll, sigCards: fc ? [] : pg.rows, sigGrid: !fc, sigPager: pg.pager, sigFocusOn: !!fc, sigFocus,
+    return { sigChips, sigHas: true, sigEmpty: false, sigEmptyGo, sigAll, sigCards: fc ? [] : pg.rows, sigGrid: !fc && roleKeyOf(s) !== 'finops', sigFin: !fc && roleKeyOf(s) === 'finops', sigPager: pg.pager, sigFocusOn: !!fc, sigFocus,
       insFocusLabel: insFocus ? ((sigAll.find(x => x.key === insFocus) || {}).title || '') : '' };
   })();
   const dash = { ...mixVals, ...insightVals, ...healthVals, ...opsVals, ...roleVals, ...sigVals, dashTiles, capRows, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
@@ -3641,7 +3669,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         else { set({ jumpHit: `Jumped to ${hit.label}`, tagView: false, treeOrMap: 'tree', inv: { ...(s.inv || {}), [hit.cloudId]: true, [hit.regionId]: true, [hit.vpcId]: true } }); after('vpc:' + hit.vpcId); }
       };
       return { jumpQ: s.jumpQ || '', setJumpQ: (e) => set({ jumpQ: e.target.value, jumpHit: '' }), jumpKey: (e) => { if (e.key === 'Enter') jumpTo(); }, jumpGo: jumpTo, jumpHit: s.jumpHit || '', hasJumpHit: !!s.jumpHit,
-        newStrip, newPill30, newOnly, haveCards, glanceRings, glanceSpend, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go, titleParts: l.titleParts, soParts: l.soParts })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
+        newStrip, newPill30, newOnly, haveCards, glanceRings, glanceSpend, finBu, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go, titleParts: l.titleParts, soParts: l.soParts })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
         // Three tabs, one panel at a time (2026-09-28, no scrolling).
         // Group the picture's sites (notes, 2026-09-29): by region, or by how they attach.
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
