@@ -43,3 +43,15 @@ test('step 2: route rules follow NetBond Advanced, direction by direction, and r
   vals(c).aSimulate();
   assert.deepEqual(c.state.customPolicies.at(-1).route['deny:matching-routes'], { o2p: true, p2o: false });
 });
+
+import { SERVICE_GROUPS } from '../naas-policy-layers.js';
+test('step 2b: multipath, inline services, access, encryption and egress are choices with their layer', () => {
+  assert.deepEqual(SERVICE_GROUPS.map(g => g.key), ['multipath', 'inline', 'access', 'crypto', 'egress']);
+  for (const g of SERVICE_GROUPS) for (const o of g.opts) assert.ok(['site', 'edge', 'core', 'cloud'].includes(o.layer), o.label);
+  const c = gov({ match: 'Private cloud · Equinix DC2, Ashburn', scope: 'AWS us-east-1', req: [], tab: 'route' });
+  const v = vals(c);
+  v.aGroups.find(g => g.key === 'multipath').opts.find(o => o.label === 'Two paths, diverse metros').go();
+  vals(c).aGroups.find(g => g.key === 'crypto').opts.find(o => o.label === 'Encrypt in transit').go();
+  assert.match(vals(c).aSent.route, /two paths, diverse metros; encrypt in transit/);
+  assert.equal(vals(c).aReady, true);
+});

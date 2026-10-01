@@ -69,4 +69,13 @@ export const ROUTE_RULES = [
   { section: 'allow', id: 'community-value-filter-att', label: 'Community value filter, AT&T BGP CVs', o2p: false, p2o: true },
   { section: 'advanced', id: 'advertise-static-routes', label: 'Advertise static routes', o2p: true, p2o: true },
 ];
-export const ROUTE_PATHS = ['Via the AT&T network', 'Fail over to Equinix Fabric', 'Never the internet'];
+// What the path between two assets must do (Micah, 2026-10-01: "multi-path routing with diversity to from between
+// cloud assets, inline service insertion, access, encrypt/decrypt, controlled egress"), each on the layer that enforces it.
+export const SERVICE_GROUPS = [
+  { key: 'multipath', label: 'Multi-path', opts: [['Via the AT&T network', 'core'], ['Two paths, diverse metros', 'edge'], ['Two paths, diverse carriers', 'site'], ['Active/active', 'core'], ['Fail over to Equinix Fabric', 'core'], ['Never the internet', 'core']] },
+  { key: 'inline', label: 'Inline services', opts: [['NGFW inline', 'edge'], ['IDS/IPS inline', 'edge'], ['Web proxy inline', 'edge']] },
+  { key: 'access', label: 'Access', opts: [['Private access only', 'site'], ['Zero-trust access for users', 'site']] },
+  { key: 'crypto', label: 'Encrypt / decrypt', opts: [['Encrypt in transit', 'edge'], ['Decrypt only at the AT&T edge, for inspection', 'edge']] },
+  { key: 'egress', label: 'Controlled egress', opts: [['Internet egress only through AT&T', 'core'], ['Egress only via named regions', 'cloud'], ['Allow-listed destinations only', 'edge']] },
+].map(g => ({ ...g, opts: g.opts.map(([label, layer]) => ({ label, layer })) }));
+export const ROUTE_PATHS = SERVICE_GROUPS.flatMap(g => g.opts.map(o => o.label));
