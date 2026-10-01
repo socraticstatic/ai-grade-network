@@ -85,14 +85,11 @@ const takes = async (...needles) => { const t = await takeaway(); for (const n o
 const cards = () => inHome('[aria-label="Snapshot"] > div').allInnerTexts();
 await beat('0 NaaS home: the take-away, the snapshot, the map below', async () => {
   await rail('NaaS');
-  await expect("Andi's briefing", 'Waiting on you');
+  // Dev's home (2026-10-01): Do next ranks the role's actions, each with what it gets you.
+  await expect("Andi's briefing", 'Do next', 'Needs attention', 'Shows the traffic you cannot see');
   await takes('Azure eastus is down', 'Finance rides it · 40 workloads · 22 min', 'Trace it');
-  // Waiting on you lists only what still waits (skeptic, 2026-09-30): the IPsec finding is acknowledged, so it is not here.
-  const chips = await inHome('[aria-label="Waiting on you"] button:has-text("Accept")').count();
-  // Network Eng owns blind regions, latency over SLO and telemetry since Insights v2 ("make sure mock data matches
-  // persona", 2026-09-30); one path to eastus went to the Architect. Three still wait.
-  if (chips !== 3) throw new Error(`Waiting on you offers Accept on ${chips} chips, not 3`);
-  if ((await inHome('[aria-label="Waiting on you"]').innerText()).includes('IPsec')) throw new Error('the acknowledged IPsec finding still waits on the home');
+  const rows = await inHome('[aria-label="Do next"] .hm-do').count();
+  if (rows !== 4) throw new Error(`Do next lists ${rows} actions, not Network Eng's 4`);
   const c = await cards();
   if (c.length !== 4) throw new Error(`${c.length} snapshot cards, not 4`);
   for (const [i, want] of [[0, '5 of 8'], [1, '2 of 7'], [2, '$89,600'], [3, '54 of 303']]) if (!c[i].includes(want)) throw new Error(`card ${i + 1} reads "${c[i].replace(/\n/g, ' | ')}", not ${want}`);

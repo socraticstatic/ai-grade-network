@@ -203,23 +203,7 @@ test('P14: on the home, one colour in the map\'s legend means one thing', () => 
 
 // ---- The Tags and Exposed cards draw their sets in ink ----
 
-test('Tags and Exposed draw the set they count in ink, never in a health colour or the ring\'s', () => {
-  const taken = new Set([...Object.values(F.HEALTH_INK), 'var(--viz-1)', 'var(--viz-2)', 'var(--viz-6)', 'var(--border-primary)', 'var(--text-disabled)']);
-  for (const view of LIVE) {
-    const v = vals(home(view, { persona: 'architect' }));
-    const tags = card(v, 'tags'), ex = card(v, 'exposed');
-    for (const d of tags.dots) assert.ok(!taken.has(d.ink), `${view} tag ${d.key}: ${d.ink}`);
-    for (const l of tags.legend) assert.ok(!taken.has(l.ink), `${view} tag legend ${l.word}: ${l.ink}`);
-    assert.ok(!taken.has(tags.swatch) && !taken.has(ex.swatch), `${view}: ${tags.swatch} / ${ex.swatch}`);
-    for (const c of ex.waffle.filter(x => x.on)) assert.ok(!taken.has(c.ink), `${view} exposed cell: ${c.ink}`);
-    // The tags with no policy are the set the card counts, filled; a covered tag is the outline.
-    const bare = tags.dots.filter(d => /No policy$/.test(d.title));
-    assert.ok(bare.every(d => d.ink === tags.swatch && d.ring === 'none'), view);
-    assert.ok(tags.dots.filter(d => !/No policy$/.test(d.title)).every(d => d.ink === 'transparent' && /inset/.test(d.ring)), view);
-  }
-  const i = HTML.indexOf('list="{{ hc.dots }}"');
-  assert.match(HTML.slice(i, HTML.indexOf('</sc-for>', i)), /box-shadow:\{\{ dt\.ring \}\}/, 'a dot cannot draw its outline');
-});
+// Retired 2026-10-01: the picture cards it pinned left the home for Dev's KPI cards.
 
 // ---- P11: Health's tile counts what the home's legend names ----
 
@@ -239,27 +223,7 @@ test('P11: Health\'s tile names both states it counts, so the home\'s Over SLO a
 // The section fills the first screen, so each card is 406 to 470px tall and its middle 230 to 294px:
 // eight app dots or nine tag dots floated in it (third skeptic, 2026-09-30). The dots lay out as a
 // near-square grid of large marks, and the ring, the waffle and the sparkline take the middle's size.
-test('a picture fills its card\'s middle: dots in a near-square grid of large marks, the ring, waffle and sparkline sized to the middle', () => {
-  for (const view of LIVE) for (const persona of ROLES) {
-    for (const x of vals(home(view, { persona })).homeCards.filter(c => c.isDots)) {
-      const nDots = x.dots.length, cols = Math.max(1, Math.min(4, Math.ceil(Math.sqrt(nDots))));
-      if (nDots > 16) continue;
-      const [btn, size] = nDots <= 4 ? [76, 56] : [52, 36];
-      assert.equal(x.dotW, `${cols * btn + (cols - 1) * 8}px`, `${view}/${persona} ${x.key}: ${nDots} dots`);
-      assert.ok(x.dots.every(d => d.size === `${size}px` && d.btn === `${btn}px`), `${view}/${persona} ${x.key}`);
-    }
-  }
-  const css = (sel) => { const i = HTML.indexOf(sel + '{'); return HTML.slice(i, HTML.indexOf('}', i)); };
-  assert.match(css('.hm-ring'), /width:min\(100%,216px\)/);
-  assert.match(css('.hm-ring'), /aspect-ratio:1/);
-  assert.match(css('.hm-spark'), /height:100%/);
-  assert.match(css('.hm-waffle'), /repeat\(10,17px\)/);
-  const i = HTML.indexOf('list="{{ hc.dots }}"');
-  assert.match(HTML.slice(i - 200, i), /width:\{\{ hc\.dotW \}\}/, 'the dots do not lay out as the card says');
-  const loop = HTML.slice(i, HTML.indexOf('</sc-for>', i));
-  assert.match(loop, /width:\{\{ dt\.btn \}\};height:\{\{ dt\.btn \}\}/);
-  assert.match(loop, /width:\{\{ dt\.size \}\};height:\{\{ dt\.size \}\}/);
-});
+// Retired 2026-10-01: the picture cards it pinned left the home for Dev's KPI cards.
 
 // ---- Minor: the count beside Waiting on you reads as a count ----
 

@@ -405,33 +405,30 @@ test('a cold load lands on the home, on every estate', () => {
   }
 });
 
-test('the home is one section: role chips, the take-away, four cards, Waiting on you, each bound to its field', () => {
+// Dev's home (2026-10-01, Micah: "model this for all personas"): KPI cards, the egress chart beside Do next,
+// and Needs attention replaced the picture cards and Waiting on you.
+test('the home is one section: role chips, the take-away, four KPI cards, the chart, Do next, Needs attention', () => {
   const i = HTML.indexOf('aria-label="NaaS home"');
   assert.ok(i > 0, 'no NaaS home section');
-  const gate = HTML.lastIndexOf('<sc-if value="{{ sHome }}"', i);
-  assert.ok(gate >= 0 && i - gate < 120, 'the home is not gated on sHome');
   const block = homeBlock();
-  for (const b of ['<sc-for list="{{ roleChips }}"', '{{ homeBriefGo }}', "Andi's briefing",
-    '{{ homeTake.head }}', '{{ homeTake.headGo }}', '<sc-for list="{{ homeTake.parts }}" as="tp"', '{{ tp.go }}', '{{ tp.off }}', '{{ homeTake.go }}', '{{ homeTake.cta }}', '{{ homeTake.icon }}', '{{ homeTake.ink }}',
-    '<sc-for list="{{ homeCards }}"', '{{ hc.go }}', '{{ hc.valueGo }}', '<sc-for list="{{ hc.figs }}"', '{{ hf.go }}',
-    '<sc-for list="{{ hc.segs }}"', '{{ sg.go }}', '<sc-for list="{{ hc.dots }}"', '{{ dt.go }}', '<sc-for list="{{ hc.waffle }}"', '{{ hc.wafGo }}', '{{ hc.wafOff }}',
-    '{{ hc.spark.past }}', '{{ hc.spark.asIs }}', '{{ hc.spark.act }}',
-    'Waiting on you', '<sc-for list="{{ homeWaiting }}"', '{{ ra.accept }}', '{{ ra.canAccept }}', '{{ ra.open }}', '{{ homeWaitingGo }}', '{{ homeStep.go }}']) {
-    assert.ok(block.includes(b), `${b} is not in the home`);
-  }
+  for (const b of ['<sc-for list="{{ roleChips }}"', '{{ roleQuestion }}', '{{ homeBriefGo }}', '{{ homeTake.head }}', '{{ homeTake.go }}',
+    '<sc-for list="{{ homeCards }}"', '{{ hc.kLabel }}', '{{ hc.pill }}', '{{ hc.big }}', '{{ hc.foot }}', '<sc-for list="{{ hc.bar }}"', '{{ hc.valueGo }}',
+    '{{ homeChart.spark.past }}', '{{ homeChart.spark.act }}', '{{ homeChart.save }}',
+    '<sc-for list="{{ homeDo }}"', '{{ dn.go }}', '{{ dn.outcome }}', '{{ homeWaitingGo }}',
+    '<sc-for list="{{ homeAttn }}"', '{{ na.go }}', '{{ homeStep.go }}']) assert.ok(block.includes(b), `${b} is not in the home`);
   assert.match(block, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/, 'the snapshot is four equal cards');
-  assert.match(block, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/, 'Waiting on you is three equal chips');
-  for (const gone of ['{{ homeGreeting }}', '{{ homeHead }}', '{{ homeBrief }}', '{{ homeStrip }}', '{{ homeNow }}', 'onChange="{{ setRange }}"']) assert.ok(!block.includes(gone), `${gone} is still on the home`);
-  // Every figure, segment, dot and bar is a button bound to its own door.
-  assert.match(block, /<button onClick="\{\{ hc\.wafGo \}\}" disabled="\{\{ hc\.wafOff \}\}"[^>]*><sc-for list="\{\{ hc\.waffle \}\}"/, 'the cells are one button, disabled when nothing is exposed');
-  for (const [loop, as, go] of [['hc.figs', 'hf', 'hf.go'], ['hc.segs', 'sg', 'sg.go'], ['hc.dots', 'dt', 'dt.go']]) {
-    const j = block.indexOf(`<sc-for list="{{ ${loop} }}" as="${as}"`);
-    const body = block.slice(j, block.indexOf('</sc-for>', j));
-    assert.match(body, new RegExp(`<button[^>]*onClick="\\{\\{ ${go.replace('.', '\\.')} \\}\\}"`), `${loop}: not a button bound to ${go}`);
-  }
-  assert.match(block, /<button[^>]*onClick="\{\{ hc\.valueGo \}\}"[^>]*disabled="\{\{ hc\.valueOff \}\}"/, 'the big figure is a button, disabled when it counts nothing');
   for (const tag of ['svg', 'table', 'select']) {
     for (const m of block.matchAll(new RegExp(`<${tag}\\b[^]*?</${tag}>`, 'g'))) assert.ok(!m[0].includes('<sc-for'), `an sc-for inside a ${tag}`);
+  }
+});
+
+test('every persona gets the same home, its own cards, actions and take-away', () => {
+  for (const p of ['architect', 'neteng', 'security', 'finops', 'exec']) {
+    const v = vals(home('partial', { persona: p }));
+    assert.equal(v.homeCards.length, 4, p);
+    for (const c of v.homeCards) { assert.ok(c.kLabel && c.big && c.foot && c.bar.length, `${p} ${c.key}`); }
+    assert.ok(v.homeDo.every(d => d.outcome && d.label), p);
+    assert.equal(v.homeDo.length, Math.min(6, v.roleActAll.length), p);
   }
 });
 

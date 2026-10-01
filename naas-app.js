@@ -1261,6 +1261,15 @@ export function homeVals(out, s, set, { go, isEmpty, openSave }) {
       icon: `brand/icons-light/${take.icon}.svg`, go: doorOf(take.door), headGo: doorOf(take.headDoor) || (() => {}), headOff: !doorOf(take.headDoor),
       parts: take.parts.map((p, i) => { const g = doorOf(p.door, p.arg); return { key: 'p' + i, t: p.t, sep: i > 0, off: !g, go: g || (() => {}) }; }) },
     homeCards,
+    // Dev's home (2026-10-01): Do next is the role's actions ranked, each with what it gets you; the chart is
+    // Spend's egress line, today and if you act; Needs attention is Health's open problems.
+    homeDo: acts.slice(0, 6).map((a, i) => ({ key: a.key, n: i + 1, head: a.head, sub: String(a.rec || '').replace(/^Recommended: /, ''), outcome: a.outcome, outInk: a.outInk,
+      label: a.hasDoor ? a.doorLabel : 'Review', go: a.hasDoor ? a.door : a.open })),
+    homeDoLine: `${acts.length} open · ranked for ${ROLE_OF[rk] ? ROLE_OF[rk].short : 'you'}`, hasHomeDo: acts.length > 0,
+    homeChart: (() => { const eg = homeCards.find(x => x.key === 'egress'); if (!eg) return null; const now = HM.numOf(tile('spend')), ah = HM.numOf(tile('ahead'));
+      return { spark: eg.spark, today: tile('spend'), act: tile('ahead'), save: now > ah && ah ? `$${(now - ah).toLocaleString('en-US')}` : '$0', go: eg.go }; })(),
+    homeAttn: probs.slice(0, 5).map(p => ({ key: p.key, word: F.HEALTH_WORD[p.state] || p.state, ink: F.HEALTH_INK[p.state] || 'var(--warning)', what: p.what, where: `${p.where} · ${p.thing}`, impact: p.appsF || '', go: p.trace || p.go || (() => {}) })),
+    hasHomeAttn: probs.length > 0,
     homeBriefGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'brief' }),
     homeWaiting: waiting.slice(0, 3), hasHomeWaiting: waiting.length > 0, noHomeWaiting: !waiting.length, homeWaitingNone: waiting.length ? '' : 'No finding waits on you',
     // "All 1" read as a slip (third skeptic, 2026-09-30): one is just its count.

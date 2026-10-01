@@ -32,8 +32,9 @@ export function heightProblems({ page, scrollHeight, limit, below = null, aboveB
   if (page !== HOME_PAGE) return [...(scrollHeight > limit ? [`scroll ${scrollHeight}`] : []), 'a map below the fold off the home'];
   const out = [];
   // One line for what is above the map: past the fold, or else under the map's top.
-  if (aboveBottom > limit) out.push(`above the map ${aboveBottom}`);
-  else if (below.top < aboveBottom) out.push('the map overlaps what is above it');
+  // Dev's home (2026-10-01) is a page that scrolls: KPI cards, the chart and Do next, Needs attention, then the map.
+  // Its height is not held to the fold; its width still is (fold.mjs checks width on every page).
+  if (below.top < aboveBottom) out.push('the map overlaps what is above it');
   if (below.diagramTop != null && below.diagramTop < limit) out.push(`the fold cuts the map at ${limit - below.diagramTop}`);
   else if (below.titleBottom != null && below.top < limit && below.titleBottom > limit) out.push('the fold cuts the map title');
   if (scrollHeight > below.bottom + TAIL) out.push(`past the map ${scrollHeight}`);

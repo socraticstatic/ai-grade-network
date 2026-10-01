@@ -169,7 +169,8 @@ test('V6: the home counts the exposed workloads in Discover\'s word; the PCI fin
     assert.equal(card(vals(home(view)), 'exposed').unit, 'workloads exposed', view);
   }
   for (const id of ['partial', 'trust']) assert.match(D.ESTATES[id].findings.find(f => f.kind === 'pci').ev, /default route to an internet gateway/, id);
-  assert.match(HTML.slice(HTML.indexOf('aria-label="Snapshot"'), HTML.indexOf('aria-label="Waiting on you"')), /\{\{ hc\.unit \}\}/);
+  // The KPI card prints its own footnote (Dev's home, 2026-10-01).
+  assert.match(HTML.slice(HTML.indexOf('aria-label="Snapshot"'), HTML.indexOf('aria-label="Do next"')), /\{\{ hc\.foot \}\}/);
 });
 
 // ---- 5. Waiting on you ----

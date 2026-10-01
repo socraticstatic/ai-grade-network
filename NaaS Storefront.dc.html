@@ -75,6 +75,26 @@ a{color:#0057b8}a:hover{color:#00388f}
 .rail-scroll::-webkit-scrollbar{display:none}
 .fx-btn{box-sizing:border-box;display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);box-shadow:0 1px 1px rgba(0,0,0,.1);color:var(--text-heading);font:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
 /* The NaaS home, v2 (2026-09-30): the take-away, the four snapshot cards, Waiting on you. Theme tokens only. */
+.hm-kpi{display:grid;gap:10px;padding:16px 18px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-base);min-width:0}
+.hm-kh{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.hm-kl{border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;color:var(--text-body);cursor:pointer}.hm-kl:hover{color:var(--link)}
+.hm-pill{display:inline-block;padding:2px 8px;border-radius:9999px;font-size:11px;line-height:16px;font-weight:600;white-space:nowrap}
+.hm-kv{justify-self:start;border:0;background:transparent;padding:0;font:inherit;font-size:30px;line-height:36px;font-weight:700;color:var(--text-heading);cursor:pointer;text-align:left}.hm-kv:disabled{cursor:default}
+.hm-kv>small{margin-left:6px;font-size:14px;font-weight:500;color:var(--text-light)}
+.hm-kbar{display:flex;height:8px;border-radius:9999px;overflow:hidden;background:var(--bg-neutral)}.hm-kbar>i{display:block;height:100%}
+.hm-kf{font-size:12px;line-height:16px;color:var(--text-body)}
+.hm-panel{display:grid;gap:14px;align-content:start;padding:18px 20px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-base);min-width:0}
+.hm-pt{border:0;background:transparent;padding:0;font:inherit;font-size:16px;line-height:22px;font-weight:700;color:var(--text-heading);cursor:pointer}
+.hm-ps{font-size:12px;line-height:16px;color:var(--text-light)}
+.hm-trio{display:flex;gap:32px}.hm-trio small{display:block;font-size:12px;color:var(--text-light)}.hm-trio b{font-size:22px;line-height:28px;color:var(--text-heading)}
+.hm-spark.big{height:100%;min-height:200px;max-height:none}
+.hm-lg{display:flex;gap:16px;font-size:12px;color:var(--text-body)}.hm-lg i{display:inline-block;width:12px;height:3px;margin-right:6px;vertical-align:middle;border-radius:2px}
+.hm-do{display:grid;grid-template-columns:24px minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border-secondary)}
+.hm-do b{font-size:13px;line-height:18px;color:var(--text-heading)}.hm-do small{font-size:12px;line-height:16px;color:var(--text-light)}
+.hm-n{display:grid;place-items:center;width:22px;height:22px;border-radius:9999px;background:var(--bg-neutral);font-size:11px;font-weight:600;color:var(--text-body)}
+.hm-out{max-width:120px;font-size:12px;line-height:15px;font-weight:600;text-align:right}
+.hm-tr{display:grid;grid-template-columns:110px minmax(0,1.4fr) minmax(0,1.2fr) 110px 70px;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--border-secondary);font-size:13px;line-height:18px;color:var(--text-body)}
+.hm-th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-light)}
 .hm-link{border:0;background:transparent;padding:0;font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap}
 .hm-link:hover{text-decoration:underline;text-underline-offset:3px}
 .hm-take{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:20px;padding:22px 24px;border:1px solid var(--border-secondary);border-radius:16px}
@@ -535,28 +555,31 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
     <button onClick="{{ homeTake.go }}" class="hm-cta">{{ homeTake.cta }}<i aria-hidden="true">→</i></button>
   </div>
   <div aria-label="Snapshot" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
-    <sc-for list="{{ homeCards }}" as="hc" hint-placeholder-count="4"><div aria-label="{{ hc.label }}" class="hm-card" style="border-color:{{ hc.edge }}">
-      <button onClick="{{ hc.go }}" title="Open {{ hc.door }}" class="hm-head"><span>{{ hc.label }}</span><b aria-hidden="true">›</b></button>
-      <div class="hm-lead"><button onClick="{{ hc.valueGo }}" disabled="{{ hc.valueOff }}" class="hm-big">{{ hc.value }}<sc-if value="{{ hc.hasSuffix }}" hint-placeholder-val="{{ false }}"><small>{{ hc.suffix }}</small></sc-if></button><div class="hm-unit"><sc-if value="{{ hc.hasSwatch }}" hint-placeholder-val="{{ false }}"><i class="hm-sw" style="background:{{ hc.swatch }}"></i></sc-if>{{ hc.unit }}</div></div>
-      <div class="hm-pic">
-        <sc-if value="{{ hc.isRing }}" hint-placeholder-val="{{ false }}"><div class="hm-ring"><sc-for list="{{ hc.segs }}" as="sg" hint-placeholder-count="4"><button onClick="{{ sg.go }}" aria-label="{{ sg.title }}" title="{{ sg.title }}" class="hm-seg"><svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="{{ sg.r }}" fill="none" stroke="{{ sg.ink }}" stroke-width="{{ sg.sw }}" stroke-dasharray="{{ sg.dash }}" stroke-dashoffset="{{ sg.off }}" transform="rotate(-90 40 40)"></circle></svg></button></sc-for></div></sc-if>
-        <sc-if value="{{ hc.isDots }}" hint-placeholder-val="{{ false }}"><div class="hm-dots" style="width:{{ hc.dotW }}"><sc-for list="{{ hc.dots }}" as="dt" hint-placeholder-count="6"><button onClick="{{ dt.go }}" aria-label="{{ dt.title }}" title="{{ dt.title }}" class="hm-dot" style="width:{{ dt.btn }};height:{{ dt.btn }}"><i style="width:{{ dt.size }};height:{{ dt.size }};background:{{ dt.ink }};border-radius:{{ dt.rad }};box-shadow:{{ dt.ring }}"></i></button></sc-for></div></sc-if>
-        <sc-if value="{{ hc.isSpark }}" hint-placeholder-val="{{ false }}"><div class="hm-spark"><svg viewBox="0 0 240 56" preserveAspectRatio="none" width="100%" height="100%" aria-hidden="true" style="display:block;overflow:visible"><path d="{{ hc.spark.area }}" fill="var(--viz-1)" opacity=".10" stroke="none"></path><path d="{{ hc.spark.past }}" fill="none" stroke="var(--viz-1)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path><path d="{{ hc.spark.asIs }}" fill="none" stroke="var(--text-light)" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linecap="round"></path><path d="{{ hc.spark.act }}" fill="none" stroke="var(--success)" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linecap="round"></path></svg><i style="left:{{ hc.spark.todayL }};top:{{ hc.spark.todayT }}"></i><small style="top:{{ hc.spark.asIsT }}">As is</small></div></sc-if>
-        <sc-if value="{{ hc.isWaffle }}" hint-placeholder-val="{{ false }}"><button onClick="{{ hc.wafGo }}" disabled="{{ hc.wafOff }}" aria-label="{{ hc.wafTitle }}" title="{{ hc.wafTitle }}" class="hm-waffle"><sc-for list="{{ hc.waffle }}" as="wc" hint-placeholder-count="100"><i style="background:{{ wc.ink }}"></i></sc-for></button></sc-if>
-      </div>
-      <div class="hm-foot"><sc-for list="{{ hc.figs }}" as="hf" hint-placeholder-count="1"><button onClick="{{ hf.go }}" disabled="{{ hf.off }}" class="hm-fig"><sc-if value="{{ hf.hasSwatch }}" hint-placeholder-val="{{ false }}"><i class="hm-sw" style="background:{{ hf.swatch }}"></i></sc-if><b>{{ hf.v }}</b>{{ hf.u }}</button></sc-for><sc-for list="{{ hc.legend }}" as="lg" hint-placeholder-count="0"><span class="hm-lg"><i style="border-radius:{{ lg.rad }};background:{{ lg.ink }};box-shadow:{{ lg.ring }}"></i>{{ lg.word }}</span></sc-for></div>
+    <sc-for list="{{ homeCards }}" as="hc" hint-placeholder-count="4"><div aria-label="{{ hc.kLabel }}" class="hm-kpi">
+      <div class="hm-kh"><button onClick="{{ hc.go }}" title="Open {{ hc.door }}" class="hm-kl">{{ hc.kLabel }}</button><sc-if value="{{ hc.hasPill }}" hint-placeholder-val="{{ true }}"><span class="hm-pill" style="color:{{ hc.pillInk }};background:{{ hc.pillBg }}">{{ hc.pill }}</span></sc-if></div>
+      <button onClick="{{ hc.valueGo }}" disabled="{{ hc.valueOff }}" class="hm-kv">{{ hc.big }} <small>{{ hc.of }}</small></button>
+      <div class="hm-kbar"><sc-for list="{{ hc.bar }}" as="kb" hint-placeholder-count="2"><i style="width:{{ kb.w }};background:{{ kb.ink }}"></i></sc-for></div>
+      <span class="hm-kf">{{ hc.foot }}</span>
     </div></sc-for>
   </div>
-  <div aria-label="Waiting on you" style="display:grid;gap:10px;min-width:0">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">Waiting on you</span><sc-if value="{{ hasHomeWaitingMore }}" hint-placeholder-val="{{ true }}"><button onClick="{{ homeWaitingGo }}" class="hm-link">{{ homeWaitingMore }}</button></sc-if></div>
-    <sc-if value="{{ hasHomeWaiting }}" hint-placeholder-val="{{ true }}"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
-      <sc-for list="{{ homeWaiting }}" as="ra" hint-placeholder-count="3"><div class="hm-chip">
-        <button onClick="{{ ra.open }}" title="{{ ra.rec }}" class="hm-open"><b>{{ ra.head }}</b><span>{{ ra.stateLabel }}<sc-if value="{{ ra.hasSave }}" hint-placeholder-val="{{ false }}"><em>{{ ra.saveLine }}</em></sc-if></span></button>
-        <sc-if value="{{ ra.canAccept }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ ra.accept }}" style="height:32px;padding:0 12px;font-size:13px">Accept</button></sc-if><sc-if value="{{ ra.hasDoor }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.door }}" style="height:32px;padding:0 12px;font-size:13px">{{ ra.doorLabel }}</button></sc-if>
-      </div></sc-for>
+  <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;min-width:0">
+    <sc-if value="{{ homeChart }}" hint-placeholder-val="{{ true }}"><div aria-label="Egress spend" class="hm-panel" style="grid-template-rows:auto auto minmax(0,1fr) auto;align-content:stretch">
+      <div><button onClick="{{ homeChart.go }}" class="hm-pt">Egress spend</button><div class="hm-ps">Monthly run-rate · the last year and the next 90 days</div></div>
+      <div class="hm-trio"><div><small>Today</small><b>{{ homeChart.today }}/mo</b></div><div><small>If you act (90 days)</small><b style="color:var(--success)">{{ homeChart.act }}/mo</b></div><div><small>You save</small><b style="color:var(--success)">{{ homeChart.save }}/mo</b></div></div>
+      <div class="hm-spark big"><svg viewBox="0 0 240 56" preserveAspectRatio="none" width="100%" height="100%" aria-hidden="true"><path d="{{ homeChart.spark.area }}" fill="var(--bg-accent)"></path><path d="{{ homeChart.spark.past }}" fill="none" stroke="var(--viz-1)" stroke-width="2" vector-effect="non-scaling-stroke"></path><path d="{{ homeChart.spark.asIs }}" fill="none" stroke="var(--text-light)" stroke-width="1.5" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"></path><path d="{{ homeChart.spark.act }}" fill="none" stroke="var(--success)" stroke-width="2" vector-effect="non-scaling-stroke"></path></svg></div>
+      <div class="hm-lg"><span><i style="background:var(--viz-1)"></i>Actual</span><span><i style="background:var(--text-light)"></i>No action</span><span><i style="background:var(--success)"></i>If you act</span></div>
     </div></sc-if>
-    <sc-if value="{{ noHomeWaiting }}" hint-placeholder-val="{{ false }}"><div class="hm-none">{{ homeWaitingNone }}</div></sc-if>
+    <div aria-label="Do next" class="hm-panel">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><div><span class="hm-pt">Do next</span><div class="hm-ps">{{ homeDoLine }}</div></div><button onClick="{{ homeWaitingGo }}" class="hm-link">All in Your actions ›</button></div>
+      <div style="display:grid;min-width:0"><sc-for list="{{ homeDo }}" as="dn" hint-placeholder-count="6"><div class="hm-do"><span class="hm-n">{{ dn.n }}</span><span style="display:grid;gap:1px;min-width:0"><b>{{ dn.head }}</b><small>{{ dn.sub }}</small></span><span class="hm-out" style="color:{{ dn.outInk }}">{{ dn.outcome }}</span><button class="fx-btn" onClick="{{ dn.go }}" style="height:30px;padding:0 12px;font-size:12px;white-space:nowrap">{{ dn.label }}</button></div></sc-for></div>
+      <sc-if value="{{ noHomeWaiting }}" hint-placeholder-val="{{ false }}"><div class="hm-ps">{{ homeWaitingNone }}</div></sc-if>
+    </div>
   </div>
+  <sc-if value="{{ hasHomeAttn }}" hint-placeholder-val="{{ true }}"><div aria-label="Needs attention" class="hm-panel">
+    <div><span class="hm-pt">Needs attention</span><div class="hm-ps">The names behind the numbers</div></div>
+    <div class="hm-tr hm-th"><span>Status</span><span>What</span><span>Where</span><span>Impact</span><span></span></div>
+    <sc-for list="{{ homeAttn }}" as="na" hint-placeholder-count="3"><div class="hm-tr"><span><span class="hm-pill" style="color:{{ na.ink }};background:color-mix(in srgb, {{ na.ink }} 12%, transparent)">{{ na.word }}</span></span><span>{{ na.what }}</span><span>{{ na.where }}</span><span>{{ na.impact }}</span><button class="fx-btn" onClick="{{ na.go }}" style="height:28px;padding:0 10px;font-size:12px;white-space:nowrap">Trace</button></div></sc-for>
+  </div></sc-if>
   </sc-if>
   <sc-if value="{{ homeEmpty }}" hint-placeholder-val="{{ false }}">
   <div aria-label="Your first step" style="display:grid;justify-items:center;gap:24px;padding:72px 24px 24px;text-align:center">

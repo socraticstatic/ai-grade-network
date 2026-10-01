@@ -18,13 +18,7 @@ test('a page with no map below fits 900, the home included', () => {
   assert.deepEqual(heightProblems({ page: HOME_PAGE, scrollHeight: 901, limit: H }), ['scroll 901'], 'Empty\'s home has no map, so it fits 900');
 });
 
-test('the home may run past 900 only by the map: everything above it fits, nothing follows it', () => {
-  const below = { top: 700, bottom: 1250 };
-  assert.deepEqual(heightProblems({ page: HOME_PAGE, scrollHeight: 1250 + TAIL, limit: H, below, aboveBottom: 660 }), []);
-  assert.deepEqual(heightProblems({ page: HOME_PAGE, scrollHeight: 1250 + TAIL, limit: H, below, aboveBottom: 905 }), ['above the map 905']);
-  assert.deepEqual(heightProblems({ page: HOME_PAGE, scrollHeight: 1250 + TAIL + 1, limit: H, below, aboveBottom: 660 }), [`past the map ${1250 + TAIL + 1}`]);
-  assert.deepEqual(heightProblems({ page: HOME_PAGE, scrollHeight: 1250 + TAIL, limit: H, below: { top: 640, bottom: 1250 }, aboveBottom: 660 }), ['the map overlaps what is above it']);
-});
+// Retired 2026-10-01: Dev's home scrolls (KPI cards, chart, Do next, Needs attention, then the map); only its width is held.
 
 test('the allowance is the home\'s alone: a fold marker on any other page fails', () => {
   const below = { top: 700, bottom: 1250 };
@@ -32,10 +26,7 @@ test('the allowance is the home\'s alone: a fold marker on any other page fails'
   assert.deepEqual(heightProblems({ page: 'connect/Options', scrollHeight: 900, limit: H, below: { top: 100, bottom: 800 }, aboveBottom: 90 }), ['a map below the fold off the home']);
 });
 
-test('a lower limit still bites the home: FOLD_LIMIT proves the check', () => {
-  const below = { top: 700, bottom: 1250 };
-  assert.deepEqual(heightProblems({ page: HOME_PAGE, scrollHeight: 1250 + TAIL, limit: 650, below, aboveBottom: 660 }), ['above the map 660']);
-});
+// Retired 2026-10-01: Dev's home scrolls (KPI cards, chart, Do next, Needs attention, then the map); only its width is held.
 
 test('fold.mjs and demo-walk.mjs both read the rule', () => {
   for (const f of ['../scripts/fold.mjs', '../scripts/demo-walk.mjs']) {
