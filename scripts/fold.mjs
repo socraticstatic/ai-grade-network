@@ -338,6 +338,25 @@ try {
         report(estate, th, pageName, trail, m, missed ? [`no "${missed}" button`, ...errors] : errors);
         if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail}`.replace(/[^\w.-]+/g, '_') + '.png') });
       }
+      // The explained-Logs beat (w2, 2026-09-30): a Signals traffic figure opens Logs with
+      // its explanation over the records, and the page walk never lands there with one set
+      // (it ran to 1022px). Measured shut as it lands, then with its filters opened by hand.
+      if (want.some(l => l.label === 'Insights')) {
+        const pageName = 'observe/Logs';
+        await clickRail(page, 'Insights');
+        await clickTab(page, 'Signals');
+        const fig = page.locator('[aria-label="Signal cards"] .sig-card', { has: page.locator('.sig-head', { hasText: 'Top talkers' }) }).first().locator('.sig-row .sig-fig').first();
+        if (await fig.count()) {
+          await fig.click(); await settle(page);
+          for (const trail of ['explaining a Signals figure', 'explaining a Signals figure > filters shown']) {
+            if (trail.endsWith('shown')) { const t = page.locator('#sec-logs button', { hasText: 'Filters' }).first(); if (await t.count()) { await t.click(); await settle(page); } }
+            errors.length = 0;
+            const m = { ...(await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT })), ...(await page.evaluate(foldMarks)) };
+            report(estate, th, pageName, trail, m, errors);
+            if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail}`.replace(/[^\w.-]+/g, '_') + '.png') });
+          }
+        }
+      }
       await ctx.close();
     }
   }

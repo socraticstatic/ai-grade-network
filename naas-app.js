@@ -1883,7 +1883,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // Logs is the page, and it pages to fit the fold rather than scrolling inside a box (Micah, 2026-09-29).
   const pageOf = (rows, size, key) => pageRows(rows, size, s[key], (n) => set({ [key]: n }));
   // The explanation panel over the logs takes room; the page keeps the fold (2026-09-29 audit).
-  const logPageSize = Math.max(3, ((s.logFiltersOpen === undefined ? !s.explain : !!s.logFiltersOpen) ? 6 : 9) - (s.explain ? 2 : 0));
+  // One open state for the filters (w2, 2026-09-30: the markup drew them open under an explanation
+  // while the toggle read Show and the page sized them shut, so Logs ran to 1022px). With an
+  // explanation they start shut; the toggle opens them and the page drops rows to keep the fold.
+  const logFiltersOn = s.logFiltersOpen === undefined ? !s.explain : !!s.logFiltersOpen;
+  // Measured at 1440x900: the explanation takes three rows' room, and its "Made of" chips one more.
+  const logPageSize = Math.max(3, (logFiltersOn ? 6 : 9) - (s.explain ? 3 : 0) - (s.explain && (s.explain.parts || []).length ? 1 : 0));
   const flowAll = logMatch.map(r => ({ ...r, key: r.id, actBg: r.deny ? (dark ? 'rgba(211,47,47,.2)' : '#fdecea') : 'var(--bg-wash)', actColor: r.deny ? 'var(--error)' : 'var(--text-body)',
     pathInk: r.path === 'public' ? 'var(--warning)' : 'var(--success)',
     pathWord: r.path === 'public' ? 'outside AT&T' : 'on AT&T' }));
@@ -1951,11 +1956,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     logCount: `${logMatch.length.toLocaleString('en-US')} of ${logAll.length.toLocaleString('en-US')} records`,
     logNote: logMatch.length ? `${logDeny} denied · ${logPub} outside AT&T · public destinations stay unresolved` : 'Nothing matches these filters.',
     hasLogs: logMatch.length > 0, noLogs: logMatch.length === 0,
-    logFiltersOpen: s.logFiltersOpen === undefined ? true : !!s.logFiltersOpen,
-    logFiltersShut: !(s.logFiltersOpen === undefined ? !s.explain : !!s.logFiltersOpen),
-    toggleLogFilters: () => set({ logFiltersOpen: !(s.logFiltersOpen === undefined ? !s.explain : !!s.logFiltersOpen) }),
+    logFiltersOpen: logFiltersOn,
+    logFiltersShut: !logFiltersOn,
+    toggleLogFilters: () => set({ logFiltersOpen: !logFiltersOn, logPage: 0 }),
     logFilterCount: (() => { const k = (logQ ? 1 : 0) + (logPath !== 'all' ? 1 : 0) + (logAct !== 'all' ? 1 : 0) + (logPattern !== 'all' ? 1 : 0); return k ? `${k} filter${k === 1 ? '' : 's'}` : 'No filters'; })(),
-    logFilterToggleWord: (s.logFiltersOpen === undefined ? !s.explain : !!s.logFiltersOpen) ? 'Hide' : 'Show',
+    logFilterToggleWord: logFiltersOn ? 'Hide' : 'Show',
     clearLogs: () => set({ logQ: '', logPath: 'all', logAct: 'all', logPattern: 'all', logPage: 0 }),
     logHasFilters: !!(logQ || logPath !== 'all' || logAct !== 'all' || logPattern !== 'all'),
   };
