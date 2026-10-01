@@ -3377,7 +3377,7 @@ function wizardVals(s, est, set, c) {
     // The total the list adds up to, beside its head: the home's "N policy violations" lands here (skeptic, 2026-09-30).
     polViolLine: ((n) => n ? `${n.toLocaleString('en-US')} policy ${n === 1 ? 'violation' : 'violations'}` : 'No policy violations')((s.layer === 'cloud' ? [...layerPolicies(s, est, 'all'), ...(s.customPolicies || [])] : layerPolicies(s, est, 'all')).reduce((a, p) => a + (p.viol || 0), 0)),
     polRows: (s.layer === 'cloud' ? [...layerPolicies(s, est, 'all'), ...(s.customPolicies || [])] : layerPolicies(s, est, 'all')).map((p, i) => ({ ...p, key: 'pr' + i, sent: polSentence(p),
-      appliesTo: `${p.match} · ${p.matched} matched`,
+      appliesTo: `${p.match} · ${(p.matched || 0).toLocaleString('en-US')} matched`,
       // A rule sits in the layer it governs; a violation is marked where it breaks.
       layers: (() => { const L = policyLayers(p), own = layerOfReq(String(p.req).split(' and ')[0]); return POLICY_LAYERS.map(l => { const text = L[l.key], broken = p.viol > 0 && l.key === own && !!text;
         return { key: l.key, label: l.label, text: text || 'Any', set: !!text, broken, ink: broken ? 'var(--error)' : text ? 'var(--text-heading)' : 'var(--text-disabled)', bar: broken ? 'var(--error)' : text ? 'var(--cta)' : 'var(--border-secondary)', weight: broken ? 600 : 400 }; }); })(), dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-light)', hasViol: p.viol > 0, violLabel: p.viol ? `${p.viol} violations` : 'no violations', matchedLabel: `${p.matched} matched`,
@@ -4464,13 +4464,19 @@ function costLegVals(s, set, est, legs0, go, c) {
   // A member's rows in words short enough to read whole (the skeptic, 2026-09-30: the service list ran out of room).
   const listWords = (names, max = 40) => { if (!names.length) return 'nothing in this leg'; const all = names.join(', '); if (all.length <= max) return all;
     for (let k = names.length - 1; k > 0; k--) { const t = `${names.slice(0, k).join(', ')} and ${names.length - k} more`; if (t.length <= max) return t; } return `${names.length} kinds`; };
-  const memberRowsOf = (leg) => members.map(m => { const sl = CV.sliceLegs(est, legs0, by, m.key)[leg];
-    return { key: 'm:' + m.key, label: m.label, sub: listWords([...new Set(sl.rows.map(r => r.label.replace(/ · remote sites$/, '')))]), title: `${m.label}: ${fmt(Math.round(sl.total))}/mo of ${legs0[leg].label.toLowerCase()}`, v: sl.total, vF: fmt(Math.round(sl.total)), modelled: false, mark: '', isPart: false,
+  // A member's row reads what its tile reads once picked (w2, 2026-09-30: US Central's IPsec row read $37, picked $36).
+  const memberRowsOf = (leg) => members.map(m => { const all = CV.sliceLegs(est, legs0, by, m.key), sl = all[leg];
+    const mR = m.vR != null ? CV.roundTo(['access', 'connect', 'cloud'].map(k => all[k].total), m.vR)[['access', 'connect', 'cloud'].indexOf(leg)] : Math.round(sl.total);
+    return { key: 'm:' + m.key, label: m.label, sub: listWords([...new Set(sl.rows.map(r => r.label.replace(/ · remote sites$/, '')))]), title: `${m.label}: ${fmt(mR)}/mo of ${legs0[leg].label.toLowerCase()}`, v: sl.total, vF: fmt(mR), modelled: false, mark: '', isPart: false,
       swatch: swatchOf(sl.rows), edge: edgeOf(sl.rows), go: () => set({ costPick: m.key, ...reset }), n: sl.rows.length }; }).filter(r => r.n > 0).sort((a, b) => b.v - a.v);
   const rowsOf = (leg) => {
     if (by !== 'all' && !pick) return memberRowsOf(leg);
     if (drill && drill.leg === leg) { const row = legs[leg].rows.find(r => r.key === drill.row); return [...row.parts].sort((a, b) => b.v - a.v || partLabel(a).localeCompare(partLabel(b))).map(partOf(row)); }
-    return legs[leg].rows.map(rowOf(leg));
+    // The rows add up to their tile to the dollar (w2, 2026-09-30: Cloud provider read $97,927 over rows of
+    // $97,928), each its share of the tile's whole dollars by largest remainder, as the tiles are of the head.
+    const rs = legs[leg].rows, want = legR[['access', 'connect', 'cloud'].indexOf(leg)];
+    const rr = want != null && rs.length ? CV.roundTo(rs.map(r => r.v), want) : rs.map(r => Math.round(r.v));
+    return rs.map((r, i) => ({ ...rowOf(leg)(r), vF: fmt(rr[i]) }));
   };
   const headOf = (leg) => { const row = drill && drill.leg === leg ? legs[leg].rows.find(r => r.key === drill.row) : null;
     return row ? { on: true, label: `‹ ${row.label}`, sub: `${fmt(Math.round(row.v))} · ${CV.rowWords(row)}`, back: () => set({ legDrill: null, [PAGE[leg]]: 0 }) } : { on: false, label: '', sub: '', back: () => {} }; };

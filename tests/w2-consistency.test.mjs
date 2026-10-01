@@ -350,6 +350,44 @@ test('A region never sends more outside AT&T than it carries, and the regions ho
   }
 });
 
+test('A policy\'s matched count reads as Govern > Tags reads the same number', () => {
+  const v = vals(mkC({ view: 'trust', estateParam: null, screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies' }));
+  const pci = v.polRows.find(p => p.match === 'tag PCI');
+  assert.equal(pci.appliesTo, 'tag PCI · 1,047 matched');
+});
+
+test('A By leg tile is the sum of the rows it opens, to the dollar', () => {
+  const $ = (t) => +String(t).replace(/[$,]/g, '');
+  let seen = 0;
+  for (const view of ['partial', 'mature', 'trust']) {
+    const at = (patch) => vals(mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'cost', costPanel: 'legs', ...patch }));
+    const base = at({ costBy: 'all' });
+    const picks = [{ costBy: 'all' }];
+    for (const by of ['region', 'cloud']) for (const m of (at({ costBy: by }).regionBars || [])) picks.push({ costBy: by, costPick: m.key });
+    for (const p of picks) {
+      const v = at(p);
+      const rows = { access: v.legAccessRows, connect: v.legConnectRows, cloud: v.legCloudRows };
+      v.legTiles.forEach((t, i) => {
+        const rs = rows[['access', 'connect', 'cloud'][i]] || [];
+        if (!rs.length) return;
+        const sum = rs.reduce((a, r) => a + $(r.vF), 0);
+        assert.equal(sum, $(t.v), `${view} ${JSON.stringify(p)} ${t.l}: the tile reads ${t.v}, its rows ${sum}`);
+        seen += 1;
+      });
+    }
+    assert.ok(base.legTiles.length === 3);
+    // A member's row before the pick is the tile after it.
+    for (const by of ['region', 'cloud']) {
+      const un = at({ costBy: by });
+      for (const [i, leg] of ['legAccessRows', 'legConnectRows', 'legCloudRows'].entries()) for (const r of un[leg] || []) {
+        const t = at({ costBy: by, costPick: r.key.replace(/^m:/, '') }).legTiles[i];
+        if (t) assert.equal($(r.vF), $(t.v), `${view} by ${by} ${r.label}: the row reads ${r.vF}, picked its tile ${t.v}`);
+      }
+    }
+  }
+  assert.ok(seen > 10, `only ${seen} tiles checked`);
+});
+
 test('The cross-cloud finding names the public pairs Cloud-to-cloud shows, and no others', () => {
   for (const view of VIEWS) {
     const est = ESTATES[view], f = est.findings.find(x => x.kind === 'crosscloud');
