@@ -20,7 +20,7 @@ import { mkC } from './harness.mjs';
 // Round 2 (skeptic, 2026-09-30): one price for one connection, the one Cost
 // > By leg bills; the approval step the retired Resize had; an order that
 // lands on its day by the one clock and shows under Connect > Orders as an
-// order; a size that drops traffic confirmed twice, in warning; Capacity rows
+// order; a size that drops traffic confirmed twice (in red since round 3); Capacity rows
 // open in place again; Escape and outside click close it, focus moves in.
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
@@ -118,13 +118,14 @@ test('Growing us-east-1: the peak, the average and the headroom are the Capacity
   assert.deepEqual(v.bw.stats.map(x => x.l), ['Peak', 'Average', 'Headroom']);
   assert.equal(v.bw.stats[0].v, g.peakF); assert.equal(v.bw.stats[0].v, `${cp.peakG} Gbps`);
   assert.equal(v.bw.stats[1].v, g.avgF, 'one average: the Capacity row\'s, over the same window');
-  assert.equal(v.bw.stats[1].sub, `${Math.round(cp.avgG / cp.capG * 100)}% over 30 days`, 'the window the Capacity row reads');
+  // Round 3 (skeptic, 2026-09-30): one 6-month average, Optimize's and the row title's, whatever the Since window.
+  assert.equal(v.bw.stats[1].sub, `${cp.avg6mPct}% over 6 months`, 'the 6-month figure Optimize reads');
   assert.equal(v.bw.stats[2].v, g.headF);
   // Nothing in the drawer leaves it: the figures are figures, not doors that throw the pick away.
   for (const x of v.bw.stats) assert.equal(x.go, undefined, x.l);
 });
 
-test('picking a size moves the headroom; the fit line reads plainly, in warning when it is short', () => {
+test('picking a size moves the headroom; the fit line reads plainly, in red when it is short', () => {
   const cp = growingEast();
   const two = BW.plan(cp, { ports: 2, mbps: 10000 });
   assert.equal(two.changed, true);
@@ -140,7 +141,8 @@ test('picking a size moves the headroom; the fit line reads plainly, in warning 
   assert.equal(BW.fitLine(one), 'Short of the 12.3 Gbps peak.');
   assert.equal(BW.dropLine(one), 'Short of the 12.3 Gbps peak. Traffic exceeding provisioned rate is dropped (traffic policing).', 'the confirm and approval say what happens, in AWS\'s words');
   assert.equal(BW.dropLine(five), '');
-  assert.equal(BW.FIT_INK.down, 'var(--warning)', 'a size that drops traffic reads in warning');
+  // Round 3 (2026-09-30): red, as Capacity's Degraded is; amber means only over 80%.
+  assert.equal(BW.FIT_INK.down, 'var(--error)', 'a size that drops traffic reads in the error ink');
   assert.equal(BW.FIT_INK.risk, 'var(--warning)');
   assert.equal(BW.FIT_INK.ok, 'var(--success)');
   assert.equal(BW.plan(cp, { ports: 0, mbps: 10000 }).ports, 3, 'no pick of ports keeps today\'s');
@@ -148,7 +150,7 @@ test('picking a size moves the headroom; the fit line reads plainly, in warning 
   // The ladder draws each size in its fit ink; none in the savings or error ink by accident.
   const v = vals(observe('partial', { bwFor: 'cx-us-east-1' }));
   assert.equal(v.bw.choices.find(ch => ch.label === '10 Gbps').ink, 'var(--success)');
-  assert.equal(v.bw.choices.find(ch => ch.label === '1 Gbps').ink, 'var(--warning)');
+  assert.equal(v.bw.choices.find(ch => ch.label === '1 Gbps').ink, 'var(--error)');
   assert.equal(v.bw.choices.find(ch => ch.label === '1 Gbps').rad, '2px', 'short of the peak keeps its own mark');
 });
 
@@ -162,8 +164,9 @@ test('Apply change asks for approval, as the retired Resize did; Submit places a
   assert.equal(bwOrders(c.state).length, 0, 'nothing is ordered before Submit');
   const approver = `j.martinez@${mailDomain(D.ESTATES.partial)}`;
   assert.equal(v.bw.approver, approver, 'the approver on the estate\'s own domain, as Review names it');
-  assert.deepEqual(v.bw.review.map(r => r.k), ['Change', 'Monthly', 'Timeline', 'Notify']);
-  assert.deepEqual(v.bw.review.map(r => r.v), ['3 × 10 Gbps to 2 × 10 Gbps', '$1,800/mo, no change', '1 business day, takes effect Wed, Sep 30', approver]);
+  // Round 3 (2026-09-30): Notify repeated the Approver input below it; the approver is said once, in the input.
+  assert.deepEqual(v.bw.review.map(r => r.k), ['Change', 'Monthly', 'Timeline']);
+  assert.deepEqual(v.bw.review.map(r => r.v), ['3 × 10 Gbps to 2 × 10 Gbps', '$1,800/mo, no change', '1 business day, takes effect Wed, Sep 30']);
   // Back keeps the pick.
   v.bw.back(); v = vals(c);
   assert.equal(v.bw.isPick, true); assert.equal(v.bw.newLabel, '2 × 10 Gbps');
@@ -199,15 +202,15 @@ test('Apply change asks for approval, as the retired Resize did; Submit places a
   assert.ok(/kind !== 'bandwidth'/.test(SRC.slice(SRC.indexOf('deliverNow:'), SRC.indexOf('deliverNow:') + 400)), 'Deliver now skips bandwidth orders');
 });
 
-test('a size that drops traffic needs a second confirm, in warning', () => {
+test('a size that drops traffic needs a second confirm, in red', () => {
   const c = observe('partial', { bwFor: 'cx-us-east-1', bwPick: { id: 'cx-us-east-1', ports: 3, mbps: 1000 } });
   let v = vals(c);
-  assert.equal(v.bw.hasFit, true); assert.equal(v.bw.fitInk, 'var(--warning)');
+  assert.equal(v.bw.hasFit, true); assert.equal(v.bw.fitInk, 'var(--error)');
   v.bw.apply(); v = vals(c);
   assert.equal(v.bw.isConfirm, true, 'Apply change on a short size asks again');
   assert.equal(v.bw.isReview, false);
   assert.equal(v.bw.confirmLine, '3 × 1 Gbps is short of the 12.3 Gbps peak. Traffic exceeding provisioned rate is dropped (traffic policing).');
-  assert.equal(v.bw.confirmInk, 'var(--warning)');
+  assert.equal(v.bw.confirmInk, 'var(--error)');
   assert.equal(v.bw.confirmLabel, 'Apply anyway');
   v.bw.back(); v = vals(c);
   assert.equal(v.bw.isPick, true); assert.equal(v.bw.newLabel, '3 × 1 Gbps', 'Back keeps the pick');

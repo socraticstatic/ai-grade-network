@@ -236,7 +236,7 @@ const PANEL_STATE_KEYS = ['State', 'Reachability'];
 const PANEL_GROUPS = [
   { title: 'Identity', keys: ['Resource', 'Address', 'Type', 'App tag', 'Class', 'Access'] },
   { title: 'Where it sits', keys: ['VPC / VNet', 'Subnet', 'Availability zone', 'Metro', 'Region', 'PoP'] },
-  { title: 'How it connects', keys: ['Path', 'First mile', 'Connection', 'Purchased', 'BGP', 'Drops', 'Average · in / out'] },
+  { title: 'How it connects', keys: ['Path', 'First mile', 'Connection', 'Purchased', 'BGP', 'Drops', '6-month average · in / out'] },
 ];
 const panelUnit = (v) => {
   const m = String(v).match(/^([\d.,]+)\s*(.*)$/);
@@ -903,7 +903,9 @@ export function vals(c) {
     // An estate switch starts clean (2026-09-30): a By pick or a drill the new
     // estate lacks drew an empty map with a phantom "Internet 1.0 Gbps".
     view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, bwFor: null, bwPick: null, bwStep: null }),
-    resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], andiTickets: d.andiTickets, heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null, pathSel: null, pathPin: null, bwFor: null, bwPick: null, bwStep: null }); },
+    resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], andiTickets: d.andiTickets, heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null, pathSel: null, pathPin: null, bwFor: null, bwPick: null, bwStep: null,
+      // A bandwidth change rehearsed is cleared with the rest (skeptic, 2026-09-30); the connect flow's own orders stay, as before.
+      orders: (s.orders || []).filter(o => !o || o.kind !== 'bandwidth') }); },
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
     // which nulled s.order even when the live compose had not started an
     // outcome yet - exactly the state right after a marketplace product
@@ -1701,7 +1703,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const conns = X.connections(est0, ob);
   const obConn = s.obConn && conns.rows.some(r => r.id === s.obConn) ? s.obConn : (conns.rows[0] || {}).id;
   const connRow = conns.rows.find(r => r.id === obConn) || null;
-  const connRows = conns.rows.map(r => ({ ...r, key: r.id, label: `${r.cloud} ${r.region}`, sub: `${F.RAMP_NAME[r.ramp] || 'NetBond'} · ${r.bw || r.ports + ' × 10 Gbps'} purchased`, pctF: r.pct + '%', curAvg: `cur ${r.gbps} · avg ${r.avg} Gbps`, on: r.id === obConn, rowBg: r.id === obConn ? 'var(--bg-accent)' : 'transparent', stateColor: r.state === 'Up' ? 'var(--success)' : 'var(--warning)', lineColor: r.degraded ? 'var(--error)' : '#009fdb', select: () => set({ obConn: r.id, cloudDrill: [r.region] }), hasDoor: r.hot, doorLabel: 'Add a port', go: composeFor(go, est0.regionsList.find(x => x.region === r.region) || {}) }));
+  const connRows = conns.rows.map(r => ({ ...r, key: r.id, label: `${r.cloud} ${r.region}`, sub: `${F.RAMP_NAME[r.ramp] || 'NetBond'} · ${r.bw || r.ports + ' × 10 Gbps'} purchased`, pctF: r.pct + '%', on: r.id === obConn, rowBg: r.id === obConn ? 'var(--bg-accent)' : 'transparent', stateColor: r.state === 'Up' ? 'var(--success)' : 'var(--warning)', lineColor: r.degraded ? 'var(--error)' : '#009fdb', select: () => set({ obConn: r.id, cloudDrill: [r.region] }), hasDoor: r.hot, doorLabel: 'Add a port', go: composeFor(go, est0.regionsList.find(x => x.region === r.region) || {}) }));
   const impact0 = X.impacted(est0, inv, connRow);
   const impact = { ...impact0, isNone: impact0.kind === 'none', isHit: impact0.kind !== 'none', hasDown: impact0.downstream.length > 0, hasVpcs: impact0.vpcs.length > 0, vpcs: impact0.vpcs.map(v => ({ ...v, key: v.name, wlF: v.wl.toLocaleString('en-US') + ' workloads', tagsF: v.tags.join(' · ') || 'untagged' })), downstream: impact0.downstream.map(d => ({ ...d, key: d.label, vpcsF: d.vpcs.map(v => v.name).join(', ') })), tone: impact0.kind === 'direct' ? 'var(--error)' : impact0.kind === 'possible' ? 'var(--warning)' : 'var(--success)', title: connRow ? `${connRow.cloud} ${connRow.region} · ${rampName(connRow)}` : 'No connection selected', openLogs: () => toLogs({ logPattern: 'all', obScope: connRow ? 'cloud:' + connRow.cloud : obScope }), askAndi: () => set({ andiScope: connRow ? { kind: 'region', id: connRow.region, label: `${connRow.cloud} ${connRow.region}` } : null, andiOpen: true }) };
   const logPattern = s.logPattern || 'all';
@@ -2247,7 +2249,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const ports = (conns.rows || []).reduce((a, r) => a + (r.ports || 1), 0);
     return [
       { key: 'cap', l: 'Capacity bought', v: `${Math.round(cap)} Gbps`, sub: `${ports} ${ports === 1 ? 'port' : 'ports'} on ${rows.length} ${rows.length === 1 ? 'connection' : 'connections'}` },
-      { key: 'avg', l: 'Carrying', v: `${avg.toFixed(1)} Gbps`, sub: `${Math.round(avg / cap * 100)}% of capacity on average` },
+      { key: 'avg', l: 'Carrying', v: `${avg.toFixed(1)} Gbps`, sub: `${Math.round(avg / cap * 100)}% of capacity, 6-month average` },
       { key: 'peak', l: 'Peak', v: `${peak.toFixed(1)} Gbps`, sub: `busiest ${busiest.label} at ${busiest.pct}%` },
       { key: 'head', l: 'Headroom', v: `${Math.round(cap - peak)} Gbps`, sub: `${first.label} fills first, ${first.fullIn.toLowerCase()}` },
     ]; })();
@@ -3682,7 +3684,6 @@ function bwVals(s, set, est0, conns, go) {
     pickOf(p.ports, p.choices[to].mbps)();
     if (typeof document !== 'undefined') setTimeout(() => { const el = document.querySelector('[aria-label="New bandwidth"] [aria-checked="true"]'); if (el) el.focus(); }, 0);
   };
-  const win = winLabelOf(s), winW = /^the /.test(win) ? win.replace(/^the last /, 'the ') : win;
   const capF = p.now.capF;
   return {
     bwOpen: true,
@@ -3692,10 +3693,11 @@ function bwVals(s, set, est0, conns, go) {
       showLadder: step !== 'review', pickFoot: step === 'pick' && !locked, showMoney: step === 'pick' && p.changed && !locked,
       currentLabel: 'Current bandwidth', nowLabel: p.now.label, nowF: capF, burstNote: p.burstNote,
       hasHostedNote: !!p.hostedNote, hostedNote: p.hostedNote,
-      // The Capacity row's own figures, over the same window: nothing here leaves the drawer.
+      // The Capacity row's own figures: nothing here leaves the drawer. The average is the one
+      // 6-month figure Optimize and the row read, whatever the Since window (skeptic, 2026-09-30).
       stats: [
         { key: 'peak', l: 'Peak', v: `${cp.peakG} Gbps`, sub: `${cp.peakPct}% of ${capF}` },
-        { key: 'avg', l: 'Average', v: `${cp.avgG} Gbps`, sub: `${Math.round(cp.avgG / cp.capG * 100)}% over ${winW}` },
+        { key: 'avg', l: 'Average', v: `${cp.avgG} Gbps`, sub: `${cp.avg6mPct}% over 6 months` },
         { key: 'head', l: 'Headroom', v: `${+(cp.capG - cp.peakG).toFixed(1)} Gbps`, sub: 'over the peak' },
       ],
       newHead: 'New bandwidth', sizeHint: `Each port's size, from NetBond's list for ${cp.cloud}`, portsLabel: 'Ports', ports: p.ports,
@@ -3715,17 +3717,19 @@ function bwVals(s, set, est0, conns, go) {
       ],
       priceLine: BW.priceLine(p),
       hasWhen: step === 'pick' && p.changed && !locked, whenLine: `Takes effect in ${BW.EFFECT_DAYS} business day, ${when}.`,
-      // A pick that no longer holds the peak says so beside Apply change, in warning; NetBond Advanced leaves it to the burst note.
+      // A pick that no longer holds the peak says so beside Apply change, in its fit ink; NetBond Advanced leaves it to the burst note.
       hasFit: step === 'pick' && p.changed && !locked && !!fit, fitLine: fit, fitInk: BW.FIT_INK[p.pick.state],
+      // The legend's short swatch: the error ink, and the provider's words (GCP's capacity is approximate).
+      downInk: BW.FIT_INK.down, downWord: BW.downWordFor(cp.cloud),
       applyLabel: locked ? 'In progress' : 'Apply change', applyOff: locked || !p.changed, apply,
-      // The second confirm, when the size drops traffic.
-      confirmHead: 'This size drops traffic', confirmLine: `${p.pick.label} is short of the ${p.peakF} peak. ${p.burstNote}`, confirmInk: BW.FIT_INK.down, confirmLabel: 'Apply anyway', applyAnyway, back,
-      // The approval step, as the retired Resize's Review had it.
-      reviewHead: 'Send for approval', review: [
+      // The second confirm, when the size is short of the peak, in the provider's words.
+      confirmHead: BW.confirmHeadFor(cp.cloud), confirmLine: `${p.pick.label} is short of the ${p.peakF} peak. ${p.burstNote}`, confirmInk: BW.FIT_INK.down, confirmLabel: 'Apply anyway', applyAnyway, back,
+      // The approval step, as the retired Resize's Review had it. The approver is said once, in its
+      // input: a Notify row repeated it (skeptic, 2026-09-30).
+      reviewHead: 'Send for approval', reviewLine: `${p.where} on ${F.RAMP_NAME[cp.ramp] || cp.ramp}. It goes to the approver first and takes effect ${when}.`, review: [
         { key: 'change', k: 'Change', v: `${p.now.label} to ${p.pick.label}` },
         { key: 'monthly', k: 'Monthly', v: BW.monthlyWords(p) },
         { key: 'timeline', k: 'Timeline', v: `${BW.EFFECT_DAYS} business day, takes effect ${when}` },
-        { key: 'notify', k: 'Notify', v: approver },
       ],
       reviewWarn: BW.dropLine(p), hasReviewWarn: drops, approver, setApprover: (e) => set({ approver: e.target.value }), submit, submitLabel: 'Submit',
       // Sent: the order waits for its day, and Connect > Orders lists it.

@@ -43,10 +43,13 @@ export function connections(est, ob) {
   const rows = est.regionsList.filter(r => r.priv).map(r => {
     const u = util.find(x => x.region === r.region) || { gbps: 0, ports: 1, cap: 1, pct: 0, bw: '1 × 1 Gbps', bwShort: '1G' };
     const degraded = r.link === 'degraded';
-    const pct = degraded ? Math.max(u.pct, 62) : u.pct;
+    // The peak is traffic (skeptic, 2026-09-30): a landed resize (BW.landUtil's was) changes the
+    // port it fills, never the Gbps. Its share is that same peak over the new size, and may pass 100%.
+    const was = u.was || u, pct0 = degraded ? Math.max(was.pct, 62) : was.pct;
+    const peakG = +((was.cap || 0) * pct0 / 100).toFixed(1), pct = u.was ? Math.round(peakG / u.cap * 100) : pct0;
     const state = degraded ? 'Degraded' : pct >= 80 ? 'Saturating' : 'Up';
     const ramp = r.ramp || 'NetBond';
-    return { id: 'cx-' + r.region, cloud: r.cloud, region: r.region, ramp, ports: u.ports, cap: u.cap, bw: u.bw || `${u.ports} × 10 Gbps`, bwShort: u.bwShort || '10G', gbps: u.gbps, avg: +(u.gbps * 0.82).toFixed(1), pct, state, bgp: degraded ? 'Flapping' : 'Established', drops: degraded ? '0.31%' : state === 'Saturating' ? '0.04%' : '0.00%', inD: sparkline(r.region + ':in', 24, pct, degraded ? 34 : 12), outD: sparkline(r.region + ':out', 24, Math.max(4, pct - 18), degraded ? 30 : 10), wl: r.wl, terminated: ATT_TERMINATED.has(ramp) ? 'att' : 'own', paths: r.paths || 1, acct: r.acct || null, hot: pct >= 80, degraded };
+    return { id: 'cx-' + r.region, cloud: r.cloud, region: r.region, ramp, ports: u.ports, cap: u.cap, bw: u.bw || `${u.ports} × 10 Gbps`, bwShort: u.bwShort || '10G', gbps: u.gbps, peakG, pct, state, bgp: degraded ? 'Flapping' : 'Established', drops: degraded ? '0.31%' : state === 'Saturating' ? '0.04%' : '0.00%', inD: sparkline(r.region + ':in', 24, pct, degraded ? 34 : 12), outD: sparkline(r.region + ':out', 24, Math.max(4, pct - 18), degraded ? 30 : 10), wl: r.wl, terminated: ATT_TERMINATED.has(ramp) ? 'att' : 'own', paths: r.paths || 1, acct: r.acct || null, hot: pct >= 80, degraded };
   }).sort((a, b) => ORDER[a.state] - ORDER[b.state] || b.pct - a.pct);
   return { rows, degraded: rows.filter(r => r.degraded).length, total: rows.length };
 }

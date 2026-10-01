@@ -41,7 +41,7 @@
 import { CATALOG } from './naas-data.js';
 import { attHolds, fmt } from './naas-logic.js';
 import { HEALTH_INK, RAMP_NAME } from './naas-flowmap.js';
-import { ORDER_STAGE, PRICE_NOTE } from './naas-connect-flow.js';
+import { ORDER_STAGE, PRICE_NOTE, ceilMbpsOf } from './naas-connect-flow.js';
 
 const T = (mbps, label) => ({ mbps, label });
 // providerBandwidth.ts AWS_HOSTED, AZURE_CIRCUIT, GOOGLE_PARTNER, ORACLE_PARTNER, DEFAULT_BANDWIDTH.
@@ -73,9 +73,9 @@ export const burstNoteFor = (cloud) => burstFor(cloud).note;
 export const sells = (row) => !!row && attHolds({ priv: true, ramp: row.ramp });
 
 // The catalog's NetBond for Cloud: "Up to 10 Gbps" is the size its one price covers, a port.
+// The connect flow reads the same line for a new connection (naas-connect-flow.js ceilMbpsOf).
 const NB = CATALOG.find(p => p.id === 'netbond') || { included: [] };
-const UP_TO = (NB.included || []).map(x => /^Up to (\d+) Gbps$/.exec(x)).find(Boolean);
-export const PORT_CEIL_MBPS = UP_TO ? +UP_TO[1] * 1000 : 10000;
+export const PORT_CEIL_MBPS = isFinite(ceilMbpsOf(NB)) ? ceilMbpsOf(NB) : 10000;
 
 /** What Cost bills one NetBond connection a month: its region's share of the NetBond on-ramps line (attChargeRows). Null where that line does not bill it. */
 export function unitOf(chargeRows, region) {
@@ -97,8 +97,13 @@ export const sizeShort = (ports, mbps) => (ports > 1 ? `${ports} × ` : '') + (m
 // What a size does to the peak. Over the port: dropped where the provider
 // polices, a burst where it lets you (Azure, up to 2x, not for sustained use).
 export const FIT_WORD = { ok: 'Holds the peak', risk: 'Over 80% at peak', down: 'Short of the peak' };
-// A size that drops traffic reads in warning, as at risk does; it keeps its own square mark (F.healthRadius).
-export const FIT_INK = { ok: HEALTH_INK.ok, risk: HEALTH_INK.risk, down: HEALTH_INK.risk };
+// Round 3 (skeptic, 2026-09-30): a size short of the peak reads in the error ink, as Capacity's
+// Degraded does, so amber means only over 80%. It keeps its own square mark (F.healthRadius).
+export const FIT_INK = { ok: HEALTH_INK.ok, risk: HEALTH_INK.risk, down: HEALTH_INK.down };
+/** Short of the peak drops traffic where the provider polices or the burst runs out; GCP's capacity is approximate, so there it is only short. */
+export const dropsTraffic = (cloud) => burstFor(cloud).model !== 'soft';
+export const downWordFor = (cloud) => (dropsTraffic(cloud) ? 'Short of the peak, drops traffic' : 'Short of the peak');
+export const confirmHeadFor = (cloud) => (dropsTraffic(cloud) ? 'This size drops traffic' : 'This size is short of the peak');
 const fitOf = (peakPct, burst) => (peakPct > 100 * burst.x ? 'down' : peakPct > 80 ? 'risk' : 'ok');
 
 /** The ports stepper's bounds: at least one port; at most twice today's (four more on a small one). A bound on the control, not a product limit. */
@@ -160,7 +165,7 @@ export function monthlyWords(p) {
 export function priceLine(p) {
   if (p.unit === null) return PRICE_NOTE + '.';
   if (p.pick.monthly === null) return `${bwF(p.mbps)} a port is past the catalog's ${PORT_CEIL_MBPS / 1000} Gbps line. Priced by AT&T after review.`;
-  return `1 region × ${fmt(p.unit)}, whatever the size, as Cost bills NetBond.`;
+  return `1 region × ${fmt(p.unit)} for ports up to ${PORT_CEIL_MBPS / 1000} Gbps, as Cost bills NetBond.`;
 }
 
 const DOW = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'America/Chicago' });
@@ -200,6 +205,11 @@ export const inFlight = (orders, est, id, now) => ordersOf(orders, est).find(o =
  * utilRows): the ports and the port size it was changed to, and the share of
  * that the same traffic fills. Everything that reads a connection's size reads
  * these rows, so Capacity, the panel, Optimize and the drawer agree.
+ *
+ * Round 3 (skeptic, 2026-09-30): a resize changes the port, never the traffic.
+ * `was` keeps the size and share the peak was measured on, so X.connections
+ * reads the same peak in Gbps whatever the new size; its share of the new size
+ * is not capped, so a size short of the peak reads over 100%, as it is.
  */
 export function landUtil(ob, orders, est, now) {
   const done = ordersOf(orders, est).filter(o => stageOf(o, now) === 'live').sort((a, b) => a.effectiveAt - b.effectiveAt);
@@ -207,8 +217,8 @@ export function landUtil(ob, orders, est, now) {
   const rows = ob.utilRows.map(u => {
     const o = done.filter(x => x.region === u.region).pop();
     if (!o) return u;
-    const portG = o.mbps / 1000, cap = o.ports * portG;
-    return { ...u, ports: o.ports, portG, cap, bw: sizeF(o.ports, o.mbps), bwShort: sizeShort(o.ports, o.mbps), pct: Math.min(99, Math.round(u.gbps / cap * 100)) };
+    const portG = o.mbps / 1000, cap = o.ports * portG, was = { cap: u.cap, pct: u.pct }, peakG = +(u.cap * u.pct / 100).toFixed(1);
+    return { ...u, ports: o.ports, portG, cap, bw: sizeF(o.ports, o.mbps), bwShort: sizeShort(o.ports, o.mbps), was, pct: Math.round(peakG / cap * 100) };
   });
   const capGbps = rows.reduce((a, u) => a + u.cap, 0);
   return { ...ob, utilRows: rows, capGbps, util: capGbps ? Math.min(99, Math.round(rows.reduce((a, u) => a + u.gbps, 0) / capGbps * 100)) : 0 };

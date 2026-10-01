@@ -19,7 +19,10 @@ import { sells } from './naas-bandwidth.js';
 
 // Modify bandwidth (2026-09-30) leads the actions wherever AT&T sells the connection's bandwidth.
 // Only on the connection's own panel: a Traffic map region node counts the region's flows, not the connection's port counters.
+// Its Add a port carries the connection's id (skeptic, 2026-09-30), so it opens the drawer one port up as Capacity and Optimize do.
 const bwActs = (row) => (row && sells(row) ? [{ key: 'bandwidth', label: 'Modify bandwidth', id: row.id }] : []);
+// The connection panel's average is the capacity function's 6-month figure (skeptic, 2026-09-30).
+const avgOf = (row) => capacity({ rows: [row] })[0].avgG;
 
 const n = (x) => Number(x).toLocaleString('en-US');
 const R = 22, C = 2 * Math.PI * R;
@@ -78,7 +81,7 @@ export function panelFor(sel, ctx) {
     const imp = impacted(est, inv, row);
     const recs = records(est, inv, { flows }, 'all').filter(r => (r.srcSub + ' ' + r.dstSub).includes(row.region)).slice(0, 8);
     return { kind: 'connection', title: `${row.cloud} ${row.region}`, sub: `${rampName(row)} · ${row.bw || row.ports + ' × 10 Gbps'} purchased`, trail: [{ key: sel, name: `${row.cloud} ${row.region}` }],
-      overview: [['Current · in / out', `${row.gbps} / ${(row.gbps * 0.62).toFixed(1)} Gbps`], ['Average · in / out', `${row.avg} / ${(row.avg * 0.62).toFixed(1)} Gbps`], ['Purchased', `${row.bw || row.ports + ' × 10 Gbps'}`], ['Utilization', `${row.pct}% of ${row.cap} Gbps`], ['State', row.state], ['BGP', row.bgp], ['Drops', row.drops], ['Workloads behind it', n(row.wl)]],
+      overview: [['Current · in / out', `${row.gbps} / ${(row.gbps * 0.62).toFixed(1)} Gbps`], ['6-month average · in / out', `${avgOf(row)} / ${(avgOf(row) * 0.62).toFixed(1)} Gbps`], ['Purchased', `${row.bw || row.ports + ' × 10 Gbps'}`], ['Utilization', `${row.pct}% of ${row.cap} Gbps`], ['State', row.state], ['BGP', row.bgp], ['Drops', row.drops], ['Workloads behind it', n(row.wl)]],
       impact: imp, records: recs, actions: [...bwActs(row), ...(row.hot ? [{ key: 'port', label: 'Add a port', region: row.region, id: row.id }] : []), { key: 'policy', label: 'Author a policy for these workloads', region: row.region }, { key: 'logs', label: 'All records for this connection', region: row.region }] };
   }
   // An opened node is replaced by its children on the map; its trail still knows it.
@@ -115,8 +118,10 @@ export function panelFor(sel, ctx) {
     };
   })();
   return { kind: node.kind, title: node.name, sub: node.sub || '', trail: tr, children: kids,
-    overview: [...(node.opened ? [['Opened', 'children shown in place']] : []), ['Traffic', `${node.v.toFixed(2)} Gbps`], ['On AT&T', `${node.v ? Math.round(node.fabV / node.v * 100) : 0}%`], ['Share of all traffic', `${share}%`], ['Change vs prior window', (node.delta >= 0 ? '+' : '') + node.delta + '%'], ['State', node.state === 'ok' ? 'Healthy' : node.state === 'degraded' ? 'Degraded' : 'Over SLO or public'], ...(resolved ? [['Resource', resolved.name], ['Address', resolved.sub]] : [])],
-    impact: imp, records: recs, actions: [...(node.state !== 'ok' && node.fabV < node.v ? [{ key: 'steer', label: 'Steer onto the AT&T network' }] : []), ...(region && !(row) ? [{ key: 'attach', label: `Attach ${region}`, region }] : []), ...(row && row.hot ? [{ key: 'port', label: 'Add a port', region }] : []), { key: 'policy', label: 'Author a policy here', region }] };
+    overview: [...(node.opened ? [['Opened', 'children shown in place']] : []), ['Traffic', `${node.v.toFixed(2)} Gbps`], ['On AT&T', `${node.v ? Math.round(node.fabV / node.v * 100) : 0}%`], ['Share of all traffic', `${share}%`], ['Change vs prior window', (node.delta >= 0 ? '+' : '') + node.delta + '%'], ['State', node.state === 'ok' ? 'Healthy' : node.state === 'degraded' ? 'Degraded' : 'Over SLO or public'],
+      // State is the paths'; the region's connection says its own, in Capacity's words and figure (skeptic, 2026-09-30), so Add a port has its reason.
+      ...(row ? [['Connection', `${rampName(row)} · ${row.degraded ? 'Degraded' : row.hot ? 'Saturating' : 'Healthy'}, ${row.pct}% at peak`]] : []), ...(resolved ? [['Resource', resolved.name], ['Address', resolved.sub]] : [])],
+    impact: imp, records: recs, actions: [...(node.state !== 'ok' && node.fabV < node.v ? [{ key: 'steer', label: 'Steer onto the AT&T network' }] : []), ...(region && !(row) ? [{ key: 'attach', label: `Attach ${region}`, region }] : []), ...(row && row.hot ? [{ key: 'port', label: 'Add a port', region, id: row.id }] : []), { key: 'policy', label: 'Author a policy here', region }] };
 }
 
 /** Find a site by id or name: a named site of the estate, or one generated inside a metro. */
@@ -410,11 +415,15 @@ export function capacity(conns, win = '30d') {
   const grow = growthOf(win) || 0, days = WIN_DAYS[win] || 30, perDay = grow > 0 ? Math.log(1 + grow) / days : 0;
   return (conns.rows || []).map(r => {
     const capG = r.cap || 10, ports = r.ports || 1, portG = capG / ports, peakPct = r.pct;
-    const peakG = +(capG * peakPct / 100).toFixed(1), avgG = +(peakG * 0.82).toFixed(1);
+    // The peak is traffic, so a landed resize carries it over unchanged (X.connections peakG, skeptic 2026-09-30).
+    const peakG = r.peakG != null ? r.peakG : +(capG * peakPct / 100).toFixed(1);
     const toFull = peakG >= capG * 0.99 ? 0 : perDay > 0 ? Math.log(capG / peakG) / perDay : Infinity;
     const fullIn = toFull === 0 ? 'Now' : !isFinite(toFull) || toFull > 365 ? 'Over a year' : toFull < 63 ? `in ${Math.max(1, Math.round(toFull / 7))} ${Math.round(toFull / 7) === 1 ? 'week' : 'weeks'}` : `in ${Math.round(toFull / 30)} months`;
-    const s6 = utilSeries(r.id + ':6m', 24, peakPct, growthOf('6m') || 0);
-    const avg6mPct = Math.round(s6.reduce((a, v) => a + v, 0) / s6.length);
+    // One average (skeptic, 2026-09-30): the 6-month run, in Gbps and as a share of what was bought.
+    // The run's shape (a 24-point series at a 50% peak) scales to the peak, so the average is
+    // traffic too: it never moves with the Since window or with a resize.
+    const s6 = utilSeries(r.id + ':6m', 24, 50, growthOf('6m') || 0);
+    const avgG = +(peakG * s6.reduce((a, v) => a + v, 0) / s6.length / 50).toFixed(1), avg6mPct = Math.round(avgG / capG * 100);
     const state = r.degraded ? 'down' : r.hot ? 'risk' : 'ok';
     const resizePct = ports > 1 ? Math.round(peakG / (capG - portG) * 100) : null;
     const oversized = state === 'ok' && ports > 1 && peakPct <= 50 && resizePct <= 80;
