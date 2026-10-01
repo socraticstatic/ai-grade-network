@@ -187,7 +187,7 @@ export function defaults() {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
     screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
-    costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankPage: 0, regSavePage: 0,
+    costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
@@ -3861,7 +3861,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
       const r100 = (v) => Math.round(v / 100) * 100;
       const toBuckets = () => set({ costPanel: 'bucket' }), toMoves = () => set({ costPanel: 'optimize' });
       // Banked opens the sources it counts, in place (the skeptic, 2026-09-30: Findings > Closed held $6,000 of $36,000).
-      const toBanked = () => set({ costPanel: 'spend', spendList: 'banked', bankScope: null, bankPage: 0 });
+      const toBanked = () => set({ costPanel: 'spend', spendList: 'banked', bankScope: null, bankSource: null, bankPage: 0 });
       const nowIx = st.past.length - 1, has = base > 0 && st.past.length > 0;
       // Both lines leave from the top of this month's spend, at its bar's right edge, and run on to the
       // chart's edge, level with their last month, so each meets its label.
@@ -3914,29 +3914,40 @@ function costVals(s, set, est, invAll, ob, go, c) {
     // Savings by region, business unit or cloud (notes, 2026-09-29): this month's banked and what is still open, split.
     ...(() => { const dim = ['region', 'bu', 'cloud'].includes(s.saveGroup) ? s.saveGroup : 'region';
       // Banked from its sources, each where it names; still open from the open findings, each where its buckets bill (2026-09-30).
-      const rows = LC.savingsBy(est, dim, { sources: LC.bankedSources(est, bLife, bNow), open: openMoves }, ((s.siteTags || {})[est.id]) || {});
+      const src = LC.bankedSources(est, bLife, bNow);
+      const rows = LC.savingsBy(est, dim, { sources: src, open: openMoves }, ((s.siteTags || {})[est.id]) || {});
       const mx = Math.max(1, ...rows.map(r => r.banked + r.open));
       // Each figure opens what it counts (the skeptic, 2026-09-30): banked opens its share of the banked
-      // sources, in place; still open opens the moves on Optimize.
+      // sources, in place; still open opens the moves on Optimize. A $0 banked figure opens nothing.
       const toOpen = () => set({ costPanel: 'optimize' });
-      const toScope = (r) => () => set({ costPanel: 'spend', spendList: 'banked', bankScope: { dim, key: r.key, label: r.label, banked: r.banked }, bankPage: 0 });
+      const toScope = (r) => () => set({ costPanel: 'spend', spendList: 'banked', bankScope: { dim, key: r.key, label: r.label }, bankSource: null, bankPage: 0 });
+      const toSource = (x) => () => set({ costPanel: 'spend', spendList: 'banked', bankSource: x.key, bankScope: null, bankPage: 0 });
+      const none = () => {};
       const saveRows = rows.map(r => ({ key: r.key, label: r.label, bankedN: r.banked, openN: r.open, bankedF: fmt(r.banked), openF: fmt(r.open), bw: (r.banked / mx * 100).toFixed(1) + '%', ow: (r.open / mx * 100).toFixed(1) + '%',
-        ink: CV.COST_INK.saved.color, goBanked: toScope(r), goOpen: toOpen, go: r.open > 0 ? toOpen : toScope(r) }));
+        ink: CV.COST_INK.saved.color, bankedOff: !(r.banked > 0), goBanked: r.banked > 0 ? toScope(r) : none, goOpen: toOpen, go: r.open > 0 ? toOpen : r.banked > 0 ? toScope(r) : none }));
       // What Banked counts, source by source: the network's own saving since the first attach and each closed finding.
-      // Scoped to a Savings row, each source's share is the row's share of this month's banked, to the dollar.
-      const src = LC.bankedSources(est, bLife, bNow);
-      const sc = s.bankScope && s.bankScope.dim === dim && rows.some(r => r.key === s.bankScope.key) ? rows.find(r => r.key === s.bankScope.key) : null;
-      const moOf = sc ? LC.split(sc.banked, src.map(x => x.perMo)) : src.map(x => x.perMo);
-      const toDateOf = sc ? LC.split(Math.round(bankTo.cumulative * (bankTo.saved ? sc.banked / bankTo.saved : 0)), src.map(x => x.toDate)) : src.map(x => x.toDate);
-      const whyShare = dim === 'bu' ? 'its sites on AT&T, by what they carry' : 'its workloads on AT&T';
-      const bankRows = src.map((x, i) => ({ key: x.key, kind: x.kind, label: x.label, moN: moOf[i], toDateN: toDateOf[i], moF: fmt(moOf[i]), toDateF: fmt(toDateOf[i]),
-        sub: `since ${monthName(x.since)} · ${fmt(x.perMo)}/mo × ${x.months} ${x.months === 1 ? 'month' : 'months'}${sc ? ` · ${sc.label}'s share` : ''}`,
-        go: x.kind === 'network' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'picture' }) : go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'closed', findPage: 0, fdKey: x.finding }) }));
+      // Scoped to a place, each source's share there (LC.savingsBy's bySource, each source where it names), so a
+      // finding never lands in a place it does not name, and a $0 share is not a row. Opened from a source (Your
+      // connections on AT&T opened Connect, where no dollar figure stands), that source's share in each place.
+      // Every row is exact: its share a month × its months is its to date.
+      const sc = s.bankScope && s.bankScope.dim === dim ? rows.find(r => r.key === s.bankScope.key) || null : null;
+      const one = !sc && s.bankSource ? src.find(x => x.key === s.bankSource) || null : null;
+      const since = (x) => `${x.months} ${x.months === 1 ? 'month' : 'months'} since ${monthName(x.since)}`;
+      const PLACE = { region: 'cloud region', cloud: 'cloud', bu: 'business unit' };
+      const bankRow = (key, kind, label, mo, x, rowGo) => ({ key, kind, label, moN: mo, months: x.months, toDateN: mo * x.months, moF: fmt(mo), toDateF: fmt(mo * x.months), sub: since(x), go: rowGo });
+      const bankRows = one
+        ? rows.filter(r => (r.bySource[one.key] || 0) > 0).sort((a, b) => b.bySource[one.key] - a.bySource[one.key] || a.label.localeCompare(b.label))
+          .map(r => bankRow('p:' + r.key, 'place', r.label, r.bySource[one.key], one, toScope(r)))
+        : src.map(x => bankRow(x.key, x.kind, x.label, sc ? (sc.bySource[x.key] || 0) : x.perMo, x,
+          sc || x.kind === 'network' ? toSource(x) : go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'closed', findPage: 0, fdKey: x.finding })))
+          .filter(r => r.moN > 0);
       const listBanked = s.spendList === 'banked';
-      return { saveGroupValue: dim, setSaveGroup: (e) => set({ saveGroup: e.target.value, bankScope: null }), saveRows, hasSaveList: rows.length > 0 && (bankTo.saved + stillOpen) > 0,
+      return { saveGroupValue: dim, setSaveGroup: (e) => set({ saveGroup: e.target.value, bankScope: null, bankSource: null }), saveRows, hasSaveList: rows.length > 0 && (bankTo.saved + stillOpen) > 0,
         spendListBanked: listBanked, spendListSavings: !listBanked, bankRows, hasBankRows: bankRows.length > 0, noBankRows: !bankRows.length,
-        bankHead: sc ? `${sc.label}: ${fmt(sc.banked)} of this month's ${fmt(bankTo.saved)}, its share by ${whyShare}` : `${fmt(bankTo.cumulative)} to date · ${fmt(bankTo.saved)} this month`,
-        bankBack: () => set({ spendList: 'savings', bankScope: null }) }; })(),
+        bankHead: sc ? `${sc.label}'s share: ${fmt(sc.banked)} of this month's ${fmt(bankTo.saved)}`
+          : one ? `${one.label}: ${fmt(one.perMo)}/mo, each ${PLACE[dim]}'s share`
+            : `${fmt(bankTo.cumulative)} to date · ${fmt(bankTo.saved)} this month`,
+        bankBack: () => set({ spendList: 'savings', bankScope: null, bankSource: null }) }; })(),
     bankBars: bankSeries.map(b => ({ key: b.month, h: (b.cumulative / bankMax * 100).toFixed(2) + '%', title: `${monthName(b.month)} · ${fmt(b.saved)} banked · ${fmt(b.cumulative)} to date` })),
     bankFrom: bankSeries.length ? monthName(bankSeries[0].month) : '', bankTo: bankSeries.length ? monthName(bankSeries[bankSeries.length - 1].month) : '',
     // One slot per Cost panel (2026-09-29 audit): the summary or its arithmetic, never both stacked.
@@ -3945,7 +3956,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
     // Cost in three legs (notes, 2026-09-30, A2): site access, cloud connectivity, the cloud provider.
     ...costLegVals(s, set, est, R.costLegs(est, invAll, ob.utilRows), go, c),
     ...(() => { const cpk = costPanelOf(s.costPanel); void hasBank;
-      return { costPanels: [['optimize', 'Optimize'], ['spend', 'Spend'], ['legs', 'By leg'], ['money', 'By region'], ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['charges', 'AT&T charges']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k, spendList: 'savings', bankScope: null }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
+      return { costPanels: [['optimize', 'Optimize'], ['spend', 'Spend'], ['legs', 'By leg'], ['money', 'By region'], ['dest', 'By destination'], ['mile', 'By first mile'], ['bucket', 'By bucket'], ['charges', 'AT&T charges']].map(([k, l]) => { const on = cpk === k; return { key: k, label: l, on, go: () => set({ costPanel: k, spendList: 'savings', bankScope: null, bankSource: null }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }),
         costPanelOptimize: cpk === 'optimize', costPanelSpend: cpk === 'spend', costPanelLegs: cpk === 'legs', costPanelMoney: cpk === 'money', costPanelCharges: cpk === 'charges', costPanelDest: cpk === 'dest', costPanelMile: cpk === 'mile', costPanelBucket: cpk === 'bucket' }; })(),
     bySite, hasBySite: bySite.length > 0, bySiteTotalF: fmt(bySiteTotal), bySiteNote: `${fmt(siteRows.reduce((a, r) => a + r.pubPart, 0))}/mo still on a public first mile`, goSites: go('s1'),
     costDonuts, hasCostDonuts: costDonuts.length > 0, mileSwatch: CV.modelledFill(),

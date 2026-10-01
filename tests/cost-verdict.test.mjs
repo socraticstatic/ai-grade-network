@@ -185,9 +185,11 @@ test('Banked opens the sources it counts: the network since the first attach and
   const f = rows.find(r => r.kind === 'finding');
   f.go();
   assert.deepEqual([c.state.obPage, c.state.insPanel, c.state.findFilter, c.state.fdKey], ['insights', 'findings', 'closed', f.key.replace(/^f:/, '')]);
+  // Re-pinned (2026-09-30, the skeptic's third read): Connect > Your network shows no dollar figure, so the
+  // network's own saving opens its share in each place, on Spend (tests/cost-banked-doors.test.mjs).
   const d = cost('partial', { costPanel: 'spend', spendList: 'banked' });
   vals(d).bankRows.find(r => r.kind === 'network').go();
-  assert.equal(d.state.tab, 'connect');
+  assert.deepEqual([d.state.tab, d.state.costPanel, d.state.bankSource], ['cost', 'spend', 'network']);
 });
 
 test('a Savings row opens what each figure counts: banked its share of the sources, still open the moves', () => {
