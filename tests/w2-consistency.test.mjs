@@ -237,3 +237,67 @@ test('Order ids never repeat, whatever Reset demo leaves', () => {
   assert.notEqual(a, 'o2'); assert.notEqual(b, a); assert.notEqual(b, 'o2');
   assert.notEqual(BW.nextId([{ id: 'o1', kind: 'bandwidth' }, flow]), 'o2');
 });
+
+test('Network Eng\'s latency action counts the regions its Latency over SLO list shows', () => {
+  for (const view of VIEWS) {
+    const v = vals(ins(view, { persona: 'neteng', insPanel: 'role' }));
+    const list = (v.roleVisuals || []).find(x => x.key === 'slo');
+    const regions = new Set((card(vals(ins(view, { persona: 'neteng' })), 'slo') || { all: [] }).all.map(r => r.region));
+    const act = v.roleActAll.find(a => /above the latency SLO/.test(a.head));
+    if (!regions.size) { assert.ok(!act, `${view}: "${act && act.head}" with nothing over SLO`); continue; }
+    assert.ok(act, `${view}: ${regions.size} regions over SLO and no action`);
+    assert.match(act.head, new RegExp(`^${regions.size} ${regions.size === 1 ? 'region runs' : 'regions run'} above`), `${view}: "${act.head}" under a list of ${[...regions].join(', ')}`);
+    if (list) assert.ok(list.rows.length > 0);
+  }
+});
+
+test('The Architect\'s lead cards each open their own findings, never the same one twice', () => {
+  for (const view of VIEWS) {
+    const seen = new Map();
+    for (const cd of vals(ins(view, { persona: 'architect' })).sigCards) {
+      if (!cd.finds || cd.finds.none) continue;
+      const c = ins(view, { persona: 'architect' });
+      vals(c).sigCards.find(x => x.key === cd.key).finds.go();
+      const keys = vals(c).insightRows.map(r => r.key);
+      for (const k of keys) { assert.ok(!seen.has(k), `${view}: ${cd.title} and ${seen.get(k)} both open ${k}`); seen.set(k, cd.title); }
+    }
+  }
+});
+
+test('Your actions\' head reads the figures its role\'s Signals read, and its records door carries them', () => {
+  const g = (t) => (/([\d.]+) Gbps/.exec(t) || [])[1];
+  for (const view of VIEWS) {
+    const exp = card(vals(ins(view, { persona: 'security' })), 'talkers').head;
+    const cov = card(vals(ins(view, { persona: 'exec' })), 'talkers').head;
+    for (const persona of ['neteng', 'security']) {
+      const c = ins(view, { persona, insPanel: 'role' }), v = vals(c);
+      if (!g(exp)) continue;
+      assert.equal(g(v.roleHead), g(exp), `${view} ${persona}: "${v.roleHead}" against Signals' "${exp}"`);
+      v.roleGo();
+      assert.equal(c.state.explain.value, `${g(exp)} Gbps`, `${view} ${persona}: the records explain ${c.state.explain.value}`);
+    }
+    const e = vals(ins(view, { persona: 'exec', insPanel: 'role' }));
+    const pct = (/(\d+)% of traffic/.exec(cov) || [])[1];
+    if (pct) assert.match(e.roleHead, new RegExp(`^${pct}% `), `${view} exec: "${e.roleHead}" against Signals' "${cov}"`);
+  }
+});
+
+test('A role\'s Signals count as findings only what its Your actions can list; an event says event', () => {
+  for (const view of VIEWS) for (const persona of ['architect', 'neteng', 'security', 'finops']) {
+    const ya = vals(ins(view, { persona, insPanel: 'role' })).roleActAll.length;
+    const sig = vals(ins(view, { persona }));
+    if (!ya) for (const cd of sig.sigCards.slice(0, 3)) assert.doesNotMatch(cd.finds.label, /\d+ findings?/, `${view} ${persona}: Your actions lists nothing, yet ${cd.title} reads "${cd.finds.label}"`);
+  }
+  const sec = vals(ins('mature', { persona: 'security' }));
+  assert.equal(sec.sigCards.find(x => x.key === 'newdest').finds.label, '1 event ›');
+});
+
+test('A Signals card keys only the inks its rows draw', () => {
+  for (const view of VIEWS) for (const persona of ['architect', 'neteng', 'security', 'finops', 'exec']) {
+    for (const cd of vals(ins(view, { persona })).sigAll) {
+      if (cd.isCols || !cd.all.length) continue;
+      const drawn = new Set(cd.all.flatMap(r => r.segs.map(x => x.fill)));
+      for (const l of cd.legend) assert.ok(drawn.has(l.ink), `${view} ${persona} ${cd.title}: the key "${l.label}" (${l.ink}) is drawn by no row`);
+    }
+  }
+});

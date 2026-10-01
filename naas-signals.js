@@ -61,7 +61,8 @@ const TALKER_FINDS = {
   share: ['ipsec'],
   egress: ['avoidable', 'ipsecegress'],
   exposure: ['pci', 'uninspected', 'unsegmented'],
-  coverage: ['onecloud', 'single', 'nothub', 'newcloud-oracle'],
+  // A second path is the Architect's Capacity card (ARCH_FINDS), not coverage: both opened 'single' (w2, 2026-09-30).
+  coverage: ['onecloud', 'nothub', 'newcloud-oracle'],
 };
 const FINDS = {
   newdest: ['an-dest'],
@@ -77,7 +78,8 @@ const FINDS = {
 // findings price on Spend.
 const ARCH_FINDS = {
   capacity: (k) => k === 'single',
-  spend: (k) => k === 'crosscloud' || /^newcloud-/.test(k),
+  // The cross-cloud finding is Cloud-to-cloud's, the card that shows its pairs; one finding opens from one card (w2, 2026-09-30).
+  spend: (k) => /^newcloud-/.test(k),
 };
 const isIncident = (k) => /^an-/.test(k) && !['an-dest', 'an-egress'].includes(k);
 export function findsOf(card, lens = 'share', ctx = {}) {

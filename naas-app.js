@@ -2571,8 +2571,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const sigLens = SG.lensOf(roleKeyOf(s)), sigCtx = { spikesOver, persona: roleKeyOf(s) };
   const cardFinds = (k) => SG.findsOf(k, sigLens, sigCtx);
   const insFocus = SG.CARDS.includes(s.insFocus) ? s.insFocus : null;
-  const findsFor = (k, label) => { const hit = cardFinds(k), n = lifeRows.filter(x => hit(x.f.key) && bucket(x.l.state) === 'open').length;
-    return { n, none: !n, label: n ? `${n} ${n === 1 ? 'finding' : 'findings'} ›` : 'No findings', title: `The open findings behind ${label}`,
+  // A finding is what Your actions lists; an event AT&T saw says event (w2, 2026-09-30: Security's New
+  // destinations read "1 finding" while Your actions said nothing waits; the one was an event).
+  const findsFor = (k, label) => { const hit = cardFinds(k), open = lifeRows.filter(x => hit(x.f.key) && bucket(x.l.state) === 'open'), n = open.length;
+    const ev = open.filter(x => x.f.event).length, fi = n - ev, word = (m, a, b) => (m ? `${m} ${m === 1 ? a : b}` : '');
+    return { n, none: !n, label: n ? `${[word(fi, 'finding', 'findings'), word(ev, 'event', 'events')].filter(Boolean).join(', ')} ›` : 'No findings', title: `The open findings and events behind ${label}`,
       go: () => set({ insFocus: k, findFilter: 'open', findPage: 0, insPanel: 'findings' }) }; };
   const personaSort = (rows) => rows.slice().sort((a, b) => ((b.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0) - ((a.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0));
   const insightRowsShown = personaSort(every.filter(x => findFilter === 'all' || bucket(x.l.state) === findFilter).filter(x => !insFocus || cardFinds(insFocus)(x.f.key)).map(toRow))
@@ -2656,16 +2659,22 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // into the same map, instead of a persona-flavoured redesign of it.
   const personaNow = PERSONA_NAME[s.persona] || 'Cloud & Platform Architect';
   const plTopCloud = map.nodes.filter(n => n.side === 'r' && n.kind === 'cloud' && !n.parentKey).sort((a, b) => (b.tot || b.v) - (a.tot || a.v))[0];
-  const plInetV = MIX.buckets.filter(b => (EXPLAIN_CUT[b.key] || {}).pattern === 'internet').reduce((a, b) => a + b.v, 0);
-  const plFabPct = Math.round(fabAll / (crossed || 1) * 100);
+  // Your actions' head reads the figures Signals reads beside it (w2, 2026-09-30: Security read 86.2 Gbps
+  // "with no inspection point" over an exposure card of 10.5 Gbps; Small's Network Eng 7.1 Gbps outside
+  // AT&T against 3.1 Gbps of traffic): the regions' own traffic, cross-cloud pairs included.
+  const tAll = (iwRaw && iwRaw.talkersAll) || [];
+  const tPub = tAll.reduce((a, t) => a + (t.pubG != null ? +t.pubG : t.priv ? 0 : t.gbps), 0), tCov = ob.covPct || 0;
+  const pubRecs = explainNav(c, { label: 'Traffic outside AT&T', value: tPub.toFixed(1) + ' Gbps', sub: 'What the regions send over the public internet, cross-cloud pairs included. Sample data: the records on the path it takes.', cut: 'Records outside AT&T, to the internet.', pattern: 'internet', path: 'public', parts: [] });
   const PERSONA_LENS = {
-    'Executive': { line: `${plFabPct}% of everything that crosses a mid mile rides the AT&T network: ${fabAll.toFixed(1)} of ${crossed.toFixed(1)} Gbps.`, cta: 'See the records', go: mixVals.explainFabric },
+    'Executive': { line: `${tCov}% of your traffic rides the AT&T network; ${tPub.toFixed(1)} Gbps still rides outside it.`, cta: 'See the records', go: explainNav(c, { label: 'Traffic on the AT&T network', value: `${tCov}% of traffic`, sub: 'What the regions send on the AT&T network. Sample data: the records on the path it takes.', cut: 'Records on the AT&T network.', pattern: '', path: 'private', parts: [] }) },
     'Cloud & Platform Architect': plTopCloud ? { line: `${plTopCloud.name} takes the most of what your sites send, ${(plTopCloud.tot || plTopCloud.v).toFixed(1)} Gbps. Open it to the region level.`, cta: `Open ${plTopCloud.name}`, go: () => set({ mapOpen: (s.mapOpen || []).includes(plTopCloud.key) ? (s.mapOpen || []) : [...(s.mapOpen || []), plTopCloud.key], mapSel: plTopCloud.key, panelTab: 'overview' }) } : null,
-    'Network Engineering': { line: `${pubAll.toFixed(1)} Gbps crosses a mid mile outside AT&T. No latency floor, no SLO, no second path.`, cta: 'See the records', go: mixVals.explainOutside },
-    'Security & Compliance': { line: `${plInetV.toFixed(1)} Gbps of cloud egress reaches the internet with no inspection point in the path.`, cta: 'See the records', go: explainNav(c, { label: 'Cloud egress to the internet', value: plInetV.toFixed(1) + ' Gbps', sub: 'AI endpoints and public internet destinations, straight over the hyperscaler exit.', cut: 'Records leaving the cloud for the internet.', pattern: 'internet', parts: [] }) },
+    'Network Engineering': { line: `${tPub.toFixed(1)} Gbps rides outside AT&T, ${100 - tCov}% of traffic. No latency floor, no SLO, no second path.`, cta: 'See the records', go: pubRecs },
+    'Security & Compliance': { line: `${tPub.toFixed(1)} Gbps reaches the internet outside AT&T, ${100 - tCov}% of traffic, with no inspection point in the path.`, cta: 'See the records', go: pubRecs },
     'FinOps & SRE': { line: totalSave > 0 ? `${fmt(totalSave)}/mo is on the table: the same bytes at AT&T rates instead of public ones.` : `The AT&T network is saving ${fmt(ob.savingsMo || 0)}/mo against public rates; egress runs ${fmt(ob.egressMo || 0)}/mo.`, cta: 'Open Cost', go: () => { go('s3', { layer: 'cloud', tab: 'cost' })(); } },
   };
-  const plNow = PERSONA_LENS[personaNow] || PERSONA_LENS['Executive'];
+  const plNow0 = PERSONA_LENS[personaNow] || PERSONA_LENS['Executive'];
+  // Nothing seen yet reads as words, never "0.0 Gbps rides outside AT&T, 100% of traffic".
+  const plNow = !tAll.length && ['Executive', 'Network Engineering', 'Security & Compliance'].includes(personaNow) ? { ...plNow0, line: 'No traffic seen yet.' } : plNow0;
   // Observe > Health (notes, 2026-09-30): the path flow, one row per app group, one
   // cell per segment; and the open problems, ranked by apps affected, with Open
   // ticket (a lifecycle move, no second store) and Trace (the Traffic map).
@@ -2952,7 +2961,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       const noRows = !m.isCols && !all.length;
       return { key: k, title: m.title, head: m.head, open: LIST.has(k) ? () => set({ sigOpen: k, sigListPage: 0, sigWeek: null }) : OPEN[k], openAria: `${m.title}: ${m.head}`,
         // No bars, no key to them.
-        finds: findsFor(k, m.title), legend: noRows ? [] : m.legend.map(l => ({ ...l, rad: l.rad || '2px' })),
+        // A key for each ink a row draws, and no other (w2, 2026-09-30: FinOps' egress card keyed On AT&T, which nothing on it drew).
+        finds: findsFor(k, m.title), legend: noRows ? [] : m.legend.filter(l => m.isCols || all.some(r => r.segs.some(x => x.fill === l.ink))).map(l => ({ ...l, rad: l.rad || '2px' })),
         all, rows: m.isCols ? [] : all.slice(0, 4), hasRows: !m.isCols && all.length > 0, noRows, empty: m.empty, isCols: !!m.isCols, isRows: !m.isCols,
         hasEmptyAct: noRows && !!EMPTY[m.emptyKind], emptyAct: m.emptyAct || '', emptyGo: EMPTY[m.emptyKind] || (() => {}),
         cols: (m.cols || []).map(w => ({ ...w, go: openWeek(w.key) })), thenLabel: m.thenLabel || '', nowLabel: m.nowLabel || '',

@@ -99,7 +99,7 @@ await beat('0 NaaS home: the take-away, the snapshot, the map below', async () =
   if (!(await page.locator('#sec-fabric[data-fold="below"]').count())) throw new Error('no Connect map below the home');
   // The map's title sits at the fold. The home has no Lens control, so its legend keys whose path a wire
   // is and Health's state on each dot (third skeptic, 2026-09-30), never a lens.
-  await expect('What you have', '1 connection down', '5 regions without flow logs', 'AT&T and private paths', 'public internet (dashed)');
+  await expect('What you have', '1 connection down', '5 regions without flow logs', 'AT&T and private paths', 'public internet (dotted)');
   if ((await page.locator('#sec-fabric').innerText()).includes('security lens')) throw new Error('the home keys a lens it has no control for');
   const neteng = await takeaway();
   await tab('Executive', 'section[aria-label="NaaS home"]');
@@ -187,7 +187,9 @@ await beat('8 Estate switch to Established', async () => {
   // Switched while on the home, the new estate's own figures show, with no stale role list.
   // v2 home (2026-09-30): the On AT&T card counts Oracle's two public regions (2 of 7 became 2 of 9).
   await rail('NaaS');
-  await expect('1 region runs above the latency SLO.');
+  // w2 (2026-09-30): the latency action counts eu-west-1's spike too, as Latency over SLO lists it.
+  const growingChips = await page.evaluate(() => (document.querySelector('main') || document.body).innerText);
+  await expect('2 regions run above the latency SLO.');
   await takes('Azure eastus is down');
   if (!(await cards())[1].includes('2 of 9')) throw new Error(`On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 2 of 9`);
   await page.selectOption('select[aria-label="View as"]', 'mature'); await settle(600);
@@ -195,7 +197,10 @@ await beat('8 Estate switch to Established', async () => {
   // The outage leads, not the at-risk region (skeptic, 2026-09-30).
   await takes('AWS eu-central-1 is down', '2 apps ride it · 96 workloads');
   if (!(await cards())[1].includes('7 of 8')) throw new Error(`Established's On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 7 of 8`);
-  if ((await text()).includes('1 region runs above the latency SLO.')) throw new Error('Growing\'s role list stayed on the Established home');
+  // Established's role list, not Growing's: one blind region where Growing has several.
+  await expect('1 region sends no flow logs.');
+  const blindG = (growingChips.match(/\d+ regions send no flow logs/) || [''])[0];
+  if (!blindG || (await text()).includes(blindG)) throw new Error('Growing\'s role list stayed on the Established home');
   await rail('Recommended');
   await expect('1 of 8 regions still ride the public internet');
 });

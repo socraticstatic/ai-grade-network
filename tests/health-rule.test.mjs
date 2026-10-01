@@ -26,7 +26,8 @@ test('regionState: down on a degraded link, otherwise the SLO of the path it tak
 
 test('the degraded finding counts regions by the one rule, on every estate', () => {
   for (const view of VIEWS) {
-    const n = D.ESTATES[view].regionsList.filter(r => F.regionState(r) === 'slo').length;
+    // w2 (2026-09-30): and the regions whose spike Health calls Over SLO, as Latency over SLO lists them.
+    const n = D.ESTATES[view].regionsList.filter(r => F.regionState(r) === 'slo' || (r.rel === 'warn' && F.healthOf(r.pub + 40, F.SLO) === 'slo')).length;
     const v = vals(mkC({ view, estateParam: null, screen: 's3', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'all' }));
     const f = v.findAll.find(r => r.key === 'degraded');
     if (!n) { assert.ok(!f, `${view} claims a degraded finding with no region over SLO`); continue; }

@@ -152,7 +152,8 @@ test('the findings behind each card belong to it; the talkers follow the lens', 
   // A lead card opens its persona's own work (2026-09-30): cross-cloud and the Oracle regions are
   // the Architect's, on Cloud-to-cloud and coverage; Spend keeps FinOps' egress findings.
   assert.ok(!hit('spend', 'share')('crosscloud') && !hit('spend', 'share')('newcloud-oracle') && hit('spend', 'share')('avoidable'));
-  assert.ok(hit('multi', 'share')('crosscloud') && hit('talkers', 'coverage')('newcloud-oracle') && hit('talkers', 'coverage')('single'));
+  // w2 (2026-09-30): one path is the Architect's Capacity card's (ARCH_FINDS), not coverage's, so no two lead cards open it.
+  assert.ok(hit('multi', 'share')('crosscloud') && hit('talkers', 'coverage')('newcloud-oracle') && !hit('talkers', 'coverage')('single'));
   assert.ok(!hit('health', 'share')('single'), 'one path is topology, the Architect\'s');
   assert.ok(hit('talkers', 'share')('ipsec') && !hit('talkers', 'coverage')('ipsec'), 'IPsec sites are Network Eng\'s');
   for (const k of SG.CARDS) assert.equal(typeof SG.findsOf(k, 'share', ctx), 'function', k);
