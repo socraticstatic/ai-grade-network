@@ -124,6 +124,8 @@ export function talkers(T, lens = 'share', { pubMo = 0, covPct = 0, billsPub = {
   const outG = out.reduce((a, t) => a + pubG(t), 0), outMax = Math.max(0, ...out.map(pubG));
   const outSub = (t) => (t.priv ? `${t.ramp || 'On AT&T'} · cross-cloud public` : t.sub);
   const base = (t) => ({ key: t.key, region: t.region, label: t.label, sub: t.sub, priv: !!t.priv, fig: 'map' });
+  // A region carrying a cross-cloud pair names its Gbps on its line, so its figure reads as its connection's and its pair's.
+  const lineOf = (t) => (t.xG > 0 ? `${t.priv ? t.ramp || 'On AT&T' : 'public internet'} · ${gb(t.xG)} cross-cloud${t.xPub ? ' public' : ''}` : t.sub);
   const bar = (t, max) => [{ key: 's', fill: t.priv ? AT.ink : PUB.ink, w: pctW(t.gbps, max) }];
   const outBar = (t) => [{ key: 's', fill: PUB.ink, w: pctW(pubG(t), outMax) }];
   // Each region's share of what leaves AT&T, whole percents that add up to 100 (largest remainder).
@@ -142,7 +144,7 @@ export function talkers(T, lens = 'share', { pubMo = 0, covPct = 0, billsPub = {
     const rows = [
       ...out.map(t => ({ ...base(t), sub: outSub(t), v: gb(pubG(t)), v2: share.get(t), segs: outBar(t), act: 'Optimize', actKind: 'optimize' })),
       ...on.map(t => (bills(t) ? { ...base(t), sub: `${bills(t).join(' and ')} bills public`, v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Optimize', actKind: 'optimize' }
-        : { ...base(t), v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Ask Andi', actKind: 'andi-region' })),
+        : { ...base(t), sub: lineOf(t), v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Ask Andi', actKind: 'andi-region' })),
     ];
     // Each figure says what it counts (w2, 2026-09-30): the dollars are what the buckets bill public, a
     // bucket on NetBond included (Bank scale's GPU inference); the Gbps are what leaves AT&T.
@@ -155,7 +157,7 @@ export function talkers(T, lens = 'share', { pubMo = 0, covPct = 0, billsPub = {
     // complement; each row's share is of the exposed, so the rows add up to it.
     const rows = [
       ...out.map(t => ({ ...base(t), sub: outSub(t), v: gb(pubG(t)), v2: share.get(t), segs: outBar(t), act: 'Set policy', actKind: 'policy-region' })),
-      ...on.map(t => ({ ...base(t), v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Policies', actKind: 'policies' })),
+      ...on.map(t => ({ ...base(t), sub: lineOf(t), v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Policies', actKind: 'policies' })),
     ];
     const head = out.length ? `${gb(outG)} public · ${100 - covPct}% of traffic` : 'Every region rides AT&T';
     return { key: 'talkers', title: 'Top talkers by exposure', head, rows, legend: [{ ...PUB, label: 'Exposed, public internet' }], empty: 'No traffic yet.' };
@@ -165,7 +167,6 @@ export function talkers(T, lens = 'share', { pubMo = 0, covPct = 0, billsPub = {
   // and the rows' On AT&T added up past the head). A row with a pair names it on its line.
   const splitBar = (t, max) => { const p = Math.min(t.gbps, pubG(t)), o = t.gbps - p;
     return [...(o > 0 ? [{ key: 'on', fill: AT.ink, w: pctW(o, max) }] : []), ...(p > 0 ? [{ key: 'pub', fill: PUB.ink, w: pctW(p, max) }] : [])]; };
-  const lineOf = (t) => (t.xG > 0 ? `${t.priv ? t.ramp || 'On AT&T' : 'public internet'} · ${gb(t.xG)} cross-cloud${t.xPub ? ' public' : ''}` : t.sub);
   const rows = all.map(t => ({ ...base(t), sub: lineOf(t), v: t.share, v2: gb(t.gbps), segs: splitBar(t, gMax), ...(t.priv ? { act: 'Ask Andi', actKind: 'andi-region' } : { act: 'Attach', actKind: 'attach' }) }));
   if (lens === 'coverage') {
     const priv = all.filter(t => t.priv);

@@ -285,4 +285,12 @@ test('Top talkers paints a region\'s public pair outside AT&T, its On AT&T parts
     const pct = (/on AT&T · (\d+)% of traffic/.exec(t.head) || [])[1];
     if (pct) assert.equal(+pct, Math.round(fab / tot * 100), `${view} ${persona}: "${t.head}" over ${fab.toFixed(1)} of ${tot.toFixed(1)} Gbps on AT&T`);
   }
+  // The egress and exposure lenses' On AT&T rows name their pair too.
+  for (const view of VIEWS) for (const persona of ['security', 'finops']) {
+    const v = vals(ins(view, { persona }));
+    for (const r of card(v, 'talkers').all.filter(x => x.v2 === 'On AT&T' && !/bills public/.test(x.sub))) {
+      const src = v.iw.talkersAll.find(x => x.key === r.key);
+      if (src.xG > 0) assert.match(r.sub, new RegExp(`${src.xG.toFixed(1)} Gbps cross-cloud`), `${view} ${persona} ${r.label}: "${r.sub}"`);
+    }
+  }
 });
