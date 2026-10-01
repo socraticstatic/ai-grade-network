@@ -162,8 +162,6 @@ export function init(c) {
   try { if (localStorage.getItem('naas.openHint') === 'seen') c.setState({ openHintSeen: true }); } catch (e) {}
   try { const h = localStorage.getItem('naas.hero'); if (h) c.setState({ heroOpen: JSON.parse(h) }); } catch (e) {}
   try { const fl = localStorage.getItem('naas.life'); if (fl) c.setState({ findingLife: JSON.parse(fl) }); } catch (e) {}
-  // Bandwidth changes ordered in Modify bandwidth (2026-09-30), each keyed to its estate.
-  try { const bo = JSON.parse(localStorage.getItem('naas.bw') || 'null'); if (Array.isArray(bo)) c.setState({ bwOrders: bo }); } catch (e) {}
   try { const tg = JSON.parse(localStorage.getItem('naas.tags') || 'null'); if (tg) c.setState({ siteTags: tg.siteTags || {}, buCustom: tg.buCustom || {} }); } catch (e) {}
   const q = new URLSearchParams(location.search);
   const hash = (location.hash || '').replace('#', '').split('/');
@@ -183,7 +181,7 @@ export function init(c) {
 
 // Every naas.* key the app saves (2026-09-30). Reset demo clears them all, so a
 // rehearsal's Acknowledge, Snooze, tags or open panels never reach Monday.
-export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint', 'naas.headOpen', 'naas.bw'];
+export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint', 'naas.headOpen'];
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
@@ -195,8 +193,9 @@ export function defaults() {
     waySet: null, waySetPage: 0, orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0,
     order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null,
     simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36,
-    // Modify bandwidth (2026-09-30): the connection it is open on, the size picked, the changes ordered.
-    bwFor: null, bwPick: null, bwOrders: [],
+    // Modify bandwidth (2026-09-30): the connection it is open on, the size picked ({ id, ports, mbps }),
+    // the step (pick, confirm, review). The orders it places live in orders, the one list Connect > Orders shows.
+    bwFor: null, bwPick: null, bwStep: null,
   };
 }
 
@@ -270,19 +269,20 @@ export function vals(c) {
   const inv = A.inventory({ ...est0, regionsList: est0.regionsList.filter((r, i) => facetPass(r, i, s.chips || [])) });
   const obScope = s.obScope || 'all';
   const skSplit = s.skSplit ? X.splitSources(est0, A.observe(R.applyScope(est0, obScope), steered, inv).flows, s.skSplit) : null;
-  const ob = A.observe(R.applyScope(est0, obScope), steered, inv, skSplit);
-  const obAll = obScope === 'all' ? ob : A.observe(est0, steered, inv);
+  // A bandwidth change that has landed (Modify bandwidth, 2026-09-30) is the connection's size from its day on the one clock.
+  const clockNow = SCH.nowOf(s), land = (o) => BW.landUtil(o, s.orders, est0.id, clockNow);
+  const ob = land(A.observe(R.applyScope(est0, obScope), steered, inv, skSplit));
+  const obAll = obScope === 'all' ? ob : land(A.observe(est0, steered, inv));
   const hp = R.health(est0, obAll, steered, SCH.nowOf(s));
   const conns = X.connections(est0, obAll);
   // One incident list (2026-09-30): Home, Alerts, the Health tab and the findings events read it.
-  const clockNow = SCH.nowOf(s);
-  const incChanges = OD.changes(est0, conns, OD.activityOf(est0, { customPolicies: s.customPolicies || [], steered, conns, bwOrders: s.bwOrders || [], now: clockNow }), clockNow, s.bwOrders || []);
+  const incChanges = OD.changes(est0, conns, OD.activityOf(est0, { customPolicies: s.customPolicies || [], steered, conns, orders: s.orders || [], now: clockNow }), clockNow, s.orders || []);
   const probs = OD.problems(est0, conns, obAll, appsOf(est0, A.inventory(est0), obAll.flows), incChanges, clockNow);
   const probRows = OD.queue(probs, clockNow);
   // Who answers for each piece of every path, read once from the whole estate (2026-09-30).
   const segCtx = G.segCtxOf(est0, { inv: A.inventory(est0), ob: obAll, conns, probs });
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, obAll), ...est0.findings] };
-  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !composeStarted(s.compose) ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, bwFor: null, bwPick: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
+  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !composeStarted(s.compose) ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, bwFor: null, bwPick: null, bwStep: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -902,8 +902,8 @@ export function vals(c) {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', themeTitle: s.theme === 'light' ? 'Dark mode' : 'Light mode', themeIsLight: s.theme !== 'dark', themeIsDark: s.theme === 'dark', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
     // An estate switch starts clean (2026-09-30): a By pick or a drill the new
     // estate lacks drew an empty map with a phantom "Internet 1.0 Gbps".
-    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, bwFor: null, bwPick: null }),
-    resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], andiTickets: d.andiTickets, heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null, pathSel: null, pathPin: null, bwOrders: [], bwFor: null, bwPick: null }); },
+    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, bwFor: null, bwPick: null, bwStep: null }),
+    resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], andiTickets: d.andiTickets, heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null, pathSel: null, pathPin: null, bwFor: null, bwPick: null, bwStep: null }); },
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
     // which nulled s.order even when the live compose had not started an
     // outcome yet - exactly the state right after a marketplace product
@@ -914,7 +914,7 @@ export function vals(c) {
     goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goHome: go('s0'), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(composeStarted(cp) ? { compose: { ...cp, step: cp.step || 0 } } : { compose: prefillCompose(est) }) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
     hasTasks: s.submitted, taskCount: 1, showPending, pendingStages, landed: landedAll, notLanded: !landedAll, pendingSub: landedAll ? 'Validated · live. First flow logs are in.' : 'Submitted for approval',
     // The region the last order placed reaches is the one delivered (the connect flow, 2026-09-30).
-    deliverNow: () => { const lastPlaced = (s.orders || []).at(-1); const cand = (lastPlaced && lastPlaced.region) || (s.compose && s.compose.prefillRegion ? s.compose.prefillRegion.split(' ')[1] : null) || (estRaw.regionsList.find(r => !r.priv) || {}).region; if (!cand) return; c.setState({ landed: cand, layer: 'cloud', tab: 'observe', screen: 's3', events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `${cand} validated · live. Hosted VPC on AT&T; first flow logs received; coverage up by one region.` }] }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
+    deliverNow: () => { const lastPlaced = (s.orders || []).filter(o => o.kind !== 'bandwidth').at(-1); const cand = (lastPlaced && lastPlaced.region) || (s.compose && s.compose.prefillRegion ? s.compose.prefillRegion.split(' ')[1] : null) || (estRaw.regionsList.find(r => !r.priv) || {}).region; if (!cand) return; c.setState({ landed: cand, layer: 'cloud', tab: 'observe', screen: 's3', events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `${cand} validated · live. Hosted VPC on AT&T; first flow logs received; coverage up by one region.` }] }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
     ...shellVals(s, set, go, est, c, sched),
     headOpen: s.headOpen !== false, headClosed: s.headOpen === false, toggleHead: () => { const v = s.headOpen === false; set({ headOpen: v }); try { localStorage.setItem('naas.headOpen', String(v)); } catch (e) {} }, headRot: s.headOpen === false ? 'rotate(-90deg)' : 'rotate(0deg)',
     ...andiVals(s, set, go, est, ob, { conns, floorVerdict, connectVerdict, governVerdict, costVerdict, discoverVerdict, stageKicker, findingCard, sortF, findingsFor, isEmpty, totalSave, persona, personaTab }),
@@ -1034,7 +1034,7 @@ export function vals(c) {
     governVerdict, governFindings: deptFindings('govern'), policies, hasPolicies: policies.length > 0, examplePolicies0: [{ key: 'a', t: 'Tag PCI forces a private path', m: 'tag PCI', r: 'Private path required' }, { key: 'b', t: 'Tag Internet-facing gets NGFW plus AT&T egress', m: 'tag Internet-facing', r: 'Inline security inspection' }, { key: 'c', t: 'Branch Finance reaches only finance-tagged workloads', m: 'branch Finance', r: 'Segment intra-tag only' }], authorPolicy: go('s4', { ...newOrder({ ...cleanCompose(cp), outcome: 'u1', control: ['Private path required'], source: ['Data center'], dest: ['Clouds'] }) }), simulate: () => set({ simulated: true, enforced: false }), enforce: () => set({ enforced: true }), undo: () => set({ simulated: false, enforced: false }), simulated: s.simulated, enforced: s.enforced, canEnforce: s.simulated && !s.enforced, simulateText: s.enforced ? 'Enforced. Paths rerouted onto the AT&T network.' : s.simulated ? `Simulated: ${pciViol ? pciViol.split(' ')[0] : 0} paths reroute onto the AT&T network, 2 flows denied. Drawn dashed until enforced.` : 'Simulate shows what changes before enforce is enabled.', enforceBg: s.simulated && !s.enforced ? 'var(--cta)' : 'var(--bg-neutral)', enforceColor: s.simulated && !s.enforced ? '#fff' : 'var(--text-disabled)',
     kpis, hasKpis: kpis.length > 0, sankeyNodes, sankeyRibbons, sankeyW: sk ? sk.W : 900, sankeyH: sk ? sk.H : 260, sankeyVB: `0 0 ${sk ? sk.W : 900} ${sk ? sk.H : 260}`, flows, observeFindings: deptFindings('observe'), seeSavings: () => { set({ tab: 'cost' }); syncHash('s3', s.layer, 'cost'); }, observeVerdict: isEmpty ? 'No telemetry yet. It starts with the first attach.' : `${est.observedPct}% of paths send telemetry. ${flows.filter(f => f.deny).length} flows denied in the last minute by the vSRX pair.`, chipScope,
     ...costVals(s, set, est, A.inventory(est), obAll, go, c),
-    ...bwVals(s, set, est0, conns),
+    ...bwVals(s, set, est0, conns, go),
     costVerdict, buckets, steerRecs: steerable, costFindings: deptFindings('cost'), hasBuckets: buckets.length > 0, bTotalF: fmt(bTotal), bFabF: fmt(bFab), bSaveF: fmt(bTotal - bFab),
     // compose: Govern's authoring grammar, then the connect flow (Ways to connect, s4, Orders).
     ...wizardVals(s, est, set, c),
@@ -1184,20 +1184,6 @@ function explainNav(c, ex) {
       scrollToSec: 'sec-logs', scrollNonce: (c.state.scrollNonce || 0) + 1,
       drill: [], cloudDrill: [], cloudPick: null, fabDrill: [],
     });
-    syncHash('s3', 'cloud', 'observe');
-  };
-}
-
-/** A connection's traffic, cut to its records (2026-09-30): the region's records on
- *  the private path the connection is. Every traffic figure of a connection (the
- *  Capacity row, the Modify bandwidth drawer) lands here; the drawer closes on the way. */
-function connLogs(set, s, cp, what, value, sub) {
-  const where = `${cp.cloud} ${cp.region}`;
-  return () => {
-    set({ screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null, obTab: 'flow', logTab: 'flow', logPage: 0,
-      explain: { label: `${where} · ${what}`, value, sub, cut: `Records to and from ${cp.region} on the connection's private path.`, path: 'private', parts: [] },
-      logQ: cp.region, logPath: 'private', logAct: 'all', bwFor: null, bwPick: null,
-      scrollToSec: 'sec-logs', scrollNonce: (s.scrollNonce || 0) + 1 });
     syncHash('s3', 'cloud', 'observe');
   };
 }
@@ -1776,7 +1762,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     if (r.sites) bits.push(`${r.sites.toLocaleString('en-US')} ${r.sites === 1 ? 'site' : 'sites'}`);
     return { ...r, detail: `${bits.join(', ')} · ${how}` };
   });
-  const actAll = OD.activityOf(est, { customPolicies: s.customPolicies || [], steered: s.steered || [], conns, runs: actRuns, bwOrders: s.bwOrders || [], now: actNow })
+  const actAll = OD.activityOf(est, { customPolicies: s.customPolicies || [], steered: s.steered || [], conns, runs: actRuns, orders: s.orders || [], now: actNow })
     .map(a => ({ ...a, mins: Math.max(0, Math.round((actNow - a.at) / 60000)) }));
   const ago = (m) => m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
   const actQ = (s.actQ || '').toLowerCase();
@@ -1784,7 +1770,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const actPageSize = 8;
   const actAllRows = actMatch.map((a, i) => ({
     key: 'ua' + i, when: ago(a.mins), who: a.who, verb: a.verb, target: a.target, detail: a.detail,
-    from: FROM[i % FROM.length], result: a.ok ? 'Applied' : 'Denied',
+    from: FROM[i % FROM.length], result: a.result || (a.ok ? 'Applied' : 'Denied'),
     resBg: a.ok ? 'var(--bg-wash)' : (dark ? 'rgba(211,47,47,.2)' : '#fdecea'),
     resInk: a.ok ? 'var(--text-body)' : 'var(--error)',
   }));
@@ -2225,10 +2211,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   };
   const playMap = () => { if (typeof window === 'undefined') return; if (window.__mapTimer) { clearInterval(window.__mapTimer); window.__mapTimer = null; set({ mapPlay: false }); return; } let t = mapT == null || mapT >= 1 ? 0 : mapT; set({ mapPlay: true, mapT: t }); window.__mapTimer = setInterval(() => { t = +(t + 0.02).toFixed(2); if (t >= 1) { clearInterval(window.__mapTimer); window.__mapTimer = null; c.setState({ mapT: 1, mapPlay: false }); } else c.setState({ mapT: t }); }, 110); };
   const capRows = OD.capacity(conns, s.obWindow || '30d');
-  // Modify bandwidth opens in place (2026-09-30): on a NetBond connection it is the
-  // flow, one port up for Add a port; elsewhere the connection's own panel.
+  // Modify bandwidth opens in place (2026-09-30) from the connection's panel: the flow on a
+  // NetBond connection, one port up for Add a port. Elsewhere Add a port orders one, as before.
+  const bwNow = SCH.nowOf(s);
   const soldBw = (id) => { const cp = capRows.find(x => x.id === id); return !!cp && BW.sells(cp); };
-  const openBw = (id, more) => () => { const cp = capRows.find(x => x.id === id); if (!cp) return; set({ bwFor: id, bwPick: more ? { ports: cp.ports + 1, mbps: Math.round(cp.portG * 1000) } : null }); };
+  const openBw = (id, more) => () => { const cp = capRows.find(x => x.id === id); if (cp) openBandwidth(set, s, cp, more ? { ports: cp.ports + 1 } : null); };
   const gaugeRows = OD.gauges(conns).map(g => ({ ...g, key: g.id, on: mapRegion === g.region, selected: mapSel === g.id, border: mapSel === g.id ? 'var(--cta)' : mapRegion === g.region ? 'var(--border-primary)' : 'var(--border-secondary)',
     // Same bar grammar as every other figure on the page: a 150px track, an
     // 8px fill, tabular numbers right-aligned. A ring was the only radial
@@ -2245,11 +2232,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     ...(() => { const row = (conns.rows || []).find(r => r.id === g.id) || {}; const cp = capRows.find(x => x.id === g.id) || {}; const { capG, peakG, avgG, toFull, fullIn } = cp;
       const grow = R.growthOf(s.obWindow || '30d');
       const title = `${g.label} · BGP ${g.bgp} · ${g.drops} drops · ${cp.avg6mPct}% on average over 6 months`;
-      // Every figure is a button (2026-09-30): traffic opens Logs on this connection, size opens Modify bandwidth, state opens the impact.
-      const sold = BW.sells(cp), ord = sold ? BW.inFlight(s.bwOrders, est0.id, g.id) : null;
-      const bw = { sold, hasBw: sold, bwLabel: sold ? (ord ? 'In progress' : 'Modify bandwidth') : '', bwNote: ord ? `to ${ord.toShort}` : '', hasBwNote: !!ord,
-        bwGo: sold ? openBw(g.id) : () => set({ mapSel: g.id, panelTab: 'overview' }), impactGo: () => set({ mapSel: g.id, panelTab: 'impact' }),
-        logsGo: connLogs(set, s, cp, 'traffic', `${peakG} Gbps peak`, `${avgG} Gbps on average and ${cp.peakPct}% of ${capG} Gbps at peak over ${winLabelOf(s)}.`) };
+      // The row opens the connection's panel in place, as it always has (skeptic, 2026-09-30); the
+      // panel offers Modify bandwidth. A change not yet landed says so under Ports.
+      const ord = BW.sells(cp) ? BW.inFlight(s.orders, est0.id, g.id, bwNow) : null;
+      const bw = { portsNote: ord ? `to ${ord.toShort}` : '', hasPortsNote: !!ord, rampLine: `${F.RAMP_NAME[g.ramp] || g.ramp}${ord ? ' · in progress' : ''}` };
       const series = X.utilSeries(g.id + ':' + (s.obWindow || '30d'), 24, g.pct, grow);
       return { ...bw, title, capG, peakG, avgG, headG: +(capG - peakG).toFixed(1), toFull, portsF: row.bwShort || '10G', rampName: F.RAMP_NAME[g.ramp] || g.ramp,
         avgF: `${avgG} Gbps`, peakF: `${peakG} Gbps`, headF: `${+(capG - peakG).toFixed(1)} Gbps`, avgW: Math.min(100, avgG / capG * 100).toFixed(1) + '%', peakX: Math.min(100, g.pct).toFixed(1) + '%',
@@ -2265,9 +2251,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       { key: 'peak', l: 'Peak', v: `${peak.toFixed(1)} Gbps`, sub: `busiest ${busiest.label} at ${busiest.pct}%` },
       { key: 'head', l: 'Headroom', v: `${Math.round(cap - peak)} Gbps`, sub: `${first.label} fills first, ${first.fullIn.toLowerCase()}` },
     ]; })();
-  const queueRows = probRows.map(q => ({ ...q, tone: q.sev >= 2 ? 'var(--error)' : 'var(--warning)', go: () => { if (q.action === 'impact') set({ mapSel: q.connId, mapRegion: q.region, panelTab: 'impact' }); else if (q.action === 'port' && soldBw(q.connId)) openBw(q.connId, true)(); else if (q.action === 'port' || q.action === 'attach') composeFor(go, est0.regionsList.find(x => x.region === q.region) || {})(); else if (q.action === 'steer') set({ steered: [...(s.steered || []), q.flowId] }); }, select: () => set({ mapSel: q.connId || (q.region ? null : null), mapRegion: q.region || null, panelTab: 'impact' }), wlF: q.wl ? q.wl.toLocaleString('en-US') + ' workloads' : '' }));
+  const queueRows = probRows.map(q => ({ ...q, tone: q.sev >= 2 ? 'var(--error)' : 'var(--warning)', go: () => { if (q.action === 'impact') set({ mapSel: q.connId, mapRegion: q.region, panelTab: 'impact' }); else if (q.action === 'port' || q.action === 'attach') composeFor(go, est0.regionsList.find(x => x.region === q.region) || {})(); else if (q.action === 'steer') set({ steered: [...(s.steered || []), q.flowId] }); }, select: () => set({ mapSel: q.connId || (q.region ? null : null), mapRegion: q.region || null, panelTab: 'impact' }), wlF: q.wl ? q.wl.toLocaleString('en-US') + ' workloads' : '' }));
   // The drawer reads the bar's traffic in Gbps, so it reads the Gbps map in every view (2026-09-30).
-  const panel0 = OD.panelFor(mapSel, { est: est0, inv, flows: ob.flows, map: mapG, conns });
+  const panel00 = OD.panelFor(mapSel, { est: est0, inv, flows: ob.flows, map: mapG, conns });
+  // A bandwidth change not yet landed: the panel's Modify bandwidth says so, and opens the order.
+  const panel0 = panel00 ? { ...panel00, actions: panel00.actions.map(a => (a.key === 'bandwidth' && BW.inFlight(s.orders, est0.id, a.id, bwNow) ? { ...a, label: 'In progress' } : a)) } : null;
   const panelTab = s.panelTab || 'overview';
   const panel = panel0 ? { ...panel0, trail: (panel0.trail || []).map((t, i, a) => ({ ...t, key: 'pt' + i, go: () => set({ mapSel: t.key }), last: i === a.length - 1, notLast: i < a.length - 1 })), overview: panel0.overview.map(([k, v]) => ({ key: k, k, v })), ...panelShape(panel0.overview), hasImpact: !!panel0.impact, noImpact: !panel0.impact, noRecords: panel0.records.length === 0, impact: panel0.impact ? { ...panel0.impact, isHit: panel0.impact.kind !== 'none', vpcs: panel0.impact.vpcs.map(v => ({ ...v, key: v.name, wlF: v.wl.toLocaleString('en-US'), tagsF: (v.tags || []).join(' · ') })), downstream: panel0.impact.downstream.map(d => ({ ...d, key: d.label, vpcsF: d.vpcs.map(v => v.name).join(', ') })), hasDown: panel0.impact.downstream.length > 0, tone: panel0.impact.kind === 'direct' ? 'var(--error)' : panel0.impact.kind === 'possible' ? 'var(--warning)' : 'var(--success)' } : null, records: panel0.records.map(r => ({ ...r, key: r.id })), hasRecords: panel0.records.length > 0, actions: panel0.actions.map(a => ({ ...a, key: a.key, go: a.key === 'bandwidth' ? openBw(a.id) : a.key === 'port' && soldBw(a.id) ? openBw(a.id, true) : a.key === 'attach' && a.site ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Attach ${a.site}: one circuit onto the AT&T network.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'path' ? () => { c.setState({ screen: 's4', ...newOrder({ ...prefillCompose(est), bulk: a.site, qty: 1, note: `Add a second path for ${a.site}: a second metro for geodiversity.` }) }); syncHash('s4', s.layer, s.tab); } : a.key === 'failover' ? () => set({ events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `Failover test on ${panel0.title} · secondary path healthy` }], panelTab: 'overview' }) : a.key === 'port' || a.key === 'attach' ? composeFor(go, est0.regionsList.find(x => x.region === a.region) || {}) : a.key === 'policy' ? () => { go('s3', { layer: 'cloud', tab: 'govern' })(); set({ authoring: true }); } : a.key === 'steer' ? () => { const f = ob.flows.find(x => x.name === (panel0.title) || (x.region || '').includes(panel0.title)); if (f) set({ steered: [...(s.steered || []), f.id] }); } : () => set({ panelTab: 'records' }) })), isSite: panel0.kind === 'site' || panel0.kind === 'workload', paths: (panel0.paths || []).map(x => ({ ...x, key: x.key, msF: x.ms + ' ms', gbpsF: x.gbps >= 1 ? x.gbps.toFixed(1) + ' Gbps' : Math.round(x.gbps * 1000) + ' Mbps', dot: F.HEALTH_INK[x.state] || 'var(--text-disabled)', rad: F.healthRadius(x.state), word: x.priv ? 'AT&T network' : 'public internet' })), children: panel0.children ? { ...panel0.children, hasNote2: !!panel0.children.note, rows: panel0.children.rows.map((r, i) => ({ ...r, key: r.key || ('leaf' + i), go: r.key ? (r.key.startsWith('vol:') ? () => { const [cls, metro] = r.key.slice(4).split('|'); openVolume(cls, metro); } : () => set({ mapSel: r.key, panelTab: 'overview' })) : () => {}, isLeaf: !r.key, notLeaf: !!r.key, cursor: r.key ? 'pointer' : 'default', hasPort: !!r.port, hasVer: !!r.ver, hasRate: !!r.rate, noteBg: r.warn ? 'rgba(212,140,0,.16)' : 'var(--bg-wash)', dot: r.warn ? 'var(--warning)' : 'var(--success)', portBg: r.warn ? 'rgba(212,140,0,.14)' : 'var(--bg-wash)', portInk: r.warn ? '#7a4b00' : 'var(--text-body)', ink: r.warn ? 'var(--warning)' : 'var(--text-light)', hasNote: !!r.note })) } : null,
     hasChildren2: !!(panel0.children && panel0.children.rows.length),
@@ -3306,7 +3294,12 @@ function flowVals(s, set, est, c) {
   const started = composeStarted(cp);
   // An order's stage is its own until Deliver now validates the region it reaches.
   const stageOf = (o) => (s.landed && o.region === s.landed ? 'Validated · live' : o.stage);
-  const opg = pageRows(orders.slice().reverse().map(o => ({ ...o, key: o.id, stage: stageOf(o), atLine: `Placed at ${o.at}`, sub: [o.term, o.policy].filter(Boolean).join(' · '), stageInk: stageOf(o) === o.stage ? 'var(--cta)' : 'var(--success)' })), 6, s.ordersPage, (n) => set({ ordersPage: n }));
+  // A bandwidth change (Modify bandwidth, 2026-09-30) is an order of this estate's: Live from its day on the one clock.
+  const nowMs = SCH.nowOf(s), shown = orders.filter(o => o.kind !== 'bandwidth' || o.est === est.id);
+  const ordRow = (o) => { if (o.kind === 'bandwidth') { const live = BW.stageOf(o, nowMs) === 'live';
+      return { ...o, key: o.id, stage: live ? 'Live' : o.stage, atLine: `${live ? 'Took' : 'Takes'} effect ${o.effectiveF}`, sub: `Placed at ${o.at} · approver ${o.approver}`, stageInk: live ? 'var(--success)' : 'var(--cta)' }; }
+    return { ...o, key: o.id, stage: stageOf(o), atLine: `Placed at ${o.at}`, sub: [o.term, o.policy].filter(Boolean).join(' · '), stageInk: stageOf(o) === o.stage ? 'var(--cta)' : 'var(--success)' }; };
+  const opg = pageRows(shown.slice().reverse().map(ordRow), 6, s.ordersPage, (n) => set({ ordersPage: n }));
   const note = f.note;
   return {
     wayTypes, cfTypes, waySet,
@@ -3330,7 +3323,7 @@ function flowVals(s, set, est, c) {
     // Orders.
     ordInProgress: { has: started, title: started ? (f.name.trim() || CF.defaultName(f)) : '', stepLine: started ? `At ${CF.STEP_META[key].title}` : '', rows: started ? CF.wipRows(f, est).map(r => ({ ...r, ...WIP_INK[r.state] })) : [], resume: () => { c.setState({ screen: 's4' }); scrollTop(); syncHash('s4'); } },
     ordCols: started ? 'minmax(0,1fr) minmax(280px,340px)' : 'minmax(0,1fr)',
-    ordRows: opg.rows, ordPager: opg.pager, hasOrdRows: orders.length > 0, noOrders: !started && !orders.length, ordNonePlaced: started && !orders.length, ordersEmpty: 'No orders yet', ordersEmptyLine: 'An order you start from Ways to connect, Recommended or a finding waits here until you place it.',
+    ordRows: opg.rows, ordPager: opg.pager, hasOrdRows: shown.length > 0, noOrders: !started && !shown.length, ordNonePlaced: started && !shown.length, ordersEmpty: 'No orders yet', ordersEmptyLine: 'An order you start from Ways to connect, Recommended or a finding waits here until you place it.',
     goWays: () => set({ cnPage: 'ways' }),
   };
 }
@@ -3642,60 +3635,102 @@ function connectVals(s, set, est, go, ob) {
  * from): Current bandwidth and the provider's burst note, the AWS hosted
  * warning, New bandwidth from the provider's list, Current monthly, New
  * monthly and Difference once the size changes, then Cancel and Apply change.
- * It opens in place over whatever page asked for it and never leaves it; only
- * its traffic figures go to Logs. Apply records an order in progress for this
- * estate (no Orders page yet on this base), saved like the other demo state.
+ *
+ * Round 2 (skeptic, 2026-09-30): the price is Cost's own for the connection;
+ * Apply change goes to the approval step the retired Resize had (Change,
+ * Monthly, Timeline, Notify, Approver, Submit), after a second confirm when
+ * the size drops traffic; Submit places an order in the one order list that
+ * Connect > Orders shows, and it lands on its day by the one clock. Nothing in
+ * the drawer leaves the page, and a dismiss keeps the pick for its connection.
  */
-function bwVals(s, set, est0, conns) {
+function openBandwidth(set, s, cp, preset) {
+  const keep = s.bwPick && s.bwPick.id === cp.id ? s.bwPick : null;
+  set({ bwFor: cp.id, bwStep: 'pick', bwPick: preset ? { id: cp.id, ports: preset.ports, mbps: preset.mbps || Math.round(cp.portG * 1000) } : keep });
+}
+function bwVals(s, set, est0, conns, go) {
   const cp = s.bwFor ? OD.capacity(conns, s.obWindow || '30d').find(r => r.id === s.bwFor && BW.sells(r)) : null;
   if (!cp) return { bwOpen: false, bw: null };
-  const orders = s.bwOrders || [], flight = BW.inFlight(orders, est0.id, cp.id);
-  // While a change is in flight the flow shows it and waits, as NetBond Advanced disables the item while Provisioning.
-  const p = BW.plan(cp, flight ? { ports: flight.ports, mbps: flight.mbps } : s.bwPick);
+  const now = SCH.nowOf(s), orders = s.orders || [], flight = BW.inFlight(orders, est0.id, cp.id, now);
+  const unit = BW.unitOf(R.attChargeRows(est0, A.inventory(est0)), cp.region);
+  const mine = s.bwPick && s.bwPick.id === cp.id ? s.bwPick : null;
+  // While a change waits for its day the flow shows it and waits, as NetBond Advanced disables the item while Provisioning.
+  const p = BW.plan(cp, flight ? { ports: flight.ports, mbps: flight.mbps } : mine, unit);
   const locked = !!flight, noop = () => {};
-  const pickOf = (ports, mbps) => (locked ? noop : () => set({ bwPick: { ports, mbps } }));
-  const close = () => set({ bwFor: null, bwPick: null });
-  const now = SCH.nowOf(s), capF = p.now.capF;
-  const logs = (what, value, sub) => connLogs(set, s, cp, what, value, sub);
-  const apply = () => {
-    if (locked || !p.changed) return;
-    const next = [...orders, BW.orderOf(cp, { ports: p.ports, mbps: p.mbps }, now, est0.id)];
-    // done marks the pick this drawer applied, so its button reads Done; opened again later it reads In progress.
-    set({ bwOrders: next, bwPick: { ports: p.ports, mbps: p.mbps, done: true } });
-    try { localStorage.setItem('naas.bw', JSON.stringify(next)); } catch (e) {}
+  const step = !locked && p.changed && ['confirm', 'review'].includes(s.bwStep) ? s.bwStep : 'pick';
+  const pickOf = (ports, mbps) => (locked ? noop : () => set({ bwPick: { id: cp.id, ports, mbps }, bwStep: 'pick' }));
+  // Escape, a click outside and Close dismiss it and keep the pick for this connection; Cancel drops it.
+  const close = () => set({ bwFor: null, bwStep: null });
+  const cancel = () => set({ bwFor: null, bwStep: null, bwPick: null });
+  const approver = s.approver == null ? `j.martinez@${mailDomain(est0)}` : s.approver;
+  const when = BW.dayF(BW.effectiveAt(now)), fit = BW.fitLine(p), drops = p.pick.state === 'down';
+  const apply = () => { if (!locked && p.changed) set({ bwStep: drops ? 'confirm' : 'review' }); };
+  const applyAnyway = () => { if (!locked && p.changed) set({ bwStep: 'review' }); };
+  const back = () => set({ bwStep: 'pick' });
+  const submit = () => {
+    if (locked || !p.changed || step !== 'review') return;
+    const rec = BW.orderOf(cp, { ports: p.ports, mbps: p.mbps }, now, est0.id, { n: orders.length + 1, approver, unit });
+    set({ orders: [...orders, rec], bwStep: 'pick', bwPick: null });
   };
-  const diffInk = p.diff > 0 ? 'var(--error)' : p.diff < 0 ? 'var(--success)' : 'var(--text-heading)';
+  // The radios rove (WAI-ARIA radio group): the arrow keys move the pick, Home and End jump, Tab leaves.
+  const on = p.choices.findIndex(ch => ch.on), n = p.choices.length;
+  const radioKey = (e) => {
+    if (locked || !e) return;
+    const k = e.key, i = on < 0 ? 0 : on;
+    const to = k === 'ArrowDown' || k === 'ArrowRight' ? (i + 1) % n : k === 'ArrowUp' || k === 'ArrowLeft' ? (i - 1 + n) % n : k === 'Home' ? 0 : k === 'End' ? n - 1 : null;
+    if (to === null) return;
+    if (e.preventDefault) e.preventDefault();
+    pickOf(p.ports, p.choices[to].mbps)();
+    if (typeof document !== 'undefined') setTimeout(() => { const el = document.querySelector('[aria-label="New bandwidth"] [aria-checked="true"]'); if (el) el.focus(); }, 0);
+  };
+  const win = winLabelOf(s), winW = /^the /.test(win) ? win.replace(/^the last /, 'the ') : win;
+  const capF = p.now.capF;
   return {
     bwOpen: true,
     bw: {
-      kicker: 'Modify bandwidth', title: p.where, sub: `${F.RAMP_NAME[cp.ramp] || cp.ramp} · ${p.now.label} bought`, close, cancel: close, cancelLabel: locked ? 'Close' : 'Cancel',
+      kicker: 'Modify bandwidth', title: p.where, sub: F.RAMP_NAME[cp.ramp] || cp.ramp, close, cancel,
+      isPick: step === 'pick', isConfirm: step === 'confirm', isReview: step === 'review', step,
+      showLadder: step !== 'review', pickFoot: step === 'pick' && !locked, showMoney: step === 'pick' && p.changed && !locked,
       currentLabel: 'Current bandwidth', nowLabel: p.now.label, nowF: capF, burstNote: p.burstNote,
       hasHostedNote: !!p.hostedNote, hostedNote: p.hostedNote,
+      // The Capacity row's own figures, over the same window: nothing here leaves the drawer.
       stats: [
-        { key: 'peak', l: 'Peak', v: p.peakF, sub: `${cp.peakPct}% of ${capF}`, isLogs: true, notLogs: false, go: logs('peak', p.peakF, `The busiest hour, ${cp.peakPct}% of the ${capF} bought.`) },
-        { key: 'avg', l: '6-month average', v: p.avgF, sub: `${cp.avg6mPct}% of ${capF}`, isLogs: true, notLogs: false, go: logs('6-month average', p.avgF, `${cp.avg6mPct}% of the ${capF} bought, on average over 6 months.`) },
-        { key: 'head', l: 'Headroom', v: p.headroomF, sub: 'over the peak today', isLogs: false, notLogs: true, go: noop },
+        { key: 'peak', l: 'Peak', v: `${cp.peakG} Gbps`, sub: `${cp.peakPct}% of ${capF}` },
+        { key: 'avg', l: 'Average', v: `${cp.avgG} Gbps`, sub: `${Math.round(cp.avgG / cp.capG * 100)}% over ${winW}` },
+        { key: 'head', l: 'Headroom', v: `${+(cp.capG - cp.peakG).toFixed(1)} Gbps`, sub: 'over the peak' },
       ],
       newHead: 'New bandwidth', sizeHint: `Each port's size, from NetBond's list for ${cp.cloud}`, portsLabel: 'Ports', ports: p.ports,
       portsLess: pickOf(p.ports - 1, p.mbps), portsMore: pickOf(p.ports + 1, p.mbps),
-      lessOff: locked || p.ports <= p.range.min, moreOff: locked || p.ports >= p.range.max, locked,
-      choices: p.choices.map(ch => ({ key: ch.key, label: ch.label, capF: ch.capF, headroomF: ch.headroomF, monthlyF: ch.monthlyF, fitWord: ch.fitWord, on: ch.on, isNow: ch.now,
-        ink: F.HEALTH_INK[ch.state], rad: F.healthRadius(ch.state), peakX: Math.min(100, ch.peakPct).toFixed(1) + '%',
+      lessOff: locked || p.ports <= p.range.min, moreOff: locked || p.ports >= p.range.max, locked, notLocked: !locked,
+      choices: p.choices.map((ch, i) => ({ key: ch.key, label: ch.label, capF: ch.capF, headroomF: ch.headroomF, fitWord: ch.fitWord, on: ch.on, isNow: ch.now,
+        ink: BW.FIT_INK[ch.state], rad: F.healthRadius(ch.state), peakX: Math.min(100, ch.peakPct).toFixed(1) + '%', tab: ch.on || (on < 0 && i === 0) ? 0 : -1,
         rowBg: ch.on ? 'var(--bg-accent)' : 'transparent', dot: ch.on ? 'var(--cta)' : 'transparent', ring: ch.on ? 'var(--cta)' : 'var(--border-primary)',
         // A size short of the peak stays on the list, its bar quieter so the sizes that hold it read first; its words keep full contrast.
         weight: ch.on ? 700 : 500, barOp: ch.state === 'down' && !ch.on ? 0.45 : 1, go: pickOf(p.ports, ch.mbps) })),
-      changed: p.changed, newLabel: p.pick.label, hasPreview: p.changed,
+      radioKey,
+      changed: p.changed, newLabel: p.pick.label, hasPreview: p.changed && !locked,
       money: [
         { key: 'now', l: 'Current monthly', v: p.nowMonthlyF, ink: 'var(--text-heading)', weight: 500 },
-        { key: 'new', l: 'New monthly', v: p.newMonthlyF, ink: 'var(--text-heading)', weight: 700 },
-        { key: 'diff', l: 'Difference', v: p.diffF, ink: diffInk, weight: 700 },
+        { key: 'new', l: 'New monthly', v: p.newMonthlyF, ink: p.pick.monthly === null ? 'var(--text-light)' : 'var(--text-heading)', weight: 700 },
+        { key: 'diff', l: 'Difference', v: p.diffF, ink: p.diff === null ? 'var(--text-light)' : 'var(--text-heading)', weight: 700 },
       ],
-      hasModelled: true, modelledTitle: BW.MODELLED_TITLE,
-      hasWhen: p.changed && !locked, whenLine: `Takes effect in ${BW.EFFECT_DAYS} business day, ${BW.dayF(BW.effectiveAt(now))}.`,
-      // A pick that no longer holds the peak says so beside Apply change; NetBond Advanced leaves it to the burst note.
-      hasFit: p.changed && p.pick.state !== 'ok', fitLine: `${p.pick.fitWord} at ${p.peakF}.`, fitInk: F.HEALTH_INK[p.pick.state],
-      inProgress: locked, orderLine: flight ? `Ordered ${flight.from} to ${flight.to}. In progress, takes effect ${flight.effectiveF}.` : '',
-      applyLabel: locked ? (s.bwPick && s.bwPick.done ? 'Done' : 'In progress') : 'Apply change', applyOff: locked || !p.changed, apply,
+      priceLine: BW.priceLine(p),
+      hasWhen: step === 'pick' && p.changed && !locked, whenLine: `Takes effect in ${BW.EFFECT_DAYS} business day, ${when}.`,
+      // A pick that no longer holds the peak says so beside Apply change, in warning; NetBond Advanced leaves it to the burst note.
+      hasFit: step === 'pick' && p.changed && !locked && !!fit, fitLine: fit, fitInk: BW.FIT_INK[p.pick.state],
+      applyLabel: locked ? 'In progress' : 'Apply change', applyOff: locked || !p.changed, apply,
+      // The second confirm, when the size drops traffic.
+      confirmHead: 'This size drops traffic', confirmLine: `${p.pick.label} is short of the ${p.peakF} peak. ${p.burstNote}`, confirmInk: BW.FIT_INK.down, confirmLabel: 'Apply anyway', applyAnyway, back,
+      // The approval step, as the retired Resize's Review had it.
+      reviewHead: 'Send for approval', review: [
+        { key: 'change', k: 'Change', v: `${p.now.label} to ${p.pick.label}` },
+        { key: 'monthly', k: 'Monthly', v: BW.monthlyWords(p) },
+        { key: 'timeline', k: 'Timeline', v: `${BW.EFFECT_DAYS} business day, takes effect ${when}` },
+        { key: 'notify', k: 'Notify', v: approver },
+      ],
+      reviewWarn: BW.dropLine(p), hasReviewWarn: drops, approver, setApprover: (e) => set({ approver: e.target.value }), submit, submitLabel: 'Submit',
+      // Sent: the order waits for its day, and Connect > Orders lists it.
+      inProgress: locked, orderLine: flight ? `Submitted for approval to ${flight.approver}: ${flight.from} to ${flight.to}, takes effect ${flight.effectiveF}.` : '',
+      viewOrders: go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'orders', mapSel: null, mapRegion: null }),
     },
   };
 }
@@ -3794,7 +3829,9 @@ function costVals(s, set, est, invAll, ob, go, c) {
   // What should I change first (notes, 2026-09-30): four moves, each landing on a real flow.
   const optNow = new Date(SCH.nowOf(s)), optLife = lifeState(s, est);
   const optOpen = findingList(est, est, ob, optNow).map(f => ({ ...f, state: LC.lifeOf(f, optLife, optNow).state })).filter(f => OPEN_STATES.includes(f.state));
-  const optCap = OD.capacity(X.connections(est, ob), s.obWindow || '30d');
+  // The Capacity move counts what a resize can act on (skeptic, 2026-09-30): the NetBond
+  // connections AT&T sells. An ExpressRoute or Direct Connect port is resized with its cloud.
+  const optCap = OD.capacity(X.connections(est, ob), s.obWindow || '30d').map(c => (c.oversized && !BW.sells(c) ? { ...c, oversized: false, resizeTo: null } : c));
   const optBase = R.optimizeRows(est, { open: optOpen, capacity: optCap, apps: appsOf(est, invAll, ob.flows || []) });
   const ipsecSites = (est.sites || []).filter(x => siteModeOf(x) === 'ipsec');
   const optGo = {
@@ -3808,14 +3845,17 @@ function costVals(s, set, est, invAll, ob, go, c) {
     // netbond advanced flow"), at the size the move names; they never land on a review page.
     // A connection AT&T does not sell opens its own panel; Add a port there still orders one.
     capacity: (cp, resize) => { if (!cp) return; const r = est.regionsList.find(x => x.region === cp.region) || {};
-      if (BW.sells(cp)) return set({ bwFor: cp.id, bwPick: { ports: resize ? cp.resizeTo : cp.ports + 1, mbps: Math.round(cp.portG * 1000) } });
+      if (BW.sells(cp)) return openBandwidth(set, s, cp, { ports: resize ? cp.resizeTo : cp.ports + 1 });
       if (!resize) return composeFor(go, r)();
       set({ mapSel: cp.id, panelTab: 'overview' }); },
   };
   const optTop = optBase.slice(0, 2).reduce((w, r) => (r.figure > (w ? w.figure : 0) ? r : w), null);
-  // A bandwidth change in flight on the move's connection says so, as a finding in progress does (2026-09-30).
-  const optState = (r) => (r.key === 'capacity' && r.target && BW.inFlight(s.bwOrders, est.id, r.target.id) ? 'In progress' : r.state);
-  const optRows = optBase.map(r => ({ ...r, state: optState(r), go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(r.target, r.resize) : optGo[r.key],
+  // A bandwidth change not yet landed says so, as a finding in progress does (2026-09-30), and only
+  // for the connections the move counts; Resize opens the first of them not already ordered.
+  const optTargets = (r) => (r.key !== 'capacity' || r.empty ? [] : optCap.filter(c => (r.resize ? c.oversized : c.state === 'risk')));
+  const optState = (r) => (r.key === 'capacity' && BW.moveState(optTargets(r), s.orders, est.id, +optNow)) || r.state;
+  const optFirst = (r) => optTargets(r).find(c => !BW.inFlight(s.orders, est.id, c.id, +optNow)) || r.target;
+  const optRows = optBase.map(r => ({ ...r, state: optState(r), go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(optFirst(r), r.resize) : optGo[r.key],
     hasCta: !r.empty, hasStart: !!optTop && optTop.key === r.key, hasState: !!optState(r), op: r.empty ? 0.6 : 1, lineRows: r.lines.slice(0, 2).map((t, i) => ({ key: r.key + i, text: t })) }));
   const optSave = optBase[0].figure + optBase[1].figure;
   const optVals = { optRows, hasOptRows: est.regionsList.length > 0, optIsEmpty: !est.regionsList.length, optEmpty: 'No egress seen yet.',

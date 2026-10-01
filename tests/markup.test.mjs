@@ -272,16 +272,21 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // div 1027 -> 1057, span 836 -> 865, sc-if 430 -> 441, sc-for 235 -> 238, button 323 -> 338, aside 9 -> 10.
 // Modify bandwidth merged onto the connect flow (2026-09-30): each count is the flow's plus Modify bandwidth's own move:
 // div 1118 -> 1148, span 947 -> 976, sc-if 477 -> 488, sc-for 247 -> 250, button 356 -> 371, aside 10 -> 11.
+// Modify bandwidth round 2 (skeptic, 2026-09-30): Capacity's rows are one button again, as on 3659e9a (div -1, span +5,
+// sc-if -2, button -8), with the in-progress size under Ports (span +1, sc-if +1); the drawer gains a scrim, a heading,
+// the review step (its rows, the drop-traffic note, an Approver label), the second confirm, the sent footer with View in
+// Orders, and loses its Logs doors and the per-row Monthly column (div +13, span -7, sc-if +4, sc-for +1, button +5, label +1):
+// div 1148 -> 1160, span 976 -> 975, sc-if 488 -> 491, sc-for 250 -> 251, button 371 -> 368, label 31 -> 32.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1148],
-    ['span', /<span\b/g, /<\/span>/g, 976],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 488],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 250],
+    ['div', /<div\b/g, /<\/div>/g, 1160],
+    ['span', /<span\b/g, /<\/span>/g, 975],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 491],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 251],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 371],
+    ['button', /<button\b/g, /<\/button>/g, 368],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
-    ['label', /<label\b/g, /<\/label>/g, 31],
+    ['label', /<label\b/g, /<\/label>/g, 32],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

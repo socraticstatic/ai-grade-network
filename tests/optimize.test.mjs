@@ -59,7 +59,7 @@ test('every action lands', () => {
   // netbond advanced flow"); it no longer stages a Review order (tests/modify-bandwidth.test.mjs).
   c = cost('partial'); vals(c).optRows[3].go();
   assert.equal(c.state.screen, 's3'); assert.equal(c.state.tab, 'cost');
-  assert.equal(c.state.bwFor, 'cx-us-east-1'); assert.deepEqual(c.state.bwPick, { ports: 2, mbps: 10000 });
+  assert.equal(c.state.bwFor, 'cx-us-east-1'); assert.deepEqual(c.state.bwPick, { id: 'cx-us-east-1', ports: 2, mbps: 10000 });
   assert.equal(vals(c).bw.newLabel, '2 × 10 Gbps');
 });
 

@@ -48,8 +48,10 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 
 ## 5. Capacity: is it full
 
-- Tab: **Capacity**. Each connection shows what was bought, the peak, the 6-month average, the headroom, and when it fills.
+- Tab: **Capacity**. Each connection shows what was bought, the peak, the average over the Since window, the headroom, and when it fills.
 - AWS us-east-1 is bought bigger than it is used: 3 x 10 Gbps, peak 41%. Two ports hold the peak.
+- Optional: click the AWS us-east-1 row. Its panel opens in place; **Modify bandwidth** is its first action. The drawer is NetBond Advanced's: pick 2 x 10 Gbps and the price stays $1,800/mo, the one Cost bills for the region. **Apply change** asks for approval (j.martinez on the estate's domain), **Submit** places the order, and **View in Orders** shows it under Connect > Orders, Submitted for approval, taking effect the next business day. A size short of the peak asks a second time, in amber. Escape or a click outside closes it.
+- If you rehearse the order, reload before the demo: orders are placed this session.
 
 ## 6. Cost: what should I change first
 

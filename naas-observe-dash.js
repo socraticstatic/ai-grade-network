@@ -18,6 +18,7 @@ import { cloudEdgeThing, rampName } from './naas-things.js';
 import { sells } from './naas-bandwidth.js';
 
 // Modify bandwidth (2026-09-30) leads the actions wherever AT&T sells the connection's bandwidth.
+// Only on the connection's own panel: a Traffic map region node counts the region's flows, not the connection's port counters.
 const bwActs = (row) => (row && sells(row) ? [{ key: 'bandwidth', label: 'Modify bandwidth', id: row.id }] : []);
 
 const n = (x) => Number(x).toLocaleString('en-US');
@@ -115,7 +116,7 @@ export function panelFor(sel, ctx) {
   })();
   return { kind: node.kind, title: node.name, sub: node.sub || '', trail: tr, children: kids,
     overview: [...(node.opened ? [['Opened', 'children shown in place']] : []), ['Traffic', `${node.v.toFixed(2)} Gbps`], ['On AT&T', `${node.v ? Math.round(node.fabV / node.v * 100) : 0}%`], ['Share of all traffic', `${share}%`], ['Change vs prior window', (node.delta >= 0 ? '+' : '') + node.delta + '%'], ['State', node.state === 'ok' ? 'Healthy' : node.state === 'degraded' ? 'Degraded' : 'Over SLO or public'], ...(resolved ? [['Resource', resolved.name], ['Address', resolved.sub]] : [])],
-    impact: imp, records: recs, actions: [...(node.state !== 'ok' && node.fabV < node.v ? [{ key: 'steer', label: 'Steer onto the AT&T network' }] : []), ...(region && !(row) ? [{ key: 'attach', label: `Attach ${region}`, region }] : []), ...bwActs(row), ...(row && row.hot ? [{ key: 'port', label: 'Add a port', region, id: row.id }] : []), { key: 'policy', label: 'Author a policy here', region }] };
+    impact: imp, records: recs, actions: [...(node.state !== 'ok' && node.fabV < node.v ? [{ key: 'steer', label: 'Steer onto the AT&T network' }] : []), ...(region && !(row) ? [{ key: 'attach', label: `Attach ${region}`, region }] : []), ...(row && row.hot ? [{ key: 'port', label: 'Add a port', region }] : []), { key: 'policy', label: 'Author a policy here', region }] };
 }
 
 /** Find a site by id or name: a named site of the estate, or one generated inside a metro. */
@@ -347,9 +348,9 @@ export function subnetPanel(sel, ctx) {
 const MIN = 60000, HR = 3600000, DAYMS = 86400000;
 const WHO = ['m.boswell', 'j.alvarez', 'p.nakamura', 'svc-terraform'];
 
-export function activityOf(est, { customPolicies = [], steered = [], conns = { rows: [] }, runs = [], bwOrders = [], now = Date.now() } = {}) {
+export function activityOf(est, { customPolicies = [], steered = [], conns = { rows: [] }, runs = [], orders = [], now = Date.now() } = {}) {
   const out = [];
-  const push = (key, at, who, verb, target, detail, ok, change, region = null) => out.push({ key, at, who, verb, target, detail, ok, change, region });
+  const push = (key, at, who, verb, target, detail, ok, change, region = null, result = null) => out.push({ key, at, who, verb, target, detail, ok, change, region, ...(result ? { result } : {}) });
   const first = FIRST_ATTACH[est.id] ? Date.parse(FIRST_ATTACH[est.id] + '-01T00:00:00Z') : now - 60 * DAYMS;
   const priv = (est.regionsList || []).filter(r => r.priv);
   priv.forEach((r, i) => {
@@ -368,15 +369,16 @@ export function activityOf(est, { customPolicies = [], steered = [], conns = { r
     else push('port:' + r.region, now - (2 + i * 6) * DAYMS, WHO[i % 3], 'Ordered a port', `${r.cloud} ${r.region}`, `${r.bw || r.ports + ' × 10 Gbps'} in place, ${r.pct}% used`, true, true, r.region);
   });
   steered.forEach((f, i) => push('steer:' + f, now - (i + 1) * 3 * MIN, WHO[i % 3], 'Steered a flow', String(f), 'moved off the public path', true, true));
-  // Modify bandwidth (2026-09-30): each change ordered in this session, in progress until it lands.
-  bwOrders.filter(o => o.est === est.id).forEach(o => push(o.key, o.at, WHO[0], 'Ordered a bandwidth change', o.where, `${o.from} to ${o.to} · in progress, takes effect ${o.effectiveF}`, true, true, o.region));
+  // Modify bandwidth (2026-09-30): what the person did is submit it for approval. The
+  // submission changes nothing on the network, so it is not a change; the day it lands is (changes()).
+  orders.filter(o => o.kind === 'bandwidth' && o.est === est.id).forEach(o => push('bw:' + o.id, o.atMs, WHO[0], 'Submitted a bandwidth change', o.where, `${o.from} to ${o.to}, for ${o.approver} to approve`, true, false, o.region, 'Submitted'));
   runs.forEach(r => push('run:' + r.at, r.at, r.trigger === 'manual' ? WHO[0] : 'svc-terraform', 'Ran re-discovery', r.accounts === 1 ? 'One account' : 'Whole estate', r.detail || '', r.ok, false));
   push('scope', now - 12 * DAYMS, WHO[1], 'Changed a scope', 'AWS account 4102-8837-5510', 'read-only, all regions', true, true);
   push('export', now - 4 * HR, WHO[2], 'Export denied', 'Flow records, last 30 days', 'no export role on this account', false, false);
   return out.sort((a, b) => b.at - a.at);
 }
 
-export function changes(est, conns, activity, now = Date.now(), bwOrders = []) {
+export function changes(est, conns, activity, now = Date.now(), orders = []) {
   // Problem starts come from the same seeds problems() uses, so the two agree without calling each other.
   const flap = startOf('flap', now, INCIDENT_MIN.flap), spike = startOf('spike', now, INCIDENT_MIN.spike);
   const probs = [
@@ -392,8 +394,9 @@ export function changes(est, conns, activity, now = Date.now(), bwOrders = []) {
       { key: 'mnt:' + r.region + ':done', at: now - (9 + i) * DAYMS, kind: 'maintenance', text: `AT&T planned maintenance on the ${r.cloud} ${r.region} on-ramp`, region: r.region, source: 'AT&T', linedUp: null, upcoming: false },
       { key: 'mnt:' + r.region + ':next', at: now + (4 + i) * DAYMS, kind: 'maintenance', text: `AT&T planned maintenance on the ${r.cloud} ${r.region} on-ramp`, region: r.region, source: 'AT&T', linedUp: null, upcoming: true },
     ]),
-    // A bandwidth change in progress (Modify bandwidth, 2026-09-30) lands on its business day, planned like maintenance.
-    ...bwOrders.filter(o => o.est === est.id && o.state === 'progress').map(o => ({ key: o.key + ':on', at: o.effectiveAt, kind: 'config', text: `Bandwidth change takes effect: ${o.where}, ${o.from} to ${o.to}`, region: o.region, source: 'AT&T', linedUp: null, upcoming: true })),
+    // A bandwidth change (Modify bandwidth, 2026-09-30) lands on its business day: planned
+    // like maintenance until then, a change on the day after. The connection is its own column.
+    ...orders.filter(o => o.kind === 'bandwidth' && o.est === est.id).map(o => ({ key: 'bw:' + o.id + ':on', at: o.effectiveAt, kind: 'config', text: `Bandwidth ${o.from} to ${o.to}`, region: o.region, source: 'AT&T', linedUp: null, upcoming: o.effectiveAt > now })),
   ];
   return rows.sort((a, b) => b.at - a.at);
 }
