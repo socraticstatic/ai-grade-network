@@ -78,7 +78,8 @@ test('P6: every PCI finding names a PCI-tagged region and counts its exposed PCI
     const m = f.head.match(/^([\d,]+) PCI-tagged workloads? reach(?:es)? the internet directly$/);
     assert.ok(m, `${view}: "${f.head}"`);
     assert.equal(n(m[1]), here.exposed, `${view}: ${m[1]} PCI-tagged workloads, but ${here.exposed} are exposed in ${region}`);
-    assert.equal(f.ev, `${m[1]} of ${here.wl.toLocaleString('en-US')} PCI-tagged workloads in ${region} have a public address and a default route to an internet gateway.`, view);
+    // The basis named (w2 second pass, 2026-09-30): VPCs tagged PCI, as Govern > Tags counts, not Discover's app tag.
+    assert.equal(f.ev, `${m[1]} of ${here.wl.toLocaleString('en-US')} workloads in PCI-tagged VPCs in ${region} have a public address and a default route to an internet gateway.`, view);
     assert.equal(pol.viol, here.exposed, `${view}: the PCI policy counts ${pol.viol} violations`);
     // A part never outgrows its whole: the PCI ones are among the exposed workloads the home counts.
     assert.ok(here.exposed <= n(stat(vals(home(view)), 'e')), view);

@@ -230,6 +230,17 @@ test('Could save is one figure: the Traffic map\'s tile names its own basis, the
   }
 });
 
+test('The PCI finding names the basis of its count, the VPCs tagged PCI, which Discover\'s app tag does not share', async () => {
+  const { ESTATES } = await import('../naas-data.js');
+  let seen = 0;
+  for (const view of VIEWS) {
+    const f = (ESTATES[view].findings || []).find(x => x.kind === 'pci'); if (!f) continue;
+    assert.match(f.ev, /^[\d,]+ of [\d,]+ workloads in PCI-tagged VPCs in [\w-]+ /, `${view}: the evidence reads "${f.ev}"`);
+    seen += 1;
+  }
+  assert.equal(seen, 2);
+});
+
 test('Spend by bucket names its blue as Cost does, AT&T price, and never calls a bucket\'s dollars on AT&T', async () => {
   const CV = await import('../naas-cost-view.js');
   for (const view of VIEWS) {
