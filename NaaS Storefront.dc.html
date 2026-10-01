@@ -1838,11 +1838,11 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
           <span style="display:grid;min-width:0"><b>{{ rs2.label }}</b><small>{{ rs2.sub }}</small></span>
           <button class="cost-num" onClick="{{ rs2.goNow }}" title="{{ rs2.label }}: its egress outside AT&amp;T, in By leg"><b>{{ rs2.nowF }}</b><small>today</small></button>
           <button class="cost-num" onClick="{{ rs2.goSave }}" title="The open moves that save it, on Optimize" style="color:var(--success)"><b style="color:var(--success)">{{ rs2.saveF }}</b><small>to save</small></button>
-          <button class="fx-btn" onClick="{{ rs2.attach }}" style="height:28px;padding:0 12px;font-size:12px">{{ rs2.act }}</button>
+          <button class="fx-btn" onClick="{{ rs2.attach }}" style="height:28px;min-width:64px;justify-content:center;padding:0 12px;font-size:12px">{{ rs2.act }}</button>
         </div></sc-for></div></sc-if>
         <sc-if value="{{ costDetail }}" hint-placeholder-val="{{ false }}"><div><sc-for list="{{ regionSaveRows }}" as="rs2" hint-placeholder-count="5"><div class="cost-save" style="grid-template-columns:minmax(0,1fr) auto">
           <span style="display:grid;gap:2px;min-width:0"><b>{{ rs2.label }}</b><span style="font-size:11px;line-height:15px;color:var(--text-body)">{{ rs2.math }}</span></span>
-          <button class="fx-btn" onClick="{{ rs2.attach }}" style="height:28px;padding:0 12px;font-size:12px">{{ rs2.act }}</button>
+          <button class="fx-btn" onClick="{{ rs2.attach }}" style="height:28px;min-width:64px;justify-content:center;padding:0 12px;font-size:12px">{{ rs2.act }}</button>
         </div></sc-for></div></sc-if>
         <sc-if value="{{ regSavePager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ regSavePager.label }}</span><button class="fx-btn" onClick="{{ regSavePager.prev }}" aria-label="Previous page" style="opacity:{{ regSavePager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ regSavePager.next }}" aria-label="Next page" style="opacity:{{ regSavePager.nextOp }}">›</button></div></sc-if>
       </div>
