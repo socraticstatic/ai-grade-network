@@ -315,13 +315,24 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // div 1148 -> 1160, span 976 -> 975, sc-if 488 -> 491, sc-for 250 -> 251, button 371 -> 368, label 31 -> 32.
 // Modify bandwidth merged onto Cost, Signals and the home (2026-09-30): each count is theirs plus Modify bandwidth's own move: div 1092 -> 1134, span 941 -> 969, sc-if 508 -> 522, sc-for 264 -> 268, button 401 -> 413, aside 10 -> 11, label 30 -> 31.
 test('every container the markup opens, it closes', () => {
+  // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
+  // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
+  // beside the rings (div +3, span +3, sc-for +2, button +3); the apps rows are divs whose seven cells are buttons
+  // (div +1, span -7, button +6); a gap's title and line run as figure buttons (sc-for +2, button +2); Your clouds'
+  // tiles, mix label, bar and legend are buttons (div -1, span -2, sc-for +1, button +4), its crumb row gains the
+  // filter chip, the new-in-Your-sites link and the moves (span +1, sc-if +2, sc-for +1, button +3), and its rows are
+  // divs holding a name button, the count parts, the cost and the bandwidth parts (div +1, span +1, sc-if +1,
+  // sc-for +2, button +3); Business units' rows are divs with a name and a count button (div +1, span -2, button +1);
+  // Your sites gains the same crumb row (span +1, sc-if +2, sc-for +1, button +3) and rows (div +1, span +1, sc-if +1,
+  // sc-for +1, button +2); a source's scope is a button (button +1):
+  // div 1134 -> 1139, span 969 -> 962, sc-if 522 -> 528, sc-for 268 -> 278, button 413 -> 445.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1134],
-    ['span', /<span\b/g, /<\/span>/g, 969],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 522],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 268],
+    ['div', /<div\b/g, /<\/div>/g, 1139],
+    ['span', /<span\b/g, /<\/span>/g, 962],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 528],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 278],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 413],
+    ['button', /<button\b/g, /<\/button>/g, 445],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];
