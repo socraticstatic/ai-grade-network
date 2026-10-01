@@ -87,12 +87,16 @@ await beat('0 NaaS home: the take-away, the snapshot, the map below', async () =
   await rail('NaaS');
   await expect("Andi's briefing", 'Waiting on you');
   await takes('Azure eastus is down', 'Finance rides it · 40 workloads · 22 min', 'Trace it');
+  // Waiting on you lists only what still waits (skeptic, 2026-09-30): the IPsec finding is acknowledged, so it is not here.
   const chips = await inHome('[aria-label="Waiting on you"] button:has-text("Accept")').count();
-  if (chips !== 2) throw new Error(`Waiting on you offers Accept on ${chips} chips, not 2 (the IPsec one is acknowledged)`);
+  if (chips !== 2) throw new Error(`Waiting on you offers Accept on ${chips} chips, not 2`);
+  if ((await inHome('[aria-label="Waiting on you"]').innerText()).includes('IPsec')) throw new Error('the acknowledged IPsec finding still waits on the home');
   const c = await cards();
   if (c.length !== 4) throw new Error(`${c.length} snapshot cards, not 4`);
-  for (const [i, want] of [[0, '5 of 8'], [1, '2 of 7'], [2, '$89,600'], [3, '54']]) if (!c[i].includes(want)) throw new Error(`card ${i + 1} reads "${c[i].replace(/\n/g, ' | ')}", not ${want}`);
+  for (const [i, want] of [[0, '5 of 8'], [1, '2 of 7'], [2, '$89,600'], [3, '54 of 303']]) if (!c[i].includes(want)) throw new Error(`card ${i + 1} reads "${c[i].replace(/\n/g, ' | ')}", not ${want}`);
   if (!(await page.locator('#sec-fabric[data-fold="below"]').count())) throw new Error('no Connect map below the home');
+  // The map's title sits at the fold and its legend is Connect's.
+  await expect('What you have', '1 connection down', 'wire colour follows the security lens');
   const neteng = await takeaway();
   await tab('Executive', 'section[aria-label="NaaS home"]');
   const exec = await takeaway();
@@ -165,21 +169,22 @@ await beat('7 Insights: Your actions and Operations', async () => {
 });
 
 await beat('8 Estate switch to Established', async () => {
-  // Recommended (Options until 2026-09-30, "options and orders is so weird") still reads the Connect verdict; the four tiles live on the home now.
+  // Recommended (Options until 2026-09-30, "options and orders is so weird") prints the Connect verdict over its moves.
   await rail('Recommended');
   // Beat 1 added Oracle's two public regions to Growing: 5 of 7 became 7 of 9.
   await expect('7 of 9 regions still ride the public internet');
   // Switched while on the home, the new estate's own figures show, with no stale role list.
   // v2 home (2026-09-30): the On AT&T card counts Oracle's two public regions (2 of 7 became 2 of 9).
   await rail('NaaS');
-  await expect('5 sites reach the cloud over IPsec');
+  await expect('Azure eastus has one path');
   await takes('Azure eastus is down');
   if (!(await cards())[1].includes('2 of 9')) throw new Error(`On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 2 of 9`);
   await page.selectOption('select[aria-label="View as"]', 'mature'); await settle(600);
   await expect('3 paths send no telemetry');
-  await takes('AWS us-west-2 is at risk', '3 apps ride it · 120 workloads');
+  // The outage leads, not the at-risk region (skeptic, 2026-09-30).
+  await takes('AWS eu-central-1 is down', '2 apps ride it · 96 workloads');
   if (!(await cards())[1].includes('7 of 8')) throw new Error(`Established's On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 7 of 8`);
-  if ((await text()).includes('5 sites reach the cloud over IPsec')) throw new Error('Growing\'s role list stayed on the Established home');
+  if ((await text()).includes('Azure eastus has one path')) throw new Error('Growing\'s role list stayed on the Established home');
   await rail('Recommended');
   await expect('1 of 8 regions still ride the public internet');
 });

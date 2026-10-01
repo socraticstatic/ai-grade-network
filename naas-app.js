@@ -278,7 +278,7 @@ export function vals(c) {
   // Who answers for each piece of every path, read once from the whole estate (2026-09-30).
   const segCtx = G.segCtxOf(est0, { inv: A.inventory(est0), ob: obAll, conns, probs });
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, obAll), ...est0.findings] };
-  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !composeStarted(s.compose) ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
+  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !composeStarted(s.compose) ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4 && !(extra && extra.scanStep >= 4)) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -424,6 +424,8 @@ export function vals(c) {
     pillFs: folded && sg.side === 'core' ? '14px' : '10px', pillLh: folded && sg.side === 'core' ? 22 : 16, pillH: folded && sg.side === 'core' ? 26 : 18, pillPad: folded && sg.side === 'core' ? 12 : 8,
   }));
   const steeredRegionNames = new Set(steered.filter(id => id.startsWith('f-')).map(id => (estRaw.regionsList[+id.split('-')[1]] || {}).region));
+  // The home repeats Connect's map, so it draws Connect's wires and legend (skeptic, 2026-09-30).
+  const ovS = s.screen === 's0' ? { ...s, screen: 's3', tab: 'connect' } : s;
   const heroEdges = L.edges.map(e => {
     const keys = [e.site ? 'site' + e.site.name : null, e.region ? 'reg' + e.region.region : null, e.internet ? 'inet' : null].filter(Boolean);
     let op = dimFor(keys);
@@ -437,7 +439,7 @@ export function vals(c) {
     const d = edgePath(e);
     const hh = e.region ? hp.regionHealth[e.region.region] : null;
     const healthStroke = hh === 'red' ? 'var(--error)' : hh === 'amber' ? 'var(--warning)' : null;
-    const ov = overlayFor(e, s, est0, ob, hp, R, steered, hoverKey);
+    const ov = overlayFor(e, ovS, est0, ob, hp, R, steered, hoverKey);
     return { ...e, ...ov, key: e.id, d, op: ov.opOverride != null ? Math.min(op, ov.opOverride) : op, landed: !!(e.region && e.region.landed), amber: hh === 'amber' || hh === 'red', openObserve: hh === 'amber' || hh === 'red' ? () => { go('s3', { layer: 'cloud', tab: 'observe', obScope: 'cloud:' + e.region.cloud })(); } : null, stroke: ov.stroke || (e.ghost ? 'var(--border-primary)' : healthStroke || (e.priv ? '#3374cc' : 'var(--text-disabled)')), w: ov.w || (e.priv ? 2 : 1.5), dash: dashed ? '6 6' : 'none', crawl: !e.priv && !e.ghost, mx: (e.x1 + e.x2) / 2, my: (e.y1 + e.y2) / 2, px: e.kind === 'ingress' ? e.x2 : e.x1, py: e.kind === 'ingress' ? e.y2 : e.y1, portFill: e.priv ? '#0057b8' : 'var(--bg-base)', durS: ov.durS || (e.dur ? e.dur + 's' : '2s'), tailBegin: '-0.25s', retBegin: '-' + ((parseFloat(ov.durS || (e.dur ? e.dur + 's' : '2s')) || 2) / 2) + 's', chipW: e.chip ? e.chip.length * 8 + 14 : 0, showChip: !!e.chip && op === 1 || !!e.chip && !hoverKey, pulse: simHit || !!(e.region && e.region.landed) };
   });
   // A provider card's wires say the same thing ("private") side by side; once is enough.
@@ -934,12 +936,13 @@ export function vals(c) {
       const blind = (obAll.blind || []).length;
       const ok = rows.length - bad.length - hot.length;
       const parts = [];
-      if (bad.length) parts.push({ key: 'bad', dot: 'var(--error)', text: `${bad.length} degraded`, title: bad.map(r => r.cloud + ' ' + r.region).join(', ') });
+      // Health's words (skeptic, 2026-09-30): a degraded connection is Down there, and "healthy" names what it counts.
+      if (bad.length) parts.push({ key: 'bad', dot: 'var(--error)', text: `${bad.length} ${bad.length === 1 ? 'connection' : 'connections'} down`, title: bad.map(r => r.cloud + ' ' + r.region).join(', ') });
       if (hot.length) parts.push({ key: 'hot', dot: 'var(--warning)', text: `${hot.length} saturating`, title: hot.map(r => r.region + ' at ' + r.pct + '%').join(', ') });
       if (blind) parts.push({ key: 'blind', dot: 'var(--text-disabled)', text: `${blind} without flow logs`, title: 'Regions sending no flow logs' });
-      if (rows.length) parts.push({ key: 'ok', dot: 'var(--success)', text: `${ok} of ${rows.length} healthy`, title: 'Connections healthy' });
+      if (rows.length) parts.push({ key: 'ok', dot: 'var(--success)', text: `${ok} of ${rows.length} ${rows.length === 1 ? 'connection' : 'connections'} healthy`, title: 'Connections healthy' });
       return parts;
-    })(), clearHover: () => set({ hoverNode: null, hoverRegion: null }), laneY: L.lane.y, laneH: L.lane.h, bandY: L.bandY, bandH: L.bandH, facH: L.H - L.bandY * 2, strataCardH, strataPadY: strataTight ? 6 : 10, strataRowGap: strataTight ? 3 : 6, footY: L.H - 54, footY2: L.H - 48, heroVisible: heroScreen && heroOpen, heroStrip: heroScreen && !heroOpen, heroCanHide: heroScreen && heroOpen && !heroDefault, toggleHero, heroStripText: isEmpty ? 'Your sites, the AT&T network and your clouds, drawn after the first scan' : `${est.attachedRegions} of ${est.regions} regions on AT&T · ${est.regions - est.attachedRegions} on the public internet · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`, inDept, overlayLegend: overlayLegend(s, R), hasOverlay: inDept, scrubT: s.scrubT == null ? 100 : s.scrubT, setScrub: (e) => set({ scrubT: +e.target.value }), showScrub: inDept && s.tab === 'observe', showForecast: inDept && s.tab === 'cost', fcT: s.fcT == null ? 0 : s.fcT, setFc: (e) => set({ fcT: +e.target.value }), fcLabel: (s.fcT || 0) === 0 ? 'today' : '+' + Math.round((s.fcT || 0) * 0.9) + ' days', heroRolled: s.screen === 's0', healthStrip: hp.strip, hasHealth: s.screen !== 's3', healthIncidents: probRows.map((x, i) => ({ ...x, text: `${x.where} · ${x.what} · ${x.age}${x.wl ? ` · ${x.wl.toLocaleString('en-US')} workloads behind it` : ''}`, key: 'hi' + i, dot: F.HEALTH_INK[x.health] || 'var(--warning)', rad: F.healthRadius(x.health), go: go('s3', { layer: 'cloud', tab: 'observe', mapSel: conns.rows.some(r => r.region === x.region) ? 'cx-' + x.region : null, mapRegion: x.region, panelTab: 'impact' }) })), hasIncidents: probRows.length > 0 && s.screen !== 's3',
+    })(), clearHover: () => set({ hoverNode: null, hoverRegion: null }), laneY: L.lane.y, laneH: L.lane.h, bandY: L.bandY, bandH: L.bandH, facH: L.H - L.bandY * 2, strataCardH, strataPadY: strataTight ? 6 : 10, strataRowGap: strataTight ? 3 : 6, footY: L.H - 54, footY2: L.H - 48, heroVisible: heroScreen && heroOpen, heroStrip: heroScreen && !heroOpen, heroCanHide: heroScreen && heroOpen && !heroDefault, toggleHero, heroStripText: isEmpty ? 'Your sites, the AT&T network and your clouds, drawn after the first scan' : `${est.attachedRegions} of ${est.regions} regions on AT&T · ${est.regions - est.attachedRegions} on the public internet · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`, inDept, overlayLegend: overlayLegend(ovS, R), hasOverlay: inDept || s.screen === 's0', scrubT: s.scrubT == null ? 100 : s.scrubT, setScrub: (e) => set({ scrubT: +e.target.value }), showScrub: inDept && s.tab === 'observe', showForecast: inDept && s.tab === 'cost', fcT: s.fcT == null ? 0 : s.fcT, setFc: (e) => set({ fcT: +e.target.value }), fcLabel: (s.fcT || 0) === 0 ? 'today' : '+' + Math.round((s.fcT || 0) * 0.9) + ' days', heroRolled: s.screen === 's0', healthStrip: hp.strip, hasHealth: s.screen !== 's3', healthIncidents: probRows.map((x, i) => ({ ...x, text: `${x.where} · ${x.what} · ${x.age}${x.wl ? ` · ${x.wl.toLocaleString('en-US')} workloads behind it` : ''}`, key: 'hi' + i, dot: F.HEALTH_INK[x.health] || 'var(--warning)', rad: F.healthRadius(x.health), go: go('s3', { layer: 'cloud', tab: 'observe', mapSel: conns.rows.some(r => r.region === x.region) ? 'cx-' + x.region : null, mapRegion: x.region, panelTab: 'impact' }) })), hasIncidents: probRows.length > 0 && s.screen !== 's3',
     headStart: D.HEADSTART.map(h => ({ ...h, key: h.cat, go: go('s7', { browseCat: h.cat }) })), headStartVerdict: isEmpty ? 'AT&T already sees the metros, clouds and paths you could use. Tell us two things and the store composes the rest.' : `${est.name} is recognized. ${estatePhrase(est)} already visible.`,
     modeTabs: [{ key: 'foryou', label: 'For you', active: !['s7', 's8'].includes(s.screen), click: () => { set({ mode: 'foryou' }); go('s3', { layer: 'cloud', tab: 'connect' })(); } }, { key: 'browse', label: 'Browse the marketplace', active: ['s7', 's8'].includes(s.screen), click: () => { set({ mode: 'browse' }); go('s7')(); } }],
     // The Sources page (a customer with no source yet): each cloud by the
@@ -1127,8 +1130,12 @@ export function homeVals(out, s, set, { go, isEmpty, openSave }) {
   const pathAll = out.pathTimeAll || [];
   const doors = {
     picture: () => picture({}),
-    capacity: () => obs({ obPanel: 'conn' }),
     options: () => go('s3', { ...cloud, tab: 'connect', cnPage: 'options' }),
+    // Discover's At a glance prints the workloads, the exposed ones and those on the internet. The
+    // home's figures are the read estate, so the door lands scanned, never mid-scan (skeptic, 2026-09-30).
+    discover: () => go('s1', { discoverView: 'estate', estPanel: 'glance', scanStep: 4, scanBusy: false }),
+    // A tag opens Govern > Tags on the page that holds it.
+    tag: (i) => go('s3', { ...cloud, tab: 'govern', govPanel: 'tags', tagPage: Math.floor(i / PAGE_SIZE.drawerTags[1]) }),
     sitesOn: () => picture({ reach: 'att' }),
     sitesOff: () => picture({ reach: 'outside' }),
     health: () => obs({ obPanel: 'health', healthView: 'app' }),
@@ -1137,40 +1144,46 @@ export function homeVals(out, s, set, { go, isEmpty, openSave }) {
       return obs({ obPanel: 'paths', pathSel: ix >= 0 ? pathAll[ix].key : null, pathsPage: ix >= 0 ? Math.floor(ix / 8) : 0 }); },
     spend: () => go('s3', { ...cloud, tab: 'cost', costPanel: 'spend' }),
     optimize: () => go('s3', { ...cloud, tab: 'cost', costPanel: 'optimize' }),
-    tags: () => go('s3', { ...cloud, tab: 'govern', govPanel: 'tags' }),
+    tags: () => go('s3', { ...cloud, tab: 'govern', govPanel: 'tags', tagPage: 0 }),
     policies: () => go('s3', { ...cloud, tab: 'govern', govPanel: 'policies' }),
   };
   const sitesG = ring('sites'), cloudsG = ring('clouds'), wlG = ring('workloads');
   const glance = { sitesTotal: HM.numOf(sitesG.centre), sitesOn: /^All\b/.test(sitesG.head || '') ? HM.numOf(sitesG.centre) : HM.numOf(sitesG.head),
     regTotal: HM.numOf(cloudsG.centre), regPriv: HM.numOf(cloudsG.head) };
   const healthy = ((out.healthTiles || []).find(x => x.key === 'ok') || {}).v || '';
-  const take = isEmpty ? null : HM.takeAway(rk, { probs, acts, onTableF: openSave ? fmt(openSave) : '', spend: tile('spend'), could: tile('could'), ahead: tile('ahead'),
-    exposed: stat('e'), govern: roll('govern'), connect: roll('connect'), pubWl: (String(wlG.head || '').match(/^[\d,]+/) || ['0'])[0], clouds: stat('c'), healthy });
-  // The take-away's doors: its action, its headline and each part of its line open the set they name.
+  const pubClouds = (out.allRegions || []).filter(r => !r.priv).map(r => r.cloud);
+  const take = isEmpty ? null : HM.takeAway(rk, { probs, acts, onTableF: openSave ? fmt(openSave) : '', spend: tile('spend'), could: tile('could'), banked: tile('banked'),
+    exposed: stat('e'), govern: roll('govern'), connect: roll('connect'), pubWl: (String(wlG.head || '').match(/^[\d,]+/) || ['0'])[0], pubClouds, healthy });
+  // The take-away's doors: its action, its headline and each part of its line open the set they name,
+  // on a page that prints that figure.
+  const worst = HM.worstFirst(probs)[0];
   const takeDoor = {
-    trace: () => () => { go('s3', { ...cloud, tab: 'observe', obPage: 'perf' })(); probs[0].trace(); },
+    trace: () => () => { go('s3', { ...cloud, tab: 'observe', obPage: 'perf' })(); worst.trace(); },
     health: doors.health,
     moves: () => go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0, persona: rk }),
     optimize: doors.optimize,
     spend: doors.spend,
     violations: doors.policies,
-    tags: doors.tags,
+    exposed: doors.discover,
+    discover: doors.discover,
     options: doors.options,
     connect: () => roll('connect').go || doors.options(),
-    clouds: () => go('s1', { discoverView: 'estate', estPanel: 'clouds' }),
     app: (tag) => doors.appPath(tag),
   };
   const doorOf = (k, arg) => (takeDoor[k] ? takeDoor[k](arg) : null);
   const homeCards = isEmpty ? [] : HM.snapshotCards(rk, { glance, health: healthy, flows: out.pathFlowAll || [], spend: { spend: tile('spend'), ahead: tile('ahead') },
-    spendCols: out.spendCols || [], exposed: stat('e'), workloads: stat('w'), govern: roll('govern') }, doors);
+    spendCols: out.spendCols || [], exposed: stat('e'), workloads: stat('w'), govern: roll('govern'), tags: out.drawerTags || [] }, doors);
+  // Waiting on you is what still waits: an open finding (Accept) or a port to add. An acknowledged
+  // one has left it for Your actions (skeptic, 2026-09-30).
+  const waiting = acts.filter(a => a.waiting);
   return {
     homeTake: take && { key: take.key, head: take.head, sub: take.sub, cta: take.cta, ink: take.ink,
       tint: `color-mix(in srgb, ${take.ink} 14%, transparent)`, wash: `color-mix(in srgb, ${take.ink} 7%, var(--bg-base))`,
-      icon: `brand/icons-light/${take.icon}.svg`, go: doorOf(take.door), headGo: doorOf(take.headDoor),
+      icon: `brand/icons-light/${take.icon}.svg`, go: doorOf(take.door), headGo: doorOf(take.headDoor) || (() => {}), headOff: !doorOf(take.headDoor),
       parts: take.parts.map((p, i) => { const g = doorOf(p.door, p.arg); return { key: 'p' + i, t: p.t, sep: i > 0, off: !g, go: g || (() => {}) }; }) },
     homeCards,
     homeBriefGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'brief' }),
-    homeWaiting: acts.slice(0, 3), hasHomeWaiting: acts.length > 0, noHomeWaiting: !acts.length, homeWaitingNone: acts.length ? '' : 'Nothing waiting on you',
+    homeWaiting: waiting.slice(0, 3), hasHomeWaiting: waiting.length > 0, noHomeWaiting: !waiting.length, homeWaitingNone: waiting.length ? '' : 'No finding waits on you',
     homeWaitingMore: acts.length ? `All ${acts.length} in Your actions ›` : '', hasHomeWaitingMore: acts.length > 0,
     homeWaitingGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0 }),
     homeEmpty: !!isEmpty, homeBand: !isEmpty, homeStep: step,
@@ -2709,16 +2722,20 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         canAccept: st === 'open' || st === 'snoozed', accept: moveF(k, 'ack', { note: `Accepted: ${rec}` }),
         canDefer: st === 'open', defer: moveF(k, 'snoozed', { snoozeDays: deferDays, note: deferWhen ? `Deferred to the ${deferWhen} briefing` : 'Deferred' }),
         canStart: st === 'ack', start: moveF(k, 'progress'), canSnooze: st === 'ack', snooze: moveF(k, 'snoozed', { snoozeDays: deferDays }), hasDoor: false, doorLabel: '', door: () => {},
+        // Still waiting on you: open, so Accept is its action (the home's Waiting on you lists only these).
+        waiting: st === 'open',
         // The home's chip opens its finding in place (v2 home, 2026-09-30).
         open: () => set({ fdKey: f.key }) }; });
     const ports = rk === 'architect' ? OD.capacity(conns, s.obWindow || '30d').filter(r => r.peakPct >= 80).map(r => { const reg = est0.regionsList.find(x => x.region === r.region) || { region: r.region, wl: 0 };
       return { key: 'cap-' + r.region, head: `${r.cloud} ${r.region} peaks at ${r.peakPct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, saveLine: '', hasSave: false, rec: 'Recommended: Add a port', stateLabel: 'Open',
-        canAccept: false, canDefer: false, canStart: false, canSnooze: false, hasDoor: true, doorLabel: 'Add a port', door: composeFor(go, reg), accept: () => {}, defer: () => {}, start: () => {}, snooze: () => {},
+        canAccept: false, canDefer: false, canStart: false, canSnooze: false, hasDoor: true, doorLabel: 'Add a port', door: composeFor(go, reg), accept: () => {}, defer: () => {}, start: () => {}, snooze: () => {}, waiting: true,
         open: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn' }) }; }) : [];
     const all = [...acts, ...ports];
     const roleEmpty = all.length ? '' : rk === 'exec' ? 'Nothing priced on the table.' : 'Nothing to act on yet. What AT&T finds for this role lands here.';
     const roleChips = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk; return { key: k, label: ROLE_OF[k].short, on, ...seg(on), go: () => set({ persona: k, rolePage: 0 }) }; });
-    return { roleChips, roleTitle: `Actions for ${role.short}`, roleHead: plNow.line, roleCta: plNow.cta, roleGo: plNow.go, roleActAll: all, roleActRows: all, hasRoleActs: all.length > 0,
+    // How many it lists, beside the title: the home's "3 moves" and "All 3 in Your actions" land on their number (2026-09-30).
+    const countNoun = rk === 'exec' ? ['move', 'moves'] : ['action', 'actions'];
+    return { roleChips, roleTitle: `Actions for ${role.short}`, roleCountLine: all.length ? `${all.length} ${all.length === 1 ? countNoun[0] : countNoun[1]}` : '', roleHead: plNow.line, roleCta: plNow.cta, roleGo: plNow.go, roleActAll: all, roleActRows: all, hasRoleActs: all.length > 0,
       roleEmpty, hasRoleEmpty: !all.length, hasRoleEmptyGo: !all.length && rk === 'exec', roleEmptyGo: () => set({ insPanel: 'ops', opsPanel: 'overview' }) };
   })();
   const dash = { ...mixVals, ...insightVals, ...healthVals, ...opsVals, ...roleVals, dashTiles, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
@@ -3115,6 +3132,8 @@ function wizardVals(s, est, set, c) {
     // Policies read by layer (Micah, 2026-09-29: "give me policies that are multi-layer").
     polLayerHeads: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label })),
     aLayers: au && au.layers ? POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: au.layers[l.key] || 'Any' })) : [], hasALayers: !!(au && au.layers),
+    // The total the list adds up to, beside its head: the home's "N policy violations" lands here (skeptic, 2026-09-30).
+    polViolLine: ((n) => n ? `${n.toLocaleString('en-US')} policy ${n === 1 ? 'violation' : 'violations'}` : 'No policy violations')((s.layer === 'cloud' ? [...layerPolicies(s, est, 'all'), ...(s.customPolicies || [])] : layerPolicies(s, est, 'all')).reduce((a, p) => a + (p.viol || 0), 0)),
     polRows: (s.layer === 'cloud' ? [...layerPolicies(s, est, 'all'), ...(s.customPolicies || [])] : layerPolicies(s, est, 'all')).map((p, i) => ({ ...p, key: 'pr' + i, sent: polSentence(p),
       appliesTo: `${p.match} · ${p.matched} matched`,
       // A rule sits in the layer it governs; a violation is marked where it breaks.

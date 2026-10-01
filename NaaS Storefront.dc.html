@@ -79,7 +79,7 @@ a{color:#0057b8}a:hover{color:#00388f}
 .hm-link:hover{text-decoration:underline;text-underline-offset:3px}
 .hm-take{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:20px;padding:22px 24px;border:1px solid var(--border-secondary);border-radius:16px}
 .hm-headline{display:block;max-width:100%;border:0;background:transparent;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hm-headline:hover{color:var(--link)}
+.hm-headline:hover:not(:disabled){color:var(--link)}.hm-headline:disabled{cursor:default}
 .hm-parts{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:15px;line-height:22px;color:var(--text-body);white-space:nowrap;overflow:hidden}
 .hm-parts>button{border:0;background:transparent;padding:0;font:inherit;color:inherit;cursor:pointer;white-space:nowrap}
 .hm-parts>button:hover:not(:disabled){color:var(--link);text-decoration:underline;text-underline-offset:3px}
@@ -88,32 +88,34 @@ a{color:#0057b8}a:hover{color:#00388f}
 .hm-cta{display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 20px;border:0;border-radius:10px;background:var(--cta);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s}
 .hm-cta:hover{background:var(--cta-hover)}
 .hm-cta>i{font-style:normal;transition:transform .15s}.hm-cta:hover>i{transform:translateX(3px)}
-.hm-card{display:grid;grid-template-rows:20px 112px 20px;row-gap:14px;min-width:0;box-sizing:border-box;padding:18px 20px 20px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;transition:box-shadow .15s}
+.hm-card{display:grid;grid-template-rows:20px auto minmax(0,1fr) 20px;row-gap:14px;min-width:0;min-height:0;box-sizing:border-box;padding:18px 20px 20px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;transition:box-shadow .15s}
 .hm-card:hover{box-shadow:0 2px 10px rgba(16,24,40,.06)}
 .hm-head{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;background:transparent;padding:0;font:inherit;font-size:11px;line-height:20px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--text-light);cursor:pointer;text-align:left}
 .hm-head>b{font-size:18px;line-height:20px;font-weight:500;letter-spacing:0;color:var(--link);transition:transform .15s}
 .hm-head:hover{color:var(--link)}.hm-head:hover>b{transform:translateX(3px)}
-.hm-body{position:relative;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.hm-lead{display:grid;gap:2px;justify-items:start;min-width:0}
+.hm-pic{display:grid;place-items:center;min-width:0;min-height:0}
 .hm-big{border:0;background:transparent;padding:0;font:inherit;text-align:left;cursor:pointer;color:var(--text-heading);font-size:32px;line-height:38px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;white-space:nowrap}
 .hm-big:hover:not(:disabled){color:var(--link)}.hm-big:disabled{cursor:default;opacity:1}
 .hm-big>small{margin-left:2px;font-size:15px;font-weight:500;letter-spacing:0;color:var(--text-light)}
 .hm-unit{display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap}
 .hm-sw{flex:none;width:8px;height:8px;border-radius:2px}
-.hm-ring{position:absolute;right:-6px;top:50%;width:96px;height:96px;margin-top:-48px}
+.hm-ring{position:relative;width:172px;height:172px}
 .hm-seg{position:absolute;inset:0;padding:0;border:0;background:transparent;pointer-events:none}
-.hm-seg svg{display:block;overflow:visible}
+.hm-seg svg{display:block;width:100%;height:100%;overflow:visible}
 .hm-seg circle{pointer-events:stroke;cursor:pointer;transition:stroke-width .15s}
 .hm-seg:hover circle,.hm-seg:focus-visible circle{stroke-width:10.5}
 .hm-seg:focus-visible{outline:none}
-.hm-dot{display:inline-grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:6px;background:transparent;cursor:pointer}
-.hm-dot>i{display:block;width:16px;height:16px}
+.hm-dots{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:8px;max-width:220px}
+.hm-dot{display:inline-grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:8px;background:transparent;cursor:pointer}
+.hm-dot>i{display:block;width:24px;height:24px}
 .hm-dot:hover{background:var(--bg-neutral)}
-.hm-spark{position:relative;height:56px}
+.hm-spark{position:relative;width:100%;height:140px}
 .hm-spark>i{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--viz-1);box-shadow:0 0 0 2px var(--bg-base)}
 .hm-spark>small{position:absolute;right:0;transform:translateY(-135%);font-size:11px;line-height:14px;font-weight:600;color:var(--warning);white-space:nowrap}
-.hm-track{position:relative;height:18px;border-radius:9px;background:var(--bg-neutral);overflow:hidden}
-.hm-bar{position:absolute;top:0;bottom:0;left:0;min-width:8px;padding:0;border:0;border-radius:0 3px 3px 0;cursor:pointer;transition:filter .15s}
-.hm-bar:hover{filter:brightness(1.1)}
+.hm-waffle{display:grid;grid-template-columns:repeat(10,14px);grid-auto-rows:14px;gap:4px;padding:6px;border:0;border-radius:10px;background:transparent;cursor:pointer;transition:background .15s}
+.hm-waffle>i{display:block;border-radius:3px}
+.hm-waffle:hover:not(:disabled){background:var(--bg-neutral)}.hm-waffle:disabled{cursor:default}
 .hm-foot{display:flex;align-items:center;gap:4px 14px;min-width:0;overflow:hidden;white-space:nowrap}
 .hm-fig{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:20px;color:var(--text-light);cursor:pointer;white-space:nowrap}
 .hm-fig>b{font-size:14px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
@@ -121,8 +123,7 @@ a{color:#0057b8}a:hover{color:#00388f}
 .hm-lg{display:inline-flex;align-items:center;gap:5px;font-size:12px;line-height:20px;color:var(--text-light)}
 .hm-lg>i{flex:none;width:8px;height:8px}
 .hm-chip{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;min-width:0;height:84px;box-sizing:border-box;padding:12px 14px 12px 16px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:12px}
-.hm-none{display:flex;align-items:flex-start;gap:10px;height:84px;box-sizing:border-box;padding-top:4px;font-size:14px;line-height:20px;color:var(--text-body)}
-.hm-none>i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-style:normal;font-size:12px;font-weight:700;color:var(--success);background:color-mix(in srgb, var(--success) 14%, transparent)}
+.hm-none{font-size:14px;line-height:20px;color:var(--text-light)}
 .hm-open{display:grid;gap:4px;min-width:0;border:0;background:transparent;padding:0;font:inherit;text-align:left;cursor:pointer;color:inherit}
 .hm-open>b{font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty}
 .hm-open:hover>b{color:var(--link)}
@@ -408,9 +409,9 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </section>
 </sc-if>
 
-<!-- ===== S0 THE NaaS HOME, v2 (Micah, 2026-09-30: "home page is too wordy! this isn't a white paper"; the approved mockup): the role chips and Andi's briefing link, one take-away for the role, four snapshot cards with a picture each, Waiting on you as three chips. The Connect network map follows below the fold (#sec-fabric, data-fold). Every figure is its page's own (homeVals, naas-home.js) and opens the set it counts. ===== -->
+<!-- ===== S0 THE NaaS HOME, v2 (Micah, 2026-09-30: "home page is too wordy! this isn't a white paper"; the approved mockup): the role chips and Andi's briefing link, one take-away for the role, four snapshot cards with a picture each, Waiting on you as three chips. The Connect network map follows below the fold (#sec-fabric, data-fold). Every figure is its page's own (homeVals, naas-home.js) and opens the set it counts. The section fills the first screen (min-height 100vh less the header, its margin and the map's title), so the map's title sits at the fold and its diagram starts below it; the cards take the slack. ===== -->
 <sc-if value="{{ sHome }}" hint-placeholder-val="{{ false }}">
-<section aria-label="NaaS home" style="display:grid;gap:20px;min-width:0;margin-bottom:36px;animation:fadeIn .3s">
+<section aria-label="NaaS home" style="display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:20px;min-width:0;min-height:calc(100vh - 174px);margin-bottom:36px;animation:fadeIn .3s">
   <sc-if value="{{ homeBand }}" hint-placeholder-val="{{ true }}">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-width:0">
     <div role="tablist" aria-label="Role" style="display:inline-flex;gap:2px;padding:2px;border-radius:10px;background:var(--bg-neutral)"><sc-for list="{{ roleChips }}" as="rc" hint-placeholder-count="5"><button role="tab" aria-selected="{{ rc.on }}" onClick="{{ rc.go }}" style="border:0;border-radius:8px;height:32px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;background:{{ rc.bg }};color:{{ rc.color }};font-weight:{{ rc.weight }};box-shadow:{{ rc.shadow }}">{{ rc.label }}</button></sc-for></div>
@@ -418,18 +419,18 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
   </div>
   <div aria-label="Take-away" class="hm-take" style="background:linear-gradient(90deg,{{ homeTake.wash }} 0%,var(--bg-base) 50%)">
     <span aria-hidden="true" style="display:grid;place-items:center;width:64px;height:64px;border-radius:18px;background:{{ homeTake.tint }}"><span style="width:30px;height:30px;background:{{ homeTake.ink }};-webkit-mask:url('{{ homeTake.icon }}') center / contain no-repeat;mask:url('{{ homeTake.icon }}') center / contain no-repeat"></span></span>
-    <div style="display:grid;gap:4px;min-width:0"><h1 style="margin:0;min-width:0;font-size:30px;line-height:36px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)"><button onClick="{{ homeTake.headGo }}" class="hm-headline">{{ homeTake.head }}</button></h1><div class="hm-parts"><sc-for list="{{ homeTake.parts }}" as="tp" hint-placeholder-count="3"><sc-if value="{{ tp.sep }}" hint-placeholder-val="{{ false }}"><i aria-hidden="true">·</i></sc-if><button onClick="{{ tp.go }}" disabled="{{ tp.off }}">{{ tp.t }}</button></sc-for></div></div>
+    <div style="display:grid;gap:4px;min-width:0"><h1 style="margin:0;min-width:0;font-size:30px;line-height:36px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)"><button onClick="{{ homeTake.headGo }}" disabled="{{ homeTake.headOff }}" class="hm-headline">{{ homeTake.head }}</button></h1><div class="hm-parts"><sc-for list="{{ homeTake.parts }}" as="tp" hint-placeholder-count="3"><sc-if value="{{ tp.sep }}" hint-placeholder-val="{{ false }}"><i aria-hidden="true">·</i></sc-if><button onClick="{{ tp.go }}" disabled="{{ tp.off }}">{{ tp.t }}</button></sc-for></div></div>
     <button onClick="{{ homeTake.go }}" class="hm-cta">{{ homeTake.cta }}<i aria-hidden="true">→</i></button>
   </div>
   <div aria-label="Snapshot" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
     <sc-for list="{{ homeCards }}" as="hc" hint-placeholder-count="4"><div aria-label="{{ hc.label }}" class="hm-card" style="border-color:{{ hc.edge }}">
       <button onClick="{{ hc.go }}" title="Open {{ hc.door }}" class="hm-head"><span>{{ hc.label }}</span><b aria-hidden="true">›</b></button>
-      <div class="hm-body">
-        <div style="display:grid;gap:2px;justify-items:start;min-width:0"><button onClick="{{ hc.valueGo }}" disabled="{{ hc.valueOff }}" class="hm-big">{{ hc.value }}<sc-if value="{{ hc.hasSuffix }}" hint-placeholder-val="{{ false }}"><small>{{ hc.suffix }}</small></sc-if></button><div class="hm-unit"><sc-if value="{{ hc.hasSwatch }}" hint-placeholder-val="{{ false }}"><i class="hm-sw" style="background:{{ hc.swatch }}"></i></sc-if>{{ hc.unit }}</div></div>
-        <sc-if value="{{ hc.isRing }}" hint-placeholder-val="{{ false }}"><div class="hm-ring"><sc-for list="{{ hc.segs }}" as="sg" hint-placeholder-count="4"><button onClick="{{ sg.go }}" aria-label="{{ sg.title }}" title="{{ sg.title }}" class="hm-seg"><svg viewBox="0 0 80 80" width="96" height="96" aria-hidden="true"><circle cx="40" cy="40" r="{{ sg.r }}" fill="none" stroke="{{ sg.ink }}" stroke-width="{{ sg.sw }}" stroke-dasharray="{{ sg.dash }}" stroke-dashoffset="{{ sg.off }}" transform="rotate(-90 40 40)"></circle></svg></button></sc-for></div></sc-if>
-        <sc-if value="{{ hc.isDots }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:2px;margin:0 -3px"><sc-for list="{{ hc.dots }}" as="dt" hint-placeholder-count="6"><button onClick="{{ dt.go }}" aria-label="{{ dt.title }}" title="{{ dt.title }}" class="hm-dot"><i style="background:{{ dt.ink }};border-radius:{{ dt.rad }}"></i></button></sc-for></div></sc-if>
-        <sc-if value="{{ hc.isSpark }}" hint-placeholder-val="{{ false }}"><div class="hm-spark"><svg viewBox="0 0 240 56" preserveAspectRatio="none" width="100%" height="56" aria-hidden="true" style="display:block;overflow:visible"><path d="{{ hc.spark.area }}" fill="var(--viz-1)" opacity=".10" stroke="none"></path><path d="{{ hc.spark.past }}" fill="none" stroke="var(--viz-1)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path><path d="{{ hc.spark.asIs }}" fill="none" stroke="var(--warning)" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linecap="round"></path><path d="{{ hc.spark.act }}" fill="none" stroke="var(--success)" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linecap="round"></path></svg><i style="left:{{ hc.spark.todayL }};top:{{ hc.spark.todayT }}"></i><small style="top:{{ hc.spark.asIsT }}">As is</small></div></sc-if>
-        <sc-if value="{{ hc.isBar }}" hint-placeholder-val="{{ false }}"><div class="hm-track"><sc-for list="{{ hc.bar }}" as="br" hint-placeholder-count="1"><button onClick="{{ br.go }}" aria-label="{{ br.title }}" title="{{ br.title }}" class="hm-bar" style="width:{{ br.w }};background:{{ br.ink }}"></button></sc-for></div></sc-if>
+      <div class="hm-lead"><button onClick="{{ hc.valueGo }}" disabled="{{ hc.valueOff }}" class="hm-big">{{ hc.value }}<sc-if value="{{ hc.hasSuffix }}" hint-placeholder-val="{{ false }}"><small>{{ hc.suffix }}</small></sc-if></button><div class="hm-unit"><sc-if value="{{ hc.hasSwatch }}" hint-placeholder-val="{{ false }}"><i class="hm-sw" style="background:{{ hc.swatch }}"></i></sc-if>{{ hc.unit }}</div></div>
+      <div class="hm-pic">
+        <sc-if value="{{ hc.isRing }}" hint-placeholder-val="{{ false }}"><div class="hm-ring"><sc-for list="{{ hc.segs }}" as="sg" hint-placeholder-count="4"><button onClick="{{ sg.go }}" aria-label="{{ sg.title }}" title="{{ sg.title }}" class="hm-seg"><svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="{{ sg.r }}" fill="none" stroke="{{ sg.ink }}" stroke-width="{{ sg.sw }}" stroke-dasharray="{{ sg.dash }}" stroke-dashoffset="{{ sg.off }}" transform="rotate(-90 40 40)"></circle></svg></button></sc-for></div></sc-if>
+        <sc-if value="{{ hc.isDots }}" hint-placeholder-val="{{ false }}"><div class="hm-dots"><sc-for list="{{ hc.dots }}" as="dt" hint-placeholder-count="6"><button onClick="{{ dt.go }}" aria-label="{{ dt.title }}" title="{{ dt.title }}" class="hm-dot"><i style="background:{{ dt.ink }};border-radius:{{ dt.rad }}"></i></button></sc-for></div></sc-if>
+        <sc-if value="{{ hc.isSpark }}" hint-placeholder-val="{{ false }}"><div class="hm-spark"><svg viewBox="0 0 240 56" preserveAspectRatio="none" width="100%" height="100%" aria-hidden="true" style="display:block;overflow:visible"><path d="{{ hc.spark.area }}" fill="var(--viz-1)" opacity=".10" stroke="none"></path><path d="{{ hc.spark.past }}" fill="none" stroke="var(--viz-1)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path><path d="{{ hc.spark.asIs }}" fill="none" stroke="var(--warning)" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linecap="round"></path><path d="{{ hc.spark.act }}" fill="none" stroke="var(--success)" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linecap="round"></path></svg><i style="left:{{ hc.spark.todayL }};top:{{ hc.spark.todayT }}"></i><small style="top:{{ hc.spark.asIsT }}">As is</small></div></sc-if>
+        <sc-if value="{{ hc.isWaffle }}" hint-placeholder-val="{{ false }}"><button onClick="{{ hc.wafGo }}" disabled="{{ hc.wafOff }}" aria-label="{{ hc.wafTitle }}" title="{{ hc.wafTitle }}" class="hm-waffle"><sc-for list="{{ hc.waffle }}" as="wc" hint-placeholder-count="100"><i style="background:{{ wc.ink }}"></i></sc-for></button></sc-if>
       </div>
       <div class="hm-foot"><sc-for list="{{ hc.figs }}" as="hf" hint-placeholder-count="1"><button onClick="{{ hf.go }}" disabled="{{ hf.off }}" class="hm-fig"><sc-if value="{{ hf.hasSwatch }}" hint-placeholder-val="{{ false }}"><i class="hm-sw" style="background:{{ hf.swatch }}"></i></sc-if><b>{{ hf.v }}</b>{{ hf.u }}</button></sc-for><sc-for list="{{ hc.legend }}" as="lg" hint-placeholder-count="0"><span class="hm-lg"><i style="border-radius:{{ lg.rad }};background:{{ lg.ink }}"></i>{{ lg.word }}</span></sc-for></div>
     </div></sc-for>
@@ -442,7 +443,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
         <sc-if value="{{ ra.canAccept }}" hint-placeholder-val="{{ true }}"><button class="fx-btn" onClick="{{ ra.accept }}" style="height:32px;padding:0 12px;font-size:13px">Accept</button></sc-if><sc-if value="{{ ra.hasDoor }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ ra.door }}" style="height:32px;padding:0 12px;font-size:13px">{{ ra.doorLabel }}</button></sc-if>
       </div></sc-for>
     </div></sc-if>
-    <sc-if value="{{ noHomeWaiting }}" hint-placeholder-val="{{ false }}"><div class="hm-none"><i aria-hidden="true">✓</i>{{ homeWaitingNone }}</div></sc-if>
+    <sc-if value="{{ noHomeWaiting }}" hint-placeholder-val="{{ false }}"><div class="hm-none">{{ homeWaitingNone }}</div></sc-if>
   </div>
   </sc-if>
   <sc-if value="{{ homeEmpty }}" hint-placeholder-val="{{ false }}">
@@ -471,7 +472,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 </sc-if>
 <sc-if value="{{ heroVisible }}" hint-placeholder-val="{{ true }}">
 <div id="sec-fabric" data-fold="{{ heroFold }}" style="display:grid;grid-template-columns:1fr;gap:12px;align-items:stretch;margin-bottom:{{ heroMb }}"><sc-if value="{{ heroHead }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:1px;min-width:0;margin-bottom:10px"><h3 style="margin:0;font-size:16px;line-height:22px;font-weight:600;color:var(--text-heading)">What you have</h3><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:12px;line-height:16px;color:var(--text-light)"><sc-for list="{{ fabricHealth }}" as="fh" hint-placeholder-count="3"><span title="{{ fh.title }}" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap"><i style="width:7px;height:7px;border-radius:9999px;background:{{ fh.dot }};flex:none"></i>{{ fh.text }}</span></sc-for></div></div></sc-if>
-<div style="position:relative;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;padding:10px 24px 12px;display:flex;align-items:stretch;min-height:{{ heroMinH }}">
+<div data-map-diagram="1" style="position:relative;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;padding:10px 24px 12px;display:flex;align-items:stretch;min-height:{{ heroMinH }}">
 
 <div style="display:grid;gap:10px;width:100%;min-width:0">
 <!-- Where you are: one breadcrumb row at the top of the picture, a trail per column (2026-09-25) -->
@@ -1108,7 +1109,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
     <sc-if value="{{ notAuthoring }}" hint-placeholder-val="{{ true }}">    <sc-if value="{{ hasGovernFindings }}" hint-placeholder-val="{{ false }}"><div style="display:grid;border-top:1px solid var(--border-secondary)"><sc-for list="{{ governFindings }}" as="f" hint-placeholder-count="1"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-secondary);color:var(--text-heading);font-size:14px"><span style="display:flex;align-items:center;gap:10px;min-width:0"><span aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;background:var(--warning);flex:none"></span><span style="font-weight:700;text-wrap:pretty">{{ f.head }}</span></span><span style="display:flex;align-items:center;gap:8px;white-space:nowrap"><button onClick="{{ f.rec.choose }}" style="height:32px;padding:0 14px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:var(--cta-hover)">{{ f.rec.name }}</button><button onClick="{{ f.askAndi }}" style="height:32px;padding:0 10px;border:0;border-radius:9999px;background:transparent;color:var(--link);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">Ask Andi</button></span></div></sc-for></div></sc-if></sc-if>
     <div style="display:grid;gap:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
-        <div id="sec-policies"><h3 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Policies</h3></div>
+        <div id="sec-policies" style="display:flex;align-items:baseline;gap:12px;min-width:0"><h3 style="margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)">Policies</h3><span style="font-size:14px;line-height:20px;color:var(--text-body);white-space:nowrap">{{ polViolLine }}</span></div>
         <div style="display:flex;gap:8px;align-items:center">
           <sc-if value="{{ hasSim }}" hint-placeholder-val="{{ false }}"><button onClick="{{ simulate }}" style="height:36px;padding:0 16px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:var(--bg-accent)">Simulate</button>
           <button onClick="{{ enforce }}" disabled="{{ enforceDisabled }}" style="height:36px;padding:0 16px;border:0;border-radius:9999px;background:{{ enforceBg }};color:{{ enforceColor }};font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">Enforce</button>
@@ -1209,7 +1210,7 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
       <sc-if value="{{ roleNoVisuals }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--text-light)">Nothing to show yet.</div></sc-if>
     </div>
     <div style="display:grid;min-width:0;border-left:2px solid var(--border-secondary);padding-left:16px">
-      <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);padding-bottom:4px">{{ roleTitle }}</div>
+      <div style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);padding-bottom:4px">{{ roleTitle }}<span style="margin-left:8px;font-weight:500;color:var(--text-light)">{{ roleCountLine }}</span></div>
       <sc-for list="{{ roleActRows }}" as="ra" hint-placeholder-count="4"><div style="display:grid;gap:4px;padding:8px 0;border-bottom:1px solid var(--border-secondary);min-width:0">
         <div style="display:flex;align-items:baseline;gap:8px;min-width:0"><b title="{{ ra.head }}" style="font-size:13px;line-height:18px;color:var(--text-heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ra.head }}</b><span style="margin-left:auto;flex:none;font-size:11px;color:var(--text-light);white-space:nowrap">{{ ra.stateLabel }}</span></div>
         <div style="display:flex;gap:8px;font-size:12px;line-height:16px;color:var(--text-body);min-width:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ra.rec }}</span><sc-if value="{{ ra.hasSave }}" hint-placeholder-val="{{ false }}"><b style="flex:none;color:var(--success);white-space:nowrap">{{ ra.saveLine }}</b></sc-if></div>

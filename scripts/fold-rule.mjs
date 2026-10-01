@@ -19,8 +19,13 @@ export const TAIL = 40;
 /**
  * The height problems on one measured page, as report lines; [] when it fits.
  * page: the walk's page name; scrollHeight: the document's; limit: the fold;
- * below: the map's { top, bottom } in document pixels, when a fold marker is on
- * the page; aboveBottom: the lowest bottom of anything in <main> before the map.
+ * below: the map's { top, bottom, titleBottom?, diagramTop? } in document
+ * pixels, when a fold marker is on the page; aboveBottom: the lowest bottom of
+ * anything in <main> before the map.
+ *
+ * The fold never cuts the map (skeptic, 2026-09-30: it cut the diagram through
+ * US East): the diagram starts at the fold or below it, and a title above the
+ * fold sits whole above it.
  */
 export function heightProblems({ page, scrollHeight, limit, below = null, aboveBottom = 0 }) {
   if (!below) return scrollHeight > limit ? [`scroll ${scrollHeight}`] : [];
@@ -29,20 +34,27 @@ export function heightProblems({ page, scrollHeight, limit, below = null, aboveB
   // One line for what is above the map: past the fold, or else under the map's top.
   if (aboveBottom > limit) out.push(`above the map ${aboveBottom}`);
   else if (below.top < aboveBottom) out.push('the map overlaps what is above it');
+  if (below.diagramTop != null && below.diagramTop < limit) out.push(`the fold cuts the map at ${limit - below.diagramTop}`);
+  else if (below.titleBottom != null && below.top < limit && below.titleBottom > limit) out.push('the fold cuts the map title');
   if (scrollHeight > below.bottom + TAIL) out.push(`past the map ${scrollHeight}`);
   return out;
 }
 
 /**
- * Runs in the page: the fold marker's box and the lowest bottom of what sits
- * above it in <main>, in document pixels, or { below: null } with no marker.
- * Fixed layers (drawers, Andi's dock) are not the page and are skipped.
+ * Runs in the page: the fold marker's box, its title's bottom and its
+ * diagram's top ([data-map-diagram]), and the lowest bottom of what sits above
+ * it in <main>, in document pixels, or { below: null } with no marker. Fixed
+ * layers (drawers, Andi's dock) are not the page and are skipped.
  */
 export function foldMarks() {
   const mark = document.querySelector('[data-fold="below"]');
   if (!mark) return { below: null, aboveBottom: 0 };
   const y = window.scrollY || 0;
   const r = mark.getBoundingClientRect();
+  const diagram = mark.querySelector('[data-map-diagram]');
+  const title = mark.querySelector('h3');
+  const titleBox = title ? title.parentElement.getBoundingClientRect() : null;
+  const extra = { ...(diagram ? { diagramTop: Math.floor(diagram.getBoundingClientRect().top + y) } : {}), ...(titleBox ? { titleBottom: Math.ceil(titleBox.bottom + y) } : {}) };
   const main = document.querySelector('main') || document.body;
   const fixed = (el) => { for (let n = el; n && n !== main; n = n.parentElement) if (getComputedStyle(n).position === 'fixed') return true; return false; };
   let aboveBottom = 0;
@@ -53,5 +65,5 @@ export function foldMarks() {
     if (!b.width || !b.height || fixed(el)) continue;
     aboveBottom = Math.max(aboveBottom, b.bottom + y);
   }
-  return { below: { top: Math.floor(r.top + y), bottom: Math.ceil(r.bottom + y) }, aboveBottom: Math.ceil(aboveBottom) };
+  return { below: { top: Math.floor(r.top + y), bottom: Math.ceil(r.bottom + y), ...extra }, aboveBottom: Math.ceil(aboveBottom) };
 }

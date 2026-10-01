@@ -270,10 +270,12 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // div 1027 -> 1115, span 837 -> 920, sc-if 429 -> 474, sc-for 234 -> 245, button 322 -> 346, aside 9 -> 10, label 29 -> 31.
 // The flow merged onto Recommended (2026-09-30): each count is Recommended's plus the flow's own move: div 1030 -> 1118, span 864 -> 947, sc-if 432 -> 477, sc-for 236 -> 247, button 332 -> 356, aside 9 -> 10, label 29 -> 31.
 // The home v2 merged onto the connect flow (2026-09-30): each count is the flow's plus the home's own move: div 1118 -> 1119, span 947 -> 938, sc-if 477 -> 481, sc-for 247 -> 252, button 356 -> 359, label 31 -> 30.
+// The home skeptic's fixes (2026-09-30): the Exposed bar's track left for a button of a hundred cells (div 1119 -> 1118),
+// and Violations & policies prints its total beside the Policies head, Your actions its count beside its title (span 938 -> 940).
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1119],
-    ['span', /<span\b/g, /<\/span>/g, 938],
+    ['div', /<div\b/g, /<\/div>/g, 1118],
+    ['span', /<span\b/g, /<\/span>/g, 940],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 481],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 252],
     ['section', /<section\b/g, /<\/section>/g, 12],

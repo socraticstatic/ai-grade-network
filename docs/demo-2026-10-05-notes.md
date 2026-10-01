@@ -7,14 +7,14 @@ Before you start: open the storefront. It opens on the NaaS home. Click **Reset 
 
 ## 0. The NaaS home: the whole network at a glance
 
-- Rail: **NaaS**. "Good morning, Network Eng" (the greeting follows the clock in Chicago time).
-- Under it, the Observe head: "13 findings open. $41,500/mo potential savings. 1 Sev 1 open now."
-- **Andi's briefing** on the left is the Monthly briefing's text for the role. **Waiting on you** on the right is the first three of Your actions, with the same Accept and Defer; Do it reads "Coming soon".
-- The five areas, each figure from the page its door opens: Discover "25 sites · 3 clouds", Connect "5 of 7 regions", Observe "1 of 2 connections", Govern "166", Cost "$41,500/mo".
-- **Now**: the eastus flap, "Azure eastus · ExpressRoute", "BGP flapping", with Trace.
-- Click **Executive** in the role chips: the briefing and the rows change to the executive team's. Click **Network Eng** to come back.
+- Rail: **NaaS**. The role chips sit on top, with **Andi's briefing ›** at the right; it opens the Monthly briefing.
+- The take-away is the worst live thing for the role: "Azure eastus is down", then "Finance rides it · 40 workloads · 22 min", and **Trace it**, which opens Paths on finance through eastus. Each counted part opens the set it counts.
+- Four snapshot cards, each a picture and the figure its door opens: Apps "5 of 8" apps healthy (a dot per app), On AT&T "2 of 7" regions private (the ring), Egress "$89,600/mo" today with the fork to "$51,100/mo" in 90 days, Exposed "54 of 303" workloads reachable from the internet (a hundred cells, 18 lit).
+- **Waiting on you** lists only what still waits: two chips, each with **Accept**. The IPsec finding is already acknowledged, so it is in Your actions, not here; "All 3 in Your actions ›" opens them.
+- At the fold: "What you have", "1 connection down", then Connect's network map below, with Connect's legend.
+- Click **Executive** in the role chips: "$41,500/mo on the table", "3 moves · 1 outage on Finance", and Egress leads the cards. Click **Network Eng** to come back.
 
-Say: one page for every role. The role changes what the top band says; the strip and Now are the same for everyone.
+Say: one page for every role. The role changes the take-away and the cards; no card repeats the take-away, and every figure opens the page that prints it.
 
 ## 1. Discover: add a source, and discovery finds it
 
@@ -67,10 +67,10 @@ Say: a new source is a credential, not a project. The hierarchy and the workload
 
 ## 8. The Estate switch (F2)
 
-- Rail: **Options**. It still reads the Connect verdict: Growing reads "7 of 9 regions still ride the public internet" (Oracle's two regions joined it in beat 1).
-- Rail: **NaaS**. The home reads "14 findings open" and "25 sites · 4 clouds" now that Oracle is in.
-- Estate, at the foot of the rail: **Established**, while on the home. Every figure recomputes: "10 findings open", "221 sites · 4 clouds", and Waiting on you lists Established's "3 paths send no telemetry", not Growing's rows.
-- Rail: **Options**: "1 of 8 regions still ride the public internet."
+- Rail: **Recommended**. It prints the Connect verdict: Growing reads "7 of 9 regions still ride the public internet" (Oracle's two regions joined it in beat 1).
+- Rail: **NaaS**. The On AT&T card reads "2 of 9" now that Oracle is in.
+- Estate, at the foot of the rail: **Established**, while on the home. Every figure recomputes: the take-away leads with the outage, "AWS eu-central-1 is down", "2 apps ride it · 96 workloads", On AT&T reads "7 of 8", and Waiting on you lists Established's "3 paths send no telemetry", not Growing's rows.
+- Rail: **Recommended**: "1 of 8 regions still ride the public internet."
 - The answer to the stakeholder's question is Appendix A of the plan (docs/superpowers/plans/2026-09-30-notes-monday-demo.md).
 
 ## If something goes sideways

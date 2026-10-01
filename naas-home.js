@@ -9,8 +9,10 @@
 // white paper"; "snapshot views"; "more visual, what's the take-away";
 // "actionability"; "it needs to tell a story without words - visuals"). The
 // approved mockup: one take-away per persona, four snapshot cards each with a
-// small picture, Waiting on you as three chips, and the Connect network map
-// below the fold.
+// picture, Waiting on you as three chips, and the Connect network map below
+// the fold. The skeptic's rules (2026-09-30): the take-away leads with the
+// worst live thing for the role; no card repeats it; every figure is printed
+// on the page its door opens.
 //
 // Pure: every figure arrives from the page that owns it (problemRows,
 // roleActAll, spendTiles, spendCols, invStats, rollup, glanceRings,
@@ -19,14 +21,31 @@
 // exactly the set its page counts.
 import { HEALTH_INK, HEALTH_WORD, healthRadius } from './naas-flowmap.js';
 
-/** Which card leads, by persona. Every order holds all four. */
+/**
+ * Which four cards show, by persona, leading card first. No card repeats the
+ * take-away (skeptic, 2026-09-30): the Architect's take-away is the On AT&T
+ * card's own figure and Security's is the Exposed card's, so each gives that
+ * slot to another snapshot (Security gets Tags, the Architect Tags too).
+ */
 export const CARD_ORDER = {
-  architect: ['onatt', 'apps', 'exposed', 'egress'],
+  architect: ['egress', 'apps', 'exposed', 'tags'],
   neteng: ['apps', 'onatt', 'egress', 'exposed'],
-  security: ['exposed', 'onatt', 'apps', 'egress'],
+  security: ['tags', 'onatt', 'apps', 'egress'],
   finops: ['egress', 'onatt', 'apps', 'exposed'],
   exec: ['egress', 'apps', 'onatt', 'exposed'],
 };
+
+// The worst live thing leads (skeptic, 2026-09-30: an outage beats an at-risk).
+const WORST = { down: 0, slo: 1, risk: 2 };
+/** Health's problems, worst state first; within a state, Health's own order. */
+export function worstFirst(probs) {
+  return [...(probs || [])].sort((a, b) => (WORST[a.state] ?? 3) - (WORST[b.state] ?? 3));
+}
+/** "AWS", "AWS and Azure", "AWS, Azure and GCP". */
+export function nameList(names) {
+  const n = [...new Set(names || [])];
+  return n.length < 2 ? (n[0] || '') : `${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`;
+}
 
 // A unit rides its number: "22 min", "15 ms" and "84%" are one word each.
 const UNIT = /^(ms|min|h|d|mo|\/mo|Gbps|Mbps|GB|TB)$/i;
@@ -57,10 +76,10 @@ const STATE_PHRASE = { down: 'down', slo: 'over SLO', risk: 'at risk', ok: 'heal
  * nothing and is never a door. `door`, `headDoor` and each part's `door` name
  * where they go; naas-app.js owns the doors.
  *
- * f: { probs, acts, onTableF, spend, could, ahead, exposed, govern, connect, pubWl, clouds, healthy }
+ * f: { probs, acts, onTableF, spend, could, banked, exposed, govern, connect, pubWl, pubClouds, healthy }
  */
 export function takeAway(rk, f) {
-  const probs = f.probs || [], acts = f.acts || [];
+  const probs = worstFirst(f.probs), acts = f.acts || [];
   const out = (o) => ({ headDoor: o.door, ...o, sub: o.parts.map(p => p.t).join(' · ') });
   if (rk === 'exec') {
     const down = probs.filter(p => p.state === 'down');
@@ -70,43 +89,58 @@ export function takeAway(rk, f) {
       parts: [{ t: one(acts.length, 'move', 'moves'), door: acts.length ? 'moves' : '' },
         down.length ? { t: `${one(down.length, 'outage', 'outages')}${on}`, door: 'health' } : { t: 'nothing down', door: '' }] });
   }
+  const cn = f.connect || {}, cm = /^([\d,]+) of ([\d,]+) regions?$/.exec(cn.value || '');
+  const pub = cm ? numOf(cm[1]) : 0;
   if (rk === 'finops') {
-    return out({ key: 'finops', icon: 'pie-chart', ink: 'var(--success)', door: 'optimize', cta: 'Optimize',
-      head: numOf(f.could) ? `Egress can drop ${f.could}/mo` : `Egress runs ${f.spend}/mo`,
-      parts: [{ t: `${f.spend}/mo today`, door: 'spend' }, { t: `${f.ahead}/mo in 90 days`, door: 'spend' }] });
+    // Spend's own words and figures (skeptic, 2026-09-30): "Could save" is what
+    // the moves save at today's volume, so it never sits over today and 90 days
+    // ahead as a drop those two figures do not show.
+    return out({ key: 'finops', icon: 'pie-chart', ink: 'var(--success)', door: 'optimize', cta: 'Optimize', headDoor: 'spend',
+      head: numOf(f.could) ? `Save ${f.could}/mo on egress` : `Egress runs ${f.spend}/mo`,
+      parts: [numOf(f.banked) ? { t: `${f.banked} banked to date`, door: 'spend' } : { t: 'Nothing banked yet', door: '' },
+        pub ? { t: `${one(pub, 'region', 'regions')} to move`, door: 'options' } : { t: 'every region on AT&T', door: '' }] });
   }
   if (rk === 'security') {
-    const gv = f.govern || {}, pol = numOf(String(gv.sub || '').replace(/^\D*/, ''));
-    const e = String(f.exposed);
+    // One line, Govern's own total; the policies left it (skeptic, 2026-09-30:
+    // the data's policy rows are not Govern's enforced count). Discover's
+    // exposed workloads are the ones the internet can reach, and the headline
+    // says so, so it never reads as the whole of a PCI finding's outbound route.
+    const gv = f.govern || {}, e = String(f.exposed), vn = numOf(gv.value);
     return out({ key: 'security', icon: 'check-shield', ink: numOf(e) ? 'var(--warning)' : 'var(--success)', door: 'violations', cta: 'Review violations',
-      head: numOf(e) ? `${e} ${e === '1' ? 'workload' : 'workloads'} exposed` : 'No workload exposed', headDoor: 'tags',
-      parts: [{ t: `${gv.value} policy violations`, door: 'violations' }, { t: one(pol, 'policy', 'policies'), door: 'violations' }] });
+      head: numOf(e) ? `${e} ${e === '1' ? 'workload' : 'workloads'} reachable from the internet` : 'No workload reachable from the internet', headDoor: numOf(e) ? 'exposed' : '',
+      parts: [vn ? { t: `${gv.value} policy ${vn === 1 ? 'violation' : 'violations'}`, door: 'violations' } : { t: 'No policy violations', door: '' }] });
   }
   if (rk === 'architect') {
-    const cn = f.connect || {}, m = /^([\d,]+) of ([\d,]+) regions?$/.exec(cn.value || '');
-    const pub = m ? numOf(m[1]) : 0;
-    return out({ key: 'architect', icon: 'cloud', ink: pub ? 'var(--warning)' : 'var(--success)', door: 'connect', cta: cn.door || 'Options',
-      head: m ? `${cn.value} still ${pub === 1 ? 'rides' : 'ride'} the public internet` : (cn.value || 'Nothing connected yet'),
-      parts: [{ t: `${f.pubWl} workloads ride ${pub === 1 ? 'it' : 'them'}`, door: 'options' }, { t: one(String(f.clouds), 'cloud', 'clouds'), door: 'clouds' }] });
+    // The clouds are named, not counted: the public regions' own clouds (skeptic,
+    // 2026-09-30: the estate's count read as if the problem spanned every cloud).
+    if (!pub) return out({ key: 'architect', icon: 'cloud', ink: 'var(--success)', door: 'connect', cta: cn.door || 'Connect',
+      head: cm ? 'Every region rides the AT&T network' : (cn.value || 'Nothing connected yet'), parts: [{ t: cn.sub || 'nothing on the public internet', door: '' }] });
+    return out({ key: 'architect', icon: 'cloud', ink: 'var(--warning)', door: 'connect', cta: cn.door || 'Recommended',
+      head: `${cn.value} still ${pub === 1 ? 'rides' : 'ride'} the public internet`,
+      parts: [{ t: `${f.pubWl} workloads ride ${pub === 1 ? 'it' : 'them'}`, door: 'discover' }, { t: `on ${nameList(f.pubClouds)}`, door: '' }] });
   }
-  // Network Eng: the first problem in Health's own ranking.
+  // Network Eng: the worst live problem, in Health's own words.
   const p = probs[0];
   if (!p) return out({ key: 'neteng', icon: 'router', ink: HEALTH_INK.ok, door: 'health', cta: 'See Health',
     head: 'Nothing is down or over SLO', parts: [{ t: `${f.healthy} apps healthy`, door: 'health' }] });
   const who = p.apps.length === 1 ? { t: `${cap(p.apps[0])} rides it`, door: 'app', arg: p.apps[0] } : { t: `${p.apps.length} apps ride it`, door: 'health' };
-  return out({ key: 'neteng', icon: 'router', ink: HEALTH_INK[p.state] || 'var(--warning)', door: 'trace', cta: 'Trace it',
+  return out({ key: 'neteng', icon: 'router', ink: HEALTH_INK[p.state] || 'var(--warning)', door: 'trace', cta: 'Trace it', probKey: p.key,
     head: `${p.where} is ${STATE_PHRASE[p.state] || p.state}`,
     parts: [who, { t: `${enf(p.wl)} workloads`, door: 'health' }, { t: p.ago, door: '' }] });
 }
 
 // ---- The pictures ----
 
-// In an 80-unit box, drawn at 96px: the outer ring is regions, the inner ring sites.
+// In an 80-unit box: the outer ring is regions, the inner ring sites.
 const RING = { sw: 8, outer: 35, inner: 24, gap: 1.6 };
+/** The shortest arc drawn, in ring units: long enough to see and to click (skeptic, 2026-09-30). */
+export const MIN_ARC = 6;
 /**
  * Concentric rings, one list of arcs: each ring's parts in order from twelve
  * o'clock, a zero part left out (it counts nothing, so it is never drawn and
- * never a door). Arcs are stroke dashes on a circle of the ring's radius.
+ * never a door). Arcs are stroke dashes on a circle of the ring's radius. A
+ * part too small to see is drawn at MIN_ARC and the others give up the length
+ * in proportion, so the ring still closes; its title carries the true count.
  */
 export function ringArcs(rings) {
   const out = [];
@@ -114,13 +148,16 @@ export function ringArcs(rings) {
     const total = ring.parts.reduce((a, p) => a + p.n, 0);
     if (!total) continue;
     const C = 2 * Math.PI * ring.r, live = ring.parts.filter(p => p.n > 0), gap = live.length > 1 ? RING.gap : 0;
+    const floor = MIN_ARC + gap;
+    const small = live.map(p => live.length > 1 && p.n / total * C < floor);
+    const bigN = live.reduce((a, p, i) => a + (small[i] ? 0 : p.n), 0);
+    const rest = C - small.filter(Boolean).length * floor;
     let at = 0;
-    for (const p of ring.parts) {
-      if (!(p.n > 0)) continue;
-      const len = p.n / total * C;
-      out.push({ ...p, r: ring.r, sw: RING.sw, dash: `${Math.max(0.5, len - gap).toFixed(2)} ${C.toFixed(2)}`, off: (-at).toFixed(2) });
+    live.forEach((p, i) => {
+      const len = small[i] ? floor : p.n / bigN * rest;
+      out.push({ ...p, r: ring.r, sw: RING.sw, dash: `${(len - gap).toFixed(2)} ${C.toFixed(2)}`, off: (-at).toFixed(2) });
       at += len;
-    }
+    });
   }
   return out;
 }
@@ -149,28 +186,35 @@ export function sparkOf(past, asIs, moved) {
     todayL: pc(today[0], SPARK.w), todayT: pc(today[1], SPARK.h), asIsT: pc(end[1], SPARK.h) };
 }
 
+/** The Exposed card's picture: a hundred cells, the exposed share lit (skeptic, 2026-09-30: a 3% bar read as a dot). */
+export function waffleOf(n, of) {
+  const lit = n > 0 && of > 0 ? Math.min(100, Math.max(1, Math.round(n / of * 100))) : 0;
+  return Array.from({ length: 100 }, (_, i) => ({ key: 'w' + i, on: i < lit, ink: i < lit ? 'var(--warning)' : 'var(--bg-neutral)' }));
+}
+
 /**
- * The four snapshot cards, in the role's order. Each card is one door to its
- * page (go); its big figure, its other figures, its ring's arcs, its dots and
- * its bar each open the set they count.
+ * The snapshot cards, the role's four in its order. Each card is one door to
+ * its page (go); its big figure, its other figures, its ring's arcs, its dots
+ * and its cells each open the set they count, on a page that prints them.
  *
- * f: { glance, health, flows, spend, spendCols, exposed, workloads, govern }
- * doors: { picture, capacity, options, sitesOn, sitesOff, health, appPath, spend, optimize, tags, policies }
+ * f: { glance, health, flows, spend, spendCols, exposed, workloads, govern, tags }
+ * doors: { picture, options, sitesOn, sitesOff, health, appPath, spend, discover, tags, tag, policies }
  */
 export function snapshotCards(rk, f, doors) {
   const g = f.glance || {};
   const regPriv = g.regPriv || 0, regTotal = g.regTotal || 0, sitesOn = g.sitesOn || 0, sitesTotal = g.sitesTotal || 0;
   const edge = 'var(--border-secondary)';
-  const INK_PRIV = 'var(--viz-1)', INK_SITE = 'var(--viz-2)', INK_OFF = 'var(--viz-6)';
-  const card = (key, label, rest) => ({ key, label, edge, suffix: '', unit: '', figs: [], legend: [], segs: [], dots: [], bar: [], spark: null,
-    isRing: false, isDots: false, isSpark: false, isBar: false, ...rest });
+  const INK_PRIV = 'var(--viz-1)', INK_SITE = 'var(--viz-2)', INK_OFF = 'var(--viz-6)', INK_COVERED = 'var(--border-primary)';
+  const card = (key, label, rest) => ({ key, label, edge, suffix: '', unit: '', figs: [], legend: [], segs: [], dots: [], waffle: [], spark: null, wafTitle: '', wafGo: () => {}, wafOff: true,
+    isRing: false, isDots: false, isSpark: false, isWaffle: false, ...rest });
 
+  // The private regions are Connect's own "N are private"; the map is where they are drawn.
   const onatt = card('onatt', 'On AT&T', {
     door: 'Connect', go: doors.picture(), value: `${enf(regPriv)} of ${enf(regTotal)}`, unit: 'regions private', swatch: INK_PRIV,
-    valueGo: doors.capacity(), valueOff: !regPriv, isRing: true,
+    valueGo: doors.picture(), valueOff: !regPriv, isRing: true,
     segs: ringArcs([
       { r: RING.outer, parts: [
-        { key: 'priv', n: regPriv, ink: INK_PRIV, title: `${enf(regPriv)} ${regPriv === 1 ? 'region' : 'regions'} private`, go: doors.capacity() },
+        { key: 'priv', n: regPriv, ink: INK_PRIV, title: `${enf(regPriv)} ${regPriv === 1 ? 'region' : 'regions'} private`, go: doors.picture() },
         { key: 'pub', n: regTotal - regPriv, ink: INK_OFF, title: `${enf(regTotal - regPriv)} ${regTotal - regPriv === 1 ? 'region' : 'regions'} on the public internet`, go: doors.options() }] },
       { r: RING.inner, parts: [
         { key: 'att', n: sitesOn, ink: INK_SITE, title: `${enf(sitesOn)} ${sitesOn === 1 ? 'site' : 'sites'} on AT&T`, go: doors.sitesOn() },
@@ -195,18 +239,30 @@ export function snapshotCards(rk, f, doors) {
   const egress = card('egress', 'Egress', {
     door: 'Spend', go: doors.spend(), value: spend.spend, suffix: '/mo', unit: 'egress today', valueGo: doors.spend(), valueOff: !numOf(spend.spend), isSpark: true,
     spark: sparkOf(past, next.map(x => x.baseN + x.topN), next.map(x => x.baseN)),
-    figs: [{ key: 'act', v: `${spend.ahead}/mo`, u: 'in 90 days, if you act', swatch: 'var(--success)', go: doors.optimize(), off: !numOf(spend.ahead) }],
+    // Spend's own "In 90 days" tile, so it opens Spend (skeptic, 2026-09-30).
+    figs: [{ key: 'act', v: `${spend.ahead}/mo`, u: 'in 90 days, if you act', swatch: 'var(--success)', go: doors.spend(), off: !numOf(spend.ahead) }],
   });
 
+  // Exposed of all, as Discover's At a glance prints them both: the workloads the internet can reach.
   const exN = numOf(f.exposed), wlN = numOf(f.workloads);
   const gv = f.govern || {};
+  const exTitle = `${f.exposed} of ${f.workloads} workloads reachable from the internet`;
   const exposed = card('exposed', 'Exposed', {
-    door: 'Violations', go: doors.policies(), value: String(f.exposed), unit: 'workloads exposed', swatch: 'var(--warning)', valueGo: doors.tags(), valueOff: !exN, isBar: true,
-    bar: exN && wlN ? [{ key: 'exposed', w: `${(exN / wlN * 100).toFixed(2)}%`, ink: 'var(--warning)', title: `${f.exposed} of ${f.workloads} workloads exposed`, go: doors.tags() }] : [],
-    figs: [{ key: 'violations', v: String(gv.value), u: 'policy violations', swatch: '', go: doors.policies(), off: !numOf(gv.value) }],
+    door: 'Discover', go: doors.discover(), value: `${f.exposed} of ${f.workloads}`, unit: 'workloads reachable from the internet', swatch: 'var(--warning)', valueGo: doors.discover(), valueOff: !exN, isWaffle: true,
+    waffle: waffleOf(exN, wlN), wafTitle: exTitle, wafGo: doors.discover(), wafOff: !exN,
+    figs: [{ key: 'violations', v: String(gv.value), u: numOf(gv.value) === 1 ? 'policy violation' : 'policy violations', swatch: '', go: doors.policies(), off: !numOf(gv.value) }],
   });
 
-  const by = { onatt, apps, egress, exposed };
+  // Tags with no policy: Govern > Tags, one mark a tag in Govern's order; a bare tag is at risk.
+  const tagRows = f.tags || [];
+  const bare = tagRows.filter(t => !t.covered).length;
+  const tags = card('tags', 'Tags', {
+    door: 'Govern', go: doors.tags(), value: `${enf(bare)} of ${enf(tagRows.length)}`, unit: 'tags with no policy', swatch: 'var(--warning)', valueGo: doors.tags(), valueOff: !bare, isDots: true,
+    dots: tagRows.map((t, i) => ({ key: t.key, ink: t.covered ? INK_COVERED : 'var(--warning)', rad: '9999px', title: `${t.name} · ${t.covered ? t.coverLabel : 'No policy'}`, go: doors.tag(i) })),
+    legend: [['bare', 'No policy', 'var(--warning)', bare], ['covered', 'Covered', INK_COVERED, tagRows.length - bare]].filter(x => x[3] > 0).map(([key, word, ink]) => ({ key, word, ink, rad: '9999px' })),
+  });
+
+  const by = { onatt, apps, egress, exposed, tags };
   return (CARD_ORDER[rk] || CARD_ORDER.neteng).map(k => by[k]).map(c => ({ ...c,
     figs: c.figs.map(x => ({ ...x, hasSwatch: !!x.swatch })), hasSwatch: !!c.swatch, hasSuffix: !!c.suffix }));
 }

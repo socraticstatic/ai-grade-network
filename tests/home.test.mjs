@@ -47,7 +47,8 @@ test('the take-away is one headline, one line and one action per persona, each f
       const t = v.homeTake;
       assert.ok(t && t.head && t.sub && t.cta, `${where}: no take-away`);
       if (persona === 'neteng') {
-        const p = v.problemRows[0];
+        // The worst live problem leads (skeptic, 2026-09-30): an outage beats over SLO beats at risk.
+        const p = [...v.problemRows].sort((a, b) => ({ down: 0, slo: 1, risk: 2 }[a.state] - { down: 0, slo: 1, risk: 2 }[b.state]))[0];
         if (p) {
           assert.equal(t.head, `${p.where} is ${WORD[p.state]}`, where);
           const who = p.apps.length === 1 ? `${p.apps[0][0].toUpperCase()}${p.apps[0].slice(1)} rides it` : `${p.apps.length} apps ride it`;
@@ -67,21 +68,27 @@ test('the take-away is one headline, one line and one action per persona, each f
         assert.equal(t.cta, 'See the moves', where);
       }
       if (persona === 'finops') {
-        assert.equal(t.head, `Egress can drop ${tile(v, 'could')}/mo`, where);
-        assert.equal(t.sub, `${tile(v, 'spend')}/mo today · ${tile(v, 'ahead')}/mo in 90 days`, where);
+        // Spend's own words (skeptic, 2026-09-30): Could save, what is banked, the regions that move.
+        const pub = +roll(v, 'connect').value.split(' ')[0];
+        assert.equal(t.head, `Save ${tile(v, 'could')}/mo on egress`, where);
+        assert.equal(t.sub, `${money(tile(v, 'banked')) ? `${tile(v, 'banked')} banked to date` : 'Nothing banked yet'} · ${pub} ${pub === 1 ? 'region' : 'regions'} to move`, where);
         assert.equal(t.cta, 'Optimize', where);
       }
       if (persona === 'security') {
-        const e = stat(v, 'e'), g = roll(v, 'govern'), pol = +g.sub.match(/across (\d+) polic/)[1];
-        assert.equal(t.head, `${e} ${e === '1' ? 'workload' : 'workloads'} exposed`, where);
-        assert.equal(t.sub, `${g.value} policy violations · ${pol} ${pol === 1 ? 'policy' : 'policies'}`, where);
+        // One part, Govern's total; the policy-row count left (skeptic, 2026-09-30).
+        const e = stat(v, 'e'), g = roll(v, 'govern');
+        assert.equal(t.head, `${e} ${e === '1' ? 'workload' : 'workloads'} reachable from the internet`, where);
+        assert.equal(t.sub, `${g.value} policy violations`, where);
         assert.equal(t.cta, 'Review violations', where);
       }
       if (persona === 'architect') {
+        // The public regions' clouds, named (skeptic, 2026-09-30).
         const cn = roll(v, 'connect'), pub = +cn.value.split(' ')[0];
         const pubWl = v.haveCards[1].soWhat.match(/([\d,]+) workloads on the internet/)[1];
+        const names = [...new Set(v.allRegions.filter(r => !r.priv).map(r => r.cloud))];
+        const named = names.length < 2 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
         assert.equal(t.head, `${cn.value} still ${pub === 1 ? 'rides' : 'ride'} the public internet`, where);
-        assert.equal(t.sub, `${pubWl} workloads ride ${pub === 1 ? 'it' : 'them'} · ${stat(v, 'c')} ${stat(v, 'c') === '1' ? 'cloud' : 'clouds'}`, where);
+        assert.equal(t.sub, `${pubWl} workloads ride ${pub === 1 ? 'it' : 'them'} · on ${named}`, where);
         assert.equal(t.cta, cn.door, where);
       }
     }
@@ -120,14 +127,16 @@ test('the take-away\'s headline and each counted part of its line open the set t
   // Executive: the moves are Your actions; the outage is in Health.
   assert.deepEqual(at(tap('exec', part(0)), ['tab', 'obPage', 'insPanel']), ['observe', 'insights', 'role']);
   assert.deepEqual(at(tap('exec', part(1)), ['tab', 'obPanel']), ['observe', 'health']);
-  // FinOps: today and in 90 days are Spend's own tiles.
-  for (const i of [0, 1]) assert.deepEqual(at(tap('finops', part(i)), ['tab', 'costPanel']), ['cost', 'spend']);
-  // Security: the exposed workloads are Govern's Tags; the violations and their policies, Violations & policies.
-  assert.deepEqual(at(tap('security', t => t.headGo), ['tab', 'govPanel']), ['govern', 'tags']);
-  for (const i of [0, 1]) assert.deepEqual(at(tap('security', part(i)), ['tab', 'govPanel']), ['govern', 'policies']);
-  // Architect: the workloads on the internet are Options' list; the clouds are Discover's Your clouds.
-  assert.deepEqual(at(tap('architect', part(0)), ['tab', 'cnPage']), ['connect', 'options']);
-  assert.deepEqual(at(tap('architect', part(1)), ['screen', 'discoverView', 'estPanel']), ['s1', 'estate', 'clouds']);
+  // FinOps: Could save and banked are Spend's own tiles; the regions to move are Recommended's.
+  assert.deepEqual(at(tap('finops', t => t.headGo), ['tab', 'costPanel']), ['cost', 'spend']);
+  assert.deepEqual(at(tap('finops', part(0)), ['tab', 'costPanel']), ['cost', 'spend']);
+  assert.deepEqual(at(tap('finops', part(1)), ['tab', 'cnPage']), ['connect', 'options']);
+  // Security: the exposed workloads are Discover's At a glance, scanned; the violations, Violations & policies.
+  assert.deepEqual(at(tap('security', t => t.headGo), ['screen', 'discoverView', 'estPanel', 'scanStep']), ['s1', 'estate', 'glance', 4]);
+  assert.deepEqual(at(tap('security', part(0)), ['tab', 'govPanel']), ['govern', 'policies']);
+  // Architect: the workloads on the internet are Discover's At a glance; the clouds are named, not a door.
+  assert.deepEqual(at(tap('architect', part(0)), ['screen', 'discoverView', 'estPanel']), ['s1', 'estate', 'glance']);
+  assert.equal(vals(home('partial', { persona: 'architect' })).homeTake.parts[1].off, true);
 });
 
 test('the persona chips switch the take-away and the card order', () => {
@@ -144,10 +153,14 @@ test('the persona chips switch the take-away and the card order', () => {
   assert.equal(heads.size, ROLES.length, 'two personas share a take-away');
   assert.deepEqual(CARD_ORDER.neteng[0], 'apps');
   assert.deepEqual(CARD_ORDER.exec[0], 'egress');
-  assert.deepEqual(CARD_ORDER.security[0], 'exposed');
-  assert.deepEqual(CARD_ORDER.architect[0], 'onatt');
+  // No card repeats the take-away (skeptic, 2026-09-30): Security leads with Tags, the Architect with Egress.
+  assert.deepEqual(CARD_ORDER.security[0], 'tags');
+  assert.deepEqual(CARD_ORDER.architect[0], 'egress');
   assert.deepEqual(CARD_ORDER.finops[0], 'egress');
-  for (const order of Object.values(CARD_ORDER)) assert.deepEqual(order.slice().sort(), ['apps', 'egress', 'exposed', 'onatt']);
+  for (const order of Object.values(CARD_ORDER)) {
+    assert.equal(new Set(order).size, 4);
+    for (const k of order) assert.ok(['apps', 'egress', 'exposed', 'onatt', 'tags'].includes(k), k);
+  }
 });
 
 // ---- 2. The four snapshot cards ----
@@ -175,12 +188,12 @@ test('every card\'s figures are its page\'s own, on every estate', () => {
     assert.match(eg.spark.past, /^M[\d.]+,[\d.]+( L[\d.]+,[\d.]+){11}$/, `${view}: twelve months drawn`);
     assert.match(eg.spark.asIs, /^M[\d.]+,[\d.]+( L[\d.]+,[\d.]+){3}$/, `${view}: the forecast, three months on from today`);
     assert.match(eg.spark.act, /^M[\d.]+,[\d.]+( L[\d.]+,[\d.]+){3}$/, `${view}: if you act, three months on`);
-    // Exposed: Discover's exposed workloads, and Govern's violations.
+    // Exposed: Discover's exposed workloads of all, and Govern's violations; the cells are the share.
     const ex = card(v, 'exposed');
-    assert.equal(ex.value, stat(v, 'e'), `${view}: exposed`);
+    assert.equal(ex.value, `${stat(v, 'e')} of ${stat(v, 'w')}`, `${view}: exposed`);
     assert.equal(ex.figs[0].v, roll(v, 'govern').value, `${view}: violations`);
     const share = money(stat(v, 'e')) / money(stat(v, 'w')) * 100;
-    assert.equal(ex.bar[0].w, `${share.toFixed(2)}%`, `${view}: the bar is exposed of all workloads`);
+    assert.equal(ex.waffle.filter(c => c.on).length, Math.max(1, Math.round(share)), `${view}: the lit cells are exposed of all workloads`);
   }
 });
 
@@ -201,17 +214,17 @@ test('each card is one door to its page, and each figure, ring segment, dot and 
   assert.deepEqual(at(click(v => card(v, 'onatt').go), ['screen', 'tab', 'cnPage']), ['s3', 'connect', 'picture']);
   assert.deepEqual(at(click(v => card(v, 'apps').go), ['screen', 'tab', 'obPage', 'obPanel', 'healthView']), ['s3', 'observe', 'perf', 'health', 'app']);
   assert.deepEqual(at(click(v => card(v, 'egress').go), ['screen', 'tab', 'costPanel']), ['s3', 'cost', 'spend']);
-  assert.deepEqual(at(click(v => card(v, 'exposed').go), ['screen', 'tab', 'govPanel']), ['s3', 'govern', 'policies']);
-  // On AT&T: private regions are the connections Capacity lists; public ones are Options' list;
-  // sites on or off AT&T are the network map's own Reach filter.
+  assert.deepEqual(at(click(v => card(v, 'exposed').go), ['screen', 'discoverView', 'estPanel']), ['s1', 'estate', 'glance']);
+  // On AT&T: private regions are Connect's own "N are private", on its map; public ones are
+  // Recommended's list; sites on or off AT&T are the network map's own Reach filter.
   const segs = card(vals(home('partial')), 'onatt').segs;
   assert.deepEqual(segs.map(g => g.key), ['priv', 'pub', 'att', 'outside']);
   const seg = (k) => (v) => card(v, 'onatt').segs.find(g => g.key === k).go;
-  assert.deepEqual(at(click(seg('priv')), ['screen', 'tab', 'obPage', 'obPanel']), ['s3', 'observe', 'perf', 'conn']);
+  assert.deepEqual(at(click(seg('priv')), ['screen', 'tab', 'cnPage']), ['s3', 'connect', 'picture']);
   assert.deepEqual(at(click(seg('pub')), ['screen', 'tab', 'cnPage']), ['s3', 'connect', 'options']);
   assert.deepEqual(click(seg('att')).state.siteFilter, { reach: 'att' });
   assert.deepEqual(click(seg('outside')).state.siteFilter, { reach: 'outside' });
-  assert.deepEqual(at(click(v => card(v, 'onatt').valueGo), ['screen', 'tab', 'obPanel']), ['s3', 'observe', 'conn']);
+  assert.deepEqual(at(click(v => card(v, 'onatt').valueGo), ['screen', 'tab', 'cnPage']), ['s3', 'connect', 'picture']);
   const sites = click(v => card(v, 'onatt').figs[0].go);
   assert.deepEqual([sites.state.screen, sites.state.tab, sites.state.cnPage, sites.state.siteFilter], ['s3', 'connect', 'picture', { reach: 'att' }]);
   // Each app's dot opens that app's own path in Paths.
@@ -223,19 +236,19 @@ test('each card is one door to its page, and each figure, ring segment, dot and 
     assert.deepEqual(at(c, ['screen', 'tab', 'obPanel']), ['s3', 'observe', 'paths'], d.key);
     assert.equal(c.state.pathSel, pathRow(d.key).key, d.key);
   }
-  // Egress: today is Spend, if you act is Optimize.
+  // Egress: today and in 90 days are both Spend's own tiles (skeptic, 2026-09-30).
   assert.deepEqual(at(click(v => card(v, 'egress').valueGo), ['screen', 'tab', 'costPanel']), ['s3', 'cost', 'spend']);
-  assert.deepEqual(at(click(v => card(v, 'egress').figs[0].go), ['screen', 'tab', 'costPanel']), ['s3', 'cost', 'optimize']);
-  // Exposed: the workloads are Govern's Tags (exposed per app), the violations Govern's list.
-  assert.deepEqual(at(click(v => card(v, 'exposed').valueGo), ['screen', 'tab', 'govPanel']), ['s3', 'govern', 'tags']);
-  assert.deepEqual(at(click(v => card(v, 'exposed').bar[0].go), ['screen', 'tab', 'govPanel']), ['s3', 'govern', 'tags']);
+  assert.deepEqual(at(click(v => card(v, 'egress').figs[0].go), ['screen', 'tab', 'costPanel']), ['s3', 'cost', 'spend']);
+  // Exposed: the workloads and their cells are Discover's At a glance, the violations Govern's list.
+  assert.deepEqual(at(click(v => card(v, 'exposed').valueGo), ['screen', 'discoverView', 'estPanel', 'scanStep']), ['s1', 'estate', 'glance', 4]);
+  assert.deepEqual(at(click(v => card(v, 'exposed').wafGo), ['screen', 'discoverView', 'estPanel', 'scanStep']), ['s1', 'estate', 'glance', 4]);
   assert.deepEqual(at(click(v => card(v, 'exposed').figs[0].go), ['screen', 'tab', 'govPanel']), ['s3', 'govern', 'policies']);
   // Only traffic figures open Logs: nothing on the home counts traffic, so nothing opens Logs.
-  const doors = (x) => [x.go, x.valueGo, ...x.figs.map(f => f.go), ...(x.segs || []).map(g => g.go), ...(x.dots || []).map(d => d.go), ...(x.bar || []).map(b => b.go)];
-  for (const k of ['onatt', 'apps', 'egress', 'exposed']) {
-    const n = doors(card(vals(home('partial')), k)).length;
+  const doors = (x) => [x.go, x.valueGo, x.wafGo, ...x.figs.map(f => f.go), ...(x.segs || []).map(g => g.go), ...(x.dots || []).map(d => d.go)];
+  for (const [k, persona] of [['onatt', 'neteng'], ['apps', 'neteng'], ['egress', 'neteng'], ['exposed', 'neteng'], ['tags', 'security']]) {
+    const n = doors(card(vals(home('partial', { persona })), k)).length;
     for (let i = 0; i < n; i++) {
-      const c = home('partial');
+      const c = home('partial', { persona });
       doors(card(vals(c), k))[i]();
       assert.notEqual(c.state.obPage, 'logs', `${k} door ${i}`);
     }
@@ -257,23 +270,23 @@ test('no card looks selected: one edge for all four', () => {
 
 // ---- 3. Waiting on you ----
 
-test('Waiting on you is the first three of the role\'s Your actions', () => {
+test('Waiting on you is the first three of the role\'s Your actions still waiting', () => {
   for (const view of LIVE) for (const persona of ROLES) {
     const v = vals(home(view, { persona }));
-    assert.deepEqual(v.homeWaiting.map(a => a.key), v.roleActAll.slice(0, 3).map(a => a.key), `${view}/${persona}`);
+    assert.deepEqual(v.homeWaiting.map(a => a.key), v.roleActAll.filter(a => a.waiting).slice(0, 3).map(a => a.key), `${view}/${persona}`);
   }
   const v = vals(home('partial', { persona: 'finops' }));
   assert.equal(v.homeWaitingMore, `All ${v.roleActAll.length} in Your actions ›`);
-  assert.equal(vals(home('mature', { persona: 'security' })).homeWaitingNone, 'Nothing waiting on you');
+  assert.equal(vals(home('mature', { persona: 'security' })).homeWaitingNone, 'No finding waits on you');
 });
 
-test('Accept on a chip moves the finding Your actions shows, in place', () => {
+test('Accept on a chip moves the finding Your actions shows, and it leaves Waiting on you', () => {
   const c = home('partial', { persona: 'architect' });
   const row = vals(c).homeWaiting.find(a => a.canAccept);
   assert.ok(row, 'an open row to accept');
   row.accept();
   assert.equal(c.state.screen, 's0', 'Accept stays on the home');
-  assert.equal(vals(c).homeWaiting.find(a => a.key === row.key).stateLabel, 'Acknowledged');
+  assert.ok(!vals(c).homeWaiting.some(a => a.key === row.key), 'an accepted finding still waits');
   c.setState({ screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'role' });
   assert.equal(vals(c).roleActAll.find(a => a.key === row.key).stateLabel, 'Acknowledged');
 });
@@ -385,7 +398,7 @@ test('the home is one section: role chips, the take-away, four cards, Waiting on
   for (const b of ['<sc-for list="{{ roleChips }}"', '{{ homeBriefGo }}', "Andi's briefing",
     '{{ homeTake.head }}', '{{ homeTake.headGo }}', '<sc-for list="{{ homeTake.parts }}" as="tp"', '{{ tp.go }}', '{{ tp.off }}', '{{ homeTake.go }}', '{{ homeTake.cta }}', '{{ homeTake.icon }}', '{{ homeTake.ink }}',
     '<sc-for list="{{ homeCards }}"', '{{ hc.go }}', '{{ hc.valueGo }}', '<sc-for list="{{ hc.figs }}"', '{{ hf.go }}',
-    '<sc-for list="{{ hc.segs }}"', '{{ sg.go }}', '<sc-for list="{{ hc.dots }}"', '{{ dt.go }}', '<sc-for list="{{ hc.bar }}"', '{{ br.go }}',
+    '<sc-for list="{{ hc.segs }}"', '{{ sg.go }}', '<sc-for list="{{ hc.dots }}"', '{{ dt.go }}', '<sc-for list="{{ hc.waffle }}"', '{{ hc.wafGo }}', '{{ hc.wafOff }}',
     '{{ hc.spark.past }}', '{{ hc.spark.asIs }}', '{{ hc.spark.act }}',
     'Waiting on you', '<sc-for list="{{ homeWaiting }}"', '{{ ra.accept }}', '{{ ra.canAccept }}', '{{ ra.open }}', '{{ homeWaitingGo }}', '{{ homeStep.go }}']) {
     assert.ok(block.includes(b), `${b} is not in the home`);
@@ -394,7 +407,8 @@ test('the home is one section: role chips, the take-away, four cards, Waiting on
   assert.match(block, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/, 'Waiting on you is three equal chips');
   for (const gone of ['{{ homeGreeting }}', '{{ homeHead }}', '{{ homeBrief }}', '{{ homeStrip }}', '{{ homeNow }}', 'onChange="{{ setRange }}"']) assert.ok(!block.includes(gone), `${gone} is still on the home`);
   // Every figure, segment, dot and bar is a button bound to its own door.
-  for (const [loop, as, go] of [['hc.figs', 'hf', 'hf.go'], ['hc.segs', 'sg', 'sg.go'], ['hc.dots', 'dt', 'dt.go'], ['hc.bar', 'br', 'br.go']]) {
+  assert.match(block, /<button onClick="\{\{ hc\.wafGo \}\}" disabled="\{\{ hc\.wafOff \}\}"[^>]*><sc-for list="\{\{ hc\.waffle \}\}"/, 'the cells are one button, disabled when nothing is exposed');
+  for (const [loop, as, go] of [['hc.figs', 'hf', 'hf.go'], ['hc.segs', 'sg', 'sg.go'], ['hc.dots', 'dt', 'dt.go']]) {
     const j = block.indexOf(`<sc-for list="{{ ${loop} }}" as="${as}"`);
     const body = block.slice(j, block.indexOf('</sc-for>', j));
     assert.match(body, new RegExp(`<button[^>]*onClick="\\{\\{ ${go.replace('.', '\\.')} \\}\\}"`), `${loop}: not a button bound to ${go}`);
