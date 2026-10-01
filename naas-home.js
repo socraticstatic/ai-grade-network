@@ -31,7 +31,8 @@ export const CARD_ORDER = {
   architect: ['egress', 'apps', 'exposed', 'tags'],
   neteng: ['apps', 'onatt', 'egress', 'exposed'],
   security: ['tags', 'onatt', 'apps', 'egress'],
-  finops: ['egress', 'onatt', 'apps', 'exposed'],
+  // Who has to act (Dev's FinOps home, 2026-10-01): FinOps' own savings, engineering's, and what is banked.
+  finops: ['egress', 'approve', 'eng', 'onatt'],
   exec: ['egress', 'apps', 'onatt', 'exposed'],
 };
 
@@ -284,7 +285,12 @@ export function snapshotCards(rk, f, doors) {
     legend: [['bare', 'No policy', false, bare], ['covered', 'Covered', true, tagRows.length - bare]].filter(x => x[3] > 0).map(([key, word, covered]) => ({ key, word, ...tagMark(covered), rad: '9999px' })),
   });
 
-  const by = { onatt, apps, egress, exposed, tags };
+  const ow = f.owners || { mineN: 0, mine: 0, engN: 0, eng: 0, banked: '' };
+  const usd = (n) => `$${enf(Math.round(n))}`;
+  const approve = card('approve', 'Yours to approve', { door: 'Optimize', go: doors.optimize(), value: enf(ow.mineN), valueGo: () => {}, valueOff: true });
+  const eng = card('eng', 'With engineering', { door: 'Optimize', go: doors.optimize(), value: usd(ow.eng), valueGo: () => {}, valueOff: true });
+  const banked = card('banked', 'Savings banked', { door: 'Spend', go: doors.spend(), value: ow.banked || '$0', valueGo: doors.spend(), valueOff: !numOf(ow.banked) });
+  const by = { onatt, apps, egress, exposed, tags, approve, eng, banked };
   // The KPI face of each card (Dev's home, Micah 2026-10-01: "model this for all personas"): a label, a pill
   // that says if it needs you, the figure, one segmented bar, one footnote. The figures are the card's own.
   const pct = (n, of) => (of > 0 ? `${Math.max(0, Math.min(100, n / of * 100)).toFixed(1)}%` : '0%');
@@ -308,6 +314,15 @@ export function snapshotCards(rk, f, doors) {
     tags: { kLabel: 'Tags with no policy', big: enf(bare), of: `of ${enf(tagRows.length)}`, ...(bare ? kp('warn', `${enf(bare)} uncovered`) : kp('ok', 'All covered')),
       bar: [{ key: 'cov', w: pct(tagRows.length - bare, tagRows.length), ink: 'var(--success)' }], foot: bare ? 'A tag with no policy can reach anything' : 'Every tag has a policy' },
   };
+  const allSave = ow.mine + ow.eng || 1;
+  Object.assign(KPI, {
+    approve: { kLabel: 'Yours to approve', big: enf(ow.mineN), of: ow.mineN === 1 ? 'move' : 'moves', ...(ow.mineN ? kp('warn', `${ow.mineN} to approve`) : kp('ok', 'Nothing waiting')),
+      bar: [{ key: 'mine', w: pct(ow.mine, allSave), ink: 'var(--success)' }], foot: `${Math.round(ow.mine / allSave * 100)}% of the open savings are FinOps' own moves` },
+    eng: { kLabel: 'With engineering', big: usd(ow.eng), of: '/mo', ...(ow.engN ? kp('warn', `${ow.engN} with other teams`) : kp('ok', 'Nothing waiting')),
+      bar: [{ key: 'eng', w: pct(ow.eng, allSave), ink: 'var(--viz-1)' }], foot: 'Network and architecture moves: FinOps follows up, engineering acts' },
+    banked: { kLabel: 'Savings banked', big: ow.banked || '$0', of: 'to date', ...(numOf(ow.banked) ? kp('ok', 'Confirmed') : kp('warn', 'Nothing banked')),
+      bar: [{ key: 'b', w: numOf(ow.banked) ? '100%' : '0%', ink: 'var(--success)' }], foot: 'Saved by moves already made on the AT&T network' },
+  });
   Object.keys(by).forEach(k2 => Object.assign(by[k2], KPI[k2]));
   return (CARD_ORDER[rk] || CARD_ORDER.neteng).map(k => dotGrid(by[k])).map(c => ({ ...c,
     figs: c.figs.map(x => ({ ...x, hasSwatch: !!x.swatch })), hasSwatch: !!c.swatch, hasSuffix: !!c.suffix }));

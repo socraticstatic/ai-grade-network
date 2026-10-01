@@ -1122,7 +1122,7 @@ export function vals(c) {
     ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll, probs, segCtx, incChanges),
   };
   Object.assign(out, briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }));
-  Object.assign(out, homeVals(out, s, set, { go, isEmpty, openSave }));
+  Object.assign(out, homeVals(out, s, set, { go, isEmpty, openSave, openF }));
   // After the home, which reads Govern's whole lists: Govern's filters narrow only its own page.
   Object.assign(out, governVals(out, s, set, { go, est, invAll: A.inventory(est0),
     orderMove: (f, label, cloud) => chooseTier(c, f, label, D.CATALOG.find(p => p.id === (cloud === 'Azure' ? 'hosted-vnet' : 'hosted-vpc')), est) }));
@@ -1189,7 +1189,7 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
 // every figure is a field vals() already computed for the page it opens, and
 // every door here opens exactly the set that figure counts. It reads
 // problemRows before pageLists pages them.
-export function homeVals(out, s, set, { go, isEmpty, openSave }) {
+export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
   const rk = roleKeyOf(s);
   const stat = (k) => String(((out.invStats || []).find(x => x.key === k) || {}).v ?? '');
   const roll = (k) => (out.rollup || []).find(r => r.key === k) || {};
@@ -1251,7 +1251,8 @@ export function homeVals(out, s, set, { go, isEmpty, openSave }) {
   };
   const doorOf = (k, arg) => (takeDoor[k] ? takeDoor[k](arg) : null);
   const homeCards = isEmpty ? [] : HM.snapshotCards(rk, { glance, health: healthy, flows: out.pathFlowAll || [], spend: { spend: tile('spend'), ahead: tile('ahead') },
-    spendCols: out.spendCols || [], exposed: stat('e'), workloads: stat('w'), govern: roll('govern'), tags: out.drawerTags || [] }, doors);
+    spendCols: out.spendCols || [], owners: (() => { const pr = openF.filter(x => x.priced && x.save); const mine = pr.filter(x => /FinOps/.test(x.persona || '')), eng = pr.filter(x => !/FinOps/.test(x.persona || ''));
+      const sum = (xs) => xs.reduce((a, x) => a + x.save, 0); return { mineN: mine.length, mine: sum(mine), engN: eng.length, eng: sum(eng), banked: tile('banked') }; })(), exposed: stat('e'), workloads: stat('w'), govern: roll('govern'), tags: out.drawerTags || [] }, doors);
   // Waiting on you is what still waits: an open finding (Accept) or a port to add. An acknowledged
   // one has left it for Your actions (skeptic, 2026-09-30).
   const waiting = acts.filter(a => a.waiting);
@@ -1267,7 +1268,8 @@ export function homeVals(out, s, set, { go, isEmpty, openSave }) {
       label: a.hasDoor ? a.doorLabel : 'Review', go: a.hasDoor ? a.door : a.open })),
     homeDoLine: `${acts.length} open · ranked for ${ROLE_OF[rk] ? ROLE_OF[rk].short : 'you'}`, hasHomeDo: acts.length > 0,
     homeChart: (() => { const eg = homeCards.find(x => x.key === 'egress'); if (!eg) return null; const now = HM.numOf(tile('spend')), ah = HM.numOf(tile('ahead'));
-      return { spark: eg.spark, today: tile('spend'), act: tile('ahead'), save: now > ah && ah ? `$${(now - ah).toLocaleString('en-US')}` : '$0', go: eg.go }; })(),
+      // Unit cost per GB (Dev's FinOps home, 2026-10-01): the rates the app prices egress at everywhere.
+      return { spark: eg.spark, today: tile('spend'), act: tile('ahead'), save: now > ah && ah ? `$${(now - ah).toLocaleString('en-US')}` : '$0', go: eg.go, perGb: 'Per GB: $0.09 on the internet, $0.02 on the AT&T network, 78% lower' }; })(),
     homeAttn: probs.slice(0, 5).map(p => ({ key: p.key, word: F.HEALTH_WORD[p.state] || p.state, ink: F.HEALTH_INK[p.state] || 'var(--warning)', what: p.what, where: `${p.where} · ${p.thing}`, impact: p.appsF || '', go: p.trace || p.go || (() => {}) })),
     hasHomeAttn: probs.length > 0,
     homeBriefGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'brief' }),
@@ -1776,7 +1778,7 @@ const ROLE_OF = {
   architect: { name: 'Cloud & Platform Architect', short: 'Architect', visuals: ['multi'], mailbox: 'cloud-architecture', q: 'Is the design right for what matters most?' },
   neteng: { name: 'Network Engineering', short: 'Network Eng', visuals: ['problems', 'slo'], mailbox: 'network-ops', q: 'Is the network up, fast and holding?' },
   security: { name: 'Security & Compliance', short: 'Security', visuals: ['newdest', 'shadow'], mailbox: 'security', q: 'Is anything exposed that should not be?' },
-  finops: { name: 'FinOps & SRE', short: 'FinOps & SRE', visuals: ['growth', 'idle'], mailbox: 'finops', q: 'Are we paying for what we use?' },
+  finops: { name: 'FinOps & SRE', short: 'FinOps & SRE', visuals: ['growth', 'idle'], mailbox: 'finops', q: 'Where does the money go, who pays, and is the saving real?' },
   exec: { name: 'Executive', short: 'Executive', visuals: ['talkers'], mailbox: 'cio', q: 'Is the network helping or hurting the business?' },
 };
 const roleKeyOf = (s) => (ROLE_OF[s.persona] ? s.persona : 'neteng');

@@ -163,7 +163,8 @@ test('the persona chips switch the take-away and the card order', () => {
   assert.deepEqual(CARD_ORDER.finops[0], 'egress');
   for (const order of Object.values(CARD_ORDER)) {
     assert.equal(new Set(order).size, 4);
-    for (const k of order) assert.ok(['apps', 'egress', 'exposed', 'onatt', 'tags'].includes(k), k);
+    // FinOps' owner split (Dev's FinOps home, 2026-10-01): Yours to approve and With engineering.
+    for (const k of order) assert.ok(['apps', 'egress', 'exposed', 'onatt', 'tags', 'approve', 'eng'].includes(k), k);
   }
 });
 
