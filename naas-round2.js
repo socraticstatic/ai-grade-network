@@ -302,8 +302,12 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   // traffic to the public regions while Cloud-to-cloud and Coverage counted a public pair
   // between two attached ones. The sum is ob.pub, Egress growth's this week.
   const pubOf = (r) => +flows.filter(f => !f.controlled && f.region === `${r.cloud} ${r.region}`).reduce((a, f) => a + f.gbps, 0).toFixed(1);
+  // What of a region's traffic is its cross-cloud pairs (w2 second pass, 2026-09-30): the row names it, so
+  // us-east-1's 14.2 Gbps reads as its 12.4 on the NetBond, the connection Capacity measures, and the 1.8 of its pair.
+  const xOf = (r) => +flows.filter(f => f.kind !== 'App' && f.region === `${r.cloud} ${r.region}`).reduce((a, f) => a + f.gbps, 0).toFixed(1);
+  const xPubOf = (r) => flows.some(f => f.kind !== 'App' && !f.controlled && f.region === `${r.cloud} ${r.region}`);
   const talkersAll = tk.map(({ r, gbps }) => ({ key: r.region, region: r.region, cloud: r.cloud, label: `${r.cloud} ${r.region}`, sub: `${r.priv ? rampName(r) : 'public internet'} · ${r.tags.slice(0, 2).join(' · ') || 'untagged'}`, gbps, v: gbps.toFixed(1) + ' Gbps', share: pct(gbps, tTot) + '%', w: Math.round(gbps / tMax * 100) + '%', priv: r.priv, fill: r.priv ? 'var(--viz-1)' : 'var(--viz-6)',
-    ramp: r.priv ? rampName(r) : '', pubG: pubOf(r) }));
+    ramp: r.priv ? rampName(r) : '', pubG: pubOf(r), xG: xOf(r), xPub: xPubOf(r) }));
   const talkers = talkersAll.slice(0, 5);
   // The region a flow belongs to, so its row opens that region on the map.
   const regionOf = (f) => (rs.find(r => `${r.cloud} ${r.region}` === f.region) || {}).region || null;

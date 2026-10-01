@@ -160,7 +160,13 @@ export function talkers(T, lens = 'share', { pubMo = 0, covPct = 0, billsPub = {
     const head = out.length ? `${gb(outG)} public · ${100 - covPct}% of traffic` : 'Every region rides AT&T';
     return { key: 'talkers', title: 'Top talkers by exposure', head, rows, legend: [{ ...PUB, label: 'Exposed, public internet' }], empty: 'No traffic yet.' };
   }
-  const rows = all.map(t => ({ ...base(t), v: t.share, v2: gb(t.gbps), segs: bar(t, gMax), ...(t.priv ? { act: 'Ask Andi', actKind: 'andi-region' } : { act: 'Attach', actKind: 'attach' }) }));
+  // A region's bar is its traffic by path: on AT&T, then what it sends outside, its public pair
+  // included (w2 second pass, 2026-09-30: us-east-1's 1.8 Gbps pair to eastus painted On AT&T,
+  // and the rows' On AT&T added up past the head). A row with a pair names it on its line.
+  const splitBar = (t, max) => { const p = Math.min(t.gbps, pubG(t)), o = t.gbps - p;
+    return [...(o > 0 ? [{ key: 'on', fill: AT.ink, w: pctW(o, max) }] : []), ...(p > 0 ? [{ key: 'pub', fill: PUB.ink, w: pctW(p, max) }] : [])]; };
+  const lineOf = (t) => (t.xG > 0 ? `${t.priv ? t.ramp || 'On AT&T' : 'public internet'} · ${gb(t.xG)} cross-cloud${t.xPub ? ' public' : ''}` : t.sub);
+  const rows = all.map(t => ({ ...base(t), sub: lineOf(t), v: t.share, v2: gb(t.gbps), segs: splitBar(t, gMax), ...(t.priv ? { act: 'Ask Andi', actKind: 'andi-region' } : { act: 'Attach', actKind: 'attach' }) }));
   if (lens === 'coverage') {
     const priv = all.filter(t => t.priv);
     return { key: 'talkers', title: 'Top talkers by coverage', head: `${priv.length || 'None'} of ${all.length} ${all.length === 1 ? 'region' : 'regions'} on AT&T · ${covPct}% of traffic`, rows, legend: [AT, PUB], empty: 'No traffic yet.' };

@@ -62,7 +62,8 @@ test('A Signals traffic figure lands on the records it counts, or says no sample
         const pair = / ↔ /.test(r.label) ? r.label.split(' ↔ ') : null;
         // Egress and exposure rows count what leaves AT&T; their On AT&T rows count what rides it.
         const onRow = /egress|exposure/.test(cd.title) && r.v2 === 'On AT&T';
-        const outside = !onRow && (/public|outside/.test(r.sub) || /egress|exposure/.test(cd.title));
+        // A coverage or share row counts all a region sends, on any path.
+        const outside = !onRow && /egress|exposure/.test(cd.title);
         for (const rec of recs) {
           const [src, dst] = regionsOf(rec), say = `${where} lists ${rec.srcName} (${rec.srcSub}) to ${rec.dstName} (${rec.dstSub}) ${rec.path}`;
           if (pair) {
@@ -73,7 +74,7 @@ test('A Signals traffic figure lands on the records it counts, or says no sample
             if (k === 'slo') assert.equal(rec.path, / · on AT&T$/.test(r.sub) ? 'private' : 'public', `${say}: the flow runs ${r.sub}`);
             else if (outside) assert.equal(rec.path, 'public', `${say}: the row counts traffic outside AT&T`);
             else if (onRow) assert.equal(rec.path, 'private', `${say}: the row counts traffic on AT&T`);
-            if (/cross-cloud/.test(r.sub)) assert.equal(rec.pattern, 'clouds', `${say}: the row counts its cross-cloud pair`);
+            if (/egress|exposure/.test(cd.title) && /cross-cloud public/.test(r.sub)) assert.equal(rec.pattern, 'clouds', `${say}: the row counts its cross-cloud pair`);
           }
         }
       });
@@ -195,4 +196,26 @@ test('The briefing says under way only of what is accepted or in progress, never
   const opt = vals(at({ screen: 's3', layer: 'cloud', tab: 'cost', costPanel: 'optimize' })).optRows.find(r => r.key === 'capacity');
   assert.equal(opt.state, 'In progress');
   assert.equal(opt.cta, 'In progress', `Optimize's Capacity reads In progress beside a button reading ${opt.cta}`);
+});
+
+test('Top talkers paints a region\'s public pair outside AT&T, its On AT&T parts add up to the head, and it names the pair\'s Gbps', () => {
+  const w = (s) => parseFloat(s) / 100;
+  for (const view of VIEWS) for (const persona of ['architect', 'neteng']) {
+    const v = vals(ins(view, { persona }));
+    const t = card(v, 'talkers'), iw = v.iw;
+    const max = Math.max(...iw.talkersAll.map(x => x.gbps));
+    let onG = 0;
+    for (const r of t.all) {
+      const src = iw.talkersAll.find(x => x.key === r.key);
+      const on = r.segs.filter(x => x.fill === 'var(--viz-1)').reduce((a, x) => a + w(x.w) * max, 0);
+      const pub = r.segs.filter(x => x.fill === 'var(--viz-6)').reduce((a, x) => a + w(x.w) * max, 0);
+      assert.ok(Math.abs(pub - (src.pubG || 0)) < 0.15, `${view} ${persona} ${r.label}: the bar paints ${pub.toFixed(1)} Gbps outside AT&T, the region sends ${src.pubG}`);
+      onG += on;
+      if (src.xG > 0) assert.match(r.sub, new RegExp(`${src.xG.toFixed(1)} Gbps cross-cloud`), `${view} ${persona} ${r.label}: "${r.sub}" does not name its ${src.xG} Gbps cross-cloud`);
+    }
+    const fab = v.iw.talkersAll.reduce((a, x) => a + x.gbps - (x.pubG || 0), 0), tot = v.iw.talkersAll.reduce((a, x) => a + x.gbps, 0);
+    assert.ok(Math.abs(onG - fab) < 0.3, `${view} ${persona}: the blue adds up to ${onG.toFixed(1)} Gbps, On AT&T is ${fab.toFixed(1)}`);
+    const pct = (/on AT&T · (\d+)% of traffic/.exec(t.head) || [])[1];
+    if (pct) assert.equal(+pct, Math.round(fab / tot * 100), `${view} ${persona}: "${t.head}" over ${fab.toFixed(1)} of ${tot.toFixed(1)} Gbps on AT&T`);
+  }
 });

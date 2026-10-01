@@ -2954,7 +2954,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const pairCut = (r, priv) => { const [a, b] = r.label.split(' ↔ '); const cross = (est0.regionsList.find(x => x.region === a) || {}).cloud !== (est0.regionsList.find(x => x.region === b) || {}).cloud;
       return { cut: `${cross ? 'Cloud-to-cloud' : 'Region-to-region'} records between ${a} and ${b}, ${priv ? 'on AT&T' : 'outside AT&T'}.`, pair: [a, b], pattern: 'clouds', path: priv ? 'private' : 'public' }; };
     const FIG = {
-      map: (r) => recsOf(r, /cross-cloud/.test(r.sub) ? { cut: `Records from ${r.label} to another cloud, outside AT&T.`, src: r.region, pattern: 'clouds', path: 'public' }
+      map: (r) => recsOf(r, pubLens && /cross-cloud public/.test(r.sub) ? { cut: `Records from ${r.label} to another cloud, outside AT&T.`, src: r.region, pattern: 'clouds', path: 'public' }
         : pubLens && r.v2 === 'On AT&T' ? { cut: `Records from ${r.label}, on AT&T.`, src: r.region, pattern: FLOW_PATS, path: 'private' }
         : pubLens ? { cut: `Records from ${r.label}, outside AT&T.`, src: r.region, pattern: FLOW_PATS, path: 'public' }
           : { cut: `Records from ${r.label}.`, src: r.region, pattern: FLOW_PATS, path: '' }),
