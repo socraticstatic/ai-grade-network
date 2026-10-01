@@ -294,3 +294,21 @@ export function rollupKeyOf(est, st) {
 export function gapSiteCount(est) {
   return (est && est.sites || []).filter(x => !x.priv).reduce((a, x) => a + countOf(x.name), 0);
 }
+
+// Policies between two assets (2026-10-01, docs/superpowers/specs/2026-10-01-between-assets-policy.md).
+/** A data center that is a private cloud hosted at a colo: its provider, facility and metro, or null. */
+export function privateCloudOf(st) {
+  const c = st && st.colo;
+  if (!c || c.kind !== 'Private cloud') return null;
+  return { provider: c.provider, facility: c.facility, metro: st.metro, label: `Private cloud · ${c.provider} ${c.facility}, ${st.metro}` };
+}
+/** Everything a policy can name on either side: private clouds, sites, cloud regions, tags, business units. */
+export function policyAssets(est, tags = {}) {
+  const sites = est.sites || [], out = [];
+  for (const st of sites) { const pc = privateCloudOf(st); if (pc) out.push({ key: 'pc:' + st.name, kind: 'private-cloud', label: pc.label, site: st.name }); }
+  for (const st of sites) if (!privateCloudOf(st)) out.push({ key: 'site:' + st.name, kind: 'site', label: st.name, site: st.name });
+  for (const r of est.regionsList || []) out.push({ key: 'region:' + r.region, kind: 'region', label: `${r.cloud} ${r.region}`, region: r.region });
+  for (const t of [...new Set((est.regionsList || []).flatMap(r => r.tags || []))]) out.push({ key: 'tag:' + t, kind: 'tag', label: `tag ${t}`, tag: t });
+  for (const b of [...new Set(sites.map(st => buOf(st, tags)))]) out.push({ key: 'bu:' + b, kind: 'bu', label: b, bu: b });
+  return out;
+}

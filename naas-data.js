@@ -114,7 +114,7 @@ export const ESTATES = {
     // the egress bill and the exposed VPN endpoints come from. Data centers and
     // the HQ carry a primary and a backup service; every other site one.
     sites: [
-      { name: 'Ashburn DC', cls: 'Data center', access: 'AVPN (MPLS VPN)', services: [{ svc: 'avpn', role: 'primary' }, { svc: 'adi', role: 'backup' }], priv: true, metro: 'Ashburn' },
+      { name: 'Ashburn DC', cls: 'Data center', access: 'AVPN (MPLS VPN)', services: [{ svc: 'avpn', role: 'primary' }, { svc: 'adi', role: 'backup' }], priv: true, metro: 'Ashburn', colo: { provider: 'Equinix', facility: 'DC2', kind: 'Private cloud' } },
       { name: 'New York HQ', cls: 'Campus', access: 'ASE on Demand', services: [{ svc: 'aseod', role: 'primary' }, { svc: 'adi', role: 'backup' }], priv: true, metro: 'New York' },
       { name: 'Boston office', cls: 'Office', access: 'ABF (Business Fiber)', services: [{ svc: 'abf' }], priv: true, metro: 'Boston' },
       // 0.9 Gbps is not credible on fixed wireless (2026-09-30): Business Fiber first, Internet Air behind.
