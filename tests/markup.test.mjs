@@ -276,11 +276,13 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // buttons, the empty line, a pager); By region gains the per-region save column beside the bars (its grid and column, a head
 // with the arithmetic toggle, a summary loop of rows with today, to save and Attach, an arithmetic loop, a pager); By
 // destination's ring and bar are gated: div 1097 -> 1111, span 959 -> 968, sc-if 484 -> 496, sc-for 253 -> 256, button 373 -> 385.
+// The skeptic's third read (2026-09-30): Insights' New destinations draws every class in one ink, named in its row, so its
+// colour legend (an sc-if, a div and three swatch spans) left: div 1111 -> 1110, span 968 -> 965, sc-if 496 -> 495.
 test('every container the markup opens, it closes', () => {
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1111],
-    ['span', /<span\b/g, /<\/span>/g, 968],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 496],
+    ['div', /<div\b/g, /<\/div>/g, 1110],
+    ['span', /<span\b/g, /<\/span>/g, 965],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 495],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 256],
     ['section', /<section\b/g, /<\/section>/g, 12],
     ['button', /<button\b/g, /<\/button>/g, 385],

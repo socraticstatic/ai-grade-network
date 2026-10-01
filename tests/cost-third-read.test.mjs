@@ -74,6 +74,18 @@ test('By region and By cloud: the bars, the member chips and a picked member\'s 
   assert.equal(p.regionTotalF, '$132,250');
 });
 
+test('Insights\' new destinations wear no money or health colour: one ink, the class in words', () => {
+  for (const view of ['partial', 'mature', 'trust']) {
+    const v = vals(mkC({ view, screen: 's3', tab: 'observe', estateParam: null, obPage: 'insights' }));
+    const fills = [...new Set(v.iw.newDest.map(d => d.fill))];
+    assert.equal(fills.length, 1, `${view}: ${fills.join(', ')}`);
+    for (const t of ['--viz-1', '--viz-2', '--viz-3', '--viz-4', '--viz-5', '--success', '--warning', '--error']) assert.ok(!fills[0].includes(t), `${view}: ${fills[0]} is ${t}`);
+    assert.ok(v.iw.newDest.every(d => /^(AI endpoint|SaaS|Object storage) · /.test(d.sub)), 'each row names its class');
+  }
+  const a = HTML.indexOf('aria-label="New destinations"'), card = HTML.slice(a, HTML.indexOf('aria-label="Shadow SaaS"', a));
+  assert.doesNotMatch(card, /var\(--viz-[1-5]\)|var\(--warning\)|var\(--success\)/, 'no swatch paints a class in a money or health colour');
+});
+
 test('Recommended names the cloud that bills the IPsec tunnels, the one By cloud puts them in', () => {
   const c = mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'options' });
   const m = vals(c).moveList.find(x => x.kind === 'sites' && x.mode === 'ipsec');

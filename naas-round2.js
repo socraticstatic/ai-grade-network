@@ -280,7 +280,9 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   // 2. New destinations inside the window, by volume.
   const pubN = rs.filter(r => !r.priv).length;
   const DEST = [{ d: 3, n: 'api.anthropic.com', c: 'ai', gb: 4.6 }, { d: 8, n: 'files.slack-edge.com', c: 'saas', gb: 3.1 }, { d: 11, n: 's3.eu-west-1.amazonaws.com', c: 'obj', gb: 12.4 }, { d: 17, n: 'intake.datadoghq.com', c: 'saas', gb: 2.4 }, { d: 22, n: 'blob.core.windows.net', c: 'obj', gb: 8.8 }, { d: 26, n: 'api.openai.com', c: 'ai', gb: 2.2 }, { d: 41, n: 'api.mistral.ai', c: 'ai', gb: 1.1 }, { d: 63, n: 'storage.googleapis.com', c: 'obj', gb: 6.2 }].slice(0, 5 + pubN);
-  const CLASS = { ai: ['AI endpoint', 'var(--viz-5)'], saas: ['SaaS', 'var(--viz-4)'], obj: ['Object storage', 'var(--viz-2)'] };
+  // One ink for every class, told apart by its name (the skeptic, 2026-09-30: SaaS wore the outside-AT&T orange and object
+  // storage the list-price cyan, Cost's money colours); a destination's class is a category, not who is paid.
+  const CLASS = { ai: ['AI endpoint', 'var(--text-light)'], saas: ['SaaS', 'var(--text-light)'], obj: ['Object storage', 'var(--text-light)'] };
   const inWin = DEST.filter(x => x.d <= win).sort((a, b) => b.gb - a.gb); const dMax = Math.max(1, ...inWin.map(x => x.gb));
   const when = (d) => d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
   const newDest = inWin.map(x => ({ key: x.n, name: x.n, sub: `${CLASS[x.c][0]} · first seen ${when(x.d)}`, v: x.gb + ' GB/d', w: Math.round(x.gb / dMax * 100) + '%', fill: CLASS[x.c][1], cls: CLASS[x.c][0], day: x.d }));
