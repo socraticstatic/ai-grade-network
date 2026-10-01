@@ -40,13 +40,21 @@ test('the apps: every workload, one row per app, largest first, paged to fit', (
   assert.equal(num(v.invStats.find(k => k.l === 'exposed workloads').v), all.reduce((a, x) => a + x.exposed, 0));
 });
 
-test('an app opens its own records', () => {
+// The drill rule (2026-09-30): an app is the workloads that carry its tag, so its row opens them on
+// Your clouds; its Traffic, a traffic figure, still opens its own records (tests/discover-drill.test.mjs
+// walks every cell).
+test('an app opens its workloads, and its traffic opens its own records', () => {
   const c = est();
   const top = vals(c).appRows[0];
   top.go();
-  assert.equal(c.state.screen, 's3');
-  assert.equal(c.state.obPage, 'logs');
-  assert.equal(c.state.logQ, top.name);
+  assert.equal(c.state.screen, 's1');
+  assert.equal(c.state.estPanel, 'clouds');
+  assert.deepEqual(c.state.cloudFilter, { unit: 'workload', tag: top.name });
+  const c2 = est();
+  vals(c2).appRows[0].gbpsGo();
+  assert.equal(c2.state.screen, 's3');
+  assert.equal(c2.state.obPage, 'logs');
+  assert.equal(c2.state.logQ, top.name);
 });
 
 test('the markup: rings, the apps table, and the gaps on a line each', () => {

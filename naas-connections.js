@@ -288,7 +288,10 @@ export function siteDrillRows(est, trail, opts = {}) {
     if (!g) return null;
     const sub = { ...est, sites: g.sites };
     if (trail.length === 1) return { level: 'region', label: g.name, rows: regionRows(sub).map(regionCard) };
-    return siteDrillRows(sub, trail.slice(1), opts);
+    // Past the regions it is the place drill on the group's sites, kept inside the whole estate so a
+    // rollup splits as it always does (2026-10-01: grouped by AVPN, Nationwide read "Texas 83").
+    const inGroup = new Set(g.sites);
+    return siteDrillRows(est, trail.slice(1), { ...opts, keep: (x) => inGroup.has(x) && (typeof opts.keep !== 'function' || opts.keep(x)) });
   }
   // The root is regions. A region opens to its sites, each drawn on its own path
   // (so Denver and Phoenix show Lumen), and past that the site drill is the one
@@ -297,7 +300,12 @@ export function siteDrillRows(est, trail, opts = {}) {
     const name = String(trail[0]).slice('region:'.length);
     const region = regionRows(est).find(r => r.name === name);
     if (!region) return null;
-    return placeDrill(est, name, region.sites, trail.slice(1), opts);
+    // A filter keeps some of the region's sites (Discover's figures, 2026-10-01). It keeps them
+    // inside the whole estate, so a rollup splits across the metros it always does: filtering
+    // the estate first re-seeded the split, and Established's AVPN sites read "Texas 83".
+    const sites = typeof opts.keep === 'function' ? region.sites.filter(opts.keep) : region.sites;
+    if (!sites.length) return null;
+    return placeDrill(est, name, sites, trail.slice(1), opts);
   }
   const tree = S.siteTree(est);
   const all = P.allSites(est);

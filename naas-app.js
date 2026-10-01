@@ -29,6 +29,7 @@ import * as HM from './naas-home.js';
 import * as CV from './naas-cost-view.js';
 import * as BW from './naas-bandwidth.js';
 import * as CF from './naas-connect-flow.js';
+import * as DR from './naas-drill.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product', s9: 'Help' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
@@ -188,7 +189,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -290,7 +291,11 @@ export function vals(c) {
   // Who answers for each piece of every path, read once from the whole estate (2026-09-30).
   const segCtx = G.segCtxOf(est0, { inv: A.inventory(est0), ob: obAll, conns, probs });
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, obAll), ...est0.findings] };
-  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !composeStarted(s.compose) ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4 && !(extra && extra.scanStep >= 4)) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, bwFor: null, bwPick: null, bwStep: null, mapSel: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
+  const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !composeStarted(s.compose) ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4 && !(extra && extra.scanStep >= 4)) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, bwFor: null, bwPick: null, bwStep: null,
+    // Discover's new filter is a landing's, and a map's panel is the map's (skeptic, 2026-10-01): a way
+    // back to Estate never opens new-filtered, nor under the connection panel a bandwidth door left open.
+    // Consistency: every navigation drops the map's selection, not only Estate's.
+    newOnly: false, mapSel: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -944,8 +949,8 @@ export function vals(c) {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', themeTitle: s.theme === 'light' ? 'Dark mode' : 'Light mode', themeIsLight: s.theme !== 'dark', themeIsDark: s.theme === 'dark', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
     // An estate switch starts clean (2026-09-30): a By pick or a drill the new
     // estate lacks drew an empty map with a phantom "Internet 1.0 Gbps".
-    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, bwFor: null, bwPick: null, bwStep: null }),
-    resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], andiTickets: d.andiTickets, heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null, pathSel: null, pathPin: null, bwFor: null, bwPick: null, bwStep: null,
+    view: s.view, setView: (e) => set({ view: e.target.value, estateParam: null, fdKey: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], regionDrill: null, simulated: false, enforced: false, scanStep: s.screen === 's1' ? 0 : s.scanStep, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: [], placeTrail: [], cloudFilter: null, placeFilter: null, newOnly: false, cloudPage: 0, placePage: 0, segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, bwFor: null, bwPick: null, bwStep: null }),
+    resetDemo: () => { try { DEMO_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {} const d = defaults(); set({ findingLife: {}, siteTags: {}, buCustom: {}, buActive: null, addedSources: [], andiTickets: d.andiTickets, heroOpen: undefined, openHintSeen: false, headOpen: undefined, obScope: 'all', obDim: 'all', mapOpen: [], mapSel: null, mapRegion: null, cloudTrailE: d.cloudTrailE, placeTrail: d.placeTrail, cloudFilter: null, placeFilter: null, newOnly: false, cloudPage: 0, placePage: 0, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [], fdKey: null, pathSel: null, pathPin: null, bwFor: null, bwPick: null, bwStep: null,
       // A bandwidth change rehearsed is cleared with the rest (skeptic, 2026-09-30); the connect flow's own orders stay, as before.
       orders: (s.orders || []).filter(o => !o || o.kind !== 'bandwidth') }); },
     // Fix round 4, finding N2: the fresh branch used to call newOrder(...),
@@ -1257,9 +1262,18 @@ export function pageRows(rows, size, page, setPage) {
 }
 const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
   segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 4, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], bankRows: ['bankPage', 5, 'bankPager', 'bankPageSize'], regionSaveRows: ['regSavePage', 6, 'regSavePager', 'regSavePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
+// What an added source found sits over Discover's Estate (2026-09-30): its lists give up the rows
+// the alert takes, so the page keeps the fold (At a glance read 905 with it, a filtered Your clouds 973).
+const FOUND_SHRINK = { appRows: 1, cloudRows: 2, placeRows: 2 };
+// Andi beside Estate narrows it, and the title row's pills wrap to a second line (skeptic, 2026-10-01:
+// "Ask Andi" on a nine-row Your clouds read 931): the lists give up a row while he is open.
+const ANDI_SHRINK = { appRows: 1, cloudRows: 1, placeRows: 1 };
 function pageLists(out, s, set) {
-  for (const [list, [key, size, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
+  const found = !!out.hasFound && s.screen === 's1';
+  const andi = !!s.andiOpen && s.screen === 's1';
+  for (const [list, [key, size0, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
     if (!Array.isArray(out[list])) continue;
+    const size = size0 - (found ? FOUND_SHRINK[list] || 0 : 0) - (andi ? ANDI_SHRINK[list] || 0 : 0);
     const pg = pageRows(out[list], size, s[key], (n) => set({ [key]: n }));
     out[list] = pg.rows; out[pagerName] = pg.pager; out[sizeName] = size;
   }
@@ -1589,6 +1603,41 @@ function prefillAttach(r) {
 function composeFor(go, r) {
   return go('s4', { ...newOrder(prefillAttach(r)) });
 }
+/** The number a figure reads ("1,640" is 1640). */
+const num0 = (v) => +String(v).replace(/[^0-9]/g, '') || 0;
+/** A run of words where some are doors: [{ key, t, can, cant, go }]. A part with no door is text. */
+const partsOf = (xs) => xs.filter(x => x != null && x !== '').map((x, i) => (typeof x === 'string'
+  ? { key: 'p' + i, t: x, can: false, cant: true, go: () => {} }
+  : { key: x.key || 'p' + i, t: x.t, can: !!x.go, cant: !x.go, go: x.go || (() => {}) }));
+/**
+ * The connect flow with a Discover set in it (Micah, 2026-09-30: "on all of the at a
+ * glance drills, what's the point? actions may help"): Attach for the set's public
+ * regions, Move to AT&T for its sites outside, Add a backup for its sites on one path.
+ * The order carries the whole set as prefillSets, the contract Connect > Recommended
+ * composes with (M.attachSets), and the banner says what and why.
+ */
+function discoverOrder(go, est, { regions = [], sites = [], shares = null, place = '', tier = 'standard', note = '' }) {
+  const regs = regions.map(id => (est.regionsList || []).find(r => r.region === id)).filter(Boolean);
+  // A place's sites (2026-10-01): a rollup it holds only part of ("Remote sites, East", 709 of
+  // 1,640 in Florida) is ordered as that many sites there (the flow's bulk and qty, priced per
+  // site), never as the whole rollup; the sites it holds whole go in by name.
+  const part = (shares || []).filter(u => !u.whole);
+  const whole = shares ? shares.filter(u => u.whole).map(u => u.site.name) : sites;
+  const siteRows = (est.sites || []).filter(x => whole.includes(x.name));
+  const kinds = shares ? shares.map(u => u.site) : siteRows;
+  const qty = shares ? shares.reduce((a, u) => a + u.n, 0) : 0;
+  const onRamps = Object.values(D.COMPOSE_CHIPS.regions).flat();
+  const metros = [...new Set([...regs.map(r => REGION_GEO[r.region]), ...siteRows.map(x => x.metro), ...part.flatMap(u => u.metros || [])].filter(m => onRamps.includes(m)))];
+  const dcOnly = kinds.length > 0 && kinds.every(x => S.isDataCenter(x));
+  const tags = regs.flatMap(r => r.tags || []);
+  const control = ['Private path required', ...(tags.includes('PCI') || tags.includes('Prod') ? ['No direct internet path'] : []), ...(tags.includes('GPU') ? ['Latency SLO'] : [])];
+  const sets = { sites: siteRows.map(x => x.name), regions: regs.map(r => r.region), tier, connectionType: !kinds.length || dcOnly ? 'DataCenter/CoLocation to Cloud' : 'VPN to Cloud', sourceLabel: 'Discover' };
+  return go('s4', { ...newOrder({ ...prefillCompose(est), source: kinds.length && !dcOnly ? ['Sites'] : ['Data center'], dest: ['Clouds'], metros, regionTab: metros.length ? REGION_OF_METRO(metros[0]) : 'US East', control,
+    resiliency: tier === 'maximum' ? 'Maximum' : tier === 'geodiversity' ? 'Geodiversity' : 'Standard',
+    prefilled: false, prefillRegion: regs.length ? `${regs[0].cloud} ${regs[0].region}` : null, prefillWl: regs.reduce((a, r) => a + (r.wl || 0), 0),
+    ...(part.length ? { bulk: `${place || 'Your sites'} · ${qty.toLocaleString('en-US')} ${qty === 1 ? 'site' : 'sites'}`, qty } : {}),
+    prefillSets: sets, sourceLabel: 'Discover', noteStep: 0, note }) });
+}
 /**
  * The connect flow for one region, started the way Connect > Recommended starts
  * it (prefillSets, the flow's contract): the region is in the order and the
@@ -1703,7 +1752,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       hops: pth.hops.map((h, i) => { const d = hopDoor(h); return { key: i, name: h.name, sub: h.sub, msF: h.ms + ' ms', dot: STATE_COLOR[h.state], hasDoor: !!d, doorLabel: d ? d.doorLabel : '', go: d ? d.go : () => {}, weight: h.state === 'ok' ? 500 : 700 }; }),
       askAndi: () => set({ andiScope: { kind: 'region', id: region.region, label: `${site.name} → ${region.cloud} ${region.region}` }, andiOpen: true }) };
   };
-  const winDays = winDaysOf(s), winLabel = winLabelOf(s), newOnly = !!s.newOnly;
+  // The new filter is Your clouds' and Your sites' (skeptic, 2026-10-01): At a glance, Business units
+  // and Sources show everything, so there it is off and the pill says so.
+  const estPanelK = ['glance', 'clouds', 'sites', 'bu'].includes(s.estPanel) ? s.estPanel : 'glance';
+  const winDays = winDaysOf(s), winLabel = winLabelOf(s), newOnly = !!s.newOnly && !(s.screen === 's1' && (s.discoverView === 'sources' || !['clouds', 'sites'].includes(estPanelK)));
   const isNew = (x) => !!x && x.since != null && x.since <= winDays;
   const LK = labelKit(s, set);
   // Each private connection's configured bandwidth, the ports Observe calls purchased (2026-09-28).
@@ -1735,7 +1787,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // What arrived inside the window (AO-362): the strip over Explore 360 and the "New" badges.
   const allVpcs = inv.flatMap(cl => cl.regions.flatMap(r => r.vpcs));
   const allWls = allVpcs.flatMap(v => v.subnets.flatMap(sn => sn.workloads || []));
-  const allSites = S.siteTree(est).flatMap(cl => cl.children.flatMap(ch => ch.kind === 'metro' ? ch.sites : [ch]));
+  // A site is new when discovery found it in the window. A rollup ("Remote sites (212)") arrives
+  // whole from AT&T's inventory, so only named sites count (2026-09-30: the samples of a rolled-up
+  // metro were counted, and no list could open them as a set).
+  const allSites = S.siteTree(est).flatMap(cl => cl.children.filter(ch => ch.kind === 'site'));
+  const siteSince = new Map(allSites.map(x => [x.name, x.since]));
+  const isNewSite = (x) => siteSince.has(x.name) && isNew({ since: siteSince.get(x.name) });
   const newVpcs = allVpcs.filter(isNew), newWls = allWls.filter(isNew), newSites = allSites.filter(isNew);
   const newN = newVpcs.length + newWls.length + newSites.length;
   const newUnlabeled = [...newVpcs, ...newSites].filter(x => !LK.labelsOf(x.id).length).length;
@@ -1743,14 +1800,48 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const nn = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   // The home's Discover tile reads the pill at Discover's own 30 days, so Since never moves the strip (2026-09-30).
   const new30 = [...allVpcs, ...allWls, ...allSites].filter(x => !!x && x.since != null && x.since <= WIN['30d'][0]).length;
-  const newPill30 = new30 ? `${new30} new · ${WIN['30d'][1]}` : '';
+  const newPill30 = new30 ? `${new30.toLocaleString('en-US')} new · ${WIN['30d'][1]}` : '';
+  // Every figure opens what it counts (Micah, 2026-09-30: "it all should be drillable"). One set
+  // of doors for Discover: each lands on the one list that holds the figure's set, filtered to
+  // it. Sites land on Your sites by place; clouds, regions, VPCs, workloads and apps on Your
+  // clouds; traffic, and only traffic, on Logs ("why does exposed when i click on it go to
+  // logs? that's confusing"); money on Cost. A door inside a row stops its click there.
+  const dd = (() => {
+    const stop = (e) => { if (e && typeof e.stopPropagation === 'function') e.stopPropagation(); };
+    const CLEAR = { discoverView: 'estate', newOnly: false, cloudFilter: null, placeFilter: null, cloudTrailE: [], placeTrail: [], cloudPage: 0, placePage: 0 };
+    const toEstate = (patch) => (e) => { stop(e); const p = { ...CLEAR, ...patch }; if (s.screen === 's1') set(p); else go('s1', p)(); };
+    return {
+      stop,
+      clouds: (filter, trail) => toEstate({ estPanel: 'clouds', cloudFilter: filter || null, cloudTrailE: trail || [] }),
+      sites: (key, trail) => toEstate({ estPanel: 'sites', placeFilter: key || null, placeTrail: trail || [] }),
+      news: (panel) => toEstate({ estPanel: panel, newOnly: true }),
+      // A connection's bandwidth is its row on Capacity.
+      conn: (region) => (e) => { stop(e); const cx = region ? X.connections(est0, obAll).rows.find(r => r.region === region) : null;
+        go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn', sub: null, mapSel: cx ? cx.id : null, mapRegion: region || null })(); },
+      logsFor: (q) => (e) => { stop(e); go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null })(); set({ logQ: q, logPage: 0 }); },
+      cost: (view) => (e) => { stop(e); go('s3', { layer: 'cloud', tab: 'cost', sub: null, costBy: 'all', costPick: null, legDrill: null, legAPage: 0, legCPage: 0, legPPage: 0, ...(view || {}) })(); },
+      // The moves a set calls for, each the real flow with the set in it.
+      order: (o) => (e) => { stop(e); discoverOrder(go, est, o)(); },
+      // A policy carries its set (skeptic, 2026-10-01: Simulate read "40 matched" whatever it came
+      // from): n is what the landing counts, viol how many of them break the rule today.
+      policy: (match, req, cnt) => (e) => { stop(e); set({ authoring: { match, scope: 'any cloud', req: [req || 'Private path required'], ...(cnt ? { n: cnt.n, viol: cnt.viol, from: 'Discover' } : {}) } }); go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'policies' })(); },
+      finding: (key) => (e) => { stop(e); set({ fdKey: key }); },
+      andi: (scope) => (e) => { stop(e); set({ andiScope: { kind: 'set', ...scope }, andiOpen: true }); },
+    };
+  })();
+  const cloudNewN = newVpcs.length + newWls.length, siteNewN = newSites.length;
+  // What an Attach order carries, and what waits its turn: one cloud an order (2026-10-01).
+  const attachNote = (plan, what) => `From Discover, ${what}: attach ${DR.listOf(plan.regions)} on ${plan.cloud}${plan.rest.length ? `, then ${DR.listOf(plan.rest.map(g => `${g.regions.length} on ${g.cloud}`))}, an order a cloud` : ''}.`;
   const newStrip = {
-    title: newOnly ? `Showing only what is new in the last ${winLabel}` : 'Act on it',
+    title: newOnly ? `Showing only what is new ${DR.inTheLast(winLabel)}` : 'Act on it',
     text: newN
-      ? `${nn(newN, 'resource was', 'resources were')} discovered in the last ${winLabel}: ${nn(newVpcs.length, 'VPC', 'VPCs')}, ${nn(newWls.length, 'workload', 'workloads')} and ${nn(newSites.length, 'site', 'sites')}. ${newUnlabeled === 0 ? 'All of them carry a label' : `${newUnlabeled} ${newUnlabeled === 1 ? 'has' : 'have'} no label yet`}${newPublic === 0 ? ' and none reach the internet directly.' : ` and ${newPublic} ${newPublic === 1 ? 'reaches' : 'reach'} the internet directly. Label them, then bring the exposed ones under a private-path policy.`}`
-      : `Nothing new was discovered in the last ${winLabel}. Widen the range in the title row to look further back.`,
-    cta: newOnly ? 'Show everything' : 'Review new', hasNew: newN > 0, pill: newOnly ? `${newN} new · showing only these` : `${newN} new · ${winLabel}`,
+      ? `${nn(newN, 'resource was', 'resources were')} discovered ${DR.inTheLast(winLabel)}: ${nn(newVpcs.length, 'VPC', 'VPCs')}, ${nn(newWls.length, 'workload', 'workloads')} and ${nn(newSites.length, 'site', 'sites')}. ${newUnlabeled === 0 ? 'All of them carry a label' : `${newUnlabeled} ${newUnlabeled === 1 ? 'has' : 'have'} no label yet`}${newPublic === 0 ? ' and none reach the internet directly.' : ` and ${newPublic} ${newPublic === 1 ? 'reaches' : 'reach'} the internet directly. Label them, then bring the exposed ones under a private-path policy.`}`
+      : `Nothing new was discovered ${DR.inTheLast(winLabel)}. Widen the range in the title row to look further back.`,
+    cta: newOnly ? 'Show everything' : 'Review new', hasNew: newN > 0, pill: newOnly ? `${newN.toLocaleString('en-US')} new · showing only these` : `${newN.toLocaleString('en-US')} new · ${winLabel}`,
     toggle: () => set({ newOnly: !newOnly, inv: newOnly ? openMap : { ...openMap, ...Object.fromEntries(inv.flatMap(cl => [cl.id, ...cl.regions.map(r => r.id)]).map(k => [k, true])) }, siteOpen: newOnly ? (s.siteOpen || {}) : Object.fromEntries(S.siteTree(est).flatMap(cl => [cl.key, ...cl.children.map(ch => ch.key)]).map(k => [k, true])) }),
+    // The pill filters Your clouds and Your sites to what is new, and lands where most of it is (2026-09-30).
+    // Where the filter is on, the pill turns it off; anywhere else it opens what is new (2026-10-01).
+    go: (e) => { dd.stop(e); if (newOnly) { set({ newOnly: false, cloudPage: 0, placePage: 0 }); return; } dd.news(cloudNewN ? 'clouds' : 'sites')(); },
   };
   // Estate insights (2026-09-28): what you have and what you don't, each card
   // leading with its so-what, its evidence as rows, and one move.
@@ -1772,7 +1863,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     { title: 'Cloud connections', soWhat: `${ePrivRegs.length} of ${eRegs.length} regions private${ePubRegs.length ? ` · ${enf(pubWlE)} workloads on the internet` : ''}`,
       rows: eBars([...ePrivRegs, ...ePubRegs].slice(0, 6).map(r => ({ key: r.region, label: `${r.cloud} ${r.region}`, sub: r.priv ? (F.RAMP_NAME[r.ramp] || 'Private') : 'public internet', n: r.wl || 0, value: r.priv ? eBwOf(r) : 'Internet', fill: r.priv ? 'var(--viz-1)' : 'var(--viz-6)' }))),
       cta: 'Connect', go: go('s3', { layer: 'cloud', tab: 'connect' }) },
-    { title: `New in the last ${winLabel}`, soWhat: newN ? `${enf(newUnlabeled)} unlabeled · ${enf(newPublic)} reach the internet` : 'Nothing new',
+    { title: DR.newWords(winLabel), soWhat: newN ? `${enf(newUnlabeled)} unlabeled · ${enf(newPublic)} reach the internet` : 'Nothing new',
       rows: eBars([['VPCs', newVpcs.length], ['Workloads', newWls.length], ['Sites', newSites.length], ['No label yet', newUnlabeled], ['Reach the internet', newPublic]].map(([l, n]) => ({ label: l, sub: '', n, value: enf(n), fill: /label|internet/.test(l) ? 'var(--viz-4)' : 'var(--viz-1)' }))),
       cta: newStrip.cta, go: newN ? newStrip.toggle : eToSites },
   ];
@@ -1781,42 +1872,94 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const eIpsecB = (est.buckets || []).find(b => b.id === 'ipsec');
   const eSingles = allSitesE.filter(x => onAtt(x) && Array.isArray(x.services) && S.servicesOf(x).length === 1);
   const eByRegion = (xs) => { const m = {}; xs.forEach(x => { const r = regionOf(x); (m[r] = m[r] || []).push(x); }); return Object.entries(m); };
+  // "'private path for 5 sites' those kinds of things should be clickable" (Micah, 2026-09-30): each
+  // count in a gap opens its set, its dollars open Cost, and its move starts the flow with the whole
+  // set in it (Attach used to carry the first region only, and Move to AT&T and Add a backup none).
+  const sitesN = (n) => `${enf(n)} ${n === 1 ? 'site' : 'sites'}`;
+  const offN = ecnt(eOffAtt), singleN = ecnt(eSingles);
   const lackCards = [
-    ...(eOffAtt.length ? [{ title: `Private path for ${enf(ecnt(eOffAtt))} ${ecnt(eOffAtt) === 1 ? 'site' : 'sites'}`,
-      soWhat: eIpsecB ? `${fmt(eIpsecB.today)}/mo egress · ${enf(eOffAtt.length)} VPN endpoints exposed` : `${enf(ecnt(eOffAtt))} outside AT&T`,
+    ...(eOffAtt.length ? [{ title: `Private path for ${sitesN(offN)}`,
+      soWhat: eIpsecB ? `${fmt(eIpsecB.today)}/mo egress · ${enf(eOffAtt.length)} VPN endpoints exposed` : `${enf(offN)} outside AT&T`,
+      titleParts: partsOf(['Private path for ', { key: 'n', t: sitesN(offN), go: dd.sites('outside') }]),
+      soParts: partsOf(eIpsecB ? [{ key: 'usd', t: `${fmt(eIpsecB.today)}/mo egress`, go: dd.cost({ costPanel: 'legs', costBy: 'cloud', costPick: eIpsecB.cloud || null, legDrill: eIpsecB.cloud ? { leg: 'cloud', row: 'egress' } : null }) }, ' · ',
+        { key: 'vpn', t: `${enf(eOffAtt.length)} VPN endpoints exposed`, go: eOffAtt.length === offN ? dd.sites('outside') : null }]
+        : [{ key: 'n', t: `${enf(offN)} outside AT&T`, go: dd.sites('outside') }]),
       rows: eOffAtt.map(x => ({ key: x.name, label: x.name, sub: regionOf(x), title: `${x.name} · ${x.metro} · ${S.servicesOf(x)[0].name}`, w: '0%', fill: 'transparent', value: x.tunnel || (S.countOf(x.name) > 1 ? enf(S.countOf(x.name)) : S.servicesOf(x)[0].label) })),
-      cta: 'Move to AT&T', go: go('s4') }] : []),
+      cta: 'Move to AT&T', go: dd.order({ sites: eOffAtt.map(x => x.name), note: `Move the ${sitesN(offN)} outside AT&T onto the AT&T network.` }) }] : []),
     ...(ePubRegs.length ? [{ title: `Private connection in ${ePubRegs.length} ${ePubRegs.length === 1 ? 'region' : 'regions'}`,
       soWhat: `${enf(pubWlE)} workloads on the internet${totalSave ? ` · ${fmt(totalSave)}/mo to save` : ''}`,
+      titleParts: partsOf(['Private connection in ', { key: 'n', t: `${ePubRegs.length} ${ePubRegs.length === 1 ? 'region' : 'regions'}`, go: dd.clouds({ unit: 'region', state: 'pub' }) }]),
+      soParts: partsOf([{ key: 'wl', t: `${enf(pubWlE)} workloads on the internet`, go: pubWlE ? dd.clouds({ unit: 'workload', state: 'internet' }) : null },
+        ...(totalSave ? [' · ', { key: 'usd', t: `${fmt(totalSave)}/mo to save`, go: dd.cost({ costPanel: 'spend' }) }] : [])]),
       rows: eBars(ePubRegs.map(r => ({ key: r.region, label: `${r.cloud} ${r.region}`, sub: `${r.pub} ms`, n: r.wl || 0, value: enf(r.wl || 0), fill: 'var(--viz-6)' }))),
-      cta: `Attach ${ePubRegs.length}`, go: composeFor(go, ePubRegs[0]) }] : []),
-    ...(eSingles.length ? [{ title: `A backup path at ${enf(eSingles.length)} ${eSingles.length === 1 ? 'site' : 'sites'}`,
+      // One cloud an order, the flow's rule (skeptic, 2026-10-01): the cloud with the most on the internet first.
+      ...((plan) => ({ cta: plan.label, go: dd.order({ regions: plan.regions, note: attachNote(plan, `${ePubRegs.length} ${ePubRegs.length === 1 ? 'region' : 'regions'} on the internet`) }) }))(DR.attachPlan(est, ePubRegs.map(r => r.region))) }] : []),
+    ...(eSingles.length ? [{ title: `A backup path at ${sitesN(singleN)}`,
       soWhat: 'One circuit failure takes a site offline',
+      titleParts: partsOf(['A backup path at ', { key: 'n', t: sitesN(singleN), go: dd.sites('single') }]),
+      soParts: partsOf(['One circuit failure takes a site offline']),
       rows: eBars(eByRegion(eSingles).map(([r, xs]) => ({ key: r, label: r, sub: '', title: xs.map(x => x.name).join(', '), n: xs.length, value: enf(xs.length), fill: 'var(--viz-4)' }))),
-      cta: 'Add a backup', go: go('s4') }] : []),
+      cta: 'Add a backup', go: dd.order({ sites: eSingles.map(x => x.name), tier: 'geodiversity', note: `A second path at the ${sitesN(singleN)} on one circuit.` }) }] : []),
   ];
   const stats = A.inventoryStats(est, inv);
   // At a glance with oomph, down to the app level (Micah, 2026-09-29): four
   // rings whose centres are the header's counts, then the apps themselves.
   const apps = appsOf(est, inv, ob.flows);
   const privWlN = Math.round(apps.reduce((a, x) => a + x.wl * x.onAtt, 0)), pubWlN = Math.max(0, stats.workloads - privWlN);
-  const ringOf = (key, title, rows, centre, centreSub, head, cta, go2) => { const d = R.donut(rows); return { key, title, ring: d.ring, centre, centreSub, head, cta, go: go2,
-    legend: d.rows.slice(0, 4).map(r => ({ key: r.label, color: r.color, label: r.label, n: enf(r.v) })) }; };
+  // "it would be good to click on pie charts - it all should be drillable" (Micah, 2026-09-30): the
+  // ring is a button (the pointer's arc opens its segment, the hole or a key press the whole set), its
+  // head opens its own set, and every segment has its door on the ring and, room allowing, in the legend.
+  // Past four segments the smallest open together, and every arc is wide enough to click (skeptic,
+  // 2026-10-01: three of Established's seven services had no legend row and a 1px arc).
+  const LEGEND_WORD = { 'Third Party Access': 'Third party' };
+  const ringOf = (key, title, rows, centre, centreSub, head, cta, go2, dr) => {
+    const segs = DR.ringSegs(rows.map((r, i) => ({ ...r, color: r.color || `var(--viz-${(i % 6) + 1})` })), { merge: dr.merge, otherLabel: () => 'Others' })
+      .map(r => ({ key: r.key || r.label, label: r.label, n: r.v, from: r.from, to: r.to, color: r.color, go: r.door, title: r.rest ? `${r.label} ${enf(r.v)}: ${r.rest.map(x => `${x.label} ${enf(x.v)}`).join(', ')}` : `${r.label} ${enf(r.v)}` }));
+    const d = { ring: DR.ringOf(segs) };
+    const pick = (e) => { const el = e && e.currentTarget; if (!el || !el.getBoundingClientRect || !e.detail || !segs.length) return dr.centre(e);
+      const b = el.getBoundingClientRect(); const i = DR.ringHit(segs, e.clientX - (b.left + b.width / 2), e.clientY - (b.top + b.height / 2), b.width / 2, b.width / 2 - 15);
+      return i < 0 ? dr.centre(e) : segs[i].go(e); };
+    return { key, title, ring: d.ring, centre, centreSub, head, cta, go: go2, segs, pick, centreGo: dr.centre, headCan: !!dr.head, headCant: !dr.head, headGo: dr.head || (() => {}),
+      ringLabel: `${title}: ${centre} ${centreSub}. ${segs.map(sg => sg.title).join('; ')}`,
+      legend: segs.map(sg => ({ key: sg.key, color: sg.color, label: LEGEND_WORD[sg.label] || sg.label, n: enf(sg.n), can: true, go: sg.go, title: `Open ${sg.title}` })) }; };
   const byCloudRegs = {}; eRegs.forEach(r => { byCloudRegs[r.cloud] = (byCloudRegs[r.cloud] || 0) + 1; });
+  const exposedN = apps.reduce((a, x) => a + x.exposed, 0);
   const glanceRings = [
-    ringOf('sites', 'Sites', Object.values(eSvcTally).sort((a, b) => b.n - a.n).map((t, i) => ({ label: t.v.label, v: t.n, color: t.v.onAtt ? `var(--viz-${[1, 2, 3, 5][i % 4]})` : 'var(--viz-4)' })), enf(eSiteN), 'sites', eAttN === eSiteN ? 'All on AT&T' : `${enf(eAttN)} on AT&T`, 'Your sites', eToSites),
-    ringOf('clouds', 'Clouds', Object.entries(byCloudRegs).sort((a, b) => b[1] - a[1]).map(([c, n]) => ({ label: c, v: n })), enf(eRegs.length), eRegs.length === 1 ? 'region' : 'regions', `${ePrivRegs.length} private`, 'Your clouds', () => set({ estPanel: 'clouds' })),
-    ringOf('workloads', 'Workloads', [{ label: 'On AT&T', v: privWlN, color: 'var(--viz-1)' }, { label: 'On the internet', v: pubWlN, color: 'var(--viz-6)' }], enf(stats.workloads), 'workloads', pubWlN ? `${enf(pubWlN)} on the internet` : 'None on the internet', 'Connect them', go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' })),
-    ringOf('apps', 'Apps', apps.map(x => ({ label: x.tag, v: x.wl })), enf(apps.length), apps.length === 1 ? 'app' : 'apps', `${enf(apps.reduce((a, x) => a + x.exposed, 0))} workloads exposed`, 'Tags', go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'tags' })),
+    ringOf('sites', 'Sites', Object.values(eSvcTally).sort((a, b) => b.n - a.n).map((t, i) => ({ key: t.v.key, label: t.v.label, v: t.n, color: t.v.onAtt ? `var(--viz-${[1, 2, 3, 5][i % 4]})` : 'var(--viz-4)', door: dd.sites('prim:' + t.v.key) })), enf(eSiteN), 'sites', eAttN === eSiteN ? 'All on AT&T' : `${enf(eAttN)} on AT&T`, 'Your sites', eToSites,
+      { centre: dd.sites(null), head: eAttN ? dd.sites('att') : null, merge: (rest) => dd.sites('prim:' + rest.map(r => r.key).join(',')) }),
+    ringOf('clouds', 'Clouds', Object.entries(byCloudRegs).sort((a, b) => b[1] - a[1]).map(([cl, n]) => ({ key: cl, label: cl, v: n, door: dd.clouds(null, ['cloud:' + cl]) })), enf(eRegs.length), eRegs.length === 1 ? 'region' : 'regions', `${ePrivRegs.length} private`, 'Your clouds', () => set({ estPanel: 'clouds' }),
+      { centre: dd.clouds({ unit: 'region' }), head: ePrivRegs.length ? dd.clouds({ unit: 'region', state: 'priv' }) : null, merge: (rest) => dd.clouds({ unit: 'region', clouds: rest.map(r => r.key) }) }),
+    ringOf('workloads', 'Workloads', [{ key: 'att', label: 'On AT&T', v: privWlN, color: 'var(--viz-1)', door: dd.clouds({ unit: 'workload', state: 'att' }) }, { key: 'internet', label: 'On the internet', v: pubWlN, color: 'var(--viz-6)', door: dd.clouds({ unit: 'workload', state: 'internet' }) }], enf(stats.workloads), 'workloads', pubWlN ? `${enf(pubWlN)} on the internet` : 'None on the internet', 'Connect them', go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' }),
+      { centre: dd.clouds({ unit: 'workload' }), head: pubWlN ? dd.clouds({ unit: 'workload', state: 'internet' }) : null }),
+    ringOf('apps', 'Apps', apps.map(x => ({ key: x.tag, label: x.tag, v: x.wl, door: dd.clouds({ unit: 'workload', tag: x.tag }) })), enf(apps.length), apps.length === 1 ? 'app' : 'apps', `${enf(exposedN)} workloads exposed`, 'Tags', go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'tags' }),
+      { centre: dd.clouds({ unit: 'app' }), head: exposedN ? dd.clouds({ unit: 'workload', state: 'exposed' }) : null, merge: (rest) => dd.clouds({ unit: 'workload', tags: rest.map(r => r.key) }) }),
   ];
+  // "discover - estate - integrate costs" (Micah, 2026-09-30): the estate's month beside the rings,
+  // and each cloud, region and site row's own, read from Cost v2's one model through its own slices
+  // (R.costLegs, as costVals reads it), so every figure is the one its Cost door shows.
+  const costL = R.costLegs(est, A.inventory(est), obAll.utilRows);
+  const costIx = DR.costIndex(est, costL);
+  const glanceSpend = (() => { const ks = ['access', 'connect', 'cloud'], tot = Math.round(costL.total || 0), legR = CV.roundTo(ks.map(k => (costL[k] || {}).total || 0), tot);
+    const segs = CV.inkSegs(ks.flatMap(k => (costL[k] || {}).rows || [])), segT = segs.reduce((a, x) => a + x.v, 0) || 1;
+    return { has: tot > 0, totalF: fmt(tot), totalGo: dd.cost({ costPanel: 'legs' }), title: `${fmt(tot)} a month, end to end, from Cost`,
+      legs: ks.map((k, i) => ({ key: k, label: { access: 'Site access', connect: 'Connectivity', cloud: 'Cloud provider' }[k], vF: fmt(legR[i]), go: dd.cost({ costPanel: 'legs' }), title: `${costL[k].label}: ${fmt(legR[i])}/mo · ${CV.legCovers(costL[k])}` })),
+      segs: segs.map(x => ({ key: x.key, w: (x.v / segT * 100).toFixed(2) + '%', bg: CV.fillOf(x.ink, x.modelled), title: `${CV.COST_INK[x.ink].word}${x.modelled ? ', modelled' : ''}: ${fmt(Math.round(x.v))}/mo` })) }; })();
   const wlMax = Math.max(1, ...apps.map(x => x.wl));
   const H_INK = F.HEALTH_INK; // one ink per state; Over SLO is not Down's red (review, 2026-09-30)
   const appAll = apps.map(x => ({ key: x.tag, name: x.tag, sub: x.topApps.join(', '), wl: x.wl, exposed: x.exposed, wlF: enf(x.wl), wlW: Math.max(3, Math.round(x.wl / wlMax * 100)) + '%',
     runsIn: x.regions.slice(0, 2).join(', ') + (x.regions.length > 2 ? ` +${x.regions.length - 2}` : ''), runsTitle: x.regions.join(', '),
     onAttF: Math.round(x.onAtt * 100) + '%', onAttW: Math.round(x.onAtt * 100) + '%', exposedF: x.exposed ? enf(x.exposed) : 'None', exposedInk: x.exposed ? 'var(--error)' : 'var(--text-light)',
     gbpsF: x.gbps >= 1 ? x.gbps.toFixed(1) + ' Gbps' : Math.round(x.gbps * 1000) + ' Mbps', p95F: `${x.p95} ms`, healthInk: H_INK[x.health], healthTitle: `p95 ${x.p95} ms against a ${x.slo} ms SLO`,
-    // An app opens its own records: the Logs filtered to its tag.
-    go: () => { go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', sub: null })(); set({ logQ: x.tag, logPage: 0 }); } }));
+    // Every cell opens its own set (2026-09-30). The app is its group, the workloads that carry its
+    // tag, so the row and its name open them. Only Traffic, a traffic figure, opens the records:
+    // Exposed opens the exposed workloads, never Logs ("that's confusing").
+    ...(() => { const onAttN = Math.round(x.wl * x.onAtt), group = dd.clouds({ unit: 'workload', tag: x.tag });
+      return { go: group, nameGo: group, wlGo: group, runsGo: dd.clouds({ unit: 'region', tag: x.tag }),
+        onAttN, onAttCan: onAttN > 0, onAttCant: !onAttN, onAttGo: onAttN ? dd.clouds({ unit: 'workload', tag: x.tag, state: 'att' }) : () => {},
+        exposedCan: x.exposed > 0, exposedCant: !x.exposed, exposedGo: x.exposed ? dd.clouds({ unit: 'workload', tag: x.tag, state: 'exposed' }) : () => {},
+        // p95 opens the app's workloads on the path that sets it, the landing reading that latency (2026-10-01:
+        // it opened the app's first path on Paths, a site-to-app total of another figure).
+        gbpsGo: dd.logsFor(x.tag), p95Go: dd.clouds({ unit: 'workload', tag: x.tag, regions: x.p95Regions, p95: true }) }; })() }));
   const selWl = inv.flatMap(cl => cl.regions.flatMap(r => r.vpcs)).filter(v => sel.includes(v.id)).reduce((a, v) => a + v.wl, 0);
   const pubWl = est.regionsList.filter(r => !r.priv).reduce((a, r) => a + r.wl, 0);
   const attachN = selWl || pubWl;
@@ -2558,6 +2701,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const bucket = (st) => OPEN_STATES.includes(st) ? 'open' : st === 'snoozed' ? 'snoozed' : 'closed';
   const every = [...lifeRows, ...history];
   const openN = every.filter(x => bucket(x.l.state) === 'open').length;
+  // Discover's "Open its finding" opens only an open one (skeptic, 2026-10-01: it opened a snoozed one).
+  const findOpen = lifeRows.map(x => ({ key: x.f.key, open: bucket(x.l.state) === 'open' }));
   const findFilter = ['open', 'snoozed', 'closed', 'all'].includes(s.findFilter) ? s.findFilter : 'open';
   const findChips = [['open', 'Open'], ['snoozed', 'Snoozed'], ['closed', 'Closed'], ['all', 'All']].map(([k, l]) => {
     const n = k === 'all' ? every.length : every.filter(x => bucket(x.l.state) === k).length;
@@ -3079,13 +3224,19 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     rescan: sched.runNow(sched.accounts.map(a => a.id), 'manual'),
   });
   const connWord = conns.total === 1 ? 'connection' : 'connections';
-  const siteN = (est0.sitesCount || est0.sites.length).toLocaleString('en-US');
+  // The sites the AT&T inventory holds are the estate's sites, counted as the pill counts them
+  // (2026-09-30: Established read "10 sites" here, its ten site records, beside a 221 sites pill).
+  const siteN = (stats.sites || est0.sitesCount || est0.sites.length).toLocaleString('en-US');
   const rawSources = [
     ...sched.accounts.map(acctRow),
     ...(conns.total ? [attRow('src:netbond', 'NetBond inventory', `${conns.total} ${connWord}`, `${conns.total} ${connWord} · live`)] : []),
     ...(est0.sites.length ? [attRow('src:sites', 'AVPN and access sites', `${siteN} sites`, `${siteN} sites · from AT&T inventory`)] : []),
   ];
-  const sources = rawSources.map(r => ({ ...r,
+  // A source's scope is a count, and a door to it (2026-09-30): an account's regions on Your clouds,
+  // the NetBond connections on Capacity, the access sites by place.
+  const scopeDoor = (r) => r.key === 'src:netbond' ? dd.conn(null) : r.key === 'src:sites' ? dd.sites(null)
+    : (est.regionsList || []).some(x => x.cloud === r.kind) ? dd.clouds(null, ['cloud:' + r.kind]) : null;
+  const sources = rawSources.map(r => ({ ...r, scopeCan: !!scopeDoor(r), scopeCant: !scopeDoor(r), scopeGo: scopeDoor(r) || (() => {}),
     edit: () => set({ sub: { page: 'discover', panel: 'add' }, sourceEdit: r.key }),
     // A source added in this session comes back out the same way (2026-09-30).
     remove: () => { const m = /^src:added-(\d+)-/.exec(r.key); if (!m) return; const mine = (s.addedSources || []).filter(a => a.estId === est.id); const drop = mine[+m[1]];
@@ -3095,12 +3246,19 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const foundVals = (() => {
     const mine = (s.addedSources || []).filter(a => a.estId === est.id), last = mine[mine.length - 1];
     const regs = last ? est.regionsList.filter(r => r.fresh && r.via === (last.name || last.provider)) : [];
-    if (!last || !regs.length) return { hasFound: false, foundLine: '', seeFound: () => {}, foundAttach: () => {} };
+    if (!last || !regs.length) return { hasFound: false, foundLine: '', foundParts: [], seeFound: () => {}, foundAttach: () => {} };
     const cloud = regs[0].cloud, noun = cloud === 'Azure' ? 'VNets' : cloud === 'Oracle' ? 'VCNs' : 'VPCs';
     const vpcN = inv.flatMap(c => c.regions || []).filter(r => regs.some(x => x.region === r.region)).reduce((a, r) => a + (r.vpcs || []).length, 0);
     const wl = regs.reduce((a, r) => a + (r.wl || 0), 0), pub = regs.every(r => !r.priv);
-    return { hasFound: true, foundLine: `Discovery found ${regs.length} ${cloud} ${regs.length === 1 ? 'region' : 'regions'}, ${vpcN} ${noun} and ${wl.toLocaleString('en-US')} workloads. ${pub ? (regs.length === 2 ? 'Both ride' : regs.length === 1 ? 'It rides' : 'All ride') : 'Some ride'} the public internet.`,
-      seeFound: () => set({ screen: 's1', discoverView: 'estate', estPanel: 'clouds', cloudTrailE: ['cloud:' + cloud], cloudPage: 0 }), foundAttach: composeFor(go, regs[0]) };
+    // Each count in the line opens what it found (drill rule, 2026-09-30), and Attach carries every region it found.
+    const found = regs.map(r => r.region), regsT = `${regs.length} ${cloud} ${regs.length === 1 ? 'region' : 'regions'}`;
+    const tail = `. ${pub ? (regs.length === 2 ? 'Both ride' : regs.length === 1 ? 'It rides' : 'All ride') : 'Some ride'} the public internet.`;
+    const foundParts = partsOf(['Discovery found ', { key: 'regs', t: regsT, go: dd.clouds({ unit: 'region', regions: found }) }, ', ',
+      { key: 'vpcs', t: `${vpcN} ${noun}`, go: vpcN ? dd.clouds({ unit: 'vpc', regions: found }) : null }, ' and ',
+      { key: 'wl', t: `${wl.toLocaleString('en-US')} workloads`, go: wl ? dd.clouds({ unit: 'workload', regions: found }) : null }, tail]);
+    return { hasFound: true, foundParts, foundLine: `Discovery found ${regsT}, ${vpcN} ${noun} and ${wl.toLocaleString('en-US')} workloads${tail}`,
+      seeFound: () => set({ screen: 's1', discoverView: 'estate', estPanel: 'clouds', cloudTrailE: ['cloud:' + cloud], cloudFilter: null, newOnly: false, cloudPage: 0 }),
+      foundAttach: ((pubFound) => dd.order({ regions: pubFound.length ? pubFound : found, note: `Attach the ${regsT} discovery just found.` }))(regs.filter(r => !r.priv).map(r => r.region)) };
   })();
   const credScanned = sources.filter(x => x.state === 'Connected').length;
   const gapVals = { gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
@@ -3172,7 +3330,13 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   };
   return {
     ...drawerVals,
-    invTree: s.tagView ? tagTree(inv, tree, chip) : tree, tagView: !!s.tagView, cloudView: !s.tagView, toggleTagView: () => set({ tagView: !s.tagView }), tagViewUb: s.tagView ? 'var(--cta)' : 'transparent', tagViewColor: s.tagView ? 'var(--link)' : 'var(--text-body)', cloudViewUb: !s.tagView ? 'var(--cta)' : 'transparent', cloudViewColor: !s.tagView ? 'var(--link)' : 'var(--text-body)', hasTree: tree.length > 0, invStats: [{ key: 's', v: stats.sites.toLocaleString('en-US'), l: 'sites' }, { key: 'c', v: stats.clouds, l: 'clouds' }, { key: 'r', v: stats.regions, l: 'regions' }, { key: 'w', v: stats.workloads.toLocaleString('en-US'), l: 'workloads' }, { key: 'a', v: stats.attached, l: 'attached' }, { key: 'e', v: stats.exposed.toLocaleString('en-US'), l: 'exposed workloads' }],
+    invTree: s.tagView ? tagTree(inv, tree, chip) : tree, tagView: !!s.tagView, cloudView: !s.tagView, toggleTagView: () => set({ tagView: !s.tagView }), tagViewUb: s.tagView ? 'var(--cta)' : 'transparent', tagViewColor: s.tagView ? 'var(--link)' : 'var(--text-body)', cloudViewUb: !s.tagView ? 'var(--cta)' : 'transparent', cloudViewColor: !s.tagView ? 'var(--link)' : 'var(--text-body)', hasTree: tree.length > 0,
+    // The small pills beside Discover are doors (Micah, 2026-09-30): each opens the list of what it counts.
+    invStats: [['s', stats.sites, 'site', 'sites', dd.sites(null)], ['c', stats.clouds, 'cloud', 'clouds', dd.clouds(null)], ['r', stats.regions, 'region', 'regions', dd.clouds({ unit: 'region' })],
+      ['w', stats.workloads, 'workload', 'workloads', dd.clouds({ unit: 'workload' })], ['a', stats.attached, 'attached', 'attached', dd.clouds({ unit: 'vpc', state: 'attached' })],
+      ['e', stats.exposed, 'exposed workload', 'exposed workloads', dd.clouds({ unit: 'workload', state: 'exposed' })]]
+      .map(([key, n, one, many, door]) => ({ key, v: key === 'c' || key === 'r' || key === 'a' ? n : n.toLocaleString('en-US'), l: n === 1 ? one : many, can: n > 0, cant: !n, go: n ? door : () => {},
+        title: n ? `Open the ${n.toLocaleString('en-US')} ${key === 'a' ? (n === 1 ? 'attached VPC' : 'attached VPCs and VNets') : n === 1 ? one : many}` : '' })),
     expandAll: () => set({ inv: { ...openMap, ...Object.fromEntries(openKeys.map(k => [k, true])) } }), collapseAll: () => set({ inv: {} }), collapsedLabel: Object.values(openMap).some(Boolean) ? 'Expanded view' : 'Collapsed view',
     // No invented split (2026-09-29 audit): nothing in the data says which of these are on AT&T.
     overflowRow: est.regionsExtra ? `${est.regionsExtra.toLocaleString('en-US')} smaller regions rolled up · no traffic data yet` : '', hasOverflow: !!est.regionsExtra, overflowW: est.regionsExtra ? '60%' : '0%',
@@ -3224,7 +3388,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         else { set({ jumpHit: `Jumped to ${hit.label}`, tagView: false, treeOrMap: 'tree', inv: { ...(s.inv || {}), [hit.cloudId]: true, [hit.regionId]: true, [hit.vpcId]: true } }); after('vpc:' + hit.vpcId); }
       };
       return { jumpQ: s.jumpQ || '', setJumpQ: (e) => set({ jumpQ: e.target.value, jumpHit: '' }), jumpKey: (e) => { if (e.key === 'Enter') jumpTo(); }, jumpGo: jumpTo, jumpHit: s.jumpHit || '', hasJumpHit: !!s.jumpHit,
-        newStrip, newPill30, newOnly, haveCards, glanceRings, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
+        newStrip, newPill30, newOnly, haveCards, glanceRings, glanceSpend, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go, titleParts: l.titleParts, soParts: l.soParts })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
         // Three tabs, one panel at a time (2026-09-28, no scrolling).
         // Group the picture's sites (notes, 2026-09-29): by region, or by how they attach.
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
@@ -3240,56 +3404,212 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           const regsOf = (cl) => est.regionsList.filter(r => r.cloud === cl);
           const ir = (reg) => invAll.flatMap(c => c.regions || []).find(x => x.region === reg);
           const nf = (x) => Number(x || 0).toLocaleString('en-US');
-          let level = 'cloud', rows = [];
-          if (!trail.length) {
-            rows = [...new Set(est.regionsList.map(r => r.cloud))].map(cl => { const rs = regsOf(cl), pr = rs.filter(r => r.priv);
-              return { key: 'cloud:' + cl, name: cl, sub: `${rs.length} ${rs.length === 1 ? 'region' : 'regions'} · ${pr.length} private · ${rs.length - pr.length} on the internet`, bw: pr.map(r => (utilOf(r) || {}).bwShort).filter(Boolean).join(' + '), priv: pr.length > 0, into: 'cloud:' + cl, next: 'regions' }; });
+          const nn = (n, one, many) => `${nf(n)} ${n === 1 ? one : many}`;
+          // Every count in a row is a door to its set (2026-09-30). A filter (s.cloudFilter) lists the
+          // things a figure counted, flat, at the trail's scope; the new pill lists what is new. A
+          // figure's door clears the new filter, and the trail's own drill clears both.
+          const cf = s.cloudFilter && s.cloudFilter.unit ? s.cloudFilter : newOnly ? { unit: 'new', days: winDays, label: winLabel } : null;
+          const at = (patch) => (e) => { dd.stop(e); set({ cloudPage: 0, newOnly: false, ...patch }); };
+          const scopeTo = (x, depth) => ['cloud:' + x.cloud, 'region:' + x.r.region, ...(depth > 2 ? ['vpc:' + x.v.id] : []), ...(depth > 3 ? ['sn:' + x.sn.id] : [])];
+          const wlLink = (n, to, extra) => ({ key: 'wl', t: nn(n, 'workload', 'workloads'), go: n ? at({ cloudTrailE: to, cloudFilter: { unit: 'workload', ...(extra || {}) } }) : null });
+          const tagLink = (tag) => ({ key: 'tag', t: tag, go: at({ cloudTrailE: [], cloudFilter: { unit: 'workload', tag } }) });
+          const connLink = (r) => { const u = utilOf(r); return u ? { key: 'bw:' + r.region, t: u.bwShort, go: dd.conn(r.region) } : null; };
+          const joinPlus = (xs) => xs.flatMap((x, i) => (i ? [' + ', x] : [x]));
+          // What a cloud or a cloud region costs a month: its egress, the figure Cost shows for it (2026-09-30).
+          const hasBucket = (cl) => (est.buckets || []).some(b => b.cloud === cl);
+          const costOf = (ix, cl, title) => ix && ix.v > 0.5 ? { hasCost: true, costF: fmt(Math.round(ix.v)), costUnit: '/mo egress', costCan: true, costCant: false, costGo: dd.cost(ix.view), costTitle: `${title}: ${fmt(Math.round(ix.v))} a month of egress, from Cost` }
+            : { hasCost: true, costF: hasBucket(cl) ? '$0' : 'Not yet measured', costUnit: hasBucket(cl) ? '/mo egress' : '', costCan: false, costCant: true, costGo: () => {},
+              costTitle: hasBucket(cl) ? `Cost places none of ${cl}'s egress in ${title}` : `No egress bucket names ${title} yet` };
+          const noCost = { hasCost: false, costF: '', costUnit: '', costCan: false, costCant: false, costGo: () => {}, costTitle: '' };
+          const cloudRowOf = (cl) => { const rs = regsOf(cl), pr = rs.filter(r => r.priv), pub = rs.length - pr.length;
+            return { key: 'cloud:' + cl, name: cl, priv: pr.length > 0, into: ['cloud:' + cl], next: 'regions', ...costOf(costIx.cloud[cl], cl, cl),
+              parts: [{ key: 'regs', t: nn(rs.length, 'region', 'regions'), go: at({ cloudTrailE: ['cloud:' + cl], cloudFilter: null }) }, ' · ',
+                { key: 'priv', t: `${pr.length} private`, go: pr.length ? at({ cloudTrailE: ['cloud:' + cl], cloudFilter: { unit: 'region', state: 'priv' } }) : null }, ' · ',
+                { key: 'pub', t: `${pub} on the internet`, go: pub ? at({ cloudTrailE: ['cloud:' + cl], cloudFilter: { unit: 'region', state: 'pub' } }) : null }],
+              bw: joinPlus(pr.map(connLink).filter(Boolean)) }; };
+          const regionRowOf = (r) => { const u = utilOf(r), to = ['cloud:' + r.cloud, 'region:' + r.region];
+            return { key: 'region:' + r.region, name: `${r.cloud} ${r.region}`, priv: !!r.priv, into: ir(r.region) ? to : null, next: 'VPCs', ...costOf(costIx.region[r.region], r.cloud, `${r.cloud} ${r.region}`),
+              parts: r.priv ? [F.RAMP_NAME[r.ramp] || 'NetBond', ' · ', wlLink(r.wl, to), ...(u ? [' · ', { key: 'gbps', t: `${u.gbps} Gbps now`, go: dd.logsFor(r.region) }] : [])]
+                : ['public internet', ' · ', wlLink(r.wl, to)],
+              bw: r.priv ? [connLink(r)].filter(Boolean) : ['Internet'] }; };
+          const where = (x) => `${x.cloud} ${x.r.region}`;
+          const vpcRowOf = (x, flat) => ({ key: 'vpc:' + x.v.id, name: x.v.name, priv: !!x.v.priv, into: scopeTo(x, 3), next: 'subnets', ...noCost,
+            parts: [flat ? `${where(x)} · ${x.v.purpose || 'VPC'}` : (x.v.purpose || 'VPC'), ' · ', wlLink(x.v.wl, scopeTo(x, 3))], bw: [] });
+          // Rows that a unit of another set lists ("Subnets of exposed workloads") count inside that set, so
+          // their doors keep it (2026-10-01: an app row read 12 exposed and opened all 68).
+          const ofP = cf && cf.of && cf.of.unit ? cf.of : null;
+          const keepOf = (f) => (ofP ? { ...f, of: ofP } : f);
+          const subnetRowOf = (x, flat) => { const n = (x.sn.workloads || []).length;
+            return { key: 'sn:' + x.sn.id, name: x.sn.name, priv: !/pub/.test(x.sn.id), into: scopeTo(x, 4), next: 'workloads', ...noCost,
+              parts: [flat ? `${where(x)} › ${x.v.name} · ${x.sn.cidr || ''}` : (x.sn.cidr || ''), ' · ', { key: 'wl', t: nn(n, 'workload', 'workloads'), go: n ? at({ cloudTrailE: scopeTo(x, 4), cloudFilter: ofP ? keepOf({ unit: 'workload' }) : null }) : null }], bw: [] }; };
+          // An exposed workload reads as exposed (2026-09-30: it read `!w.public`, a field no workload carries).
+          const workloadRowOf = (x, flat) => ({ key: 'wl:' + x.w.id, name: x.w.name || x.w.id, priv: !x.w.exposed, into: null, next: '', ...noCost,
+            parts: [flat ? `${x.w.ip} · ${where(x)} › ${x.v.name}` : (x.w.ip || ''), ' · ', tagLink(x.w.tag || 'untagged')], bw: [] });
+          const appRowOf = (g) => ({ key: g.key, name: g.tag, priv: g.exposed === 0, into: null, filter: keepOf({ unit: 'workload', tag: g.tag }), next: 'workloads', ...noCost,
+            parts: [{ key: 'wl', t: nn(g.wl, 'workload', 'workloads'), go: at({ cloudFilter: keepOf({ unit: 'workload', tag: g.tag }) }) }, ' · ',
+              { key: 'exp', t: `${nf(g.exposed)} exposed`, go: g.exposed ? at({ cloudFilter: keepOf({ unit: 'workload', tag: g.tag, state: 'exposed' }) }) : null }], bw: [] });
+          const U = DR.unitsOf(est, invAll, trail);
+          let level = 'cloud', rows = [], set0 = null;
+          if (cf) {
+            set0 = DR.cloudSet(est, invAll, trail, cf); level = cf.unit;
+            rows = set0.items.map(x => x.kind === 'cloud' ? cloudRowOf(x.cloud) : x.kind === 'region' ? regionRowOf(x.top.cloud ? x.top : { ...x.top, cloud: x.cloud, region: x.r.region, wl: 0 })
+              : x.kind === 'vpc' ? vpcRowOf(x, true) : x.kind === 'subnet' ? subnetRowOf(x, true) : x.kind === 'app' ? appRowOf(x) : workloadRowOf(x, true));
+          } else if (!trail.length) {
+            rows = [...new Set(est.regionsList.map(r => r.cloud))].map(cloudRowOf);
           } else if (trail.length === 1) {
-            level = 'region';
-            rows = regsOf(String(trail[0]).slice(6)).map(r => { const u = utilOf(r);
-              return { key: r.region, name: `${r.cloud} ${r.region}`, sub: r.priv ? `${F.RAMP_NAME[r.ramp] || 'NetBond'} · ${nf(r.wl)} workloads · ${u ? u.gbps + ' Gbps now' : ''}` : `public internet · ${nf(r.wl)} workloads`, bw: r.priv && u ? u.bwShort : r.priv ? '' : 'Internet', priv: !!r.priv, into: ir(r.region) ? 'region:' + r.region : null, next: 'VPCs' }; });
-          } else {
-            const reg = ir(String(trail[1]).slice(7));
-            if (trail.length === 2) { level = 'vpc'; rows = reg ? reg.vpcs.map(v => ({ key: v.id, name: v.name, sub: `${v.purpose || 'VPC'} · ${nf(v.wl)} workloads`, bw: '', priv: !!v.priv, into: 'vpc:' + v.id, next: 'subnets' })) : []; }
-            else { const vpc = reg && reg.vpcs.find(v => 'vpc:' + v.id === trail[2]);
-              if (trail.length === 3) { level = 'subnet'; rows = vpc ? vpc.subnets.map(sn => ({ key: sn.id, name: sn.name, sub: `${sn.cidr || ''} · ${nf((sn.workloads || []).length)} workloads`, bw: '', priv: !/pub/.test(sn.id), into: 'sn:' + sn.id, next: 'workloads' })) : []; }
-              else { level = 'workload'; const sn = vpc && vpc.subnets.find(x => 'sn:' + x.id === trail[3]); rows = sn ? (sn.workloads || []).map(w => ({ key: w.id, name: w.name || w.id, sub: [w.ip, w.tag].filter(Boolean).join(' · '), bw: '', priv: !w.public, into: null, next: '' })) : []; } }
-          }
-          const LV = { cloud: ['cloud', 'clouds'], region: ['region', 'regions'], vpc: ['VPC', 'VPCs'], subnet: ['subnet', 'subnets'], workload: ['workload', 'workloads'] }[level];
-          const cloudRows = rows.map(r => ({ ...r, dot: r.priv ? 'var(--success)' : 'var(--warning)', level: r.into ? r.next : '', caret: r.into ? '›' : '', cursor: r.into ? 'pointer' : 'default',
-            go: r.into ? () => set({ cloudTrailE: [...trail, r.into], cloudPage: 0 }) : () => {} }));
+            level = 'region'; rows = regsOf(String(trail[0]).slice(6)).map(regionRowOf);
+          } else if (trail.length === 2) { level = 'vpc'; rows = U.vpcs.map(x => vpcRowOf(x, false)); }
+          else if (trail.length === 3) { level = 'subnet'; rows = U.sns.map(x => subnetRowOf(x, false)); }
+          else { level = 'workload'; rows = U.wls.map(x => workloadRowOf(x, false)); }
+          const LV = { cloud: ['cloud', 'clouds'], region: ['region', 'regions'], vpc: ['VPC', 'VPCs'], subnet: ['subnet', 'subnets'], workload: ['workload', 'workloads'], app: ['app', 'apps'], new: ['new thing', 'new things'] }[level];
+          const cloudRows = rows.map(r => { const parts = partsOf(r.parts), bwParts = partsOf(r.bw || []);
+            const open = r.into ? () => set({ cloudTrailE: r.into, cloudFilter: null, newOnly: false, cloudPage: 0 })
+              : r.filter ? () => set({ cloudFilter: r.filter, newOnly: false, cloudPage: 0 }) : null;
+            return { ...r, parts, bwParts, sub: parts.map(p => p.t).join(''), hasBw: bwParts.length > 0, dot: r.priv ? 'var(--success)' : 'var(--warning)', level: open ? r.next : '', caret: open ? '›' : '', cursor: open ? 'pointer' : 'default', canGo: !!open, noGo: !open,
+              go: open ? (e) => { dd.stop(e); open(); } : () => {} }; });
           const labelOf = (k) => { const id = String(k).replace(/^(cloud|region|vpc|sn):/, ''); const reg2 = trail[1] ? ir(String(trail[1]).slice(7)) : null;
             if (String(k).startsWith('vpc:') && reg2) return (reg2.vpcs.find(v => v.id === id) || {}).name || id;
             if (String(k).startsWith('sn:') && reg2) { for (const v of reg2.vpcs) { const sn = v.subnets.find(x => x.id === id); if (sn) return sn.name; } }
             return id; };
           const cloudCrumbsE = [{ key: 'root', label: 'All clouds', to: [] }, ...trail.map((k, i) => ({ key: k, label: labelOf(k), to: trail.slice(0, i + 1) }))]
-            .map((c, i, a) => ({ ...c, notLast: i < a.length - 1, weight: i === a.length - 1 ? 700 : 500, color: i === a.length - 1 ? 'var(--text-heading)' : 'var(--link)', go: () => set({ cloudTrailE: c.to, cloudPage: 0 }) }));
-          // The tiles count clouds, not sites, and follow the drill (notes, 2026-09-30).
-          const sc = X.cloudScope(est, invAll, trail);
-          const cloudTiles = sc.tiles.map(t => ({ ...t, tone: 'var(--text-heading)' }));
-          const cloudMix = sc.mix.map(m => ({ ...m, w: m.pct + '%', op: m.n ? 1 : 0.4 }));
+            .map((c, i, a) => ({ ...c, notLast: i < a.length - 1, weight: i === a.length - 1 ? 700 : 500, color: i === a.length - 1 ? 'var(--text-heading)' : 'var(--link)', go: () => set({ cloudTrailE: c.to, cloudFilter: null, newOnly: false, cloudPage: 0 }) }));
+          // The tiles count clouds, not sites, and follow the drill (notes, 2026-09-30). Each opens its
+          // set at this scope: the level's own rows, or the flat list of what it counts. Beside a filter
+          // they count the set, and open that unit of it (skeptic, 2026-10-01: "CLOUDS 4, VPCs 20" sat
+          // beside "53 new").
+          const sc = X.cloudScope(est, cf ? DR.pruneInv(est, invAll, trail, cf) : invAll, trail);
+          const natural = { root: 'Clouds', cloud: 'Regions', region: sc.noun, vpc: 'Subnets', subnet: 'Workloads' }[sc.level];
+          const unitOf = (l) => (l === 'Clouds' ? { unit: 'cloud' } : l === 'Regions' ? { unit: 'region' } : l === sc.noun ? { unit: 'vpc' } : l === 'Subnets' ? { unit: 'subnet' } : l === 'Apps' ? { unit: 'app' } : l === 'Workloads' ? { unit: 'workload' } : l === 'Exposed' ? { unit: 'workload', state: 'exposed' } : null);
+          const ofCf = (f) => (cf ? { ...f, of: cf } : f);
+          const cloudTiles = sc.tiles.map(t => { const n = num0(t.v), f = unitOf(t.l), can = !!n && (t.l === natural || !!f);
+            const to = cf ? (f && !(f.unit === 'app' && cf.unit === 'app') ? ofCf(f) : cf) : t.l === natural ? null : f;
+            return { ...t, tone: 'var(--text-heading)', can, cant: !can, go: !can ? () => {} : at({ cloudFilter: to }), title: !can ? '' : cf && to ? `Open the ${t.v}: ${DR.cloudFilterLabel(to)}` : `Open the ${t.v} ${t.l.toLowerCase()}` }; });
+          const cloudMix = sc.mix.map(m => ({ ...m, w: m.pct + '%', op: m.n ? 1 : 0.4, can: m.n > 0, cant: !m.n, go: m.n ? at({ cloudFilter: ofCf({ unit: 'vpc', state: 'mode:' + m.mode }) }) : () => {} }));
+          const siteModeN = (m) => (est.sites || []).filter(x => siteModeOf(x) === m).reduce((a, x) => a + S.countOf(x.name), 0), ipN = siteModeN('ipsec'), sdN = siteModeN('sdwan');
+          const cloudMixParts = partsOf(['How they connect · ', { key: 'ipsec', t: `${nf(ipN)} IPsec ${ipN === 1 ? 'site' : 'sites'}`, go: ipN ? dd.sites('mode:ipsec') : null }, ' · ', { key: 'sdwan', t: `${nf(sdN)} SD-WAN ${sdN === 1 ? 'site' : 'sites'}`, go: sdN ? dd.sites('mode:sdwan') : null }]);
           const cloudMixLabel = `How they connect · ${sc.siteLine}`, cloudMixTitle = `${sc.noun} by how they attach. ${sc.siteLine} reach the clouds over their own tunnels.`;
-          return { cloudRows, cloudCrumbsE, cloudTiles, cloudMix, cloudMixLabel, cloudMixTitle, cloudLine: `${rows.length} ${rows.length === 1 ? LV[0] : LV[1]}` };
+          const cloudListN = cf ? set0.total : rows.length;
+          const cloudLine = cf ? set0.line : nn(rows.length, LV[0], LV[1]);
+          // The moves this set calls for (Micah, 2026-09-30: "on all of the at a glance drills, what's the
+          // point? actions may help"): one or two, each the real flow with the set in it.
+          const items = cf ? set0.items : U.regs;
+          const cloudSetPub = DR.publicRegionsOf(cf && cf.unit === 'app' ? U.wls : items);
+          const exposedSet = !!(cf && cf.unit === 'workload' && cf.state === 'exposed'), tagged = cf && cf.tag;
+          const scopeWord = trail.length ? cloudCrumbsE[cloudCrumbsE.length - 1].label : 'All clouds';
+          const setWord = cf ? set0.label : scopeWord;
+          const scopeReg = trail[1] ? String(trail[1]).slice(7) : null, scopeCl = trail[0] ? String(trail[0]).slice(6) : null;
+          // The policy's subject, in the words its sentence reads ("When tag finance reaches any cloud, ..."): one thing, never a plural.
+          const ONE = { region: { priv: 'a private region', pub: 'a region on the internet' }, vpc: { attached: 'an attached VPC' }, workload: { exposed: 'an exposed workload', att: 'a workload on AT&T', internet: 'a workload on the internet' } };
+          const match = tagged ? `tag ${tagged}` : scopeReg ? `region ${scopeReg}` : scopeCl ? `cloud ${scopeCl}`
+            : cf ? ((ONE[cf.unit] || {})[cf.state] || { region: 'any region', vpc: 'any VPC', subnet: 'any subnet', workload: 'any workload', app: 'any app', new: 'anything new' }[cf.unit] || 'any workload') : 'any workload';
+          // Its finding is the open one written about this set, or none (skeptic, 2026-10-01: the exposed
+          // workloads opened a snoozed finding about 7 others in eu-west-1).
+          const fd0 = DR.findingFor(findOpen, DR.cloudFindingKeys(cf));
+          const regsIn = new Set(items.flatMap(x => x.kind === 'app' ? x.regions : x.kind === 'cloud' ? regsOf(x.cloud).map(r => r.region) : x.r ? [x.r.region] : [])).size;
+          // One cloud an order (the flow's rule): the cloud with the most on the internet first, the rest named.
+          const attach = DR.attachPlan(est, cloudSetPub);
+          // What a policy on the set matches, and how many of them break it today: the set itself, or
+          // at a scope with no filter, the workloads there (a region policy matches its workloads).
+          const pubOf = (x) => (x.kind === 'cloud' ? regsOf(x.cloud).some(r => !r.priv) : x.kind === 'app' ? x.internet > 0 : x.kind === 'vpc' ? !x.v.priv : x.kind === 'workload' ? (exposedSet ? !!x.w.exposed : !x.top.priv) : !x.top.priv);
+          const polN = cf ? { n: set0.total, viol: set0.items.filter(pubOf).length } : { n: U.wls.length, viol: U.wls.filter(x => !x.top.priv).length };
+          const MOVES = {
+            attach: attach ? { key: 'attach', label: attach.label, go: dd.order({ regions: attach.regions, note: attachNote(attach, `${setWord} · ${cloudLine}`) }) } : null,
+            policy: { key: 'policy', label: 'Set policy', go: dd.policy(match, cf && cf.p95 ? 'Latency SLO' : exposedSet ? 'No direct internet path' : 'Private path required', polN) },
+            finding: fd0 ? { key: 'finding', label: 'Open its finding', go: dd.finding(fd0.key) } : null,
+            andi: { key: 'andi', label: 'Ask Andi', go: dd.andi({ id: 'clouds:' + (cf ? JSON.stringify(cf) : trail.join('>')), label: `${setWord} · ${cloudLine}`,
+              lead: `${setWord}: ${cloudLine}${regsIn ? ` in ${nn(regsIn, 'region', 'regions')}` : ''}${cloudSetPub.length ? `, ${nn(cloudSetPub.length, 'region', 'regions')} still on the public internet.` : ', all on AT&T.'}`,
+              sub: 'Ask what to attach first, what a policy on them would cover, or what they cost.', qs: ['Which region should I attach first?', 'What is driving public egress?', 'Is anything internet-facing uninspected?'] }) },
+          };
+          // What is new wants a label and a private path first ("Label them, then bring the exposed ones under a private-path policy").
+          const plan = exposedSet ? ['policy', 'finding', 'andi'] : tagged || (cf && cf.unit === 'new') ? ['attach', 'policy', 'andi'] : cloudSetPub.length ? ['attach', 'finding', 'andi'] : ['policy', 'finding', 'andi'];
+          const cloudActs = plan.map(k => MOVES[k]).filter(Boolean).slice(0, 2);
+          return { cloudRows, cloudCrumbsE, cloudTiles, cloudMix, cloudMixParts, cloudMixLabel, cloudMixTitle, cloudLine, cloudListN, cloudActs, cloudSetPub, cloudAttachRegions: attach ? attach.regions : [],
+            hasCloudFilter: !!cf, cloudFilterLabel: cf ? set0.label : '', clearCloudFilter: () => set({ cloudFilter: null, newOnly: false, cloudPage: 0 }),
+            cloudNewOther: newOnly && siteNewN ? `${nf(siteNewN)} new in Your sites ›` : '', hasCloudNewOther: !!(newOnly && siteNewN), cloudNewOtherGo: () => set({ estPanel: 'sites', placePage: 0 }) };
         })(),
         // Your sites drill by place (Micah, 2026-09-29): region, state, metro, site, services.
         ...(() => {
           const trail = Array.isArray(s.placeTrail) ? s.placeTrail : [];
+          // A figure's sites (2026-09-30): s.placeFilter keys ('att', 'outside', 'prim:avpn', 'mode:ipsec',
+          // 'bu:HQ', 'single', joined by '&') keep only the sites it counted, and the new pill only the
+          // sites discovery found in the window. The drill stays by place.
+          const tagsP = ((s.siteTags || {})[est.id]) || {};
+          const pkeys = DR.siteKeysOf(s.placeFilter);
+          // The filter keeps sites inside the whole estate (skeptic, 2026-10-01): handing the drill a
+          // filtered estate re-seeded the rollups' metro split, so Established's AVPN sites read
+          // "Texas 83" and Bank scale's Florida 292 against its own 709.
+          const keepP = pkeys.length || newOnly ? (x) => pkeys.every(k => DR.sitePass(k, tagsP)(x)) && (!newOnly || isNewSite(x)) : null;
+          const keptSites = keepP ? (est.sites || []).filter(keepP) : (est.sites || []);
+          const estP = keepP ? { ...est, sites: keptSites } : est;
+          const nfP = (x) => Number(x || 0).toLocaleString('en-US');
+          const drillOf = (tr, o = {}) => X.siteDrillRows(est, tr, { ...o, ...(keepP ? { keep: keepP } : {}) });
           // A state lists its sites, not its metros (notes, 2026-09-30: "once we display States, we
           // should show all city/sites"): the metros flatten into site rows, the metro stays in the
           // trail, and a rolled-up metro's "+N more" opens the whole metro here, paged.
-          const lvl0 = trail.length ? X.siteDrillRows(est, trail, { full: true }) : null;
-          const flat = lvl0 && lvl0.level === 'metro' ? lvl0.rows.flatMap(m => { const sub = X.siteDrillRows(est, [...trail, m.drillKey]);
+          const lvl0 = trail.length ? drillOf(trail, { full: true }) : null;
+          const flat = lvl0 && lvl0.level === 'metro' ? lvl0.rows.flatMap(m => { const sub = drillOf([...trail, m.drillKey]);
             return (sub ? sub.rows : []).map(r => r.more ? { ...r, name: `${r.name} in ${m.name}`, moreTo: [...trail, m.drillKey] } : { ...r, via: [...trail, m.drillKey] }); }) : null;
           const lvl = flat ? { level: 'site', rows: flat } : lvl0;
-          const rows0 = lvl ? lvl.rows : regionRows(est).map(r => { const st = X.siteDrillRows(est, ['region:' + r.name]); const att = st ? st.rows.reduce((a, x) => a + (x.att || 0), 0) : r.sites.filter(onAtt).reduce((a, x) => a + S.countOf(x.name), 0);
-            return { key: 'region:' + r.name, name: r.name, drillKey: 'region:' + r.name, count: r.count, priv: att > 0, access: `${r.count.toLocaleString('en-US')} ${r.count === 1 ? 'site' : 'sites'} · ${att.toLocaleString('en-US')} AT&T · ${(r.count - att).toLocaleString('en-US')} non-AT&T` }; });
+          const rows0 = lvl ? lvl.rows : regionRows(estP).map(r => { const st = drillOf(['region:' + r.name]); const att = st ? st.rows.reduce((a, x) => a + (x.att || 0), 0) : r.sites.filter(onAtt).reduce((a, x) => a + S.countOf(x.name), 0);
+            return { key: 'region:' + r.name, name: r.name, drillKey: 'region:' + r.name, count: r.count, att, priv: att > 0, sites: r.sites, access: `${r.count.toLocaleString('en-US')} ${r.count === 1 ? 'site' : 'sites'} · ${att.toLocaleString('en-US')} AT&T · ${(r.count - att).toLocaleString('en-US')} non-AT&T` }; });
           const level = !trail.length ? 'region' : lvl ? lvl.level : 'region';
           const usRegion = (k) => /^region:(US |Nationwide)/.test(String(k || ''));
           const NEXT = { region: 'states', state: 'metros', metro: 'sites', site: 'services', service: '' };
           const nextOf = (r) => level === 'region' && !usRegion(r.drillKey) ? 'countries' : NEXT[level] || '';
+          // A row's counts are doors (2026-09-30): its sites, its sites on AT&T, its sites outside, each
+          // drilled into the row, under the filters already on.
+          const atP = (patch) => (e) => { dd.stop(e); set({ placePage: 0, ...patch }); };
+          const withKey = (k) => [...pkeys.filter(x => !(['att', 'outside'].includes(x) && ['att', 'outside'].includes(k))), k].join('&');
+          const countParts = (r, into) => { const out0 = r.count - r.att;
+            return [{ key: 'n', t: `${nfP(r.count)} ${r.count === 1 ? 'site' : 'sites'}`, go: into ? atP({ placeTrail: into }) : null }, ' · ',
+              { key: 'att', t: `${nfP(r.att)} AT&T`, go: into && r.att ? atP({ placeTrail: into, placeFilter: withKey('att') }) : null }, ' · ',
+              { key: 'out', t: `${nfP(out0)} non-AT&T`, go: into && out0 ? atP({ placeTrail: into, placeFilter: withKey('outside') }) : null }]; };
+          // What a site's access costs a month (2026-09-30: "integrate costs"), the figure Cost's access leg
+          // shows for it. A rolled-up site (RS-CHI-0396, one of 212) costs its rollup's rate, the "× $480
+          // each" Cost's row reads; a site on another carrier's access is not priced here.
+          const rollupAt = (via) => { const ms = via && via.length === 3 ? X.placeMetroScope(est, via) : null; if (!ms) return null;
+            const ix = String(ms.metroKey).split(':')[1]; return (est.sites || []).find(x => S.countOf(x.name) > 1 && S.rollupKeyOf(est, x) === `${ms.cls}#${ix}`) || null; };
+          const priceOf = (v, carrier) => (carrier ? 'Not priced' : fmt(Math.round(v)));
+          const costCell = (c0) => c0 ? { hasCost: true, costF: c0.costF, costUnit: c0.carrier ? '' : '/mo access', costCan: !!c0.go, costCant: !c0.go, costGo: c0.go || (() => {}), costTitle: c0.title } : { hasCost: false, costF: '', costUnit: '', costCan: false, costCant: false, costGo: () => {}, costTitle: '' };
+          const siteCost = (r, into) => {
+            const nm = String(r.key || '').replace(/^site:/, ''), named = costIx.site[nm];
+            if (named) return named.svc.length === 1
+              ? { costF: priceOf(named.v, named.carrier), carrier: named.carrier, go: dd.cost(named.svc[0].view), title: `${nm}: ${named.carrier ? 'billed by another carrier, not priced here' : `${fmt(Math.round(named.v))} a month of ${named.svc[0].label} access, from Cost`}` }
+              : { costF: priceOf(named.v, named.carrier), carrier: named.carrier, go: into ? atP({ placeTrail: into }) : null, title: `${nm}: ${named.svc.map(x => `${x.label}${x.role === 'backup' ? ' backup' : ''} ${priceOf(x.v, x.carrier)}`).join(' + ')} a month · open its services` };
+            const roll = rollupAt(r.via || trail), ri = roll && costIx.site[roll.name];
+            if (!ri) return null;
+            const each = ri.v / S.countOf(roll.name);
+            return { costF: priceOf(each, ri.carrier), carrier: ri.carrier, go: dd.cost(ri.svc[0].view), title: `${r.name}: one of ${roll.name}, ${ri.carrier ? 'billed by another carrier, not priced here' : `${fmt(Math.round(each))} a month each, from Cost`}` };
+          };
+          const svcSite = level === 'service' ? String(trail[trail.length - 1] || '').replace(/^site:/, '') : '';
+          const svcCost = (r) => {
+            const k = String(r.key || '').replace(/^svc:/, ''), named = costIx.site[svcSite];
+            const roll = named ? null : rollupAt(trail.slice(0, 3)), ri = roll && costIx.site[roll.name];
+            const sv = named ? named.svc.find(x => x.svc === k) : ri ? ri.svc.find(x => x.svc === k) : null;
+            if (!sv) return null;
+            const v = named ? sv.v : sv.v / S.countOf(roll.name);
+            return { costF: priceOf(v, sv.carrier), carrier: sv.carrier, go: dd.cost(sv.view), title: `${r.name} at ${svcSite}: ${sv.carrier ? 'billed by another carrier, not priced here' : `${fmt(Math.round(v))} a month, from Cost`}` };
+          };
+          // A region's or a country's access a month (skeptic, 2026-10-01: "integrate costs" left the
+          // regions bare): only where its sites are exactly one Cost place's, its door that place on By region.
+          const placeCost = (r) => {
+            let names = null;
+            if (level === 'region' && !trail.length && Array.isArray(r.sites)) names = r.sites.map(x => x.name);
+            else if (level === 'state' && r.drillKey) { const sh = DR.placeShares(est, keptSites, [...trail, r.drillKey]); if (sh.length && sh.every(u => u.whole)) names = sh.map(u => u.site.name); }
+            const pc = names ? DR.placeCostOf(costIx, est, names) : null;
+            if (pc && pc.v > 0) return { costF: fmt(pc.v), carrier: false, go: dd.cost(pc.view), title: `${r.name}: ${fmt(pc.v)} a month of site access, Cost's ${pc.key} on By region` };
+            // Every site on another carrier's access: billed outside AT&T, as each of its sites reads.
+            return pc && names.every(n => costIx.site[n] && costIx.site[n].carrier) ? { costF: 'Not priced', carrier: true, go: null, title: `${r.name}: its sites ride another carrier's access, billed outside AT&T` } : null;
+          };
           const placeRows = rows0.map(r => { const can = (!!r.drillKey && !r.leaf && !r.more) || !!r.moreTo;
-            return { key: r.key || r.name, name: r.name, access: r.more ? 'the whole metro, here' : (r.svcLine && r.place) || r.access || '', svcLine: r.svcLine || '', bwF: r.bwF || '', dot: r.more ? 'transparent' : r.priv ? 'var(--success)' : 'var(--warning)', level: can && !r.moreTo ? nextOf(r) : '', caret: can ? '›' : '', cursor: can ? 'pointer' : 'default',
-              go: !can ? () => {} : r.moreTo ? () => set({ placeTrail: r.moreTo, placePage: 0 }) : () => set({ placeTrail: [...(r.via || trail), r.drillKey], placePage: 0 }) }; });
+            const access = r.more ? 'the whole metro, here' : (r.svcLine && r.place) || r.access || '';
+            const into = can && !r.moreTo ? [...(r.via || trail), r.drillKey] : null;
+            const counted = typeof r.count === 'number' && typeof r.att === 'number' && !r.more && access === `${nfP(r.count)} ${r.count === 1 ? 'site' : 'sites'} · ${nfP(r.att)} AT&T · ${nfP(r.count - r.att)} non-AT&T`;
+            const cost = costCell(level === 'service' ? svcCost(r) : String(r.key || '').startsWith('site:') && !r.more ? siteCost(r, into) : level === 'region' || level === 'state' ? placeCost(r) : null);
+            const open = !can ? null : r.moreTo ? () => set({ placeTrail: r.moreTo, placePage: 0 }) : () => set({ placeTrail: into, placePage: 0 });
+            return { key: r.key || r.name, name: r.name, access, parts: partsOf(counted ? countParts(r, into) : [access]), svcLine: r.svcLine || '', bwF: r.bwF || '', ...cost,
+              dot: r.more ? 'transparent' : r.priv ? 'var(--success)' : 'var(--warning)', level: can && !r.moreTo ? nextOf(r) : '', caret: can ? '›' : '', cursor: can ? 'pointer' : 'default', canGo: can, noGo: !can,
+              go: open ? (e) => { dd.stop(e); open(); } : () => {} }; });
           const crumbs = [{ key: 'root', label: 'All regions', to: [] }, ...trail.map((k, i) => ({ key: k, label: S.labelOfKey(est, k), to: trail.slice(0, i + 1) }))]
             .map((c, i, a) => ({ ...c, notLast: i < a.length - 1, weight: i === a.length - 1 ? 700 : 500, color: i === a.length - 1 ? 'var(--text-heading)' : 'var(--link)', go: () => set({ placeTrail: c.to, placePage: 0 }) }));
           const total = rows0.reduce((a, r) => a + (r.count || 1), 0);
@@ -3298,8 +3618,44 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           const nounOf = { region: ['region', 'regions'], state: [usCodes ? 'state' : 'country', usCodes ? 'states' : 'countries'], metro: ['metro', 'metros'], site: ['site', 'sites'], service: ['service', 'services'] }[level] || ['row', 'rows'];
           const shown = rows0.filter(r => !r.more).length;
           const sitesN = `${total.toLocaleString('en-US')} ${total === 1 ? 'site' : 'sites'}`;
-          const flatLine = flat ? (() => { const n = lvl0.rows.reduce((a, m) => a + (m.count || 1), 0), mN = lvl0.rows.length; return `${n.toLocaleString('en-US')} ${n === 1 ? 'site' : 'sites'} in ${mN} ${mN === 1 ? 'metro' : 'metros'}`; })() : '';
-          return { placeRows, placeCrumbs: crumbs, placeLine: flat ? flatLine : level === 'service' || level === 'site' ? (level === 'site' ? sitesN : `${shown} ${shown === 1 ? nounOf[0] : nounOf[1]}`) : `${shown} ${shown === 1 ? nounOf[0] : nounOf[1]} · ${sitesN}` };
+          const flatN = flat ? lvl0.rows.reduce((a, m) => a + (m.count || 1), 0) : 0;
+          const flatLine = flat ? (() => { const n = flatN, mN = lvl0.rows.length; return `${n.toLocaleString('en-US')} ${n === 1 ? 'site' : 'sites'} in ${mN} ${mN === 1 ? 'metro' : 'metros'}`; })() : '';
+          const placeLine = flat ? flatLine : level === 'service' || level === 'site' ? (level === 'site' ? sitesN : `${shown} ${shown === 1 ? nounOf[0] : nounOf[1]}`) : `${shown} ${shown === 1 ? nounOf[0] : nounOf[1]} · ${sitesN}`;
+          const placeSitesN = flat ? flatN : level === 'service' ? 1 : total;
+          const filterWords = [...pkeys.map(k => DR.siteFilterLabel(k, est)), ...(newOnly ? [DR.newWords(winLabel)] : [])].join(' · ');
+          // The sites this list holds, each as its share of the place (skeptic, 2026-10-01: Florida's 709
+          // offered "Move 1,640 sites to AT&T", and Andi read Arizona as all 212 of its rollup).
+          const [tRg, , , tSi] = trail.map(k => String(k).replace(/^(region|state|metro|site):/, ''));
+          const held = DR.placeShares(est, keptSites, trail);
+          // The moves this set calls for (2026-09-30): Move to AT&T for the sites outside, Add a backup for
+          // the sites on one path, else a policy on them; Ask Andi always knows the set.
+          const outside = held.filter(u => !onAtt(u.site)), singles = held.filter(u => DR.sitePass('single')(u.site));
+          const sumN = (us) => us.reduce((a, u) => a + u.n, 0);
+          const heldN = sumN(held), outN = sumN(outside), singleN = sumN(singles);
+          const nounS = (n) => `${nfP(n)} ${n === 1 ? 'site' : 'sites'}`;
+          // The place first, then the filter: "Florida · Sites outside AT&T".
+          const placeName = trail.length ? crumbs[crumbs.length - 1].label : '';
+          const placeWord = [placeName, filterWords].filter(Boolean).join(' · ') || 'All sites';
+          // Its finding is the open one written about these sites (2026-10-01).
+          const fdS = DR.findingFor(findOpen, DR.siteFindingKeys(outside.map(u => u.site)));
+          const SMOVES = {
+            move: outside.length ? { key: 'move', label: `Move ${nounS(outN)} to AT&T`, go: dd.order({ shares: outside, place: placeName || 'Your sites', note: `From Discover, ${placeWord}: move the ${nounS(outN)} outside AT&T onto the AT&T network.` }) } : null,
+            backup: singles.length ? { key: 'backup', label: 'Add a backup', go: dd.order({ shares: singles, place: placeName || 'Your sites', tier: 'geodiversity', note: `From Discover, ${placeWord}: a second path at the ${nounS(singleN)} on one circuit.` }) } : null,
+            finding: outside.length && fdS ? { key: 'finding', label: 'Open its finding', go: dd.finding(fdS.key) } : null,
+            // The policy's subject is one thing in its sentence's words ("When branch HQ reaches any cloud, ..."),
+            // and it carries the sites it came from, those outside AT&T breaking a private path today.
+            policy: heldN ? { key: 'policy', label: 'Set policy', go: dd.policy(tSi ? `site ${tSi}` : pkeys.find(k => k.startsWith('bu:')) ? `branch ${pkeys.find(k => k.startsWith('bu:')).slice(3)}`
+              : pkeys.includes('att') ? 'a site on AT&T' : pkeys.includes('outside') ? 'a site outside AT&T' : tRg ? `a site in ${placeName}` : 'any site', 'Private path required', { n: heldN, viol: outN }) } : null,
+            andi: { key: 'andi', label: 'Ask Andi', go: dd.andi({ id: 'sites:' + [...pkeys, newOnly ? 'new' : ''].join('&') + '|' + trail.join('>'), label: `${placeWord} · ${nounS(heldN)}`,
+              lead: `${placeWord}: ${nounS(heldN)}, ${nfP(heldN - outN)} on AT&T${outN ? ` and ${nfP(outN)} outside it` : ''}${singleN ? `, ${nounS(singleN)} on one path` : ''}.`,
+              sub: 'Ask which sites to move first, where a backup path matters, or what their access costs.', qs: ['Where are my sites attached?', 'Which region should I attach first?'] }) },
+          };
+          const splan = outside.length ? ['move', 'finding', 'andi'] : pkeys.includes('single') ? ['backup', 'andi'] : ['policy', 'andi'];
+          const placeActs = splan.map(k => SMOVES[k]).filter(Boolean).slice(0, 2);
+          return { placeRows, placeCrumbs: crumbs, placeLine, placeSitesN, placeActs, placeSetOutside: outside.filter(u => u.whole).map(u => u.site.name), placeSetSingles: singles.filter(u => u.whole).map(u => u.site.name), placeOutN: outN, placeSingleN: singleN,
+            hasPlaceFilter: !!filterWords, placeFilterLabel: filterWords, clearPlaceFilter: () => set({ placeFilter: null, newOnly: false, placePage: 0 }),
+            placeNewOther: newOnly && cloudNewN ? `${nfP(cloudNewN)} new in Your clouds ›` : '', hasPlaceNewOther: !!(newOnly && cloudNewN), placeNewOtherGo: () => set({ estPanel: 'clouds', cloudPage: 0 }),
+            cloudNewN, siteNewN };
         })(),
         // Business units (notes, 2026-09-29): the customer tags sites, and every grouping reads the tags.
         ...(() => {
@@ -3312,14 +3668,16 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           const active = known.includes(s.buActive) ? s.buActive : null;
           const maxN = Math.max(1, ...groups.map(g => g.count));
           const buList = known.map(b => { const g = groups.find(x => x.name === b); const n = g ? g.count : 0; const on = active === b;
-            return { key: b, name: b, n, nF: n.toLocaleString('en-US'), w: Math.round(n / maxN * 100) + '%', on, all: false, go: () => set({ buActive: on ? null : b }), bg: on ? 'var(--bg-accent)' : 'transparent', border: on ? 'var(--border-active)' : 'var(--border-secondary)' }; });
+            return { key: b, name: b, n, nF: n.toLocaleString('en-US'), w: Math.round(n / maxN * 100) + '%', on, all: false, go: (e) => { dd.stop(e); set({ buActive: on ? null : b }); }, bg: on ? 'var(--bg-accent)' : 'transparent', border: on ? 'var(--border-active)' : 'var(--border-secondary)',
+              // The count opens the unit's sites, by place (2026-09-30); the name still picks the unit to move sites into.
+              countCan: n > 0, countCant: !n, countGo: n ? dd.sites('bu:' + b) : () => {}, countTitle: n ? `Open the ${n.toLocaleString('en-US')} ${n === 1 ? 'site' : 'sites'} in ${b}` : '' }; });
           const buSites = (est.sites || []).map(x => { const bu = S.buOf(x, tags); const target = active && bu !== active ? active : null;
             return { key: x.name, name: x.name, metro: x.metro || 'various', access: x.access || '', count: S.countOf(x.name).toLocaleString('en-US'), bu, moveLabel: target ? `Move to ${target}` : active ? `In ${active}` : 'Pick a unit', canMove: !!target, noMove: !target,
               move: () => { if (!target) return; save({ ...(s.siteTags || {}), [est.id]: { ...tags, [x.name]: target } }, s.buCustom || {}); } }; });
           const addBu = () => { const nm = String(s.buNew || '').trim(); if (!nm) return; if (!known.includes(nm)) save(s.siteTags || {}, { ...(s.buCustom || {}), [est.id]: [...custom, nm] }); set({ buNew: '', buActive: nm }); };
           return { buList, buSites, buActiveName: active || '', hasBuActive: !!active, buHint: active ? `Moving sites into ${active}` : 'Pick a business unit, then move sites into it', buNew: s.buNew || '', setBuNew: (e) => set({ buNew: e.target.value }), addBu };
         })(),
-        ...(() => { const ek = ['glance', 'clouds', 'sites', 'bu'].includes(s.estPanel) ? s.estPanel : 'glance'; return { estPanels: [['glance', 'At a glance'], ['clouds', 'Your clouds'], ['sites', 'Your sites'], ['bu', 'Business units']].map(([k, l]) => { const on = ek === k; return { key: k, label: l, on, go: () => set({ estPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), estPanelGlance: ek === 'glance', estPanelClouds: ek === 'clouds', estPanelSites: ek === 'sites', estPanelBu: ek === 'bu' }; })(),
+        ...(() => { const ek = ['glance', 'clouds', 'sites', 'bu'].includes(s.estPanel) ? s.estPanel : 'glance'; return { estPanels: [['glance', 'At a glance'], ['clouds', 'Your clouds'], ['sites', 'Your sites'], ['bu', 'Business units']].map(([k, l]) => { const on = ek === k; return { key: k, label: l, on, go: () => set({ estPanel: k, ...(k === 'glance' || k === 'bu' ? { newOnly: false } : {}) }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), estPanelGlance: ek === 'glance', estPanelClouds: ek === 'clouds', estPanelSites: ek === 'sites', estPanelBu: ek === 'bu' }; })(),
         siteTree: openCls ? [openCls] : treeAll, hasSiteTree: treeAll.length > 0, siteCrumbs: crumbs, hasSiteCrumbs: crumbs.length > 1, cloudsLine: `${stats.clouds} ${stats.clouds === 1 ? 'cloud' : 'clouds'} · ${stats.regions} ${stats.regions === 1 ? 'region' : 'regions'} · ${stats.workloads.toLocaleString('en-US')} workloads`, siteCrumbTail: crumbs[crumbs.length - 1].label, collapseSites: () => set({ siteOpen: {} }), sitesLineTree: `${totalSites.toLocaleString('en-US')} sites · your own buildings, not a cloud` };
     })(),
     siteCards: est.sites.filter(st => !st.rollup).map((st, i) => ({ key: st.name, name: st.name, metro: st.metro, cidr: `10.${60 + i}.0.0/20`, selected: false })), siteRollups: est.sites.filter(st => st.rollup).map(st => ({ key: st.name, name: st.name, n: (st.name.match(/\(([\d,]+)\)/) || [])[1] || '', priv: st.priv, pctW: st.priv ? '100%' : '0%', fill: st.priv ? '#0057b8' : '#8a949c' })), hasSiteRollups: est.sites.some(st => st.rollup), sitesLine: `${stats.sites.toLocaleString('en-US')} premises · your own buildings, not a cloud`,
@@ -3401,10 +3759,11 @@ function wizardVals(s, est, set, c) {
   const A_MATCH0 = ['tag PCI', 'tag Prod', 'tag Internet-facing', 'branch Finance', 'tag GPU', 'region ap-*'];
   const A_MATCH = s.authoring && s.authoring.match && !A_MATCH0.includes(s.authoring.match) ? [s.authoring.match, ...A_MATCH0] : A_MATCH0;
   const A_SCOPE = ['any cloud', 'the Internet', 'a cloud region', 'the WAN', 'AI providers'];
-  const aSet = (p) => set({ authoring: { ...(au || { match: null, scope: null, req: [] }), ...p } });
+  // A count Discover sent belongs to its subject: a new subject drops it (2026-10-01).
+  const aSet = (p) => { const next = { ...(au || { match: null, scope: null, req: [] }), ...p }; if (au && p.match !== undefined && p.match !== au.match) { delete next.n; delete next.viol; delete next.from; } set({ authoring: next }); };
   const aCard = (field, v, single) => { const cur = au ? au[field] : (single ? null : []); const on = single ? cur === v : (cur || []).includes(v); return { key: v, label: v, desc: field === 'req' ? CARD_DESC.control[v] : '', on, click: () => { if (single) return aSet({ [field]: v }); aSet({ [field]: on ? cur.filter(x => x !== v) : [...(cur || []), v] }); }, border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', check: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)' }; };
   const aReady = !!(au && au.match && au.scope && au.req && au.req.length);
-  const commit = (state) => () => { if (!aReady) return; const matched = { 'tag PCI': 34, 'tag Prod': 478, 'tag Internet-facing': 19, 'branch Finance': 228, 'tag GPU': 174, 'region ap-*': 52 }[au.match] || (est.regionsList.find(r => 'region ' + r.region === au.match) || {}).wl || 40; const viol = state === 'simulated' ? Math.round(matched * 0.18) : 0; const pol = { name: au.templateName || `${au.match.replace(/^tag |^branch |^region /, '')} · ${au.req[0]}`, match: au.match, scope: au.scope, req: au.req.join(' and '), matched, viol, state, custom: true, ...(au.layers ? { layers: au.layers } : {}) }; set({ customPolicies: [...(s.customPolicies || []), pol], authoring: null, simulated: state === 'simulated' ? true : s.simulated,
+  const commit = (state) => () => { if (!aReady) return; const matched = typeof au.n === 'number' ? au.n : { 'tag PCI': 34, 'tag Prod': 478, 'tag Internet-facing': 19, 'branch Finance': 228, 'tag GPU': 174, 'region ap-*': 52 }[au.match] || (est.regionsList.find(r => 'region ' + r.region === au.match) || {}).wl || 40; const viol = state === 'simulated' ? (typeof au.viol === 'number' ? Math.min(matched, au.viol) : Math.round(matched * 0.18)) : 0; const pol = { name: au.templateName || `${au.match.replace(/^tag |^branch |^region /, '')} · ${au.req[0]}`, match: au.match, scope: au.scope, req: au.req.join(' and '), matched, viol, state, custom: true, ...(au.layers ? { layers: au.layers } : {}) }; set({ customPolicies: [...(s.customPolicies || []), pol], authoring: null, simulated: state === 'simulated' ? true : s.simulated,
     // The list opens on the page that holds what you just authored.
     polPage: Math.floor(((s.layer === 'cloud' ? layerPolicies(s, est, 'all').length : 0) + (s.customPolicies || []).length) / PAGE_SIZE.polRows[1]) }); };
   const openAuthor = (m, r) => () => set({ authoring: { match: m || null, scope: 'any cloud', req: r ? [r] : [] } });
@@ -4628,6 +4987,8 @@ function andiVals(s, set, go, est, ob, x) {
   else if (s.screen === 's7' || s.screen === 's8') { lead = 'Filter by what the path must do, not by product name.'; qs = ['Which products fit tag PCI?', 'What do estates like mine choose?']; }
   // scoped focus
   if (scope && scope.kind === 'region') { const r = est.regionsList.find(z => z.region === scope.id); if (r) { const deg = r.link === 'degraded'; lead = deg ? `${r.cloud} ${r.region} is degraded on ${F.RAMP_NAME[r.ramp] || 'NetBond'}: BGP flapping, 0.31% drops, ${r.wl} workloads behind it${(r.paths || 1) >= 2 ? ', a second path holding' : ', single path'}.` : `${r.cloud} ${r.region}: ${r.wl} workloads, ${r.priv ? 'on AT&T at ' + r.fab + ' ms' : 'on the public internet at ' + r.pub + ' ms'}. Tags ${r.tags.join(', ') || 'none'}.`; sub = deg ? ((r.paths || 1) >= 2 ? 'Access holds. Govern it: a policy that requires the second path keeps it that way.' : 'Access is lost if this link fails. Add a second path, then a policy that requires it.') : r.priv ? 'Already attached. The remaining lever is policy: which tags may reach the internet.' : `Attaching it moves ${r.wl} workloads to $0.02/GB and ${r.fab} ms, deterministic.`; qs = deg ? ['Which workloads are impacted?', 'What does a second path cost?', 'Author the policy'] : ['Compare the three paths here', 'What would a private-path policy change?', 'Who owns these resources?']; } }
+  // A set from Discover (2026-09-30): Andi reads the set the list holds, in the list's own words.
+  if (scope && scope.kind === 'set') { lead = scope.lead || scope.label; sub = scope.sub || ''; if (Array.isArray(scope.qs) && scope.qs.length) qs = scope.qs; }
   if (scope && scope.kind === 'tag') { lead = `Tag ${scope.id} spans clouds. One policy covers every VPC carrying it.`; sub = 'When tag ' + scope.id + ' reaches any cloud, require a private path.'; qs = ['Author that policy', 'Which VPCs carry it?', 'Any of them internet-exposed?']; }
   const top = scope && scope.kind === 'finding' ? est.findings.find(f => f.kind === scope.id) : screenFindings[0];
   if (top) focus = findingCard(top);

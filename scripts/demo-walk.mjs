@@ -126,6 +126,16 @@ await beat('2 Your sites and Your clouds', async () => {
   await expect('All regions', /\d+ sites · \d+ AT&T/);
   await tab('Your clouds');
   await expect('How they connect');
+  // Each cloud carries its egress a month, Cost's own figure (2026-09-30: "integrate costs").
+  await page.locator('nav[aria-label="Cloud drill"] button', { hasText: 'All clouds' }).click(); await settle();
+  await expect(/\$51,000\s*\/mo egress/);
+  // Every count is a door to its set, and the landing carries its moves (the drill rule, 2026-09-30).
+  await tab('At a glance');
+  await expect(/Spend\s*\$135,650/);
+  await page.locator('[aria-label="Estate at a glance"] button', { hasText: '70 workloads exposed' }).first().click(); await settle();
+  // No finding is written about all 70, so the moves are the policy and Andi (2026-10-01: "Open its
+  // finding" opened a snoozed one about 7 others in eu-west-1).
+  await expect('Exposed workloads', '70 workloads', 'Set policy', 'Ask Andi');
 });
 
 await beat('3 Traffic: a GCP pick, in proportion', async () => {

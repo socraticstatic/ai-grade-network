@@ -31,13 +31,13 @@ export function appsOf(est, inv, flows) {
       g.regions[`${reg.cloud} ${r.region}`] = (g.regions[`${reg.cloud} ${r.region}`] || 0) + 1;
       g.clouds[reg.cloud] = (g.clouds[reg.cloud] || 0) + 1;
       (w.endpoints || []).forEach(e => { g.apps[e.app] = (g.apps[e.app] || 0) + 1; });
-      g.lat.push({ v: per || 1e-6, ms: onAtt ? reg.fab : reg.pub, slo: SLO_OF(onAtt) });
+      g.lat.push({ v: per || 1e-6, ms: onAtt ? reg.fab : reg.pub, slo: SLO_OF(onAtt), region: r.region });
     })));
   }));
   return Object.values(by).map(g => {
     // p95: the latency 95% of the app's traffic stays under; health: its worst material path.
     // One sample per path, not per workload: a path is material at 5% of the app's traffic.
-    const grp = {}; g.lat.forEach(x => { const k = `${x.ms}|${x.slo}`; (grp[k] = grp[k] || { ms: x.ms, slo: x.slo, v: 0 }).v += x.v; });
+    const grp = {}; g.lat.forEach(x => { const k = `${x.ms}|${x.slo}`; const p = grp[k] = grp[k] || { ms: x.ms, slo: x.slo, v: 0, regions: [] }; p.v += x.v; if (!p.regions.includes(x.region)) p.regions.push(x.region); });
     const byMs = Object.values(grp).sort((a, b) => a.ms - b.ms), tot = byMs.reduce((a, x) => a + x.v, 0);
     let cum = 0, at = byMs[byMs.length - 1];
     for (const x of byMs) { cum += x.v; if (cum >= tot * 0.95) { at = x; break; } }
@@ -48,6 +48,8 @@ export function appsOf(est, inv, flows) {
       regions: sortDesc(g.regions).map(([k]) => k), clouds: sortDesc(g.clouds).map(([k]) => k),
       topApps: sortDesc(g.apps).filter(([k]) => !SIDECARS.has(k)).slice(0, 3).map(([k]) => k),
       // Each region's share of the app's traffic (by workloads when it sends none), for grids that read an app by path.
-      parts: Object.keys(g.regN).map(region => ({ region, gbps: g.regG[region] || 0, share: g.gbps > 0 ? (g.regG[region] || 0) / g.gbps : g.regN[region] / g.wl })), p95: Math.round(at ? at.ms : 0), slo: at ? at.slo : F.SLO, health };
+      parts: Object.keys(g.regN).map(region => ({ region, gbps: g.regG[region] || 0, share: g.gbps > 0 ? (g.regG[region] || 0) / g.gbps : g.regN[region] / g.wl })), p95: Math.round(at ? at.ms : 0), slo: at ? at.slo : F.SLO, health,
+      // The regions whose latency is the p95 (Discover's p95 door, 2026-10-01): the path that sets it.
+      p95Regions: at ? at.regions.slice() : [] };
   }).sort((a, b) => b.wl - a.wl);
 }
