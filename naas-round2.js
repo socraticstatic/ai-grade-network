@@ -290,7 +290,10 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   const rs = est.regionsList; if (!rs.length) return null;
   const flows = ob.flows || [];
   // 1. Top talkers: the same per-region flows the Sankey draws.
-  const regGbps = (r) => { const i = rs.indexOf(r); return +flows.filter(f => f.id.startsWith(`f-${i}-`)).reduce((a, f) => a + f.gbps, 0).toFixed(1); };
+  // A region carries its own flows and its cross-cloud pairs at their first end, the way pubOf
+  // counts what it sends outside AT&T (w2, 2026-09-30: us-west-2 read 6.1 Gbps of traffic and
+  // 7.3 Gbps public, and Network Eng's shares added up to 93%).
+  const regGbps = (r) => +flows.filter(f => f.region === `${r.cloud} ${r.region}`).reduce((a, f) => a + f.gbps, 0).toFixed(1);
   // Every region, so Signals' full list holds what the card counts (2026-09-30); the card draws five.
   const tk = rs.map(r => ({ r, gbps: regGbps(r) })).sort((a, b) => b.gbps - a.gbps);
   const tMax = Math.max(1, ...tk.map(t => t.gbps)), tTot = ob.total || 1;

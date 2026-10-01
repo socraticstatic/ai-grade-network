@@ -335,6 +335,21 @@ test('A connection\'s current never reads above the peak its Modify bandwidth op
   }
 });
 
+test('Capacity\'s average bar is the one ink its legend keys, whatever the state', () => {
+  for (const view of ['partial', 'mature', 'trust']) for (const g of vals(obs(view)).gaugeRows)
+    assert.equal(g.color, 'var(--viz-1)', `${view} ${g.label}: the average bar is ${g.color} under a legend of Average use in --viz-1`);
+});
+
+test('A region never sends more outside AT&T than it carries, and the regions hold all the traffic', () => {
+  for (const view of VIEWS) {
+    const est = ESTATES[view], ob = A.observe(est, [], A.inventory(est));
+    const iw = R.insightWidgets(est, ob, 30);
+    for (const t of iw.talkersAll) assert.ok(t.pubG <= t.gbps + 1e-9, `${view} ${t.label}: ${t.pubG} Gbps public of ${t.gbps} Gbps`);
+    const sum = iw.talkersAll.reduce((a, t) => a + t.gbps, 0);
+    assert.ok(Math.abs(sum - ob.total) <= 0.05 * iw.talkersAll.length + 1e-9, `${view}: the regions carry ${sum.toFixed(1)} of ${ob.total} Gbps`);
+  }
+});
+
 test('The cross-cloud finding names the public pairs Cloud-to-cloud shows, and no others', () => {
   for (const view of VIEWS) {
     const est = ESTATES[view], f = est.findings.find(x => x.kind === 'crosscloud');

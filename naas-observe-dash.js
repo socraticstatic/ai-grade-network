@@ -29,7 +29,9 @@ const R = 22, C = 2 * Math.PI * R;
 
 /** One ring per connection: used against purchased, the 24h line inside, a state dot. */
 export function gauges(conns) {
-  return conns.rows.map(r => ({ id: r.id, region: r.region, cloud: r.cloud, label: `${r.cloud} ${r.region}`, ramp: r.ramp, pct: r.pct, pctF: r.pct + '%', purchased: `${r.bw || r.ports + ' × 10 Gbps'}`, used: `${r.gbps} Gbps`, dash: `${(C * r.pct / 100).toFixed(1)} ${C.toFixed(1)}`, circ: C.toFixed(1), r: R, state: r.state, bgp: r.bgp, drops: r.drops, inD: r.inD, outD: r.outD, degraded: r.degraded, hot: r.hot, wl: r.wl, color: r.state === 'Degraded' ? 'var(--error)' : r.state === 'Saturating' ? '#e5a100' : '#009fdb' }));
+  return conns.rows.map(r => ({ id: r.id, region: r.region, cloud: r.cloud, label: `${r.cloud} ${r.region}`, ramp: r.ramp, pct: r.pct, pctF: r.pct + '%', purchased: `${r.bw || r.ports + ' × 10 Gbps'}`, used: `${r.gbps} Gbps`, dash: `${(C * r.pct / 100).toFixed(1)} ${C.toFixed(1)}`, circ: C.toFixed(1), r: R, state: r.state, bgp: r.bgp, drops: r.drops, inD: r.inD, outD: r.outD, degraded: r.degraded, hot: r.hot, wl: r.wl, // The average bar is the one ink Capacity's legend keys (w2, 2026-09-30: #e5a100 was a second amber
+    // beside --warning's 80% line); the row's state word and dot carry Saturating and Degraded.
+    color: 'var(--viz-1)' }));
 }
 
 /** Who holds the SLA, in words (2026-09-30). */
