@@ -170,6 +170,18 @@ test('A landed size reads as it landed on the home\'s chip, in Your actions and 
   assert.doesNotMatch(brief, /3 × 10 Gbps/, `the briefing reads "${brief}"`);
 });
 
+test('A size short of the peak drops what the peak does not fit, and the connection says so', async () => {
+  const BW = await import('../naas-bandwidth.js');
+  const cap = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn' })).capRows.find(r => r.region === 'us-east-1');
+  const order = BW.orderOf(cap, { ports: 3, mbps: 1000 }, ORDERED, 'partial', { id: BW.nextId([]) });
+  const c = mkC({ view: 'partial', estateParam: null, orders: [order], nowIso: LATER, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'map', mapSel: 'cx-us-east-1' });
+  const p = vals(c).panel;
+  const drops = p.overview.find(o => o.k === 'Drops') || (p.groups.flatMap(g => g.rows).find(o => o.k === 'Drops'));
+  const pct = +(p.overview.find(o => o.k === 'Utilization') || p.groups.flatMap(g => g.rows).find(o => o.k === 'Utilization') || { v: '0' }).v.match(/\d+/)[0];
+  assert.ok(pct > 100, `the landed size reads ${pct}%`);
+  assert.equal(drops.v, `${Math.round((1 - 100 / pct) * 100)}% at peak`, `a connection at ${pct}% of its size reads drops ${drops.v}`);
+});
+
 const COUNTW = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
 test('The briefing says under way only of what is accepted or in progress, never of a snoozed finding; a port on order no longer waits', async () => {
   for (const view of VIEWS) for (const persona of ['architect', 'neteng', 'security', 'finops']) {

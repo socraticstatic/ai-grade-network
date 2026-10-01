@@ -49,7 +49,10 @@ export function connections(est, ob) {
     const peakG = +((was.cap || 0) * pct0 / 100).toFixed(1), pct = u.was ? Math.round(peakG / u.cap * 100) : pct0;
     const state = degraded ? 'Degraded' : pct >= 80 ? 'Saturating' : 'Up';
     const ramp = r.ramp || 'NetBond';
-    return { id: 'cx-' + r.region, cloud: r.cloud, region: r.region, ramp, ports: u.ports, cap: u.cap, bw: u.bw || `${u.ports} × 10 Gbps`, bwShort: u.bwShort || '10G', gbps: u.gbps, peakG, pct, state, bgp: degraded ? 'Flapping' : 'Established', drops: degraded ? '0.31%' : state === 'Saturating' ? '0.04%' : '0.00%', inD: sparkline(r.region + ':in', 24, pct, degraded ? 34 : 12), outD: sparkline(r.region + ':out', 24, Math.max(4, pct - 18), degraded ? 30 : 10), wl: r.wl, terminated: ATT_TERMINATED.has(ramp) ? 'att' : 'own', paths: r.paths || 1, acct: r.acct || null, hot: pct >= 80, degraded };
+    // A size short of the peak drops what the peak does not fit (w2 second pass, 2026-09-30: a landed
+    // 3 x 1 Gbps at 410% read 0.04% drops beside Modify bandwidth's "Short of the peak, drops traffic").
+    const drops = degraded ? '0.31%' : pct > 100 ? `${Math.round((1 - 100 / pct) * 100)}% at peak` : state === 'Saturating' ? '0.04%' : '0.00%';
+    return { id: 'cx-' + r.region, cloud: r.cloud, region: r.region, ramp, ports: u.ports, cap: u.cap, bw: u.bw || `${u.ports} × 10 Gbps`, bwShort: u.bwShort || '10G', gbps: u.gbps, peakG, pct, state, bgp: degraded ? 'Flapping' : 'Established', drops, inD: sparkline(r.region + ':in', 24, pct, degraded ? 34 : 12), outD: sparkline(r.region + ':out', 24, Math.max(4, pct - 18), degraded ? 30 : 10), wl: r.wl, terminated: ATT_TERMINATED.has(ramp) ? 'att' : 'own', paths: r.paths || 1, acct: r.acct || null, hot: pct >= 80, degraded };
   }).sort((a, b) => ORDER[a.state] - ORDER[b.state] || b.pct - a.pct);
   return { rows, degraded: rows.filter(r => r.degraded).length, total: rows.length };
 }
