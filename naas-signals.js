@@ -257,11 +257,13 @@ export function spend(B) {
   const max = Math.max(0, ...all.map(b => b.today));
   const total = all.reduce((a, b) => a + b.today, 0), saveT = all.reduce((a, b) => a + save(b), 0);
   const rows = all.map(b => { const sv = save(b);
-    return { key: b.id, label: b.name, sub: sv ? `${b.cloud} · ${money(b.fabric)}/mo on AT&T` : `${b.cloud} · at the AT&T rate`, v: `${money(b.today)}/mo`, v2: sv ? `save ${money(sv)}` : '', fig: 'bucket',
+    // Money in blue is AT&T price, Cost's word for it (w2 second pass, 2026-09-30): GCP's GPU bucket read
+    // "$12,400/mo on AT&T" with GCP not attached, beside traffic cards whose blue is On AT&T.
+    return { key: b.id, label: b.name, sub: sv ? `${b.cloud} · ${money(b.fabric)}/mo at AT&T price` : `${b.cloud} · at AT&T price`, v: `${money(b.today)}/mo`, v2: sv ? `save ${money(sv)}` : '', fig: 'bucket',
       segs: sv ? [{ key: 'att', fill: AT.ink, w: pctW(b.fabric, max) }, { key: 'save', fill: SAVE, w: pctW(sv, max) }] : [{ key: 'att', fill: AT.ink, w: pctW(b.today, max) }],
       ...(sv ? { act: 'Optimize', actKind: 'optimize' } : { act: 'By bucket', actKind: 'bucket' }) }; });
-  return { key: 'spend', title: 'Spend by bucket', head: !total ? 'No egress spend yet' : saveT ? `Save ${money(saveT)}/mo of ${money(total)}/mo egress` : `${money(total)}/mo egress, all at the AT&T rate`,
-    rows, legend: [{ key: 'att', label: 'At the AT&T rate', ink: AT.ink }, ...(saveT ? [{ key: 'save', label: 'To save on AT&T', ink: SAVE }] : [])], empty: 'Egress shows here once a bucket is priced.' };
+  return { key: 'spend', title: 'Spend by bucket', head: !total ? 'No egress spend yet' : saveT ? `Save ${money(saveT)}/mo of ${money(total)}/mo egress` : `${money(total)}/mo egress, all at AT&T price`,
+    rows, legend: [{ key: 'att', label: 'AT&T price', ink: AT.ink }, ...(saveT ? [{ key: 'save', label: 'To save', ink: SAVE }] : [])], empty: 'Egress shows here once a bucket is priced.' };
 }
 
 /**

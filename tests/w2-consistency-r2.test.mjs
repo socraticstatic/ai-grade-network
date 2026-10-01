@@ -198,6 +198,18 @@ test('The briefing says under way only of what is accepted or in progress, never
   assert.equal(opt.cta, 'In progress', `Optimize's Capacity reads In progress beside a button reading ${opt.cta}`);
 });
 
+test('Spend by bucket names its blue as Cost does, AT&T price, and never calls a bucket\'s dollars on AT&T', async () => {
+  const CV = await import('../naas-cost-view.js');
+  for (const view of VIEWS) {
+    const sp = card(vals(ins(view, { persona: 'finops' })), 'spend');
+    if (!sp || !sp.all.length) continue;
+    const blue = sp.legend.find(l => l.ink === CV.COST_INK.att.color);
+    assert.ok(blue, `${view}: Spend keys no blue`);
+    assert.equal(blue.label, CV.COST_INK.att.word, `${view}: Spend keys blue "${blue.label}", Cost keys it "${CV.COST_INK.att.word}"`);
+    for (const r of sp.all) assert.doesNotMatch(r.sub, /on AT&T/, `${view}: the ${r.label} bucket (${r.sub}) reads its dollars as on AT&T`);
+  }
+});
+
 test('Top talkers paints a region\'s public pair outside AT&T, its On AT&T parts add up to the head, and it names the pair\'s Gbps', () => {
   const w = (s) => parseFloat(s) / 100;
   for (const view of VIEWS) for (const persona of ['architect', 'neteng']) {
