@@ -356,6 +356,14 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // div 1243 -> 1248, span 1062 -> 1074, sc-if 576 -> 578, sc-for 308 -> 310, button 480 -> 482.
 // Then the badges ride the name line and the strip drops its clipped caption (sc-if -1): sc-if 578 -> 577.
 // The open row keeps the four rules alone, its sentence was the name and applies-to again (div -2, b -3 unpinned): div 1248 -> 1246.
+// The composer on NetBond Advanced's layout (2026-10-02): the vertical tab group (nav, sc-for +2, button +1, span +2), the strip
+// under the sentence (sc-for +1, span +1), the pick rows with their glyph and check (span +3 each x3, sc-if +1 each x3), the
+// routing and security pages (sc-if +1, sc-for +4, span +4, button +2), the route columns (sc-for +2, span +2, button +2),
+// the outcome's tiles, pushed rows and missing rows with their glyphs (span +9, sc-if +2, sc-for +2), Reset (button +1); the
+// old intent cards' check circles, the five chip columns, the route cards' text buttons and the old tablist left (span -12,
+// button -4, sc-if -2, sc-for -5). Recounted from the file, every tag balanced:
+// span 1074 -> 1089, button 482 -> 484, sc-if 577 -> 582, sc-for 310 -> 314, div unchanged at 1246.
+// The route rules as a grid, the direction words once per section head (span +2): span 1089 -> 1091.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -371,11 +379,11 @@ test('every container the markup opens, it closes', () => {
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 1246],
-    ['span', /<span\b/g, /<\/span>/g, 1074],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 577],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 310],
+    ['span', /<span\b/g, /<\/span>/g, 1091],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 582],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 314],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 482],
+    ['button', /<button\b/g, /<\/button>/g, 484],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

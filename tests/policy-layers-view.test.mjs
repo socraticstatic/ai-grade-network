@@ -53,5 +53,6 @@ test('the markup draws the layer table and the layer stacks', () => {
   assert.match(HTML, /<sc-for list="\{\{ polLayerHeads \}\}"/);
   assert.match(HTML, /<sc-for list="\{\{ p\.layers \}\}"/);
   assert.match(HTML, /<sc-for list="\{\{ e\.layers \}\}"/);
-  assert.match(HTML, /<sc-for list="\{\{ aLayers \}\}"/);
+  // The composer draws its layers as the path strip since 2026-10-02 (aStrip); aLayers stays bound for the templates' hand-off.
+  assert.match(HTML, /<sc-for list="\{\{ aStrip \}\}"/);
 });

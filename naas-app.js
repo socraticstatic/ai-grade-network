@@ -3993,6 +3993,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
 const CARD_DESC = {
   control: { 'Private path required': 'Traffic may never touch the public internet. Enforced on the path.', 'No direct internet path': 'Cloud workloads leave only through the AT&T network and its inspection.', 'Inline inspection': 'NGFW in path. Every session judged before it leaves.', 'Segment by tag': 'Workloads talk only to their own tag. East-west contained.', 'Latency SLO': 'A millisecond ceiling per tag; the AT&T network re-routes when it is at risk.', 'Cost-aware routing': 'When two paths meet policy, take the cheaper one.' },
 };
+// Glyphs for the composer (2026-10-02): a Require chip, a service group, a route section.
+const REQ_ICON = { 'Private path required': 'padlock', 'No direct internet path': 'not-available', 'Inline inspection': 'firewall', 'Segment by tag': 'tag', 'Latency SLO': 'high-meter', 'Cost-aware routing': 'bill' };
+const GROUP_ICON = { multipath: 'shuffle', inline: 'firewall', access: 'user-access', crypto: 'padlock', egress: 'export' };
+const ROUTE_ICON = { deny: 'not-available', manip: 'pencil', allow: 'check-circle', advanced: 'gear' };
 const REGION_OF_METRO = (m) => Object.keys(D.COMPOSE_CHIPS.regions).find(r => D.COMPOSE_CHIPS.regions[r].includes(m)) || 'US East';
 const REGION_GEO = CF.REGION_GEO;
 
@@ -4052,7 +4056,7 @@ function wizardVals(s, est, set, c) {
   const A_SCOPE = au && au.scope && !A_SCOPE0.includes(au.scope) ? [au.scope, ...A_SCOPE0] : A_SCOPE0;
   // A count Discover sent belongs to its subject: a new subject drops it (2026-10-01).
   const aSet = (p) => { const next = { ...(au || { match: null, scope: null, req: [] }), ...p }; if (au && p.match !== undefined && p.match !== au.match) { delete next.n; delete next.viol; delete next.from; } set({ authoring: next }); };
-  const aCard = (field, v, single) => { const cur = au ? au[field] : (single ? null : []); const on = single ? cur === v : (cur || []).includes(v); return { key: v, label: v, desc: field === 'req' ? CARD_DESC.control[v] : '', on, click: () => { if (single) return aSet({ [field]: v }); aSet({ [field]: on ? cur.filter(x => x !== v) : [...(cur || []), v] }); }, border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', check: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)' }; };
+  const aCard = (field, v, single) => { const cur = au ? au[field] : (single ? null : []); const on = single ? cur === v : (cur || []).includes(v); return { key: v, label: v, icon: field === 'req' ? (REQ_ICON[v] || 'check-shield') : assetIcon(v), desc: field === 'req' ? CARD_DESC.control[v] : '', on, click: () => { if (single) return aSet({ [field]: v }); aSet({ [field]: on ? cur.filter(x => x !== v) : [...(cur || []), v] }); }, border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', check: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)' }; };
   // Route rules or a path are a policy too (between-assets spec, 2026-10-01), with or without an intent rule.
   const aReady = !!(au && au.match && au.scope && ((au.req && au.req.length) || (au.path && au.path.length) || Object.values(au.route || {}).some(v => v.o2p || v.p2o)));
   // What it matches and what breaks it count by Govern's one rule (w2-govern, 2026-09-30), never a
@@ -4074,27 +4078,41 @@ function wizardVals(s, est, set, c) {
     // Two tabs, one at a time (2026-09-28, no scrolling).
     ...(() => { const gk = ['templates', 'tags', 'engine'].includes(s.govPanel) ? s.govPanel : 'policies'; return { govPanels: [['policies', 'Violations & policies'], ['templates', 'Templates'], ['engine', 'Policy engine'], ['tags', 'Tags']].map(([k, l]) => { const on = gk === k; return { key: k, label: l, on, go: () => set({ govPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), govPanelPolicies: gk === 'policies', govPanelTemplates: gk === 'templates', govPanelEngine: gk === 'engine', govPanelTags: gk === 'tags' }; })(),
     authoring: !!au, openAuthor: openAuthor(), closeAuthor: () => set({ authoring: null }), aMatch: A_MATCH.map(v => aCard('match', v, true)), aScope: A_SCOPE.map(v => aCard('scope', v, true)), aReq: D.COMPOSE_CHIPS.control.map(v => aCard('req', v, false)),
-    ...(() => { // Intent | Route policy (Advanced): NetBond Advanced's rules, each direction its own toggle (2026-10-01).
-      const tabK = au && ['route', 'services', 'outcome'].includes(au.tab) ? au.tab : 'intent', rt = (au && au.route) || {}, paths = (au && au.path) || [];
+    ...(() => { // The composer as NetBond Advanced lays out Configure > Policies (2026-10-02): a vertical tab group with icons and category
+      // heads, rules as wash rows with a toggle per direction, Reset and the verbs in the footer. The route rules are NetBond Advanced's as they are (2026-10-01).
+      const tabK = au && ['route', 'services', 'security', 'outcome'].includes(au.tab) ? au.tab : 'intent', rt = (au && au.route) || {}, paths = (au && au.path) || [];
       const tog = (k, dir) => () => { const cur = rt[k] || { o2p: false, p2o: false }; aSet({ route: { ...rt, [k]: { ...cur, [dir]: !cur[dir] } } }); };
       const look = (on) => ({ bg: on ? 'var(--cta)' : 'var(--bg-base)', ink: on ? '#fff' : 'var(--text-body)' });
       const words = [];
       ROUTE_RULES.forEach(r => { const v = rt[`${r.section}:${r.id}`] || {}; const ds = [v.o2p && 'on premise → partner', v.p2o && 'partner → on premise'].filter(Boolean);
         if (ds.length) words.push(`${({ deny: 'deny', manip: 'apply', allow: 'allow', advanced: 'apply' })[r.section]} ${r.label.toLowerCase()} (${ds.join(', ')})`); });
-      return { aTabs: [['intent', 'Intent'], ['services', 'Path & services'], ['route', 'Route policy · Advanced'], ['outcome', 'Outcome']].map(([k, l]) => ({ key: k, label: l, on: tabK === k, go: () => aSet({ tab: k }), line: tabK === k ? 'var(--cta)' : 'transparent', color: tabK === k ? 'var(--text-heading)' : 'var(--text-light)' })),
-        aIntent: tabK === 'intent', aRouteOn: tabK === 'route', aSvcOn: tabK === 'services', aOutOn: tabK === 'outcome',
+      const TABS = [['intent', 'Intent', 'target', 'Policy'], ['services', 'Multi-path & egress', 'shuffle', 'Routing'], ['route', 'Route policy', 'router', 'Routing'], ['security', 'Inspection & access', 'firewall', 'Security'], ['outcome', 'Simulate', 'high-meter', 'Outcome']];
+      const aTabs = TABS.map(([k, l, icon, cat]) => ({ key: k, label: l, icon, cat, on: tabK === k, go: () => aSet({ tab: k }), line: tabK === k ? 'var(--cta)' : 'transparent', color: tabK === k ? 'var(--text-heading)' : 'var(--text-light)' }));
+      const aCats = ['Policy', 'Routing', 'Security', 'Outcome'].map(c => ({ key: c, label: c, tabs: aTabs.filter(t => t.cat === c) }));
+      const aRoute = ROUTE_SECTIONS.map(([sk, sl]) => ({ key: sk, label: sl, icon: ROUTE_ICON[sk], rules: ROUTE_RULES.filter(r => r.section === sk).map(r => { const k = `${sk}:${r.id}`, v = rt[k] || {};
+        return { key: k, id: r.id, section: sk, label: r.label, o2pOn: !!v.o2p, p2oOn: !!v.p2o, o2pOff: !r.o2p, p2oOff: !r.p2o, o2pGo: r.o2p ? tog(k, 'o2p') : () => {}, p2oGo: r.p2o ? tog(k, 'p2o') : () => {},
+          o2pBg: look(!!v.o2p).bg, o2pInk: look(!!v.o2p).ink, p2oBg: look(!!v.p2o).bg, p2oInk: look(!!v.p2o).ink }; }) }));
+      const aGroups = SERVICE_GROUPS.map(g => ({ key: g.key, label: g.label, icon: GROUP_ICON[g.key], opts: g.opts.map(o => { const on = paths.includes(o.label); return { key: o.label, label: o.label, layer: o.layer, layerLabel: LAYER_SHORT[o.layer], ...look(on), on, go: () => aSet({ path: on ? paths.filter(x => x !== o.label) : [...paths, o.label] }) }; }) }));
+      // The strip under the sentence: what this policy sets at each layer, live as you pick (a template's layers, the rules, the path picks, the route rules at the edge).
+      const per = Object.fromEntries(POLICY_LAYERS.map(l => [l.key, []]));
+      if (au && au.layers) for (const l of POLICY_LAYERS) if (au.layers[l.key]) per[l.key].push(au.layers[l.key]);
+      for (const q of (au && au.req) || []) per[layerOfReq(q)].push(q);
+      for (const g of SERVICE_GROUPS) for (const o of g.opts) if (paths.includes(o.label)) per[o.layer].push(o.label);
+      const rn = Object.values(rt).filter(v => v && (v.o2p || v.p2o)).length; if (rn) per.edge.push(`${rn} route ${rn === 1 ? 'rule' : 'rules'}`);
+      const aStrip = POLICY_LAYERS.map(l => { const xs = [...new Set(per[l.key])]; return { key: l.key, label: l.label, icon: LAYER_ICON[l.key], state: xs.length ? 'set' : 'any', text: xs.join(' · ') || 'Any' }; });
+      return { aTabs, aCats, aIntent: tabK === 'intent', aRouteOn: tabK === 'route', aSvcOn: tabK === 'services', aSecOn: tabK === 'security', aOutOn: tabK === 'outcome',
         // Simulate the pair (step 3): the catalog's prices, Cost's cross-connect rate.
         aOut: (() => { const cat = (id) => ((D.CATALOG.find(p => p.id === id) || {}).price) || 0;
-          const o = pairOutcome(est, au, { netbond: cat('netbond'), ngfw: cat('ngfw'), xc: 350 }); if (!o) return { has: false, missing: [], pushed: [], lines: [] };
+          const o = pairOutcome(est, au, { netbond: cat('netbond'), ngfw: cat('ngfw'), xc: 350 }); if (!o) return { has: false, none: true, missing: [], pushed: [], lines: [] };
           const toWays = () => set({ authoring: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'ways' });
-          return { has: true, ...o, todayMs: o.today.ms == null ? 'Not measured' : `${o.today.ms} ms p95`, afterMs: o.after.ms == null ? 'Not measured' : `${o.after.ms} ms p95`,
-            lines: o.lines.map(x => ({ ...x, vF: `+$${x.v.toLocaleString('en-US')}/mo` })), hasLines: o.lines.length > 0, hasMissing: o.missing.length > 0,
+          return { has: true, none: false, ...o, todayMs: o.today.ms == null ? 'Not measured' : `${o.today.ms} ms p95`, afterMs: o.after.ms == null ? 'Not measured' : `${o.after.ms} ms p95`,
+            lines: o.lines.map(x => ({ ...x, vF: `+$${x.v.toLocaleString('en-US')}/mo` })), hasLines: o.lines.length > 0, hasMissing: o.missing.length > 0, noMissing: !o.missing.length,
             missing: o.missing.map(m => ({ ...m, label: m.order === 'colo' ? 'Order Colo to Cloud' : 'Order NetBond', go: toWays })),
-            pushed: o.pushed.map((p, i) => ({ key: 'p' + i, ...p, layerLabel: (POLICY_LAYERS.find(l => l.key === p.layer) || {}).label || p.layer })), hasPushed: o.pushed.length > 0 }; })(),
-        aRoute: ROUTE_SECTIONS.map(([sk, sl]) => ({ key: sk, label: sl, rules: ROUTE_RULES.filter(r => r.section === sk).map(r => { const k = `${sk}:${r.id}`, v = rt[k] || {};
-          return { key: k, id: r.id, section: sk, label: r.label, o2pOff: !r.o2p, p2oOff: !r.p2o, o2pGo: r.o2p ? tog(k, 'o2p') : () => {}, p2oGo: r.p2o ? tog(k, 'p2o') : () => {},
-            o2pBg: look(!!v.o2p).bg, o2pInk: look(!!v.o2p).ink, p2oBg: look(!!v.p2o).bg, p2oInk: look(!!v.p2o).ink }; }) })),
-        aGroups: SERVICE_GROUPS.map(g => ({ key: g.key, label: g.label, opts: g.opts.map(o => { const on = paths.includes(o.label); return { key: o.label, label: o.label, layer: o.layer, ...look(on), on, go: () => aSet({ path: on ? paths.filter(x => x !== o.label) : [...paths, o.label] }) }; }) })),
+            pushed: o.pushed.map((p, i) => ({ key: 'p' + i, ...p, icon: LAYER_ICON[p.layer] || 'hub', layerLabel: (POLICY_LAYERS.find(l => l.key === p.layer) || {}).label || p.layer })), hasPushed: o.pushed.length > 0 }; })(),
+        aRoute, aGroups, aStrip,
+        aRouting: aGroups.filter(g => ['multipath', 'egress'].includes(g.key)), aSecurity: aGroups.filter(g => ['inline', 'access', 'crypto'].includes(g.key)),
+        aRouteCols: [['deny', 'allow'], ['manip', 'advanced']].map((ks, i) => ({ key: 'rc' + i, secs: ks.map(k => aRoute.find(x => x.key === k)) })),
+        aReset: () => aSet({ req: [], path: [], route: {}, layers: null }),
         aRouteLine: [...paths.map(p => p.replace(/^\w/, ch => ch.toLowerCase())), ...words].join('; ') }; })(),
     aSent: { route: (() => { const rt = (au && au.route) || {}, paths = (au && au.path) || []; const w = []; ROUTE_RULES.forEach(r => { const v = rt[`${r.section}:${r.id}`] || {}; const ds = [v.o2p && 'on premise → partner', v.p2o && 'partner → on premise'].filter(Boolean); if (ds.length) w.push(`${({ deny: 'deny', manip: 'apply', allow: 'allow', advanced: 'apply' })[r.section]} ${r.label.toLowerCase()} (${ds.join(', ')})`); }); return [...paths.map(p => p.replace(/^\w/, ch => ch.toLowerCase())), ...w].join('; '); })(), match: au && au.match || 'something', scope: au && au.scope || 'somewhere', req: au && au.req && au.req.length ? au.req.map(x => x.toLowerCase()).join(' and ') : au && au.path && au.path.length ? au.path.map(p => p.replace(/^\w/, ch => ch.toLowerCase())).join(' and ') : '…', matchOn: !!(au && au.match), scopeOn: !!(au && au.scope), reqOn: !!(au && au.req && au.req.length) },
     aSimulate: commit('simulated'), aEnforce: commit('enforced'), aReady, aBg: aReady ? 'var(--cta)' : 'var(--bg-neutral)', aColor: aReady ? '#fff' : 'var(--text-disabled)',
