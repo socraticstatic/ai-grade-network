@@ -31,8 +31,9 @@ test('the light theme carries Flywheel 3 values for the eight drifted tokens', (
 
 test('the four tokens Flywheel has no answer for are left alone until a human rules', () => {
   const t = theme('light');
-  assert.equal(t['--warning'], '#b85f00', 'fw orange-600 #ea712f is markedly louder; deferred');
-  assert.equal(t['--viz-4'], '#b85f00', 'same as --warning; deferred');
+  // Micah, 2026-10-02: "remove any orange or purple". Warning is a slate grey, the fourth viz a deep cobalt, the fifth a deep crimson.
+  assert.equal(t['--warning'], '#5f6b78', 'no orange: warning is slate');
+  assert.equal(t['--viz-4'], '#00388f', 'no orange: the fourth viz is deep cobalt');
   assert.equal(t['--error'], '#c23131', 'fw red-600 #c70032 is markedly louder; deferred');
-  assert.equal(t['--viz-5'], '#7d3f98', 'fw purple #af29bb is markedly more saturated; deferred');
+  assert.equal(t['--viz-5'], '#8f2335', 'no purple: the fifth viz is deep crimson');
 });
