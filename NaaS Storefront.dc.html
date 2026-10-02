@@ -167,31 +167,33 @@ a{color:#0057b8}a:hover{color:#00388f}
 .fw-row.rt{display:grid;grid-template-columns:minmax(0,1fr) 104px 104px;gap:8px;min-height:32px;padding:4px 14px}.fw-row.rt>b{font-size:12px;line-height:16px}.fw-sec.rt>h4{padding-right:14px}
 .fw-sec{display:grid;gap:6px;align-content:start;min-width:0}.fw-sec>h4{display:flex;align-items:center;gap:8px;margin:0 0 2px;font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading)}
 /* The path strip: a policy drawn across the four layers it crosses, in path order. */
-.ps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;position:relative;min-width:0}
-.ps::before{content:"";position:absolute;left:12.5%;right:12.5%;top:13px;height:2px;background:var(--border-secondary)}
+.ps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;position:relative;min-width:0;--n:28px}
 .ps>span{display:grid;justify-items:center;gap:4px;min-width:0;position:relative}
-.ps i{display:grid;place-items:center;width:28px;height:28px;box-sizing:border-box;border-radius:50%;background:var(--bg-base);border:2px solid var(--border-secondary);color:var(--text-disabled);font-style:normal}
+/* The line is each node's own (Micah, 2026-10-02: centre it in the ovals, never through them): drawn at the node's middle, half a cell on the ends, under an opaque node. */
+.ps>span::before{content:"";position:absolute;left:0;right:0;top:calc(var(--n) / 2 - 1px);height:2px;background:var(--border-secondary)}
+.ps>span:first-child::before{left:50%}.ps>span:last-child::before{right:50%}
+.ps i{position:relative;display:grid;place-items:center;width:var(--n);height:var(--n);box-sizing:border-box;border-radius:50%;background:var(--bg-base);border:2px solid var(--border-secondary);color:var(--text-disabled);font-style:normal}
 .ps [data-state="set"] i{border-color:var(--cta);color:var(--link);background:var(--bg-accent)}
-.ps [data-state="broken"] i{border-color:var(--error);color:var(--error);background:color-mix(in srgb,var(--error) 10%,transparent)}
+.ps [data-state="broken"] i{border-color:var(--error);color:var(--error);background:color-mix(in srgb,var(--error) 10%,var(--bg-base))}
 .ps small{font-size:11px;line-height:14px;color:var(--text-light);text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ps [data-state="set"] small{color:var(--text-heading)}.ps [data-state="broken"] small{color:var(--error);font-weight:600}
-.ps.big i{width:40px;height:40px}.ps.big::before{top:19px}.ps.big small{font-size:12px;line-height:16px;white-space:normal;text-wrap:pretty}
+.ps.big{--n:40px}.ps.big small{font-size:12px;line-height:16px;white-space:normal;text-wrap:pretty}
 .ps.big b{font-size:12px;line-height:16px;color:var(--text-heading);text-align:center;text-wrap:pretty}.ps.big [data-state="any"] b{color:var(--text-disabled);font-weight:400}.ps.big [data-state="broken"] b{color:var(--error)}
 .ps-heads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));text-align:center}
 /* Observe's seven stations (2026-10-02): Site, Edge, Backbone, On-ramp, Cloud link, Hub, App, in the health inks. */
-.ps.seven{grid-template-columns:repeat(7,minmax(0,1fr))}.ps.seven::before{left:7.14%;right:7.14%}
-.ps.sm i{width:22px;height:22px}.ps.sm::before{top:10px}
-.ps.three{grid-template-columns:repeat(3,minmax(0,1fr))}.ps.three::before{left:16.67%;right:16.67%}
+.ps.seven{grid-template-columns:repeat(7,minmax(0,1fr))}
+.ps.sm{--n:22px}
+.ps.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 .ps .ps-node{display:block;border:0;background:transparent;padding:0;cursor:pointer;border-radius:50%}.ps .ps-node:hover i{box-shadow:0 0 0 3px var(--bg-accent)}
-.ps.xs i{width:18px;height:18px;border-width:1.5px}.ps.xs::before{top:8px;height:1.5px}.ps.xs .ic{width:11px;height:11px}
+.ps.xs{--n:18px}.ps.xs i{border-width:1.5px}.ps.xs>span::before{height:1.5px;top:calc(var(--n) / 2 - 0.75px)}.ps.xs .ic{width:11px;height:11px}
 .ps.sm b{font-size:12px;line-height:16px;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap}.ps.sm small{font-size:11px;line-height:13px;color:var(--text-light);white-space:nowrap}
-.ps [data-state="ok"] i{border-color:var(--success);color:var(--success);background:color-mix(in srgb,var(--success) 12%,transparent)}
-.ps [data-state="risk"] i{border-color:var(--warning);color:var(--warning);background:color-mix(in srgb,var(--warning) 14%,transparent)}
-.ps [data-state="slo"] i{border-color:var(--viz-5);color:var(--viz-5);background:color-mix(in srgb,var(--viz-5) 14%,transparent)}
+.ps [data-state="ok"] i{border-color:var(--success);color:var(--success);background:color-mix(in srgb,var(--success) 12%,var(--bg-base))}
+.ps [data-state="risk"] i{border-color:var(--warning);color:var(--warning);background:color-mix(in srgb,var(--warning) 14%,var(--bg-base))}
+.ps [data-state="slo"] i{border-color:var(--viz-5);color:var(--viz-5);background:color-mix(in srgb,var(--viz-5) 14%,var(--bg-base))}
 .ps [data-state="down"] i{border-radius:6px;border-color:var(--error);color:#fff;background:var(--error)}
-.ps [data-state="nodata"] i{border-style:dashed;border-color:var(--text-disabled);color:var(--text-disabled);background:transparent}
+.ps [data-state="nodata"] i{border-style:dashed;border-color:var(--text-disabled);color:var(--text-disabled);background:var(--bg-base)}
 .ps [data-state="none"] i{border-color:var(--border-secondary);color:transparent;background:var(--bg-base)}
-.ps [data-limited="true"] i{background:transparent}
+.ps [data-limited="true"] i{background:var(--bg-base)}
 .ps-heads.seven{grid-template-columns:repeat(7,minmax(0,1fr))}
 /* The wizard's steps as the vertical tab group (2026-10-02), each with its mark: done, current, filled from your estate, todo. */
 .fw-vtab.step{height:auto;min-height:44px;padding:5px 10px;gap:8px}.fw-vtab.step:disabled{cursor:default}
@@ -203,7 +205,7 @@ a{color:#0057b8}a:hover{color:#00388f}
 .fw-vtab[aria-selected="true"] .lbl>small{color:var(--link)}
 .ps [data-state="filled"] i{border-style:dashed;border-color:var(--link);color:var(--link)}
 .ps .ps-cap{border:0;background:transparent;padding:0;font:inherit;font-size:11px;line-height:14px;font-weight:700;color:var(--text-heading);text-align:center;cursor:pointer;max-width:100%;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty}.ps .ps-cap:disabled{cursor:default}.ps [data-state="any"] .ps-cap{color:var(--text-disabled);font-weight:400}
-.ps.mid i{width:32px;height:32px}.ps.mid::before{top:15px}.ps.mid b{font-size:11px;line-height:14px;color:var(--text-heading);text-align:center;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty}.ps.mid [data-state="any"] b{color:var(--text-disabled);font-weight:400}
+.ps.mid{--n:32px}.ps.mid b{font-size:11px;line-height:14px;color:var(--text-heading);text-align:center;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty}.ps.mid [data-state="any"] b{color:var(--text-disabled);font-weight:400}
 .hm-waffle{display:grid;grid-template-columns:repeat(10,17px);grid-auto-rows:17px;gap:4px;padding:6px;border:0;border-radius:10px;background:transparent;cursor:pointer;transition:background .15s}
 .hm-waffle>i{display:block;border-radius:3px}
 .hm-waffle:hover:not(:disabled){background:var(--bg-neutral)}.hm-waffle:disabled{cursor:default}
