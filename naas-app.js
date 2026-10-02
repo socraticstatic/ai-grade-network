@@ -4937,8 +4937,10 @@ function costVals(s, set, est, invAll, ob, go, c) {
   const partGo = (pt) => pt.finding ? () => set({ fdKey: pt.finding })
     : pt.conn ? go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn', mapSel: pt.conn, mapRegion: pt.region })
     : pt.region ? go('s1', { discoverView: 'estate', estPanel: 'clouds', cloudTrailE: ['cloud:' + pt.cloud, 'region:' + pt.region], cloudPage: 0, scanStep: 4, scanBusy: false }) : () => {};
+  // A mark per move (2026-10-02): Spend, Routing, Resiliency, Capacity.
+  const OPT_ICON = { spend: 'bill', routing: 'router', resiliency: 'sync', capacity: 'high-meter' };
   const optRows = optBase.map(r => { const shown = s.optShow === r.key, parts = r.parts || [];
-    return { ...r, state: optState(r), cta: r.key === 'capacity' && optState(r) === 'In progress' ? 'In progress' : r.cta, go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(optFirst(r), r.resize) : optGo[r.key],
+    return { ...r, icon: OPT_ICON[r.key] || 'target', state: optState(r), cta: r.key === 'capacity' && optState(r) === 'In progress' ? 'In progress' : r.cta, go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(optFirst(r), r.resize) : optGo[r.key],
       hasCta: !r.empty, hasStart: !!optTop && optTop.key === r.key, hasState: !!optState(r), op: r.empty ? 0.6 : 1,
       hasFigGo: !r.empty && !!r.figureF, noFigGo: r.empty || !r.figureF, figGo: () => set({ optShow: shown ? null : r.key }), figOpen: shown,
       moreLines: !shown && r.lines.length > 2 ? `+${r.lines.length - 2} more` : '', hasMoreLines: !shown && r.lines.length > 2,

@@ -50,3 +50,12 @@ test('verb badges: NetBond Advanced\'s four in their colors, the path\'s asks in
   assert.deepEqual(verbBadges({ req: 'Inline security inspection' }).map(x => x.label), ['Inspect', 'Egress']);
   assert.deepEqual(verbBadges({ req: 'Latency SLO 15 ms' }).map(x => x.label), ['Path', 'SLO']);
 });
+
+import { vals } from '../naas-app.js';
+import { mkC } from './harness.mjs';
+test('every Optimize move carries a mark on disk', () => {
+  const v = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'cost', costPanel: 'optimize' }));
+  assert.equal(v.optRows.length, 4);
+  for (const o of v.optRows) assert.ok(onDisk(o.icon), `${o.key}: ${o.icon}`);
+  assert.deepEqual(v.optRows.map(o => o.icon), ['bill', 'router', 'sync', 'high-meter']);
+});
