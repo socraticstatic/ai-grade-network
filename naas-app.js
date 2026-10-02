@@ -4160,14 +4160,14 @@ function wizardVals(s, est, set, c) {
           const tags = [...new Set(flows.map(x => x.tag).filter(Boolean))].slice(0, 5);
           const pub = (est.regionsList || []).find(r => !r.priv) || (est.regionsList || [])[0] || {};
           const ef = { from: froms[0] || '', to: tos.includes(`${pub.cloud} ${pub.region}`) ? `${pub.cloud} ${pub.region}` : tos[0] || '', tag: tags.includes('Prod') ? 'Prod' : '', ...(s.engFlow || {}) };
-          const chip = (k, v, lab) => { const on = ef[k] === v; return { key: k + v, label: lab || v, on, bg: on ? 'var(--cta)' : 'var(--bg-base)', ink: on ? '#fff' : 'var(--text-body)', go: () => set({ engFlow: { ...ef, [k]: v } }) }; };
+          const chip = (k, v, lab) => { const on = ef[k] === v; return { key: k + v, label: lab || v, icon: k === 'tag' ? (v ? 'tag' : 'minus-circle') : assetIcon(v), on, bg: on ? 'var(--cta)' : 'var(--bg-base)', ink: on ? '#fff' : 'var(--text-body)', go: () => set({ engFlow: { ...ef, [k]: v } }) }; };
           const r = ef.from && ef.to ? effectivePolicy(est, all, ef) : null;
           const hit = r ? r.trace.filter(t => t.result !== 'Does not match') : [];
           const sh = shadowedPolicies(est, all), iv = intendedVsConfigured(est, all);
           const INK = { 'In sync': 'var(--success)', Drift: 'var(--error)', 'Not pushed': 'var(--warning)' };
           return { engFrom: froms.map(v => chip('from', v)), engTo: tos.map(v => chip('to', v)), engTag: [chip('tag', '', 'Nothing tagged'), ...tags.map(v => chip('tag', v, `tag ${v}`))],
-            engHas: !!r, engVerdict: r ? r.verdict : '', engVerdictInk: r && r.verdict === 'Denied' ? 'var(--error)' : 'var(--success)', engDecided: r ? r.decidedBy : '',
-            engLayers: r ? r.layers.map(l => ({ ...l, byLine: l.by ? `by ${l.by}` : 'no policy sets it' })) : [],
+            engHas: !!r, engVerdict: r ? r.verdict : '', engVerdictInk: r && r.verdict === 'Denied' ? 'var(--error)' : 'var(--success)', engVerdictCls: r && r.verdict === 'Denied' ? 'deny' : 'allow', engVerdictIcon: r && r.verdict === 'Denied' ? 'close-circle' : 'check-circle', engDecided: r ? r.decidedBy : '',
+            engLayers: r ? r.layers.map(l => ({ ...l, icon: LAYER_ICON[l.key], state: l.by ? 'set' : 'any', byLine: l.by ? `by ${l.by}` : 'no policy sets it' })) : [],
             engTrace: hit.slice(0, 6).map((t, i) => ({ key: 'tr' + i, n: i + 1, name: t.name, result: t.result, ink: t.result === 'Won' ? 'var(--success)' : 'var(--text-light)' })),
             engTraceMore: r ? `${r.trace.length - hit.length} more ${r.trace.length - hit.length === 1 ? 'policy does' : 'policies do'} not match this flow` : '',
             engShadow: sh.slice(0, 4).map(x => ({ key: x.name, text: `${x.name}: never decides; ${x.by} always wins first` })), hasEngShadow: sh.length > 0, noEngShadow: !sh.length,
@@ -4178,9 +4178,10 @@ function wizardVals(s, est, set, c) {
     examplePolicies: (s.govTplKind || 'layered') === 'between' ? BETWEEN_TEMPLATES.map(t => { const r = resolveTemplate(est, t);
       const layerText = (lk) => { const xs = SERVICE_GROUPS.flatMap(g => g.opts).filter(o => r.path.includes(o.label) && o.layer === lk).map(o => o.label); const rt = lk === 'edge' ? Object.keys(r.route).length : 0;
         return [...xs, ...(rt ? [`${rt} route ${rt === 1 ? 'rule' : 'rules'}`] : [])].join(' · ') || 'Any'; };
-      return { key: t.key, t: t.name, m: `${r.match} ↔ ${r.scope}`, why: t.why, r: r.path[0] || 'Route policy', layers: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: layerText(l.key) })),
-        go: () => set({ govPanel: 'policies', authoring: { ...r, tab: 'outcome' } }) }; }) : MULTI_LAYER.map(t => ({ key: t.key, t: t.name, m: t.match, why: t.why, r: t.layers.core,
-      layers: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: t.layers[l.key] })),
+      // A card's glyph tile, its two sides with their glyphs, and its layers as a strip (2026-10-02).
+      return { key: t.key, t: t.name, icon: t.icon || 'check-shield', a: r.match, b: r.scope, aIcon: assetIcon(r.match), bIcon: assetIcon(r.scope), m: `${r.match} ↔ ${r.scope}`, why: t.why, r: r.path[0] || 'Route policy', layers: POLICY_LAYERS.map(l => { const text = layerText(l.key); return { key: l.key, label: l.label, text, icon: LAYER_ICON[l.key], state: text === 'Any' ? 'any' : 'set' }; }),
+        go: () => set({ govPanel: 'policies', authoring: { ...r, tab: 'outcome' } }) }; }) : MULTI_LAYER.map(t => ({ key: t.key, t: t.name, icon: t.icon || 'check-shield', a: t.match, b: 'any cloud', aIcon: assetIcon(t.match), bIcon: 'cloud', m: t.match, why: t.why, r: t.layers.core,
+      layers: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: t.layers[l.key], icon: LAYER_ICON[l.key], state: t.layers[l.key] ? 'set' : 'any' })),
       go: () => set({ govPanel: 'policies', authoring: { match: t.match, scope: 'any cloud', req: [t.layers.core], layers: t.layers, templateName: t.name } }) })),
   };
 }

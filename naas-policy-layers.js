@@ -41,15 +41,15 @@ export function policyLayers(p) {
 
 /** Starting points that set a rule at every layer. */
 export const MULTI_LAYER = [
-  { key: 'pci', name: 'PCI, end to end', match: 'tag PCI', why: 'Card data never touches the internet, from the store to the subnet.',
+  { icon: 'padlock', key: 'pci', name: 'PCI, end to end', match: 'tag PCI', why: 'Card data never touches the internet, from the store to the subnet.',
     layers: { site: 'AVPN or Switched Ethernet, no internet breakout', edge: 'Inspect at the AT&T edge', core: 'Private path required', cloud: 'PCI subnets only' } },
-  { key: 'remote', name: 'Remote sites to cloud', match: 'remote-site any', why: 'Remote sites reach the cloud through AT&T, not around it.',
+  { icon: 'large-building', key: 'remote', name: 'Remote sites to cloud', match: 'remote-site any', why: 'Remote sites reach the cloud through AT&T, not around it.',
     layers: { site: 'SD-WAN or Third Party Access tunnels to the AT&T edge', edge: 'Terminate tunnels at the AT&T edge', core: 'No direct internet path', cloud: 'Private on-ramp into the region' } },
-  { key: 'gpu', name: 'AI and GPU traffic', match: 'tag AI', why: 'Training data moves on capacity that is sized and measured for it.',
+  { icon: 'ai', key: 'gpu', name: 'AI and GPU traffic', match: 'tag AI', why: 'Training data moves on capacity that is sized and measured for it.',
     layers: { site: 'Data centers on 10G Switched Ethernet', edge: 'Dedicated 10G on-ramp port', core: 'Latency SLO 15 ms', cloud: 'GPU regions on a private path' } },
-  { key: 'inet', name: 'Internet-facing apps', match: 'tag Internet-facing', why: 'What faces the internet is inspected once, at the edge, for every cloud.',
+  { icon: 'globe', key: 'inet', name: 'Internet-facing apps', match: 'tag Internet-facing', why: 'What faces the internet is inspected once, at the edge, for every cloud.',
     layers: { site: 'No local internet breakout', edge: 'DDoS protection and inline inspection', core: 'Egress through AT&T, never direct', cloud: 'Public subnets behind the edge' } },
-  { key: 'fin', name: 'Finance stays segmented', match: 'branch Finance', why: 'Finance traffic has its own lane at every hop.',
+  { icon: 'bill', key: 'fin', name: 'Finance stays segmented', match: 'branch Finance', why: 'Finance traffic has its own lane at every hop.',
     layers: { site: 'Finance sites in their own segment', edge: 'Segment-aware firewall', core: 'Segment intra-tag only', cloud: 'Finance VPCs only' } },
 ];
 
@@ -117,15 +117,15 @@ export function pairOutcome(est, au, price = {}) {
 
 // Templates between two assets (2026-10-01): each names its sides by kind, and resolves to the estate's own.
 export const BETWEEN_TEMPLATES = [
-  { key: 'pc-hsp', name: 'Private cloud to a hyperscaler, private and inspected', why: 'Your colo private cloud reaches a cloud region over the AT&T network only, through a firewall, encrypted.',
+  { icon: 'hybrid-cloud', key: 'pc-hsp', name: 'Private cloud to a hyperscaler, private and inspected', why: 'Your colo private cloud reaches a cloud region over the AT&T network only, through a firewall, encrypted.',
     a: 'private-cloud', b: 'public-region', path: ['Via the AT&T network', 'Never the internet', 'NGFW inline', 'Encrypt in transit'], route: { 'deny:block-default-routes': { o2p: true, p2o: false } } },
-  { key: 'c2c', name: 'Cloud to cloud over AT&T, two paths', why: 'Two clouds talk over the AT&T network on diverse metros, active/active, never the internet.',
+  { icon: 'cloud-transfer', key: 'c2c', name: 'Cloud to cloud over AT&T, two paths', why: 'Two clouds talk over the AT&T network on diverse metros, active/active, never the internet.',
     a: 'region', b: 'other-cloud-region', path: ['Via the AT&T network', 'Two paths, diverse metros', 'Active/active', 'Never the internet'], route: {} },
-  { key: 'egress', name: 'Controlled egress for internet-facing apps', why: 'Internet-bound traffic leaves only through AT&T, to allow-listed destinations, inspected.',
+  { icon: 'export', key: 'egress', name: 'Controlled egress for internet-facing apps', why: 'Internet-bound traffic leaves only through AT&T, to allow-listed destinations, inspected.',
     a: 'tag Internet-facing', b: 'the Internet', path: ['Internet egress only through AT&T', 'Allow-listed destinations only', 'NGFW inline'], route: {} },
-  { key: 'branch-zt', name: 'Branches to cloud, zero-trust', why: 'Users at branches reach the clouds through zero-trust access, encrypted, over the AT&T network.',
+  { icon: 'user-access', key: 'branch-zt', name: 'Branches to cloud, zero-trust', why: 'Users at branches reach the clouds through zero-trust access, encrypted, over the AT&T network.',
     a: 'bu', b: 'any cloud', path: ['Zero-trust access for users', 'Encrypt in transit', 'Via the AT&T network'], route: {} },
-  { key: 'advertise', name: 'Advertise only what the partner needs', why: 'The cloud learns only your matching routes, tagged for its route table; no default route leaks.',
+  { icon: 'router', key: 'advertise', name: 'Advertise only what the partner needs', why: 'The cloud learns only your matching routes, tagged for its route table; no default route leaks.',
     a: 'private-cloud', b: 'public-region', path: [], route: { 'allow:matching-routes': { o2p: true, p2o: false }, 'deny:block-default-routes': { o2p: true, p2o: false }, 'manip:selective-cv-tagging': { o2p: true, p2o: false } } },
 ];
 /** A template's sides, named from this estate: its first private cloud, its first public region, a region on another cloud. */
