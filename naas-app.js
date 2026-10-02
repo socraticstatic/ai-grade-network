@@ -3012,6 +3012,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         impW: f.priced && f.save ? Math.max(4, Math.round(f.save / maxSave * 100)) + '%' : '0%', impWord: f.priced && f.save ? '' : (f.event ? 'Event' : 'Risk'),
         actLabel: acts.length ? acts[0][0] : 'Open', actGo: acts.length ? acts[0][1] : () => set({ fdKey: f.key }) }; })(),
     kind: f.event ? 'Event' : (D.KINDS[f.kind] || f.pillar || 'Finding'), when: f.event ? f.a.when : '', head: f.head,
+    // The kind as a badge in the verb inks (an event orange, a priced saving green, a risk neutral) and the strip (2026-10-02).
+    badgeCls: f.event ? 'manip' : f.priced && f.save ? 'allow' : '', strip: findStrip(f),
     stateLabel: l.label, stateTone: TONE[l.state], owner: l.owner, age: `${l.ageDays}d`,
     saveLine: f.priced && f.save ? `${fmt(f.save)}/mo` : '', hasSave: !!(f.priced && f.save),
     tone: f.event ? 'var(--warning)' : 'var(--link)', toneBg: 'var(--bg-base)',
@@ -3306,7 +3308,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       // What the move gets you, in words (Dev's Insights screens, 2026-10-01): a saving when priced, else the risk it closes.
       const outcome = f.priced ? `Save ${fmt(f.save)}/mo` : /single|backup|onecloud/.test(f.kind) ? 'Removes outage risk' : /degraded|slo|latency/.test(f.kind) ? 'Brings latency under SLO' : /ipsec|sdwan|nothub/.test(f.kind) ? 'Takes traffic off the internet'
         : f.pillar === 'Policy control' ? 'Closes a security risk' : f.pillar === 'Observability' ? 'Shows the traffic you cannot see' : f.pillar === 'Private reach' ? 'Takes traffic off the internet' : 'Closes an open finding';
-      return { key: f.kind, head: f.head, saveLine: f.priced ? `Save ${fmt(f.save)}/mo` : '', hasSave: !!f.priced, outcome, outInk: f.priced ? 'var(--success)' : 'var(--text-heading)', rec: `Recommended: ${rec}`, stateLabel: l.label,
+      return { key: f.kind, head: f.head, strip: findStrip(f), saveLine: f.priced ? `Save ${fmt(f.save)}/mo` : '', hasSave: !!f.priced, outcome, outInk: f.priced ? 'var(--success)' : 'var(--text-heading)', rec: `Recommended: ${rec}`, stateLabel: l.label,
         canAccept: st === 'open' || st === 'snoozed', accept: moveF(k, 'ack', { note: `Accepted: ${rec}` }),
         canDefer: st === 'open', defer: moveF(k, 'snoozed', { snoozeDays: deferDays, note: deferWhen ? `Deferred to the ${deferWhen} briefing` : 'Deferred' }),
         canStart: st === 'ack', start: moveF(k, 'progress'), canSnooze: st === 'ack', snooze: moveF(k, 'snoozed', { snoozeDays: deferDays }), hasDoor: false, doorLabel: '', door: () => {},
@@ -3320,7 +3322,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // while the briefing said it waits).
     const ports = rk === 'architect' ? OD.capacity(conns, s.obWindow || '30d').filter(r => r.peakPct >= 80 && r.state !== 'down').map(r => {
       const busy = capMoveLabel(s, est0, r, '') === 'In progress';
-      return { key: 'cap-' + r.region, head: `${r.cloud} ${r.region} peaks at ${r.peakPct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, saveLine: '', hasSave: false, rec: 'Recommended: Add a port', outcome: 'Adds headroom before it fills', outInk: 'var(--text-heading)', stateLabel: busy ? 'In progress' : 'Open', underWay: busy,
+      return { key: 'cap-' + r.region, head: `${r.cloud} ${r.region} peaks at ${r.peakPct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, strip: findStrip({ kind: 'port' }), saveLine: '', hasSave: false, rec: 'Recommended: Add a port', outcome: 'Adds headroom before it fills', outInk: 'var(--text-heading)', stateLabel: busy ? 'In progress' : 'Open', underWay: busy,
         canAccept: false, canDefer: false, canStart: false, canSnooze: false, hasDoor: true, doorLabel: capMoveLabel(s, est0, r, 'Add a port'), door: capMove(go, set, s, est0, r), accept: () => {}, defer: () => {}, start: () => {}, snooze: () => {}, waiting: !busy,
         open: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn' }) }; }) : [];
     const all = [...acts, ...ports];
@@ -3999,6 +4001,18 @@ const CARD_DESC = {
 const REQ_ICON = { 'Private path required': 'padlock', 'No direct internet path': 'not-available', 'Inline inspection': 'firewall', 'Segment by tag': 'tag', 'Latency SLO': 'high-meter', 'Cost-aware routing': 'bill' };
 const GROUP_ICON = { multipath: 'shuffle', inline: 'firewall', access: 'user-access', crypto: 'padlock', egress: 'export' };
 const ROUTE_ICON = { deny: 'not-available', manip: 'pencil', allow: 'check-circle', advanced: 'gear' };
+// Where on the path a finding sits (2026-10-02): the four stations as the strip draws them. A public path has no
+// AT&T edge and a core at risk; a blind spot is a station AT&T cannot yet see; a cadence or a missing cloud is the cloud
+// not yet seen; one path or a port near full is a core at risk; a segmentation gap is the edge at risk.
+const STRIP_WORD = { site: 'Sites', edge: 'AT&T edge', core: 'AT&T core', cloud: 'Cloud' };
+function findStrip(f) {
+  const k = String((f && f.kind) || ''), event = !!(f && f.event);
+  const pub = /ipsec|pci|uninspected|crosscloud|avoidable|egress/.test(k), blind = /blind|unmonitored/.test(k), unseen = /nightly|weekly|hours|manual|newcloud|onecloud|nothub/.test(k);
+  const st = { site: 'set', edge: pub ? 'none' : blind ? 'nodata' : /unsegmented/.test(k) ? 'risk' : 'set',
+    core: pub ? 'risk' : blind ? 'nodata' : /degraded|slo/.test(k) ? 'slo' : /single|port/.test(k) || event ? 'risk' : 'set', cloud: unseen ? 'nodata' : 'set' };
+  const why = { none: 'not on this path', risk: 'at risk', nodata: 'not yet seen', slo: 'over SLO', set: 'on the AT&T network' };
+  return [['site', 'large-building'], ['edge', 'firewall'], ['core', 'hub'], ['cloud', 'cloud']].map(([key, icon]) => ({ key, icon, state: st[key], title: `${STRIP_WORD[key]}: ${key === 'site' || key === 'cloud' ? (st[key] === 'nodata' ? 'not yet seen' : 'yours') : why[st[key]]}` }));
+}
 const REGION_OF_METRO = (m) => Object.keys(D.COMPOSE_CHIPS.regions).find(r => D.COMPOSE_CHIPS.regions[r].includes(m)) || 'US East';
 const REGION_GEO = CF.REGION_GEO;
 

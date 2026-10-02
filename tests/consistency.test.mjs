@@ -57,7 +57,9 @@ test('a card does not repeat the tab above it, and says each count once', () => 
 });
 
 test('a row of cards acts with outline buttons; filled blue is for the one main move', () => {
-  const f = between('<sc-for list="{{ insightRows }}"', '</sc-for>');
+  // The row holds the strip's own loop since 2026-10-02, so the block runs through the row's action.
+  const a = HTML.indexOf('<sc-for list="{{ insightRows }}"');
+  const f = HTML.slice(a, HTML.indexOf('</sc-for>', HTML.indexOf('{{ ins.actLabel }}', a)));
   assert.match(f, /<button class="fx-btn" onClick="\{\{ ins\.open \}\}"/);
 });
 

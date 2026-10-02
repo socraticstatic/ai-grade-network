@@ -30,7 +30,8 @@ test('one list: every actionable finding and every event, each with its state, o
 
 test('the card is terse: a headline, a state, one move; the why lives in the drawer', () => {
   const a = HTML.indexOf('<sc-for list="{{ insightRows }}"');
-  const block = HTML.slice(a, HTML.indexOf('</sc-for>', a));
+  // The row holds the strip's own loop since 2026-10-02, so the block runs through the row's action.
+  const block = HTML.slice(a, HTML.indexOf('</sc-for>', HTML.indexOf('{{ ins.actLabel }}', a)));
   // The row is a table row since 2026-09-29; its one move is a verb (actLabel), never the old sentence.
   for (const b of ['ins.why', '{{ ins.act }}', 'ins.did']) assert.ok(!block.includes(b), b);
   assert.ok(block.includes('ins.stateLabel') && block.includes('ins.open') && block.includes('{{ ins.actLabel }}'));

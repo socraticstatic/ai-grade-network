@@ -384,6 +384,9 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Recommended's rows (2026-10-02): the tiny strip in Today (div +1, sc-for +1, span +2, i +1) and in each tier (span +3,
 // sc-for +1, i +1), and the set's glyph on the title (span +2). Recounted, every tag balanced:
 // div 1255 -> 1256, span 1132 -> 1139, sc-for 314 -> 316.
+// Findings and Your actions (2026-10-02): the kind as a badge, the strip and the when on the Findings kicker (span +6,
+// sc-for +1, i +1), the strip beside the head on Your actions (span +5, sc-for +1, i +1). Recounted, every tag balanced:
+// span 1139 -> 1147, sc-for 316 -> 318.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -399,9 +402,9 @@ test('every container the markup opens, it closes', () => {
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 1256],
-    ['span', /<span\b/g, /<\/span>/g, 1139],
+    ['span', /<span\b/g, /<\/span>/g, 1147],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 583],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 316],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 318],
     ['section', /<section\b/g, /<\/section>/g, 12],
     ['button', /<button\b/g, /<\/button>/g, 484],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
