@@ -381,6 +381,9 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Observe's Health and Paths rows as the seven-station strip (2026-10-02): each row's seven dot cells become one strip div
 // (div +1 each) whose nodes carry the station glyph (i, span) and, on Paths, the milliseconds with loss under an sc-if; the
 // heads sit in a seven-column span. Recounted, every tag balanced: div 1253 -> 1255, span 1129 -> 1132, sc-if 582 -> 583.
+// Recommended's rows (2026-10-02): the tiny strip in Today (div +1, sc-for +1, span +2, i +1) and in each tier (span +3,
+// sc-for +1, i +1), and the set's glyph on the title (span +2). Recounted, every tag balanced:
+// div 1255 -> 1256, span 1132 -> 1139, sc-for 314 -> 316.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -395,10 +398,10 @@ test('every container the markup opens, it closes', () => {
   // div 1134 -> 1139, span 969 -> 962, sc-if 522 -> 528, sc-for 268 -> 278, button 413 -> 445.
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1255],
-    ['span', /<span\b/g, /<\/span>/g, 1132],
+    ['div', /<div\b/g, /<\/div>/g, 1256],
+    ['span', /<span\b/g, /<\/span>/g, 1139],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 583],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 314],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 316],
     ['section', /<section\b/g, /<\/section>/g, 12],
     ['button', /<button\b/g, /<\/button>/g, 484],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],

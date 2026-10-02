@@ -4895,6 +4895,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
     const pick = (i) => () => set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: i }), moveSel: keep('moveSel', { ...sel, [m.key]: true }) });
     const setDoor = m.kind === 'sites' ? siteDoor(m) : cloudDoor(m);
     return { ...m, rankF: String(m.rank), sel: on, check: on ? '✓' : '', checkBg: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)',
+      kindIcon: m.kind === 'sites' ? 'large-building' : 'cloud', strip: M.stripOf(m.today.path),
       selLabel: `${on ? 'Remove' : 'Add'} move ${m.rank}, ${m.title}, ${on ? 'from' : 'to'} the order`,
       toggle: () => set({ moveSel: keep('moveSel', { ...sel, [m.key]: !on }) }),
       attach: () => composeMoves([m]), compare: () => set({ cnPage: 'ways' }),
@@ -4908,7 +4909,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
         return { ...t, key: m.key + ':' + t.i, on: tOn, pick: pick(t.i), featured: t.rec, priceShort: t.monthly === null ? '' : `${fmt(t.monthly)}/mo`,
           aria: `${t.intro} Security: ${t.sec.value}${t.sec.delta ? `, ${t.sec.delta}` : ''}. Performance: ${t.perf.value}${t.perf.delta ? `, ${t.perf.delta}` : ''}. Cost: ${t.cost.value}${t.cost.delta ? `, ${t.cost.delta}` : ''}.`,
           title: `${t.intro} ${t.fit}. ${t.price}. Performance: ${t.perfTitle}. Cost: ${t.costTitle}.`,
-          border: tOn ? 'var(--cta)' : 'var(--border-secondary)', bg: tOn ? 'var(--bg-accent)' : 'transparent', wordInk: t.rec ? 'var(--link)' : 'var(--text-light)',
+          border: tOn ? 'var(--cta)' : 'var(--border-secondary)', bg: tOn ? 'var(--bg-accent)' : 'transparent', wordInk: t.rec ? 'var(--link)' : 'var(--text-light)', strip: M.tierStrip(t),
           sec: cell(t.sec), perf: cell(t.perf), cost: cell(t.cost) }; }) };
   });
   return shell(all);

@@ -24,6 +24,25 @@ import { CATALOG } from './naas-data.js';
 import { fmt, siteModeOf, onAtt, regionOf } from './naas-logic.js';
 import { rampName } from './naas-things.js';
 
+/**
+ * The four stations a path crosses, for the strip Govern draws (2026-10-02): today's path or a tier's.
+ * The public internet has no AT&T edge and a core at risk; a third party's path is one AT&T cannot see
+ * into; a hyperscaler-native path has the cloud's own edge; AT&T's path sets every station.
+ */
+const STATION = { site: 'Sites', edge: 'AT&T edge', core: 'AT&T core', cloud: 'Cloud' };
+export function stripOf(path, opts = {}) {
+  const pub = path === 'internet' || path === 'ipsec', third = path === 'sdwan' || path === 'third', nat = path === 'native';
+  const word = { set: 'on the AT&T network', none: 'not on this path', risk: 'the public internet', nodata: 'not AT&T\'s to see' };
+  return [
+    { key: 'site', icon: 'large-building', state: 'set' },
+    { key: 'edge', icon: opts.inspect ? 'check-shield' : 'firewall', state: pub ? 'none' : third || nat ? 'nodata' : 'set' },
+    { key: 'core', icon: 'hub', state: pub ? 'risk' : third ? 'nodata' : 'set' },
+    { key: 'cloud', icon: 'cloud', state: 'set' },
+  ].map(n => ({ ...n, title: `${STATION[n.key]}: ${n.key === 'edge' && opts.inspect ? 'inspected' : n.key === 'site' || n.key === 'cloud' ? 'yours' : word[n.state]}` }));
+}
+/** A tier's strip: its path, inspected where a hosted product sits in it. */
+export const tierStrip = (t) => stripOf(t.path, { inspect: (t.products || []).some(p => (PROD[p.id] || {}).inspect) });
+
 /** The house tier words (naas-app.js reads these). */
 export const TIERS = ['Start here', 'Recommended', 'Full control'];
 /** NetBond Advanced's connection types, the contract with the compose flow. */
