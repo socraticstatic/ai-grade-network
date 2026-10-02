@@ -387,6 +387,11 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // Findings and Your actions (2026-10-02): the kind as a badge, the strip and the when on the Findings kicker (span +6,
 // sc-for +1, i +1), the strip beside the head on Your actions (span +5, sc-for +1, i +1). Recounted, every tag balanced:
 // span 1139 -> 1147, sc-for 316 -> 318.
+// Cost > By leg (2026-10-02): the three leg tiles become the stations of a cost strip (div +0, span -2 net, button +1 for
+// the node beside the figure's own, i +1). Recounted, every tag balanced: span 1147 -> 1145, button 484 -> 485.
+// The glyph passes (2026-10-02): Sources carry the provider's mark or AT&T's glyph (sc-if +2, span +2), Changes a glyph per
+// kind in place of its tick (span +1, i -1), Business units and Your sites a glyph per site class or place level (span +2
+// each). Recounted, every tag balanced: span 1145 -> 1152, sc-if 583 -> 585, i 100 -> 99.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -402,11 +407,11 @@ test('every container the markup opens, it closes', () => {
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 1256],
-    ['span', /<span\b/g, /<\/span>/g, 1147],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 583],
+    ['span', /<span\b/g, /<\/span>/g, 1152],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 585],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 318],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 484],
+    ['button', /<button\b/g, /<\/button>/g, 485],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

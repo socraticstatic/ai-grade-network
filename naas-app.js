@@ -3191,7 +3191,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const KIND = { config: ['Config', 'var(--link)'], route: ['Route', 'var(--error)'], maintenance: ['Maintenance', 'var(--warning)'] };
     const regName = (id) => { const r = (est0.regionsList || []).find(x => x.region === id); return r ? `${r.cloud} ${r.region}` : (id || ''); };
     const changeAll = (incChanges || []).filter(x => (x.upcoming ? x.at <= nowMs + 14 * DAY : x.at >= fromMs && x.at <= nowMs)).map(x => { const pb = x.linedUp ? probs.find(p => p.key === x.linedUp) : null;
-      return { key: x.key, at: x.at, upcoming: !!x.upcoming, whenF: x.upcoming ? `${dayF(x.at)}, planned` : nowMs - x.at < DAY ? SCH.hhmm(x.at) : dayF(x.at), kind: (KIND[x.kind] || [x.kind])[0], dot: (KIND[x.kind] || [0, 'var(--text-light)'])[1],
+      return { key: x.key, at: x.at, upcoming: !!x.upcoming, whenF: x.upcoming ? `${dayF(x.at)}, planned` : nowMs - x.at < DAY ? SCH.hhmm(x.at) : dayF(x.at), kind: (KIND[x.kind] || [x.kind])[0], dot: (KIND[x.kind] || [0, 'var(--text-light)'])[1], icon: ({ config: 'gear', route: 'router', maintenance: 'wrench' })[x.kind] || 'exclamation-circle',
         text: x.text, touched: regName(x.region), source: x.source || '', lineF: pb ? `${pb.where} · ${pb.thing}: ${pb.what}` : '', lined: !!pb }; });
     const pctOf = (t) => `${Math.max(0, Math.min(100, (t - fromMs) / winMs * 100)).toFixed(2)}%`;
     const chgTicks = changeAll.filter(x => !x.upcoming).map(x => ({ key: x.key, left: pctOf(x.at), color: x.dot, title: `${x.whenF} · ${x.kind} · ${x.text}` }));
@@ -3521,7 +3521,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // the NetBond connections on Capacity, the access sites by place.
   const scopeDoor = (r) => r.key === 'src:netbond' ? dd.conn(null) : r.key === 'src:sites' ? dd.sites(null)
     : (est.regionsList || []).some(x => x.cloud === r.kind) ? dd.clouds(null, ['cloud:' + r.kind]) : null;
-  const sources = rawSources.map(r => ({ ...r, scopeCan: !!scopeDoor(r), scopeCant: !scopeDoor(r), scopeGo: scopeDoor(r) || (() => {}),
+  // The provider's mark, or AT&T's glyph, leads the account (2026-10-02).
+  const SRC_MARK = { AWS: 'brand/providers/aws.svg', Azure: 'brand/providers/azure.svg', GCP: 'brand/providers/google-icon.svg', Google: 'brand/providers/google-icon.svg', Oracle: 'brand/providers/oracle.svg' };
+  const sources = rawSources.map(r => ({ ...r, mark: SRC_MARK[r.kind] || '', hasMark: !!SRC_MARK[r.kind], isAtt: r.kind === 'AT&T', scopeCan: !!scopeDoor(r), scopeCant: !scopeDoor(r), scopeGo: scopeDoor(r) || (() => {}),
     edit: () => set({ sub: { page: 'discover', panel: 'add' }, sourceEdit: r.key }),
     // A source added in this session comes back out the same way (2026-09-30).
     remove: () => { const m = /^src:added-(\d+)-/.exec(r.key); if (!m) return; const mine = (s.addedSources || []).filter(a => a.estId === est.id); const drop = mine[+m[1]];
@@ -3888,12 +3890,13 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
             return pc && names.every(n => costIx.site[n] && costIx.site[n].carrier) ? { costF: 'Not priced', carrier: true, go: null, title: `${r.name}: its sites ride another carrier's access, billed outside AT&T` } : null;
           };
           const placeRows = rows0.map(r => { const can = (!!r.drillKey && !r.leaf && !r.more) || !!r.moreTo;
+            const icon = r.more ? 'pinpoint' : PLACE_ICON[level] || (level === 'site' || r.leaf ? SITE_ICON(r) : 'pinpoint');
             const access = r.more ? 'the whole metro, here' : (r.svcLine && r.place) || r.access || '';
             const into = can && !r.moreTo ? [...(r.via || trail), r.drillKey] : null;
             const counted = typeof r.count === 'number' && typeof r.att === 'number' && !r.more && access === `${nfP(r.count)} ${r.count === 1 ? 'site' : 'sites'} · ${nfP(r.att)} AT&T · ${nfP(r.count - r.att)} non-AT&T`;
             const cost = costCell(level === 'service' ? svcCost(r) : String(r.key || '').startsWith('site:') && !r.more ? siteCost(r, into) : level === 'region' || level === 'state' ? placeCost(r) : null);
             const open = !can ? null : r.moreTo ? () => set({ placeTrail: r.moreTo, placePage: 0 }) : () => set({ placeTrail: into, placePage: 0 });
-            return { key: r.key || r.name, name: r.name, access, parts: partsOf(counted ? countParts(r, into) : [access]), svcLine: r.svcLine || '', bwF: r.bwF || '', ...cost,
+            return { icon,  key: r.key || r.name, name: r.name, access, parts: partsOf(counted ? countParts(r, into) : [access]), svcLine: r.svcLine || '', bwF: r.bwF || '', ...cost,
               dot: r.more ? 'transparent' : r.priv ? 'var(--success)' : 'var(--warning)', level: can && !r.moreTo ? nextOf(r) : '', caret: can ? '›' : '', cursor: can ? 'pointer' : 'default', canGo: can, noGo: !can,
               go: open ? (e) => { dd.stop(e); open(); } : () => {} }; });
           const crumbs = [{ key: 'root', label: 'All regions', to: [] }, ...trail.map((k, i) => ({ key: k, label: S.labelOfKey(est, k), to: trail.slice(0, i + 1) }))]
@@ -3963,7 +3966,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
               // The count opens the unit's sites, by place (2026-09-30); the name still picks the unit to move sites into.
               countCan: n > 0, countCant: !n, countGo: n ? dd.sites('bu:' + b) : () => {}, countTitle: n ? `Open the ${n.toLocaleString('en-US')} ${n === 1 ? 'site' : 'sites'} in ${b}` : '' }; });
           const buSites = (est.sites || []).map(x => { const bu = S.buOf(x, tags); const target = active && bu !== active ? active : null;
-            return { key: x.name, name: x.name, metro: x.metro || 'various', access: x.access || '', count: S.countOf(x.name).toLocaleString('en-US'), bu, moveLabel: target ? `Move to ${target}` : active ? `In ${active}` : 'Pick a unit', canMove: !!target, noMove: !target,
+            return { key: x.name, name: x.name, icon: SITE_ICON(x), metro: x.metro || 'various', access: x.access || '', count: S.countOf(x.name).toLocaleString('en-US'), bu, moveLabel: target ? `Move to ${target}` : active ? `In ${active}` : 'Pick a unit', canMove: !!target, noMove: !target,
               move: () => { if (!target) return; save({ ...(s.siteTags || {}), [est.id]: { ...tags, [x.name]: target } }, s.buCustom || {}); } }; });
           const addBu = () => { const nm = String(s.buNew || '').trim(); if (!nm) return; if (!known.includes(nm)) save(s.siteTags || {}, { ...(s.buCustom || {}), [est.id]: [...custom, nm] }); set({ buNew: '', buActive: nm }); };
           return { buList, buSites, buActiveName: active || '', hasBuActive: !!active, buHint: active ? `Moving sites into ${active}` : 'Pick a business unit, then move sites into it', buNew: s.buNew || '', setBuNew: (e) => set({ buNew: e.target.value }), addBu };
@@ -4005,6 +4008,10 @@ const ROUTE_ICON = { deny: 'not-available', manip: 'pencil', allow: 'check-circl
 // AT&T edge and a core at risk; a blind spot is a station AT&T cannot yet see; a cadence or a missing cloud is the cloud
 // not yet seen; one path or a port near full is a core at risk; a segmentation gap is the edge at risk.
 const STRIP_WORD = { site: 'Sites', edge: 'AT&T edge', core: 'AT&T core', cloud: 'Cloud' };
+// A site's glyph by its class (2026-10-02): a data center, a campus or plant, a branch or office.
+const SITE_ICON = (x) => { const c = String((x && x.cls) || ''); return /data ?cent|DC\b|colo/i.test(c + ' ' + ((x && x.name) || '')) ? 'large-building' : /HQ|campus|plant|manufact|hospital|school/i.test(c) ? 'midsized-building' : 'retail-store'; };
+// A place's glyph by its level on the site side (2026-10-02).
+const PLACE_ICON = { region: 'map', state: 'pinpoint-area', country: 'pinpoint-area', metro: 'pinpoint', service: 'ethernet' };
 function findStrip(f) {
   const k = String((f && f.kind) || ''), event = !!(f && f.event);
   const pub = /ipsec|pci|uninspected|crosscloud|avoidable|egress/.test(k), blind = /blind|unmonitored/.test(k), unseen = /nightly|weekly|hours|manual|newcloud|onecloud|nothub/.test(k);
@@ -5332,7 +5339,7 @@ function costLegVals(s, set, est, legs0, go, c) {
   return {
     legTiles: legKs.map((k, i) => { const l = legs[k], segs = CV.inkSegs(l.rows);
       // A picked member's tiles are shares of that member, not of the estate (the skeptic, 2026-09-30).
-      return { key: l.key, l: l.label, v: fmt(legR[i]), u: '/mo', covers: CV.legCovers(l), sub: `${legPct[i]}% of ${pick ? pickLabel : 'the total'}`,
+      return { key: l.key, l: l.label, icon: { access: 'large-building', connect: 'hub', cloud: 'cloud' }[l.key] || 'target', v: fmt(legR[i]), u: '/mo', covers: CV.legCovers(l), sub: `${legPct[i]}% of ${pick ? pickLabel : 'the total'}`,
         title: `${l.label}: ${fmt(legR[i])}/mo · ${CV.legCovers(l)} · ${segs.map(x => `${I[x.ink].word}${x.modelled ? ', modelled' : ''} ${fmt(Math.round(x.v))}`).join(' · ') || 'nothing priced'}`,
         go: () => set({ legDrill: null, [PAGE[k]]: 0 }) }; }),
     legAccessRows: rowsOf('access'), legConnectRows: rowsOf('connect'), legCloudRows: rowsOf('cloud'),
