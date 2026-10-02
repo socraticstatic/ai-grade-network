@@ -4203,6 +4203,9 @@ const CF_INK = {
 };
 const WIP_INK = { you: { dot: 'var(--cta)', ring: 'var(--cta)', dash: 'solid', ink: 'var(--text-heading)' }, estate: { dot: 'transparent', ring: 'var(--link)', dash: 'dashed', ink: 'var(--text-heading)' }, none: { dot: 'transparent', ring: 'var(--border-primary)', dash: 'solid', ink: 'var(--text-disabled)' } };
 const pickInk = (on) => ({ border: on ? 'var(--cta)' : 'var(--border-secondary)', bg: on ? 'var(--bg-accent)' : 'var(--bg-base)', ink: on ? 'var(--link)' : 'var(--text-heading)', check: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)' });
+// A step's category head and glyph in the vertical tab group (2026-10-02).
+const STEP_CAT = { type: 'What', provider: 'Where', endpoints: 'Where', basic: 'How', advanced: 'How', terms: 'Terms', review: 'Review', confirm: 'Review' };
+const STEP_ICON = { type: 'cable', provider: 'cloud', endpoints: 'large-building', basic: 'high-meter', advanced: 'check-shield', terms: 'time-money', review: 'checklist', confirm: 'checklist' };
 const STEP_HEAD = {
   type: ['Choose your connection type', 'Each type says which of your sites or clouds it applies to.'],
   provider: ['Select your cloud provider', 'Pick the region this connection reaches, from the clouds discovery found.'],
@@ -4318,7 +4321,8 @@ function flowVals(s, set, est, c) {
   // The steps, honestly.
   const cfSteps = CF.stepStates(f).map((st, i, all) => { const ink = CF_INK[st.state], can = CF.reachable(st.key, f) && st.key !== key;
     return { ...st, ...ink, mark: st.state === 'done' ? '✓' : String(st.n), sub: st.state === 'filled' ? `${st.filledFrom}: ${st.value}` : st.state === 'done' && st.value ? st.value : st.description,
-      go: can ? () => goStep(st.key) : () => {}, off: !can, cursor: can ? 'pointer' : 'default', notLast: i < all.length - 1, flex: i < all.length - 1 ? '1 1 0' : '0 1 auto', aria: st.key === key ? 'step' : 'false' }; });
+      go: can ? () => goStep(st.key) : () => {}, off: !can, cursor: can ? 'pointer' : 'default', notLast: i < all.length - 1, flex: i < all.length - 1 ? '1 1 0' : '0 1 auto', aria: st.key === key ? 'step' : 'false',
+      cat: STEP_CAT[st.key], icon: STEP_ICON[st.key], isCurrent: st.key === key, hasValue: (st.state === 'done' || st.state === 'filled') && !!st.value, catFirst: i === 0 || STEP_CAT[all[i - 1].key] !== STEP_CAT[st.key], catPad: i === 0 ? '0' : '8px' }; });
   // A block this estate cannot clear by itself says so, and what would clear it.
   const estClouds = new Set((est.regionsList || []).map(r => r.cloud));
   const block0 = CF.blockOf(key, f);
@@ -4358,10 +4362,24 @@ function flowVals(s, set, est, c) {
     leftGo: dg.leftKind ? openList(dg.leftKind) : () => {}, rightGo: dg.rightKind ? openList(dg.rightKind) : () => {}, leftOff: !dg.leftKind, rightOff: !dg.rightKind, leftCursor: dg.leftKind ? 'pointer' : 'default', rightCursor: dg.rightKind ? 'pointer' : 'default', leftDeco: dg.leftKind ? 'underline' : 'none', rightDeco: dg.rightKind ? 'underline' : 'none',
     leftLink: dg.leftKind ? 'var(--link)' : (dg.leftSet ? 'var(--text-heading)' : 'var(--text-disabled)'), rightLink: dg.rightKind ? 'var(--link)' : (dg.rightSet ? 'var(--text-heading)' : 'var(--text-disabled)'),
     wireInk: dg.leftSet && dg.rightSet ? 'var(--link)' : 'var(--border-primary)', wireDash: dg.leftSet && dg.rightSet ? 'none' : '4 4', single: !dg.dual, hasBw: !!dg.bw };
+  // The strip in the panel (2026-10-02): Govern's four stations, each set, filled from your estate (dashed) or not chosen yet.
+  const wrows = CF.wipRows(f, est), wrow = (k) => wrows.find(r => r.key === k) || { state: 'none', value: '' };
+  const stOf = (on, ...rows) => !on ? 'any' : rows.some(r => r.state === 'you') ? 'set' : rows.some(r => r.state === 'estate') ? 'filled' : 'set';
+  const isC2c = f.ctype === 'Cloud to Cloud', isColoF = CF.isColo(f), endRow = isColoF || isC2c ? wrow('cloud') : wrow('sites');
+  const cfStrip = {
+    site: stOf(dg.leftSet, endRow, wrow('loc')), siteIcon: isColoF ? 'large-building' : isC2c ? 'cloud' : dg.left === 'The internet' ? 'globe' : 'large-building', siteTitle: `${isColoF ? 'Colo A' : isC2c ? 'Cloud region' : 'Your sites'}: ${dg.left}`,
+    edge: stOf(!!(f.loc.length || f.bandwidth || dg.shield), wrow('loc'), wrow('bandwidth')), edgeIcon: dg.shield ? 'check-shield' : 'firewall', edgeText: [f.loc.join(' + '), f.bandwidth, dg.shield ? 'inspected' : ''].filter(Boolean).join(' · ') || 'Location and bandwidth',
+    core: stOf(!!f.tier, wrow('tier')), coreText: f.tier ? `${f.tier} · ${dg.dual ? '2 paths' : '1 path'}` : 'Standard until you pick',
+    cloud: stOf(dg.rightSet, wrow('cloud')), cloudIcon: isColoF ? 'large-building' : 'cloud', cloudTitle: `${isColoF ? 'Colo B' : isC2c ? 'Second cloud' : 'Cloud region'}: ${dg.right}` };
   const price = CF.wipPrice(f, est);
   // Review's total: the order at its term, the same figure the panel shows.
   const hasTerm = f.term !== null && f.term !== undefined;
   const cfTotal = { has: price.has, label: hasTerm ? `Monthly · ${CF.termTitle(f.term)}${CF.TERM_DISC[f.term] ? `, ${CF.TERM_DISC[f.term]}% off` : ''}` : 'Monthly · month-to-month', price: price.has ? `${price.big}/mo` : '', sub: price.sub };
+  // The outcome before you place it (2026-10-02): today's path for the region this order reaches, the path it rides, the price, when it stands up.
+  const cfOutcome = (() => { const r0 = CF.sampleRegion(f, est), rides = CF.pathTable(f, est).find(p => p.rides) || null, has = f.regions.length > 0 && !!r0 && !!rides;
+    return { has, none: !has, todayPath: r0 ? (r0.priv ? 'Private on the AT&T network' : 'Public internet') : 'Not measured', todayMs: r0 ? `${r0.priv ? r0.fab : r0.pub} ms p95` : '',
+      afterPath: rides ? (rides.key === 'internet' ? 'Internet attach' : 'Private on the AT&T network') : '', afterLine: rides ? `${rides.performance} · ${rides.reliability} · ${rides.security}` : '',
+      priceBig: price.has ? `${price.big}/mo` : PRICE_NOTE, priceSub: price.has ? cfTotal.label : '', standUp: rides ? rides.setup : '' }; })();
   // The review, NetBond Advanced's ReviewStep rows in the storefront's words.
   const reviewRows = CF.wipRows(f, est).map(r => ({ key: r.key, label: r.label, value: r.value, word: r.word, ink: WIP_INK[r.state].ink }));
   const lines = ord.lines.map(l => ({ ...l, key: 'l' + l.line, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? PRICE_NOTE : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : `${fmt(l.monthly)}/mo`, ink: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
@@ -4393,7 +4411,7 @@ function flowVals(s, set, est, c) {
     cfPlace: place, cfCanPlace: isLast && !block,
     cfName: f.name, cfNamePlaceholder: CF.defaultName(f), cfNameHelp: `Leave it blank and it is named ${CF.defaultName(f)}.`, cfSetName: (e) => put({ name: e.target.value }),
     cfReviewRows: reviewRows, cfLines: lines, cfOrder: ord, cfShield: ord.shield,
-    cfWipTitle: 'Your order, in progress', cfWip: wip, cfWipList, cfDiagram, cfPrice: price, cfPriced: price.has, cfUnpriced: !price.has,
+    cfWipTitle: 'Your order, in progress', cfWip: wip, cfWipList, cfDiagram, cfStrip, cfOutcome, cfPrice: price, cfPriced: price.has, cfUnpriced: !price.has,
     hasParsedNote: !!note && key === noteKey, parsedNote: note || '', parsedNoteTitle: f.noteTitle,
     // Orders.
     ordInProgress: { has: started, title: started ? (f.name.trim() || CF.defaultName(f)) : '', stepLine: started ? `At ${CF.STEP_META[key].title}` : '', rows: started ? CF.wipRows(f, est).map(r => ({ ...r, ...WIP_INK[r.state] })) : [], resume: () => { c.setState({ screen: 's4' }); scrollTop(); syncHash('s4'); } },

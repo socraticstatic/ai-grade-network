@@ -640,9 +640,11 @@ test('the Connect tabs name the destinations: Recommended, Ways to connect, Orde
 });
 
 test('the stepper and the panel never clip a word', () => {
-  const stepper = S4.slice(S4.indexOf('<ol aria-label="Steps"'), S4.indexOf('</ol>'));
+  // The steps are the vertical tab group since 2026-10-02; a step's value wraps under its title, never cut with an ellipsis.
+  const stepper = S4.slice(S4.indexOf('<nav class="fw-vtabs" aria-label="Steps"'), S4.indexOf('</nav>'));
   assert.ok(stepper.length > 0);
   assert.ok(!/text-overflow:\s*ellipsis/.test(stepper), 'a step subtitle is cut off with an ellipsis');
+  assert.ok(!/\.fw-vtab \.lbl>small\{[^}]*ellipsis/.test(HTML), 'the step sub-line clips in CSS');
   const wip = S4.slice(S4.indexOf('<aside aria-label="Your order, in progress"'), S4.indexOf('</aside>'));
   assert.ok(wip.length > 0);
   assert.ok(!/text-overflow:\s*ellipsis/.test(wip), 'the picture cuts a name off');

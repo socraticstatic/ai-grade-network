@@ -372,6 +372,12 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // The engine names the deciding policy only where one set the layer (sc-if +1), and the outcome's pushed rows go two-up in a
 // grid, their layer in the title (div +1, span -1): div 1248 -> 1249, span 1105 -> 1104, sc-if 582 -> 583.
 // Cost > Optimize's moves each carry a mark in a tile (div +1, span +2): div 1249 -> 1250, span 1104 -> 1106.
+// The order wizard on the same grammar (2026-10-02): the horizontal stepper (ol, li, sc-if -1, span -5) becomes the vertical
+// tab group (nav, div +1, sc-if +1, span +4 with the mark and the two-line label); the panel's three-box svg (its foreignObjects'
+// div -3, button -2) becomes the four-station strip (div +1, span +4 nodes, button +2 ends, b +2, i +4); Review opens with the
+// Today, With this order and Price tiles and the stand-up line (sc-if +1, div +4, span +16). Recounted, every tag balanced:
+// div 1250 -> 1253, span 1106 -> 1129, sc-if 583 -> 581, button and sc-for unchanged.
+// A step's sub-line shows only once it carries a value (sc-if +1): sc-if 581 -> 582.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -386,9 +392,9 @@ test('every container the markup opens, it closes', () => {
   // div 1134 -> 1139, span 969 -> 962, sc-if 522 -> 528, sc-for 268 -> 278, button 413 -> 445.
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1250],
-    ['span', /<span\b/g, /<\/span>/g, 1106],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 583],
+    ['div', /<div\b/g, /<\/div>/g, 1253],
+    ['span', /<span\b/g, /<\/span>/g, 1129],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 582],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 314],
     ['section', /<section\b/g, /<\/section>/g, 12],
     ['button', /<button\b/g, /<\/button>/g, 484],
