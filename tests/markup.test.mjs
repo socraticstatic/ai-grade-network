@@ -348,6 +348,14 @@ test('the page title row leads with the verdict and demotes the stat line', () =
 // The policy engine and between-asset templates (2026-10-01): Govern's Policy engine tab (summary, conflicts, precedence list, pushed to connections) and the templates' kind switch; recounted, balanced.
 // Recommended, fewer words (Micah, 2026-10-01: "way too crammed with words"): the sub-line, the With AT&T caption, each row's reason (now the title's hover), Today's note and each tier's fit line left; recounted, balanced.
 // The policy engine, evaluated (2026-10-01): a flow picker, the decision per layer, the trace, shadowed policies and intended vs configured replace the list; recounted, balanced.
+// Govern's list as NetBond Advanced's Policies tab draws a rule (2026-10-02): each row gains the toggle and the precedence
+// square (button +1, span +1), the name becomes a button that opens the words (button +1), the badges row (span +1, sc-for +1),
+// the applies-to line with its glyph (span +4), the strip's nodes (span +2 inside the sc-for, sc-if +1 on the broken caption),
+// the head's strip captions (span +1) and the open row's sentence and four rules (div +5, sc-if +1, sc-for +1, span +2);
+// the four text cells per row left (div -1, span -1 net). Recounted from the file, every tag balanced:
+// div 1243 -> 1248, span 1062 -> 1074, sc-if 576 -> 578, sc-for 308 -> 310, button 480 -> 482.
+// Then the badges ride the name line and the strip drops its clipped caption (sc-if -1): sc-if 578 -> 577.
+// The open row keeps the four rules alone, its sentence was the name and applies-to again (div -2, b -3 unpinned): div 1248 -> 1246.
 test('every container the markup opens, it closes', () => {
   // Discover > Estate made drillable (2026-09-30, the drill rule): the title pills are buttons (span -1, button +1);
   // each ring is a button, its head and legend entries figure buttons (div -1, span -2, button +3); the Spend card
@@ -362,12 +370,12 @@ test('every container the markup opens, it closes', () => {
   // div 1134 -> 1139, span 969 -> 962, sc-if 522 -> 528, sc-for 268 -> 278, button 413 -> 445.
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1243],
-    ['span', /<span\b/g, /<\/span>/g, 1062],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 576],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 308],
+    ['div', /<div\b/g, /<\/div>/g, 1246],
+    ['span', /<span\b/g, /<\/span>/g, 1074],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 577],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 310],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 480],
+    ['button', /<button\b/g, /<\/button>/g, 482],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

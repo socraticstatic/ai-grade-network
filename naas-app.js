@@ -21,7 +21,7 @@ import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
 import * as SG from './naas-signals.js';
-import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies, effectivePolicy, shadowedPolicies, intendedVsConfigured, engineFlows } from './naas-policy-layers.js';
+import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies, effectivePolicy, shadowedPolicies, intendedVsConfigured, engineFlows, LAYER_ICON, LAYER_SHORT, assetIcon, verbBadges } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
 import * as M from './naas-moves.js';
 import { rampName } from './naas-things.js';
@@ -4063,6 +4063,10 @@ function wizardVals(s, est, set, c) {
     polPage: Math.floor(((s.layer === 'cloud' ? layerPolicies(s, est, 'all').length : 0) + (s.customPolicies || []).length) / PAGE_SIZE.polRows[1]) }); };
   const openAuthor = (m, r) => () => set({ authoring: { match: m || null, scope: 'any cloud', req: r ? [r] : [] } });
   const polSentence = (p) => ({ match: p.match, scope: p.scope || (/internet/i.test(p.req) ? 'the Internet' : 'any cloud'), req: p.req.toLowerCase() });
+  // The list and the engine agree on precedence (2026-10-02): the square on each row is the engine's number.
+  const allPol = [...(s.layer === 'cloud' ? layerPolicies(s, est, 'all') : []), ...(s.customPolicies || [])];
+  const prioOf = new Map(evalPolicies(est, allPol).ordered.map((p, i) => [p.name, i + 1]));
+  const PRIO_WHY = ['an asset pair beats everything', 'a region beats a tag', 'a tag or branch beats a pattern', 'a pattern beats any', 'the broadest rule'];
   return {
     aNotReady: !aReady, aReady,
     // govern
@@ -4095,7 +4099,7 @@ function wizardVals(s, est, set, c) {
     aSent: { route: (() => { const rt = (au && au.route) || {}, paths = (au && au.path) || []; const w = []; ROUTE_RULES.forEach(r => { const v = rt[`${r.section}:${r.id}`] || {}; const ds = [v.o2p && 'on premise → partner', v.p2o && 'partner → on premise'].filter(Boolean); if (ds.length) w.push(`${({ deny: 'deny', manip: 'apply', allow: 'allow', advanced: 'apply' })[r.section]} ${r.label.toLowerCase()} (${ds.join(', ')})`); }); return [...paths.map(p => p.replace(/^\w/, ch => ch.toLowerCase())), ...w].join('; '); })(), match: au && au.match || 'something', scope: au && au.scope || 'somewhere', req: au && au.req && au.req.length ? au.req.map(x => x.toLowerCase()).join(' and ') : au && au.path && au.path.length ? au.path.map(p => p.replace(/^\w/, ch => ch.toLowerCase())).join(' and ') : '…', matchOn: !!(au && au.match), scopeOn: !!(au && au.scope), reqOn: !!(au && au.req && au.req.length) },
     aSimulate: commit('simulated'), aEnforce: commit('enforced'), aReady, aBg: aReady ? 'var(--cta)' : 'var(--bg-neutral)', aColor: aReady ? '#fff' : 'var(--text-disabled)',
     // Policies read by layer (Micah, 2026-09-29: "give me policies that are multi-layer").
-    polLayerHeads: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label })),
+    polLayerHeads: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, short: LAYER_SHORT[l.key] })),
     aLayers: au && au.layers ? POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: au.layers[l.key] || 'Any' })) : [], hasALayers: !!(au && au.layers),
     // The total the list adds up to, beside its head: the home's "N policy violations" lands here (skeptic, 2026-09-30).
     polViolLine: ((n) => n ? `${n.toLocaleString('en-US')} policy ${n === 1 ? 'violation' : 'violations'}` : 'No policy violations')((s.layer === 'cloud' ? [...layerPolicies(s, est, 'all'), ...(s.customPolicies || [])] : layerPolicies(s, est, 'all')).reduce((a, p) => a + (p.viol || 0), 0)),
@@ -4106,8 +4110,9 @@ function wizardVals(s, est, set, c) {
         return { key: l.key, label: l.label, text: text || 'Any', set: !!text, broken, ink: broken ? 'var(--error)' : text ? 'var(--text-heading)' : 'var(--text-disabled)', bar: broken ? 'var(--error)' : text ? 'var(--cta)' : 'var(--border-secondary)', weight: broken ? 600 : 400 }; }); })(), dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-light)', hasViol: p.viol > 0, violLabel: p.viol ? `${p.viol} violations` : 'no violations', matchedLabel: `${p.matched} matched`,
       // A violation you cannot act on is a number on a wall. Every violating
       // policy opens the workloads breaking it, on the map, filtered to them.
-      act: p.viol ? (p.state === 'simulated' ? 'Enforce' : 'See what is breaking it') : (p.state === 'simulated' ? 'Enforce' : ''),
-      hasAct: !!(p.viol || p.state === 'simulated'),
+      // The toggle enforces a simulated policy (2026-10-02); the action column keeps the violations door alone.
+      act: p.viol ? 'See what is breaking it' : '',
+      hasAct: !!p.viol,
       // wizardVals has no `go` in scope, so this navigates through the
       // component the same way go() does. Calling go() here failed silently.
       actGo: p.viol
@@ -4115,7 +4120,15 @@ function wizardVals(s, est, set, c) {
         : () => set({ authoring: { match: p.match, scope: 'any cloud', req: [p.req] } }),
       actBg: p.viol ? 'var(--cta)' : 'transparent',
       actInk: p.viol ? '#fff' : 'var(--link)',
-      actBorder: p.viol ? 'var(--cta)' : 'var(--border-primary)' })),
+      actBorder: p.viol ? 'var(--cta)' : 'var(--border-primary)' }))
+      // NetBond Advanced's row (2026-10-02): the toggle is the state (and enforces a simulated policy of yours), the square is
+      // the engine's precedence, the badges are the verbs, the strip is the path with its glyphs, and the name opens the words.
+      .map(p => { const rank = evalPolicies(est, [p]).ordered[0], enforcedNow = p.state === 'enforced';
+        return { ...p, prio: prioOf.get(p.name) || '·', prioWhy: rank ? PRIO_WHY[rank.rank] : 'a draft', isOn: enforcedNow, toggleCls: enforcedNow ? 'inert' : '',
+          toggleTitle: enforcedNow ? 'Enforced' : p.state === 'simulated' ? 'Simulated. Enforce it' : 'Draft',
+          toggleGo: enforcedNow ? () => {} : p.custom ? () => set({ customPolicies: (s.customPolicies || []).map(x => x.name === p.name ? { ...x, state: 'enforced' } : x) }) : () => set({ authoring: { match: p.match, scope: p.scope || 'any cloud', req: [p.req] } }),
+          badges: verbBadges(p), kindIcon: assetIcon(p.match), open: s.polOpen === p.name, toggleOpen: () => set({ polOpen: s.polOpen === p.name ? null : p.name }),
+          layers: p.layers.map(l => ({ ...l, icon: LAYER_ICON[l.key], state: l.broken ? 'broken' : l.set ? 'set' : 'any' })) }; }),
     // The policy engine (2026-10-01): every policy in precedence order, what each compiles onto each connection, conflicts.
     ...(() => { const all = [...(s.layer === 'cloud' ? layerPolicies(s, est, 'all') : []), ...(s.customPolicies || [])];
       const e = evalPolicies(est, all), RANKW = ['Asset pair', 'To a region', 'Tag or branch', 'Region pattern', 'Any'];

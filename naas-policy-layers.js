@@ -256,3 +256,38 @@ export function intendedVsConfigured(est, policies) {
   }
   return [...byReg.values()];
 }
+
+// ---- Icons and badges (2026-10-02: "more icon and flywheel beauty") ----
+// Each layer's glyph on the path strip, and the short word its column head uses.
+export const LAYER_ICON = { site: 'large-building', edge: 'firewall', core: 'hub', cloud: 'cloud' };
+export const LAYER_SHORT = { site: 'Sites', edge: 'Edge', core: 'Core', cloud: 'Cloud' };
+/** The glyph for a side of a policy, by what the label names. */
+export function assetIcon(label) {
+  const s = String(label || '');
+  if (/^Private cloud/.test(s)) return 'hybrid-cloud';
+  if (/^tag /.test(s)) return 'tag';
+  if (/^(branch|remote-site|site) /.test(s) || /\bDC\b|data cent|HQ\b|yard\b|plant\b/i.test(s)) return 'large-building';
+  if (/^the Internet$/i.test(s)) return 'globe';
+  if (/^the WAN$/i.test(s)) return 'global-network';
+  if (/^region /.test(s) || /^any cloud$/i.test(s) || CLOUD_LABEL.test(s)) return 'cloud';
+  return 'target';
+}
+// NetBond Advanced's four verbs (Allow, Deny, Manipulate, Advertise) in its colors, then what the path asks for, in neutral: three at most.
+export function verbBadges(p) {
+  const out = [], seen = new Set(), add = (key, label, cls) => { if (!seen.has(key)) { seen.add(key); out.push({ key, label, cls }); } };
+  const rt = (p && p.route) || {};
+  for (const rr of ROUTE_RULES) { const v = rt[`${rr.section}:${rr.id}`] || {}; if (!(v.o2p || v.p2o)) continue;
+    if (rr.section === 'deny') add('deny', 'Deny', 'deny'); else if (rr.section === 'allow') add('allow', 'Allow', 'allow'); else if (rr.section === 'manip') add('manip', 'Manipulate', 'manip'); else add('adv', 'Advertise', 'adv'); }
+  const words = [String((p && p.req) || ''), ...((p && p.path) || []), ...Object.values(policyLayers(p))].join(' · ').toLowerCase();
+  if (/private path|never the internet|via the at&t|no direct internet|two paths|active\/active|fail over|private on-ramp/.test(words)) add('path', 'Path', '');
+  if (/inspect|ngfw|ids\/ips|proxy|firewall|ddos/.test(words)) add('inspect', 'Inspect', '');
+  if (/segment/.test(words)) add('segment', 'Segment', '');
+  if (/latency slo/.test(words)) add('slo', 'SLO', '');
+  if (/egress/.test(words)) add('egress', 'Egress', '');
+  if (/encrypt/.test(words)) add('encrypt', 'Encrypt', '');
+  if (/zero-trust|private access/.test(words)) add('access', 'Access', '');
+  if (/cost-aware/.test(words)) add('cost', 'Cost', '');
+  return out.slice(0, 3);
+}
+/** Every glyph the app binds by name; tests/icons.test.mjs checks each is on disk. */
+export const ICON_NAMES = [...new Set([...Object.values(LAYER_ICON), 'hybrid-cloud', 'tag', 'large-building', 'globe', 'global-network', 'cloud', 'target'])];
