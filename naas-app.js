@@ -3149,14 +3149,16 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const healthVals = (() => {
     if (!segCtx) return { pathFlowAll: [], pathFlowRows: [], segHeads: [], healthTiles: [], problemRows: [], healthViews: [], segRows: [], segDrillRows: [], segCrumbs: [], pathTimeAll: [], pathTimeRows: [], changeAll: [], changeRows: [], chgTicks: [], chgBands: [], chgLegend: [], noPaths: true, noChanges: true };
     const all = G.pathFlow(segCtx);
-    const segHeads = G.SEGMENTS.map(g => ({ key: g.key, label: g.label, title: g.title }));
+    // The station's glyph on the strip (2026-10-02).
+    const SEG_ICON = { site: 'large-building', edge: 'router', backbone: 'hub', onramp: 'ethernet', cloudlink: 'cable', hub: 'merge', app: 'apps' };
+    const segHeads = G.SEGMENTS.map(g => ({ key: g.key, label: g.label, title: g.title, icon: SEG_ICON[g.key] }));
     const cellView = (c, i) => {
       const ink = INK[c.state], seg = G.SEGMENTS[i];
       const bg = c.state === 'none' || c.state === 'nodata' || c.limited ? 'transparent' : ink;
       const border = c.state === 'none' ? '0' : c.state === 'nodata' ? '1.5px dashed var(--text-disabled)' : c.limited ? `2px solid ${ink}` : '0';
       const word = { ok: 'Healthy', risk: 'At risk', slo: 'Over SLO', down: 'Down', nodata: 'Not yet measured', none: 'Not on this path' }[c.state];
       const title = c.state === 'none' ? `${seg.label}: not on this path` : `${seg.label} · ${c.thing}${c.owner ? ' · ' + G.OWNERS[c.owner] : ''} · ${word}${c.why && c.why !== 'Healthy' && c.why !== word ? ' · ' + c.why : ''}${c.limited ? ' · limited view' : ''}`;
-      return { key: seg.key, state: c.state, thing: c.thing, title, bg, border, limited: !!c.limited, rad: F.healthRadius(c.state) };
+      return { key: seg.key, state: c.state, thing: c.thing, title, bg, border, limited: !!c.limited, rad: F.healthRadius(c.state), icon: SEG_ICON[seg.key] };
     };
     const rows = all.map(r => ({ key: r.tag, tag: r.tag, label: r.label, state: r.state, dot: INK[r.state] || 'var(--text-disabled)', rad: F.healthRadius(r.state), cells: r.cells.map(cellView) }));
     const downN = (conns.rows || []).filter(r => r.degraded).length, riskN = all.filter(r => r.state === 'risk' || r.state === 'slo').length;
@@ -3178,7 +3180,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const pathSelRow = pathAll.find(r => r.key === s.pathSel) || null;
     const pathTimeRows = pathAll.map(r => { const sel = !!pathSelRow && r.key === pathSelRow.key;
       return { key: r.key, label: r.label, sub: `${r.site} to ${r.where}`, title: r.title, state: r.state, dot: INK[r.state] || 'var(--text-disabled)', rad: F.healthRadius(r.state), totalF: r.totalF, totalTone: r.state === 'ok' ? 'var(--text-heading)' : INK[r.state], sel, bg: sel ? 'var(--bg-accent)' : 'transparent',
-        cells: r.cells.map(c => ({ key: c.key, msShow: c.msF || '', msTone: c.msF ? 'var(--text-heading)' : 'var(--text-disabled)', lossF: c.lossF, lossTone: c.lossF && c.lossF !== '0.00%' ? 'var(--error)' : 'var(--text-light)', title: c.title })),
+        cells: r.cells.map(c => { const lossy = !!c.lossF && c.lossF !== '0.00%'; return { key: c.key, icon: SEG_ICON[c.key], state: !c.msF ? 'nodata' : lossy ? 'risk' : 'set', msShow: c.msF || '', msTone: c.msF ? 'var(--text-heading)' : 'var(--text-disabled)', lossF: c.lossF, hasLoss: !!c.lossF, lossTone: lossy ? 'var(--error)' : 'var(--text-light)', title: c.title }; }),
         go: () => set({ pathSel: sel ? null : r.key }) }; });
     const pathDetail = pathSelRow ? `${pathSelRow.label}, ${pathSelRow.site} to ${pathSelRow.where}: ${pathSelRow.hops.slice(1).map(h => `${h.name} ${h.ms} ms`).join(' › ')}` : 'Pick a row to see its hops.';
     // What changed (notes, 2026-09-30, B2): the Since window's changes, lined up with the problems they preceded.

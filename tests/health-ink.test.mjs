@@ -89,7 +89,10 @@ test('every health dot on Health and Paths takes the square for Down, and the on
       if (ink) assert.equal(ink, F.HEALTH_INK[state], `${view} ${what}: ${state} inked ${ink}`);
     }
   }
-  for (const b of ['pf.rad', 'cl.rad', 'pb.rad', 'pt.rad', 'sg.rad', 'sd.rad']) assert.ok(HTML.includes(`border-radius:{{ ${b} }}`), `the markup draws ${b}`);
+  for (const b of ['pf.rad', 'pb.rad', 'pt.rad', 'sg.rad', 'sd.rad']) assert.ok(HTML.includes(`border-radius:{{ ${b} }}`), `the markup draws ${b}`);
+  // The Health cells are the seven-station strip since 2026-10-02: the node takes its state, and Down's square is the strip's own rule.
+  assert.ok(HTML.includes('data-state="{{ cl.state }}"'), 'the markup draws cl.state on the strip');
+  assert.ok(/\.ps \[data-state="down"\] i\{border-radius:6px/.test(HTML), 'the strip squares Down');
 });
 
 test('the Health legend carries a distinct swatch for Down and for Over SLO', () => {
