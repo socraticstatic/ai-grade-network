@@ -131,6 +131,17 @@ export function trends(ob, window) {
   const d = TREND[window] || [0, 0, 0, 0, 0, 0, 0];
   return ob.kpis.map((k, i) => { const delta = d[i] || 0; const good = (i === 1 || i === 2 || i === 3) ? delta <= 0 : delta >= 0; return { ...k, delta: (delta >= 0 ? '+' : '') + Math.round(delta * 100) + '%', deltaTone: good ? 'var(--success)' : 'var(--warning)', arrow: delta >= 0 ? '↑' : '↓', vs: `vs prior ${window}`, vsShort: `vs ${window}` }; });
 }
+/** Public egress growth over the twelve weeks, as a percent of the figures the cards print: at the money grid (hundreds)
+ *  when the estate prices its egress (pubMo, this month's public egress in dollars), else of the raw volumes (2026-10-05:
+ *  "+$3,100/mo in 11 weeks · +11%" read 29,700 to 32,800, which is +10%). */
+export function egressPct(ob, pubMo = 0) {
+  const ew = egressWeeks(ob), then = ew[0].pub, now = ew[11].pub;
+  if (!(then > 0)) return 0;
+  const rate = pubMo > 0 && now > 0 ? pubMo / now : 0;
+  if (!rate) return Math.round((now / then - 1) * 100);
+  const r100 = (v) => Math.round(v * rate / 100) * 100;
+  return r100(then) > 0 ? Math.round((r100(now) / r100(then) - 1) * 100) : 0;
+}
 export function anomalies(est, ob, now = Date.now()) {
   const out = [];
   const spike = startOf('spike', now, INCIDENT_MIN.spike);
@@ -138,7 +149,7 @@ export function anomalies(est, ob, now = Date.now()) {
   const newDest = est.regionsList.find(r => !r.priv && (r.tags || []).includes('Prod'));
   if (newDest) out.push({ key: 'an-dest', when: 'Yesterday', sev: 'amber', head: `New destination from ${newDest.region}: files.slack-edge.com`, cause: `Workloads tagged Prod began sending 3.1 GB/day to a destination not seen in the prior 30 days.`, did: 'Logged and classified as SaaS; no policy matched, so nothing was blocked.', can: 'Author a policy: when tag Prod reaches the Internet, require inline inspection.', region: newDest.region });
   // The same series the Signals card draws (2026-09-30): the card's drill lands here.
-  const ew = egressWeeks(ob), ePct = ew[0].pub > 0 ? Math.round((ew[11].pub / ew[0].pub - 1) * 100) : 0;
+  const pubMoNow = (est.buckets || []).filter(b => b.today > b.fabric).reduce((a, b) => a + b.today, 0), ePct = egressPct(ob, pubMoNow);
   if (ob.pub > 0) out.push({ key: 'an-egress', when: 'This week', sev: 'info', head: `Public egress ${(ePct >= 0 ? '+' : '') + ePct}% in 11 weeks`, cause: `Growth is concentrated in object-storage reads from ${est.regionsList.filter(r => !r.priv).map(r => r.region).slice(0, 2).join(' and ') || 'unattached regions'}.`, did: 'Priced the same bytes on AT&T.', can: `Steer the object-storage flow: ${fmt(Math.round(ob.pub * 1000 * 0.07 * 30 / 10) * 10)}/mo back.` });
   return out;
 }
@@ -338,9 +349,9 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   const sgn = (n) => (n >= 0 ? '+' : '') + n + '%';
   const pctOf = (a, b) => (b > 0 ? sgn(Math.round((a / b - 1) * 100) || 0) : '');
   const thenMo = mo(wk[0].pub), nowMo = mo(wk[11].pub), deltaMo = nowMo - thenMo, priced = rate > 0 && nowMo > 0;
-  const pubPctF = pctOf(wk[11].pub, wk[0].pub), fabPctF = pctOf(wk[11].fab, wk[0].fab);
+  const pubPctF = wk[0].pub > 0 ? sgn(egressPct(ob, rate * wk[11].pub)) : '', fabPctF = pctOf(wk[11].fab, wk[0].fab);
   // The change runs from the first column, 11 weeks ago, to this week: the head says 11 (third round, 2026-09-30).
-  const growth = { weeks, pubPct: (wk[0].pub > 0 ? Math.round((wk[11].pub / wk[0].pub - 1) * 100) : 0), fabPct: (wk[0].fab > 0 ? Math.round((wk[11].fab / wk[0].fab - 1) * 100) : 0), pubNow: wk[11].pub.toFixed(1), fabNow: wk[11].fab.toFixed(1), pubThen: wk[0].pub.toFixed(1), pubPctF, fabPctF,
+  const growth = { weeks, pubPct: egressPct(ob, rate * wk[11].pub), fabPct: (wk[0].fab > 0 ? Math.round((wk[11].fab / wk[0].fab - 1) * 100) : 0), pubNow: wk[11].pub.toFixed(1), fabNow: wk[11].fab.toFixed(1), pubThen: wk[0].pub.toFixed(1), pubPctF, fabPctF,
     thenMo, nowMo, deltaMo, thenF: priced ? money(thenMo) : '', nowF: priced ? money(nowMo) : '', deltaF: priced ? (deltaMo >= 0 ? '+' : '-') + money(Math.abs(deltaMo)) : '',
     subF: priced ? `Public egress ${(deltaMo >= 0 ? '+' : '-') + money(Math.abs(deltaMo))}/mo in 11 weeks · ${pubPctF}` : `Public ${pubPctF || 'none'} · AT&T ${fabPctF || 'none'}`,
     thenLabel: priced ? `${money(thenMo)}/mo · 11 weeks ago` : '11 weeks ago', nowLabel: priced ? `this week · ${money(nowMo)}/mo` : 'this week' };

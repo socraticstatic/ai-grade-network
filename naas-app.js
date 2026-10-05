@@ -1268,9 +1268,11 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
     homeDo: acts.slice(0, 6).map((a, i) => ({ key: a.key, n: i + 1, head: a.head, sub: String(a.rec || '').replace(/^Recommended: /, ''), outcome: a.outcome, outInk: a.outInk,
       label: a.hasDoor ? a.doorLabel : 'Review', go: a.hasDoor ? a.door : a.open })),
     homeDoLine: `${acts.length} open · ranked for ${ROLE_OF[rk] ? ROLE_OF[rk].short : 'you'}`, hasHomeDo: acts.length > 0,
-    homeChart: (() => { const eg = homeCards.find(x => x.key === 'egress'); if (!eg) return null; const now = HM.numOf(tile('spend')), ah = HM.numOf(tile('ahead'));
-      // Unit cost per GB (Dev's FinOps home, 2026-10-01): the rates the app prices egress at everywhere.
-      return { spark: eg.spark, today: tile('spend'), act: tile('ahead'), save: now > ah && ah ? `$${(now - ah).toLocaleString('en-US')}` : '$0', go: eg.go, perGb: 'Per GB: $0.09 on the internet, $0.02 on the AT&T network, 78% lower' }; })(),
+    homeChart: (() => { const eg = homeCards.find(x => x.key === 'egress'); if (!eg) return null; const ahead = (out.spendTiles || []).find(t => t.key === 'ahead') || {}, asIs = HM.numOf(ahead.asIsV || ''), ah = HM.numOf(tile('ahead'));
+      // The trio reads one clock (Micah, 2026-10-05: "make sure the math adds up"): in 90 days as is, in 90 days if you act, and
+      // the difference. It used to subtract the 90-day forecast from today's run-rate, which read "You save $0" on an estate
+      // whose spend grows faster than its moves save. Unit cost per GB (Dev's FinOps home, 2026-10-01): the rates the app prices egress at everywhere.
+      return { spark: eg.spark, today: tile('spend'), asIs: ahead.asIsV || tile('spend'), act: tile('ahead'), save: asIs > ah ? `$${(asIs - ah).toLocaleString('en-US')}` : '$0', go: eg.go, perGb: 'Per GB: $0.09 on the internet, $0.02 on the AT&T network, 78% lower' }; })(),
     ...(() => { // Dev's FinOps home (2026-10-01): the waterfall, what if, who pays, unit cost, and FinOps' own work.
       const isFin = rk === 'finops' && !isEmpty, start = HM.numOf(tile('spend'));
       if (!isFin || !start) return { homeFin: false, homeFinOff: true };
