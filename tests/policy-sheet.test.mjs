@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { vals } from '../naas-app.js';
 import { mkC } from './harness.mjs';
 import { ESTATES } from '../naas-data.js';
@@ -69,7 +69,8 @@ test('the engine view carries the sheet, and its trace wears the precedence squa
   const v = at('mature');
   assert.ok(v.engHas);
   assert.equal(v.engSheet.length, 4);
-  for (const s of v.engSheet) { assert.ok(['deny', 'manip', 'allow', 'adv'].includes(s.cls), s.key); assert.ok(s.icon); assert.match(s.count, /^\d+ of \d+$/); for (const r of s.rules) { assert.equal(typeof r.o2pOn, 'boolean'); assert.equal(typeof r.o2pOff, 'boolean'); assert.equal(typeof r.by, 'string'); } }
+  for (const s of v.engSheet) { assert.ok(['deny', 'manip', 'allow', 'adv'].includes(s.cls), s.key); assert.ok(s.icon); assert.match(s.count, /^\d+ of \d+$/); for (const r of s.rules) { assert.equal(typeof r.o2pOn, 'boolean'); assert.equal(typeof r.o2pOff, 'boolean'); assert.equal(typeof r.by, 'string'); assert.ok(existsSync(new URL(`../brand/icons/${r.icon}.svg`, import.meta.url)), `${r.key}: ${r.icon}`); } }
+  for (const t of v.engTrace) assert.ok(existsSync(new URL(`../brand/icons/${t.icon}.svg`, import.meta.url)), `${t.name}: ${t.icon}`);
   assert.ok(v.engSheet.some(s => s.rules.some(r => r.o2pOn || r.p2oOn)), 'the default flow on Established sets something');
   assert.equal(v.engSheet.flatMap(s => s.rules).length, ROUTE_RULES.length);
   for (const t of v.engTrace) { assert.ok(/^\d+$/.test(String(t.prio)), `${t.name}: prio ${t.prio}`); assert.ok(Array.isArray(t.badges)); assert.ok(['Won'].includes(t.result) || /^Overridden by /.test(t.result)); }
@@ -81,7 +82,8 @@ test('the markup draws the sheet as NetBond\'s wash rows with a toggle per direc
   const blk = HTML.slice(a, b);
   assert.match(blk, /<sc-for list="\{\{ engSheet \}\}" as="sh"/);
   assert.match(blk, /<sc-for list="\{\{ sh\.rules \}\}" as="sr"/);
-  assert.match(blk, /class="fw-row rt[^"]*"[^>]*><b>\{\{ sr\.label \}\}/);
+  assert.match(blk, /class="fw-row rt[^"]*"[^>]*><b><span class="ic s14" style="--ic:url\('brand\/icons\/\{\{ sr\.icon \}\}\.svg'\)[^"]*"><\/span>\{\{ sr\.label \}\}/);
+  assert.match(blk, /\{\{ tr\.icon \}\}/);
   assert.match(blk, /class="fw-toggle sm inert" aria-pressed="\{\{ sr\.o2pOn \}\}" disabled="\{\{ sr\.o2pOff \}\}"/);
   assert.match(blk, /class="fw-toggle sm inert" aria-pressed="\{\{ sr\.p2oOn \}\}" disabled="\{\{ sr\.p2oOff \}\}"/);
   assert.match(blk, /class="fw-badge \{\{ sh\.cls \}\}"/);

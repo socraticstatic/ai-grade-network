@@ -416,9 +416,13 @@ test('every container the markup opens, it closes', () => {
   // Recommended's header line carries one glyph tile per side in place of the two tiny strips (2026-10-05, Micah: "barely
   // viewable icons, thick circle lines"): two strip loops left (sc-for -2, span -2 net, i -2), the open row's strips gained
   // a station word per node (small +2). Recounted, every tag balanced: span 1174 -> 1172, sc-for 323 -> 321.
+  // Glyph-first Recommended (2026-10-05, Micah: "way too text heavy", "more visual"): the caps labels, the security line and
+  // the per-row Attach left the header line (div -1, button -1); counts are a glyph and a number (span +2); the attribute
+  // words became glyphs (span +0 net); each card head carries its mark (span +4); Attach and Compare carry glyphs in the
+  // footer (button +1, span +2). Recounted, every tag balanced: div 1262 -> 1261, span 1172 -> 1177.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1262],
-    ['span', /<span\b/g, /<\/span>/g, 1172],
+    ['div', /<div\b/g, /<\/div>/g, 1261],
+    ['span', /<span\b/g, /<\/span>/g, 1177],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 587],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 321],
     ['section', /<section\b/g, /<\/section>/g, 12],

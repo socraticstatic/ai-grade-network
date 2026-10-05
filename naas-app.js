@@ -4189,19 +4189,20 @@ function wizardVals(s, est, set, c) {
           const hit = r ? r.trace.filter(t => t.result !== 'Does not match') : [];
           const sh = shadowedPolicies(est, all), iv = intendedVsConfigured(est, all);
           // NetBond Advanced's sheet for this flow (2026-10-05): each section wears its verb badge, each row the policy that sets it.
-          const VERB = { deny: ['Deny', 'deny'], manip: ['Manipulate', 'manip'], allow: ['Allow', 'allow'], advanced: ['Advertise', 'adv'] };
+          const VERB = { deny: ['Deny', 'deny', 'var(--error)'], manip: ['Manipulate', 'manip', 'var(--warning)'], allow: ['Allow', 'allow', 'var(--success)'], advanced: ['Advertise', 'adv', 'var(--link)'] };
+          const RULE_ICON = { 'matching-routes': 'merge', 'block-default-routes': 'stop-sign', 'community-value-filter-customer': 'filter', 'community-value-filter-att': 'filter', 'prepend-advertisements': 'plus-circle', 'selective-cv-tagging': 'tag', 'community-value-tag': 'tag', 'advertise-static-routes': 'export' };
           const prioE = new Map(e.ordered.map((p, i) => [p.name, i + 1])), polByName = new Map(all.map(p => [p.name, p]));
           const sheet = r ? flowSheet(est, all, ef).map(sec => { const on = sec.rules.filter(x => x.o2p.on || x.p2o.on).length;
-            return { key: sec.key, label: sec.label, verb: VERB[sec.key][0], cls: VERB[sec.key][1], icon: ROUTE_ICON[sec.key], count: `${on} of ${sec.rules.length}`,
+            return { key: sec.key, label: sec.label, verb: VERB[sec.key][0], cls: VERB[sec.key][1], ink: VERB[sec.key][2], icon: ROUTE_ICON[sec.key], count: `${on} of ${sec.rules.length}`,
               rules: sec.rules.map(x => { const by = x.o2p.by || x.p2o.by, tt = (d, w) => (d.on ? `${w}: pushed by ${d.by}` : `${w}: nothing pushes it on this flow`);
-                return { key: x.key, label: x.label, on: x.o2p.on || x.p2o.on, by, hasBy: !!by, o2pOn: x.o2p.on, p2oOn: x.p2o.on, o2pOff: !x.can.o2p, p2oOff: !x.can.p2o, o2pTitle: x.can.o2p ? tt(x.o2p, 'On premise → partner') : 'NetBond offers no on premise → partner toggle here', p2oTitle: x.can.p2o ? tt(x.p2o, 'Partner → on premise') : 'NetBond offers no partner → on premise toggle here' }; }) }; }) : [];
+                return { key: x.key, label: x.label, on: x.o2p.on || x.p2o.on, icon: RULE_ICON[x.id] || 'gear', ink: x.o2p.on || x.p2o.on ? VERB[sec.key][2] : 'var(--text-disabled)', by, hasBy: !!by, o2pOn: x.o2p.on, p2oOn: x.p2o.on, o2pOff: !x.can.o2p, p2oOff: !x.can.p2o, o2pTitle: x.can.o2p ? tt(x.o2p, 'On premise → partner') : 'NetBond offers no on premise → partner toggle here', p2oTitle: x.can.p2o ? tt(x.p2o, 'Partner → on premise') : 'NetBond offers no partner → on premise toggle here' }; }) }; }) : [];
           const INK = { 'In sync': 'var(--success)', Drift: 'var(--error)', 'Not pushed': 'var(--warning)' };
           return { engFrom: froms.map(v => chip('from', v)), engTo: tos.map(v => chip('to', v)), engTag: [chip('tag', '', 'Nothing tagged'), ...tags.map(v => chip('tag', v, `tag ${v}`))],
             engHas: !!r, engVerdict: r ? r.verdict : '', engVerdictInk: r && r.verdict === 'Denied' ? 'var(--error)' : 'var(--success)', engVerdictCls: r && r.verdict === 'Denied' ? 'deny' : 'allow', engVerdictIcon: r && r.verdict === 'Denied' ? 'close-circle' : 'check-circle', engDecided: r ? r.decidedBy : '',
             engLayers: r ? r.layers.map(l => ({ ...l, icon: LAYER_ICON[l.key], state: l.by ? 'set' : 'any', byLine: l.by ? `by ${l.by}` : 'no policy sets it' })) : [],
             engSheet: sheet, engSheetN: sheet.reduce((a, x) => a + x.rules.filter(y => y.on).length, 0),
             // The trace as NetBond's Connection > Policies list: the engine's precedence square, the name, the verbs, Won or Overridden.
-            engTrace: hit.slice(0, 5).map((t, i) => ({ key: 'tr' + i, n: i + 1, prio: prioE.get(t.name) || i + 1, badges: verbBadges(polByName.get(t.name) || {}).filter(b => b.cls).slice(0, 2), name: t.name, result: t.result, short: t.result === 'Won' ? 'Won' : 'Overridden', ink: t.result === 'Won' ? 'var(--success)' : 'var(--text-light)' })),
+            engTrace: hit.slice(0, 5).map((t, i) => ({ key: 'tr' + i, n: i + 1, prio: prioE.get(t.name) || i + 1, icon: assetIcon((polByName.get(t.name) || {}).match || ''), badges: verbBadges(polByName.get(t.name) || {}).filter(b => b.cls).slice(0, 2), name: t.name, result: t.result, short: t.result === 'Won' ? 'Won' : 'Overridden', ink: t.result === 'Won' ? 'var(--success)' : 'var(--text-light)' })),
             engTraceMore: r ? `${r.trace.length - hit.length} more ${r.trace.length - hit.length === 1 ? 'policy does' : 'policies do'} not match this flow` : '',
             engShadow: sh.slice(0, 4).map(x => ({ key: x.name, text: `${x.name}: never decides; ${x.by} always wins first` })), hasEngShadow: sh.length > 0, noEngShadow: !sh.length,
             engIv: iv.slice(0, 2).map(c => ({ key: c.key, label: c.label, rows: c.rows.slice(0, 3).map(x => ({ ...x, ink: INK[x.status] || 'var(--text-body)' })) })), hasEngIv: iv.length > 0, noEngIv: !iv.length }; })(),
@@ -4929,7 +4930,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   const cell = (x, go2, money) => { const good = (tn) => tn === 'good' || tn === 'same';
     return { ...x, ink: good(x.tone) ? 'var(--text-heading)' : MOVE_TONE[x.tone] || 'var(--text-heading)',
       dink: (x.dtone || x.tone) === 'good' ? (money ? 'var(--success)' : 'var(--text-light)') : good(x.dtone || x.tone) ? 'var(--text-light)' : MOVE_TONE[x.dtone || x.tone] || 'var(--text-light)',
-      hasDelta: !!x.delta, delta: x.delta || '', go: go2 || (() => {}) }; };
+      hasDelta: !!x.delta && x.delta !== 'same', delta: x.delta && x.delta !== 'same' ? x.delta : '', go: go2 || (() => {}) }; };
   const all = model.map(m => {
     const pickI = tierOfMove(m), on = !!sel[m.key];
     const pick = (i) => () => set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: i }), moveSel: keep('moveSel', { ...sel, [m.key]: true }) });
@@ -4945,7 +4946,8 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
       selLabel: `${on ? 'Remove' : 'Add'} move ${m.rank}, ${m.title}, ${on ? 'from' : 'to'} the order`,
       toggle: () => set({ moveSel: keep('moveSel', { ...sel, [m.key]: !on }) }),
       attach: () => composeMoves([m]), compare: () => set({ cnPage: 'ways' }),
-      counts: m.counts.map(n => ({ ...n, title: n.kind === 'sites' ? `Show these ${n.label} on the map` : `Open ${n.label} in Your clouds`, go: n.kind === 'sites' ? siteDoor(m) : cloudDoor(m) })),
+      // A count is a glyph and a number (2026-10-05, "way too text heavy"); its words stay in the title and the aria label.
+      counts: m.counts.map(n => ({ ...n, icon: ({ sites: 'large-building', regions: 'cloud', workloads: 'apps' })[n.kind] || 'apps', n: String(n.label).split(' ')[0], title: n.kind === 'sites' ? `Show these ${n.label} on the map` : `Open ${n.label} in Your clouds`, go: n.kind === 'sites' ? siteDoor(m) : cloudDoor(m) })),
       // Today reads once, left of the tiers; every figure in it is a door to what it counts.
       pathWord: m.today.pathWord, todayNote: m.today.cost.modelled ? 'Ports at list price, modelled' : 'Measured',
       tSec: cell(m.today.sec, setDoor), tPerf: cell(m.today.perf, perfDoor(m)), tCost: cell(m.today.cost, m.today.cost.value === 'Not priced today' ? null : costDoor(m)),

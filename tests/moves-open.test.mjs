@@ -18,6 +18,7 @@ test('the first move on the page is open; the rest are collapsed and carry the p
     assert.equal(m.pick.tier, 'Recommended', `${m.title}: the picked tier is Recommended by default`);
     assert.equal(m.pick.strip.length, 4);
     assert.ok(m.mark.icon && m.pick.mark.icon, `${m.title}: the header line carries a mark per side`);
+    for (const ct of m.counts) assert.ok(ct.icon && /^\d/.test(ct.n), `${m.title}: a count is a glyph and a number`);
     assert.ok(m.pick.label && m.pick.cost.value, m.title);
     assert.ok(m.chevron, 'the row carries a chevron glyph');
     assert.equal(typeof m.toggleOpen, 'function');
