@@ -55,7 +55,7 @@ export const tierStrip = (t) => stripOf(t.path, { inspect: (t.products || []).so
 /** The house tier words (naas-app.js reads these). */
 export const TIERS = ['Start here', 'Recommended', 'Full control'];
 /** NetBond Advanced's connection types, the contract with the compose flow. */
-export const CONN_TYPES = ['Layer 2 to Cloud', 'VPN to Cloud', 'DataCenter/CoLocation to Cloud', 'Cloud to Cloud'];
+export const CONN_TYPES = ['Internet to Cloud', 'Layer 2 to Cloud', 'AVPN to Cloud', 'DataCenter/CoLocation to Cloud', 'Cloud to Cloud'];
 /** Ranking weight of the risk a move closes, used only where dollars tie. */
 export const RISK = { down: 4, slo: 3, full: 2, exposed: 1, single: 1, none: 0 };
 const REC = 1;
@@ -75,17 +75,17 @@ const uptimeOf = (id) => { const p = cat(id); const u = p && (p.proof || []).fin
  * it is bought by, the connection type it asks the compose flow for.
  */
 const PROD = {
-  i2c: { name: 'Internet to Cloud', path: 'internet', conn: 'VPN to Cloud', gbps: 1 },
-  adi: { name: 'ADI', path: 'internet', conn: 'VPN to Cloud' },
+  i2c: { name: 'Internet to Cloud', path: 'internet', conn: 'Internet to Cloud', gbps: 1 },
+  adi: { name: 'ADI', path: 'internet', conn: 'Internet to Cloud' },
   ase: { name: 'ASE on Demand', path: 'netbond', conn: 'Layer 2 to Cloud' },
-  avpn: { name: 'AVPN', path: 'netbond', conn: 'VPN to Cloud' },
+  avpn: { name: 'AVPN', path: 'netbond', conn: 'AVPN to Cloud' },
   netbond: { name: 'NetBond', path: 'netbond', gbps: 10 },
   'hosted-vpc': { name: 'Hosted VPC', path: 'netbond', inspect: true },
   'hosted-vnet': { name: 'Hosted VNet', path: 'netbond', inspect: true },
   'oracle-fc': { name: 'Oracle FastConnect', path: 'netbond' },
   neocloud: { name: 'Equinix Fabric reach', path: 'netbond' },
   lmcc: { name: 'Interconnect Last Mile', path: 'native' },
-  hub: { name: 'Connection Hub', path: 'netbond', conn: 'VPN to Cloud' },
+  hub: { name: 'Connection Hub', path: 'netbond', conn: 'AVPN to Cloud' },
   c2c: { name: 'Cloud to Cloud', path: 'netbond', conn: 'Cloud to Cloud' },
 };
 
@@ -254,8 +254,8 @@ function siteMoves(est, ctx) {
         cost: moneyCell(egBefore, net, t.monthly),
         perfTitle: `The first mile moves to AT&T; the clouds these sites reach stay where they are, so the p95 across their paths holds at ${ms} ms against the ${F.SLO} ms SLO`,
         costTitle: [egBefore !== null ? `Egress ${fmt(egBefore)} to ${fmt(egAfter)}/mo` : 'No egress priced for these sites', t.monthly !== null ? `${t.breakdown} a site = ${fmt(t.monthly)}/mo` : 'Priced after a site survey', retired ? `${nf(tunnels)} IPsec tunnels retired at the $${R.CSP_VPN.toFixed(2)} cloud VPN list price (modelled)` : '', mo !== null ? `${fmt(mo)}/mo after, ${net >= 0 ? 'saves' : 'adds'} ${fmt(Math.abs(net))}` : ''].filter(Boolean).join(' · '),
-        // Sites reach the clouds over a VPN, or Layer 2 on Switched Ethernet; data centers alone are colocation.
-        conn: dcOnly ? 'DataCenter/CoLocation to Cloud' : t.products.length ? t.conn : 'VPN to Cloud' };
+        // Sites reach the clouds over AVPN (MPLS) or the internet, or Layer 2 on Switched Ethernet; data centers alone are colocation.
+        conn: dcOnly ? 'DataCenter/CoLocation to Cloud' : t.products.length ? t.conn : 'AVPN to Cloud' };
     });
     return {
       key: 'sites:' + mode, kind: 'sites', mode, title: M.title(n, noun, carrier), reason, finding: f ? f.kind : null,

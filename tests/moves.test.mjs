@@ -315,7 +315,7 @@ test('a single move\'s Attach carries its own set; a second path asks for maximu
   assert.deepEqual(setsOf(c2).regions, aws.regions);
   assert.equal(setsOf(c2).tier, 'standard');
   assert.equal(setsOf(c2).connectionType, 'DataCenter/CoLocation to Cloud');
-  for (const t of CONN_TYPES) assert.ok(['Layer 2 to Cloud', 'VPN to Cloud', 'DataCenter/CoLocation to Cloud', 'Cloud to Cloud'].includes(t));
+  for (const t of CONN_TYPES) assert.ok(['Internet to Cloud', 'Layer 2 to Cloud', 'AVPN to Cloud', 'DataCenter/CoLocation to Cloud', 'Cloud to Cloud'].includes(t));
 });
 
 test('the picked tier sets the connection type a site set asks for', () => {
@@ -323,7 +323,7 @@ test('the picked tier sets the connection type a site set asks for', () => {
   const m = vals(c).moveList.find(x => x.kind === 'sites');
   m.tiers[2].pick();
   vals(c).moveList.find(x => x.key === m.key).attach();
-  assert.equal(setsOf(c).connectionType, 'VPN to Cloud', 'AVPN is VPN to Cloud');
+  assert.equal(setsOf(c).connectionType, 'AVPN to Cloud', 'AVPN is AVPN to Cloud: private, over AT&T MPLS');
 });
 
 test('each move links to Ways to connect', () => {
@@ -464,7 +464,7 @@ test('every tier asks the compose flow for the connection type its set and produ
       if (m.kind !== 'sites') { assert.equal(t.conn, t.products.some(p => p.id === 'c2c') ? 'Cloud to Cloud' : 'DataCenter/CoLocation to Cloud', at); continue; }
       const dcs = est.sites.filter(x => m.sites.includes(x.name)).every(x => /data center/i.test(x.cls || ''));
       if (dcs) assert.equal(t.conn, 'DataCenter/CoLocation to Cloud', at);
-      else assert.equal(t.conn, t.products.some(p => p.id === 'ase') ? 'Layer 2 to Cloud' : 'VPN to Cloud', at);
+      else assert.equal(t.conn, t.products.some(p => p.id === 'ase') ? 'Layer 2 to Cloud' : t.path === 'internet' && t.products.length ? 'Internet to Cloud' : 'AVPN to Cloud', at);
     }
   }
 });

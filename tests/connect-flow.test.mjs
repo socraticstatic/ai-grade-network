@@ -37,7 +37,7 @@ const MENU = [
   ['Internet to Cloud', 'Public internet on-ramp with DDoS protection'],
   ['Cloud to Cloud', 'Private backbone linking two clouds through one Hub'],
   ['DataCenter / CoLocation to Cloud', 'Direct fiber cross-connect from your data center'],
-  ['VPN to Cloud', 'Encrypted IPSec / IKEv2 tunnel over the internet'],
+  ['AVPN to Cloud', 'Private connectivity over AT&T MPLS'],
   ['IoT to Cloud', 'Private APN connectivity for your 4G/5G IoT devices'],
   ['Layer 2 to Cloud', 'ASEoD Ethernet from your Layer 2 branch offices'],
   ['Colo to Colo', "Bridge two colo cages over AT&T's private network"],
@@ -179,7 +179,7 @@ test('attaching AWS us-west-2 prefills AWS us-west-2 as the cloud and region', (
 });
 
 test('two sites and a region make one order that names all three, in the banner, the panel and the picture', () => {
-  const c = flow('partial', { prefillSets: [{ sites: ['Charlotte branch', 'Phoenix branch'], connectionType: 'VPN to Cloud', sourceLabel: 'Recommended' }, { regions: ['AWS us-west-2'] }] });
+  const c = flow('partial', { prefillSets: [{ sites: ['Charlotte branch', 'Phoenix branch'], connectionType: 'Internet to Cloud', sourceLabel: 'Recommended' }, { regions: ['AWS us-west-2'] }] });
   let v = vals(c);
   for (const name of ['Charlotte branch', 'Phoenix branch']) {
     assert.ok(row(v, 'sites').value.includes(name), `the panel does not name ${name}`);
@@ -450,10 +450,10 @@ test('the path table in Connection Profile reads the region this order reaches, 
 });
 
 test('the policy sentence agrees with what it names, and names sites rather than counting them', () => {
-  let v = vals(flow('partial', { prefillSets: { sites: ['Charlotte branch'], regions: ['AWS us-west-2'], connectionType: 'VPN to Cloud' } }));
+  let v = vals(flow('partial', { prefillSets: { sites: ['Charlotte branch'], regions: ['AWS us-west-2'], connectionType: 'Internet to Cloud' } }));
   assert.equal(v.cfPolicySent.match, 'Charlotte branch');
   assert.equal(v.cfPolicySent.verb, 'reaches');
-  v = vals(flow('partial', { prefillSets: [{ sites: ['Charlotte branch', 'Phoenix branch'], connectionType: 'VPN to Cloud' }, { regions: ['AWS us-west-2'] }] }));
+  v = vals(flow('partial', { prefillSets: [{ sites: ['Charlotte branch', 'Phoenix branch'], connectionType: 'Internet to Cloud' }, { regions: ['AWS us-west-2'] }] }));
   assert.equal(v.cfPolicySent.match, 'Charlotte branch and Phoenix branch');
   assert.equal(v.cfPolicySent.verb, 'reach');
   // Four sites at a location the flow filled: named as a group, never counted.
@@ -521,17 +521,20 @@ test('a member of a type\'s set starts the flow with it attached, filled from yo
   assert.equal(stepOf(v, 'provider').state, 'filled');
   assert.equal(v.cfKey, 'basic');
   const d = ways();
-  vals(d).wayTypes.find(t => t.label === 'VPN to Cloud').openSet();
-  vals(d).waySet.rows.find(r => r.name === 'Charlotte branch').start();
+  vals(d).wayTypes.find(t => t.label === 'AVPN to Cloud').openSet();
+  vals(d).waySet.rows.find(r => r.name === 'Denver office').start();
   v = vals(d);
-  assert.equal(row(v, 'sites').value, 'Charlotte branch (Branch) · Charlotte');
+  assert.equal(row(v, 'sites').value, 'Denver office (Office) · Denver');
   assert.equal(row(v, 'sites').word, 'From your estate');
   assert.equal(v.cfKey, 'provider');
 });
 
 test('on Connection Type, the types that fit what you attached say so', () => {
-  const v = vals(flow('partial', { prefillSets: [{ sites: ['Charlotte branch'], sourceLabel: 'Recommended' }] }));
-  assert.equal(v.cfTypes.find(t => t.label === 'VPN to Cloud').fits, 'Fits Charlotte branch');
+  const v = vals(flow('partial', { prefillSets: [{ sites: ['Denver office'], sourceLabel: 'Recommended' }] }));
+  assert.equal(v.cfTypes.find(t => t.label === 'AVPN to Cloud').fits, 'Fits Denver office');
+  // AVPN is private MPLS: an IPsec branch on the internet is not one of its sites.
+  const ip = vals(flow('partial', { prefillSets: [{ sites: ['Charlotte branch'], sourceLabel: 'Recommended' }] }));
+  assert.equal(ip.cfTypes.find(t => t.label === 'AVPN to Cloud').fits, '');
   assert.equal(v.cfTypes.find(t => t.label === 'DataCenter / CoLocation to Cloud').fits, '');
   const w = vals(flow('partial', { prefillSets: [{ regions: ['AWS us-west-2'] }] }));
   assert.equal(w.cfTypes.find(t => t.label === 'Internet to Cloud').fits, 'Fits AWS us-west-2');
@@ -612,7 +615,7 @@ test('Orders calls the order in progress by the name you gave it', () => {
 });
 
 test('the sites an order carries open from the panel and the picture, exactly those', () => {
-  const c = flow('partial', { prefillSets: [{ sites: ['Charlotte branch', 'Phoenix branch', 'Madrid branch'], connectionType: 'VPN to Cloud', sourceLabel: 'Recommended' }] });
+  const c = flow('partial', { prefillSets: [{ sites: ['Charlotte branch', 'Phoenix branch', 'Madrid branch'], connectionType: 'Internet to Cloud', sourceLabel: 'Recommended' }] });
   const v = vals(c);
   const r = row(v, 'sites');
   assert.equal(r.hasMore, true);

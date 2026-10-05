@@ -1904,7 +1904,7 @@ function discoverOrder(go, est, { regions = [], sites = [], shares = null, place
   const dcOnly = kinds.length > 0 && kinds.every(x => S.isDataCenter(x));
   const tags = regs.flatMap(r => r.tags || []);
   const control = ['Private path required', ...(tags.includes('PCI') || tags.includes('Prod') ? ['No direct internet path'] : []), ...(tags.includes('GPU') ? ['Latency SLO'] : [])];
-  const sets = { sites: siteRows.map(x => x.name), regions: regs.map(r => r.region), tier, connectionType: !kinds.length || dcOnly ? 'DataCenter/CoLocation to Cloud' : 'VPN to Cloud', sourceLabel: 'Discover' };
+  const sets = { sites: siteRows.map(x => x.name), regions: regs.map(r => r.region), tier, connectionType: !kinds.length || dcOnly ? 'DataCenter/CoLocation to Cloud' : 'AVPN to Cloud', sourceLabel: 'Discover' };
   return go('s4', { ...newOrder({ ...prefillCompose(est), source: kinds.length && !dcOnly ? ['Sites'] : ['Data center'], dest: ['Clouds'], metros, regionTab: metros.length ? REGION_OF_METRO(metros[0]) : 'US East', control,
     resiliency: tier === 'maximum' ? 'Maximum' : tier === 'geodiversity' ? 'Geodiversity' : 'Standard',
     prefilled: false, prefillRegion: regs.length ? `${regs[0].cloud} ${regs[0].region}` : null, prefillWl: regs.reduce((a, r) => a + (r.wl || 0), 0),

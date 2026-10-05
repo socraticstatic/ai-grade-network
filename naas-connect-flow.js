@@ -24,7 +24,7 @@
 // Pure data and functions; naas-app.js binds them.
 import { CATALOG } from './naas-data.js';
 import { PATHS } from './naas-round2.js';
-import { countOf } from './naas-sites.js';
+import { countOf, servicesOf } from './naas-sites.js';
 import { fmt, plural, siteModeOf, regionOf } from './naas-logic.js';
 
 // ---------- The connection types (CreateConnectionMenu.tsx OPTIONS) ----------
@@ -32,7 +32,7 @@ export const CONNECTION_TYPES = [
   { key: 'internet', label: 'Internet to Cloud', description: 'Public internet on-ramp with DDoS protection' },
   { key: 'c2c', label: 'Cloud to Cloud', description: 'Private backbone linking two clouds through one Hub' },
   { key: 'dc', label: 'DataCenter / CoLocation to Cloud', description: 'Direct fiber cross-connect from your data center' },
-  { key: 'vpn', label: 'VPN to Cloud', description: 'Encrypted IPSec / IKEv2 tunnel over the internet' },
+  { key: 'vpn', label: 'AVPN to Cloud', description: 'Private connectivity over AT&T MPLS' },
   { key: 'iot', label: 'IoT to Cloud', description: 'Private APN connectivity for your 4G/5G IoT devices' },
   { key: 'layer2', label: 'Layer 2 to Cloud', description: 'ASEoD Ethernet from your Layer 2 branch offices' },
   { key: 'colo', label: 'Colo to Colo', description: "Bridge two colo cages over AT&T's private network" },
@@ -137,12 +137,12 @@ const metroOk = (m) => !!m && m !== 'Various';
 const SITE_TEST = {
   dc: (x) => x.cls === 'Data center',
   colo: (x) => x.cls === 'Data center',
-  vpn: (x) => siteModeOf(x) === 'ipsec',
+  vpn: (x) => servicesOf(x).some(v => v.key === 'avpn'),
   iot: (x) => /mobility/i.test(x.access || '') || /^(Mobility|Edge)$/.test(x.cls || ''),
   layer2: (x) => /\bASE\b/.test(x.access || ''),
   site: (x) => x.cls === 'Branch',
 };
-const SITE_NOUN = { dc: ['data center', 'data centers'], colo: ['data center', 'data centers'], vpn: ['site on IPsec', 'sites on IPsec'], iot: ['wireless or IoT site', 'wireless and IoT sites'], layer2: ['site on Switched Ethernet', 'sites on Switched Ethernet'], site: ['branch site', 'branch sites'] };
+const SITE_NOUN = { dc: ['data center', 'data centers'], colo: ['data center', 'data centers'], vpn: ['site on AVPN', 'sites on AVPN'], iot: ['wireless or IoT site', 'wireless and IoT sites'], layer2: ['site on Switched Ethernet', 'sites on Switched Ethernet'], site: ['branch site', 'branch sites'] };
 /** A site as the flow names it: its name, its class and its metro. */
 export const siteLine = (x) => `${x.name} (${x.cls})${metroOk(x.metro) ? ' · ' + x.metro : ''}`;
 /**
@@ -282,10 +282,10 @@ export function flowOf(cp, est) {
 
 export const cloudsOf = (f) => uniq((f.regions || []).map(cloudOfName));
 export const tierOf = (f) => f.tier || 'Standard';
-/** wizardDoor.ts isLmccPath + tierForkArmed: Internet or VPN to Cloud, AWS alone, Maximum. */
+/** wizardDoor.ts isLmccPath + tierForkArmed: Internet to Cloud, AWS alone, Maximum (AVPN is private already). */
 export function isLmcc(f) {
   if (f.ctype === LAST_MILE.label) return true;
-  if (f.ctype !== 'Internet to Cloud' && f.ctype !== 'VPN to Cloud') return false;
+  if (f.ctype !== 'Internet to Cloud') return false;
   const c = cloudsOf(f);
   return c.length === 1 && c[0] === 'AWS' && tierOf(f) === 'Maximum';
 }
@@ -392,10 +392,10 @@ export function reachable(key, f) {
 }
 
 // ---------- What each tier gets you ----------
-const TYPE_PRODUCT = { 'Internet to Cloud': 'i2c', 'VPN to Cloud': 'i2c', 'Cloud to Cloud': 'c2c', 'DataCenter / CoLocation to Cloud': 'netbond', 'IoT to Cloud': 'netbond', 'Layer 2 to Cloud': 'netbond', 'Colo to Colo': 'colo', 'Interconnect - Last Mile': 'lmcc' };
+const TYPE_PRODUCT = { 'Internet to Cloud': 'i2c', 'AVPN to Cloud': 'netbond', 'Cloud to Cloud': 'c2c', 'DataCenter / CoLocation to Cloud': 'netbond', 'IoT to Cloud': 'netbond', 'Layer 2 to Cloud': 'netbond', 'Colo to Colo': 'colo', 'Interconnect - Last Mile': 'lmcc' };
 const productOf = (id) => CATALOG.find(p => p.id === id);
 /** The path a type rides, from R.PATHS: the internet types ride Internet attach, the rest the AT&T network. */
-export const pathOf = (f) => PATHS.find(p => p.id === (['Internet to Cloud', 'VPN to Cloud'].includes(f.ctype) && !isLmcc(f) ? 'internet' : 'netbond'));
+export const pathOf = (f) => PATHS.find(p => p.id === (f.ctype === 'Internet to Cloud' && !isLmcc(f) ? 'internet' : 'netbond'));
 /** The region a latency reads from: the first one chosen, else the estate's first on the public internet. */
 export function sampleRegion(f, est) {
   const rs = regionsOf(est);
