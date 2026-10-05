@@ -50,7 +50,10 @@ test('the connection types are NetBond Advanced\'s, word for word', () => {
   const src = read('components/connection/CreateConnectionMenu.tsx');
   if (src) {
     const pairs = [...src.matchAll(/label: '([^']+)',\s*description: ("[^"]+"|'[^']+')/g)].map(m => [m[1], m[2].slice(1, -1)]);
-    assert.deepEqual(pairs, MENU, 'the menu in att-netbond-sdci moved; re-transcribe it');
+    // One deliberate departure (2026-10-05): NetBond Advanced still says VPN to Cloud over IPsec;
+    // the storefront says AVPN to Cloud, private over AT&T MPLS, which is what the product is.
+    const OURS = { 'VPN to Cloud': ['AVPN to Cloud', 'Private connectivity over AT&T MPLS'] };
+    assert.deepEqual(pairs.map(([l, d]) => OURS[l] || [l, d]), MENU, 'the menu in att-netbond-sdci moved; re-transcribe it');
   }
 });
 
