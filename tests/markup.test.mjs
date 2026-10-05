@@ -405,13 +405,21 @@ test('every container the markup opens, it closes', () => {
   // sc-for +1, button +2); a source's scope is a button (button +1):
   // div 1134 -> 1139, span 969 -> 962, sc-if 522 -> 528, sc-for 268 -> 278, button 413 -> 445.
   // What an added source found reads as figure buttons, one per part of its line (2026-09-30): sc-for 278 -> 279, button 445 -> 446.
+  // Recommended, one move open at a time, and the Policy engine on NetBond Advanced's sheet (2026-10-05, Micah: "way too
+  // crowded" / "doesn't look like a good engine with AT&T's allow, deny, manipulate, advertise"): a move is a header line
+  // (the rank square, the title as a button, Today and the picked tier each a strip beside a word, the saving, Attach, a
+  // chevron button) plus the four columns under sc-if mv.open, with Compare in its footer; the blank aria-hidden head row
+  // left (div -1). The engine's left panel gains the sheet (a section loop of heads and rule rows, each row two toggle
+  // buttons under an sc-if for the policy that sets it); the verdict, the strip and the trace (a square, the name, a badge
+  // loop) move to a right-column panel under sc-if engHas. Recounted, every tag balanced:
+  // div 1256 -> 1262, span 1152 -> 1174, sc-if 585 -> 587, sc-for 318 -> 323, button 485 -> 489.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1256],
-    ['span', /<span\b/g, /<\/span>/g, 1152],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 585],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 318],
+    ['div', /<div\b/g, /<\/div>/g, 1262],
+    ['span', /<span\b/g, /<\/span>/g, 1174],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 587],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 323],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 485],
+    ['button', /<button\b/g, /<\/button>/g, 489],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

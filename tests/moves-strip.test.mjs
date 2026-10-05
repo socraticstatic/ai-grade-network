@@ -36,7 +36,10 @@ test('every move on Growing draws its today and its three tiers, and the Full co
 });
 
 test('the markup draws the strip in Today and in each tier, on the row the labels leave for it', () => {
-  assert.match(HTML, /<div class="ps xs" aria-label="Today's path"/);
-  assert.match(HTML, /<span class="ps xs" aria-label="\{\{ tr\.tier \}\}: the path"/);
-  assert.equal((HTML.match(/grid-template-rows:15px 16px 24px 16px 16px 16px/g) || []).length, 3, 'the labels, Today and the tiers share one row plan');
+  // The header line carries the tiny strips (2026-10-05); the open row's four columns carry the small ones on one row plan.
+  assert.match(HTML, /<span class="ps xs" aria-label="Today's path"/);
+  assert.match(HTML, /<span class="ps xs" aria-label="\{\{ mv\.pick\.tier \}\}: the path"/);
+  assert.match(HTML, /<div class="ps sm" aria-label="Today's path"/);
+  assert.match(HTML, /<span class="ps sm" aria-label="\{\{ tr\.tier \}\}: the path"/);
+  assert.equal((HTML.match(/grid-template-rows:16px 18px 34px 20px 20px 20px/g) || []).length, 3, 'the labels, Today and the tiers share one row plan');
 });

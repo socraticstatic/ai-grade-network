@@ -21,7 +21,7 @@ import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
 import * as SG from './naas-signals.js';
-import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies, effectivePolicy, shadowedPolicies, intendedVsConfigured, engineFlows, LAYER_ICON, LAYER_SHORT, assetIcon, verbBadges } from './naas-policy-layers.js';
+import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies, effectivePolicy, shadowedPolicies, intendedVsConfigured, engineFlows, flowSheet, LAYER_ICON, LAYER_SHORT, assetIcon, verbBadges } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
 import * as M from './naas-moves.js';
 import { rampName } from './naas-things.js';
@@ -4183,18 +4183,28 @@ function wizardVals(s, est, set, c) {
           const tags = [...new Set(flows.map(x => x.tag).filter(Boolean))].slice(0, 5);
           const pub = (est.regionsList || []).find(r => !r.priv) || (est.regionsList || [])[0] || {};
           const ef = { from: froms[0] || '', to: tos.includes(`${pub.cloud} ${pub.region}`) ? `${pub.cloud} ${pub.region}` : tos[0] || '', tag: tags.includes('Prod') ? 'Prod' : '', ...(s.engFlow || {}) };
-          const chip = (k, v, lab) => { const on = ef[k] === v; return { key: k + v, label: lab || v, icon: k === 'tag' ? (v ? 'tag' : 'minus-circle') : assetIcon(v), on, bg: on ? 'var(--cta)' : 'var(--bg-base)', ink: on ? '#fff' : 'var(--text-body)', go: () => set({ engFlow: { ...ef, [k]: v } }) }; };
+          // The chip wears a short word (its glyph says private cloud or tag); the full name is its title (fold, 2026-10-05).
+          const chip = (k, v, lab) => { const on = ef[k] === v, label = lab || v; return { key: k + v, label, short: label.replace(/^Private cloud · /, '').replace(/^tag /, ''), icon: k === 'tag' ? (v ? 'tag' : 'minus-circle') : assetIcon(v), on, bg: on ? 'var(--cta)' : 'var(--bg-base)', ink: on ? '#fff' : 'var(--text-body)', go: () => set({ engFlow: { ...ef, [k]: v } }) }; };
           const r = ef.from && ef.to ? effectivePolicy(est, all, ef) : null;
           const hit = r ? r.trace.filter(t => t.result !== 'Does not match') : [];
           const sh = shadowedPolicies(est, all), iv = intendedVsConfigured(est, all);
+          // NetBond Advanced's sheet for this flow (2026-10-05): each section wears its verb badge, each row the policy that sets it.
+          const VERB = { deny: ['Deny', 'deny'], manip: ['Manipulate', 'manip'], allow: ['Allow', 'allow'], advanced: ['Advertise', 'adv'] };
+          const prioE = new Map(e.ordered.map((p, i) => [p.name, i + 1])), polByName = new Map(all.map(p => [p.name, p]));
+          const sheet = r ? flowSheet(est, all, ef).map(sec => { const on = sec.rules.filter(x => x.o2p.on || x.p2o.on).length;
+            return { key: sec.key, label: sec.label, verb: VERB[sec.key][0], cls: VERB[sec.key][1], icon: ROUTE_ICON[sec.key], count: `${on} of ${sec.rules.length}`,
+              rules: sec.rules.map(x => { const by = x.o2p.by || x.p2o.by, tt = (d, w) => (d.on ? `${w}: pushed by ${d.by}` : `${w}: nothing pushes it on this flow`);
+                return { key: x.key, label: x.label, on: x.o2p.on || x.p2o.on, by, hasBy: !!by, o2pOn: x.o2p.on, p2oOn: x.p2o.on, o2pOff: !x.can.o2p, p2oOff: !x.can.p2o, o2pTitle: x.can.o2p ? tt(x.o2p, 'On premise → partner') : 'NetBond offers no on premise → partner toggle here', p2oTitle: x.can.p2o ? tt(x.p2o, 'Partner → on premise') : 'NetBond offers no partner → on premise toggle here' }; }) }; }) : [];
           const INK = { 'In sync': 'var(--success)', Drift: 'var(--error)', 'Not pushed': 'var(--warning)' };
           return { engFrom: froms.map(v => chip('from', v)), engTo: tos.map(v => chip('to', v)), engTag: [chip('tag', '', 'Nothing tagged'), ...tags.map(v => chip('tag', v, `tag ${v}`))],
             engHas: !!r, engVerdict: r ? r.verdict : '', engVerdictInk: r && r.verdict === 'Denied' ? 'var(--error)' : 'var(--success)', engVerdictCls: r && r.verdict === 'Denied' ? 'deny' : 'allow', engVerdictIcon: r && r.verdict === 'Denied' ? 'close-circle' : 'check-circle', engDecided: r ? r.decidedBy : '',
             engLayers: r ? r.layers.map(l => ({ ...l, icon: LAYER_ICON[l.key], state: l.by ? 'set' : 'any', byLine: l.by ? `by ${l.by}` : 'no policy sets it' })) : [],
-            engTrace: hit.slice(0, 6).map((t, i) => ({ key: 'tr' + i, n: i + 1, name: t.name, result: t.result, ink: t.result === 'Won' ? 'var(--success)' : 'var(--text-light)' })),
+            engSheet: sheet, engSheetN: sheet.reduce((a, x) => a + x.rules.filter(y => y.on).length, 0),
+            // The trace as NetBond's Connection > Policies list: the engine's precedence square, the name, the verbs, Won or Overridden.
+            engTrace: hit.slice(0, 5).map((t, i) => ({ key: 'tr' + i, n: i + 1, prio: prioE.get(t.name) || i + 1, badges: verbBadges(polByName.get(t.name) || {}).filter(b => b.cls).slice(0, 2), name: t.name, result: t.result, short: t.result === 'Won' ? 'Won' : 'Overridden', ink: t.result === 'Won' ? 'var(--success)' : 'var(--text-light)' })),
             engTraceMore: r ? `${r.trace.length - hit.length} more ${r.trace.length - hit.length === 1 ? 'policy does' : 'policies do'} not match this flow` : '',
             engShadow: sh.slice(0, 4).map(x => ({ key: x.name, text: `${x.name}: never decides; ${x.by} always wins first` })), hasEngShadow: sh.length > 0, noEngShadow: !sh.length,
-            engIv: iv.slice(0, 2).map(c => ({ key: c.key, label: c.label, rows: c.rows.slice(0, 4).map(x => ({ ...x, ink: INK[x.status] || 'var(--text-body)' })) })), hasEngIv: iv.length > 0, noEngIv: !iv.length }; })(),
+            engIv: iv.slice(0, 2).map(c => ({ key: c.key, label: c.label, rows: c.rows.slice(0, 3).map(x => ({ ...x, ink: INK[x.status] || 'var(--text-body)' })) })), hasEngIv: iv.length > 0, noEngIv: !iv.length }; })(),
       }; })(),
     tplKinds: [['between', 'Between assets'], ['layered', 'Layered']].map(([k, l]) => { const on = (s.govTplKind || 'layered') === k; return { key: k, label: l, on, go: () => set({ govTplKind: k }), bg: on ? 'var(--bg-base)' : 'transparent', weight: on ? 700 : 500 }; }),
     // Multi-layer starting points: a rule at every layer, carried into the author.
@@ -4864,9 +4874,13 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   const onPage = s.screen === 's3' && s.tab === 'connect' && cnPageOf(s) === 'options';
   const empty = !est || est.stage === 'empty' || !(est.regionsList || []).length;
   const step = { label: 'Add a source', go: go('s1', { discoverView: 'sources' }) };
-  const shell = (all) => { const pg = pageRows(all, MOVES_PAGE, s.movePage, (n) => set({ movePage: n }));
+  // One move open at a time (Micah, 2026-10-05: "way too crowded"): the first on the page unless a row was opened or closed;
+  // paging opens the first of the new page. The open row draws the tiers; a collapsed one reads the picked tier.
+  const shell = (all) => { const pg = pageRows(all, MOVES_PAGE, s.movePage, (n) => set({ movePage: n, moveOpen: null }));
     const picked = all.filter(m => m.sel);
-    return { moveList: all, moves: pg.rows, movesPager: pg.pager, movesPageSize: MOVES_PAGE, hasMoves: all.length > 0, noMoves: !all.length,
+    const openKey = s.moveOpen === 'none' ? null : pg.rows.some(m => m.key === s.moveOpen) ? s.moveOpen : (pg.rows[0] || {}).key;
+    const rows = pg.rows.map(m => { const open = m.key === openKey; return { ...m, open, chevron: open ? 'chevron-down' : 'chevron-right', openLabel: open ? `Hide the tiers for ${m.title}` : `Show the tiers for ${m.title}`, toggleOpen: () => set({ moveOpen: open ? 'none' : m.key }) }; });
+    return { moveList: all, moves: rows, movesPager: pg.pager, movesPageSize: MOVES_PAGE, hasMoves: all.length > 0, noMoves: !all.length,
       movesHead: 'What to connect next, by impact',
       movesSub: all.length ? `${all.length} ${all.length === 1 ? 'move' : 'moves'}, ranked by what the Recommended tier saves a month, then by the risk it closes. Today is measured; what you'd get is modelled at AT&T rates and list prices.` : '',
       movesEmpty: empty ? 'Nothing is discovered yet, so there is nothing to connect. Discovery reads a cloud account and lists what it can move.' : 'Everything discovered is on the AT&T network. Nothing to move.',
@@ -4915,6 +4929,12 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
     const pickI = tierOfMove(m), on = !!sel[m.key];
     const pick = (i) => () => set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: i }), moveSel: keep('moveSel', { ...sel, [m.key]: true }) });
     const setDoor = m.kind === 'sites' ? siteDoor(m) : cloudDoor(m);
+    const tiers = m.tiers.map(t => { const tOn = t.i === pickI;
+        return { ...t, key: m.key + ':' + t.i, on: tOn, pick: pick(t.i), featured: t.rec, priceShort: t.monthly === null ? '' : `${fmt(t.monthly)}/mo`,
+          aria: `${t.intro} Security: ${t.sec.value}${t.sec.delta ? `, ${t.sec.delta}` : ''}. Performance: ${t.perf.value}${t.perf.delta ? `, ${t.perf.delta}` : ''}. Cost: ${t.cost.value}${t.cost.delta ? `, ${t.cost.delta}` : ''}.`,
+          title: `${t.intro} ${t.fit}. ${t.price}. Performance: ${t.perfTitle}. Cost: ${t.costTitle}.`,
+          border: tOn ? 'var(--cta)' : 'var(--border-secondary)', bg: tOn ? 'var(--bg-accent)' : 'transparent', wordInk: t.rec ? 'var(--link)' : 'var(--text-light)', strip: M.tierStrip(t),
+          sec: cell(t.sec), perf: cell(t.perf), cost: cell(t.cost) }; });
     return { ...m, rankF: String(m.rank), sel: on, check: on ? '✓' : '', checkBg: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)',
       kindIcon: m.kind === 'sites' ? 'large-building' : 'cloud', strip: M.stripOf(m.today.path),
       selLabel: `${on ? 'Remove' : 'Add'} move ${m.rank}, ${m.title}, ${on ? 'from' : 'to'} the order`,
@@ -4926,15 +4946,11 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
       tSec: cell(m.today.sec, setDoor), tPerf: cell(m.today.perf, perfDoor(m)), tCost: cell(m.today.cost, m.today.cost.value === 'Not priced today' ? null : costDoor(m)),
       tCostTitle: m.today.cost.modelled ? `${m.today.cost.value}: a cloud provider list price applied to your ports, modelled` : m.today.egress !== null ? `${m.today.cost.value}: this month's egress for this set, as Cost splits it. Opens Cost.` : 'Not priced today',
       tCostCursor: m.today.cost.value === 'Not priced today' ? 'default' : 'pointer', tCostHover: m.today.cost.value === 'Not priced today' ? 'none' : 'underline',
-      tiers: m.tiers.map(t => { const tOn = t.i === pickI;
-        return { ...t, key: m.key + ':' + t.i, on: tOn, pick: pick(t.i), featured: t.rec, priceShort: t.monthly === null ? '' : `${fmt(t.monthly)}/mo`,
-          aria: `${t.intro} Security: ${t.sec.value}${t.sec.delta ? `, ${t.sec.delta}` : ''}. Performance: ${t.perf.value}${t.perf.delta ? `, ${t.perf.delta}` : ''}. Cost: ${t.cost.value}${t.cost.delta ? `, ${t.cost.delta}` : ''}.`,
-          title: `${t.intro} ${t.fit}. ${t.price}. Performance: ${t.perfTitle}. Cost: ${t.costTitle}.`,
-          border: tOn ? 'var(--cta)' : 'var(--border-secondary)', bg: tOn ? 'var(--bg-accent)' : 'transparent', wordInk: t.rec ? 'var(--link)' : 'var(--text-light)', strip: M.tierStrip(t),
-          sec: cell(t.sec), perf: cell(t.perf), cost: cell(t.cost) }; }) };
+      tiers, pick: (() => { const t = tiers.find(x => x.on) || tiers[1] || tiers[0]; return t ? { ...t, headline: t.cost.delta || t.cost.value } : null; })() };
   });
   return shell(all);
 }
+
 
 /** Cost's views. Savings (Banked) and Forecast are part of Spend now; their old doors land there. */
 // Cost lands on Optimize (2026-09-30); the panels that folded into Spend still land there.

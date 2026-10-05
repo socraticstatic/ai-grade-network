@@ -69,6 +69,26 @@ export const ROUTE_RULES = [
   { section: 'allow', id: 'community-value-filter-att', label: 'Community value filter, AT&T BGP CVs', o2p: false, p2o: true },
   { section: 'advanced', id: 'advertise-static-routes', label: 'Advertise static routes', o2p: true, p2o: true },
 ];
+// What NetBond Advanced's sheet pushes for an intent (2026-10-05, Micah: "allow, deny, manipulate, advertise ... you were
+// supposed to use that as a foundation"). An estate policy says what it requires; this is the route policy that enforces
+// it, rule by rule: a private path blocks the default route out and allows the matching routes; inspection steers by CV
+// tags; segmentation filters by community; an SLO or a second path prepends ASNs on the path to deprioritise; egress
+// through AT&T blocks the default route out and advertises AT&T's static routes in. A policy with a sheet of its own keeps it.
+const ROUTE_OF = [
+  [/private path|never the internet|no direct internet|via the at&t|private on-ramp/, { 'deny:block-default-routes': { o2p: true }, 'allow:matching-routes': { o2p: true, p2o: true } }],
+  [/inspect|ngfw|ids\/ips|proxy|ddos|firewall/, { 'manip:selective-cv-tagging': { o2p: true }, 'manip:community-value-tag': { p2o: true } }],
+  [/segment/, { 'allow:community-value-filter-customer': { o2p: true, p2o: true }, 'deny:community-value-filter-att': { p2o: true } }],
+  [/latency slo|two paths|active\/active|fail over/, { 'manip:prepend-advertisements': { o2p: true, p2o: true } }],
+  [/egress/, { 'deny:block-default-routes': { o2p: true }, 'advanced:advertise-static-routes': { p2o: true } }],
+];
+/** A policy's NetBond route sheet: its own, or the one its intent implies. {'section:id': {o2p, p2o}} */
+export function routeRulesOf(p) {
+  if (p && p.route) return p.route;
+  const words = [String((p && p.req) || ''), ...((p && p.path) || []), ...Object.values(p && p.layers ? p.layers : {})].join(' · ').toLowerCase();
+  const out = {};
+  for (const [re, rules] of ROUTE_OF) if (re.test(words)) for (const [k, v] of Object.entries(rules)) out[k] = { ...(out[k] || {}), ...v };
+  return out;
+}
 // What the path between two assets must do (Micah, 2026-10-01: "multi-path routing with diversity to from between
 // cloud assets, inline service insertion, access, encrypt/decrypt, controlled egress"), each on the layer that enforces it.
 export const SERVICE_GROUPS = [
@@ -154,7 +174,7 @@ export function evalPolicies(est, policies = []) {
     if (!r) continue;
     const k = r.region, c = byConn.get(k) || { key: k, region: r.region, label: `${r.cloud} ${r.region}`, rules: [] };
     for (const pick of p.path || []) c.rules.push({ text: pick, from: p.name });
-    for (const rr of ROUTE_RULES) { const v = (p.route || {})[`${rr.section}:${rr.id}`] || {};
+    for (const rr of ROUTE_RULES) { const v = routeRulesOf(p)[`${rr.section}:${rr.id}`] || {};
       for (const [dir, word] of [['o2p', 'on premise → partner'], ['p2o', 'partner → on premise']]) if (v[dir])
         c.rules.push({ text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${word})`, from: p.name, sec: rr.section, id: rr.id, dir, word, pair: `${p.match}→${p.scope}` }); }
     byConn.set(k, c);
@@ -193,11 +213,13 @@ function contributions(p) {
   for (const q of String(p.req || '').split(' and ').map(x => x.trim()).filter(Boolean)) out.push({ layer: layerOfReq(q), text: q });
   for (const g of SERVICE_GROUPS) for (const o of g.opts) if ((p.path || []).includes(o.label)) out.push({ layer: o.layer, text: o.label });
   let deny = false, allow = false;
-  for (const rr of ROUTE_RULES) { const v = (p.route || {})[`${rr.section}:${rr.id}`] || {};
+  const rt = routeRulesOf(p);
+  for (const rr of ROUTE_RULES) { const v = rt[`${rr.section}:${rr.id}`] || {};
     for (const [dir, word] of [['o2p', 'on premise → partner'], ['p2o', 'partner → on premise']]) if (v[dir]) {
       // Only denying the matching routes stops the flow; blocking a default route or filtering CVs shapes it.
       if (rr.section === 'deny' && rr.id === 'matching-routes') deny = true; if (rr.section === 'allow' && rr.id === 'matching-routes') allow = true;
-      out.push({ layer: 'edge', text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${word})` }); } }
+      // A derived rule restates an intent already on its own layer; only a sheet of the policy's own reaches the edge.
+      if (p.route) out.push({ layer: 'edge', text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${word})` }); } }
   return { out, deny, allow };
 }
 /** Precedence: an explicit priority, then the most specific, then deny before allow, then the order written. */
@@ -239,6 +261,15 @@ export function shadowedPolicies(est, policies) {
   }
   return Object.entries(seen).filter(([, s]) => !s.won).map(([name, s]) => ({ name, by: Object.entries(s.by).sort((a, b) => b[1] - a[1])[0][0] }));
 }
+/** NetBond Advanced's Configure > Policies sheet, read for one flow (2026-10-05): every rule, per direction, on when a
+ *  live policy that matches the flow pushes it, naming the policy first in precedence. `can` is the direction NetBond offers. */
+export function flowSheet(est, policies, flow) {
+  const live = policies.filter(p => p.state !== 'draft');
+  const hits = precedence(live).filter(({ p }) => sideA(p, flow) && sideB(p, flow)).map(x => x.p);
+  return ROUTE_SECTIONS.map(([sk, sl]) => ({ key: sk, label: sl, rules: ROUTE_RULES.filter(r => r.section === sk).map(r => {
+    const k = `${sk}:${r.id}`, dir = (d) => { const by = hits.find(p => (routeRulesOf(p)[k] || {})[d]); return { on: !!by, by: by ? by.name : '' }; };
+    return { key: k, id: r.id, label: r.label, can: { o2p: r.o2p, p2o: r.p2o }, o2p: dir('o2p'), p2o: dir('p2o') }; }) }));
+}
 /** Per connection: what the policies intend, what the connection has today, and whether they agree. */
 export function intendedVsConfigured(est, policies) {
   const byReg = new Map();
@@ -275,7 +306,7 @@ export function assetIcon(label) {
 // NetBond Advanced's four verbs (Allow, Deny, Manipulate, Advertise) in its colors, then what the path asks for, in neutral: three at most.
 export function verbBadges(p) {
   const out = [], seen = new Set(), add = (key, label, cls) => { if (!seen.has(key)) { seen.add(key); out.push({ key, label, cls }); } };
-  const rt = (p && p.route) || {};
+  const rt = routeRulesOf(p);
   for (const rr of ROUTE_RULES) { const v = rt[`${rr.section}:${rr.id}`] || {}; if (!(v.o2p || v.p2o)) continue;
     if (rr.section === 'deny') add('deny', 'Deny', 'deny'); else if (rr.section === 'allow') add('allow', 'Allow', 'allow'); else if (rr.section === 'manip') add('manip', 'Manipulate', 'manip'); else add('adv', 'Advertise', 'adv'); }
   const words = [String((p && p.req) || ''), ...((p && p.path) || []), ...Object.values(policyLayers(p))].join(' · ').toLowerCase();
