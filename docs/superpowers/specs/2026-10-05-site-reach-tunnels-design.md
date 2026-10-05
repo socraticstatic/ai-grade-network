@@ -1,87 +1,112 @@
-# Site reach: private, SD-WAN tunnel, IPsec tunnel
+# Tunnels as a way to reach the cloud
 
-2026-10-05. Approved in chat by Micah ("go for it").
+2026-10-05, v2. v1 was assessed and rejected the same day (reasons at the end).
 
 ## Why
 
-A stakeholder's notes, with a marked-up Connect picture: a site reaches a cloud one of three ways, and the storefront draws only one.
+A stakeholder's marked-up Connect picture shows three ways a site reaches a cloud:
 
-1. **Private.** AVPN (or ASE on Demand) access → AT&T PE → AT&T backbone → NetBond / ExpressRoute → cloud gateway.
-2. **SD-WAN tunnel.** Business Fiber access → overlay over the internet → the cloud's VPN gateway. Never touches PE, backbone or NetBond.
-3. **IPsec tunnel.** Dedicated Internet access → IPsec over the internet → the cloud's VPN gateway. Same bypass.
+1. **Private.** AVPN access → AT&T PE → AT&T backbone → NetBond / ExpressRoute → cloud. (AT&T: NetBond "extend[s] your MPLS VPN" to the cloud.)
+2. **SD-WAN tunnel.** Business Fiber access → overlay over the internet → the SD-WAN appliance in the cloud (Azure Virtual WAN hub NVA; on AWS an appliance in a transit VPC behind Transit Gateway Connect).
+3. **IPsec tunnel.** Dedicated Internet access → IPsec over the internet → the cloud's VPN gateway (AWS Site-to-Site VPN: one connection, two tunnels, $0.05/hour, traffic billed as internet egress).
 
-Today "on AT&T" is decided by the access product (`attInternet` in naas-things.js:30, `entersAtt` :32, `onAtt` naas-logic.js:87). So ABF and ADI sites draw through PE, backbone and NetBond, which is wrong: their access is AT&T's, their middle is the internet. IPsec exists only for non-AT&T branches (`tpa`), and SD-WAN never draws as a tunnel.
+The storefront draws only the first for AT&T-access sites. Every ABF and ADI site is drawn through PE, backbone and NetBond.
 
-The same week the "VPN to Cloud" type became "AVPN to Cloud, private connectivity over AT&T MPLS" (80b507a). This spec finishes that thought across the product.
+## Rule: a tunnel is stated, never inferred
 
-## The model: one field, `reachOf(site)`
+SD-WAN rides any transport (AT&T lists broadband, LTE, MPLS) and Dedicated Internet often reaches clouds with no tunnel at all. So **no access product implies a tunnel.** A site rides a tunnel only when its data says so. Every other site keeps exactly what it has today.
 
-New in naas-logic.js, next to `siteModeOf`. Returns one of:
+## The model: existing fields, one meaning each
 
-| reach | meaning | default from primary access |
+No new competing field. A tunnel site in naas-data.js is:
+
+```js
+{ name, access: 'ABF (Business Fiber)', services: [...], priv: false, tunnel: 'SD-WAN', tunnelTo: 'AWS us-west-2', ... }
+{ name, access: 'ADI (Dedicated Internet)', services: [...], priv: false, tunnel: 'IPsec', tunnelTo: 'Azure westeurope', ... }
+```
+
+- `priv: false` because the path is not private. That keeps all 396 `.priv` reads agreeing with the picture without touching them.
+- `tunnel` already exists (the five non-AT&T IPsec branches carry `tunnel: 'IPsec'`). It gains the value `'SD-WAN'`.
+- `tunnelTo` (new, required with `tunnel`) names the one region the tunnel lands in. Today's non-AT&T branches get it too, from their bucket's cloud, so nothing has to guess a destination.
+- **Access ownership does not change.** ABF and ADI stay AT&T access (`attInternet`, naas-things.js:30): AT&T still holds the access SLA, and the site still counts as "AT&T" in "N AT&T · M non-AT&T".
+
+### Code that has to learn this (and only this)
+
+| where | today | change |
 |---|---|---|
-| `private` | AT&T access, PE, backbone, on-ramp | AVPN, ASE / ASE on Demand, SD-WAN over AVPN, Mobility (private APN) |
-| `sdwan` | AT&T access, SD-WAN tunnel over the internet to the cloud VPN gateway | ABF (Business Fiber), plain "SD-WAN" on AT&T access |
-| `ipsec` | AT&T access, IPsec tunnel over the internet to the cloud VPN gateway | ADI (Dedicated Internet), AIA-B |
-| `outside` | not AT&T access (today's `tpa`, `accessSla: 'third'`, `core: 'third'`) | unchanged |
+| naas-logic.js:39 `siteModeOf` | sdwan only by access text; ipsec only if tpa or tunnel | `tunnel: 'SD-WAN'` → sdwan; `tunnel: 'IPsec'` → ipsec, whoever owns the access |
+| naas-things.js:32 `entersAtt` | `priv \|\| attInternet` | add `&& !x.tunnel` for the **core** question: a tunnel site enters AT&T's access, not its backbone. Split into `attAccess(x)` (ring, counts) and `attCore(x)` (routing). |
+| naas-flowmap.js:59 `isTunnel` | `!priv && (tunnel \|\| tpa)` | splits into `ipsecV` and `sdwanV` by `tunnel` |
+| naas-sites.js:185 `servicesOf` | ipsec → tpa | a tunnel on AT&T access keeps its own service (ABF, ADI); tpa stays for non-AT&T access only |
+| naas-round2.js:444 `ipsecCloud` | cloud of the ipsec bucket | reads `tunnelTo` |
 
-- Decided by the site's **primary** service. A backup service never changes reach.
-- A site may override with `reach: '<value>'` in naas-data.js. None does at first; the field exists so the odd site (an ABF site on NetBond) is one word, not a code change.
-- `siteModeOf` keeps its four answers but derives from `reachOf` (`private` → `att`, `outside` → `third`, tunnels → their own names). Every existing caller keeps working.
-- `onAtt(site)` keeps meaning **"AT&T holds the access SLA"**. A tunnel site is still on AT&T for the access ring and the "N AT&T · M non-AT&T" counts. What changes is the **path**: a new `onCore(site) = reachOf(site) === 'private'` answers "does it ride the AT&T backbone", and the routing code asks that instead of `entersAtt`.
-- `isTunnel` in naas-flowmap.js:59 is replaced by `reachOf`: `sdwan` and `ipsec` are tunnels; an `outside` site keeps today's rule (its tpa IPsec still counts as IPsec, on another carrier's internet).
+Then every surface below reads these. A grep for `entersAtt`, `attInternet`, `isTunnel`, `siteModeOf` and `tunnel` is the full call list; each call site is classified ring/count (keeps `attAccess`) or path (moves to `attCore`) in the plan.
+
+## The sites that change (Growing only)
+
+| site | access | becomes | lands in |
+|---|---|---|---|
+| Boston office | ABF | SD-WAN tunnel | AWS us-west-2 |
+| Houston office | ABF | SD-WAN tunnel | AWS us-west-2 |
+| Minneapolis office | ADI | IPsec tunnel | Azure westeurope |
+| Dublin office | ADI | IPsec tunnel | Azure westeurope |
+
+Both destinations are public today (no NetBond), which is why a tunnel exists. Atlanta and Los Angeles (ABF) and Mumbai (ADI) stay as they are, so Growing shows all three ways side by side. Small, Mature, Bank scale and Empty are untouched. The five non-AT&T IPsec branches only gain `tunnelTo`.
 
 ## Surfaces
 
-### Connect picture (naas-logic.js `heroLayout`, naas-things.js, naas-segments.js)
-- Tunnel sites keep their Access thing on the AT&T track (Business Fiber, Dedicated Internet).
-- From Access their line runs **straight to the cloud gateway**, bypassing Edge, Core and the on-ramp, labelled "SD-WAN tunnel" or "IPsec tunnel" on the wire. Builds on the existing third-core precedent (`:394-406`), but the draft skips the Core column instead of passing through it.
-- Right-hand Access gets the cloud's **VPN gateway** as a thing where a tunnel lands (AWS VPN gateway, Azure VPN gateway, GCP Cloud VPN), distinct from the on-ramp's gateway.
-- Segment table (naas-segments.js): the existing `ipsec` row ("Cloud VPN metrics", owner customer) covers tunnel sites of both kinds; a `sdwan` row is added beside it the same way. Edge and Backbone cells count only `onCore` sites.
-- "Outside the AT&T network" lane is unchanged: still non-AT&T access only.
+**Connect picture** (naas-logic.js `heroLayout`, naas-things.js, naas-segments.js)
+- The Access thing stays on the AT&T track (Business Fiber, Dedicated Internet).
+- The line runs from Access **straight to the cloud card**, skipping Edge and Core, labelled on the wire "SD-WAN tunnel" or "IPsec tunnel". It ends at a right-hand Access thing named for what terminates it: "SD-WAN hub" or "VPN gateway".
+- The non-AT&T lane is unchanged.
+- Segment table: the existing `ipsec` row (owner customer, "Cloud VPN metrics", unmeasured) covers both tunnel kinds, renamed "Tunnels (IPsec, SD-WAN)". No new row, so segment-model's nine rows hold.
 
-### Flow map (naas-flowmap.js)
-- Mids: `mid:<ramp>` (NetBond etc.), `mid:wan`, **`mid:sdwan` "SD-WAN tunnel"**, `mid:ipsec` "IPsec tunnel", `mid:internet`.
-- A site's volume splits by reach: private → fabric; sdwan → `sdwanV`; ipsec → `ipsecV`; outside → today's rule. Carried through scaling and folding exactly as `ipsecV` is today (:347, :363, :384, :410, :435).
-- Conservation holds at every level; tests/flowmap.test.mjs:129 and sankey-conserves keep passing with the new mid.
+**Flow map** (naas-flowmap.js)
+- Mids: ramps, WAN, **"SD-WAN tunnel"** (new), "IPsec tunnel" (renamed from "IPsec over internet"; it holds both AT&T-access and non-AT&T IPsec), Internet.
+- The tunnel sites' volume moves from the fabric to the tunnel mids. Conservation at every level is the gate (flowmap.test.mjs:129, sankey-conserves).
 
-### Observe (naas-observe-dash.js, naas-flowmap.js `perfOf`, naas-paths.js)
-- `P.path` for a tunnel site: Access (AT&T) → **Internet (unmeasured)** → cloud VPN gateway. No "AT&T on-net" PoP hop, no fabric hop.
-- Who answers: AT&T for the access, "Public internet" for the middle, the cloud for its gateway. The middle is a blind spot (no flow logs), stated, not hidden.
-- p95 for tunnel mids reads the public latency (`pub`), as `mid:ipsec` does today; the SLO is the public one (100 ms), never the private 20 ms.
+**Observe** (naas-paths.js, naas-observe-dash.js, naas-flowmap.js `perfOf`)
+- `P.path` for a tunnel site: AT&T access → internet (unmeasured) → SD-WAN hub or VPN gateway. No on-net PoP, no fabric hop.
+- Who answers: AT&T for access, nobody for the middle (stated as a blind spot), the cloud for its gateway.
+- p95 reads the public latency and the public SLO (100 ms), as `mid:ipsec` does today.
 
-### Cost (naas-round2.js, naas-moves.js)
-- Tunnel legs priced from what is already in the model: `CSP_VPN` ($36.50 per tunnel per month, cloud list) per tunnel, SD-WAN at the catalog sdwan price per site, egress at the public rate ($0.09/GB vs $0.02 private) on the site's modelled volume. Every figure is labelled modelled; no new numbers are invented.
-- The existing partial `ipsec` bucket ($8,600) stays the IPsec-over-third-party figure; new tunnel volume is computed, not added to the bucket by hand.
-- Recommended: tunnel sites become a site-set move "Move N tunnel sites to AVPN to Cloud", the saving = tunnel cost + public egress − AVPN/NetBond cost, same machinery as today's ipsec move (`siteMoves`, :197-240). The Connect type it asks for is **AVPN to Cloud**.
+**Cost** (naas-round2.js, naas-moves.js)
+- IPsec: $36.50 per **VPN connection** per month (the existing `CSP_VPN`; the word "tunnel" in labels becomes "connection").
+- SD-WAN: the existing catalog SD-WAN price per site.
+- Egress for the four sites: the public rate (`$0.09`) on their modelled volume, labelled modelled. These are the only new figures, and each is listed in the plan with how it is derived.
+- Recommended: one site-set move per tunnel kind ("Move 2 SD-WAN sites to AVPN to Cloud", "Move 2 IPsec sites to AVPN to Cloud"), same machinery as today's ipsec move. Connect type asked for: AVPN to Cloud.
 
-### Govern (naas-govern.js, naas-data.js)
-- A tunnel site breaks "No direct internet path" and counts toward "PCI on public paths" when its workloads carry PCI, exactly as a non-AT&T site does today (naas-govern.js:114 asks `onCore`, not `onAtt`).
-- The finding words name the tunnel: "reaches the cloud over an SD-WAN tunnel on the internet" / "over an IPsec tunnel on the internet".
+**Govern** (naas-govern.js)
+- A tunnel site breaks "No direct internet path" and counts toward "PCI on public paths" where its workloads carry PCI. The finding names the tunnel: "reaches Azure westeurope over an IPsec tunnel on the internet".
 
-### Connect types (naas-connect-flow.js)
-- AVPN to Cloud fits `private` AVPN sites (shipped).
-- Internet to Cloud fits IPsec-reach sites as well as public regions.
-- Site to Cloud (SD-WAN, coming soon) counts SD-WAN-reach sites.
+**Connect types** (naas-connect-flow.js)
+- AVPN to Cloud: AVPN sites (shipped).
+- Internet to Cloud: IPsec-tunnel sites and public regions.
+- Site to Cloud (coming soon): SD-WAN-tunnel sites.
 
-## What moves in the data
+## Hand-written figures that move (Growing)
 
-- **partial:** 4 ABF sites → sdwan, 3 ADI sites → ipsec (all `priv: true` today; `priv` stays as stored, `reachOf` decides the path). Backup ABF/ADI on ASE/AVPN sites stay private.
-- **small:** Dallas HQ (ABF) → sdwan, Houston (ADI) → ipsec. Small's flow map gains tunnel mids beside Internet.
-- **mature:** Austin (ABF) → sdwan, Singapore DC (ADI) → ipsec. SD-WAN over AVPN stays private.
-- **trust:** SD-WAN East/Central (`priv: false`) → sdwan; SD-WAN West (`priv: true`) → sdwan unless it states AVPN. Mobility stays as is.
-- **empty:** nothing.
+Recomputed from the model after the change, never edited by eye; the plan lists each with its before and after:
+- `privatePct` 40, `savedMo`, `observedPct`, `fabricAttachPct`.
+- Findings `ipsec` and `ipsecegress` ("5 IPsec sites", $8,600 bucket): they stay about the five non-AT&T branches. A new finding covers the four AT&T-access tunnel sites, so the old figures stay true.
+- Connect header "5 of 7 regions still ride the public internet": regions don't change, so it holds.
+- FinOps audit (cost.mjs + check.py) re-run; every Cost page still adds up.
 
-Pinned counts that move (update with a comment saying why, never loosen): classify.test.mjs:33-36, segments.test.mjs:89-110, site-services.test.mjs:38-66 (Singapore no longer meets Core), segment-model.test.mjs:55, sankey-conserves.test.mjs:94 (Small's mids), discover-drill-r2, cost-verdict:245, cost-third-read:91-97, moves.test.mjs:59, govern-drill:107,134.
+## Fit the fold
+
+The tunnel wires reuse the existing row slots: a tunnel site sits in its region card's row like any other. The wire skips columns instead of adding things. The only new things are two right-hand Access items (SD-WAN hub, VPN gateway) in the existing column, and they fold like the rest. `scripts/fold.mjs`: 0 FAIL, all pages × 5 estates × light/dark.
 
 ## Out of scope
-- NetBond Advanced and Cloud_Designer (Micah: storefront only).
-- New pricing sources. SASE PoPs as overlay ends.
-- A UI to set a site's reach; the override is data only.
+
+NetBond Advanced and Cloud_Designer. Re-marking sites in other estates. A UI to set a tunnel. SASE.
 
 ## Done means
-- `npm test` green, with every moved pin explained in its test.
-- `scripts/fold.mjs` 0 FAIL (all pages × 5 estates × light/dark, no scroll).
-- Flow map adds up on all five estates.
-- Headless screenshots: Connect picture on Growing and Small showing tunnel wires to the VPN gateways; Traffic with SD-WAN and IPsec mids; Recommended's tunnel move; Govern's tunnel finding.
-- Deployed to main, live file checked.
+
+- `npm test` green; every moved pin carries a comment saying why.
+- fold.mjs 0 FAIL; flow map adds up on all five estates; FinOps audit clean.
+- Headless screenshots on Growing: Connect picture with both tunnel wires, Traffic with both tunnel mids, a tunnel site's path in Observe, Recommended's two moves, Govern's tunnel finding.
+- Deployed to main; live file checked.
+
+## Why v1 was rejected
+
+It defaulted every Business Fiber site to SD-WAN and every Dedicated Internet site to IPsec, with no evidence. That moved Small and Mature wholesale and put SD-WAN tunnels on cloud VPN gateways, which is wrong. It also kept `priv: true` on tunnel sites beside a new field that could disagree with it, and left out the hand-written figures it would falsify.
