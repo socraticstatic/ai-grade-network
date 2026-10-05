@@ -4924,7 +4924,12 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   const costDoor = (m) => go('s3', { layer: 'cloud', tab: 'cost', costPanel: m.kind === 'sites' ? 'bucket' : m.kind === 'region' ? 'money' : 'legs' });
   // The latency figure opens the path it reports: Traffic > Paths, that region's row pinned and picked. A site set's opens the sites.
   const perfDoor = (m) => (!m.today.msRegion ? siteDoor(m) : go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', obPanel: 'paths', pathPin: '|' + m.today.msRegion, pathSel: '|' + m.today.msRegion, pathsPage: 0 }));
-  const cell = (x, go2) => ({ ...x, ink: MOVE_TONE[x.tone] || 'var(--text-heading)', dink: MOVE_TONE[x.dtone || x.tone] || 'var(--text-light)', hasDelta: !!x.delta, delta: x.delta || '', go: go2 || (() => {}) });
+  // Green only on the saving itself (Micah, 2026-10-05: "too much green"): a good value reads in heading ink, a good delta
+  // in light ink, and the money delta alone keeps the success ink. Risk, SLO and down keep their inks.
+  const cell = (x, go2, money) => { const good = (tn) => tn === 'good' || tn === 'same';
+    return { ...x, ink: good(x.tone) ? 'var(--text-heading)' : MOVE_TONE[x.tone] || 'var(--text-heading)',
+      dink: (x.dtone || x.tone) === 'good' ? (money ? 'var(--success)' : 'var(--text-light)') : good(x.dtone || x.tone) ? 'var(--text-light)' : MOVE_TONE[x.dtone || x.tone] || 'var(--text-light)',
+      hasDelta: !!x.delta, delta: x.delta || '', go: go2 || (() => {}) }; };
   const all = model.map(m => {
     const pickI = tierOfMove(m), on = !!sel[m.key];
     const pick = (i) => () => set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: i }), moveSel: keep('moveSel', { ...sel, [m.key]: true }) });
@@ -4934,7 +4939,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
           aria: `${t.intro} Security: ${t.sec.value}${t.sec.delta ? `, ${t.sec.delta}` : ''}. Performance: ${t.perf.value}${t.perf.delta ? `, ${t.perf.delta}` : ''}. Cost: ${t.cost.value}${t.cost.delta ? `, ${t.cost.delta}` : ''}.`,
           title: `${t.intro} ${t.fit}. ${t.price}. Performance: ${t.perfTitle}. Cost: ${t.costTitle}.`,
           border: tOn ? 'var(--cta)' : 'var(--border-secondary)', bg: tOn ? 'var(--bg-accent)' : 'transparent', wordInk: t.rec ? 'var(--link)' : 'var(--text-light)', strip: M.tierStrip(t),
-          sec: cell(t.sec), perf: cell(t.perf), cost: cell(t.cost) }; });
+          sec: cell(t.sec), perf: cell(t.perf), cost: cell(t.cost, null, true) }; });
     return { ...m, rankF: String(m.rank), sel: on, check: on ? '✓' : '', checkBg: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)',
       kindIcon: m.kind === 'sites' ? 'large-building' : 'cloud', strip: M.stripOf(m.today.path),
       selLabel: `${on ? 'Remove' : 'Add'} move ${m.rank}, ${m.title}, ${on ? 'from' : 'to'} the order`,

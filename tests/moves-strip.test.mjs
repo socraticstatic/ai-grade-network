@@ -41,5 +41,5 @@ test('the markup draws the strip in Today and in each tier, on the row the label
   assert.match(HTML, /<span class="ps xs" aria-label="\{\{ mv\.pick\.tier \}\}: the path"/);
   assert.match(HTML, /<div class="ps sm" aria-label="Today's path"/);
   assert.match(HTML, /<span class="ps sm" aria-label="\{\{ tr\.tier \}\}: the path"/);
-  assert.equal((HTML.match(/grid-template-rows:16px 18px 34px 20px 20px 20px/g) || []).length, 3, 'the labels, Today and the tiers share one row plan');
+  assert.equal((HTML.match(/grid-template-rows:18px 20px 40px 22px 22px 22px/g) || []).length, 3, 'the labels, Today and the tiers share one row plan');
 });
