@@ -954,7 +954,8 @@ export function vals(c) {
   const floorVerdict0 = isEmpty ? `${est.name} has no active connections. AT&T already sees 41 metros with on-ramps and 12 clouds you could reach.` : isMature ? `${est.name}: ${est.privatePct}% of ${est.workloads.toLocaleString('en-US')} workloads reach AT&T privately. ${est.findings.length} things left to close.` : `${est.name}: ${est.privatePct}% of ${est.workloads.toLocaleString('en-US')} workloads reach AT&T privately. ${fmt(totalSave)}/mo in savings identified.`;
 
   const floorVerdict = isEmpty ? '0 connections · 41 metros · 12 clouds reachable' : `${est.privatePct}% of ${est.workloads.toLocaleString('en-US')} workloads private · ${est.findings.length} to close`;
-  const showPending = s.submitted && !s.pendingDismissed && (s.screen === 's2' || s.screen === 's6' || (s.screen === 's3' && !!s.landed));
+  // Recommended carries the task's phases on its own rows (2026-10-05), so the pending banner stays off that page.
+  const showPending = s.submitted && !s.pendingDismissed && (s.screen === 's2' || s.screen === 's6' || (s.screen === 's3' && !!s.landed && !(s.tab === 'connect' && cnPageOf(s) === 'options')));
   const landedAll = !!s.landed;
   const pendingStages = D.LIFECYCLE.map((l, i) => landedAll ? ({ key: l, label: l, fill: 'var(--success)', ring: 'var(--success)', color: 'var(--text-heading)', line: 'var(--success)' }) : ({ key: l, label: l, fill: i < 2 ? 'var(--success)' : i === 2 ? 'var(--cta)' : 'var(--bg-base)', ring: i < 2 ? 'var(--success)' : i === 2 ? 'var(--cta)' : 'var(--border-primary)', color: i <= 2 ? 'var(--text-heading)' : 'var(--text-disabled)', line: i < 2 ? 'var(--success)' : 'var(--border-secondary)' }));
 
@@ -4201,8 +4202,12 @@ function wizardVals(s, est, set, c) {
             engHas: !!r, engVerdict: r ? r.verdict : '', engVerdictInk: r && r.verdict === 'Denied' ? 'var(--error)' : 'var(--success)', engVerdictCls: r && r.verdict === 'Denied' ? 'deny' : 'allow', engVerdictIcon: r && r.verdict === 'Denied' ? 'close-circle' : 'check-circle', engDecided: r ? r.decidedBy : '',
             engLayers: r ? r.layers.map(l => ({ ...l, icon: LAYER_ICON[l.key], state: l.by ? 'set' : 'any', byLine: l.by ? `by ${l.by}` : 'no policy sets it' })) : [],
             engSheet: sheet, engSheetN: sheet.reduce((a, x) => a + x.rules.filter(y => y.on).length, 0),
+            // The sheet in two columns, as the composer lays it out: Deny and Manipulations, then Allow and Advanced (2026-10-05, "too compressed").
+            engSheetCols: [['deny', 'manip'], ['allow', 'advanced']].map((ks, i) => ({ key: 'sc' + i, secs: ks.map(k => sheet.find(x => x.key === k)).filter(Boolean) })),
+            engIvLines: iv.slice(0, 2).map(cn => { const n = (st) => cn.rows.filter(x => x.status === st).length; const parts = [['In sync', 'in sync'], ['Drift', 'drift'], ['Not pushed', 'not pushed']].filter(([k]) => n(k)).map(([k, w]) => `${n(k)} ${w}`);
+              return { key: cn.key, text: `NetBond to ${cn.label}: ${parts.join(' · ')}`, ink: n('Drift') ? 'var(--error)' : n('Not pushed') ? 'var(--warning)' : 'var(--success)' }; }),
             // The trace as NetBond's Connection > Policies list: the engine's precedence square, the name, the verbs, Won or Overridden.
-            engTrace: hit.slice(0, 5).map((t, i) => ({ key: 'tr' + i, n: i + 1, prio: prioE.get(t.name) || i + 1, icon: assetIcon((polByName.get(t.name) || {}).match || ''), badges: verbBadges(polByName.get(t.name) || {}).filter(b => b.cls).slice(0, 2), name: t.name, result: t.result, short: t.result === 'Won' ? 'Won' : 'Overridden', ink: t.result === 'Won' ? 'var(--success)' : 'var(--text-light)' })),
+            engTrace: hit.slice(0, 4).map((t, i) => ({ key: 'tr' + i, n: i + 1, prio: prioE.get(t.name) || i + 1, icon: assetIcon((polByName.get(t.name) || {}).match || ''), badges: verbBadges(polByName.get(t.name) || {}).filter(b => b.cls).slice(0, 2), name: t.name, result: t.result, short: t.result === 'Won' ? 'Won' : 'Overridden', ink: t.result === 'Won' ? 'var(--success)' : 'var(--text-light)' })),
             engTraceMore: r ? `${r.trace.length - hit.length} more ${r.trace.length - hit.length === 1 ? 'policy does' : 'policies do'} not match this flow` : '',
             engShadow: sh.slice(0, 4).map(x => ({ key: x.name, text: `${x.name}: never decides; ${x.by} always wins first` })), hasEngShadow: sh.length > 0, noEngShadow: !sh.length,
             engIv: iv.slice(0, 2).map(c => ({ key: c.key, label: c.label, rows: c.rows.slice(0, 3).map(x => ({ ...x, ink: INK[x.status] || 'var(--text-body)' })) })), hasEngIv: iv.length > 0, noEngIv: !iv.length }; })(),
@@ -4379,6 +4384,7 @@ function flowVals(s, set, est, c) {
   const place = () => {
     if (!isLast || CF.blockOf(key, f)) return;
     const rec = CF.placedRecord(f, est, SCH.hhmm(SCH.nowOf(s)), orders.length + 1);
+    const cpz = s.compose || {}; rec.moveKeys = cpz.moveKeys || []; rec.moveTitles = cpz.moveTitles || {};
     const all = [...orders, rec];
     c.setState({ orders: all, ordersPage: 0, order: { ...ord, lines: ord.lines.map(l => ({ ...l, term: CF.termTitle(f.term) })) }, submitted: true, pendingDismissed: false, compose: BLANK_COMPOSE(), screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', waySet: null, wipList: null, wipListPage: 0, cfArea: null });
     scrollTop(); syncHash('s3', 'cloud', 'connect');
@@ -4425,7 +4431,9 @@ function flowVals(s, set, est, c) {
   const nowMs = SCH.nowOf(s), shown = orders.filter(o => o.kind !== 'bandwidth' || o.est === est.id);
   const ordRow = (o) => { if (o.kind === 'bandwidth') { const live = BW.stageOf(o, nowMs) === 'live';
       return { ...o, key: o.id, stage: live ? 'Live' : o.stage, atLine: `${live ? 'Took' : 'Takes'} effect ${o.effectiveF}`, sub: `Placed at ${o.at} · approver ${o.approver}`, stageInk: live ? 'var(--success)' : 'var(--cta)' }; }
-    return { ...o, key: o.id, stage: stageOf(o), atLine: `Placed at ${o.at}`, sub: [o.term, o.policy].filter(Boolean).join(' · '), stageInk: stageOf(o) === o.stage ? 'var(--cta)' : 'var(--success)' }; };
+    return { ...o, key: o.id, stage: stageOf(o), atLine: `Placed at ${o.at}`, sub: [o.term, o.policy].filter(Boolean).join(' · '), stageInk: stageOf(o) === o.stage ? 'var(--cta)' : 'var(--success)',
+      // Go live (2026-10-05, task rows): the demo's delivery, on the order itself, where the task's Provision phase points. It validates the region the order reaches; the task's Live and Insight phases light from it.
+      canGoLive: !!o.region && !!o.fromFlow && stageOf(o) === o.stage, goLive: () => set({ landed: o.region, events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `${o.region} validated · live. Hosted VPC on AT&T; first flow logs received; coverage up by one region.` }] }) }; };
   const opg = pageRows(shown.slice().reverse().map(ordRow), 6, s.ordersPage, (n) => set({ ordersPage: n }));
   const note = f.note;
   return {
@@ -4877,11 +4885,30 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   const step = { label: 'Add a source', go: go('s1', { discoverView: 'sources' }) };
   // One move open at a time (Micah, 2026-10-05: "way too crowded"): the first on the page unless a row was opened or closed;
   // paging opens the first of the new page. The open row draws the tiers; a collapsed one reads the picked tier.
-  const shell = (all) => { const pg = pageRows(all, MOVES_PAGE, s.movePage, (n) => set({ movePage: n, moveOpen: null }));
+  // Task rows (Micah, 2026-10-05: "we need this to be task oriented", "on connect then the flow, provisioning phase, then
+  // insight"): a move that has an order shows its phase in place of Connect: Ordered, Provisioning, Live, Insight; each
+  // phase is a door (the order, the connection, the path's insight). A move whose region has landed leaves the ranked
+  // list and stays as a done row, so the task closes where it was started.
+  const ordersAll = (s.orders || []).filter(o => o && o.kind !== 'bandwidth');
+  // An order that remembers its moves belongs to those alone (a landed region spawns a second-path move the order must not claim); an older order, by its region.
+  const orderOf = (m) => ordersAll.find(o => ((o.moveKeys || []).length ? o.moveKeys.includes(m.key) : !!(o.region && m.regions && m.regions.includes(o.region))));
+  const PHASES = [['ordered', 'Ordered', 'shopping-bag'], ['provisioning', 'Provision', 'wrench'], ['live', 'Live', 'verified'], ['insight', 'Insight', 'lightbulb']];
+  const phasesOf = (o, title, region) => { const landed = !!(s.landed && o.region && o.region === s.landed);
+    const state = (i) => (landed ? (i < 3 ? 'ok' : 'set') : i === 0 ? 'ok' : i === 1 ? 'set' : 'any');
+    const doors = [() => set({ cnPage: 'orders' }), () => set({ cnPage: 'orders' }), landed ? () => set({ cnPage: 'picture' }) : null,
+      landed && region ? go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', obPanel: 'paths', pathPin: '|' + region, pathSel: '|' + region, pathsPage: 0 }) : null];
+    const words = landed ? ['placed', 'done', 'validated, live', 'first flow logs are in'] : ['placed', 'in progress', 'not yet', 'not yet'];
+    return { landed, word: landed ? 'Live' : o.stage, phases: PHASES.map(([key, label, icon], i) => ({ key, label, icon, state: state(i), title: `${label}: ${words[i]}`, hasDoor: !!doors[i], go: doors[i] || (() => {}) })) }; };
+  const shell = (all) => {
+    const liveKeys = new Set(all.map(m => m.key));
+    const done = ordersAll.filter(o => (o.moveKeys || []).some(k => !liveKeys.has(k))).map(o => { const key = (o.moveKeys || []).find(k => !liveKeys.has(k)); const ph = phasesOf(o, o.title, o.region);
+      return { key: 'done:' + o.id, title: (o.moveTitles || {})[key] || o.title, what: o.what, monthly: o.monthly, mark: M.pathMark('netbond'), word: ph.landed ? 'On the AT&T network' : 'Ordered', stageWord: ph.word, ...ph }; });
+    const size = Math.max(1, MOVES_PAGE - done.length);
+    const pg = pageRows(all, size, s.movePage, (n) => set({ movePage: n, moveOpen: null }));
     const picked = all.filter(m => m.sel);
     const openKey = s.moveOpen === 'none' ? null : pg.rows.some(m => m.key === s.moveOpen) ? s.moveOpen : (pg.rows[0] || {}).key;
     const rows = pg.rows.map(m => { const open = m.key === openKey; return { ...m, open, chevron: open ? 'chevron-down' : 'chevron-right', openLabel: open ? `Hide the tiers for ${m.title}` : `Show the tiers for ${m.title}`, toggleOpen: () => set({ moveOpen: open ? 'none' : m.key }) }; });
-    return { moveList: all, moves: rows, movesPager: pg.pager, movesPageSize: MOVES_PAGE, hasMoves: all.length > 0, noMoves: !all.length,
+    return { moveList: all, moves: rows, movesPager: pg.pager, movesPageSize: size, hasMoves: all.length > 0 || done.length > 0, noMoves: !all.length && !done.length, doneMoves: done, hasDone: done.length > 0,
       movesHead: 'What to connect next, by impact',
       movesSub: all.length ? `${all.length} ${all.length === 1 ? 'move' : 'moves'}, ranked by what the Recommended tier saves a month, then by the risk it closes. Today is measured; what you'd get is modelled at AT&T rates and list prices.` : '',
       movesEmpty: empty ? 'Nothing is discovered yet, so there is nothing to connect. Discovery reads a cloud account and lists what it can move.' : 'Everything discovered is on the AT&T network. Nothing to move.',
@@ -4916,7 +4943,8 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
     go('s4', { ...newOrder({ ...prefillCompose(est), source: siteRows.length && !dcOnly ? ['Sites'] : ['Data center'], dest: ['Clouds'], metros, regionTab: metros.length ? REGION_OF_METRO(metros[0]) : 'US East', control,
       resiliency: sets.tier === 'maximum' ? 'Maximum' : sets.tier === 'geodiversity' ? 'Geodiversity' : 'Standard',
       prefilled: false, prefillRegion: regs.length ? `${regs[0].cloud} ${regs[0].region}` : null, prefillWl: regs.reduce((a, r) => a + r.wl, 0),
-      prefillSets: sets, sourceLabel: 'Options', noteStep: 0, note }) })();
+      // The compose remembers the moves it serves, so Recommended can show each one's phase (task rows, 2026-10-05).
+      prefillSets: sets, moveKeys: picks.map(m => m.key), moveTitles: Object.fromEntries(picks.map(m => [m.key, m.title])), sourceLabel: 'Options', noteStep: 0, note }) })();
   }
   const sitesOf = (m) => (est.sites || []).filter(x => m.sites.includes(x.name));
   // Every count lands on its set: sites on the Connections map filtered to them, regions and workloads in Your clouds.
@@ -4945,7 +4973,8 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
       kindIcon: m.kind === 'sites' ? 'large-building' : 'cloud', strip: M.stripOf(m.today.path), mark: M.pathMark(m.today.path),
       selLabel: `${on ? 'Remove' : 'Add'} move ${m.rank}, ${m.title}, ${on ? 'from' : 'to'} the order`,
       toggle: () => set({ moveSel: keep('moveSel', { ...sel, [m.key]: !on }) }),
-      attach: () => composeMoves([m]), compare: () => set({ cnPage: 'ways' }),
+      ...(() => { const o = orderOf(m); if (!o) return { hasTask: false, canConnect: true, phases: [], taskWord: '' }; const ph = phasesOf(o, m.title, m.regions[0]); return { hasTask: true, canConnect: false, phases: ph.phases, taskWord: ph.word, taskLanded: ph.landed }; })(),
+      attach: () => composeMoves([m]), compare: () => set({ cnPage: 'ways' }), connectTitle: `Start one order: ${m.title.replace(/^\w/, ch => ch.toLowerCase())}, with ${TIERS[tierOfMove(m)]}`,
       // A count is a glyph and a number (2026-10-05, "way too text heavy"); its words stay in the title and the aria label.
       counts: m.counts.map(n => ({ ...n, icon: ({ sites: 'large-building', regions: 'cloud', workloads: 'apps' })[n.kind] || 'apps', n: String(n.label).split(' ')[0], title: n.kind === 'sites' ? `Show these ${n.label} on the map` : `Open ${n.label} in Your clouds`, go: n.kind === 'sites' ? siteDoor(m) : cloudDoor(m) })),
       // Today reads once, left of the tiers; every figure in it is a door to what it counts.

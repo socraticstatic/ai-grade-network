@@ -420,13 +420,22 @@ test('every container the markup opens, it closes', () => {
   // the per-row Attach left the header line (div -1, button -1); counts are a glyph and a number (span +2); the attribute
   // words became glyphs (span +0 net); each card head carries its mark (span +4); Attach and Compare carry glyphs in the
   // footer (button +1, span +2). Recounted, every tag balanced: div 1262 -> 1261, span 1172 -> 1177.
+  // Connect on the right of every line (2026-10-05, Micah: "still too crowded"): the tick (button -1, span -1) and Attach
+  // selected (sc-if -1, button -1) left, the footer's Attach left (button -1, span -1), Connect came (button +1).
+  // Recounted, every tag balanced: span 1177 -> 1175, sc-if 587 -> 586, button 489 -> 487.
+  // Task rows and the engine's three panels (2026-10-05, Micah: "task oriented", "too compressed"): Connect sits under
+  // sc-if mv.canConnect and the phase strip under sc-if mv.hasTask (sc-if +2, span +4, sc-for +1, button +1); done rows
+  // after the list (div +3, span +8, sc-for +1, button +1); the engine's shadowed and intended panels fold into lines in
+  // the trace panel (div -1, span +4 net, sc-if +0 net) and the sheet loops its two columns (sc-for +1, div +1).
+  // Recounted, every tag balanced: div 1261 -> 1263, span 1175 -> 1193, sc-if 586 -> 589, sc-for 321 -> 324, button 487 -> 489.
   const pairs = [
-    ['div', /<div\b/g, /<\/div>/g, 1261],
-    ['span', /<span\b/g, /<\/span>/g, 1177],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 587],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 321],
+  // Go live on the order's row (2026-10-05): sc-if +1, button +1, span +1: span 1193 -> 1194, sc-if 589 -> 590, button 489 -> 490.
+    ['div', /<div\b/g, /<\/div>/g, 1263],
+    ['span', /<span\b/g, /<\/span>/g, 1194],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 590],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 324],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 489],
+    ['button', /<button\b/g, /<\/button>/g, 490],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

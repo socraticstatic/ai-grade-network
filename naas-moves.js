@@ -290,7 +290,8 @@ function regionMoves(est, ctx) {
   const eg = ctx.egress;
   // A site already on AT&T access whose cloud leg is public belongs to the public
   // region it sends the most to (P.gbps), so one move names it and no other does.
-  const homeOf = (x) => pubRs.reduce((best, r) => (P.gbps(est, x, r) > P.gbps(est, x, best) ? r : best), pubRs[0]).region;
+  // No public region left (the last one landed, 2026-10-05): a site has no home here and no move names it.
+  const homeOf = (x) => (pubRs.length ? pubRs.reduce((best, r) => (P.gbps(est, x, r) > P.gbps(est, x, best) ? r : best), pubRs[0]).region : null);
   const viaAll = (est.sites || []).filter(x => !x.priv && onAtt(x)).map(x => ({ x, home: homeOf(x) }));
   // An internet arc between two regions is told once, by the first move that touches it.
   const arcsTold = new Set();

@@ -45,5 +45,5 @@ test('the markup draws the strip in Today and in each tier, on the row the label
   assert.match(HTML, /class="ic-tile s28" style="background:\{\{ mv\.pick\.mark\.bg \}\}/);
   assert.match(HTML, /<div class="ps" aria-label="Today's path"[^>]*><sc-for list="\{\{ mv\.strip \}\}"[^>]*><span[^>]*><i><span class="ic s16"/);
   assert.match(HTML, /<span class="ps" aria-label="\{\{ tr\.tier \}\}: the path"[^>]*><sc-for list="\{\{ tr\.strip \}\}"[^>]*><span[^>]*><i><span class="ic s16"[^>]*><\/span><\/i><small>\{\{ tn\.short \}\}<\/small>/);
-  assert.equal((HTML.match(/grid-template-rows:36px 54px 22px 22px 22px/g) || []).length, 3, 'the glyph column, Today and the tiers share one row plan');
+  assert.equal((HTML.match(/grid-template-rows:38px 56px 24px 24px 24px/g) || []).length, 3, 'the glyph column, Today and the tiers share one row plan');
 });
