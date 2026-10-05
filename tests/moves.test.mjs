@@ -344,7 +344,9 @@ test('the markup draws Recommended as one list of moves with three tier columns'
   assert.match(blk, /<sc-for list="\{\{ moves \}\}"/);
   assert.match(blk, /<sc-for list="\{\{ mv\.tiers \}\}"/);
   assert.match(blk, /<sc-for list="\{\{ mv\.counts \}\}"/);
-  assert.match(blk, /disabled="\{\{ movesAttachOff \}\}"/);
+  // Connect on the right of every line (Micah, 2026-10-05: "we need a 'connect' on the right - it's still too crowded"); the tick column and Attach selected left the markup.
+  assert.match(blk, /<button onClick="\{\{ mv\.attach \}\}"[^>]*>Connect<\/button>/);
+  assert.doesNotMatch(blk, /movesAttachOff|role="checkbox"/);
   assert.doesNotMatch(blk, /candGroups/);
   // Nothing loops inside an svg, a table or a select (the dc-runtime foster-parents it).
   assert.doesNotMatch(blk, /<(svg|table|select)\b/);
