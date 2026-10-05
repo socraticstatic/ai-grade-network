@@ -6,7 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 // Layout and derivation helpers for the NaaS storefront. Pure functions, no DOM.
-import { siteChain, cloudEdgeThing, cloudAccessThing, coreThing, accessThing, entersAtt } from './naas-things.js';
+import { siteChain, cloudEdgeThing, cloudAccessThing, coreThing, accessThing, entersAtt, tunnelEdgeThing, tunnelEndThing } from './naas-things.js';
 import { servicesOf, stateOf, SERVICE, buOf, BU_DEFAULTS } from './naas-sites.js';
 export const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
 export const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
@@ -106,8 +106,9 @@ export function rollupLine(sites) {
 /** The distinct lines a group of sites draws: one per access thing, and one for the internet. */
 export function linesOf(sites, perService = true) {
   const seen = {};
-  (perService ? sites.flatMap(serviceSites) : sites).forEach(site => { const t = accessThing(site); const k = t ? t.id + (site.core === 'third' ? '>third' : '') : 'public'; if (!seen[k]) seen[k] = site; });
-  return Object.entries(seen).map(([k, rep]) => ({ key: k, priv: !!rep.priv, access: rep.access, accessSla: rep.accessSla, carrier: rep.carrier, core: rep.core, via: rep.via, viaRamp: rep.viaRamp, xc: rep.xc }));
+  (perService ? sites.flatMap(serviceSites) : sites).forEach(site => { const t = accessThing(site); const tun = t && tunnelOf(site); const k = t ? t.id + (site.core === 'third' ? '>third' : '') + (tun ? `>${tun.kind}>${tun.name}` : '') : 'public'; if (!seen[k]) seen[k] = site; });
+  // A stated tunnel is its own line: Business Fiber on SD-WAN is not Business Fiber to NetBond (2026-10-05).
+  return Object.entries(seen).map(([k, rep]) => ({ key: k, priv: !!rep.priv, access: rep.access, accessSla: rep.accessSla, carrier: rep.carrier, core: rep.core, via: rep.via, viaRamp: rep.viaRamp, xc: rep.xc, tunnel: rep.tunnel, tunnelTo: rep.tunnelTo }));
 }
 /**
  * The filter row over the picture (2026-09-28): service type, location, reach.
@@ -409,7 +410,15 @@ export function heroLayout(est, opts) {
     const site = e.site, y = e.y1, who = site.name, label = site.label || site.name;
     const chain = siteChain(site);
     if (!chain) return;
-    if (site.core === 'third') {
+    // A stated tunnel (2026-10-05) rides AT&T's own internet through the core, as ADI
+    // does, then leaves for its one cloud over the tunnel, past NetBond and the on-ramp.
+    const tun = site.core !== 'third' ? tunnelOf(site) : null;
+    const tunTarget = tun && (out.regions.find(r => r.cloud === tun.cloud && r.region === tun.region) || out.regions.find(r => r.card && r.cloud === tun.cloud && r.regions.includes(tun.region)));
+    if (tunTarget) {
+      const full = [...chain, tunnelEdgeThing(tun.kind), tunnelEndThing(tun.kind, tun.cloud)];
+      const ys = [y, y, (y + tunTarget.cy) / 2, tunTarget.cy, tunTarget.cy];
+      drafts.push({ who, label, side: 'path', region: site.region, e, target: tunTarget, tunnel: tun.kind, xc: site.xc, nodes: full.map((t, i) => want(t, i, ys[i])) });
+    } else if (site.core === 'third') {
       // A provider card stands in for every region it holds.
       const target = out.regions.find(r => r.region === site.via) || out.regions.find(r => r.card && r.regions.includes(site.via));
       if (!target) return;
@@ -512,7 +521,13 @@ export function heroLayout(est, opts) {
     if (d.side === 'region') d.e.y1 = yOf(ns[last], d) + fan;
     // Folded, a third-party core keeps its own row to the band's edge, so it
     // reaches its cloud on its own wire rather than stopping short of the AT&T one.
-    if (d.side === 'path' && (folded || !out.edges.some(x => x.kind === 'egress' && x.priv && x.region && x.region.region === d.target.region)))
+    // A tunnel leaves the band from what it ends on, on its own public wire to its cloud,
+    // one wire per endpoint however many sites share it (2026-10-05).
+    if (d.tunnel) {
+      const id = 'tun:' + ns[last].id;
+      // It lands just under its cloud's private wire, so the two read apart even folded, where both leave from the core's row.
+      if (!out.edges.some(x => x.id === id)) out.edges.push({ id, kind: 'egress', priv: false, tunnel: d.tunnel, x1: bandX + bandW, y1: yOf(ns[last], d) + (folded ? 10 : 0), x2: RX, y2: d.target.cy + 10, region: d.target, dur: 3 });
+    } else if (d.side === 'path' && (folded || !out.edges.some(x => x.kind === 'egress' && x.priv && x.region && x.region.region === d.target.region)))
       out.edges.push({ id: 'via' + d.who, kind: 'egress', priv: true, x1: bandX + bandW, y1: yOf(ns[last], d), x2: RX, y2: d.target.cy, region: d.target, dur: 3 });
     // A customer's own cross-connect is a cable on a handoff, not a thing: a
     // site's lands between its circuit and the AT&T edge, a region's between
@@ -521,6 +536,11 @@ export function heroLayout(est, opts) {
       const [p, q] = ns;
       out.xconnects.push({ key: 'xc:' + d.who, ...(d.side === 'region' ? { region: d.region, cloud: d.e.region.cloud, ramp: d.e.region.ramp } : { site: d.who }), ...d.xc, x: q.x, y: Math.round((yOf(p, d) + yOf(q, d)) / 2) });
     }
+  });
+  // A tunnel's wire lands on the side of its cloud's private wire it leaves from, so the two never cross.
+  out.edges.filter(x => x.tunnel).forEach(t => {
+    const p = out.edges.find(x => x.kind === 'egress' && x.priv && !x.tunnel && x.region && x.region.region === t.region.region);
+    t.y2 = t.region.cy + (p && t.y1 < p.y1 ? -10 : 10);
   });
   return out;
 }

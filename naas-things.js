@@ -92,5 +92,16 @@ export function cloudAccessThing(region) {
   return { ...T('ca:' + slug(c), t ? t[0] : c, 'cloud', t ? t[1] : `${c}'s own network`), cloud: c };
 }
 
+/**
+ * A stated tunnel's two things on the cloud side (2026-10-05): the tunnel itself,
+ * over the public internet where no one answers for it, then what it ends on in
+ * the cloud. IPsec ends on the cloud's VPN gateway; SD-WAN on the SD-WAN
+ * appliance in the cloud (an Azure Virtual WAN hub, a transit VPC on AWS).
+ * Neither touches NetBond or an on-ramp.
+ */
+export const tunnelEdgeThing = (kind) => T('ce:tunnel-' + slug(kind), `${kind} tunnel`, 'third', `${kind} tunnel over the public internet, past NetBond: no one answers for this leg`);
+export const tunnelEndThing = (kind, cloud) => ({ ...T(`ca:${slug(cloud)}-${kind === 'SD-WAN' ? 'sdwan' : 'vpn'}`, `${cloud} ${kind === 'SD-WAN' ? 'SD-WAN hub' : 'VPN gateway'}`, 'cloud',
+  kind === 'SD-WAN' ? `The SD-WAN appliance in ${cloud} the tunnel ends on` : `${cloud}'s VPN gateway, where the IPsec tunnel ends`), cloud });
+
 /** The chain of things a site's traffic takes to Core. */
 export const siteChain = (site) => (entersAtt(site) ? [accessThing(site), edgeThing(site), coreThing(site)] : null);

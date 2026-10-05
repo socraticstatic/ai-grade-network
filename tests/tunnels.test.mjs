@@ -46,3 +46,29 @@ test('the flow map carries the tunnels as their own middles, and every middle ad
   assert.ok(mids.includes('IPsec tunnel'), mids.join(', '));
   for (const n of v.mapNodes.filter(x => x.side === 'm' && /tunnel/.test(x.label))) assert.ok(!/undefined|NaN/.test(n.subLabel), n.subLabel);
 });
+
+test('the Connect picture runs each tunnel past NetBond to what it ends on in its cloud', async () => {
+  const { heroLayout } = await import('../naas-logic.js');
+  for (const folded of [false, true]) {
+    const L2 = heroLayout(D.ESTATES.partial, { folded });
+    const name = (id) => L2.nodes.find(n => n.id === id).label;
+    const routes = L2.routes.map(r => r.nodes.map(name));
+    const sd = routes.filter(r => r.includes('SD-WAN tunnel')), ip = routes.filter(r => r.includes('IPsec tunnel'));
+    assert.ok(sd.length && ip.length, `folded ${folded}: ${routes.map(r => r.join(' > ')).join(' | ')}`);
+    for (const r of sd) assert.deepEqual(r.slice(-2), ['SD-WAN tunnel', 'AWS SD-WAN hub']);
+    for (const r of ip) assert.deepEqual(r.slice(-2), ['IPsec tunnel', 'Azure VPN gateway']);
+    for (const r of [...sd, ...ip]) { assert.ok(!r.some(t => /NetBond|ExpressRoute|Direct Connect/.test(t)), r.join(' > ')); assert.ok(r.includes('AT&T backbone'), 'AT&T internet rides the core'); }
+  }
+});
+
+test('a region card draws a tunnel line apart from the same access on the private path', () => {
+  const lines = L.linesOf(D.ESTATES.partial.sites.filter(s => ['Boston office', 'Atlanta office'].includes(s.name)));
+  assert.equal(lines.filter(l => /a:abf/.test(l.key)).length, 2, lines.map(l => l.key).join(', '));
+});
+
+test('the lane outside the AT&T network still holds only what never touches AT&T', async () => {
+  const { vals } = await import('../naas-app.js');
+  const { mkC } = await import('./harness.mjs');
+  const v = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'picture' }));
+  assert.match(v.laneCount, /^5 sites · /, v.laneCount);
+});

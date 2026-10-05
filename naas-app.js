@@ -1022,7 +1022,7 @@ export function vals(c) {
     // hero
     drawer, drawerOpen, openLevel, hasDrawer: drawerOpen, noDrawer: !drawerOpen, andiFabRight: drawerOpen ? '396px' : '16px',
     fabOpen: fabDrill.length > 0, fabClosed: fabDrill.length === 0, sitesDoor, bandDoor, cloudsDoor, fabRows, fabHead, fabUp, fabTrail, hasFabMore: !!(fabHead && fabHead.more), fabMore: fabHead ? fabHead.more : '', openBandLevel: () => openLevel('fabric'), fabHeadY: L.bandY + 8, fabEmpty, fabEmptyY: L.bandY + 40, fabEmptyHead: fabInfo ? fabInfo.emptyHead : '', fabEmptyLine: fabInfo ? fabInfo.emptyLine : '', fabEmptyCta: fabInfo ? fabInfo.emptyCta : '', fabEmptyGo, bandX: L.bandX, bandW: L.bandW, bandLabelX: L.bandX, laneX: L.lane.x, laneW: L.lane.w,
-    laneFocus: !!s.laneFocus, toggleLane: () => set({ laneFocus: !s.laneFocus }), laneTitle: s.laneFocus ? 'Show everything' : 'Show only what rides outside AT&T', laneCount: (() => { const sN = est.sites.filter(x => !x.priv).reduce((a, x) => a + S.countOf(x.name), 0), rN = est.regionsList.filter(r => !r.priv).length; return [sN ? `${sN} ${sN === 1 ? 'site' : 'sites'}` : '', rN ? `${rN} ${rN === 1 ? 'region' : 'regions'}` : ''].filter(Boolean).join(' · ') + ' on the internet'; })(), laneAttach: () => { const r = est.regionsList.find(x => !x.priv); if (r) composeFor(go, r)(); else { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); } },
+    laneFocus: !!s.laneFocus, toggleLane: () => set({ laneFocus: !s.laneFocus }), laneTitle: s.laneFocus ? 'Show everything' : 'Show only what rides outside AT&T', laneCount: (() => { const sN = est.sites.filter(x => !x.priv && !(onAtt(x) && x.tunnel)).reduce((a, x) => a + S.countOf(x.name), 0), rN = est.regionsList.filter(r => !r.priv).length; return [sN ? `${sN} ${sN === 1 ? 'site' : 'sites'}` : '', rN ? `${rN} ${rN === 1 ? 'region' : 'regions'}` : ''].filter(Boolean).join(' · ') + ' on the internet'; })(), laneAttach: () => { const r = est.regionsList.find(x => !x.priv); if (r) composeFor(go, r)(); else { c.setState({ screen: 's4', ...newOrder(prefillCompose(est)) }); } },
     heroSites, heroRegions, heroClouds, heroGroups: L.groups.map(g => ({ ...g, key: 'g' + g.cloud + g.y })), heroWorkloads: [], heroEdges, heroArcs, segments: segmentsMeta, nodes: nodesMeta, pieces: piecesMeta, foldTags, routeDots, pipeOp: folded ? 1 : 0, xconnects: xconnectsMeta, ownerKey: Object.entries(OWNER).map(([k, o]) => ({ key: k, ...o })), showWorkloads: false, graphHeadFs: headUnits(L.W) + 'px', rightX: L.rightX,
     // A drilled column sits on a tinted panel.
     colTintH: L.H - 30, siteTintOp: s.drill.length ? 1 : 0, cloudTintOp: cloudPick ? 1 : 0, cloudTintX: L.rightX - 14, internetTx: L.rightX + 12, internetY: L.internet.y, internetTy: L.internet.y + 19, bandFill, bandOpen: false, toggleBand: () => set({ fabDrill: (s.fabDrill || []).length ? [] : ['fab'], picked: [] }), bandLabel: (s.fabDrill || []).length ? '‹ AT&T network' : 'AT&T network  ›', facilityRows, routePreview, hasRoute: !!routePreview, routeLabel: routePreview ? `${routePreview.a} to ${routePreview.b}: ${routePreview.ms} ms on AT&T` : 'Pick two metros to preview a route', ghost: L.ghost, regionDrilled: cloudDrill.length > 0, clearRegionDrill: () => set({ cloudDrill: [] }), drillCount: s.drill.length,
@@ -5523,7 +5523,9 @@ function answer(q, est, ob, s) {
 const SLO = 100;
 function overlayFor(e, s, est, ob, hp, R, steered, hoverKey) {
   if (s.screen !== 's3' || !e.region || e.ghost) return {};
-  const r = est.regionsList.find(x => x.region === e.region.region) || e.region;
+  const r0 = est.regionsList.find(x => x.region === e.region.region) || e.region;
+  // A tunnel's wire is the public internet whatever else its cloud has (2026-10-05).
+  const r = e.tunnel ? { ...r0, priv: false, ramp: null } : r0;
   const flows = ob.flows.filter(f => f.region === r.cloud + ' ' + r.region);
   const gbps = flows.reduce((a, f) => a + f.gbps, 0);
   const lat = r.priv ? r.fab : r.pub;

@@ -300,7 +300,8 @@ function regionMoves(est, ctx) {
   // region it sends the most to (P.gbps), so one move names it and no other does.
   // No public region left (the last one landed, 2026-10-05): a site has no home here and no move names it.
   const homeOf = (x) => (pubRs.length ? pubRs.reduce((best, r) => (P.gbps(est, x, r) > P.gbps(est, x, best) ? r : best), pubRs[0]).region : null);
-  const viaAll = (est.sites || []).filter(x => !x.priv && onAtt(x)).map(x => ({ x, home: homeOf(x) }));
+  // A stated tunnel has its own move (2026-10-05); no region move names it again.
+  const viaAll = (est.sites || []).filter(x => !x.priv && onAtt(x) && !tunnelOf(x)).map(x => ({ x, home: homeOf(x) }));
   // An internet arc between two regions is told once, by the first move that touches it.
   const arcsTold = new Set();
   const policyTags = new Set((est.policies || []).filter(p => p.state === 'enforced' && /^tag /.test(p.match || '')).map(p => p.match.slice(4).toLowerCase()));
