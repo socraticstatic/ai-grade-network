@@ -17,6 +17,7 @@ test('the first move on the page is open; the rest are collapsed and carry the p
   for (const m of v.moves) {
     assert.equal(m.pick.tier, 'Recommended', `${m.title}: the picked tier is Recommended by default`);
     assert.equal(m.pick.strip.length, 4);
+    assert.ok(m.mark.icon && m.pick.mark.icon, `${m.title}: the header line carries a mark per side`);
     assert.ok(m.pick.label && m.pick.cost.value, m.title);
     assert.ok(m.chevron, 'the row carries a chevron glyph');
     assert.equal(typeof m.toggleOpen, 'function');
@@ -55,5 +56,6 @@ test('the markup draws a header line per move and the four columns only under sc
   assert.ok(blk.indexOf('{{ mv.pick.label }}') < open, 'the header line carries the picked tier');
   assert.match(blk, /class="fw-prio sm"[^>]*>\{\{ mv\.rankF \}\}/);
   assert.match(blk, /aria-expanded="\{\{ mv\.open \}\}"/);
-  assert.match(blk, /<sc-for list="\{\{ mv\.pick\.strip \}\}"/);
+  assert.match(blk, /\{\{ mv\.pick\.mark\.icon \}\}/);
+  assert.ok(blk.indexOf('{{ mv.strip }}') > open, 'the header line carries a mark, not a strip; the strips draw in the open row');
 });

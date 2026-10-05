@@ -38,8 +38,17 @@ export function stripOf(path, opts = {}) {
     { key: 'edge', icon: opts.inspect ? 'check-shield' : 'firewall', state: pub ? 'none' : third || nat ? 'nodata' : 'set' },
     { key: 'core', icon: 'hub', state: pub ? 'risk' : third ? 'nodata' : 'set' },
     { key: 'cloud', icon: 'cloud', state: 'set' },
-  ].map(n => ({ ...n, title: `${STATION[n.key]}: ${n.key === 'edge' && opts.inspect ? 'inspected' : n.key === 'site' || n.key === 'cloud' ? 'yours' : word[n.state]}` }));
+  ].map(n => ({ ...n, short: SHORT[n.key], title: `${STATION[n.key]}: ${n.key === 'edge' && opts.inspect ? 'inspected' : n.key === 'site' || n.key === 'cloud' ? 'yours' : word[n.state]}` }));
 }
+const SHORT = { site: 'Sites', edge: 'Edge', core: 'Core', cloud: 'Cloud' };
+/** One glyph for a path, where a row has room for a mark and not a strip (2026-10-05): AT&T's hub for its network, the
+ *  shield where it inspects, a cable for a cloud's own port, the globe for the public internet, a shuffle for a tunnel over it. */
+export function pathMark(path, opts = {}) {
+  const priv = path === 'netbond' || path === 'native';
+  const icon = opts.inspect ? 'check-shield' : path === 'netbond' ? 'hub' : path === 'native' ? 'cable' : path === 'sdwan' || path === 'ipsec' ? 'shuffle' : path === 'third' ? 'global-network' : 'globe';
+  return { icon, ink: priv ? 'var(--link)' : 'var(--text-light)', bg: priv ? 'var(--bg-accent)' : 'var(--bg-neutral)' };
+}
+export const tierMark = (t) => pathMark(t.path, { inspect: (t.products || []).some(p => (PROD[p.id] || {}).inspect) });
 /** A tier's strip: its path, inspected where a hosted product sits in it. */
 export const tierStrip = (t) => stripOf(t.path, { inspect: (t.products || []).some(p => (PROD[p.id] || {}).inspect) });
 

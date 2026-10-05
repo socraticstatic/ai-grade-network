@@ -413,11 +413,14 @@ test('every container the markup opens, it closes', () => {
   // buttons under an sc-if for the policy that sets it); the verdict, the strip and the trace (a square, the name, a badge
   // loop) move to a right-column panel under sc-if engHas. Recounted, every tag balanced:
   // div 1256 -> 1262, span 1152 -> 1174, sc-if 585 -> 587, sc-for 318 -> 323, button 485 -> 489.
+  // Recommended's header line carries one glyph tile per side in place of the two tiny strips (2026-10-05, Micah: "barely
+  // viewable icons, thick circle lines"): two strip loops left (sc-for -2, span -2 net, i -2), the open row's strips gained
+  // a station word per node (small +2). Recounted, every tag balanced: span 1174 -> 1172, sc-for 323 -> 321.
   const pairs = [
     ['div', /<div\b/g, /<\/div>/g, 1262],
-    ['span', /<span\b/g, /<\/span>/g, 1174],
+    ['span', /<span\b/g, /<\/span>/g, 1172],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 587],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 323],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 321],
     ['section', /<section\b/g, /<\/section>/g, 12],
     ['button', /<button\b/g, /<\/button>/g, 489],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],

@@ -141,7 +141,7 @@ a{color:#0057b8}a:hover{color:#00388f}
 .ic{display:inline-block;flex:none;width:18px;height:18px;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
 .ic.s14{width:14px;height:14px}.ic.s16{width:16px;height:16px}.ic.s18{width:18px;height:18px}.ic.s20{width:20px;height:20px}.ic.s24{width:24px;height:24px}.ic.s28{width:28px;height:28px}
 .ic-tile{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:10px;background:var(--bg-accent);color:var(--link)}
-.ic-tile.s32{width:32px;height:32px;border-radius:8px}
+.ic-tile.s32{width:32px;height:32px;border-radius:8px}.ic-tile.s28{width:28px;height:28px;border-radius:7px}
 /* Flywheel primitives, as NetBond Advanced draws them (Configure > Policies, the connection's Policies tab). Theme tokens only. */
 .fw-toggle{position:relative;flex:none;width:36px;height:20px;padding:0;border:0;border-radius:9999px;background:var(--border-primary);cursor:pointer;transition:background .2s}
 .fw-toggle::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
@@ -172,14 +172,14 @@ a{color:#0057b8}a:hover{color:#00388f}
 .ps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;position:relative;min-width:0;--n:28px}
 .ps>span{display:grid;justify-items:center;gap:4px;min-width:0;position:relative}
 /* The line is each node's own (Micah, 2026-10-02: centre it in the ovals, never through them): drawn at the node's middle, half a cell on the ends, under an opaque node. */
-.ps>span::before{content:"";position:absolute;left:0;right:0;top:calc(var(--n) / 2 - 1px);height:2px;background:var(--border-secondary)}
+.ps>span::before{content:"";position:absolute;left:0;right:0;top:calc(var(--n) / 2 - 0.75px);height:1.5px;background:var(--border-secondary)}
 .ps>span:first-child::before{left:50%}.ps>span:last-child::before{right:50%}
-.ps i{position:relative;display:grid;place-items:center;width:var(--n);height:var(--n);box-sizing:border-box;border-radius:50%;background:var(--bg-base);border:2px solid var(--border-secondary);color:var(--text-disabled);font-style:normal}
+.ps i{position:relative;display:grid;place-items:center;width:var(--n);height:var(--n);box-sizing:border-box;border-radius:50%;background:var(--bg-base);border:1.5px solid var(--border-secondary);color:var(--text-disabled);font-style:normal}
 .ps [data-state="set"] i{border-color:var(--cta);color:var(--link);background:var(--bg-accent)}
 .ps [data-state="broken"] i{border-color:var(--error);color:var(--error);background:color-mix(in srgb,var(--error) 10%,var(--bg-base))}
 .ps small{font-size:11px;line-height:14px;color:var(--text-light);text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ps [data-state="set"] small{color:var(--text-heading)}.ps [data-state="broken"] small{color:var(--error);font-weight:600}
-.ps.big{--n:40px}.ps.big small{font-size:12px;line-height:16px;white-space:normal;text-wrap:pretty}
+.ps.big{--n:40px}.ps.big i{border-width:2px}.ps.big>span::before{height:2px;top:calc(var(--n) / 2 - 1px)}.ps.big small{font-size:12px;line-height:16px;white-space:normal;text-wrap:pretty}
 .ps.big b{font-size:12px;line-height:16px;color:var(--text-heading);text-align:center;text-wrap:pretty}.ps.big [data-state="any"] b{color:var(--text-disabled);font-weight:400}.ps.big [data-state="broken"] b{color:var(--error)}
 .ps-heads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));text-align:center}
 /* Observe's seven stations (2026-10-02): Site, Edge, Backbone, On-ramp, Cloud link, Hub, App, in the health inks. */
@@ -1305,7 +1305,7 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
     <div role="list" aria-label="Moves, ranked by impact" style="display:grid;border-top:1px solid var(--border-secondary)">
       <sc-for list="{{ moves }}" as="mv" hint-placeholder-count="5">
       <div role="listitem" style="display:grid;border-bottom:1px solid var(--border-secondary);min-width:0">
-        <div style="display:grid;grid-template-columns:22px 28px minmax(0,1fr) 226px 16px 212px 140px auto 24px;gap:0 14px;align-items:center;padding:13px 0;min-width:0">
+        <div style="display:grid;grid-template-columns:22px 28px minmax(0,1fr) 210px 16px 210px 140px auto 24px;gap:0 14px;align-items:center;padding:12px 0;min-width:0">
           <button role="checkbox" aria-checked="{{ mv.sel }}" aria-label="{{ mv.selLabel }}" onClick="{{ mv.toggle }}" style="display:grid;place-items:center;width:22px;height:22px;padding:0;border:0;background:transparent;font:inherit;cursor:pointer"><span aria-hidden="true" style="width:14px;height:14px;box-sizing:border-box;border-radius:3px;border:2px solid {{ mv.checkRing }};background:{{ mv.checkBg }};display:flex;align-items:center;justify-content:center;color:var(--bg-base);font-size:10px;line-height:10px;font-weight:700">{{ mv.check }}</span></button>
           <span class="fw-prio sm" title="Ranked by what the Recommended tier saves a month, then by the risk it closes">{{ mv.rankF }}</span>
           <div style="display:grid;gap:4px;min-width:0">
@@ -1314,12 +1314,12 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
           </div>
           <div aria-label="Today" style="display:grid;gap:5px;min-width:0">
             <span style="font-size:10px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--text-light)">Today</span>
-            <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="ps xs" aria-label="Today's path" style="width:76px;flex:none"><sc-for list="{{ mv.strip }}" as="sn" hint-placeholder-count="4"><span data-state="{{ sn.state }}" title="{{ sn.title }}"><i><span class="ic" style="--ic:url('brand/icons/{{ sn.icon }}.svg')"></span></i></span></sc-for></span><span title="{{ mv.pathWord }}" style="font-size:12px;line-height:16px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mv.pathWord }}</span></span>
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span class="ic-tile s28" style="background:{{ mv.mark.bg }};color:{{ mv.mark.ink }}"><span class="ic s16" style="--ic:url('brand/icons/{{ mv.mark.icon }}.svg')"></span></span><span title="{{ mv.pathWord }}" style="font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mv.pathWord }}</span></span>
           </div>
           <span class="ic s16" style="--ic:url('brand/icons/arrow-right.svg');color:var(--text-disabled)"></span>
           <div aria-label="{{ mv.pick.tier }}" style="display:grid;gap:5px;min-width:0">
             <span style="display:flex;gap:6px;align-items:baseline;min-width:0"><span style="font-size:10px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:{{ mv.pick.wordInk }};white-space:nowrap">{{ mv.pick.tier }}</span><span style="font-size:11px;line-height:16px;color:var(--text-body);white-space:nowrap">{{ mv.pick.priceShort }}</span></span>
-            <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="ps xs" aria-label="{{ mv.pick.tier }}: the path" style="width:76px;flex:none"><sc-for list="{{ mv.pick.strip }}" as="pn" hint-placeholder-count="4"><span data-state="{{ pn.state }}" title="{{ pn.title }}"><i><span class="ic" style="--ic:url('brand/icons/{{ pn.icon }}.svg')"></span></i></span></sc-for></span><span title="{{ mv.pick.label }}" style="font-size:12px;line-height:16px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mv.pick.label }}</span></span>
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span class="ic-tile s28" style="background:{{ mv.pick.mark.bg }};color:{{ mv.pick.mark.ink }}"><span class="ic s16" style="--ic:url('brand/icons/{{ mv.pick.mark.icon }}.svg')"></span></span><span title="{{ mv.pick.label }}" style="font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mv.pick.label }}</span></span>
           </div>
           <div style="display:grid;gap:4px;min-width:0"><b title="{{ mv.pick.cost.value }}" style="font-size:13px;line-height:18px;color:{{ mv.pick.cost.dink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mv.pick.headline }}</b><span title="{{ mv.pick.sec.value }}" style="font-size:12px;line-height:16px;color:{{ mv.pick.sec.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mv.pick.sec.value }}</span></div>
           <button class="fx-btn" onClick="{{ mv.attach }}" style="height:26px;padding:0 12px;font-size:12px">Attach</button>
@@ -1327,27 +1327,27 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
         </div>
         <sc-if value="{{ mv.open }}" hint-placeholder-val="{{ false }}">
         <div style="display:grid;grid-template-columns:84px repeat(4,minmax(0,1fr));gap:0 16px;align-items:stretch;padding:4px 0 16px 60px;min-width:0">
-          <div aria-hidden="true" style="display:grid;grid-template-rows:18px 20px 40px 22px 22px 22px;padding:13px 0 0;font-size:11px;line-height:20px;color:var(--text-light)"><span></span><span></span><span></span><span>Security</span><span>Performance</span><span>Cost</span></div>
-          <div aria-label="Today" style="display:grid;grid-template-rows:18px 20px 40px 22px 22px 22px;padding:13px 0 0;min-width:0">
+          <div aria-hidden="true" style="display:grid;grid-template-rows:18px 20px 54px 22px 22px 22px;padding:13px 0 0;font-size:11px;line-height:20px;color:var(--text-light)"><span></span><span></span><span></span><span>Security</span><span>Performance</span><span>Cost</span></div>
+          <div aria-label="Today" style="display:grid;grid-template-rows:18px 20px 54px 22px 22px 22px;padding:13px 0 0;min-width:0">
             <span style="font-size:10px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--text-light)">Today</span>
             <span title="{{ mv.pathWord }}" style="font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mv.pathWord }}</span>
-            <div class="ps sm" aria-label="Today's path" style="padding:8px 0 0;max-width:160px"><sc-for list="{{ mv.strip }}" as="sd" hint-placeholder-count="4"><span data-state="{{ sd.state }}" title="{{ sd.title }}"><i><span class="ic s14" style="--ic:url('brand/icons/{{ sd.icon }}.svg')"></span></i></span></sc-for></div>
+            <div class="ps" aria-label="Today's path" style="padding:8px 4px 0"><sc-for list="{{ mv.strip }}" as="sd" hint-placeholder-count="4"><span data-state="{{ sd.state }}" title="{{ sd.title }}"><i><span class="ic s16" style="--ic:url('brand/icons/{{ sd.icon }}.svg')"></span></i><small>{{ sd.short }}</small></span></sc-for></div>
             <button onClick="{{ mv.tSec.go }}" title="{{ mv.tSec.value }}" style="border:0;background:transparent;padding:0;text-align:left;font:inherit;font-size:13px;line-height:20px;color:{{ mv.tSec.ink }};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" style-hover="text-decoration:underline">{{ mv.tSec.value }}</button>
             <button onClick="{{ mv.tPerf.go }}" title="{{ mv.tPerf.value }}" style="border:0;background:transparent;padding:0;text-align:left;font:inherit;font-size:13px;line-height:20px;color:{{ mv.tPerf.ink }};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" style-hover="text-decoration:underline">{{ mv.tPerf.value }}</button>
             <button onClick="{{ mv.tCost.go }}" title="{{ mv.tCostTitle }}" style="border:0;background:transparent;padding:0;text-align:left;font:inherit;font-size:13px;line-height:20px;font-weight:600;color:{{ mv.tCost.ink }};cursor:{{ mv.tCostCursor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" style-hover="text-decoration:{{ mv.tCostHover }}">{{ mv.tCost.value }}</button>
           </div>
           <sc-for list="{{ mv.tiers }}" as="tr" hint-placeholder-count="3">
-          <button onClick="{{ tr.pick }}" aria-pressed="{{ tr.on }}" aria-label="{{ tr.aria }}" title="{{ tr.title }}" style="display:grid;grid-template-rows:18px 20px 40px 22px 22px 22px;box-sizing:border-box;width:100%;min-width:0;padding:12px 14px;border:1px solid {{ tr.border }};border-radius:12px;background:{{ tr.bg }};font:inherit;text-align:left;cursor:pointer" style-hover="border-color:var(--border-active)">
+          <button onClick="{{ tr.pick }}" aria-pressed="{{ tr.on }}" aria-label="{{ tr.aria }}" title="{{ tr.title }}" style="display:grid;grid-template-rows:18px 20px 54px 22px 22px 22px;box-sizing:border-box;width:100%;min-width:0;padding:12px 14px;border:1px solid {{ tr.border }};border-radius:12px;background:{{ tr.bg }};font:inherit;text-align:left;cursor:pointer" style-hover="border-color:var(--border-active)">
             <span style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;min-width:0"><span style="font-size:10px;line-height:16px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:{{ tr.wordInk }};white-space:nowrap">{{ tr.tier }}</span><span style="font-size:11px;line-height:16px;color:var(--text-body);white-space:nowrap">{{ tr.priceShort }}</span></span>
             <span style="font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tr.label }}</span>
-            <span class="ps sm" aria-label="{{ tr.tier }}: the path" style="padding:8px 0 0;max-width:160px"><sc-for list="{{ tr.strip }}" as="tn" hint-placeholder-count="4"><span data-state="{{ tn.state }}" title="{{ tn.title }}"><i><span class="ic s14" style="--ic:url('brand/icons/{{ tn.icon }}.svg')"></span></i></span></sc-for></span>
+            <span class="ps" aria-label="{{ tr.tier }}: the path" style="padding:8px 4px 0"><sc-for list="{{ tr.strip }}" as="tn" hint-placeholder-count="4"><span data-state="{{ tn.state }}" title="{{ tn.title }}"><i><span class="ic s16" style="--ic:url('brand/icons/{{ tn.icon }}.svg')"></span></i><small>{{ tn.short }}</small></span></sc-for></span>
             <span style="display:flex;justify-content:space-between;gap:6px;min-width:0;font-size:13px;line-height:20px"><span style="color:{{ tr.sec.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tr.sec.value }}</span><span style="flex:none;font-size:11px;color:{{ tr.sec.dink }};white-space:nowrap">{{ tr.sec.delta }}</span></span>
             <span style="display:flex;justify-content:space-between;gap:6px;min-width:0;font-size:13px;line-height:20px"><span style="color:{{ tr.perf.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tr.perf.value }}</span><span style="flex:none;font-size:11px;color:{{ tr.perf.dink }};white-space:nowrap">{{ tr.perf.delta }}</span></span>
             <span style="display:flex;justify-content:space-between;gap:6px;min-width:0;font-size:13px;line-height:20px"><span style="font-weight:600;color:{{ tr.cost.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tr.cost.value }}</span><span style="flex:none;font-size:11px;font-weight:600;color:{{ tr.cost.dink }};white-space:nowrap">{{ tr.cost.delta }}</span></span>
           </button>
           </sc-for>
         </div>
-        <div style="padding:0 0 16px 60px"><button onClick="{{ mv.compare }}" style="border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:16px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap" style-hover="text-decoration:underline">Compare ways to connect</button></div>
+        <div style="padding:0 0 12px 60px"><button onClick="{{ mv.compare }}" style="border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:16px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap" style-hover="text-decoration:underline">Compare ways to connect</button></div>
         </sc-if>
       </div>
       </sc-for>
