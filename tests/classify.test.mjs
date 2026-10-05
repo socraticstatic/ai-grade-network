@@ -30,9 +30,11 @@ test('connModeOf reads the ramp through who holds its SLA', () => {
   assert.equal(L.CONN_LABEL.direct.long, 'Cloud provider direct connect');
 });
 
-test('siteModeOf: Growing has five IPsec sites; the rollups carry SD-WAN', () => {
+test('siteModeOf: Growing has seven IPsec sites; the rollups carry SD-WAN', () => {
   const count = (view, mode) => D.ESTATES[view].sites.filter(s => L.siteModeOf(s) === mode).reduce((a, s) => a + S.countOf(s.name), 0);
-  assert.equal(count('partial', 'ipsec'), 5);
+  // Five branches on another carrier's internet, and since 2026-10-05 Minneapolis and Dublin's IPsec tunnels on AT&T's own.
+  assert.equal(count('partial', 'ipsec'), 7);
+  assert.equal(count('partial', 'sdwan'), 2, 'Boston and Houston ride SD-WAN tunnels');
   assert.ok(count('mature', 'sdwan') > 0 && count('trust', 'sdwan') > 0);
 });
 

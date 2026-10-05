@@ -29,7 +29,8 @@ test('Growing: the IPsec move is the five IPsec branches and the ipsec bucket', 
   const est = D.ESTATES.partial;
   const mv = listOf('partial').find(m => m.kind === 'sites');
   assert.ok(mv, 'no site move on Growing');
-  const ipsec = est.sites.filter(x => siteModeOf(x) === 'ipsec').map(x => x.name);
+  // The five branches outside AT&T; Minneapolis and Dublin tunnel over AT&T's own internet and have their own move (2026-10-05).
+  const ipsec = est.sites.filter(x => siteModeOf(x) === 'ipsec' && !onAtt(x)).map(x => x.name);
   assert.deepEqual(mv.sites, ipsec);
   assert.equal(ipsec.length, 5);
   assert.match(mv.title, /^Move 5 IPsec branches onto AT&T access$/);
@@ -57,7 +58,10 @@ test('every public site not on AT&T access is in exactly one site move, one per 
   for (const view of ESTATES) {
     const est = D.ESTATES[view];
     const want = est.sites.filter(x => !onAtt(x) && servicesOf(x).some(v => v.key === 'tpa')).map(x => x.name).sort();
-    const moves = listOf(view).filter(m => m.kind === 'sites');
+    // AT&T-access tunnel sites have their own moves, one per tunnel kind (2026-10-05).
+    const tun = listOf(view).filter(m => m.kind === 'sites' && m.att);
+    assert.deepEqual(tun.flatMap(m => m.sites).sort(), est.sites.filter(x => onAtt(x) && x.tunnel).map(x => x.name).sort(), view);
+    const moves = listOf(view).filter(m => m.kind === 'sites' && !m.att);
     assert.deepEqual(moves.flatMap(m => m.sites).sort(), want, view);
     const modes = moves.map(m => m.mode);
     assert.equal(new Set(modes).size, modes.length, `${view}: two site moves share a situation`);

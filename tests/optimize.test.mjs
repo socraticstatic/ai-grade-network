@@ -49,7 +49,7 @@ test('a dismissed or snoozed finding leaves its row', () => {
 
 test('every action lands', () => {
   let c = cost('partial'); vals(c).optRows[0].go();
-  assert.equal(c.state.screen, 's4'); assert.equal(c.state.compose.qty, 5); assert.match(c.state.compose.note, /IPsec/);
+  assert.equal(c.state.screen, 's4'); assert.equal(c.state.compose.qty, 5); assert.match(c.state.compose.note, /IPsec/); // the five branches, not the AT&T-access tunnels
   c = cost('partial'); vals(c).optRows[1].go();
   assert.equal(c.state.tab, 'govern'); assert.ok(c.state.authoring.req.includes('Cost-aware routing'));
   c = cost('partial'); vals(c).optRows[2].go();

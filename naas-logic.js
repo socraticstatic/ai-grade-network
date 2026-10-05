@@ -35,8 +35,20 @@ export function connModeOf(r) { if (!r || !r.priv) return 'internet'; const o = 
  *  a NetBond on-ramp. One rule for what AT&T bills (attChargeRows, By leg), where
  *  AT&T facilities sit, and the On-ramp column's AT&T rows. */
 export function attHolds(r) { return connModeOf(r) === 'netbond'; }
+/**
+ * A site's tunnel, as its data states it (2026-10-05): SD-WAN or IPsec over the
+ * internet, landing in one region. Never inferred from the access: Business
+ * Fiber and Dedicated Internet reach the cloud many ways.
+ */
+export function tunnelOf(site) {
+  if (!site || !site.tunnel || !site.tunnelTo) return null;
+  const [cloud, ...rest] = String(site.tunnelTo).split(' ');
+  return { kind: site.tunnel, cloud, region: rest.join(' '), name: site.tunnelTo };
+}
 /** How a site reaches the clouds: SD-WAN, an IPsec tunnel, or its own access, on AT&T or not. */
 export function siteModeOf(site) {
+  const t = tunnelOf(site);
+  if (t) return t.kind === 'SD-WAN' ? 'sdwan' : 'ipsec';
   if (/sd-?wan/i.test((site && site.access) || '')) return 'sdwan';
   if (site && !site.priv && (site.tunnel || servicesOf(site).some(v => v.key === 'tpa'))) return 'ipsec';
   return onAtt(site) ? 'att' : 'third';
@@ -108,6 +120,8 @@ export function filterSites(sites, f = {}) {
     if (svc.length && !servicesOf(x).some(v => svc.includes(v.key))) return false;
     if (f.reach === 'att' && !onAtt(x)) return false;
     if (f.reach === 'outside' && onAtt(x)) return false;
+    // AT&T access, tunnel over the internet (2026-10-05): what a tunnel move's count opens.
+    if (f.reach === 'tunnel' && !(onAtt(x) && tunnelOf(x))) return false;
     if (f.loc) {
       const [kind, val] = [f.loc.slice(0, f.loc.indexOf(':')), f.loc.slice(f.loc.indexOf(':') + 1)];
       if (kind === 'region' && regionOf(x) !== val) return false;

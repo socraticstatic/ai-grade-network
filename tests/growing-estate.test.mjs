@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from '../naas-data.js';
-import { regionRows } from '../naas-logic.js';
+import { regionRows, onAtt } from '../naas-logic.js';
 import { defaults, vals } from '../naas-app.js';
 import { mkC } from './harness.mjs';
 
@@ -23,7 +23,8 @@ test('Growing is 25 sites across five regions, five in each', () => {
 
 test('each region has four sites on AT&T and one on IPsec over the internet', () => {
   for (const r of regionRows(est)) {
-    const pub = r.sites.filter(x => !x.priv);
+    // AT&T-access tunnels (Boston, Houston, Minneapolis, Dublin, 2026-10-05) are AT&T sites on a public path.
+    const pub = r.sites.filter(x => !x.priv && !onAtt(x));
     assert.equal(pub.length, 1, r.name);
     assert.equal(pub[0].tunnel, 'IPsec', r.name);
     assert.match(pub[0].access, /IPsec/);

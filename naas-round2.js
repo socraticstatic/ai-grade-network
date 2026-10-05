@@ -7,7 +7,7 @@
  */
 import * as S from './naas-sites.js';
 // Stakeholder round 2: path tradeoffs, health, endpoints/resources, Observe cuts, Cost arbitrage.
-import { fmt, pct, connModeOf, attHolds, siteModeOf } from './naas-logic.js';
+import { fmt, pct, connModeOf, attHolds, siteModeOf, tunnelOf } from './naas-logic.js';
 import { CATALOG } from './naas-data.js';
 import { agoOf, hhmm, startOf, INCIDENT_MIN } from './naas-schedule.js';
 import { regionState, RAMP_NAME, HEALTH_INK, healthOf, SLO as SLO_PUBLIC, SLO_PRIVATE } from './naas-flowmap.js';
@@ -479,10 +479,10 @@ export function costLegs(est, inv, utilRows) {
     ...(sdwanN ? [{ key: 'sdwan', label: 'SD-WAN', n: sdwanN, v: sdwanN * catPrice('sdwan'), sub: `${sdwanN.toLocaleString('en-US')} sites × ${fmt(catPrice('sdwan'))}`, modelled: false, unit: catPrice('sdwan'), nouns: ['site', 'sites'], parts: siteParts(sdwanSites, catPrice('sdwan'), 'att', false) }] : []),
     ...(xcN ? [{ key: 'xc', label: 'Your cross-connects', n: xcN, v: xcN * XC_RATE, sub: `${xcN} × ${fmt(XC_RATE)} at a typical colo rate`, modelled: true, unit: XC_RATE, nouns: ['cross-connect', 'cross-connects'], rateWords: 'a typical colo rate',
       parts: [...xcRegs.map(r => ({ key: r.region, kind: 'region', region: r.region, n: 1, v: XC_RATE, ink: 'list', modelled: true })), ...xcSites.map(x => ({ key: x.name, kind: 'site', site: x.name, n: 1, v: XC_RATE, ink: 'list', modelled: true }))] }] : []),
-    // A tunnel ends on a cloud's VPN gateway and that cloud bills it: the cloud of the IPsec
-    // egress bucket, whose VPN list price we apply (By cloud, 2026-09-30: "by csp").
+    // A tunnel ends on a cloud's VPN gateway and that cloud bills it: the cloud the site's
+    // tunnel lands in (2026-10-05), else the IPsec egress bucket's (By cloud, 2026-09-30).
     ...(ipsecN ? [{ key: 'ipsec', label: 'IPsec tunnels', n: ipsecN, v: ipsecN * CSP_VPN, sub: `${ipsecN.toLocaleString('en-US')} tunnels × ${each(CSP_VPN)} cloud VPN list price`, modelled: true, unit: CSP_VPN, nouns: ['tunnel', 'tunnels'], rateWords: 'the cloud VPN list price',
-      parts: siteParts(ipsecSites, CSP_VPN, 'list', true).map(p => ({ ...p, cloud: ipsecCloud(est) || undefined })) }] : []),
+      parts: siteParts(ipsecSites, CSP_VPN, 'list', true).map(p => { const t = tunnelOf(ipsecSites.find(x => x.name === p.site)); return { ...p, cloud: (t && t.cloud) || ipsecCloud(est) || undefined }; }) }] : []),
   ];
   // Cloud provider: each cloud's ports at its list price, then this month's egress.
   // direct: the share of it that is direct-connect regions' ports, which the

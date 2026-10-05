@@ -1378,7 +1378,7 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
     }
     if (d.kind === 'finding') {
       const f = (est.findings || []).find(x => x.kind === d.key); if (!f) return null;
-      if (d.key === 'ipsec') { const list = (est.sites || []).filter(x => siteModeOf(x) === 'ipsec'), n = GV.count(list, 'site');
+      if (d.key === 'ipsec') { const list = (est.sites || []).filter(x => siteModeOf(x) === 'ipsec' && !onAtt(x)), n = GV.count(list, 'site');
         return { crumb: D.KINDS[f.kind] || 'Finding', last: nOf(n, 'site', 'sites'), n, unit: 'site', line: f.head, rule: 'An IPsec tunnel on another carrier\'s internet, to a public cloud VPN gateway.', rows: list.map(siteRow) }; }
       const rule = FINDING_RULE[d.key]; if (!rule) return null;
       const ps = setsOf(rule); if (!ps.viol) return null;
@@ -2574,7 +2574,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     if (nd.ramp) return { sub: `p95 ${q.ms} ms · SLO ${q.slo} ms`, hover: `${nd.name}: ${gbpsW(nd.v)} on AT&T · p95 ${q.ms} ms against a ${q.slo} ms SLO${q.health === 'slo' ? ', over' : ''}` };
     if (nd.wan) return { sub: 'to your data centers', hover: `Private WAN: ${gbpsW(nd.v)} from your sites to your own data centers, on AT&T` };
     // The label prices its own node (2026-09-30): under a pick it is the pick's share, as the Cost view shows.
-    if (nd.ipsec) { const mo = nd.v * mapRates.out; return { sub: `${money(mo)}/mo egress`, hover: `IPsec over the internet: ${gbpsW(nd.v)} · ${money(mo)}/mo egress · ${money(mo * mapRates.saveShare)}/mo to save on AT&T` }; }
+    // A stated SD-WAN tunnel (2026-10-05): AT&T answers for the access, no one for the internet in the middle.
+    if (nd.sdwan) return { sub: `p95 ${q.ms} ms · past NetBond`, hover: `SD-WAN tunnel over the internet: ${gbpsW(nd.v)} · AT&T answers for the access, no one for the middle · p95 ${q.ms} ms` };
+    if (nd.ipsec) { const mo = nd.v * mapRates.out; return { sub: `${money(mo)}/mo egress`, hover: `IPsec tunnel over the internet: ${gbpsW(nd.v)} · ${money(mo)}/mo egress · ${money(mo * mapRates.saveShare)}/mo to save on AT&T` }; }
     return { sub: `p95 ${q.ms} ms · SLO ${q.slo} ms`, hover: `Internet: ${gbpsW(nd.v)} outside AT&T · p95 ${q.ms} ms` };
   };
   // Performance mode paints and keys the one set of health inks (review round 2,
@@ -4950,7 +4952,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   }
   const sitesOf = (m) => (est.sites || []).filter(x => m.sites.includes(x.name));
   // Every count lands on its set: sites on the Connections map filtered to them, regions and workloads in Your clouds.
-  const siteDoor = (m) => go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'picture', siteFilter: { svc: [...new Set(sitesOf(m).flatMap(x => S.servicesOf(x).map(v => v.key)))], reach: 'outside' } });
+  const siteDoor = (m) => go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'picture', siteFilter: { svc: [...new Set(sitesOf(m).flatMap(x => S.servicesOf(x).map(v => v.key)))], reach: m.att ? 'tunnel' : 'outside' } });
   const cloudDoor = (m) => go('s1', { estPanel: 'clouds', cloudTrailE: m.regions.length === 1 ? ['cloud:' + m.cloud, 'region:' + m.regions[0]] : ['cloud:' + m.cloud], cloudPage: 0 });
   const costDoor = (m) => go('s3', { layer: 'cloud', tab: 'cost', costPanel: m.kind === 'sites' ? 'bucket' : m.kind === 'region' ? 'money' : 'legs' });
   // The latency figure opens the path it reports: Traffic > Paths, that region's row pinned and picked. A site set's opens the sites.
@@ -5007,7 +5009,8 @@ function costVals(s, set, est, invAll, ob, go, c) {
   // connections AT&T sells. An ExpressRoute or Direct Connect port is resized with its cloud.
   const optCap = sellableCap(OD.capacity(X.connections(est, ob), s.obWindow || '30d'));
   const optBase = R.optimizeRows(est, { open: optOpen, capacity: optCap, apps: appsOf(est, invAll, ob.flows || []) });
-  const ipsecSites = (est.sites || []).filter(x => siteModeOf(x) === 'ipsec');
+  // The IPsec bucket's sites: on another carrier's internet. AT&T-access tunnels have their own move (2026-10-05).
+  const ipsecSites = (est.sites || []).filter(x => siteModeOf(x) === 'ipsec' && !onAtt(x));
   const optGo = {
     spend: () => { const r = est.regionsList.find(x => !x.priv) || est.regionsList[0] || {}; const n = ipsecSites.reduce((a, x) => a + S.countOf(x.name), 0);
       if (n) go('s4', { ...newOrder({ ...prefillAttach(r), source: ['Branch'], bulk: `${n} IPsec ${n === 1 ? 'site' : 'sites'}`, qty: n, sourceLabel: 'Optimize', noteStep: 5, note: `Move ${n} ${n === 1 ? 'site' : 'sites'} off IPsec onto AT&T: ${ipsecSites.map(x => x.name).join(', ')}.` }) })();

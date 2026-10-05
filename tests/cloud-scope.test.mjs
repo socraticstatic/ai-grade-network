@@ -57,7 +57,7 @@ test('ExpressRoute and Direct Connect are the cloud provider\'s; Equinix is a th
 });
 
 test('IPsec and SD-WAN come from the sites that carry them', () => {
-  assert.match(X.cloudScope(D.ESTATES.partial, A.inventory(D.ESTATES.partial), []).siteLine, /^5 IPsec sites · 0 SD-WAN sites$/);
+  assert.match(X.cloudScope(D.ESTATES.partial, A.inventory(D.ESTATES.partial), []).siteLine, /^7 IPsec sites · 2 SD-WAN sites$/ /* 2026-10-05: four Growing sites tunnel over AT&T's own internet */);
   assert.match(X.cloudScope(D.ESTATES.trust, A.inventory(D.ESTATES.trust), []).siteLine, /SD-WAN sites$/);
 });
 

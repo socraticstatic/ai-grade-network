@@ -35,7 +35,9 @@ test('data centers carry a primary and a backup; offices and branches carry one'
 });
 
 test('the IPsec sites are Third Party Access and sit outside the AT&T network', () => {
-  for (const x of est.sites.filter(y => y.tunnel === 'IPsec')) {
+  // An IPsec tunnel on AT&T's own internet keeps its AT&T service (Minneapolis, Dublin: ADI, 2026-10-05).
+  for (const x of est.sites.filter(y => y.tunnel === 'IPsec' && /ADI/.test(y.access))) assert.deepEqual(S.servicesOf(x).map(v => v.key), ['adi'], x.name);
+  for (const x of est.sites.filter(y => y.tunnel === 'IPsec' && !/ADI/.test(y.access))) {
     assert.deepEqual(S.servicesOf(x).map(v => v.key), ['tpa'], x.name);
     assert.equal(x.priv, false, x.name);
   }

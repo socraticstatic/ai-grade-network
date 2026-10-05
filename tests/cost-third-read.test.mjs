@@ -69,9 +69,11 @@ test('By region and By cloud: the bars, the member chips and a picked member\'s 
     assert.equal(w.legTiles.reduce((a, t) => a + money(t.v), 0), money(w.legTotalF), `${view}: whole-estate tiles`);
     assert.equal(w.legTotalF, v.regionTotalF);
   }
-  // The skeptic's case: Growing's five regions each hold one $36.50 tunnel, and the bars still read $132,250.
+  // The skeptic's case: Growing's five regions each hold one $36.50 tunnel, and the bars still add up.
+  // $132,250 became $132,683 on 2026-10-05: Boston and Houston ride SD-WAN (2 x $180) and
+  // Minneapolis and Dublin two IPsec connections (2 x $36.50).
   const p = vals(cost('partial', { costPanel: 'money' }));
-  assert.equal(p.regionTotalF, '$132,250');
+  assert.equal(p.regionTotalF, '$132,683');
 });
 
 test('Insights\' new destinations wear no money colour: one ink, the class in words', () => {
@@ -93,7 +95,8 @@ test('Recommended names the cloud that bills the IPsec tunnels, the one By cloud
   const m = vals(c).moveList.find(x => x.kind === 'sites' && x.mode === 'ipsec');
   const by = vals(cost('partial', { costPanel: 'legs', costBy: 'cloud' }));
   const billed = by.costMembers.filter(x => vals(cost('partial', { costPanel: 'legs', costBy: 'cloud', costPick: x.key })).legConnectRows.some(r => r.key === 'ipsec')).map(x => x.key);
-  assert.deepEqual(billed, ['AWS']);
+  // Azure bills Minneapolis and Dublin's IPsec connections (2026-10-05); the branches' reason still names AWS.
+  assert.deepEqual(billed, ['AWS', 'Azure']);
   assert.match(m.reason, /AWS bills their 5 tunnels/, m.reason);
   void D;
 });

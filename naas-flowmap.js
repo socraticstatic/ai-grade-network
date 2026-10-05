@@ -55,8 +55,10 @@ function shareFab(rows, fabTotal) {
 function invRegion(inv, name) { return inv.flatMap(c => c.regions).find(r => r.region === name); }
 function stateOfRegion(est, name) { const r = regionOf(est, name); if (!r) return 'ok'; if (r.link === 'degraded') return 'degraded'; if (!r.priv && (r.pub || 0) > SLO) return 'slo'; if (r.rel === 'warn') return 'slo'; return 'ok'; }
 
-/** A site that reaches the cloud over IPsec on someone else's internet. */
-const isTunnel = (x) => !x.priv && (!!x.tunnel || S.servicesOf(x).some(v => v.key === 'tpa'));
+/** A site that reaches the cloud over IPsec: on someone else's internet, or a stated tunnel on AT&T's (2026-10-05). */
+const isTunnel = (x) => !x.priv && x.tunnel !== 'SD-WAN' && (!!x.tunnel || S.servicesOf(x).some(v => v.key === 'tpa'));
+/** A site whose data states an SD-WAN tunnel over the internet (2026-10-05). */
+const isSdwan = (x) => !x.priv && x.tunnel === 'SD-WAN';
 /** An estate with no private region has no on-ramp: nothing reaches a cloud on AT&T. */
 const attached = (est) => (est.regionsList || []).some(r => r.priv);
 /** Root nodes on the left: site regions, the grouping every other view uses (Micah, 2026-09-28). */
@@ -78,8 +80,8 @@ export function leftRoots(est, flows, by = 'region') {
     const r = siteRegion(s); return { id: r, node: { kind: 'site', key: 'site:' + r, cls: 'region:' + r, region: r, label: r } };
   };
   (est.sites || []).forEach(s => { const { id, node } = group(s); const count = S.countOf(s.name); const v = (PER_SITE[S.classOf(s)] || 0.5) * count;
-    const g = sg[id] = sg[id] || { ...node, count: 0, v: 0, fabV: 0, ipsecV: 0 };
-    g.count += count; g.v += v; g.fabV += (s.priv ? v : v * 0.1) * onAtt; if (isTunnel(s)) g.ipsecV += v * 0.9; });
+    const g = sg[id] = sg[id] || { ...node, count: 0, v: 0, fabV: 0, ipsecV: 0, sdwanV: 0 };
+    g.count += count; g.v += v; g.fabV += (s.priv ? v : v * 0.1) * onAtt; if (isTunnel(s)) g.ipsecV += v * 0.9; if (isSdwan(s)) g.sdwanV += v * 0.9; });
   const order = regionRows(est).map(r => r.name);
   void flows;
   const rows = Object.values(sg).map(({ label, ...g }) => ({ ...g, name: `${label} · ${n(g.count)} ${g.count === 1 ? 'site' : 'sites'}`, group: 'sites', hasChildren: true, state: 'ok' }));
@@ -229,7 +231,7 @@ function siteRegionRows(node, est) {
       if (g.count > count) g.only = null;
     });
     return Object.values(byMetro).map(g => g.only && g.count === 1
-      ? { kind: 'sitename', key: `${node.key}/${g.only.name}`, metro: g.metro, cls: node.cls, siteCls: g.cls, siteName: g.only.name, name: g.only.name, sub: S.servicesOf(g.only).map(v => v.label).join(' + '), v: g.v, fabV: g.fabV, ipsecV: isTunnel(g.only) ? g.v * 0.9 : 0, hasChildren: true, state: g.only.priv ? 'ok' : 'slo', parentKey: node.key }
+      ? { kind: 'sitename', key: `${node.key}/${g.only.name}`, metro: g.metro, cls: node.cls, siteCls: g.cls, siteName: g.only.name, name: g.only.name, sub: S.servicesOf(g.only).map(v => v.label).join(' + '), v: g.v, fabV: g.fabV, ipsecV: isTunnel(g.only) ? g.v * 0.9 : 0, sdwanV: isSdwan(g.only) ? g.v * 0.9 : 0, hasChildren: true, state: g.only.priv ? 'ok' : 'slo', parentKey: node.key }
       : { kind: 'metro', key: `${node.key}/${g.metro}`, cls: node.cls, siteCls: g.cls, metro: g.metro, count: g.count, name: `${g.metro} · ${n(g.count)}`, v: g.v, fabV: g.fabV, hasChildren: true, state: g.onFabric < g.count / 2 ? 'slo' : 'ok', parentKey: node.key }
     ).sort((a, b) => b.v - a.v);
   }
@@ -344,7 +346,7 @@ function fitKids(p, kids) {
   const ff = kf > 1e-9 ? pf / kf : 1, fu = ku > 1e-9 ? pu / ku : 1;
   if (Math.abs(ff - 1) < 0.005 && Math.abs(fu - 1) < 0.005) return kids;
   return kids.map(k => { const f = (k.fabV || 0) * ff, u = Math.max(0, k.v - (k.fabV || 0)) * fu;
-    return { ...k, fabV: f, v: f + u, ...(k.ipsecV != null ? { ipsecV: k.ipsecV * fu } : {}), ...(k.pubV != null ? { pubV: k.pubV * fu } : {}), ...(k.wan != null ? { wan: k.wan * ff } : {}), ...(k.byRamp ? { byRamp: Object.fromEntries(Object.entries(k.byRamp).map(([r, v]) => [r, v * ff])) } : {}) }; });
+    return { ...k, fabV: f, v: f + u, ...(k.ipsecV != null ? { ipsecV: k.ipsecV * fu } : {}), ...(k.sdwanV != null ? { sdwanV: k.sdwanV * fu } : {}), ...(k.pubV != null ? { pubV: k.pubV * fu } : {}), ...(k.wan != null ? { wan: k.wan * ff } : {}), ...(k.byRamp ? { byRamp: Object.fromEntries(Object.entries(k.byRamp).map(([r, v]) => [r, v * ff])) } : {}) }; });
 }
 function expand(list, open, est, inv, flows, depth = 0) {
   // Below the roots, an open node's siblings fold into one row so the map's height stays bounded at volume (Micah, 16:23).
@@ -360,7 +362,7 @@ function expand(list, open, est, inv, flows, depth = 0) {
     fold = ranked.slice(CAP);
   }
   const out = keep.flatMap(nd => { const node = { ...nd, depth, group: nd.group || rootGroup(nd) }; if (open.has(node.key) && node.hasChildren) { const kids = fitKids(node, childrenOf(node, est, inv, flows)).map(k => ({ ...k, group: node.group })); return kids.length ? expand(kids, open, est, inv, flows, depth + 1) : [node]; } return [node]; });
-  if (fold.length) { const first = openHere[0] || keep[0] || fold[0]; const kindWord = { placestate: 'states', metro: 'metros', sitename: 'sites', service: 'services', site: 'regions', tag: 'workload tags', c2c: 'cloud pairs', tagregion: 'regions', vpc: 'VPCs', subnet: 'subnets', workload: 'workloads', endpoint: 'endpoints', dest: 'destinations' }[fold[0].kind] || ''; out.push({ kind: 'rollup', key: `${(fold[0].parentKey || (first && first.key ? first.key.split('/')[0] : 'lvl' + depth))}/rollup`, name: kindWord ? `+${fold.length} other ${kindWord}` : `+${fold.length} others`, sub: 'click to fold back', v: fold.reduce((a, x) => a + x.v, 0), fabV: fold.reduce((a, x) => a + x.fabV, 0), hasChildren: false, state: 'ok', depth, group: fold[0].group || rootGroup(fold[0]), parentKey: fold[0].parentKey, ipsecV: fold.reduce((a, x) => a + (x.ipsecV || 0), 0), pubV: fold.reduce((a, x) => a + (x.pubV || 0), 0), wan: fold.reduce((a, x) => a + (x.wan || 0), 0), byRamp: fold.reduce((m, x) => { Object.entries(x.byRamp || {}).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; }); return m; }, {}), foldsKey: first && first.key ? first.key : null, tailOnly: !openHere.length , tagV: fold.reduce((a, x) => a + (x.kind === 'c2c' ? 0 : (x.tagV != null ? x.tagV : x.v)), 0)}); }
+  if (fold.length) { const first = openHere[0] || keep[0] || fold[0]; const kindWord = { placestate: 'states', metro: 'metros', sitename: 'sites', service: 'services', site: 'regions', tag: 'workload tags', c2c: 'cloud pairs', tagregion: 'regions', vpc: 'VPCs', subnet: 'subnets', workload: 'workloads', endpoint: 'endpoints', dest: 'destinations' }[fold[0].kind] || ''; out.push({ kind: 'rollup', key: `${(fold[0].parentKey || (first && first.key ? first.key.split('/')[0] : 'lvl' + depth))}/rollup`, name: kindWord ? `+${fold.length} other ${kindWord}` : `+${fold.length} others`, sub: 'click to fold back', v: fold.reduce((a, x) => a + x.v, 0), fabV: fold.reduce((a, x) => a + x.fabV, 0), hasChildren: false, state: 'ok', depth, group: fold[0].group || rootGroup(fold[0]), parentKey: fold[0].parentKey, ipsecV: fold.reduce((a, x) => a + (x.ipsecV || 0), 0), sdwanV: fold.reduce((a, x) => a + (x.sdwanV || 0), 0), pubV: fold.reduce((a, x) => a + (x.pubV || 0), 0), wan: fold.reduce((a, x) => a + (x.wan || 0), 0), byRamp: fold.reduce((m, x) => { Object.entries(x.byRamp || {}).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; }); return m; }, {}), foldsKey: first && first.key ? first.key : null, tailOnly: !openHere.length , tagV: fold.reduce((a, x) => a + (x.kind === 'c2c' ? 0 : (x.tagV != null ? x.tagV : x.v)), 0)}); }
   return out;
 }
 
@@ -381,7 +383,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
   if (opts.window || opts.t != null) {
     const g = opts.window ? +opts.window.growth || 0 : 0;
     const level = (t) => levelAt(g, t);
-    L0 = L0.map(x => { const k = opts.t == null ? level(0.5) : level(opts.t) * shapeAt(x.key, opts.t); return { ...x, v: x.v * k, fabV: x.fabV * k, ipsecV: (x.ipsecV || 0) * k }; });
+    L0 = L0.map(x => { const k = opts.t == null ? level(0.5) : level(opts.t) * shapeAt(x.key, opts.t); return { ...x, v: x.v * k, fabV: x.fabV * k, ipsecV: (x.ipsecV || 0) * k, sdwanV: (x.sdwanV || 0) * k }; });
   }
   let R0 = rightRoots(est, flows, opts.rightBy || 'cloud', L0);
   // A pick keeps the other destinations in view at estate scale (notes, 2026-09-30):
@@ -407,7 +409,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
     const sites = L0.filter(x => x.kind === 'site');
     const sF = sites.reduce((a, x) => a + x.fabV, 0), sU = sites.reduce((a, x) => a + x.v - x.fabV, 0);
     const kf = sF ? F1 / sF : 0, ku = sU ? U1 / sU : 0;
-    L0 = L0.map(x => x.kind === 'site' ? { ...x, fabV: x.fabV * kf, v: x.fabV * kf + (x.v - x.fabV) * ku, ipsecV: (x.ipsecV || 0) * ku } : x);
+    L0 = L0.map(x => x.kind === 'site' ? { ...x, fabV: x.fabV * kf, v: x.fabV * kf + (x.v - x.fabV) * ku, ipsecV: (x.ipsecV || 0) * ku, sdwanV: (x.sdwanV || 0) * ku } : x);
     R0 = keep;
     if (opts.context) ctxRows = Rall.filter(x => !keep.some(k => k.key === x.key)).map(x => ({ ...x, ctx: true, hasChildren: false }));
   }
@@ -432,7 +434,7 @@ export function buildMap(est, inv, flows0, opts = {}) {
     const fabOf = (x) => { if (!perPath) return (x.fabV || 0) * a;
       const known = Object.values(x.byRamp || {}).reduce((s, v) => s + v, 0) + (x.wan || 0);
       return Object.entries(x.byRamp || {}).reduce((s, [r, v]) => s + v * rate(r), 0) + (x.wan || 0) * a + Math.max(0, (x.fabV || 0) - known) * blend; };
-    const w = (x) => { const f = fabOf(x), u = Math.max(0, x.v - (x.fabV || 0)) * b; return { ...x, fabV: f, v: f + u, ...(x.ipsecV != null ? { ipsecV: x.ipsecV * b } : {}), ...(x.pubV != null ? { pubV: x.pubV * b } : {}), ...(x.wan != null ? { wan: x.wan * a } : {}),
+    const w = (x) => { const f = fabOf(x), u = Math.max(0, x.v - (x.fabV || 0)) * b; return { ...x, fabV: f, v: f + u, ...(x.ipsecV != null ? { ipsecV: x.ipsecV * b } : {}), ...(x.sdwanV != null ? { sdwanV: x.sdwanV * b } : {}), ...(x.pubV != null ? { pubV: x.pubV * b } : {}), ...(x.wan != null ? { wan: x.wan * a } : {}),
       ...(x.byRamp ? { byRamp: Object.fromEntries(Object.entries(x.byRamp).map(([r, v]) => [r, v * rate(r)])) } : {}), ...(x.parts ? { parts: x.parts.map(pt => ({ ...pt, fab: pt.fab * rate(rampOf(pt.r)), pub: pt.pub * b })) } : {}) }; };
     const priced = (x) => !perPath || x.v > 0.0005;
     L0 = L0.map(w).filter(priced); R0 = R0.map(w).filter(priced); ctxRows = ctxRows.map(w).filter(priced); }
@@ -500,12 +502,22 @@ export function buildMap(est, inv, flows0, opts = {}) {
   const wanT = Rs.reduce((a, d) => a + (d.wan || 0), 0);
   const pubT = Rs.reduce((a, d) => a + (d.pubV || 0), 0);
   // The middle carries what the sites send, never the divide-by guard: no sites, no Internet node (2026-09-30).
-  const ipsecT = Ls.reduce((a, x) => a + (x.ipsecV || 0), 0), inetT = Math.max(0, T0 - fabV - ipsecT);
+  const ipsecT = Ls.reduce((a, x) => a + (x.ipsecV || 0), 0), sdwanAll = Ls.reduce((a, x) => a + (x.sdwanV || 0), 0);
+  // An SD-WAN tunnel lands in the cloud its site states (2026-10-05); what those sites send
+  // anywhere else breaks out to the plain internet. So the tunnel carries at most what its
+  // clouds take in from the public side, and only into them.
+  const sdClouds = new Set((est.sites || []).filter(isSdwan).map(x => String(x.tunnelTo || '').split(' ')[0]));
+  const cloudOfDest = (d) => d.cloud || (d.parts && d.parts[0] && d.parts[0].r && d.parts[0].r.cloud) || null;
+  const pubTot = Math.max(0, T0 - fabV), pubScaled = (d) => (pubT > 0 ? (d.pubV || 0) * pubTot / pubT : 0);
+  const sdRoom = Rs.filter(d => sdClouds.has(cloudOfDest(d))).reduce((a, d) => a + pubScaled(d), 0);
+  const sdwanT = Math.min(sdwanAll, sdRoom), sdKeep = sdwanAll > 0 ? sdwanT / sdwanAll : 0;
+  const inetT = Math.max(0, T0 - fabV - ipsecT - sdwanT);
   const cloudFabT = Math.max(0, fabV - wanT);
   const mids = [
     ...Object.entries(rampT).sort((a2, b2) => b2[1] - a2[1]).map(([r, v]) => ({ kind: 'mid', key: 'mid:' + r, name: r, ramp: r, v: cloudFabT * v / rampSum, fabV: cloudFabT * v / rampSum, priv: true, state: 'ok', hasChildren: false })),
     ...(wanT > 0.001 ? [{ kind: 'mid', key: 'mid:wan', name: 'Private WAN', v: wanT, fabV: wanT, priv: true, wan: true, state: 'ok', hasChildren: false }] : []),
-    ...(ipsecT > 0.0005 ? [{ kind: 'mid', key: 'mid:ipsec', name: 'IPsec over internet', v: ipsecT, fabV: 0, priv: false, ipsec: true, state: 'slo', hasChildren: false }] : []),
+    ...(sdwanT > 0.0005 ? [{ kind: 'mid', key: 'mid:sdwan', name: 'SD-WAN tunnel', v: sdwanT, fabV: 0, priv: false, sdwan: true, state: 'slo', hasChildren: false }] : []),
+    ...(ipsecT > 0.0005 ? [{ kind: 'mid', key: 'mid:ipsec', name: 'IPsec tunnel', v: ipsecT, fabV: 0, priv: false, ipsec: true, state: 'slo', hasChildren: false }] : []),
     ...(inetT > 0.0005 ? [{ kind: 'mid', key: 'mid:internet', name: 'Internet', v: inetT, fabV: 0, priv: false, state: 'slo', hasChildren: false }] : []),
   ].filter(m => m.v > 0.0005);
   const crossedV = Math.max(0.0001, T - localV);
@@ -523,9 +535,10 @@ export function buildMap(est, inv, flows0, opts = {}) {
   const mid = (k) => MM.find(m => m.key === k);
   const wanShare = fabV ? wanT / fabV : 0;
   SS.forEach(s0 => {
-    const f = s0.fabV || 0, ip = Math.min(s0.ipsecV || 0, Math.max(0, s0.v - f)), net = Math.max(0, s0.v - f - ip);
+    const f = s0.fabV || 0, ip = Math.min(s0.ipsecV || 0, Math.max(0, s0.v - f)), sd = Math.min((s0.sdwanV || 0) * sdKeep, Math.max(0, s0.v - f - ip)), net = Math.max(0, s0.v - f - ip - sd);
     MM.filter(m => m.ramp).forEach(m => link(s0, m, f * (1 - wanShare) * (rampT[m.ramp] / rampSum), true));
     if (mid('mid:wan')) link(s0, mid('mid:wan'), f * wanShare, true);
+    if (mid('mid:sdwan')) link(s0, mid('mid:sdwan'), sd, false);
     if (mid('mid:ipsec')) link(s0, mid('mid:ipsec'), ip, false);
     if (mid('mid:internet')) link(s0, mid('mid:internet'), net, false);
   });
@@ -533,7 +546,11 @@ export function buildMap(est, inv, flows0, opts = {}) {
     Object.entries(d.byRamp || {}).forEach(([r, v]) => { const m = mid('mid:' + r); if (m) link(m, d, cloudFabT * v / rampSum, true); });
     if (d.wan && mid('mid:wan')) link(mid('mid:wan'), d, d.wan, true);
     const pv = d.pubV || 0;
-    if (pv > 0 && pubT > 0) { const ipShare = ipsecT / Math.max(0.0001, ipsecT + inetT); if (mid('mid:ipsec')) link(mid('mid:ipsec'), d, pv * (pubT ? (ipsecT + inetT) / pubT : 1) * ipShare, false); if (mid('mid:internet')) link(mid('mid:internet'), d, pv * (pubT ? (ipsecT + inetT) / pubT : 1) * (1 - ipShare), false); }
+    // The public middles share each public destination by what they carry: tunnels and the plain internet.
+    if (pv > 0 && pubT > 0) { const all = pubScaled(d), sd = sdClouds.has(cloudOfDest(d)) && sdRoom > 0 ? all * sdwanT / sdRoom : 0, rest = all - sd, ipShare = ipsecT / Math.max(0.0001, ipsecT + inetT);
+      if (mid('mid:sdwan')) link(mid('mid:sdwan'), d, sd, false);
+      if (mid('mid:ipsec')) link(mid('mid:ipsec'), d, rest * ipShare, false);
+      if (mid('mid:internet')) link(mid('mid:internet'), d, rest * (1 - ipShare), false); }
   });
   const nodes = [...SS.map(x => ({ ...x, side: 'l' })), ...MM.map(x => ({ ...x, side: 'm' })), ...DD.map(x => ({ ...x, side: 'r' }))].map(x => ({ ...x, delta: deltaOf(x.key), open: open.has(x.key) }));
   // The total is what the sites send; T's divide-by guard read 1.0 Gbps on an empty estate (2026-09-30).

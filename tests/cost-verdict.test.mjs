@@ -126,7 +126,8 @@ test('with a member picked, the leg tiles read shares of that member and add to 
     const v = vals(cost(view, { costPanel: 'legs', costBy: by, costPick: key }));
     const tot = v.legTiles.reduce((a, t) => a + money(t.v), 0);
     let sum = 0;
-    for (const t of v.legTiles) { const pct = +/^(\d+)%/.exec(t.sub)[1]; sum += pct; assert.ok(Math.abs(pct - money(t.v) / tot * 100) <= 0.5, `${view} ${key} ${t.key}: ${t.sub}`); assert.match(t.sub, new RegExp(`of ${key}$`)); }
+    for (const t of v.legTiles) { const pct = +/^(\d+)%/.exec(t.sub)[1]; sum += pct; // Largest-remainder rounding keeps the tiles at 100% and can move a tile by up to one point (2026-10-05: US East access 17.52% prints 17%).
+    assert.ok(Math.abs(pct - money(t.v) / tot * 100) < 1, `${view} ${key} ${t.key}: ${t.sub}`); assert.match(t.sub, new RegExp(`of ${key}$`)); }
     assert.ok(Math.abs(sum - 100) <= 2, `${view} ${key}: ${sum}`);
   }
   assert.match(vals(cost('partial', { costPanel: 'legs' })).legTiles[0].sub, /% of the total$/);
@@ -243,7 +244,10 @@ test('the list-price swatch covers every list price it paints, and By cloud puts
   assert.match(list.title, /cross-connect/);
   const e = D.ESTATES.partial, L = legsOf('partial');
   const aws = CV.sliceLegs(e, L, 'cloud', 'AWS').connect.rows.find(r => r.key === 'ipsec');
-  assert.ok(aws && aws.n === 5, 'the five tunnels bill in AWS, beside the IPsec egress bucket');
+  assert.ok(aws && aws.n === 5, 'the five branch tunnels bill in AWS, beside the IPsec egress bucket');
+  // Minneapolis and Dublin's IPsec connections land in Azure westeurope (2026-10-05): Azure bills them.
+  const az = CV.sliceLegs(e, L, 'cloud', 'Azure').connect.rows.find(r => r.key === 'ipsec');
+  assert.ok(az && az.n === 2, 'the two AT&T-access IPsec connections bill in Azure');
   assert.ok(!CV.sliceLegs(e, L, 'cloud', CV.SITES).connect.rows.some(r => r.key === 'ipsec'));
 });
 

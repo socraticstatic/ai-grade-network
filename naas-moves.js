@@ -21,7 +21,7 @@ import * as P from './naas-paths.js';
 import * as F from './naas-flowmap.js';
 import * as R from './naas-round2.js';
 import { CATALOG } from './naas-data.js';
-import { fmt, siteModeOf, onAtt, regionOf } from './naas-logic.js';
+import { fmt, siteModeOf, onAtt, regionOf, tunnelOf } from './naas-logic.js';
 import { rampName } from './naas-things.js';
 
 /**
@@ -199,21 +199,26 @@ function siteMoves(est, ctx) {
   const modes = [...new Set(off.map(siteModeOf))];
   const bucket = (est.buckets || []).find(b => b.id === 'ipsec');
   const onAvpn = (est.sites || []).filter(x => onAtt(x) && S.servicesOf(x).some(v => v.key === 'avpn')).reduce((a, x) => a + S.countOf(x.name), 0);
-  return modes.map(mode => {
-    const members = off.filter(x => siteModeOf(x) === mode);
+  // AT&T access, tunnel over the internet (2026-10-05): the site is AT&T's, the path is
+  // not. Each tunnel kind is its own move; it skips NetBond, so it moves to AVPN.
+  const tun = (est.sites || []).filter(x => onAtt(x) && tunnelOf(x));
+  const groups = [...modes.map(mode => ({ mode, att: false, members: off.filter(x => siteModeOf(x) === mode) })),
+    ...[...new Set(tun.map(siteModeOf))].map(mode => ({ mode, att: true, members: tun.filter(x => siteModeOf(x) === mode) }))];
+  return groups.map(({ mode, att, members }) => {
     const n = members.reduce((a, x) => a + S.countOf(x.name), 0);
     const cls = [...new Set(members.map(S.classOf))];
     const noun = cls.length === 1 && cls[0] === 'Branch' ? (n === 1 ? 'branch' : 'branches') : cls.length === 1 && cls[0] === 'Data center' ? (n === 1 ? 'data center' : 'data centers') : (n === 1 ? 'site' : 'sites');
     const carriers = [...new Set(members.map(x => x.carrier).filter(Boolean))];
     const carrier = carriers.length === 1 ? carriers[0] : '';
-    const M = MODE[mode] || MODE.third;
+    const kindW = mode === 'sdwan' ? 'SD-WAN' : 'IPsec';
+    const M = att ? { title: (n2, noun2) => `Move ${nf(n2)} ${kindW} tunnel ${noun2} onto AVPN`, word: `${kindW} tunnel over the internet`, find: /^$/ } : MODE[mode] || MODE.third;
     // Rollups that share a stem read as one phrase: "Remote sites East and Central".
     const bare = members.map(x => x.name.replace(/\s*\([\d,]+\)\s*$/, ''));
     const stems = [...new Set(bare.map(x => x.split(', ')[0]))];
     const labels = stems.length === 1 && bare.every(x => x.includes(', ')) ? [`${stems[0]} ${andList(bare.map(x => x.split(', ')[1]))}`] : bare;
-    const f = connectFinding(ctx.findings, 'sites', (t) => M.find.test(t));
-    const behind = ctx.findings.find(x => x.tab !== 'connect' && M.find.test(textOf(x)) && !x.priced);
-    const egBefore = mode === 'ipsec' && bucket ? bucket.today : null;
+    const f = att ? null : connectFinding(ctx.findings, 'sites', (t) => M.find.test(t));
+    const behind = att ? null : ctx.findings.find(x => x.tab !== 'connect' && M.find.test(textOf(x)) && !x.priced);
+    const egBefore = !att && mode === 'ipsec' && bucket ? bucket.today : null;
     const tunnels = mode === 'ipsec' ? members.filter(x => x.tunnel).reduce((a, x) => a + S.countOf(x.name), 0) || n : 0;
     const dcOnly = cls.length === 1 && cls[0] === 'Data center';
     // Performance: each site's path to each region, weighted by what it sends (P.path, P.gbps).
@@ -222,15 +227,18 @@ function siteMoves(est, ctx) {
     const hToday = F.healthOf(ms, F.SLO);
     const dest = (behind && behind.pathDst) || andList([...new Set(est.regionsList.map(r => r.cloud))]);
     // The cloud that bills the tunnels is named, the one Cost > By cloud puts them in (R.ipsecCloud, 2026-09-30).
-    const tunnelCloud = mode === 'ipsec' ? R.ipsecCloud(est) : null;
-    const reason = mode === 'ipsec'
+    const tunnelCloud = mode === 'ipsec' ? (att ? andList([...new Set(members.map(x => tunnelOf(x).cloud))]) : R.ipsecCloud(est)) : null;
+    const lands = att ? andList([...new Set(members.map(x => tunnelOf(x).name))]) : '';
+    const reason = att
+      ? `${andList(members.map(x => x.name))} ${members.length === 1 ? 'reaches' : 'reach'} ${lands} over ${kindW} ${members.length === 1 ? 'a tunnel' : 'tunnels'} on AT&T's own internet, past NetBond, so no one answers for the middle${mode === 'ipsec' ? `; ${tunnelCloud} bills their ${plural(tunnels, 'VPN connection', 'VPN connections')}` : ''}.`
+      : mode === 'ipsec'
       ? `${andList(members.map(x => x.metro))} reach ${dest} over IPsec on another carrier's internet${tunnelCloud ? `; ${tunnelCloud} bills their ${plural(tunnels, 'tunnel', 'tunnels')}${egBefore ? ` and ${fmt(egBefore)}/mo of their egress at internet rates` : ''}` : egBefore ? `; ${fmt(egBefore)}/mo of their egress bills at internet rates` : ''}.`
       : mode === 'sdwan'
         ? `${andList(labels)} reach the clouds over SD-WAN on another carrier's internet${f ? `; ${lowerFirst(f.head)}` : ''}.`
         : `${members.map(x => `${x.name} rides ${x.carrier || x.access}${x.xc && x.xc.at ? `, cross-connected at ${x.xc.at}` : x.via ? ` end to end into ${x.via}` : ''}`).join('; ')}. ${carrier || 'Another carrier'} holds their SLA, not AT&T.`;
     // A hub serves the rollups in its own region (Atlanta: US East).
     const ctxT = { kind: 'sites', regions: [], all: members.map(x => x.name), sitesIn: (metros) => { const regs = metros.map(m => regionOf({ metro: m, name: '' })); return members.filter(x => regs.includes(regionOf(x))).map(x => x.name); } };
-    const tiers = (f ? ladderTiers(f, ctxT) : [['adi'], ['ase'], ['avpn']].map((ps, i) => tierOf(i, ps.map(id => [id, n]), { covers: ctxT.all }))).map(t => {
+    const tiers = (f ? ladderTiers(f, ctxT) : (att ? [['ase'], ['avpn'], ['avpn', 'netbond']] : [['adi'], ['ase'], ['avpn']]).map((ps, i) => tierOf(i, ps.map(id => [id, n]), { covers: ctxT.all }))).map(t => {
       const cov = t.covers.length ? members.filter(x => t.covers.includes(x.name)) : members;
       const covN = cov.reduce((a, x) => a + S.countOf(x.name), 0);
       const priv = t.path !== 'internet' && t.products.length > 0;
@@ -258,11 +266,11 @@ function siteMoves(est, ctx) {
         conn: dcOnly ? 'DataCenter/CoLocation to Cloud' : t.products.length ? t.conn : 'AVPN to Cloud' };
     });
     return {
-      key: 'sites:' + mode, kind: 'sites', mode, title: M.title(n, noun, carrier), reason, finding: f ? f.kind : null,
+      key: 'sites:' + (att ? 'tunnel:' : '') + mode, kind: 'sites', mode, att, title: M.title(n, noun, carrier), reason, finding: f ? f.kind : null,
       sites: members.map(x => x.name), regions: [], n, wl: 0, size: n, need: 'standard',
       risk: mode === 'third' ? 'none' : hToday === 'slo' ? 'slo' : 'exposed',
       today: { path: mode === 'ipsec' ? 'ipsec' : mode === 'sdwan' ? 'sdwan' : 'third', pathWord: M.word, ms, egress: egBefore, mo: egBefore,
-        sec: mode === 'third' ? { value: `Private on ${carrier || 'another carrier'}`, tone: 'same' } : { value: mode === 'ipsec' ? `IPsec · ${plural(tunnels, 'endpoint', 'endpoints')} public` : `Internet · ${nf(n)} exposed`, tone: 'risk' },
+        sec: mode === 'third' ? { value: `Private on ${carrier || 'another carrier'}`, tone: 'same' } : att ? { value: `${kindW} tunnel · ${nf(n)} on the internet`, tone: 'risk' } : { value: mode === 'ipsec' ? `IPsec · ${plural(tunnels, 'endpoint', 'endpoints')} public` : `Internet · ${nf(n)} exposed`, tone: 'risk' },
         perf: { value: `${ms} ms p95${healthWord(hToday)}`, tone: TONE_OF_HEALTH[hToday] },
         cost: egBefore !== null ? { value: `${fmt(egBefore)}/mo egress`, tone: 'same' } : { value: 'Not priced today', tone: 'same' } },
       counts: [{ key: 'sites', kind: 'sites', label: `${nf(n)} ${noun}` }],

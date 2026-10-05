@@ -18,22 +18,35 @@ const GCP = { obDim: 'cloud', obScope: 'cloud:GCP' };
 // Over SLO has its own ink since the review (2026-09-30); red is Down's alone.
 const RED = 'var(--viz-5)';
 
+// Since 2026-10-05 the bucket is shared by every public middle: the IPsec tunnels, the SD-WAN
+// tunnels (Boston, Houston) and the plain internet. Together they are the $8,600 bucket; each
+// label rounds to the hundred, so the sum lands within $100 of it.
 for (const win of ['7d', '30d', '90d']) {
-  test(`Whole estate IPsec prices at the $8,600 bucket at ${win}`, () => {
-    assert.equal(node(at({ mapMode: 'cost', obWindow: win }), 'mid:ipsec').vF, '$8,600/mo');
+  test(`Whole estate public middles price at the $8,600 bucket at ${win}`, () => {
+    const v = at({ mapMode: 'cost', obWindow: win });
+    const sum = ['mid:ipsec', 'mid:sdwan', 'mid:internet'].map(k => node(v, k)).filter(Boolean).reduce((a, n) => a + dollars(n.vF), 0);
+    assert.ok(Math.abs(sum - 8600) <= 100, `${win}: ${sum}`);
   });
 }
+
+test('an SD-WAN tunnel carries traffic only into the cloud it lands in', () => {
+  const v = at();
+  const to = v.mapRibbons.filter(r => r.from === 'mid:sdwan').map(r => r.to);
+  assert.deepEqual([...new Set(to)], ['cloud:AWS']);
+  assert.ok(!node(at(GCP), 'mid:sdwan'), 'GCP is not reached over an SD-WAN tunnel');
+});
 
 test('under a GCP pick the IPsec label, the Cost view node and the Cost tile agree', () => {
   const label = node(at(GCP), 'mid:ipsec').pathSay;
   const cost = at({ ...GCP, mapMode: 'cost' });
   assert.equal(dollars(label), dollars(node(cost, 'mid:ipsec').vF), label);
-  // GCP rides IPsec only, so the path is the whole bill.
-  assert.equal(dollars(label), dollars(tile(cost, 'cost').v));
+  // GCP rides IPsec and, since 2026-10-05, the tunnel offices' plain internet: the two are the whole bill, to the rounding.
+  assert.ok(Math.abs(dollars(node(cost, 'mid:ipsec').vF) + dollars(node(cost, 'mid:internet').vF) - dollars(tile(cost, 'cost').v)) <= 100);
 });
 
 test('a map under 1 Gbps reads in Mbps on the Traffic tile, as its nodes do', () => {
-  const v = at(GCP);
+  // GCP crossed 1 Gbps on 2026-10-05 (four offices left the private path); one branch is well under it.
+  const v = at({ obDim: 'site', obScope: 'site:Charlotte branch' });
   const t = tile(v, 'traffic');
   assert.equal(t.u, 'Mbps');
   assert.equal(`${t.v} ${t.u}`, `${Math.round(v.mapTotal * 1000)} Mbps`);
