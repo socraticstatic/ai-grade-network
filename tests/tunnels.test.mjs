@@ -72,3 +72,18 @@ test('the lane outside the AT&T network still holds only what never touches AT&T
   const v = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'picture' }));
   assert.match(v.laneCount, /^5 sites · /, v.laneCount);
 });
+
+test('a tunnel site\'s path runs AT&T access, the tunnel over the internet, then what it ends on', async () => {
+  const P = await import('../naas-paths.js');
+  const est = D.ESTATES.partial, reg = (n) => est.regionsList.find(r => `${r.cloud} ${r.region}` === n);
+  const p = P.path(site('partial', 'Minneapolis office'), reg('Azure westeurope'));
+  const at = (pth, kind) => pth.hops.find(h => h.kind === kind);
+  assert.deepEqual(p.hops.map(h => h.kind).filter(k => k !== 'hub'), ['site', 'access', 'pop', 'public', 'gateway', 'region']);
+  assert.equal(at(p, 'public').name, 'IPsec tunnel');
+  assert.equal(at(p, 'gateway').name, 'Azure VPN gateway');
+  assert.equal(at(P.path(site('partial', 'Boston office'), reg('AWS us-west-2')), 'gateway').name, 'AWS SD-WAN hub');
+  // Nowhere does a tunnel site reach NetBond: AWS us-east-1 is the internet for it.
+  assert.ok(!P.path(site('partial', 'Boston office'), reg('AWS us-east-1')).hops.some(h => h.kind === 'fabric' || h.kind === 'ramp'));
+  // The branches on another carrier's internet keep the path they had.
+  assert.ok(P.path(site('partial', 'Charlotte branch'), reg('AWS us-east-1')).hops.some(h => h.kind === 'fabric'));
+});
