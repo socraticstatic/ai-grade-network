@@ -36,7 +36,7 @@ const SLO_REQ = /latency slo\s*(\d+)/i;
 export const RULE = {
   path: 'it reaches the internet directly: no private path to AT&T, or a public address with its own route out',
   slo: (ms) => `its region runs above the ${ms} ms latency SLO`,
-  site: 'it reaches the cloud outside the AT&T network',
+  site: 'it reaches the cloud outside the AT&T network, or over a tunnel on the internet',
 };
 
 /** Every workload in the inventory, with where it sits. */
@@ -111,7 +111,8 @@ export function breaker(req, unit) {
       if (PATH_REQ.test(cl)) return (r) => !r.vpc.priv || !!r.w.exposed;
       const s = SLO_REQ.exec(cl); if (s) return (r) => r.latency > +s[1];
     }
-    if (unit === 'site' && PATH_REQ.test(cl)) return (st) => !onAtt(st);
+    // A stated tunnel is on AT&T access and still on the internet (2026-10-05).
+    if (unit === 'site' && PATH_REQ.test(cl)) return (st) => !onAtt(st) || (!st.priv && !!st.tunnel);
     return null;
   }).filter(Boolean);
   return preds.length ? (r) => preds.some(f => f(r)) : null;

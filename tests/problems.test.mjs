@@ -56,7 +56,8 @@ test('Blind regions are not alerts; they stay the blindspots finding', () => {
 });
 
 test('the head counts the flap and keeps the savings', () => {
-  assert.equal(obs().pageVerdict, '13 findings open. $41,500/mo potential savings.');
+  // 14 since 2026-10-05: the four AT&T sites on tunnels are a finding; it is not priced, so the savings hold.
+  assert.equal(obs().pageVerdict, '14 findings open. $41,500/mo potential savings.');
 });
 
 test('the head reads the whole estate under a Traffic pick', () => {
