@@ -2582,7 +2582,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // Performance mode paints and keys the one set of health inks (review round 2,
   // 2026-09-30): Within and Near SLO were hex beside the tokens Health draws.
   const HEALTH_FILL = F.HEALTH_INK;
-  const mapNodes = map.nodes.map((nd, i) => { const left = nd.side === 'l'; const mid = nd.side === 'm'; const say = mid ? midSay(nd) : null; const selected = nd.key === mapSel; return { ...nd, key: 'n' + i, id: nd.key, label: nd.name, subLabel: say ? say.sub : nd.sub || '', hasSub: !!(say ? say.sub : nd.sub), pathSay: say ? say.sub : '', pathBg: say && say.sub ? 'var(--bg-base)' : 'transparent', pathPad: say && say.sub ? '0 5px' : '0', sy: nd.y + nd.h / 2 + 10, subPad: 26, subInk: say && !nd.priv ? 'var(--warning)' : 'var(--text-light)', vF: (() => { const tot = nd.tot || nd.v, t = trAt(nd), q = perf.nodes[nd.key];
+  // A path's second line sits under its label; where the next path's label starts before that line ends (three thin
+  // public paths since 2026-10-05: SD-WAN, IPsec, Internet), the line stays in the hover instead of under a label.
+  const midCs = map.nodes.filter(x => x.side === 'm').map(x => x.y + x.h / 2).sort((a, b) => a - b);
+  const subFits = (nd) => { const c = nd.y + nd.h / 2, next = midCs.find(y => y > c + 0.5); return next == null || next - 10 >= c + 24; };
+  const mapNodes = map.nodes.map((nd, i) => { const left = nd.side === 'l'; const mid = nd.side === 'm'; const say = mid ? midSay(nd) : null; const selected = nd.key === mapSel; return { ...nd, key: 'n' + i, id: nd.key, label: nd.name, subLabel: say ? say.sub : nd.sub || '', hasSub: !!(say ? say.sub : nd.sub) && (!mid || subFits(nd)), pathSay: say && subFits(nd) ? say.sub : '', pathBg: say && say.sub && subFits(nd) ? 'var(--bg-base)' : 'transparent', pathPad: say && say.sub && subFits(nd) ? '0 5px' : '0', sy: nd.y + nd.h / 2 + 10, subPad: 26, subInk: say && !nd.priv ? 'var(--warning)' : 'var(--text-light)', vF: (() => { const tot = nd.tot || nd.v, t = trAt(nd), q = perf.nodes[nd.key];
       // Each view reads in its own unit (2026-09-29): Gbps, dollars a month, or p95.
       if (mapMode === 'slo' && q) return `p95 ${q.ms} ms`;
       if (mapMode === 'cost') return t == null || t >= tot - 0.5 ? `${money(tot)}/mo` : `${money(t)} of ${money(tot)}/mo`;
