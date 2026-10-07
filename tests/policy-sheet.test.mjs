@@ -65,31 +65,4 @@ test('a region-scoped intent compiles its derived rules onto its connection', ()
   assert.ok(e.connections[0].rules.some(r => /Deny block default routes \(on premise → partner\)/.test(r.text)));
 });
 
-test('the engine view carries the sheet, and its trace wears the precedence square and the verbs', () => {
-  const v = at('mature');
-  assert.ok(v.engHas);
-  assert.equal(v.engSheet.length, 4);
-  for (const s of v.engSheet) { assert.ok(['deny', 'manip', 'allow', 'adv'].includes(s.cls), s.key); assert.ok(s.icon); assert.match(s.count, /^\d+ of \d+$/); for (const r of s.rules) { assert.equal(typeof r.o2pOn, 'boolean'); assert.equal(typeof r.o2pOff, 'boolean'); assert.equal(typeof r.by, 'string'); assert.ok(existsSync(new URL(`../brand/icons/${r.icon}.svg`, import.meta.url)), `${r.key}: ${r.icon}`); } }
-  for (const t of v.engTrace) assert.ok(existsSync(new URL(`../brand/icons/${t.icon}.svg`, import.meta.url)), `${t.name}: ${t.icon}`);
-  assert.ok(v.engSheet.some(s => s.rules.some(r => r.o2pOn || r.p2oOn)), 'the default flow on Established sets something');
-  assert.equal(v.engSheet.flatMap(s => s.rules).length, ROUTE_RULES.length);
-  for (const t of v.engTrace) { assert.ok(/^\d+$/.test(String(t.prio)), `${t.name}: prio ${t.prio}`); assert.ok(Array.isArray(t.badges)); assert.ok(['Won'].includes(t.result) || /^Overridden by /.test(t.result)); }
-  assert.ok(v.engTrace.length <= 4, 'four trace rows keep the panel in the fold');
-  assert.equal(v.engSheetCols.length, 2); assert.deepEqual(v.engSheetCols.flatMap(c => c.secs.map(x => x.key)), ['deny', 'manip', 'allow', 'advanced']);
-});
-
-test('the markup draws the sheet as NetBond\'s wash rows with a toggle per direction, and the trace with a square', () => {
-  const a = HTML.indexOf('<sc-if value="{{ govPanelEngine }}"'), b = HTML.indexOf('<sc-if value="{{ govPanelTemplates }}"', a);
-  const blk = HTML.slice(a, b);
-  assert.match(blk, /<sc-for list="\{\{ engSheetCols \}\}" as="sc"/);
-  assert.match(blk, /<sc-for list="\{\{ sc\.secs \}\}" as="sh"/);
-  assert.match(blk, /<sc-for list="\{\{ sh\.rules \}\}" as="sr"/);
-  assert.match(blk, /class="fw-row rt[^"]*"[^>]*><b><span class="ic s14" style="--ic:url\('brand\/icons\/\{\{ sr\.icon \}\}\.svg'\)[^"]*"><\/span>\{\{ sr\.label \}\}/);
-  assert.match(blk, /\{\{ tr\.icon \}\}/);
-  assert.match(blk, /class="fw-toggle sm inert" aria-pressed="\{\{ sr\.o2pOn \}\}" disabled="\{\{ sr\.o2pOff \}\}"/);
-  assert.match(blk, /class="fw-toggle sm inert" aria-pressed="\{\{ sr\.p2oOn \}\}" disabled="\{\{ sr\.p2oOff \}\}"/);
-  assert.match(blk, /class="fw-badge \{\{ sh\.cls \}\}"/);
-  assert.match(blk, /class="fw-prio sm">\{\{ tr\.prio \}\}/);
-  assert.match(blk, /<sc-for list="\{\{ tr\.badges \}\}"/);
-  assert.doesNotMatch(blk, /<(svg|table|select)\b/);
-});
+// The engine view's sheet and trace moved to tests/engine-v3.test.mjs with the rebuild (2026-10-07).

@@ -460,12 +460,18 @@ test('every container the markup opens, it closes', () => {
   // The home cards' footnote and the Signals line under each title as glyph chips (2026-10-07): a chip loop each
   // (sc-for +2) whose chip is a span holding the glyph span (span +4 across the two). Recounted, every tag balanced:
   // span 1281 -> 1285, sc-for 341 -> 343.
-    ['div', /<div\b/g, /<\/div>/g, 1248],
-    ['span', /<span\b/g, /<\/span>/g, 1285],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 601],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 343],
-    ['section', /<section\b/g, /<\/section>/g, 13],
-    ['button', /<button\b/g, /<\/button>/g, 493],
+  // The policy engine rebuilt left to right (2026-10-07, Micah: "needs a deep UI and UX pass"): three columns as sections
+  // (section +3); the chip wall became three pickers (a loop of a button and an sc-if menu of option buttons) and a Try
+  // loop; the three panels and the two-column sheet became the ladder loop, the result (verdict, decider and default
+  // under sc-if, the strip under sc-if, the pushed rules loop with a direction loop, the All sheet under sc-if) and a
+  // scrim button under sc-if. Recounted, every tag balanced: div 1248 -> 1249, span 1285 -> 1297, sc-if 601 -> 606,
+  // sc-for 343 -> 341, section 13 -> 16, button 493 -> 498.
+    ['div', /<div\b/g, /<\/div>/g, 1249],
+    ['span', /<span\b/g, /<\/span>/g, 1297],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 606],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 341],
+    ['section', /<section\b/g, /<\/section>/g, 16],
+    ['button', /<button\b/g, /<\/button>/g, 498],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

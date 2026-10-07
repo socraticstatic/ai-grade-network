@@ -12,24 +12,7 @@ const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url)
 const onDisk = (n) => existsSync(new URL(`../brand/icons/${n}.svg`, import.meta.url));
 const at = (view, extra = {}) => vals(mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'govern', ...extra }));
 
-test('the engine\'s chips carry a glyph by what they name', () => {
-  const v = at('partial', { govPanel: 'engine' });
-  for (const ch of [...v.engFrom, ...v.engTo, ...v.engTag]) assert.ok(onDisk(ch.icon), `${ch.label}: ${ch.icon}`);
-  assert.equal(v.engFrom.find(c => /^Private cloud/.test(c.label)).icon, 'hybrid-cloud');
-  assert.equal(v.engTo.find(c => c.label === 'the Internet').icon, 'globe');
-  assert.equal(v.engTag.find(c => c.label === 'Nothing tagged').icon, 'minus-circle');
-  assert.equal(v.engTag.find(c => c.label === 'tag PCI').icon, 'tag');
-});
-
-test('the verdict is a badge with its glyph, and the layers are a strip with a state', () => {
-  const v = at('partial', { govPanel: 'engine' });
-  assert.ok(v.engHas);
-  assert.ok(['allow', 'deny'].includes(v.engVerdictCls));
-  assert.equal(v.engVerdictIcon, v.engVerdictCls === 'deny' ? 'close-circle' : 'check-circle');
-  assert.equal(v.engLayers.length, 4);
-  for (const l of v.engLayers) { assert.ok(onDisk(l.icon), l.key); assert.equal(l.state, l.by ? 'set' : 'any'); }
-  assert.ok(v.engLayers.some(l => l.state === 'set'), 'the Growing estate decides at least one layer for its default flow');
-});
+// The engine's flow, verdict and strip moved to tests/engine-v3.test.mjs with the rebuild (2026-10-07).
 
 test('every template names a glyph on disk, and its card carries its sides and a strip', () => {
   for (const t of [...BETWEEN_TEMPLATES, ...MULTI_LAYER]) assert.ok(onDisk(t.icon), `${t.key}: ${t.icon}`);
@@ -49,9 +32,7 @@ test('every template names a glyph on disk, and its card carries its sides and a
   assert.equal(pc.aIcon, 'hybrid-cloud'); assert.equal(pc.bIcon, 'cloud');
 });
 
-test('the markup draws the engine\'s strip and badge and the cards\' strips', () => {
-  assert.match(HTML, /<sc-for list="\{\{ engLayers \}\}" as="el" hint-placeholder-count="4"><span data-state="\{\{ el\.state \}\}"/);
-  assert.match(HTML, /class="fw-badge big \{\{ engVerdictCls \}\}"/);
+test('the markup draws the cards\' strips', () => {
   assert.match(HTML, /<div class="ps mid"[^>]*><sc-for list="\{\{ e\.layers \}\}"/);
   assert.ok(!HTML.includes('Start from this · {{ e.m }}'), 'Start is a button with the sides in its title');
 });

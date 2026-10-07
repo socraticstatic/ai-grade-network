@@ -193,7 +193,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -1482,7 +1482,7 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
   const listedViol = polRows.reduce((a, p) => a + (p.viol || 0), 0);
   const polViolGo = violSum && gk === 'policies' && !drill && !pf ? fig('g-viol-total', violSum, 'polFilter:viol', setPf('viol')) : null;
   // The page head: each figure in the sentence opens what it counts.
-  let verdictParts = null;
+  let verdictParts = null, govChips = null;
   const vm = /^(\d+) (polic(?:y|ies) enforced)\. (.*)\.$/.exec(out.governVerdict || '');
   if (onGov && vm) {
     const tail = vm[3], tf = /^(\d+) authored but not enforced$/.exec(tail), find = (est.findings || []).find(f => f.tab === 'govern' && f.head.replace(/\.$/, '') === tail);
@@ -1491,6 +1491,12 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
     const enfGo = +vm[1] > 0 ? fig('g-verdict-enforced', +vm[1], 'polFilter:enforced', setPf('enforced')) : null;
     verdictParts = [{ text: `${vm[1]} ${vm[2]}`, go: enfGo }, { text: '. ' }, { text: tail, go: tailGo }, { text: '.' }]
       .map((p, i) => ({ key: 'vp' + i, text: p.text, isFig: !!p.go, isText: !p.go, go: p.go || (() => {}) }));
+    // Govern's head as chips too (2026-10-07, "pare words down along the way"), the doors kept; the sentence is their title.
+    const tailN = tf ? tf[1] : lead(tail) != null ? String(lead(tail)) : '';
+    const TAIL_WORD = { pci: ['globe', 'PCI exposed'], ipsec: ['internet', 'on IPsec'] };
+    const tw = tf ? ['pencil', 'not enforced'] : (find && TAIL_WORD[find.kind]) || ['exclamation-circle', tail.replace(/^\d[\d,]*\s*/, '').split(' ').slice(0, 2).join(' ')];
+    govChips = [{ key: 'enf', icon: 'check-shield', n: vm[1], label: 'enforced', ink: 'var(--link)', title: `${vm[1]} ${vm[2]}`, go: enfGo || (() => {}) },
+      ...(tailN ? [{ key: 'tail', icon: tw[0], n: tailN, label: tw[1], ink: tf ? 'var(--warning)' : 'var(--error)', title: tail, go: tailGo || (() => {}) }] : [])];
   }
   const governFindings = (out.governFindings || []).map(f => {
     const n = lead(f.head), can = !drill && n != null && (FINDING_RULE[f.kind] || f.kind === 'ipsec');
@@ -1536,7 +1542,7 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
     polFilterOn: !!pf, polFilterLabel: pfLabel, clearPolFilter: () => set({ polFilter: null, polPage: 0 }),
     ...(pf ? { polViolLine: listedViol ? `${nf(listedViol)} policy ${listedViol === 1 ? 'violation' : 'violations'}` : 'No policy violations' } : {}),
     hasPolViolGo: !!polViolGo, noPolViolGo: !polViolGo, polViolGo: polViolGo || (() => {}),
-    verdictParts: verdictParts || [], hasVerdictParts: !!verdictParts, verdictPlain: !verdictParts,
+    verdictParts: verdictParts || [], hasVerdictParts: !!verdictParts, verdictPlain: !verdictParts, ...(govChips ? { verdictChips: govChips } : {}),
     drawerTags: onGov && gk === 'tags' ? tagRows : tagAll, tagSubParts, tagFilterOn: !!tf && tagFigOk, tagFilterLabel: tf ? `${nOf(bareN, 'tag', 'tags')} with no policy` : '', clearTagFilter: () => set({ tagFilter: null, tagPage: 0 }),
     examplePolicies,
     govBackOn: !!back, govBackGo, govBackLabel: 'Back to Govern',
@@ -1608,7 +1614,9 @@ function pageLists(out, s, set) {
   const andi = !!s.andiOpen && s.screen === 's1';
   for (const [list, [key, size0, pagerName, sizeName]] of Object.entries(PAGE_SIZE)) {
     if (!Array.isArray(out[list])) continue;
-    const size = size0 - (found ? FOUND_SHRINK[list] || 0 : 0) - (andi ? ANDI_SHRINK[list] || 0 : 0);
+    // An open policy row reads its four rules in words under it, so it takes a slot of its own (2026-10-07: the engine's
+    // ladder opens a policy there, and an open row ran Violations & policies to 945).
+    const size = size0 - (found ? FOUND_SHRINK[list] || 0 : 0) - (andi ? ANDI_SHRINK[list] || 0 : 0) - (list === 'polRows' && s.polOpen ? 1 : 0);
     const pg = pageRows(out[list], size, s[key], (n) => set({ [key]: n }));
     out[list] = pg.rows; out[pagerName] = pg.pager; out[sizeName] = size;
   }
@@ -1682,6 +1690,26 @@ function levelMap(s, est, layer, drillInfo, set) {
   return sites.map(st => tile({ key: st.name, name: st.name, sub: st.access, size: /\((\d[\d,]*)\)/.test(st.name) ? parseInt(/\((\d[\d,]*)\)/.exec(st.name)[1].replace(/,/g, ''), 10) : 1, exposed: st.priv ? 0 : 1, meta: `${st.cls || ''} · ${st.priv ? 'private' : 'public'}`, dot: st.priv ? 'var(--success)' : 'var(--warning)' }, !!st.rollup || /\(/.test(st.name), st.name));
 }
 
+// The engine's default flows (2026-10-07), read once per estate and policy set: the flow where the most policies meet
+// (a contest shows precedence at work), the first flow a policy denies, and the first no policy touches.
+const ENGINE_DEFAULTS = new Map();
+function engineDefaults(est, all, flows, froms, tos) {
+  const key = `${est.id}|${all.map(p => `${p.name}:${p.state}`).join(',')}`;
+  if (ENGINE_DEFAULTS.has(key)) return ENGINE_DEFAULTS.get(key);
+  let contest = null, best = 0, denied = null, free = null, first = null;
+  for (const f of flows) {
+    if (!froms.includes(f.from) || !tos.includes(f.to)) continue;
+    first = first || f;
+    const r = effectivePolicy(est, all, f), m = r.trace.filter(t => t.result !== 'Does not match').length;
+    if (m > best) { best = m; contest = f; }
+    if (!denied && r.verdict === 'Denied') denied = f;
+    if (!free && !m && f.to !== 'the Internet') free = f;
+  }
+  // Two or more policies meeting is a contest; one is still a flow a policy decides.
+  const out = { contest, contested: best >= 2, denied, free, first };
+  ENGINE_DEFAULTS.set(key, out);
+  return out;
+}
 function layerPolicies(s, est, scope) {
   const inScope = (list) => { if (!scope || scope === 'all') return list; const name = scope.split(':')[1].toLowerCase(); return list.filter(p => !p.scope || /any cloud/i.test(p.scope) || `${p.match} ${p.scope || ''} ${p.name || ''}`.toLowerCase().includes(name)); };
   if (s.layer === 'cloud') return inScope(est.policies);
@@ -4282,38 +4310,67 @@ function wizardVals(s, est, set, c) {
         engineConns: e.connections.map(c => ({ key: c.key, label: c.label, rules: c.rules.slice(0, 6).map((r, i) => ({ key: c.key + i, text: r.text, from: r.from })) })), hasEngineConns: e.connections.length > 0, noEngineConns: !e.connections.length,
         engineConflicts: e.conflicts, hasEngineConflicts: e.conflicts.length > 0, noEngineConflicts: !e.conflicts.length,
         engineStart: () => set({ govPanel: 'templates', govTplKind: 'between' }),
-        // Evaluated (2026-10-01, "not a real policy engine"): one flow, every policy, one decision.
-        ...(() => { const flows = engineFlows(est, all), froms = [...new Set(flows.map(x => x.from))].slice(0, 5), tos = [...new Set(flows.map(x => x.to))].slice(0, 8);
-          const tags = [...new Set(flows.map(x => x.tag).filter(Boolean))].slice(0, 5);
-          const pub = (est.regionsList || []).find(r => !r.priv) || (est.regionsList || [])[0] || {};
-          const ef = { from: froms[0] || '', to: tos.includes(`${pub.cloud} ${pub.region}`) ? `${pub.cloud} ${pub.region}` : tos[0] || '', tag: tags.includes('Prod') ? 'Prod' : '', ...(s.engFlow || {}) };
-          // The chip wears a short word (its glyph says private cloud or tag); the full name is its title (fold, 2026-10-05).
-          const chip = (k, v, lab) => { const on = ef[k] === v, label = lab || v; return { key: k + v, label, short: label.replace(/^Private cloud · /, '').replace(/^tag /, ''), icon: k === 'tag' ? (v ? 'tag' : 'minus-circle') : assetIcon(v), on, bg: on ? 'var(--cta)' : 'var(--bg-base)', ink: on ? '#fff' : 'var(--text-body)', go: () => set({ engFlow: { ...ef, [k]: v } }) }; };
+        // The engine as an engine (2026-10-07, Micah: "The policy engine needs a deep UI and UX pass"): a flow goes in on
+        // the left (three pickers, not a wall of chips), every policy is checked in precedence order in the middle (the
+        // one that decides is lit, the rest say whether they were overridden or skip the flow), and the result comes out
+        // on the right: the verdict, the four stations and what each enforces, and only the route rules NetBond pushes.
+        ...(() => { const flows = engineFlows(est, all), froms = [...new Set(flows.map(x => x.from))].slice(0, 6), tos = [...new Set(flows.map(x => x.to))].slice(0, 9);
+          const tags = [...new Set(flows.map(x => x.tag).filter(Boolean))].slice(0, 6);
+          const pick = engineDefaults(est, all, flows, froms, tos);
+          const ef = { ...(pick.contest || pick.first || { from: '', to: '', tag: '' }), ...(s.engFlow || {}) };
+          const shortOf = (v) => String(v || '').replace(/^Private cloud · /, '').replace(/^tag /, '');
+          const opt = (k, v, lab) => { const on = ef[k] === v, label = lab || v; return { key: k + ':' + v, label, short: shortOf(label), icon: k === 'tag' ? (v ? 'tag' : 'minus-circle') : assetIcon(v), on, check: on ? 'check-circle' : '', go: () => set({ engFlow: { ...ef, [k]: v }, engPick: null }) }; };
+          const PICK = [['from', 'From', froms.map(v => opt('from', v))], ['to', 'To', tos.map(v => opt('to', v))], ['tag', 'Carrying', [opt('tag', '', 'Nothing tagged'), ...tags.map(v => opt('tag', v, `tag ${v}`))]]];
+          const engPickers = PICK.map(([k, word, options]) => { const cur = options.find(o => o.on) || options[0] || { short: '', icon: 'minus-circle', label: '' }, open = s.engPick === k;
+            return { key: k, word, value: cur.short, title: `${word}: ${cur.label}`, icon: cur.icon, open, options, chevron: open ? 'chevron-down' : 'chevron-right', toggle: () => set({ engPick: open ? null : k }) }; });
           const r = ef.from && ef.to ? effectivePolicy(est, all, ef) : null;
-          const hit = r ? r.trace.filter(t => t.result !== 'Does not match') : [];
           const sh = shadowedPolicies(est, all), iv = intendedVsConfigured(est, all);
+          const drift = iv.reduce((a, cn) => a + cn.rows.filter(x => x.status === 'Drift').length, 0);
+          // A policy opens where it lives: Violations & policies, its row open, on its page.
+          const openPol = (name) => { const i = all.findIndex(p => p.name === name); return () => set({ govPanel: 'policies', polOpen: name, polFilter: null, polPage: i < 0 ? 0 : Math.floor(i / (PAGE_SIZE.polRows[1] - 1)) }); };
+          const polByName = new Map(all.map(p => [p.name, p]));
+          // The ladder: every live policy in the order the engine reads them; the one that decides wears the light.
+          const STATE = { won: ['check-circle', 'Won', 'var(--success)'], over: ['minus-circle', 'Overridden', 'var(--text-light)'], skip: ['arrow-right', 'Skips', 'var(--text-disabled)'] };
+          const decider = r ? r.decidedBy : '';
+          const engLadder = r ? r.trace.map((t, i) => { const st = t.result === 'Won' ? 'won' : t.result === 'Does not match' ? 'skip' : 'over', p = polByName.get(t.name) || {}, lit = t.name === decider;
+            return { key: 'lad' + i, prio: String(i + 1), name: t.name, icon: assetIcon(p.match || ''), state: st, lit, glyph: STATE[st][0], word: STATE[st][1], ink: STATE[st][2], op: st === 'skip' ? 0.5 : 1,
+              title: st === 'skip' ? `${t.name} does not match this flow (${p.match || 'any'} to ${p.scope || 'any cloud'})` : st === 'won' ? `${t.name} decides ${lit ? 'this flow' : 'a station on this flow'}` : `${t.name}: ${t.result.toLowerCase()}`, go: openPol(t.name) }; }) : [];
+          const denied = !!r && r.verdict === 'Denied';
+          // The stations: what each one enforces for this flow, by which policy; a station no policy sets reads Any.
+          const engStations = r ? r.layers.map(l => ({ key: l.key, station: LAYER_SHORT[l.key], icon: LAYER_ICON[l.key], text: l.by ? l.text : 'Any', state: l.by ? (denied && l.key === 'core' ? 'broken' : 'set') : 'any', title: l.by ? `${LAYER_SHORT[l.key]}: ${l.text}, set by ${l.by}` : `${LAYER_SHORT[l.key]}: no policy sets it` })) : [];
           // NetBond Advanced's sheet for this flow (2026-10-05): each section wears its verb badge, each row the policy that sets it.
           const VERB = { deny: ['Deny', 'deny', 'var(--error)'], manip: ['Manipulate', 'manip', 'var(--warning)'], allow: ['Allow', 'allow', 'var(--success)'], advanced: ['Advertise', 'adv', 'var(--link)'] };
           const RULE_ICON = { 'matching-routes': 'merge', 'block-default-routes': 'stop-sign', 'community-value-filter-customer': 'filter', 'community-value-filter-att': 'filter', 'prepend-advertisements': 'plus-circle', 'selective-cv-tagging': 'tag', 'community-value-tag': 'tag', 'advertise-static-routes': 'export' };
-          const prioE = new Map(e.ordered.map((p, i) => [p.name, i + 1])), polByName = new Map(all.map(p => [p.name, p]));
+          const DIRS = [['o2p', 'On prem → Partner'], ['p2o', 'Partner → On prem']];
           const sheet = r ? flowSheet(est, all, ef).map(sec => { const on = sec.rules.filter(x => x.o2p.on || x.p2o.on).length;
-            return { key: sec.key, label: sec.label, verb: VERB[sec.key][0], cls: VERB[sec.key][1], ink: VERB[sec.key][2], icon: ROUTE_ICON[sec.key], count: `${on} of ${sec.rules.length}`,
-              rules: sec.rules.map(x => { const by = x.o2p.by || x.p2o.by, tt = (d, w) => (d.on ? `${w}: pushed by ${d.by}` : `${w}: nothing pushes it on this flow`);
-                return { key: x.key, label: x.label, on: x.o2p.on || x.p2o.on, icon: RULE_ICON[x.id] || 'gear', ink: x.o2p.on || x.p2o.on ? VERB[sec.key][2] : 'var(--text-disabled)', by, hasBy: !!by, o2pOn: x.o2p.on, p2oOn: x.p2o.on, o2pOff: !x.can.o2p, p2oOff: !x.can.p2o, o2pTitle: x.can.o2p ? tt(x.o2p, 'On premise → partner') : 'NetBond offers no on premise → partner toggle here', p2oTitle: x.can.p2o ? tt(x.p2o, 'Partner → on premise') : 'NetBond offers no partner → on premise toggle here' }; }) }; }) : [];
-          const INK = { 'In sync': 'var(--success)', Drift: 'var(--error)', 'Not pushed': 'var(--warning)' };
-          return { engFrom: froms.map(v => chip('from', v)), engTo: tos.map(v => chip('to', v)), engTag: [chip('tag', '', 'Nothing tagged'), ...tags.map(v => chip('tag', v, `tag ${v}`))],
-            engHas: !!r, engVerdict: r ? r.verdict : '', engVerdictInk: r && r.verdict === 'Denied' ? 'var(--error)' : 'var(--success)', engVerdictCls: r && r.verdict === 'Denied' ? 'deny' : 'allow', engVerdictIcon: r && r.verdict === 'Denied' ? 'close-circle' : 'check-circle', engDecided: r ? r.decidedBy : '',
-            engLayers: r ? r.layers.map(l => ({ ...l, icon: LAYER_ICON[l.key], state: l.by ? 'set' : 'any', byLine: l.by ? `by ${l.by}` : 'no policy sets it' })) : [],
-            engSheet: sheet, engSheetN: sheet.reduce((a, x) => a + x.rules.filter(y => y.on).length, 0),
-            // The sheet in two columns, as the composer lays it out: Deny and Manipulations, then Allow and Advanced (2026-10-05, "too compressed").
-            engSheetCols: [['deny', 'manip'], ['allow', 'advanced']].map((ks, i) => ({ key: 'sc' + i, secs: ks.map(k => sheet.find(x => x.key === k)).filter(Boolean) })),
-            engIvLines: iv.slice(0, 2).map(cn => { const n = (st) => cn.rows.filter(x => x.status === st).length; const parts = [['In sync', 'in sync'], ['Drift', 'drift'], ['Not pushed', 'not pushed']].filter(([k]) => n(k)).map(([k, w]) => `${n(k)} ${w}`);
-              return { key: cn.key, text: `NetBond to ${cn.label}: ${parts.join(' · ')}`, ink: n('Drift') ? 'var(--error)' : n('Not pushed') ? 'var(--warning)' : 'var(--success)' }; }),
-            // The trace as NetBond's Connection > Policies list: the engine's precedence square, the name, the verbs, Won or Overridden.
-            engTrace: hit.slice(0, 4).map((t, i) => ({ key: 'tr' + i, n: i + 1, prio: prioE.get(t.name) || i + 1, icon: assetIcon((polByName.get(t.name) || {}).match || ''), badges: verbBadges(polByName.get(t.name) || {}).filter(b => b.cls).slice(0, 2), name: t.name, result: t.result, short: t.result === 'Won' ? 'Won' : 'Overridden', ink: t.result === 'Won' ? 'var(--success)' : 'var(--text-light)' })),
-            engTraceMore: r ? `${r.trace.length - hit.length} more ${r.trace.length - hit.length === 1 ? 'policy does' : 'policies do'} not match this flow` : '',
-            engShadow: sh.slice(0, 4).map(x => ({ key: x.name, text: `${x.name}: never decides; ${x.by} always wins first` })), hasEngShadow: sh.length > 0, noEngShadow: !sh.length,
-            engIv: iv.slice(0, 2).map(c => ({ key: c.key, label: c.label, rows: c.rows.slice(0, 3).map(x => ({ ...x, ink: INK[x.status] || 'var(--text-body)' })) })), hasEngIv: iv.length > 0, noEngIv: !iv.length }; })(),
+            return { key: sec.key, label: sec.label, verb: VERB[sec.key][0], cls: VERB[sec.key][1], ink: VERB[sec.key][2], icon: ROUTE_ICON[sec.key], count: `${on} of ${sec.rules.length}`, n: on,
+              rules: sec.rules.map(x => { const by = x.o2p.by || x.p2o.by, isOn = x.o2p.on || x.p2o.on;
+                return { key: x.key, label: x.label, on: isOn, verb: VERB[sec.key][0], cls: VERB[sec.key][1], icon: RULE_ICON[x.id] || 'gear', ink: isOn ? VERB[sec.key][2] : 'var(--text-disabled)', by, hasBy: !!by, byGo: by ? openPol(by) : () => {},
+                  o2pOn: x.o2p.on, p2oOn: x.p2o.on, o2pOff: !x.can.o2p, p2oOff: !x.can.p2o,
+                  // NetBond's row: a toggle per direction it offers, the direction beside it.
+                  dirs: DIRS.filter(([d]) => x.can[d]).map(([d, w]) => ({ key: d, word: w, on: x[d].on, title: x[d].on ? `${w}: pushed by ${x[d].by}` : `${w}: nothing pushes it on this flow` })) }; }) }; }) : [];
+          const pushed = sheet.flatMap(sec => sec.rules.filter(x => x.on)), ruleN = sheet.reduce((a, sec) => a + sec.rules.length, 0);
+          const all12 = !!s.engAll;
+          const pl = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+          // The head: what the engine holds, as glyph chips; a count that is zero stays silent.
+          const live = all.filter(p => p.state !== 'draft').length;
+          const engHeadChips = [{ key: 'pol', icon: 'check-shield', t: String(live), title: pl(live, 'live policy', 'live policies'), ink: 'var(--text-body)' },
+            ...(sh.length ? [{ key: 'sh', icon: 'eye-off', t: String(sh.length), title: `${pl(sh.length, 'policy never decides', 'policies never decide')}: ${sh.map(x => `${x.name} (${x.by} wins first)`).join('; ')}`, ink: 'var(--warning)' }] : []),
+            ...(drift ? [{ key: 'drift', icon: 'sync', t: String(drift), title: `${pl(drift, 'rule drifts', 'rules drift')} from what the connection has today`, ink: 'var(--error)' }] : []),
+            ...(!sh.length && !drift ? [{ key: 'clean', icon: 'check-circle', t: 'Clean', title: 'No policy is shadowed and nothing drifts from its connection', ink: 'var(--success)' }] : [])];
+          // Three flows that show the engine's range: a contest, a denial, a flow no policy touches.
+          const ex = (key, f, icon, word) => (f ? { key, icon, word, title: `${word}: ${shortOf(f.tag ? `tag ${f.tag}` : f.from)} to ${shortOf(f.to)}`, on: f.from === ef.from && f.to === ef.to && (f.tag || '') === (ef.tag || ''), go: () => set({ engFlow: f, engPick: null, engAll: false }) } : null);
+          const engExamples = [ex('contest', pick.contest, pick.contested ? 'shuffle' : 'check-shield', pick.contested ? 'Contested' : 'Decided'), ex('denied', pick.denied, 'close-circle', 'Denied'), ex('free', pick.free, 'minus-circle', 'No policy')].filter(Boolean);
+          return { engPickers, engPickOpen: !!s.engPick && engPickers.some(p => p.open), closePick: () => set({ engPick: null }),
+            engHas: !!r, engEmpty: !r, engEmptyText: froms.length ? 'Pick where the flow starts and where it goes' : 'No data center or private cloud to start a flow from yet',
+            engVerdict: r ? r.verdict : '', engVerdictCls: denied ? 'deny' : 'allow', engVerdictIcon: denied ? 'close-circle' : 'check-circle',
+            engDecided: r ? (decider.startsWith('No policy') ? 'Default path' : decider) : '', engDecidedIsPolicy: !!r && !decider.startsWith('No policy'), engDecidedIsDefault: !!r && decider.startsWith('No policy'), engDecidedGo: r && !decider.startsWith('No policy') ? openPol(decider) : () => {},
+            engDecidedIcon: r && !decider.startsWith('No policy') ? assetIcon((polByName.get(decider) || {}).match || '') : 'minus-circle',
+            engStations, engLadder, engLadderN: engLadder.length, engMatchN: engLadder.filter(x => x.state !== 'skip').length,
+            engSheet: sheet, engSheetN: pushed.length, engPushed: pushed, hasEngPushed: pushed.length > 0 && !all12, noEngPushed: !pushed.length && !all12,
+            engShowStrip: !all12, engAll: all12, engAllLabel: all12 ? 'Pushed only' : `All ${ruleN}`, engAllTitle: all12 ? 'Show only the rules NetBond pushes for this flow' : `Show every rule on NetBond's sheet, ${ruleN} in all`, toggleEngAll: () => set({ engAll: !all12 }),
+            engPushedWord: pl(pushed.length, 'rule', 'rules'), engHeadChips, engExamples, hasEngExamples: engExamples.length > 1 };
+        })(),
       }; })(),
     tplKinds: [['between', 'Between assets'], ['layered', 'Layered']].map(([k, l]) => { const on = (s.govTplKind || 'layered') === k; return { key: k, label: l, on, go: () => set({ govTplKind: k }), bg: on ? 'var(--bg-base)' : 'transparent', weight: on ? 700 : 500 }; }),
     // Multi-layer starting points: a rule at every layer, carried into the author.

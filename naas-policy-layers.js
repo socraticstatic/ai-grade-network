@@ -200,10 +200,16 @@ function sideA(p, f) {
   if (/^region /.test(m)) return CLOUD_LABEL.test(f.to) && glob(m.slice(7), f.to.split(' ').slice(1).join(' '));
   return false;
 }
+// The internet in the engine (2026-10-07, the engine could only ever say Allowed): an intent that keeps traffic private
+// (a private path, no direct internet) forbids the public internet outright, so a flow to the Internet that it matches is
+// Denied; an intent about the internet (inspection) applies to those flows too. Any other cloud-wide intent leaves them be.
+const FORBIDS_INTERNET = /no direct internet|private path|never the internet/i;
+export const forbidsInternet = (p) => FORBIDS_INTERNET.test(String(p.req || '')) || (p.path || []).includes('Never the internet');
+const speaksInternet = (p) => forbidsInternet(p) || /internet|inspection/i.test(`${p.req || ''} ${(p.path || []).join(' ')}`);
 function sideB(p, f) {
   const sc = p.scope || 'any cloud';
   if (sc === f.to) return true;
-  if (sc === 'any cloud') return CLOUD_LABEL.test(f.to);
+  if (sc === 'any cloud') return CLOUD_LABEL.test(f.to) || (f.to === 'the Internet' && speaksInternet(p));
   if (sc === 'the Internet') return f.to === 'the Internet';
   return false;
 }
@@ -232,7 +238,8 @@ export function effectivePolicy(est, policies, flow) {
   for (const { p, c } of ranked) {
     if (!(sideA(p, flow) && sideB(p, flow))) { trace.push({ name: p.name, result: 'Does not match' }); continue; }
     let won = false, blocker = '';
-    if (c.deny && verdict !== 'Denied') { verdict = 'Denied'; decidedBy = p.name; won = true; }
+    const deny = c.deny || (flow.to === 'the Internet' && forbidsInternet(p));
+    if (deny && verdict !== 'Denied') { verdict = 'Denied'; decidedBy = p.name; won = true; }
     for (const x of c.out) { if (!layers[x.layer]) { layers[x.layer] = { text: x.text, by: p.name }; won = true; } else if (layers[x.layer].by !== p.name && !blocker) blocker = layers[x.layer].by; }
     if (won && !decidedBy) decidedBy = p.name;
     trace.push({ name: p.name, result: won ? 'Won' : `Overridden by ${blocker || decidedBy}` });
@@ -267,7 +274,9 @@ export function flowSheet(est, policies, flow) {
   const live = policies.filter(p => p.state !== 'draft');
   const hits = precedence(live).filter(({ p }) => sideA(p, flow) && sideB(p, flow)).map(x => x.p);
   return ROUTE_SECTIONS.map(([sk, sl]) => ({ key: sk, label: sl, rules: ROUTE_RULES.filter(r => r.section === sk).map(r => {
-    const k = `${sk}:${r.id}`, dir = (d) => { const by = hits.find(p => (routeRulesOf(p)[k] || {})[d]); return { on: !!by, by: by ? by.name : '' }; };
+    // A policy that forbids the internet allows its routes on the private path only: a flow to the Internet gets its deny alone.
+    const k = `${sk}:${r.id}`, pushes = (p) => !(sk === 'allow' && flow.to === 'the Internet' && forbidsInternet(p));
+    const dir = (d) => { const by = hits.find(p => pushes(p) && (routeRulesOf(p)[k] || {})[d]); return { on: !!by, by: by ? by.name : '' }; };
     return { key: k, id: r.id, label: r.label, can: { o2p: r.o2p, p2o: r.p2o }, o2p: dir('o2p'), p2o: dir('p2o') }; }) }));
 }
 /** Per connection: what the policies intend, what the connection has today, and whether they agree. */
