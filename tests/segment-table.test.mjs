@@ -16,11 +16,11 @@ test('App health, the path by app and By segment are the views of Health', () =>
   const c = mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' });
   const v = vals(c);
   // App health joined them (2026-10-06): the app's own compute, database and network against your thresholds.
-  assert.deepEqual(v.healthViews.map(h => h.label), ['App health', 'Path by app', 'By segment']);
-  assert.ok(v.healthByApp && !v.healthBySegment && !v.healthInCloud);
+  assert.deepEqual(v.healthViews.map(h => h.label), ['Path by app', 'App health', 'By segment']);
+  assert.ok(v.healthByApp && !v.healthBySegment && !v.healthInCloud, 'the landing view is first');
   v.healthViews[2].go();
   assert.ok(vals(c).healthBySegment);
-  v.healthViews[0].go();
+  v.healthViews[1].go();
   assert.ok(vals(c).healthInCloud);
 });
 

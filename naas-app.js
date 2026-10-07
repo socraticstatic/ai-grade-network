@@ -3225,9 +3225,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // By segment (notes, 2026-09-30): the stakeholder's nine rows, who answers for
     // each piece and what the product can see of it; a row drills in place.
     const healthView = s.healthView === 'segment' ? 'segment' : s.healthView === 'cloud' ? 'cloud' : 'app';
-    // App health first (2026-10-06 session: "we need to define what app healthy means"): the app's own compute,
-    // database and network against your thresholds, beside its path; then the path by app, then by segment.
-    const healthViews = [['cloud', 'App health'], ['app', 'Path by app'], ['segment', 'By segment']].map(([k, l]) => { const on = healthView === k; return { key: k, label: l, on, ...seg(on), go: () => set({ healthView: k, segOpen: null, segTrail: [], segPage: 0 }) }; });
+    // App health (2026-10-06 session: "we need to define what app healthy means"): the app's own compute, database and
+    // network against your thresholds, beside its path. The landing view stays first (its open problems are the Health
+    // tab's own list); the home's Apps healthy opens App health directly.
+    const healthViews = [['app', 'Path by app'], ['cloud', 'App health'], ['segment', 'By segment']].map(([k, l]) => { const on = healthView === k; return { key: k, label: l, on, ...seg(on), go: () => set({ healthView: k, segOpen: null, segTrail: [], segPage: 0 }) }; });
     const dotOf = (state, limited) => { const ink = INK[state] || 'var(--text-disabled)';
       return { rad: F.healthRadius(state), bg: state === 'nodata' || state === 'none' || limited ? 'transparent' : ink, border: state === 'nodata' ? '1.5px dashed var(--text-disabled)' : state === 'none' ? '1.5px solid var(--border-secondary)' : limited ? `2px solid ${ink}` : '0' }; };
     const NOUN = { access: ['site', 'sites'], access3p: ['site', 'sites'], ipsec: ['site', 'sites'], backbone: ['backbone', 'backbone'], onramp: ['on-ramp', 'on-ramps'], cloudlink: ['connection', 'connections'], hub: ['hub', 'hubs'], exit: ['region', 'regions'], app: ['region', 'regions'] };
