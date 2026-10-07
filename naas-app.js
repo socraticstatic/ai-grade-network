@@ -343,6 +343,23 @@ export function vals(c) {
   const openF = findList.filter(f => OPEN_STATES.includes(LC.lifeOf(f, life, lifeNow).state));
   const openSave = openF.filter(f => f.priced).reduce((a, f) => a + f.save, 0);
   const observeHead = openF.length ? `${openF.length} ${openF.length === 1 ? 'finding' : 'findings'} open.${openSave ? ` ${fmt(openSave)}/mo potential savings.` : ''}` : '';
+  // The line under a page's title as glyph chips (2026-10-07, Micah: "less words, more icons"); the sentence is their title.
+  const goTo = (screen, extra) => () => { c.setState({ screen, ...extra }); syncHash(screen, extra.layer || s.layer, extra.tab || s.tab); };
+  const verdictChips = (() => {
+    if (s.screen !== 's3' || !est || est.stage === 'empty') return [];
+    if (s.tab === 'connect' && s.layer === 'cloud') {
+      const regs = est.regionsList || [], pub = regs.filter(r => !r.priv).length;
+      const WAYS = [['netbond', 'hub', 'NetBond'], ['direct', 'cable', 'direct'], ['third', 'global-network', 'Equinix']];
+      const priv = WAYS.map(([mode, icon, label]) => ({ icon, n: regs.filter(r => r.priv && connModeOf(r) === mode).length, label })).filter(x => x.n);
+      return [{ key: 'pub', icon: 'globe', n: `${pub}`, label: 'public', ink: pub ? 'var(--warning)' : 'var(--success)', title: `${pub} of ${regs.length} regions ride the public internet`, go: goTo('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' }) },
+        ...priv.map(x => ({ key: x.label, icon: x.icon, n: `${x.n}`, label: x.label, ink: 'var(--link)', title: `${x.n} ${x.n === 1 ? 'region' : 'regions'} private on ${x.label === 'direct' ? 'a direct connect' : x.label}`, go: goTo('s3', { layer: 'cloud', tab: 'connect', cnPage: 'picture' }) }))];
+    }
+    if (s.tab === 'cost' && openSave) return [{ key: 'save', icon: 'bill', n: `${fmt(openSave)}/mo`, label: 'to save', ink: 'var(--success)', title: `Open priced findings: ${fmt(openSave)}/mo`, go: goTo('s3', { layer: 'cloud', tab: 'cost', costPanel: 'optimize' }) },
+      ...(ob.savingsMo ? [{ key: 'saved', icon: 'check-circle', n: `${fmt(ob.savingsMo)}/mo`, label: 'saved on AT&T', ink: 'var(--success)', title: `${fmt(ob.savingsMo)}/mo already saved on AT&T`, go: goTo('s3', { layer: 'cloud', tab: 'cost', costPanel: 'spend' }) }] : [])];
+    if (s.tab === 'observe' && openF.length) return [{ key: 'f', icon: 'exclamation-circle', n: `${openF.length}`, label: openF.length === 1 ? 'finding' : 'findings', ink: 'var(--warning)', title: observeHead, go: goTo('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings' }) },
+      ...(openSave ? [{ key: 's', icon: 'bill', n: `${fmt(openSave)}/mo`, label: 'to save', ink: 'var(--success)', title: observeHead, go: goTo('s3', { layer: 'cloud', tab: 'cost', costPanel: 'optimize' }) }] : [])];
+    return [];
+  })();
   const layer = D.LAYERS.find(l => l.id === s.layer) || D.LAYERS[1];
   const layerProducts = (id) => D.CATALOG.filter(p => p.layer === id);
   const findingsFor = (id, tab) => est.findings.filter(f => f.layer === id && (!tab || f.tab === tab));
@@ -983,7 +1000,7 @@ export function vals(c) {
     ...shellVals(s, set, go, est, c, sched),
     headOpen: s.headOpen !== false, headClosed: s.headOpen === false, toggleHead: () => { const v = s.headOpen === false; set({ headOpen: v }); try { localStorage.setItem('naas.headOpen', String(v)); } catch (e) {} }, headRot: s.headOpen === false ? 'rotate(-90deg)' : 'rotate(0deg)',
     ...andiVals(s, set, go, est, ob, { conns, floorVerdict, connectVerdict, governVerdict, costVerdict, discoverVerdict, stageKicker, findingCard, sortF, findingsFor, isEmpty, totalSave, persona, personaTab }),
-    pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? (observeHead || ob.verdict) : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on AT&T · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${[...(est.policies || []), ...(s.customPolicies || [])].filter(p => p.state === 'enforced').length} of ${(est.policies || []).length + (s.customPolicies || []).length} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
+    verdictChips, pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? (observeHead || ob.verdict) : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on AT&T · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${[...(est.policies || []), ...(s.customPolicies || [])].filter(p => p.state === 'enforced').length} of ${(est.policies || []).length + (s.customPolicies || []).length} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
     persona: s.persona || 'neteng', personaName: persona, setPersona: (e) => set({ persona: e.target.value }), personas: PERSONAS.map(p => ({ key: p, label: p })), moreByTab, hasMoreByTab: moreByTab.length > 0, pendingTitle: (s.order && s.order.title) || 'Hosted VPC order', dismissPending: () => set({ pendingDismissed: true }),
     estateName: est.name, isEmpty, isPartial, isMature, notEmpty: !isEmpty, stageKicker, floorVerdict,
     // Discover has two views: the estate, and its sources (source management).
@@ -1130,7 +1147,7 @@ export function vals(c) {
   Object.assign(out, governVals(out, s, set, { go, est, invAll: A.inventory(est0),
     orderMove: (f, label, cloud) => chooseTier(c, f, label, D.CATALOG.find(p => p.id === (cloud === 'Azure' ? 'hosted-vnet' : 'hosted-vpc')), est) }));
   if (s.screen === 's3' && s.tab === 'observe' && s.obPage === 'insights' && out.insPanelBrief) Object.assign(out, { andiSub: out.briefText, hasAndiSub: true });
-  return pageLists(out, s, set);
+  return pageLists(glyphPass(out), s, set);
 }
 
 /** The estate's mail domain: Acme Corp is acme.com. The briefing's mailboxes
@@ -1275,7 +1292,10 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
       // The trio reads one clock (Micah, 2026-10-05: "make sure the math adds up"): in 90 days as is, in 90 days if you act, and
       // the difference. It used to subtract the 90-day forecast from today's run-rate, which read "You save $0" on an estate
       // whose spend grows faster than its moves save. Unit cost per GB (Dev's FinOps home, 2026-10-01): the rates the app prices egress at everywhere.
-      return { spark: eg.spark, today: tile('spend'), asIs: ahead.asIsV || tile('spend'), act: tile('ahead'), save: asIs > ah ? `$${(asIs - ah).toLocaleString('en-US')}` : '$0', go: eg.go, perGb: 'Per GB: $0.09 on the internet, $0.02 on the AT&T network, 78% lower' }; })(),
+      return { spark: eg.spark, today: tile('spend'), asIs: ahead.asIsV || tile('spend'), act: tile('ahead'), save: asIs > ah ? `$${(asIs - ah).toLocaleString('en-US')}` : '$0', go: eg.go, perGb: 'Per GB: $0.09 on the internet, $0.02 on the AT&T network, 78% lower',
+        // The unit cost as marks and figures (2026-10-07: fewer words).
+        rates: [{ key: 'i', icon: 'globe', v: '$0.09/GB', title: 'Per GB through the internet' }, { key: 'a', icon: 'hub', v: '$0.02/GB', title: 'Per GB on the AT&T network' }, { key: 'd', icon: 'trending-down', v: '78% lower', title: '78% lower per GB on the AT&T network' }],
+        note: 'Monthly run-rate: the last year and the next 90 days. In 90 days as is, if you act, and the difference.' }; })(),
     ...(() => { // Dev's FinOps home (2026-10-01): the waterfall, what if, who pays, unit cost, and FinOps' own work.
       const isFin = rk === 'finops' && !isEmpty, start = HM.numOf(tile('spend'));
       if (!isFin || !start) return { homeFin: false, homeFinOff: true };
@@ -1541,6 +1561,34 @@ const FOUND_SHRINK = { appRows: 1, cloudRows: 2, placeRows: 2 };
 // Andi beside Estate narrows it, and the title row's pills wrap to a second line (skeptic, 2026-10-01:
 // "Ask Andi" on a nine-row Your clouds read 931): the lists give up a row while he is open.
 const ANDI_SHRINK = { appRows: 1, cloudRows: 1, placeRows: 1 };
+// Fewer words, more icons (2026-10-07): every page tab leads with its glyph, every role chip with its own and carries its
+// question as its title (the question left the page), and a page whose head is chips draws them in place of the sentence.
+const TAB_ICON = { 'Recommended': 'bullseye', 'Ways to connect': 'cable', 'Orders': 'shopping-bag', 'At a glance': 'pie-chart', 'Your clouds': 'cloud', 'Your sites': 'large-building', 'Business units': 'person-group',
+  'Violations & policies': 'exclamation-triangle', 'Templates': 'list', 'Policy engine': 'gear', 'Tags': 'tag', 'Signals': 'smart-meter', 'Your actions': 'checklist', 'Operations': 'wrench', 'Findings': 'exclamation-circle',
+  'Monthly briefing': 'lightbulb', 'Traffic': 'global-network', 'Over time': 'trending-up', 'Where it goes': 'map', 'Health': 'verified', 'Paths': 'shuffle', 'Capacity': 'high-meter', 'Changes': 'history',
+  'Optimize': 'trending-down', 'Spend': 'bill', 'By leg': 'merge', 'By region': 'map', 'By destination': 'target', 'By first mile': 'ethernet', 'Flow records': 'list', 'User activity': 'user-access',
+  'Overview': 'grid', 'Tickets': 'checklist', 'Availability': 'verified', 'Maintenance & Changes': 'wrench' };
+const TAB_LISTS = ['cnPanels', 'estPanels', 'govPanels', 'insPanels', 'obPanels', 'costPanels', 'logTabs', 'opsPanels'];
+const ROLE_ICON = { architect: 'hybrid-cloud', neteng: 'router', security: 'personal-security', finops: 'bill', exec: 'pie-chart' };
+const HOME_CARD_ICON = { apps: 'apps', onatt: 'padlock', egress: 'bill', exposed: 'personal-security', glance: 'pie-chart', health: 'verified', spend: 'bill', govern: 'check-shield', tags: 'tag', workloads: 'apps' };
+// What an action gets you, as one glyph; the words are its title.
+const outIcon = (t) => { const x = String(t || '').toLowerCase(); return /cannot see|unseen|blind|telemetry/.test(x) ? 'eye' : /latency|slo/.test(x) ? 'high-meter' : /off the internet|private/.test(x) ? 'hub' : /security|risk|expos/.test(x) ? 'check-shield' : /sav|\$|cost|fee|confirm|send/.test(x) ? 'bill' : /alert/.test(x) ? 'bell' : 'bullseye'; };
+const firstSentence = (t) => { const m = /^(.+?[.!?])\s+[A-Z0-9$]/.exec(String(t || '')); return m ? m[1].replace(/\.$/, '') : String(t || '').replace(/\.$/, ''); };
+function glyphPass(out) {
+  if (Array.isArray(out.homeCards)) out.homeCards = out.homeCards.map(h => ({ ...h, icon: HOME_CARD_ICON[h.key] || 'pie-chart' }));
+  // Insights' cards lead with their mark; a row's action wears its glyph.
+  const SIG_ICON = [[/health/i, 'verified'], [/latency/i, 'clock'], [/capacity/i, 'high-meter'], [/talker/i, 'trending-up'], [/cloud-to-cloud|cloud to cloud/i, 'arrows-horizontal'], [/egress|spend|cost/i, 'bill'], [/ai /i, 'ai'], [/expos|reachable/i, 'personal-security'], [/destination/i, 'globe'], [/shadow|unseen|blind/i, 'eye-off'], [/policy|violation/i, 'check-shield'], [/change/i, 'history']];
+  const ACT_ICON = { Trace: 'target', Attach: 'cable', Steer: 'shuffle', Resize: 'plus-circle', 'Ask Andi': 'ai', Optimize: 'trending-down', Review: 'checklist', Isolate: 'stop-sign', Inspect: 'firewall' };
+  if (Array.isArray(out.sigCards)) out.sigCards = out.sigCards.map(g => ({ ...g, icon: (SIG_ICON.find(([re]) => re.test(g.title || '')) || [0, 'smart-meter'])[1],
+    rows: Array.isArray(g.rows) ? g.rows.map(r => ({ ...r, actIcon: ACT_ICON[r.act] || 'arrow-right' })) : g.rows }));
+  const RING_ICON = { Sites: 'large-building', Clouds: 'cloud', Workloads: 'apps', Apps: 'grid' };
+  if (Array.isArray(out.glanceRings)) out.glanceRings = out.glanceRings.map(g => ({ ...g, icon: RING_ICON[String(g.title || '').replace(/^\w/, ch => ch.toUpperCase())] || RING_ICON[g.title] || 'pie-chart' }));
+  for (const k of ['homeDo', 'finActs']) if (Array.isArray(out[k])) out[k] = out[k].map(d => ({ ...d, headAll: d.head, head: firstSentence(d.head), outIcon: outIcon(d.outcome) }));
+  for (const k of TAB_LISTS) if (Array.isArray(out[k])) out[k] = out[k].map(t => { const base = String(t.label || '').split(' · ')[0].trim(); return { ...t, icon: TAB_ICON[base] || 'more-ellipse' }; });
+  for (const k of ['roleChips', 'sigChips']) if (Array.isArray(out[k])) out[k] = out[k].map(r => ({ ...r, icon: ROLE_ICON[r.key] || 'person', title: ROLE_OF[r.key] ? `For ${ROLE_OF[r.key].short}: ${ROLE_OF[r.key].q}` : r.label }));
+  if (Array.isArray(out.verdictChips) && out.verdictChips.length) { out.hasVerdictChips = true; out.verdictPlain = false; out.hasVerdictParts = false; } else out.hasVerdictChips = false;
+  return out;
+}
 function pageLists(out, s, set) {
   const found = !!out.hasFound && s.screen === 's1';
   const andi = !!s.andiOpen && s.screen === 's1';
@@ -2695,6 +2743,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     fabPctF: Math.round(fabAll / (crossed || 1) * 100) + '%',
     pubPctF: Math.round(pubAll / (crossed || 1) * 100) + '%',
     mixSub: `${(mixTotal).toFixed(1)} Gbps in the window. ${locAll.toFixed(1)} Gbps of it never leaves its region, so it crosses no mid mile at all.`,
+    mixShort: [{ key: 't', icon: 'global-network', v: `${(mixTotal).toFixed(1)} Gbps`, title: 'In the window' }, { key: 'l', icon: 'pinpoint', v: `${locAll.toFixed(1)} Gbps`, title: 'Never leaves its region, so it crosses no mid mile' }],
   };
   // Cost view: what leaves AT&T is priced at the estate's own avoidable rate, per Gbps outside.
   const egBuckets = est.buckets || [], egSpend = egBuckets.reduce((a, b) => a + b.today, 0), egAvoid = egBuckets.reduce((a, b) => a + Math.max(0, b.today - b.fabric), 0);
@@ -5514,7 +5563,7 @@ function costLegVals(s, set, est, legs0, go, c) {
     // Empty says No egress once, in the page's own line (the skeptic, 2026-09-30).
     hasLegs: legs0.total > 0, noLegs: !(legs0.total > 0) && est.stage !== 'empty', legEmpty: legs0.total > 0 ? '' : 'No egress seen yet.',
     // The line over the legs, its figure a door: the total opens By region, the same money by place.
-    legWho: whose, legTotalF: fmt(legTotalR), legRest: 'a month, end to end. Each row is count × unit; open one to see what it counts.',
+    legWho: whose, legTotalF: fmt(legTotalR), legRest: 'a month, end to end.', legNote: 'Each row is count × unit; open one to see what it counts.',
     legTotalGo: () => set({ costPanel: 'money', costBy: by === 'cloud' ? 'cloud' : 'region', costPick: null, ...reset }),
     // The filter bar: the house By chips (Observe's grammar), then the members with what each costs.
     costByChips: [['all', 'Whole estate'], ['region', 'By region'], ['cloud', 'By cloud']].map(([k, l]) => { const on = by === k;
@@ -5540,7 +5589,7 @@ function costLegVals(s, set, est, legs0, go, c) {
       { meaning: 'public', label: 'Outside AT&T', title: 'Egress at the cloud provider’s public rates', color: I.public.color, bg: I.public.color, edge: '0' },
       // The hatch covers more than a cloud's price: a VPN tunnel and a colo cross-connect wear it too (the skeptic, 2026-09-30).
       { meaning: 'list', label: 'Public list price', title: 'A cloud port, a VPN tunnel or a colo cross-connect at its public list price', color: I.list.color, bg: CV.hatch(I.list.color), edge: '0' },
-      { meaning: 'modelled', label: 'Modelled: a price or share applied, not a bill', title: 'Hatched fills and the Modelled mark: a list price, a rate or a workload share applied to your estate', color: CV.MODELLED.color, bg: CV.modelledFill(), edge: '0' },
+      { meaning: 'modelled', label: 'Modelled', title: 'Hatched fills and the Modelled mark: a list price, a rate or a workload share applied to your estate', color: CV.MODELLED.color, bg: CV.modelledFill(), edge: '0' },
       { meaning: 'other', label: 'Not priced here', title: 'Counted, not priced: billed by another carrier, or on no public price list', color: I.other.color, bg: 'transparent', edge: `1px solid ${I.other.color}` },
     ].map(l => ({ ...l, key: l.meaning })),
   };
@@ -5667,7 +5716,7 @@ function homeLegend({ states, third, xc }) {
   return [
     { key: 'oa', sw: '#3374cc', l: 'AT&T and private paths' }, { key: 'oc', sw: 'var(--text-light)', l: 'cloud provider' },
     ...(third ? [{ key: 'ot', sw: 'var(--text-light)', dash: true, l: 'third party (dashed)' }] : []),
-    { key: 'oh', sw: null, l: 'a drop = a handoff off AT&T' },
+    { key: 'oh', sw: null, l: 'a drop = handoff' },
     ...(xc ? [{ key: 'xc', sw: null, l: '□ your cross-connect (the colo answers for it)' }] : []),
     // Dotted, as its wire is (w2, 2026-09-30): two grey dashes 1.5:1 apart read as one mark.
     { key: 'pub', sw: 'var(--text-disabled)', dotted: true, l: 'public internet (dotted)' },
@@ -5684,11 +5733,11 @@ function overlayLegend(s, R) {
   // path performs. The legend says which is which.
   if (tab === 'connect') return [
     { key: 'oa', sw: '#3374cc', l: 'AT&T' }, { key: 'oc', sw: 'var(--text-light)', l: 'cloud provider' }, { key: 'ot', sw: 'var(--text-light)', dash: true, l: 'third party (dashed)' },
-    { key: 'oh', sw: null, l: 'a drop = a handoff off AT&T' },
-    { key: 'xc', sw: null, l: '□ your cross-connect (the colo answers for it)' },
+    { key: 'oh', sw: null, l: 'a drop = handoff' },
+    { key: 'xc', sw: null, l: '□ your cross-connect' },
     { key: 'g', sw: 'var(--success)', l: 'good' }, { key: 'f', sw: 'var(--warning)', l: 'fair' }, { key: 'p', sw: 'var(--error)', l: 'poor' },
     // w2 (2026-09-30): a region's dot on Connect is its lens score too, so the dot and its wire never disagree.
-    { key: 'lens', sw: null, l: 'outside the network, a wire and its region\'s dot follow the ' + (s.lens || 'security') + ' lens' }];
+    { key: 'lens', sw: null, l: 'dots and wires outside: ' + (s.lens || 'security') + ' lens' }];
   if (tab === 'observe') return [{ key: 'w', sw: null, l: 'thickness = Gbps' }, { key: 'b', sw: '#0057b8', l: 'AT&T network' }, { key: 'p', sw: '#8a949c', l: 'public internet' }, { key: 'r', sw: 'var(--error)', l: 'red sleeve = over 100 ms' }, { key: 'd', sw: null, l: 'dashed = public path' }];
   if (tab === 'govern') return [{ key: 'g', sw: '#0057b8', l: 'gate = policy on this path' }, { key: 'o', sw: '#00abeb', l: 'matched by the policy you are authoring' }, { key: 'v', sw: 'var(--error)', l: 'violation' }, { key: 'd', sw: null, l: 'dashed = simulated' }];
   if (tab === 'cost') return [{ key: 'w', sw: null, l: 'thickness = $/mo' }, { key: 'r', sw: 'var(--error)', l: 'red sleeve = premium over the AT&T rate' }, { key: 's', sw: null, l: 'slide the forecast to land the moves' }];

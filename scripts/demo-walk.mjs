@@ -86,7 +86,9 @@ const cards = () => inHome('[aria-label="Snapshot"] > div').allInnerTexts();
 await beat('0 NaaS home: the take-away, the snapshot, the map below', async () => {
   await rail('NaaS');
   // Dev's home (2026-10-01): Do next ranks the role's actions, each with what it gets you.
-  await expect("Andi's briefing", 'Do next', 'Needs attention', 'Shows the traffic you cannot see');
+  await expect("Andi's briefing", 'Do next', 'Needs attention');
+  // Fewer words (2026-10-07): what an action gets you is its glyph, the words its label.
+  if (!(await inHome('[aria-label="Shows the traffic you cannot see"]').count())) throw new Error('no action says it shows the traffic you cannot see');
   await takes('Azure eastus is down', 'Finance rides it · 40 workloads · 22 min', 'Trace it');
   const rows = await inHome('[aria-label="Do next"] .hm-do').count();
   // The tunnel finding (2026-10-05, four AT&T sites on tunnels over the internet) is Network Eng's fourth action of five.
@@ -185,7 +187,9 @@ await beat('7 Insights: Signals, Your actions and Operations', async () => {
   // Each action says what it gets you (Dev's Insights content, 2026-10-01); Do it's "Coming soon" moved to its title.
   await expect('Actions for Network Eng', 'Brings latency under SLO');
   await tab('Operations', '[aria-label="Insights views"]');
-  await expect(/\d+ Sev 1 open now\. \d+ tickets? open\./, 'sample history');
+  // The line is the note's title now (2026-10-07); the tiles carry the figures.
+  if (!(await page.locator('[role="note"][title*="Sev 1 open now"]').count())) throw new Error('the Operations note lost its Sev 1 line');
+  await expect('sample history');
   await tab('Tickets', '[aria-label="Operations views"]');
   if (!eastusTicket) throw new Error('beat 4 never read the eastus ticket');
   await expect(`${eastusTicket} · opened by Andi`);
@@ -195,26 +199,27 @@ await beat('8 Estate switch to Established', async () => {
   // Recommended (Options until 2026-09-30, "options and orders is so weird") prints the Connect verdict over its moves.
   await rail('Recommended');
   // Beat 1 added Oracle's two public regions to Growing: 5 of 7 became 7 of 9.
-  await expect('7 of 9 regions still ride the public internet');
+  // Connect's head is chips (2026-10-07); the sentence is their title.
+  if (!(await page.locator('[aria-label="Verdict"][title*="7 of 9 regions still ride the public internet"]').count())) throw new Error('Connect does not read 7 of 9 public');
   // Switched while on the home, the new estate's own figures show, with no stale role list.
   // v2 home (2026-09-30): the On AT&T card counts Oracle's two public regions (2 of 7 became 2 of 9).
   await rail('NaaS');
   // w2 (2026-09-30): the latency action counts eu-west-1's spike too, as Latency over SLO lists it.
   const growingChips = await page.evaluate(() => (document.querySelector('main') || document.body).innerText);
-  await expect('2 regions run above the latency SLO.');
+  await expect('2 regions run above the latency SLO');
   await takes('Azure eastus is down');
   if (!(await cards())[1].includes('2 of 9')) throw new Error(`On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 2 of 9`);
   await page.selectOption('select[aria-label="View as"]', 'mature'); await settle(600);
-  await expect('3 paths send no telemetry', '2 regions run above the latency SLO.');
+  await expect('3 paths send no telemetry', '2 regions run above the latency SLO');
   // The outage leads, not the at-risk region (skeptic, 2026-09-30).
   await takes('AWS eu-central-1 is down', '2 apps ride it · 96 workloads');
   if (!(await cards())[1].includes('7 of 8')) throw new Error(`Established's On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 7 of 8`);
   // Established's role list, not Growing's: one blind region where Growing has several.
-  await expect('1 region sends no flow logs.');
+  await expect('1 region sends no flow logs');
   const blindG = (growingChips.match(/\d+ regions send no flow logs/) || [''])[0];
   if (!blindG || (await text()).includes(blindG)) throw new Error('Growing\'s role list stayed on the Established home');
   await rail('Recommended');
-  await expect('1 of 8 regions still ride the public internet');
+  if (!(await page.locator('[aria-label="Verdict"][title*="1 of 8 regions still ride the public internet"]').count())) throw new Error('Established does not read 1 of 8 public');
 });
 
 await browser.close();

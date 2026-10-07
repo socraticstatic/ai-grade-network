@@ -413,7 +413,7 @@ test('the home is one section: role chips, the take-away, four KPI cards, the ch
   const i = HTML.indexOf('aria-label="NaaS home"');
   assert.ok(i > 0, 'no NaaS home section');
   const block = homeBlock();
-  for (const b of ['<sc-for list="{{ roleChips }}"', '{{ roleQuestion }}', '{{ homeBriefGo }}', '{{ homeTake.head }}', '{{ homeTake.go }}',
+  for (const b of ['<sc-for list="{{ roleChips }}"', '{{ rc.title }}', '{{ homeBriefGo }}', '{{ homeTake.head }}', '{{ homeTake.go }}',
     '<sc-for list="{{ homeCards }}"', '{{ hc.kLabel }}', '{{ hc.pill }}', '{{ hc.big }}', '{{ hc.foot }}', '<sc-for list="{{ hc.bar }}"', '{{ hc.valueGo }}',
     '{{ homeChart.spark.past }}', '{{ homeChart.spark.act }}', '{{ homeChart.save }}',
     '<sc-for list="{{ homeDo }}"', '{{ dn.go }}', '{{ dn.outcome }}', '{{ homeWaitingGo }}',

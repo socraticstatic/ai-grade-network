@@ -447,12 +447,16 @@ test('every container the markup opens, it closes', () => {
   // card's line a path strip (div -1, sc-for +1); Recommended's line leads with the cloud's mark or the sites' glyph and a
   // badge (sc-if +3, span +7), the summary boxes carry a cloud glyph, setup a who glyph (sc-if +1, span +5). Recounted,
   // every tag balanced: div 1254 -> 1253, span 1246 -> 1259, sc-if 598 -> 602, sc-for 334 -> 336.
-    ['div', /<div\b/g, /<\/div>/g, 1253],
-    ['span', /<span\b/g, /<\/span>/g, 1259],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 602],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 336],
+  // Fewer words site-wide (2026-10-07): page tabs and role chips lead with glyphs (span), Connect, Observe and Cost
+  // heads are chips (sc-if, sc-for, button), home cards and panels lead with tiles, the per-GB line and Traffic's mix are
+  // chips (sc-for), notes became info glyphs (div -3: the note lines, the briefing footnote, the template sentence).
+  // Recounted, every tag balanced: div 1253 -> 1250, span 1259 -> 1307, sc-if 602 -> 603, sc-for 336 -> 339, button 496 -> 497.
+    ['div', /<div\b/g, /<\/div>/g, 1250],
+    ['span', /<span\b/g, /<\/span>/g, 1307],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 603],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 339],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 496],
+    ['button', /<button\b/g, /<\/button>/g, 497],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

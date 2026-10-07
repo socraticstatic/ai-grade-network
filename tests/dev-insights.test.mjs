@@ -14,7 +14,11 @@ test('each role reads its own question, on the home and on Signals', () => {
   assert.equal(new Set(qs).size, 5, qs.join(' | '));
   for (const q of qs) assert.match(q, /^For [\w& ]+: .+\?$/, q);
   assert.equal(qs[4], 'For Executive: Is the network helping or hurting the business?');
-  assert.equal((HTML.match(/\{\{ roleQuestion \}\}/g) || []).length, 2, 'the home and Signals both print it');
+  // Fewer words (2026-10-07): the question left the page and is each role chip's title, on the home and on Signals.
+  assert.equal((HTML.match(/\{\{ roleQuestion \}\}/g) || []).length, 0, 'the question is a title now, not a line');
+  assert.ok(HTML.includes('title="{{ rc.title }}"') && HTML.includes('title="{{ pc.title }}"'), 'the role chips carry the question');
+  const chips = vals(mkC({ view: 'partial', estateParam: null, screen: 's0', persona: 'exec' })).roleChips;
+  assert.equal(chips.find(r => r.key === 'exec').title, 'For Executive: Is the network helping or hurting the business?');
 });
 
 test('every action says what it gets you', () => {

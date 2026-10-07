@@ -96,7 +96,9 @@ test('each leg says per month and what it covers; each row reads count × unit',
   assert.equal(avpn.vF, '$14,400');
   // Modelled is explained once, in the legend, not on every row.
   assert.equal(v.costLegend.filter(l => l.meaning === 'modelled').length, 1);
-  assert.match(v.costLegend.find(l => l.meaning === 'modelled').label, /not a bill/);
+  // Fewer words (2026-10-07): the key reads Modelled; what it means is its title.
+  assert.equal(v.costLegend.find(l => l.meaning === 'modelled').label, 'Modelled');
+  assert.match(v.costLegend.find(l => l.meaning === 'modelled').title, /list price|rate/);
 });
 
 test('the filter bar is the house By chips: Whole estate, By region, By cloud', () => {
