@@ -93,7 +93,8 @@ await beat('0 NaaS home: the take-away, the snapshot, the map below', async () =
   const rows = await inHome('[aria-label="Do next"] .hm-do').count();
   // The tunnel finding (2026-10-05, four AT&T sites on tunnels over the internet) is Network Eng's fourth action of five.
   if (rows !== 5) throw new Error(`Do next lists ${rows} actions, not Network Eng's 5`);
-  await expect('4 AT&T sites reach the cloud over tunnels on the internet');
+  // Do next pares a finding's head to its figures (2026-10-07); the full sentence is the line's title.
+  await expect('4 AT&T sites tunnel over the internet');
   const c = await cards();
   if (c.length !== 4) throw new Error(`${c.length} snapshot cards, not 4`);
   for (const [i, want] of [[0, '5 of 8'], [1, '2 of 7'], [2, '$89,600'], [3, '54 of 303']]) if (!c[i].includes(want)) throw new Error(`card ${i + 1} reads "${c[i].replace(/\n/g, ' | ')}", not ${want}`);
@@ -208,11 +209,11 @@ await beat('8 Estate switch to Established', async () => {
   await rail('NaaS');
   // w2 (2026-09-30): the latency action counts eu-west-1's spike too, as Latency over SLO lists it.
   const growingChips = await page.evaluate(() => (document.querySelector('main') || document.body).innerText);
-  await expect('2 regions run above the latency SLO');
+  await expect('2 regions over latency SLO');
   await takes('Azure eastus is down');
   if (!(await cards())[1].includes('2 of 9')) throw new Error(`On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 2 of 9`);
   await page.selectOption('select[aria-label="View as"]', 'mature'); await settle(600);
-  await expect('3 paths send no telemetry', '2 regions run above the latency SLO');
+  await expect('3 paths send no telemetry', '2 regions over latency SLO');
   // The outage leads, not the at-risk region (skeptic, 2026-09-30).
   await takes('AWS eu-central-1 is down', '2 apps ride it · 96 workloads');
   if (!(await cards())[1].includes('7 of 8')) throw new Error(`Established's On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 7 of 8`);

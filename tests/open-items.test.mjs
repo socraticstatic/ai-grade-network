@@ -151,3 +151,38 @@ test('a Signals line splits into a glyph and its figure per part', async () => {
   const sig = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'signals' }));
   for (const g of sig.sigCards) assert.ok(g.headChips.length > 0 && g.headChips.every(x => x.icon && x.t), g.title);
 });
+
+// ---- fewer words (2026-10-07, "Go"): finding heads pared for list lines, Needs attention glyph-first ----
+test('a finding head pares to the same figures in fewer words; an unknown head passes unchanged', async () => {
+  const { pareHead } = await import('../naas-app.js');
+  const P = [
+    ['5 sites reach the cloud over IPsec on the public internet', '5 sites on IPsec over the internet'],
+    ['4 AT&T sites reach the cloud over tunnels on the internet', '4 AT&T sites tunnel over the internet'],
+    ['$40,800/mo of internet egress the AT&T network would carry for $17,600', '$40,800/mo egress, $17,600 on AT&T'],
+    ['$22,200/mo of cross-cloud traffic crosses the public internet', '$22,200/mo cross-cloud on the internet'],
+    ['$8,600/mo of egress rides IPsec tunnels over the internet', '$8,600/mo egress over IPsec'],
+    ['31 internet-facing workloads have no inspection in path', '31 internet-facing workloads uninspected'],
+    ['Azure eastus has one path, and finance rides it', 'Azure eastus: one path, finance on it'],
+    ['AWS us-west-2 peaks at 84% of 2 × 10 Gbps', 'AWS us-west-2 peaks at 84%'],
+    ['GCP us-central1 at 81% of 5 × 10 Gbps purchased', 'GCP us-central1 at 81%'],
+    ['2 regions run above the latency SLO', '2 regions over latency SLO'],
+    ['6 PCI-tagged workloads reach the internet directly', '6 PCI-tagged workloads reach the internet'],
+    ['6 paths send no telemetry', '6 paths send no telemetry'],
+  ];
+  for (const [a, b] of P) assert.equal(pareHead(a), b);
+  // Every number in the head survives the paring, except a capacity's port size (it stays in the title).
+  for (const [a, b] of P.filter(([x]) => !/Gbps/.test(x))) for (const n of a.match(/\$?[\d,]+(?:\/mo)?%?/g) || []) assert.ok(b.includes(n), `${a}: ${n}`);
+  const v = vals(mkC({ view: 'partial', estateParam: null, screen: 's0' }));
+  for (const d of v.homeDo) assert.ok(d.headAll.length >= d.head.length, d.head);
+  assert.ok(v.homeDo.some(d => d.head === '5 sites on IPsec over the internet'));
+});
+
+test('Needs attention: the state wears its glyph, the place its cloud mark and path glyph, the impact two chips', () => {
+  const v = vals(mkC({ view: 'partial', estateParam: null, screen: 's0' }));
+  const down = v.homeAttn.find(a => a.word === 'Down');
+  assert.equal(down.stateIcon, 'close-circle');
+  assert.equal(down.region, 'eastus'); assert.equal(down.hasMark, true); assert.equal(down.thingIcon, 'cable');
+  assert.deepEqual(down.impactChips.map(x => [x.icon, x.t, x.title]), [['grid', '1', '1 app'], ['apps', '40', '40 workloads']]);
+  assert.equal(down.where, 'Azure eastus · ExpressRoute', 'the full place stays as the title');
+  assert.ok(v.homeAttn.filter(a => /internet/i.test(a.thing)).every(a => a.thingIcon === 'globe'));
+});

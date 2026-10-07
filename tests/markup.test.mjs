@@ -466,10 +466,14 @@ test('every container the markup opens, it closes', () => {
   // under sc-if, the strip under sc-if, the pushed rules loop with a direction loop, the All sheet under sc-if) and a
   // scrim button under sc-if. Recounted, every tag balanced: div 1248 -> 1249, span 1285 -> 1297, sc-if 601 -> 606,
   // sc-for 343 -> 341, section 13 -> 16, button 493 -> 498.
+  // The home glyph-first (2026-10-07, "Go"): Needs attention's state pill wears its glyph, the place the cloud's mark (or a
+  // cloud glyph) under two sc-ifs and the path as a chip, the impact a chip loop; Egress spend's head a 90 days chip; the
+  // FinOps panel's what-if arrow and 78% lower chip (in both copies). Recounted, every tag balanced: span 1297 -> 1311,
+  // sc-if 606 -> 608, sc-for 341 -> 342.
     ['div', /<div\b/g, /<\/div>/g, 1249],
-    ['span', /<span\b/g, /<\/span>/g, 1297],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 606],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 341],
+    ['span', /<span\b/g, /<\/span>/g, 1311],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 608],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 342],
     ['section', /<section\b/g, /<\/section>/g, 16],
     ['button', /<button\b/g, /<\/button>/g, 498],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],

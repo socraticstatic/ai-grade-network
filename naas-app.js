@@ -1312,14 +1312,21 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
       const eng = pr.filter(x => !/FinOps/.test(x.persona || '')), engSum = eng.reduce((a, x) => a + x.save, 0);
       const toSpend = go('s3', { ...cloud, tab: 'cost', costPanel: 'spend' }), toLegs = go('s3', { ...cloud, tab: 'cost', costPanel: 'legs' });
       const finActs = [
-        bu.length && { key: 'showback', head: 'Send each business unit its share', sub: bu.map(x => x.label).join(', '), outcome: `${bu.length} to send`, outInk: 'var(--warning)', label: 'Showback', go: toLegs },
-        eng.length && { key: 'owners', head: 'Send savings to the people who can make them', sub: `${eng.length} engineering ${eng.length === 1 ? 'move' : 'moves'}, worth ${fmt(engSum)}/mo`, outcome: 'Without an owner', outInk: 'var(--warning)', label: 'Assign owners', go: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0 }) },
-        { key: 'alert', head: 'Set an alert on cloud exit fees', sub: `${fmt(outN)}/mo leaves outside AT&T today`, outcome: 'No alert set', outInk: 'var(--warning)', label: 'Set alert', go: toSpend },
-        { key: 'verify', head: 'Confirm savings on the invoice', sub: `${tile('banked') || '$0'} banked to date`, outcome: 'Confirm', outInk: 'var(--success)', label: 'Verify', go: toSpend },
+        bu.length && { key: 'showback', head: 'Each unit its share', sub: bu.map(x => x.label).join(', '), outcome: `${bu.length} to send`, outInk: 'var(--warning)', label: 'Showback', go: toLegs },
+        eng.length && { key: 'owners', head: 'Owners for the savings', sub: `${eng.length} engineering ${eng.length === 1 ? 'move' : 'moves'}, worth ${fmt(engSum)}/mo`, outcome: 'Without an owner', outInk: 'var(--warning)', label: 'Assign owners', go: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'role', rolePage: 0 }) },
+        { key: 'alert', head: 'Alert on exit fees', sub: `${fmt(outN)}/mo leaves outside AT&T today`, outcome: 'No alert set', outInk: 'var(--warning)', label: 'Set alert', go: toSpend },
+        { key: 'verify', head: 'Savings on the invoice', sub: `${tile('banked') || '$0'} banked to date`, outcome: 'Confirm', outInk: 'var(--success)', label: 'Verify', go: toSpend },
       ].filter(Boolean);
       return { homeFin: true, homeFinOff: false, finWf: wf, finWhatIf: p, setFinWhatIf: (e) => set({ finWhatIf: +e.target.value }), finWhatIfSave: `${fmt(wiSave)}/mo`,
         finBuRows: bu.map(x => ({ ...x, vF: fmt(x.v), w: `${Math.round(x.v / buMax * 100)}%` })), hasFinBu: bu.length > 0, finActs }; })(),
-    homeAttn: probs.slice(0, 5).map(p => ({ key: p.key, word: F.HEALTH_WORD[p.state] || p.state, ink: F.HEALTH_INK[p.state] || 'var(--warning)', what: p.what, where: `${p.where} · ${p.thing}`, impact: p.appsF || '', go: p.trace || p.go || (() => {}) })),
+    // Glyph-first rows (2026-10-07, "pare words down along the way"): the state wears its glyph, the place the cloud's mark
+    // and the path's glyph, the impact two chips (apps, workloads); every sentence stays in a title.
+    homeAttn: probs.slice(0, 5).map(p => { const cloud = String(p.where || '').split(' ')[0], m = /^([\d,]+) apps? · ([\d,]+) workloads?$/.exec(p.appsF || '');
+      const mark = W.MARK[cloud] ? W.markFor(cloud, s.theme) : '', pub = /internet/i.test(p.thing || '');
+      return { key: p.key, word: F.HEALTH_WORD[p.state] || p.state, ink: F.HEALTH_INK[p.state] || 'var(--warning)', stateIcon: ({ down: 'close-circle', slo: 'clock', risk: 'exclamation-triangle' })[p.state] || 'exclamation-circle',
+        what: p.what, where: `${p.where} · ${p.thing}`, markSrc: mark, hasMark: !!mark, noMark: !mark, region: String(p.where || '').split(' ').slice(1).join(' ') || p.where, thingIcon: pub ? 'globe' : 'cable', thing: p.thing,
+        impact: p.appsF || '', impactChips: m ? [{ key: 'a', icon: 'grid', t: m[1], title: `${m[1]} ${m[1] === '1' ? 'app' : 'apps'}` }, { key: 'w', icon: 'apps', t: m[2], title: `${m[2]} workloads` }] : [{ key: 'x', icon: 'apps', t: p.appsF || '', title: p.appsF || '' }],
+        go: p.trace || p.go || (() => {}) }; }),
     hasHomeAttn: probs.length > 0,
     homeBriefGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'brief' }),
     homeWaiting: waiting.slice(0, 3), hasHomeWaiting: waiting.length > 0, noHomeWaiting: !waiting.length, homeWaitingNone: waiting.length ? '' : 'No finding waits on you',
@@ -1579,6 +1586,24 @@ const ROLE_ICON = { architect: 'hybrid-cloud', neteng: 'router', security: 'pers
 const HOME_CARD_ICON = { apps: 'apps', onatt: 'padlock', egress: 'bill', exposed: 'personal-security', glance: 'pie-chart', health: 'verified', spend: 'bill', govern: 'check-shield', tags: 'tag', workloads: 'apps' };
 // What an action gets you, as one glyph; the words are its title.
 const outIcon = (t) => { const x = String(t || '').toLowerCase(); return /cannot see|unseen|blind|telemetry/.test(x) ? 'eye' : /latency|slo/.test(x) ? 'high-meter' : /off the internet|private/.test(x) ? 'hub' : /security|risk|expos/.test(x) ? 'check-shield' : /sav|\$|cost|fee|confirm|send/.test(x) ? 'bill' : /alert/.test(x) ? 'bell' : 'bullseye'; };
+// A finding's head, pared for a list line (2026-10-07, "pare words down along the way"): the same figures in fewer words.
+// The full sentence stays the line's title. A head no rule knows passes unchanged.
+const PARE_HEAD = [
+  [/ reach(es)? the cloud over IPsec on the public internet$/, ' on IPsec over the internet'],
+  [/ reach(es)? the cloud over tunnels on the internet$/, ' tunnel over the internet'],
+  [/^(\$[\d,]+\/mo) of internet egress the AT&T network would carry for (\$[\d,]+)$/, '$1 egress, $2 on AT&T'],
+  [/^(\$[\d,]+\/mo) of cross-cloud traffic crosses the public internet$/, '$1 cross-cloud on the internet'],
+  [/^(\$[\d,]+\/mo) of egress rides IPsec tunnels over the internet$/, '$1 egress over IPsec'],
+  [/ (?:has|have) no inspection in path$/, ' uninspected'],
+  [/^(.+) has one path, and (.+) rides it$/, '$1: one path, $2 on it'],
+  [/ peaks at (\d+%) of .+$/, ' peaks at $1'],
+  [/ at (\d+%) of .+ purchased$/, ' at $1'],
+  [/ runs? above the latency SLO$/, ' over latency SLO'],
+  [/^Finance and non-finance workloads share a routing domain$/, 'Finance shares a routing domain'],
+  [/ reach(es)? the internet directly$/, ' reach the internet'],
+  [/ route outside a Connection Hub$/, ' bypass Connection Hubs'],
+];
+export function pareHead(t) { let out = String(t || ''); for (const [re, to] of PARE_HEAD) if (re.test(out)) { out = out.replace(re, to); break; } return out; }
 const firstSentence = (t) => { const m = /^(.+?[.!?])\s+[A-Z0-9$]/.exec(String(t || '')); return m ? m[1].replace(/\.$/, '') : String(t || '').replace(/\.$/, ''); };
 // A Signals card's line under its title, as chips (2026-10-07): each part of "3 problems · 2 apps affected" becomes a
 // glyph and its figure, the part itself the chip's title. A part with no figure (a cloud and region, "sample") keeps its words.
@@ -1603,7 +1628,8 @@ function glyphPass(out) {
     rows: Array.isArray(g.rows) ? g.rows.map(r => ({ ...r, actIcon: ACT_ICON[r.act] || 'arrow-right' })) : g.rows }));
   const RING_ICON = { Sites: 'large-building', Clouds: 'cloud', Workloads: 'apps', Apps: 'grid' };
   if (Array.isArray(out.glanceRings)) out.glanceRings = out.glanceRings.map(g => ({ ...g, icon: RING_ICON[String(g.title || '').replace(/^\w/, ch => ch.toUpperCase())] || RING_ICON[g.title] || 'pie-chart' }));
-  for (const k of ['homeDo', 'finActs']) if (Array.isArray(out[k])) out[k] = out[k].map(d => ({ ...d, headAll: d.head, head: firstSentence(d.head), outIcon: outIcon(d.outcome) }));
+  for (const k of ['homeDo', 'finActs']) if (Array.isArray(out[k])) out[k] = out[k].map(d => ({ ...d, headAll: d.head, head: pareHead(firstSentence(d.head)), outIcon: outIcon(d.outcome) }));
+  for (const k of ['roleActRows', 'insightRows']) if (Array.isArray(out[k])) out[k] = out[k].map(d => ({ ...d, headShort: pareHead(firstSentence(d.head)) }));
   for (const k of TAB_LISTS) if (Array.isArray(out[k])) out[k] = out[k].map(t => { const base = String(t.label || '').split(' · ')[0].trim(); return { ...t, icon: TAB_ICON[base] || 'more-ellipse' }; });
   for (const k of ['roleChips', 'sigChips']) if (Array.isArray(out[k])) out[k] = out[k].map(r => ({ ...r, icon: ROLE_ICON[r.key] || 'person', title: ROLE_OF[r.key] ? `For ${ROLE_OF[r.key].short}: ${ROLE_OF[r.key].q}` : r.label }));
   if (Array.isArray(out.verdictChips) && out.verdictChips.length) { out.hasVerdictChips = true; out.verdictPlain = false; out.hasVerdictParts = false; } else out.hasVerdictChips = false;
