@@ -26,7 +26,8 @@ import { CATALOG } from './naas-data.js';
 import * as W from './naas-ways.js';
 import { PATHS } from './naas-round2.js';
 import { countOf, servicesOf } from './naas-sites.js';
-import { fmt, plural, siteModeOf, regionOf } from './naas-logic.js';
+import { fmt, plural, siteModeOf, regionOf, filterSites, tunnelOf } from './naas-logic.js';
+import { gbps } from './naas-paths.js';
 
 // ---------- The connection types (CreateConnectionMenu.tsx OPTIONS) ----------
 export const CONNECTION_TYPES = [
@@ -173,6 +174,27 @@ export function appliesTo(est, key) {
   const clouds = [...new Set(rs.map(r => r.cloud))];
   const items = clouds.length >= 2 ? rs : [];
   return { key, kind: 'regions', items, n: items.length, phrase: items.length ? plural(items.length, 'region across your clouds', 'regions across your clouds') : '', none: items.length ? '' : (rs.length ? 'Needs a second cloud' : 'No cloud region in your estate') };
+}
+/**
+ * The estate by how it connects to its clouds today (the 2026-10-06 session: "four or five boxes showing what the
+ * connection summary looks like ... 214 sites on the VPN, 5 data centers ... internet sites connected to 4 clouds").
+ * Each box counts with the map's own site filter, so its door opens exactly what it counted, and says how many
+ * clouds those sites reach (a stated tunnel its one cloud, otherwise every cloud it sends to).
+ */
+export function connectSummary(est) {
+  const sites = sitesOf(est), rs = regionsOf(est);
+  if (!sites.length && !rs.length) return [];
+  const reached = (xs) => { const cl = new Set(); xs.forEach(x => { const t = tunnelOf(x); if (t) { cl.add(t.cloud); return; } rs.forEach(r => { if (gbps(est, x, r) > 0) cl.add(r.cloud); }); }); return cl.size; };
+  const box = (key, icon, filter, one, many) => { const xs = filterSites(sites, filter), n = xs.reduce((a, x) => a + countOf(x.name), 0);
+    return { key, icon, kind: 'sites', filter, n, noun: n === 1 ? one : many, clouds: reached(xs) }; };
+  const clouds = new Set(rs.map(r => r.cloud)).size;
+  return [
+    box('vpn', 'hub', { svc: ['avpn'] }, 'site on AVPN', 'sites on AVPN'),
+    box('internet', 'globe', { reach: 'internet' }, 'site over the internet', 'sites over the internet'),
+    box('dc', 'large-building', { cls: 'Data center' }, 'data center', 'data centers'),
+    box('iot', 'wireless-network', { kind: 'iot' }, 'wireless or IoT site', 'wireless and IoT sites'),
+    { key: 'clouds', icon: 'cloud', kind: 'regions', filter: null, n: rs.length, noun: rs.length === 1 ? 'cloud region' : 'cloud regions', clouds },
+  ].map(b => ({ ...b, cloudWord: b.kind === 'regions' ? `across ${plural(b.clouds, 'cloud', 'clouds')}` : b.n ? `to ${plural(b.clouds, 'cloud', 'clouds')}` : 'None yet' }));
 }
 /** One row per member of a type's set: what it is and how it reaches the cloud today. No figures. */
 export function appliesRows(est, set, rampWord) {

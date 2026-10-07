@@ -12,13 +12,16 @@ if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: ()
 const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
 const at = (view, patch = {}) => vals(mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health', healthView: 'segment', ...patch }));
 
-test('By app and By segment are the two views of Health', () => {
+test('App health, the path by app and By segment are the views of Health', () => {
   const c = mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'health' });
   const v = vals(c);
-  assert.deepEqual(v.healthViews.map(h => h.label), ['By app', 'By segment']);
-  assert.ok(v.healthByApp && !v.healthBySegment);
-  v.healthViews[1].go();
+  // App health joined them (2026-10-06): the app's own compute, database and network against your thresholds.
+  assert.deepEqual(v.healthViews.map(h => h.label), ['App health', 'Path by app', 'By segment']);
+  assert.ok(v.healthByApp && !v.healthBySegment && !v.healthInCloud);
+  v.healthViews[2].go();
   assert.ok(vals(c).healthBySegment);
+  v.healthViews[0].go();
+  assert.ok(vals(c).healthInCloud);
 });
 
 test('nine rows in the email\'s order on every estate, empty included', () => {

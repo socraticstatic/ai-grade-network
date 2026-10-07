@@ -21,7 +21,7 @@ import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
 import * as SG from './naas-signals.js';
-import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies, effectivePolicy, shadowedPolicies, intendedVsConfigured, engineFlows, flowSheet, LAYER_ICON, LAYER_SHORT, assetIcon, verbBadges } from './naas-policy-layers.js';
+import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, routeRulesOf, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies, effectivePolicy, shadowedPolicies, intendedVsConfigured, engineFlows, flowSheet, LAYER_ICON, LAYER_SHORT, assetIcon, verbBadges } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
 import * as M from './naas-moves.js';
 import { rampName } from './naas-things.js';
@@ -30,6 +30,7 @@ import * as CV from './naas-cost-view.js';
 import * as BW from './naas-bandwidth.js';
 import * as CF from './naas-connect-flow.js';
 import * as W from './naas-ways.js';
+import * as AH from './naas-app-health.js';
 import * as DR from './naas-drill.js';
 import * as GV from './naas-govern.js';
 
@@ -199,7 +200,7 @@ export function defaults() {
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
     // The connect flow (2026-09-30): the set a Ways to connect figure opened, the orders placed this session, the location area shown.
-    waySet: null, waySetPage: 0, wayZone: 'intra', orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0,
+    waySet: null, waySetPage: 0, wayZone: 'intra', appThresh: null, orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0,
     order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null,
     simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36,
     // Modify bandwidth (2026-09-30): the connection it is open on, the size picked ({ id, ports, mbps }),
@@ -302,7 +303,7 @@ export function vals(c) {
   const probs = OD.problems(est0, conns, obAll, appsOf(est0, A.inventory(est0), obAll.flows), incChanges, clockNow);
   const probRows = OD.queue(probs, clockNow);
   // Who answers for each piece of every path, read once from the whole estate (2026-09-30).
-  const segCtx = G.segCtxOf(est0, { inv: A.inventory(est0), ob: obAll, conns, probs });
+  const segCtx = G.segCtxOf(est0, { inv: A.inventory(est0), ob: obAll, conns, probs, thresholds: s.appThresh });
   const est = { ...est0, observedPct: ob.total ? ob.covPct : est0.observedPct, findings: [...A.observeFindings(est0, obAll), ...est0.findings] };
   const go = (screen, extra) => () => { const pre = screen === 's4' && !(extra && extra.compose) && !composeStarted(s.compose) ? { compose: prefillCompose(est) } : {}; if (screen === 's1' && s.scanStep < 4 && !(extra && extra.scanStep >= 4)) runScan(c, est); c.setState({ screen, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, discoverView: 'estate', fabDrill: [], laneFocus: false, cnPage: 'picture', fdKey: null, bwFor: null, bwPick: null, bwStep: null,
     // Discover's new filter is a landing's, and a map's panel is the map's (skeptic, 2026-10-01): a way
@@ -1214,7 +1215,8 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
     tag: (i) => go('s3', { ...cloud, tab: 'govern', govPanel: 'tags', tagPage: Math.floor(i / PAGE_SIZE.drawerTags[1]) }),
     sitesOn: () => picture({ reach: 'att' }),
     sitesOff: () => picture({ reach: 'outside' }),
-    health: () => obs({ obPanel: 'health', healthView: 'app' }),
+    // Apps healthy opens what healthy means (2026-10-06 session: "when you click on it ... what is the definition for them").
+    health: () => obs({ obPanel: 'health', healthView: 'cloud' }),
     // An app's dot opens its own path in Paths, on the page that holds it.
     appPath: (tag) => { const ix = pathAll.findIndex(r => String(r.key).startsWith(tag + '|'));
       return obs({ obPanel: 'paths', pathSel: ix >= 0 ? pathAll[ix].key : null, pathsPage: ix >= 0 ? Math.floor(ix / 8) : 0 }); },
@@ -3222,8 +3224,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       .map(r => (r.move ? r : { ...r, move: r.trace }));
     // By segment (notes, 2026-09-30): the stakeholder's nine rows, who answers for
     // each piece and what the product can see of it; a row drills in place.
-    const healthView = s.healthView === 'segment' ? 'segment' : 'app';
-    const healthViews = [['app', 'By app'], ['segment', 'By segment']].map(([k, l]) => { const on = healthView === k; return { key: k, label: l, on, ...seg(on), go: () => set({ healthView: k, segOpen: null, segTrail: [], segPage: 0 }) }; });
+    const healthView = s.healthView === 'segment' ? 'segment' : s.healthView === 'cloud' ? 'cloud' : 'app';
+    // App health first (2026-10-06 session: "we need to define what app healthy means"): the app's own compute,
+    // database and network against your thresholds, beside its path; then the path by app, then by segment.
+    const healthViews = [['cloud', 'App health'], ['app', 'Path by app'], ['segment', 'By segment']].map(([k, l]) => { const on = healthView === k; return { key: k, label: l, on, ...seg(on), go: () => set({ healthView: k, segOpen: null, segTrail: [], segPage: 0 }) }; });
     const dotOf = (state, limited) => { const ink = INK[state] || 'var(--text-disabled)';
       return { rad: F.healthRadius(state), bg: state === 'nodata' || state === 'none' || limited ? 'transparent' : ink, border: state === 'nodata' ? '1.5px dashed var(--text-disabled)' : state === 'none' ? '1.5px solid var(--border-secondary)' : limited ? `2px solid ${ink}` : '0' }; };
     const NOUN = { access: ['site', 'sites'], access3p: ['site', 'sites'], ipsec: ['site', 'sites'], backbone: ['backbone', 'backbone'], onramp: ['on-ramp', 'on-ramps'], cloudlink: ['connection', 'connections'], hub: ['hub', 'hubs'], exit: ['region', 'regions'], app: ['region', 'regions'] };
@@ -3247,11 +3251,37 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const segHead = segKey ? segRows.find(r => r.key === segKey) : null;
     const segCrumbs = segKey ? [{ key: 'root', label: 'All segments', to: null }, { key: segKey, label: segHead.label.replace(/ \(.*\)$/, ''), to: [] }, ...segTrail.map((k, i) => ({ key: k, label: segLabelOf(k), to: segTrail.slice(0, i + 1) }))]
       .map((c, i, a) => ({ ...c, notLast: i < a.length - 1, weight: i === a.length - 1 ? 700 : 500, color: i === a.length - 1 ? 'var(--text-heading)' : 'var(--link)', go: () => set(c.to ? { segTrail: c.to, segPage: 0 } : { segOpen: null, segTrail: [], segPage: 0 }) })) : [];
+    // App health (2026-10-06): one row per app, its path, its three signals as meters with your threshold on each,
+    // how much of it is on AT&T and the policies enforced on its tag, then a verdict that says why. Your thresholds
+    // step by 5 and move every count that reads app health, here and on the home.
+    const th = segCtx.thresholds || AH.thresholdsOf(s.appThresh);
+    const HW = { ok: 'Healthy', risk: 'At risk', slo: 'Over', down: 'Down' };
+    const PRANK = { none: -2, nodata: -1, ok: 0, risk: 1, slo: 2, down: 3 };
+    const enforcedOn = (tag) => (est0.policies || []).filter(p => p.state === 'enforced' && String(p.match || '').toLowerCase() === `tag ${tag}`.toLowerCase()).length;
+    const appHealthRows = all.map(r => { const res = r.resource || AH.signalsOf(est0, r.tag, s.appThresh);
+      const wc = r.cells.filter(c => PRANK[c.state] > 0).sort((a, b) => PRANK[b.state] - PRANK[a.state])[0];
+      const pathWord = r.pathState === 'ok' ? 'Holds its SLO' : `${{ risk: 'At risk', slo: 'Over SLO', down: 'Down' }[r.pathState] || r.pathState}${wc ? ` · ${wc.thing}` : ''}`;
+      // The why leads with the app's own signals (the session's example), then the path: short on the row, whole in the title.
+      const PW = { risk: 'at risk', slo: 'over SLO', down: 'down' };
+      const shorts = [...res.signals.filter(g => g.state !== 'ok').map(g => `${g.label} ${g.value}%${g.leak ? ' and climbing' : ''}`), ...(r.pathState !== 'ok' ? [`path ${PW[r.pathState] || r.pathState}`] : [])];
+      const reasons = [...res.reasons, ...(r.pathState !== 'ok' ? [`Path ${PW[r.pathState] || r.pathState}${wc ? ` at ${wc.thing}` : ''}`] : [])];
+      const pol = enforcedOn(r.tag), onPct = Math.round((r.onAtt || 0) * 100);
+      return { key: r.tag, label: r.label, state: r.state, dot: INK[r.state] || 'var(--text-disabled)', rad: F.healthRadius(r.state),
+        pathWord, pathInk: r.pathState === 'ok' ? 'var(--text-body)' : INK[r.pathState], pathDot: INK[r.pathState] || 'var(--text-disabled)', pathRad: F.healthRadius(r.pathState),
+        signals: res.signals.map(g => ({ key: g.key, pct: `${g.value}%`, width: `${Math.min(100, g.value)}%`, tick: `${g.threshold}%`, fill: g.state === 'ok' ? 'var(--link)' : INK[g.state], ink: g.state === 'ok' ? 'var(--text-heading)' : INK[g.state],
+          leak: g.leak, title: `${g.label}: ${g.value}% ${g.unit} (${g.what}), your threshold ${g.threshold}%${g.leak ? '; memory climbs and is never released' : ''}` })),
+        onAtt: `${onPct}%`, onAttInk: onPct === 100 ? 'var(--text-heading)' : 'var(--text-light)', policies: pol ? `${pol} ${pol === 1 ? 'policy' : 'policies'}` : 'No policy', polInk: pol ? 'var(--text-body)' : 'var(--text-disabled)',
+        verdict: r.state === 'slo' ? (r.pathState === 'slo' ? 'Over SLO' : 'Over threshold') : HW[r.state] || r.state, verdictInk: r.state === 'ok' ? 'var(--text-heading)' : INK[r.state],
+        why: shorts.length ? shorts.join(' · ').replace(/^\w/, ch => ch.toUpperCase()) : 'Inside your thresholds', whyAll: reasons.join('; ') || 'Path and resources inside your thresholds' }; });
+    const appThreshCtl = AH.SIGNALS.map(g => ({ key: g.key, label: g.label, icon: g.icon, valueF: `${th[g.key]}%`, title: `${g.label}: over ${th[g.key]}% is over; within ${AH.RISK_BAND} points under it, at risk`,
+      decOff: th[g.key] <= AH.MIN, incOff: th[g.key] >= AH.MAX, dec: () => set({ appThresh: { ...th, [g.key]: Math.max(AH.MIN, th[g.key] - AH.STEP) } }), inc: () => set({ appThresh: { ...th, [g.key]: Math.min(AH.MAX, th[g.key] + AH.STEP) } }) }));
+    const appThreshChanged = AH.SIGNALS.some(g => th[g.key] !== AH.THRESHOLDS[g.key]);
     const pathVals = { pathTimeAll: pathAll, pathTimeRows, pathDetail, pathLine: `Is it fast? Each app group on its slowest path, from the site that sends it the most. SLO ${F.SLO_PRIVATE} ms on AT&T, ${F.SLO} ms outside.`, hasPaths: pathAll.length > 0, noPaths: !pathAll.length,
       changeAll, changeRows: changeAll, chgTicks, chgBands, chgFrom: winLabelOf(s), hasChanges: changeAll.length > 0, noChanges: !changeAll.length,
       chgLegend: [['var(--error)', 'Route'], ['var(--link)', 'Config'], ['var(--warning)', 'Maintenance']].map(([color, label]) => ({ key: label, color, label })) };
     return { ...pathVals, pathFlowAll: all, pathFlowRows: rows, segHeads, healthTiles, problemRows, hasProblems: problemRows.length > 0,
-      healthViews, healthByApp: healthView === 'app', healthBySegment: healthView === 'segment', segRows, segOpen: !!segKey, segTable: healthView === 'segment' && !segKey, segLevel: drill ? drill.level : null, segDrillRows, segCrumbs,
+      healthViews, healthByApp: healthView === 'app', healthBySegment: healthView === 'segment', healthInCloud: healthView === 'cloud',
+      appHealthRows, appThreshCtl, appThreshChanged, appThreshReset: () => set({ appThresh: null }), appHealthOk: `${all.filter(r => r.state === 'ok').length} of ${all.length}`, segRows, segOpen: !!segKey, segTable: healthView === 'segment' && !segKey, segLevel: drill ? drill.level : null, segDrillRows, segCrumbs,
       segOwner: segHead ? segHead.ownerLabel : '', segSource: segHead ? segHead.source : '', segLimited: !!(segHead && segHead.limited) };
   })();
   // Insights > Operations (notes, 2026-09-30, C1): tickets, how long fixes take,
@@ -4371,6 +4401,21 @@ function flowVals(s, set, est, c) {
   const cfQos = CF.cloudsOf(f).map(cl => ({ key: cl, cloud: cl, value: f.qos[cl] || 'Standard', set: (e) => put({ qos: { ...f.qos, [cl]: e.target.value } }) }));
   const cfPolicy = D.COMPOSE_CHIPS.control.map(k => { const on = f.policy.includes(k); return { key: k, label: k, desc: CARD_DESC.control[k] || '', on, ...pickInk(on), pick: () => choose('policy', on ? f.policy.filter(x => x !== k) : [...f.policy, k]) }; });
   const cfPolicySent = CF.policySentence(f, est);
+  // Advanced Settings in two sections (2026-10-06 session: "just do routing and security ... have a header, and maybe
+  // the options are not available yet, but routing you already know what to apply"). Routing holds the QoS classifier,
+  // the routing requirements and the NetBond Advanced route rules they push, rule by rule and direction by direction;
+  // Security holds inspection and segmentation, and what is not offered yet, said so.
+  const ROUTING_REQ = ['Private path required', 'No direct internet path', 'Latency SLO', 'Cost-aware routing'];
+  const reqIcon = (k) => REQ_ICON[k] || 'checklist';
+  const cfPolicyRouting = cfPolicy.filter(p => ROUTING_REQ.includes(p.key)).map(p => ({ ...p, icon: reqIcon(p.key) }));
+  const cfPolicySecurity = cfPolicy.filter(p => !ROUTING_REQ.includes(p.key)).map(p => ({ ...p, icon: reqIcon(p.key) }));
+  const pushed = {};
+  f.policy.forEach(k => { const pc = CF.POLICY_FOR_CONTROL[k]; if (pc) for (const [rk, rv] of Object.entries(routeRulesOf({ req: pc.req }))) pushed[rk] = { ...(pushed[rk] || {}), ...rv }; });
+  const VERB = { deny: ['Deny', 'deny'], manip: ['Manipulate', 'manip'], allow: ['Allow', 'allow'], advanced: ['Advertise', 'adv'] };
+  const cfRouteRules = ROUTE_RULES.filter(rr => { const rv = pushed[`${rr.section}:${rr.id}`] || {}; return rv.o2p || rv.p2o; }).map(rr => { const rv = pushed[`${rr.section}:${rr.id}`];
+    return { key: `${rr.section}:${rr.id}`, label: rr.label, verb: VERB[rr.section][0], cls: VERB[rr.section][1], icon: ROUTE_ICON[rr.section], o2p: !!rv.o2p, p2o: !!rv.p2o,
+      title: `${VERB[rr.section][0]}: ${rr.label}${rv.o2p ? ', your side to the cloud' : ''}${rv.p2o ? ', the cloud to your side' : ''}` }; });
+  const cfSecuritySoon = [['Allow and deny lists by address', 'stop-sign'], ['Intrusion prevention in path', 'firewall'], ['Encryption keys you hold', 'lock']].map(([label, icon]) => ({ key: label, label, icon }));
   // Terms: the storefront's term discounts, the same ones Review always used.
   const ord = CF.flowOrder(f, est);
   const cfTerms = CF.TERMS.map(t => { const on = f.term === t.m, priced = CF.priceable(f) && ord.priced;
@@ -4470,7 +4515,9 @@ function flowVals(s, set, est, c) {
     goRecommended: () => set({ cnPage: 'options' }),
     cfKey: key, cfSteps, cfTitle: (STEP_HEAD[key] || [])[0] || '', cfDesc: (STEP_HEAD[key] || [])[1] || '',
     cfIsType: key === 'type', cfIsProvider: key === 'provider', cfIsEndpoints: key === 'endpoints', cfIsBasic: key === 'basic', cfIsAdvanced: key === 'advanced', cfIsTerms: key === 'terms', cfIsReview: isLast,
-    cfShowPolicy: key === 'advanced' || (isLast && !keys.includes('advanced')),
+    // Review carries the policy chips only where the flow has no Advanced Settings (Last Mile, Colo to Colo).
+    cfShowPolicy: isLast && !keys.includes('advanced'),
+    cfPolicyRouting, cfPolicySecurity, cfRouteRules, hasCfRouteRules: cfRouteRules.length > 0, noCfRouteRules: cfRouteRules.length === 0, cfSecuritySoon,
     cfClouds, hasCfClouds: cfClouds.length > 0, noCfClouds: cfClouds.length === 0, cfMulti: f.ctype === 'Cloud to Cloud',
     // With no cloud found, the step's door is the one that finds one; the order waits in Orders.
     cfAddSource: () => { c.setState({ screen: 's1', discoverView: 'sources' }); scrollTop(); syncHash('s1'); },
@@ -4935,16 +4982,22 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
       landed && region ? go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', obPanel: 'paths', pathPin: '|' + region, pathSel: '|' + region, pathsPage: 0 }) : null];
     const words = landed ? ['placed', 'done', 'validated, live', 'first flow logs are in'] : ['placed', 'in progress', 'not yet', 'not yet'];
     return { landed, word: landed ? 'Live' : o.stage, phases: PHASES.map(([key, label, icon], i) => ({ key, label, icon, state: state(i), title: `${label}: ${words[i]}`, hasDoor: !!doors[i], go: doors[i] || (() => {}) })) }; };
+  // The estate by how it connects today, above the moves (2026-10-06 session: "four or five boxes showing what the
+  // connection summary looks like"). Each box is a door to exactly the set it counts; a box with none says so.
+  const summary = onPage && !empty ? CF.connectSummary(est).map(b => ({ ...b, nF: b.n.toLocaleString('en-US'), off: !b.n, op: b.n ? 1 : 0.55,
+    title: b.n ? `${b.n.toLocaleString('en-US')} ${b.noun} ${b.cloudWord}. ${b.kind === 'sites' ? 'Show them on the map' : 'Open Your clouds'}` : `No ${b.noun} in this estate`,
+    go: !b.n ? () => {} : b.kind === 'sites' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'picture', siteFilter: b.filter }) : go('s1', { estPanel: 'clouds', cloudTrailE: [], cloudPage: 0 }) })) : [];
   const shell = (all) => {
     const liveKeys = new Set(all.map(m => m.key));
     const done = ordersAll.filter(o => (o.moveKeys || []).some(k => !liveKeys.has(k))).map(o => { const key = (o.moveKeys || []).find(k => !liveKeys.has(k)); const ph = phasesOf(o, o.title, o.region);
       return { key: 'done:' + o.id, title: (o.moveTitles || {})[key] || o.title, what: o.what, monthly: o.monthly, mark: M.pathMark('netbond'), word: ph.landed ? 'On the AT&T network' : 'Ordered', stageWord: ph.word, ...ph }; });
-    const size = Math.max(1, MOVES_PAGE - done.length);
+    // The summary row takes one move's slot, so the page keeps the fold.
+    const size = Math.max(1, MOVES_PAGE - done.length - (summary.length ? 1 : 0));
     const pg = pageRows(all, size, s.movePage, (n) => set({ movePage: n, moveOpen: null }));
     const picked = all.filter(m => m.sel);
     const openKey = s.moveOpen === 'none' ? null : pg.rows.some(m => m.key === s.moveOpen) ? s.moveOpen : (pg.rows[0] || {}).key;
     const rows = pg.rows.map(m => { const open = m.key === openKey; return { ...m, open, chevron: open ? 'chevron-down' : 'chevron-right', openLabel: open ? `Hide the tiers for ${m.title}` : `Show the tiers for ${m.title}`, toggleOpen: () => set({ moveOpen: open ? 'none' : m.key }) }; });
-    return { moveList: all, moves: rows, movesPager: pg.pager, movesPageSize: size, hasMoves: all.length > 0 || done.length > 0, noMoves: !all.length && !done.length, doneMoves: done, hasDone: done.length > 0,
+    return { connectSummary: summary, hasConnectSummary: summary.length > 0, moveList: all, moves: rows, movesPager: pg.pager, movesPageSize: size, hasMoves: all.length > 0 || done.length > 0, noMoves: !all.length && !done.length, doneMoves: done, hasDone: done.length > 0,
       movesHead: 'What to connect next, by impact',
       movesSub: all.length ? `${all.length} ${all.length === 1 ? 'move' : 'moves'}, ranked by what the Recommended tier saves a month, then by the risk it closes. Today is measured; what you'd get is modelled at AT&T rates and list prices.` : '',
       movesEmpty: empty ? 'Nothing is discovered yet, so there is nothing to connect. Discovery reads a cloud account and lists what it can move.' : 'Everything discovered is on the AT&T network. Nothing to move.',

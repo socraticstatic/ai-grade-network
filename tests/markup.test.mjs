@@ -438,12 +438,17 @@ test('every container the markup opens, it closes', () => {
   // path-by-path table left (div, span, sc-for); the flow gained the way banner and the provider marks (sc-if +3).
   // Start moved into each way card's head row to fit the fold (div -1). Recounted, every tag balanced: div 1263 -> 1234,
   // span 1194 -> 1202, sc-if 590 -> 592, sc-for 324 -> 326, button 490 -> 488.
-    ['div', /<div\b/g, /<\/div>/g, 1234],
-    ['span', /<span\b/g, /<\/span>/g, 1202],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 592],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 326],
+  // The session's open items (2026-10-07): Advanced Settings as Routing and Security sections (div, span, sc-for for the
+  // route rules and the two requirement grids, button for the inert direction toggles), Recommended's summary boxes
+  // (sc-if, sc-for, button, span), App health (div, span, sc-for for rows, signals and thresholds, button for the steppers
+  // and Reset, sc-if for the leak mark and Reset). Recounted, every tag balanced: div 1234 -> 1254, span 1202 -> 1246,
+  // sc-if 592 -> 598, sc-for 326 -> 334, button 488 -> 496.
+    ['div', /<div\b/g, /<\/div>/g, 1254],
+    ['span', /<span\b/g, /<\/span>/g, 1246],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 598],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 334],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 488],
+    ['button', /<button\b/g, /<\/button>/g, 496],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

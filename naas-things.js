@@ -56,9 +56,16 @@ export function edgeThing(site) {
   return T('e:pe', 'AT&T PE', 'att', 'AT&T provider edge router');
 }
 
-/** Core: the backbone between edges. */
+/**
+ * Core: the backbone between edges. AVPN is the customer's own private MPLS network across AT&T's core, so its sites
+ * cross Core on a thing of their own and reach the cloud through NetBond (AVPN to Cloud): "I didn't see it under core"
+ * (the connect options session, 2026-10-06). Everything else AT&T carries meets on the shared backbone.
+ */
+export const AVPN_CORE = T('c:avpn', 'AVPN · MPLS', 'att', 'AT&T VPN: your private MPLS network across the AT&T core, into NetBond (AVPN to Cloud)');
+export const isAvpnSite = (site) => !!site && site.core !== 'third' && site.accessSla !== 'third' && !site.carrier && /AVPN/.test(site.circuit || site.access || '');
 export function coreThing(site) {
   if (site && site.core === 'third') { const c = site.carrier || site.viaRamp || 'third'; return T('c:' + slug(c), 'Third Party Core', 'third', 'Third-party backbone'); }
+  if (isAvpnSite(site)) return AVPN_CORE;
   return T('c:att', 'AT&T backbone', 'att', 'AT&T MPLS backbone');
 }
 

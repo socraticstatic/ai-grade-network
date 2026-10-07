@@ -89,7 +89,9 @@ await beat('0 NaaS home: the take-away, the snapshot, the map below', async () =
   await expect("Andi's briefing", 'Do next', 'Needs attention', 'Shows the traffic you cannot see');
   await takes('Azure eastus is down', 'Finance rides it · 40 workloads · 22 min', 'Trace it');
   const rows = await inHome('[aria-label="Do next"] .hm-do').count();
-  if (rows !== 4) throw new Error(`Do next lists ${rows} actions, not Network Eng's 4`);
+  // The tunnel finding (2026-10-05, four AT&T sites on tunnels over the internet) is Network Eng's fourth action of five.
+  if (rows !== 5) throw new Error(`Do next lists ${rows} actions, not Network Eng's 5`);
+  await expect('4 AT&T sites reach the cloud over tunnels on the internet');
   const c = await cards();
   if (c.length !== 4) throw new Error(`${c.length} snapshot cards, not 4`);
   for (const [i, want] of [[0, '5 of 8'], [1, '2 of 7'], [2, '$89,600'], [3, '54 of 303']]) if (!c[i].includes(want)) throw new Error(`card ${i + 1} reads "${c[i].replace(/\n/g, ' | ')}", not ${want}`);
@@ -128,7 +130,8 @@ await beat('2 Your sites and Your clouds', async () => {
   await expect(/\$51,000\s*\/mo egress/);
   // Every count is a door to its set, and the landing carries its moves (the drill rule, 2026-09-30).
   await tab('At a glance');
-  await expect(/Spend\s*\$135,650/);
+  // Re-pinned 2026-10-07: the tunnel sites' VPN connections (2026-10-05) moved Spend from $135,650.
+  await expect(/Spend\s*\$136,083/);
   await page.locator('[aria-label="Estate at a glance"] button', { hasText: '70 workloads exposed' }).first().click(); await settle();
   // No finding is written about all 70, so the moves are the policy and Andi (2026-10-01: "Open its
   // finding" opened a snoozed one about 7 others in eu-west-1).

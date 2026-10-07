@@ -6,7 +6,7 @@
  * integration by AT&T and its authorised partners. Not for redistribution.
  */
 // Layout and derivation helpers for the NaaS storefront. Pure functions, no DOM.
-import { siteChain, cloudEdgeThing, cloudAccessThing, coreThing, accessThing, entersAtt, tunnelEdgeThing, tunnelEndThing } from './naas-things.js';
+import { siteChain, cloudEdgeThing, cloudAccessThing, coreThing, accessThing, entersAtt, tunnelEdgeThing, tunnelEndThing, AVPN_CORE } from './naas-things.js';
 import { servicesOf, stateOf, SERVICE, buOf, BU_DEFAULTS } from './naas-sites.js';
 export const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
 export const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
@@ -123,6 +123,11 @@ export function filterSites(sites, f = {}) {
     if (f.reach === 'outside' && onAtt(x)) return false;
     // AT&T access, tunnel over the internet (2026-10-05): what a tunnel move's count opens.
     if (f.reach === 'tunnel' && !(onAtt(x) && tunnelOf(x))) return false;
+    // The connect summary's boxes (2026-10-06): whatever reaches the cloud over the internet, AT&T's or another
+    // carrier's; one class of site; wireless and IoT, as the connection type counts them.
+    if (f.reach === 'internet' && x.priv) return false;
+    if (f.cls && x.cls !== f.cls) return false;
+    if (f.kind === 'iot' && !(/mobility/i.test(x.access || '') || /^(Mobility|Edge)$/.test(x.cls || ''))) return false;
     if (f.loc) {
       const [kind, val] = [f.loc.slice(0, f.loc.indexOf(':')), f.loc.slice(f.loc.indexOf(':') + 1)];
       if (kind === 'region' && regionOf(x) !== val) return false;
@@ -428,12 +433,17 @@ export function heroLayout(est, opts) {
     } else drafts.push({ who, label, side: 'site', region: site.region, e, xc: site.xc, nodes: chain.map((t, i) => want(t, i, y)) });
   });
   // Regions: out of Core, across the on-ramp, into the cloud's own gateway.
+  // AVPN to Cloud (2026-10-06): where AVPN sites drew their own Core thing, each NetBond on-ramp is fed from it too,
+  // so the AVPN line runs on across Core into NetBond and the cloud instead of stopping in the middle.
+  const avpnOn = drafts.some(d => d.side === 'site' && d.nodes[2] && d.nodes[2].id === AVPN_CORE.id);
   out.edges.filter(e => e.kind === 'egress' && e.priv && !e.ghost && !e.viaLane && e.region).forEach(e => {
     const r = e.region, y = r.cy != null ? r.cy : e.y2;
     // A provider's one wire carries a route per on-ramp; they share the wire.
     (r.lines || [r]).forEach((part, pi) => {
-      const chain = [coreThing(null), cloudEdgeThing({ ...part, cloud: r.cloud }), cloudAccessThing(r)];
+      const edge = cloudEdgeThing({ ...part, cloud: r.cloud });
+      const chain = [coreThing(null), edge, cloudAccessThing(r)];
       drafts.push({ who: r.lines ? `${r.region} · ${part.line}` : r.region, label: r.card ? r.cloud : `${r.cloud} ${r.region}`, side: 'region', region: r.region, e, shared: pi > 0, xc: part.xc, nodes: chain.map((t, i) => want(t, i + 2, y)) });
+      if (avpnOn && edge.id === 'ce:netbond') drafts.push({ who: `${r.lines ? `${r.region} · ${part.line}` : r.region} · AVPN`, label: r.card ? r.cloud : `${r.cloud} ${r.region}`, side: 'region', region: r.region, e, shared: true, avpn: true, xc: part.xc, nodes: [AVPN_CORE, edge, cloudAccessThing(r)].map((t, i) => want(t, i + 2, y)) });
     });
   });
   drafts.forEach(d => d.nodes.forEach(n => use(n, d.label)));

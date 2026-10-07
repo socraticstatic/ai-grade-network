@@ -217,7 +217,8 @@ test('each card is one door to its page, and each figure, ring segment, dot and 
   const click = (fn, patch = {}) => { const c = home('partial', patch); fn(vals(c))(); return c; };
   // The card doors.
   assert.deepEqual(at(click(v => card(v, 'onatt').go), ['screen', 'tab', 'cnPage']), ['s3', 'connect', 'picture']);
-  assert.deepEqual(at(click(v => card(v, 'apps').go), ['screen', 'tab', 'obPage', 'obPanel', 'healthView']), ['s3', 'observe', 'perf', 'health', 'app']);
+  // Apps healthy opens what healthy means (2026-10-06): App health, the app's own signals beside its path.
+  assert.deepEqual(at(click(v => card(v, 'apps').go), ['screen', 'tab', 'obPage', 'obPanel', 'healthView']), ['s3', 'observe', 'perf', 'health', 'cloud']);
   assert.deepEqual(at(click(v => card(v, 'egress').go), ['screen', 'tab', 'costPanel']), ['s3', 'cost', 'spend']);
   assert.deepEqual(at(click(v => card(v, 'exposed').go), ['screen', 'discoverView', 'estPanel']), ['s1', 'estate', 'glance']);
   // On AT&T: private regions are Connect's own "N are private", on its map; public ones are

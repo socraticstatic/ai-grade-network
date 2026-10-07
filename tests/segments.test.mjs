@@ -133,9 +133,15 @@ test('paths that use the same thing meet at it', () => {
   const l = L();
   // Both NetBond regions hand off at one NetBond; every AT&T-core route meets one backbone.
   assert.equal(routeOf(l, 'us-east-1').nodes[1], routeOf(l, 'us-central1').nodes[1]);
+  // Re-pinned (2026-10-06, AVPN to Cloud: "I didn't see it under core"): AVPN sites cross Core on their own thing, and each
+  // NetBond on-ramp is fed from it as well as from the backbone, so every AT&T-core route meets one of the two, each drawn once.
   const backbones = new Set(l.routes.filter(r => r.side !== 'path').map(r => r.side === 'site' ? r.nodes[2] : r.nodes[0]));
-  assert.deepEqual([...backbones], ['c:att']);
+  assert.deepEqual([...backbones].sort(), ['c:att', 'c:avpn']);
   assert.equal(l.nodes.filter(n => n.id === 'c:att').length, 1);
+  assert.equal(l.nodes.filter(n => n.id === 'c:avpn').length, 1);
+  for (const r of l.routes.filter(x => x.side === 'site' && x.nodes[0] === 'a:avpn')) assert.equal(r.nodes[2], 'c:avpn', r.who);
+  const avpnOut = l.routes.filter(x => x.side === 'region' && x.nodes[0] === 'c:avpn');
+  assert.ok(avpnOut.length > 0 && avpnOut.every(x => x.nodes[1] === 'ce:netbond'), 'AVPN runs on into NetBond and only NetBond');
 });
 
 test('each thing is drawn once, inside its segment, clear of the labels', () => {

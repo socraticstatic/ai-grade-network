@@ -43,7 +43,8 @@ test('an order for the move turns Connect into the phase strip: Ordered done, Pr
   assert.ok(d.phases[3].hasDoor);
   d.phases[3].go();
   assert.equal(c.state.tab, 'observe'); assert.equal(c.state.pathPin, '|' + region);
-  assert.equal(v.movesPageSize, 4, 'a done row takes a slot so the page keeps the fold');
+  // A done row takes a slot, and so does the summary of how the estate connects (2026-10-06), so the page keeps the fold.
+  assert.equal(v.movesPageSize, 3, 'a done row takes a slot so the page keeps the fold');
 });
 
 test('the markup draws Connect or the phase strip on the right, and the done rows after the list', () => {

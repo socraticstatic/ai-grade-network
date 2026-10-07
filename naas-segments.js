@@ -12,6 +12,7 @@ import { countOf, stateOf, placeName } from './naas-sites.js';
 import { siteState } from './naas-volume.js';
 import { appsOf } from './naas-apps.js';
 import { path as hopsOf, regionSites } from './naas-paths.js';
+import * as AH from './naas-app-health.js';
 
 /** The grid's columns, left to right. Headers are the stakeholder's; titles name the house segment. */
 export const SEGMENTS = [
@@ -47,8 +48,10 @@ const NOT_YET = 'Not yet measured';
 const RANK = { ok: 0, risk: 1, slo: 2, down: 3 };
 
 /** Everything the segment model reads, built once from the whole estate; probs is the open incident list (naas-observe-dash problems()). */
-export function segCtxOf(est, { inv, ob, conns, probs = [] }) {
-  return { est, ob, conns, probs: probs || [], apps: appsOf(est, inv, (ob && ob.flows) || []), blind: new Set(((ob && ob.blind) || []).map(r => r.region)) };
+export function segCtxOf(est, { inv, ob, conns, probs = [], thresholds = null }) {
+  const apps = appsOf(est, inv, (ob && ob.flows) || []);
+  // The app's own signals in the cloud (2026-10-06): compute, database and network against your thresholds.
+  return { est, ob, conns, probs: probs || [], apps, resource: AH.resourceOf(est, apps, thresholds), thresholds: AH.thresholdsOf(thresholds), blind: new Set(((ob && ob.blind) || []).map(r => r.region)) };
 }
 
 const rowOf = (ctx, region) => (ctx.conns.rows || []).find(r => r.region === region) || null;
@@ -215,9 +218,12 @@ export function pathFlow(ctx) {
   return (ctx.apps || []).map(a => {
     const cells = cellsFor(a.tag, ctx);
     const listed = (ctx.probs || []).filter(p => (p.apps || []).includes(a.tag)).map(p => p.state);
-    const state = [...cells.map(c => c.state), ...listed].reduce((w, st) => (R[st] > R[w] ? st : w), 'ok');
+    // Healthy means the path holds its SLO and the app's own compute, database and network stay under your thresholds (2026-10-06).
+    const pathState = [...cells.map(c => c.state), ...listed].reduce((w, st) => (R[st] > R[w] ? st : w), 'ok');
+    const res = (ctx.resource || {})[a.tag] || null;
+    const state = res && R[res.state] > R[pathState] ? res.state : pathState;
     const top = (a.topApps || [])[0];
-    return { tag: a.tag, label: top ? `${a.tag} → ${top}` : a.tag, cells, state, wl: a.wl };
+    return { tag: a.tag, label: top ? `${a.tag} → ${top}` : a.tag, cells, state, pathState, resource: res, wl: a.wl, onAtt: a.onAtt };
   }).sort((x, y) => R[y.state] - R[x.state] || y.wl - x.wl);
 }
 

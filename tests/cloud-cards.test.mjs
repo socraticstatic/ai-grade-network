@@ -40,7 +40,8 @@ test('a provider draws one wire until it is opened, and a route per on-ramp insi
   assert.equal(wires('AWS')[0].y2, cards(l).find(c => c.cloud === 'AWS').cy);
   assert.equal(wires('AWS')[0].priv, true);
   const aws = l.routes.filter(r => r.side === 'region' && r.region === 'AWS').map(r => r.who);
-  assert.deepEqual(aws, ['AWS · ce:netbond', 'AWS · ce:dx']);
+  // AVPN to Cloud (2026-10-06): the NetBond on-ramp is fed from AVPN's own Core thing too.
+  assert.deepEqual(aws, ['AWS · ce:netbond', 'AWS · ce:netbond · AVPN', 'AWS · ce:dx']);
 });
 
 test('each private wire runs Core, its on-ramp, the provider\'s gateway', () => {
