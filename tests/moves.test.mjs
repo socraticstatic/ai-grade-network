@@ -9,6 +9,7 @@ import * as F from '../naas-flowmap.js';
 import { siteModeOf, filterSites, onAtt, fmt } from '../naas-logic.js';
 import { countOf, servicesOf } from '../naas-sites.js';
 import { mkC } from './harness.mjs';
+import * as W from '../naas-ways.js';
 
 // Connect > Recommended (Micah, 2026-09-30): "The options don't make much sense";
 // "discover options - show attributes of cost, performance and security"; "with
@@ -20,7 +21,11 @@ const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url)
 const ESTATES = ['partial', 'mature', 'trust', 'small'];
 const on = (view, extra = {}) => mkC({ view, screen: 's3', tab: 'connect', cnPage: 'options', estateParam: null, ...extra });
 const listOf = (view, extra) => vals(on(view, extra)).moveList;
-const cat = (id) => D.CATALOG.find(p => p.id === id);
+// A way's own products (the AT&T-provided port) price from naas-ways.js beside the catalog (2026-10-06).
+const cat = (id) => W.productOf(id);
+// The session's words for the ways a cloud region is offered, Recommended first (2026-10-06).
+const WAY_WORDS = ['Recommended', 'Option 2', 'Option 3'];
+const byWays = (m) => m.tiers.some(t => t.way);
 const pub = (est) => est.regionsList.filter(r => !r.priv);
 
 // ---- each estate's moves come from its own data ----
@@ -86,7 +91,9 @@ test('Small reads its one move off its Connect finding; Empty has none and says 
   assert.equal(sm.length, 1);
   assert.deepEqual(sm[0].regions, ['us-east-1', 'us-west-2']);
   assert.equal(sm[0].finding, 'onecloud');
-  assert.deepEqual(sm[0].tiers.map(t => t.rung), D.ESTATES.small.findings.find(f => f.kind === 'onecloud').ladder);
+  // Re-pinned (2026-10-06, the connect options session): an AWS region set is offered the session's three ways, in its
+  // order of priority; the Connect finding still names why the move exists.
+  assert.deepEqual(sm[0].tiers.map(t => t.way), ['byo', 'att', 'peer']);
   const e = vals(on('empty'));
   assert.equal(e.moveList.length, 0);
   assert.equal(e.noMoves, true);
@@ -121,11 +128,13 @@ test('before values: a public region set reads its public latency and its Cost-p
 
 test('every move offers exactly three tiers in the house order, Recommended preselected', () => {
   for (const view of ESTATES) for (const m of listOf(view)) {
-    assert.deepEqual(m.tiers.map(t => t.tier), TIERS, `${view} ${m.title}`);
+    // A cloud region set reads the session's ways (Recommended, then Option 2 and 3); every other move the house ladder.
+    assert.deepEqual(m.tiers.map(t => t.tier), byWays(m) ? WAY_WORDS : TIERS, `${view} ${m.title}`);
     assert.deepEqual(TIERS, ['Start here', 'Recommended', 'Full control']);
     assert.equal(m.tiers.filter(t => t.on).length, 1);
-    assert.equal(m.tiers[1].on, true, `${view} ${m.title}: Recommended is not preselected`);
-    for (const t of m.tiers) {
+    assert.equal(m.tiers[m.recI].on, true, `${view} ${m.title}: Recommended is not preselected`);
+    assert.equal(m.tiers[m.recI].tier, 'Recommended', `${view} ${m.title}`);
+    for (const t of m.tiers.filter(x => !x.unavailable)) {
       assert.equal(t.intro, `With AT&T ${t.label} (${t.tier}), here's what you'd get:`);
       assert.ok(t.fit && t.sec.value && t.perf.value && t.cost.value, `${view} ${m.title} ${t.tier}`);
     }
@@ -136,6 +145,8 @@ test('a finding on the Connect tab lends its ladder; otherwise the catalog serve
   for (const view of ESTATES) {
     const est = D.ESTATES[view];
     for (const m of listOf(view)) {
+      // A cloud region set is offered the session's ways for its cloud, in its order (2026-10-06), whatever finding named it.
+      if (byWays(m)) { assert.deepEqual(m.tiers.map(t => t.way), W.recommendedFor(m.cloud).map(r => r.key), `${view} ${m.title}`); continue; }
       const f = m.finding && est.findings.find(x => x.kind === m.finding);
       if (f) { assert.equal(f.tab, 'connect'); assert.deepEqual(m.tiers.map(t => t.rung), f.ladder, `${view} ${m.title}`); continue; }
       const priced = m.tiers.map(t => t.monthly);
@@ -147,7 +158,7 @@ test('a finding on the Connect tab lends its ladder; otherwise the catalog serve
 });
 
 test('each tier is priced at its catalog price, or reads Priced after survey', () => {
-  for (const view of ESTATES) for (const m of listOf(view)) for (const t of m.tiers) {
+  for (const view of ESTATES) for (const m of listOf(view)) for (const t of m.tiers.filter(x => !x.unavailable)) {
     if (t.monthly === null) { assert.equal(t.price, 'Priced after survey', `${view} ${m.title} ${t.tier}`); continue; }
     const sum = t.products.reduce((a, p) => a + cat(p.id).price * p.n, 0);
     assert.equal(t.monthly, sum, `${view} ${m.title} ${t.tier}`);
@@ -173,10 +184,19 @@ test('each tier\'s after-values follow its product\'s path', () => {
   }
 });
 
-test('Growing\'s cheapest tier is Internet to Cloud; NetBond is Recommended; the full tier holds a hosted VPC', () => {
+test('Growing\'s cloud moves offer the session\'s ways: your port, AT&T\'s port, hosted peering; Google cannot have AT&T\'s', () => {
+  // Re-pinned (2026-10-06, the connect options session): NetBond Advanced on your own port is recommended, then on the
+  // port AT&T orders and holds, then peering into an AT&T-hosted VPC; all three ride the AT&T network.
   const aws = listOf('partial').find(m => m.kind === 'region' && m.cloud === 'AWS');
-  assert.deepEqual(aws.tiers.map(t => t.products.map(p => p.id).join('+')), ['i2c', 'netbond', 'netbond+hosted-vpc']);
-  assert.deepEqual(aws.tiers.map(t => t.path), ['internet', 'netbond', 'netbond']);
+  assert.deepEqual(aws.tiers.map(t => t.products.map(p => p.id).join('+')), ['netbond', 'netbond+port-att', 'netbond+hosted-vpc']);
+  assert.deepEqual(aws.tiers.map(t => t.path), ['netbond', 'netbond', 'netbond']);
+  assert.deepEqual(aws.tiers.map(t => t.label), ['Your Direct Connect', "AT&T's Direct Connect", 'Hosted VPC peering']);
+  const az = listOf('partial').find(m => m.kind === 'region' && m.cloud === 'Azure');
+  assert.deepEqual(az.tiers.map(t => t.label), ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted VNet peering']);
+  assert.deepEqual(az.tiers.map(t => t.monthly), [1800, 2100, 4200]);
+  const gcp = listOf('partial').find(m => m.kind === 'region' && m.cloud === 'GCP');
+  assert.deepEqual(gcp.tiers.map(t => t.way), ['byo', 'peer', 'att']);
+  assert.match(gcp.tiers[2].unavailable, /Not on Google Cloud/);
   const ipsec = listOf('partial').find(m => m.kind === 'sites');
   assert.deepEqual(ipsec.tiers.map(t => t.products.map(p => p.id).join('+')), ['adi', 'ase', 'avpn']);
 });
@@ -194,7 +214,7 @@ test('moves rank by net dollars saved, then by the risk they close, and show the
       const da = Math.max(0, a.impact), db = Math.max(0, b.impact);
       assert.ok(da > db || (da === db && RISK[a.risk] >= RISK[b.risk]), `${view}: ${a.title} (${da}, ${a.risk}) before ${b.title} (${db}, ${b.risk})`);
     }
-    for (const m of l) assert.equal(m.impact, m.tiers[1].net, `${view}: impact is not Recommended's net`);
+    for (const m of l) assert.equal(m.impact, m.tiers[m.recI].net, `${view}: impact is not Recommended's net`);
   }
   // Growing: the two priced cloud moves lead; the flapping finance path outranks the IPsec branches.
   const g = listOf('partial').map(m => m.key);
@@ -273,10 +293,14 @@ test('Today\'s figures are doors: latency opens the path it reports, cost opens 
 test('picking a tier swaps the row\'s selection and ticks the row', () => {
   const c = on('partial');
   const m = vals(c).moves[0];
-  vals(c).moves[0].tiers[2].pick();
+  vals(c).moves[0].tiers[1].pick();
   const after = vals(c).moves.find(x => x.key === m.key);
-  assert.deepEqual(after.tiers.map(t => t.on), [false, false, true]);
+  assert.deepEqual(after.tiers.map(t => t.on), [false, true, false]);
   assert.equal(after.sel, true);
+  // The way a cloud cannot have (Google's AT&T-provided port) never takes the pick.
+  const g = vals(c).moves.find(x => x.key === 'region:GCP');
+  g.tiers[2].pick();
+  assert.deepEqual(vals(c).moves.find(x => x.key === 'region:GCP').tiers.map(t => t.on), [false, true, false]);
 });
 
 // ---- the order: one compose for everything selected (the contract with connect-flow) ----
@@ -294,7 +318,7 @@ test('Attach N selected composes one order that carries every selected set', () 
   assert.equal(v.movesAttachLabel, 'Attach 2 selected');
   v.movesAttach();
   assert.equal(c.state.screen, 's4');
-  assert.deepEqual(setsOf(c), { sites: ipsec.sites, regions: aws.regions, tier: 'standard', connectionType: 'Layer 2 to Cloud', sourceLabel: 'Options' });
+  assert.deepEqual(setsOf(c), { sites: ipsec.sites, regions: aws.regions, tier: 'standard', connectionType: 'Layer 2 to Cloud', way: null, sourceLabel: 'Options' });
   // Sites arrive as sites, each one the estate knows with its metro.
   for (const n of setsOf(c).sites) assert.ok(D.ESTATES.partial.sites.find(x => x.name === n && x.metro), n);
 });
@@ -312,13 +336,17 @@ test('a tick stays with its estate: switching estates never carries it', () => {
 test('a single move\'s Attach carries its own set; a second path asks for maximum resiliency', () => {
   const c = on('partial');
   vals(c).moveList.find(m => m.kind === 'second').attach();
-  assert.deepEqual(setsOf(c), { sites: [], regions: ['eastus'], tier: 'maximum', connectionType: 'DataCenter/CoLocation to Cloud', sourceLabel: 'Options' });
+  assert.deepEqual(setsOf(c), { sites: [], regions: ['eastus'], tier: 'maximum', connectionType: 'DataCenter/CoLocation to Cloud', way: null, sourceLabel: 'Options' });
   const c2 = on('partial');
   const aws = vals(c2).moveList.find(m => m.kind === 'region' && m.cloud === 'AWS');
   aws.attach();
   assert.deepEqual(setsOf(c2).regions, aws.regions);
   assert.equal(setsOf(c2).tier, 'standard');
   assert.equal(setsOf(c2).connectionType, 'DataCenter/CoLocation to Cloud');
+  // The order carries the way the picked option is, and Back returns to Recommended (2026-10-06).
+  assert.equal(setsOf(c2).way, 'byo');
+  assert.equal(c2.state.compose.way, 'byo');
+  assert.equal(c2.state.compose.origin, 'options');
   for (const t of CONN_TYPES) assert.ok(['Internet to Cloud', 'Layer 2 to Cloud', 'AVPN to Cloud', 'DataCenter/CoLocation to Cloud', 'Cloud to Cloud'].includes(t));
 });
 
@@ -362,7 +390,7 @@ test('Cost reads today\'s monthly, then each tier\'s monthly after it and what t
   for (const view of ESTATES) for (const m of listOf(view)) {
     if (m.today.mo !== null) assert.ok(m.today.cost.value.startsWith(`${fmt(m.today.mo)}/mo`), `${view} ${m.title}: ${m.today.cost.value}`);
     else assert.equal(m.today.cost.value, 'Not priced today', `${view} ${m.title}`);
-    for (const t of m.tiers) {
+    for (const t of m.tiers.filter(x => !x.unavailable)) {
       const at = `${view} ${m.title} ${t.tier}`;
       if (t.monthly === null) { assert.equal(t.cost.value, 'Priced after survey', at); assert.equal(t.mo, null, at); continue; }
       if (m.today.mo === null) { assert.equal(t.mo, null, at); assert.equal(t.cost.value, `Adds ${fmt(t.monthly)}/mo`, at); continue; }
@@ -420,7 +448,7 @@ test('within a move no two tiers read as the same product', () => {
   }
   assert.deepEqual(listOf('partial').find(m => m.kind === 'second').tiers.map(t => t.label), ['NetBond', 'NetBond, second metro', 'Maximum resiliency']);
   assert.deepEqual(listOf('trust').find(m => m.kind === 'sites').tiers.map(t => t.label), ['1 Connection Hub', '2 Connection Hubs', 'Hubs + SD-WAN steer']);
-  assert.deepEqual(listOf('small')[0].tiers.map(t => t.label), ['NetBond, us-east-1', 'NetBond', 'Connection Hub + NetBond']);
+  assert.deepEqual(listOf('small')[0].tiers.map(t => t.label), ['Your Direct Connect', "AT&T's Direct Connect", 'Hosted VPC peering']);
 });
 
 test('a port move offers capacity at every tier', () => {

@@ -101,7 +101,7 @@ test('Ways to connect is NetBond Advanced\'s entry: every type, each counting wh
   }
 });
 
-test('the three-card comparison and its Chosen button are gone; the path table moved into Connection Profile', () => {
+test('the three-card comparison and its Chosen button are gone; the path table left Connection Profile too', () => {
   assert.ok(!HTML.includes('pathRows'), 'the three NetBond / SD-WAN / Hyperscaler cards are still bound');
   assert.ok(!/>\s*Chosen\s*</.test(HTML) && !HTML.includes('pt.pickLabel'), 'a Chosen button is still in the markup');
   const scan = (x, path = []) => {
@@ -111,10 +111,11 @@ test('the three-card comparison and its Chosen button are gone; the path table m
   };
   scan(vals(ways()));
   scan(vals(flow('partial', {})));
-  // The comparison (security, performance, reliability, cost, time to stand up, per path) is Connection Profile's reference.
-  const basic = S4.slice(S4.indexOf('<sc-if value="{{ cfIsBasic }}"'));
+  // Re-pinned (2026-10-06, the connect options session: "I think we don't need this table here"): the way you picked on
+  // Recommended or Ways to connect already carries cost, security and performance, so the path table left the profile.
   assert.ok(S4.includes('<sc-if value="{{ cfIsBasic }}"'), 'Connection Profile has no gate');
-  assert.ok(basic.includes('<sc-for list="{{ cfPaths }}"') && basic.includes('{{ pt.setup }}') && basic.includes('{{ pt.reliability }}'), 'the path table is not in Connection Profile');
+  assert.ok(!S4.includes('<sc-for list="{{ cfPaths }}"') && !S4.includes("What you'd get, path by path"), 'the path table is still in Connection Profile');
+  assert.equal(vals(flow('partial', {})).cfShowPaths, false);
   const waysBlock = HTML.slice(HTML.indexOf('<sc-if value="{{ cnIsWays }}"'), HTML.indexOf('<sc-if value="{{ cnIsOptions }}"'));
   assert.ok(!waysBlock.includes('{{ matrix }}'), 'the path table is still on Ways to connect');
 });

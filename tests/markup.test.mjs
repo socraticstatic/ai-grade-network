@@ -430,12 +430,20 @@ test('every container the markup opens, it closes', () => {
   // Recounted, every tag balanced: div 1261 -> 1263, span 1175 -> 1193, sc-if 586 -> 589, sc-for 321 -> 324, button 487 -> 489.
   const pairs = [
   // Go live on the order's row (2026-10-05): sc-if +1, button +1, span +1: span 1193 -> 1194, sc-if 589 -> 590, button 489 -> 490.
-    ['div', /<div\b/g, /<\/div>/g, 1263],
-    ['span', /<span\b/g, /<\/span>/g, 1194],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 590],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 324],
+  // The connect options session (2026-10-06): Ways to connect's nine type cards and their applies-to panel became the six
+  // ways (div -28 net with the panel and its pager gone, span +8 for the marks, meters and logos, sc-for +2 for logos,
+  // zones, criteria and segments against the type and member loops, button -2 net: Start and the zone chips against the
+  // count, Start, Close and pager buttons); Recommended's line lost its Today and picked columns to a saving with its
+  // option under it, the open row gained a setup row and the option a cloud cannot have (sc-if +3); the profile's
+  // path-by-path table left (div, span, sc-for); the flow gained the way banner and the provider marks (sc-if +3).
+  // Start moved into each way card's head row to fit the fold (div -1). Recounted, every tag balanced: div 1263 -> 1234,
+  // span 1194 -> 1202, sc-if 590 -> 592, sc-for 324 -> 326, button 490 -> 488.
+    ['div', /<div\b/g, /<\/div>/g, 1234],
+    ['span', /<span\b/g, /<\/span>/g, 1202],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 592],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 326],
     ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 490],
+    ['button', /<button\b/g, /<\/button>/g, 488],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

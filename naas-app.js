@@ -29,6 +29,7 @@ import * as HM from './naas-home.js';
 import * as CV from './naas-cost-view.js';
 import * as BW from './naas-bandwidth.js';
 import * as CF from './naas-connect-flow.js';
+import * as W from './naas-ways.js';
 import * as DR from './naas-drill.js';
 import * as GV from './naas-govern.js';
 
@@ -198,7 +199,7 @@ export function defaults() {
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
     // The connect flow (2026-09-30): the set a Ways to connect figure opened, the orders placed this session, the location area shown.
-    waySet: null, waySetPage: 0, orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0,
+    waySet: null, waySetPage: 0, wayZone: 'intra', orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0,
     order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null,
     simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36,
     // Modify bandwidth (2026-09-30): the connection it is open on, the size picked ({ id, ports, mbps }),
@@ -4051,7 +4052,7 @@ const REGION_GEO = CF.REGION_GEO;
 // The connect flow's own fields (2026-09-30) are the person's choices on an
 // order, so a NEW order drops them with the rest: nothing picked for one order
 // is ever shown as picked on the next.
-const FLOW_FIELDS = { ctype: null, regions: null, sites: null, loc: null, bandwidth: null, tier: null, policy: null, term: null, name: '', qos: null, colo: null, passed: [], fk: null, from: {}, prefillSets: null, noteKey: null, lmccExpress: false, byText: false };
+const FLOW_FIELDS = { ctype: null, regions: null, sites: null, loc: null, bandwidth: null, tier: null, policy: null, term: null, name: '', qos: null, colo: null, passed: [], fk: null, from: {}, prefillSets: null, noteKey: null, lmccExpress: false, byText: false, way: null, wayZone: null, origin: null };
 const cleanCompose = (cp) => ({ ...cp, sourceLabel: null, bulk: null, qty: 1, noteStep: 0, note: null, ...FLOW_FIELDS });
 
 /**
@@ -4310,6 +4311,19 @@ function flowVals(s, set, est, c) {
     choose('ctype', t.label, { patch });
   };
   const wayTypes = CF.ALL_TYPES.map(t => ({ ...tile(t), start: start(t) }));
+  // Ways to connect (2026-10-06 session): the six ways into a cloud for a new customer, each scored on cost,
+  // performance, security, setup effort and time, its clouds as their marks. Start carries the way into the flow,
+  // which asks next what you connect from ("do you want to connect your VPN site, what cloud region").
+  const startWay = (w) => () => {
+    if (w.soon) return;
+    c.setState({ screen: 's4', ...newOrder({ ...BLANK_COMPOSE(), way: w.key, wayZone: w.zones ? (s.wayZone || 'intra') : null, from: { way: 'you' }, origin: 'ways' }), waySet: null, waySetPage: 0, wipList: null, wipListPage: 0, cfArea: null, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [] });
+    scrollTop(); syncHash('s4');
+  };
+  const wayCards = W.wayCards(s.wayZone || 'intra').map(w => ({ ...w, start: startWay(w), notSoon: !w.soon, op: w.soon ? 0.62 : 1,
+    tileBg: w.soon ? 'var(--bg-neutral)' : 'var(--bg-accent)', tileInk: w.soon ? 'var(--text-light)' : 'var(--link)',
+    logos: w.clouds.map(cl => ({ key: cl, src: W.markFor(cl, s.theme), name: W.CLOUD_NAME[cl] || cl })), hasLogos: w.clouds.length > 0,
+    hasZones: !!w.zones, zoneChips: w.zones ? Object.entries(w.zones).map(([k, z]) => { const on = (s.wayZone || 'intra') === k; return { key: k, label: z.label, on, go: () => set({ wayZone: k }), bg: on ? 'var(--cta)' : 'transparent', ink: on ? '#fff' : 'var(--text-light)' }; }) : [],
+    rows: w.rows.map(r => ({ ...r, segs: r.segs.map(g => ({ ...g, bg: g.on ? 'var(--link)' : 'var(--bg-neutral)' })), valueInk: r.score === null ? 'var(--text-disabled)' : 'var(--text-heading)' })) }));
   const cfTypes = CF.ALL_TYPES.map(t => ({ ...tile(t), pick: pickType(t) }));
   // The set a count opens: exactly what it counted, as a list on the page, paged.
   const setT = CF.ALL_TYPES.find(t => t.key === s.waySet) || null;
@@ -4331,8 +4345,10 @@ function flowVals(s, set, est, c) {
     if (f.bandwidth && !CF.bandwidthsFor(after).includes(f.bandwidth)) patch.bandwidth = null;
     choose('regions', next, { patch });
   };
-  const cfClouds = cloudNames.map(cloud => ({ key: cloud, cloud, regions: (est.regionsList || []).filter(r => r.cloud === cloud).map(r => { const name = CF.regionName(r), on = f.regions.includes(name);
-    return { key: name, name, region: r.region, sub: r.priv ? `${rampName(r)} today` : 'Public internet today', on, ...pickInk(on), pick: pickRegion(name) }; }) }));
+  const cfClouds = cloudNames.map(cloud => { const can = !f.way || W.wayAvailable(f.way, cloud), wayT = f.way ? (W.wayOf(f.way) || {}).title : '';
+    return { key: cloud, cloud, mark: W.markFor(cloud, s.theme), hasMark: !!W.MARK[cloud], can, cant: !can, op: can ? 1 : 0.45, cantWord: can ? '' : `Not with ${wayT}`,
+      regions: (est.regionsList || []).filter(r => r.cloud === cloud).map(r => { const name = CF.regionName(r), on = f.regions.includes(name);
+        return { key: name, name, region: r.region, sub: r.priv ? `${rampName(r)} today` : 'Public internet today', on, ...pickInk(on), pick: can ? pickRegion(name) : () => {}, off: !can, cursor: can ? 'pointer' : 'not-allowed' }; }) }; });
   // Connection Profile: the tiers and what each gets you, location and bandwidth.
   const soon = CF.maximumSoon(f);
   const cfTiers = CF.tiersFor(f).map(t => { const g = CF.tierGets(f, est, t), on = CF.tierOf(f) === t && (!!f.tier || t === 'Standard'), isSoon = t === 'Maximum' && soon;
@@ -4387,7 +4403,12 @@ function flowVals(s, set, est, c) {
     set({ compose: { ...cp, noteKey, passed, fk: keys[ki + 1], ...tierPatch } });
     scrollTop();
   };
-  const back = () => { if (ki > 0) goStep(keys[ki - 1]); };
+  // Back from the first step you saw returns to the page the order started on (2026-10-06: "If I go back, I lose the
+  // whole recommendation part"); the steps an entry filled before it are its, not yours to walk back through.
+  const origin = f.origin === 'options' || f.origin === 'ways' ? f.origin : null;
+  const walked = keys.slice(0, ki).some(k => f.passed.includes(k));
+  const toOrigin = origin && (ki === 0 || !walked) ? () => { c.setState({ screen: 's3', layer: 'cloud', tab: 'connect', cnPage: origin }); scrollTop(); syncHash('s3', 'cloud', 'connect'); } : null;
+  const back = () => { if (toOrigin) toOrigin(); else if (ki > 0) goStep(keys[ki - 1]); };
   const orders = s.orders || [];
   const place = () => {
     if (!isLast || CF.blockOf(key, f)) return;
@@ -4426,8 +4447,8 @@ function flowVals(s, set, est, c) {
   // The outcome before you place it (2026-10-02): today's path for the region this order reaches, the path it rides, the price, when it stands up.
   const cfOutcome = (() => { const r0 = CF.sampleRegion(f, est), rides = CF.pathTable(f, est).find(p => p.rides) || null, has = f.regions.length > 0 && !!r0 && !!rides;
     return { has, none: !has, todayPath: r0 ? (r0.priv ? 'Private on the AT&T network' : 'Public internet') : 'Not measured', todayMs: r0 ? `${r0.priv ? r0.fab : r0.pub} ms p95` : '',
-      afterPath: rides ? (rides.key === 'internet' ? 'Internet attach' : 'Private on the AT&T network') : '', afterLine: rides ? `${rides.performance} · ${rides.reliability} · ${rides.security}` : '',
-      priceBig: price.has ? `${price.big}/mo` : PRICE_NOTE, priceSub: price.has ? cfTotal.label : '', standUp: rides ? rides.setup : '' }; })();
+      afterPath: rides ? (rides.key === 'internet' ? 'Internet attach' : f.way ? CF.wayWords(f) : 'Private on the AT&T network') : '', afterLine: rides ? `${rides.performance} · ${rides.reliability} · ${rides.security}` : '',
+      priceBig: price.has ? `${price.big}/mo` : PRICE_NOTE, priceSub: price.has ? cfTotal.label : '', standUp: f.way && W.waySetup(f.way) ? W.waySetup(f.way) : rides ? rides.setup : '' }; })();
   // The review, NetBond Advanced's ReviewStep rows in the storefront's words.
   const reviewRows = CF.wipRows(f, est).map(r => ({ key: r.key, label: r.label, value: r.value, word: r.word, ink: WIP_INK[r.state].ink }));
   const lines = ord.lines.map(l => ({ ...l, key: 'l' + l.line, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? PRICE_NOTE : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : `${fmt(l.monthly)}/mo`, ink: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
@@ -4445,7 +4466,8 @@ function flowVals(s, set, est, c) {
   const opg = pageRows(shown.slice().reverse().map(ordRow), 6, s.ordersPage, (n) => set({ ordersPage: n }));
   const note = f.note;
   return {
-    wayTypes, cfTypes, waySet,
+    wayTypes, wayCards, cfTypes, waySet, wayFoot: 'Each criterion scored 1 to 5, the most favourable 5. Cost is one region at 1 Gbps a month, from the catalog. The scores are estimates.',
+    goRecommended: () => set({ cnPage: 'options' }),
     cfKey: key, cfSteps, cfTitle: (STEP_HEAD[key] || [])[0] || '', cfDesc: (STEP_HEAD[key] || [])[1] || '',
     cfIsType: key === 'type', cfIsProvider: key === 'provider', cfIsEndpoints: key === 'endpoints', cfIsBasic: key === 'basic', cfIsAdvanced: key === 'advanced', cfIsTerms: key === 'terms', cfIsReview: isLast,
     cfShowPolicy: key === 'advanced' || (isLast && !keys.includes('advanced')),
@@ -4454,9 +4476,15 @@ function flowVals(s, set, est, c) {
     cfAddSource: () => { c.setState({ screen: 's1', discoverView: 'sources' }); scrollTop(); syncHash('s1'); },
     cfNoCloudsLine: lmccOnly && (est.regionsList || []).length ? 'Add an AWS source and its AWS regions show here.' : 'Add a source and its cloud regions show here.',
     cfTiers, cfTierProtects: CF.isColo(f) ? 'Colo to Colo is point to point, so its tiers are its own.' : 'Each tier says what it protects against.', cfAreas, cfMetros, hasCfAreas: cfAreas.length > 1, cfBandwidths, cfLocTitle: geo ? 'Location · pick at least 2 metros' : CF.isLmcc(f) ? 'Metro' : 'Location', cfShowLoc: !CF.isColo(f),
-    cfPaths, cfPathsFor: CF.pathsFor(f, est), cfShowPaths: !CF.isColo(f) && cfPaths.length > 0 && !!CF.pathsFor(f, est), cfTotal,
+    // The path-by-path table left the profile (2026-10-06): the way you picked already carries cost, security and performance.
+    cfPaths, cfPathsFor: CF.pathsFor(f, est), cfShowPaths: false, cfTotal,
     cfQos, hasCfQos: cfQos.length > 0, cfPolicy, cfPolicySent, cfTerms, cfEndpoints,
-    cfBlock: block, hasCfBlock: !!block, cfNext: next, cfBack: back, cfHasBack: ki > 0, cfBackVis: ki > 0 ? 'visible' : 'hidden', cfNotLast: !isLast,
+    cfBlock: block, hasCfBlock: !!block, cfNext: next, cfBack: back, cfHasBack: ki > 0 || !!toOrigin, cfBackVis: ki > 0 || toOrigin ? 'visible' : 'hidden', cfNotLast: !isLast,
+    cfBackLabel: toOrigin ? (origin === 'options' ? 'Back to Recommended' : 'Back to Ways to connect') : 'Back',
+    // The way this order rides, above the step: its mark, its name for this cloud, and the door back to where it was chosen.
+    cfWay: (() => { const w = f.way ? W.wayOf(f.way) : null; const cl = CF.cloudsOf(f)[0]; const z = w && w.zones && f.zone ? w.zones[f.zone] : null;
+      return { has: !!w, none: !w, icon: w ? w.icon : 'cable', title: w ? (cl ? W.wayLabel(w.key, cl) : w.title) : '', kicker: w ? w.kicker : '', zone: z ? z.label : '', hasZone: !!z,
+        setup: w ? W.waySetup(w.key) : '', canChange: !!origin, change: origin ? () => { c.setState({ screen: 's3', layer: 'cloud', tab: 'connect', cnPage: origin }); scrollTop(); syncHash('s3', 'cloud', 'connect'); } : () => {}, changeLabel: origin === 'options' ? 'Change on Recommended' : 'Change' }; })(),
     cfNextLabel: isLast ? 'Place order' : `Next: ${CF.STEP_META[keys[ki + 1]].title}`, cfNextDisabled: !!block, cfNextBg: block ? 'var(--bg-neutral)' : 'var(--cta)', cfNextInk: block ? 'var(--text-disabled)' : '#fff',
     cfPlace: place, cfCanPlace: isLast && !block,
     cfName: f.name, cfNamePlaceholder: CF.defaultName(f), cfNameHelp: `Leave it blank and it is named ${CF.defaultName(f)}.`, cfSetName: (e) => put({ name: e.target.value }),
@@ -4933,7 +4961,8 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   // Picks are kept per estate, so the demo picker never carries a tick from one estate to another.
   const sel = (s.moveSel || {})[est.id] || {}, tierPick = (s.moveTier || {})[est.id] || {};
   const keep = (k, v) => ({ ...(s[k] || {}), [est.id]: v });
-  const tierOfMove = (m) => (Number.isInteger(tierPick[m.key]) ? tierPick[m.key] : 1);
+  // A move preselects its recommendation: the session's first way on a cloud region, a ladder's middle rung elsewhere.
+  const tierOfMove = (m) => (Number.isInteger(tierPick[m.key]) ? tierPick[m.key] : Number.isInteger(m.recI) ? m.recI : 1);
   const labelOf = (m) => m.title.replace(/^(Move|Bring|Put|Add) /, '').replace(/ onto AT&T( access)?$| on the AT&T network$/, '');
   // The contract with the compose flow is prefillSets. Until that flow reads it, the
   // compose screen's own fields read the same sets: regions bring the metros where
@@ -4952,7 +4981,9 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
       resiliency: sets.tier === 'maximum' ? 'Maximum' : sets.tier === 'geodiversity' ? 'Geodiversity' : 'Standard',
       prefilled: false, prefillRegion: regs.length ? `${regs[0].cloud} ${regs[0].region}` : null, prefillWl: regs.reduce((a, r) => a + r.wl, 0),
       // The compose remembers the moves it serves, so Recommended can show each one's phase (task rows, 2026-10-05).
-      prefillSets: sets, moveKeys: picks.map(m => m.key), moveTitles: Object.fromEntries(picks.map(m => [m.key, m.title])), sourceLabel: 'Options', noteStep: 0, note }) })();
+      prefillSets: sets, moveKeys: picks.map(m => m.key), moveTitles: Object.fromEntries(picks.map(m => [m.key, m.title])), sourceLabel: 'Options', noteStep: 0, note,
+      // The way the picked option is rides with the order, and Back returns here (2026-10-06).
+      way: sets.way || null, origin: 'options' }) })();
   }
   const sitesOf = (m) => (est.sites || []).filter(x => m.sites.includes(x.name));
   // Every count lands on its set: sites on the Connections map filtered to them, regions and workloads in Your clouds.
@@ -4971,18 +5002,25 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
     const pickI = tierOfMove(m), on = !!sel[m.key];
     const pick = (i) => () => set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: i }), moveSel: keep('moveSel', { ...sel, [m.key]: true }) });
     const setDoor = m.kind === 'sites' ? siteDoor(m) : cloudDoor(m);
-    const tiers = m.tiers.map(t => { const tOn = t.i === pickI;
-        return { ...t, key: m.key + ':' + t.i, on: tOn, pick: pick(t.i), featured: t.rec, priceShort: t.monthly === null ? '' : `${fmt(t.monthly)}/mo`,
+    const tiers = m.tiers.map(t => { const tOn = t.i === pickI && !t.unavailable;
+        // The way this cloud cannot have (Google's AT&T-provided port) holds its column muted and says why.
+        if (t.unavailable) return { ...t, key: m.key + ':' + t.i, on: false, pick: () => {}, featured: false, isOption: false, notOption: true, reason: t.unavailable, priceShort: '', aria: `${t.label}: ${t.unavailable}`, title: t.unavailable,
+          border: 'var(--border-secondary)', hoverBorder: 'var(--border-secondary)', bg: 'transparent', op: 0.55, cursor: 'default', wordInk: 'var(--text-light)', strip: [], mark: { icon: 'not-available', ink: 'var(--text-light)', bg: 'var(--bg-neutral)' },
+          sec: cell({ value: '', tone: 'same' }), perf: cell({ value: '', tone: 'same' }), cost: cell({ value: '', tone: 'same' }, null, true), setup: '' };
+        return { ...t, key: m.key + ':' + t.i, on: tOn, pick: pick(t.i), featured: t.rec, isOption: true, notOption: false, reason: '', op: 1, cursor: 'pointer', hoverBorder: 'var(--border-active)', priceShort: t.monthly === null ? '' : `${fmt(t.monthly)}/mo`,
           aria: `${t.intro} Security: ${t.sec.value}${t.sec.delta ? `, ${t.sec.delta}` : ''}. Performance: ${t.perf.value}${t.perf.delta ? `, ${t.perf.delta}` : ''}. Cost: ${t.cost.value}${t.cost.delta ? `, ${t.cost.delta}` : ''}.`,
           title: `${t.intro} ${t.fit}. ${t.price}. Performance: ${t.perfTitle}. Cost: ${t.costTitle}.`,
-          border: tOn ? 'var(--cta)' : 'var(--border-secondary)', bg: tOn ? 'var(--bg-accent)' : 'transparent', wordInk: t.rec ? 'var(--link)' : 'var(--text-light)', strip: M.tierStrip(t), mark: M.tierMark(t),
+          // A way wears its own mark (your port a cable, AT&T's the hub, peering the shield), so two ways on one path still read apart.
+          border: tOn ? 'var(--cta)' : 'var(--border-secondary)', bg: tOn ? 'var(--bg-accent)' : 'transparent', wordInk: t.rec ? 'var(--link)' : 'var(--text-light)', strip: M.tierStrip(t), mark: t.way && W.wayOf(t.way) ? { ...M.tierMark(t), icon: W.wayOf(t.way).icon } : M.tierMark(t), setup: t.setup || '',
           sec: cell(t.sec), perf: cell(t.perf), cost: cell(t.cost, null, true) }; });
     return { ...m, rankF: String(m.rank), sel: on, check: on ? '✓' : '', checkBg: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)',
       kindIcon: m.kind === 'sites' ? 'large-building' : 'cloud', strip: M.stripOf(m.today.path), mark: M.pathMark(m.today.path),
       selLabel: `${on ? 'Remove' : 'Add'} move ${m.rank}, ${m.title}, ${on ? 'from' : 'to'} the order`,
       toggle: () => set({ moveSel: keep('moveSel', { ...sel, [m.key]: !on }) }),
       ...(() => { const o = orderOf(m); if (!o) return { hasTask: false, canConnect: true, phases: [], taskWord: '' }; const ph = phasesOf(o, m.title, m.regions[0]); return { hasTask: true, canConnect: false, phases: ph.phases, taskWord: ph.word, taskLanded: ph.landed }; })(),
-      attach: () => composeMoves([m]), compare: () => set({ cnPage: 'ways' }), connectTitle: `Start one order: ${m.title.replace(/^\w/, ch => ch.toLowerCase())}, with ${TIERS[tierOfMove(m)]}`,
+      attach: () => composeMoves([m]), compare: () => set({ cnPage: 'ways' }), connectTitle: `Start one order: ${m.title.replace(/^\w/, ch => ch.toLowerCase())}, with ${(m.tiers[tierOfMove(m)] || {}).label || ''}`,
+      // The session's five criteria include setup effort and time (2026-10-06): a move whose tiers are ways reads them on a row of their own.
+      hasSetup: !!m.hasSetup, tSetup: m.today.setup || '', openRows: m.hasSetup ? '38px 56px 24px 24px 24px 24px' : '38px 56px 24px 24px 24px',
       // A count is a glyph and a number (2026-10-05, "way too text heavy"); its words stay in the title and the aria label.
       counts: m.counts.map(n => ({ ...n, icon: ({ sites: 'large-building', regions: 'cloud', workloads: 'apps' })[n.kind] || 'apps', n: String(n.label).split(' ')[0], title: n.kind === 'sites' ? `Show these ${n.label} on the map` : `Open ${n.label} in Your clouds`, go: n.kind === 'sites' ? siteDoor(m) : cloudDoor(m) })),
       // Today reads once, left of the tiers; every figure in it is a door to what it counts.

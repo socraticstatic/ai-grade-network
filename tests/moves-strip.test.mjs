@@ -28,13 +28,16 @@ test('every move on Growing draws its today and its three tiers, and the Full co
     for (const n of mv.strip) assert.ok(n.short, 'every node names its station');
     assert.ok(onDisk(mv.mark.icon), mv.mark.icon);
     assert.equal(mv.tiers.length, 3);
-    for (const t of mv.tiers) { assert.equal(t.strip.length, 4); for (const n of t.strip) assert.ok(onDisk(n.icon), n.icon); }
+    // The way a cloud cannot have (2026-10-06) holds its column with the reason and no path.
+    for (const t of mv.tiers) { assert.equal(t.strip.length, t.unavailable ? 0 : 4); for (const n of t.strip) assert.ok(onDisk(n.icon), n.icon); }
   }
   const gcp = v.moves.find(m => /GCP/.test(m.title));
   assert.ok(gcp, 'the GCP regions move');
   assert.deepEqual(gcp.strip.map(n => n.state), ['set', 'none', 'risk', 'set'], 'today rides the public internet');
-  assert.deepEqual(gcp.tiers[1].strip.map(n => n.state), ['set', 'set', 'set', 'set'], 'Recommended rides AT&T');
-  assert.equal(gcp.tiers[2].strip[1].icon, 'check-shield', 'Full control inspects at the edge');
+  // Re-pinned (2026-10-06): Google's ways are your own Interconnect (Recommended), then hosted peering, which inspects.
+  assert.deepEqual(gcp.tiers[0].strip.map(n => n.state), ['set', 'set', 'set', 'set'], 'Recommended rides AT&T');
+  assert.equal(gcp.tiers[1].strip[1].icon, 'check-shield', 'hosted peering inspects at the edge');
+  assert.ok(gcp.tiers[2].unavailable, 'Google cannot have AT&T\'s port');
 });
 
 test('the markup draws the strip in Today and in each tier, on the row the labels leave for it', () => {
@@ -42,8 +45,10 @@ test('the markup draws the strip in Today and in each tier, on the row the label
   // The header line carries one mark per side (Micah, 2026-10-05: "barely viewable icons, thick circle lines"); the open
   // row's strips run the column's width at 28px with the station word under each node.
   assert.match(HTML, /class="ic-tile s28" style="background:\{\{ mv\.mark\.bg \}\}/);
-  assert.match(HTML, /class="ic-tile s28" style="background:\{\{ mv\.pick\.mark\.bg \}\}/);
+  // The line's Today and picked columns left (2026-10-06, "what are those columns"): the saving reads its option's mark and name under it.
+  assert.match(HTML, /--ic:url\('brand\/icons\/\{\{ mv\.pick\.mark\.icon \}\}\.svg'\);color:var\(--link\)"><\/span><span[^>]*>\{\{ mv\.pick\.label \}\}/);
   assert.match(HTML, /<div class="ps" aria-label="Today's path"[^>]*><sc-for list="\{\{ mv\.strip \}\}"[^>]*><span[^>]*><i><span class="ic s16"/);
   assert.match(HTML, /<span class="ps" aria-label="\{\{ tr\.tier \}\}: the path"[^>]*><sc-for list="\{\{ tr\.strip \}\}"[^>]*><span[^>]*><i><span class="ic s16"[^>]*><\/span><\/i><small>\{\{ tn\.short \}\}<\/small>/);
-  assert.equal((HTML.match(/grid-template-rows:38px 56px 24px 24px 24px/g) || []).length, 3, 'the glyph column, Today and the tiers share one row plan');
+  // One row plan for the glyph column, Today and the tiers; a move whose tiers are ways adds the setup row (2026-10-06).
+  assert.equal((HTML.match(/grid-template-rows:\{\{ mv\.openRows \}\}/g) || []).length, 3, 'the glyph column, Today and the tiers share one row plan');
 });

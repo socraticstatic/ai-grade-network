@@ -23,6 +23,7 @@ import * as R from './naas-round2.js';
 import { CATALOG } from './naas-data.js';
 import { fmt, siteModeOf, onAtt, regionOf, tunnelOf } from './naas-logic.js';
 import { rampName } from './naas-things.js';
+import * as W from './naas-ways.js';
 
 /**
  * The four stations a path crosses, for the strip Govern draws (2026-10-02): today's path or a tier's.
@@ -60,7 +61,8 @@ export const CONN_TYPES = ['Internet to Cloud', 'Layer 2 to Cloud', 'AVPN to Clo
 export const RISK = { down: 4, slo: 3, full: 2, exposed: 1, single: 1, none: 0 };
 const REC = 1;
 
-const cat = (id) => CATALOG.find(p => p.id === id) || null;
+// A way's own products (the AT&T-provided port, PrivateLink, Cloud WAN) price from naas-ways.js beside the catalog.
+const cat = (id) => CATALOG.find(p => p.id === id) || W.EXTRA[id] || null;
 const nf = (n) => Number(n || 0).toLocaleString('en-US');
 const plural = (n, one, many) => `${nf(n)} ${n === 1 ? one : many}`;
 const andList = (xs) => (xs.length <= 1 ? (xs[0] || '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
@@ -87,6 +89,9 @@ const PROD = {
   lmcc: { name: 'Interconnect Last Mile', path: 'native' },
   hub: { name: 'Connection Hub', path: 'netbond', conn: 'AVPN to Cloud' },
   c2c: { name: 'Cloud to Cloud', path: 'netbond', conn: 'Cloud to Cloud' },
+  'port-att': { name: 'Cloud port, AT&T-provided', path: 'netbond' },
+  privatelink: { name: 'Hosted PrivateLink', path: 'netbond', inspect: true },
+  'cloud-wan': { name: 'Cloud WAN', path: 'netbond' },
 };
 
 /** The traffic-weighted 95th percentile of a set of paths: [{ ms, w }]. */
@@ -124,9 +129,10 @@ function tierOf(i, products, extra = {}) {
   const path = extra.path || (prods[0] ? (PROD[prods[0].id] || {}).path : 'netbond') || 'netbond';
   const conn = extra.conn || prods.map(p => (PROD[p.id] || {}).conn).find(Boolean) || 'DataCenter/CoLocation to Cloud';
   const breakdown = prods.map(p => `${p.n > 1 ? `${nf(p.n)} × ` : ''}${cat(p.id) ? cat(p.id).name : p.id} at ${cat(p.id) && cat(p.id).price != null ? fmt(cat(p.id).price) : 'a surveyed price'}`).join(' + ');
-  return { i, tier: TIERS[i], rung: extra.rung || null, label, products: prods, path, conn, monthly,
+  const word = extra.tier || TIERS[i];
+  return { i, tier: word, rung: extra.rung || null, label, products: prods, path, conn, monthly, way: extra.way || null,
     price: monthly === null ? 'Priced after survey' : `Starting at ${fmt(monthly)}/mo`,
-    intro: `With AT&T ${label} (${TIERS[i]}), here's what you'd get:`, breakdown, fit: extra.fit || '', covers: extra.covers || [] };
+    intro: `With AT&T ${label} (${word}), here's what you'd get:`, breakdown, fit: extra.fit || '', covers: extra.covers || [] };
 }
 
 /**
@@ -328,8 +334,17 @@ function regionMoves(est, ctx) {
     const viaClause = via.length ? `${andList(viaNames)} ${viaMany ? 'reach' : 'reaches'} ${rs.length === 1 ? 'it' : 'them'} over ${andList([...new Set(via.map(x => S.servicesOf(x)[0].label))])}` : '';
     const reason = `${plural(wl, 'workload', 'workloads')}${tags.length ? ` (${tags.join(', ')})` : ''} in ${andList(ids)}${apps.length ? ` run ${andList(apps)}` : ''} over the public internet at ${andList([...new Set(rs.map(r => r.pub))].map(String))} ms${[extra, viaClause].filter(Boolean).map(x => `; ${x}`).join('')}.`;
     const ctxT = { kind: 'region', regions: rs, all: ids };
-    const ladder = f ? ladderTiers(f, ctxT) : regionLadder(cloud).map(([ps, label], i) => tierOf(i, ps.map(id => [id, id === 'c2c' ? 1 : rs.length]), { covers: ids, label }));
+    // The ways the 2026-10-06 session recommends for this cloud, in its order of priority: Azure and AWS three
+    // (bring your own port, AT&T's port, hosted peering), Google two and the one it cannot have. A cloud the
+    // session did not cover (Oracle, a neocloud) keeps its catalog ladder.
+    const recs = W.recommendedFor(cloud), byWays = recs.length >= 2;
+    const ladder = byWays ? recs.map((r, i) => { const word = i === 0 ? 'Recommended' : `Option ${i + 1}`;
+        return r.unavailable ? { i, tier: word, label: W.wayLabel(r.key, cloud), way: r.key, unavailable: r.unavailable, products: [], path: 'netbond', conn: 'DataCenter/CoLocation to Cloud', monthly: null, price: '', intro: '', breakdown: '', fit: '', covers: [] }
+          : tierOf(i, W.wayProducts(r.key, cloud, rs.length), { covers: ids, label: W.wayLabel(r.key, cloud), tier: word, way: r.key }); })
+      : f ? ladderTiers(f, ctxT) : regionLadder(cloud).map(([ps, label], i) => tierOf(i, ps.map(id => [id, id === 'c2c' ? 1 : rs.length]), { covers: ids, label }));
     const tiers = ladder.map(t => {
+      // The way this cloud cannot have holds its column and says why; it is never picked or priced.
+      if (t.unavailable) return { ...t, ms, egress: null, net: null, mo: null, sec: { value: 'Not offered here', tone: 'same' }, perf: { value: '', tone: 'same' }, cost: { value: '', tone: 'same' }, perfTitle: '', costTitle: t.unavailable, setup: '' };
       const cov = t.covers.length ? rs.filter(r => t.covers.includes(r.region)) : rs;
       const P0 = pathOf(t.path) || pathOf('netbond');
       const lat = (r) => (cov.includes(r) && t.products.length ? P0.lat(r) : r.pub);
@@ -344,7 +359,8 @@ function regionMoves(est, ctx) {
       // A hosted VPC enforces a policy in path only where one is enforced on these tags (Govern > Policies).
       const enforced = tags.find(tg => policyTags.has(String(tg).toLowerCase()));
       const hostedWord = ids0.includes('hosted-vnet') ? 'VNet' : 'VPC';
-      const fit = t.fit || (ids0[0] === 'i2c' ? `Encrypted, up to 1 Gbps a region`
+      const port = W.PORT_NAME[cloud] || 'port';
+      const fit = t.fit || (t.way === 'att' ? `AT&T orders and holds the ${port}` : t.way === 'byo' ? `Your own ${port}, carried by AT&T` : ids0[0] === 'i2c' ? `Encrypted, up to 1 Gbps a region`
         : inspect ? (enforced ? `Enforces your ${enforced} policy in path` : `Inspected in AT&T's ${hostedWord}`)
           : ids0.includes('c2c') ? 'Joined to your other clouds'
             : `${plural(wl, 'workload', 'workloads')} at $0.02/GB`);
@@ -353,7 +369,7 @@ function regionMoves(est, ctx) {
           : cov.length < rs.length ? { value: `Private for ${cov.length} of ${rs.length}`, delta: `${rs.length - cov.length} public`, tone: 'risk' }
             : { value: inspect ? 'Private and inspected' : t.path === 'native' ? 'Private, two paths' : 'Private, off the internet', delta: '', tone: 'good' };
       const mo = moneyAfter(egNow, net, t.monthly);
-      return { ...t, fit, covers: cov.map(r => r.region), ms: msA, egress: egA, net, mo,
+      return { ...t, fit, covers: cov.map(r => r.region), ms: msA, egress: egA, net, mo, setup: t.way ? W.waySetup(t.way) : '',
         sec, perf: { value: `${msA} ms p95${healthWord(hA)}`, ...msDelta(ms, msA), tone: TONE_OF_HEALTH[hA] },
         cost: moneyCell(egNow, net, t.monthly),
         perfTitle: `p95 across ${andList(ids)}, weighted by workloads, ${ms} to ${msA} ms; ${allPriv ? `a private path is held to the ${F.SLO_PRIVATE} ms SLO` : `a public path to the ${F.SLO} ms SLO`}`,
@@ -362,9 +378,11 @@ function regionMoves(est, ctx) {
     return {
       key: 'region:' + cloud, kind: 'region', cloud, title: rs.length === 1 ? `Put ${cloud} ${ids[0]} on the AT&T network` : `Put ${rs.length} ${cloud} regions on the AT&T network`,
       reason, finding: f ? f.kind : null, sites: [], regions: ids, n: 0, wl, size: wl, need: 'standard',
+      // The session's first way is its recommendation; a ladder's middle rung is.
+      recI: byWays ? 0 : REC, hasSetup: byWays,
       gb: Object.fromEntries(rs.map(r => [r.region, eg[r.region].gb])),
       risk: rs.some(r => F.regionState(r) === 'slo') ? 'slo' : 'exposed',
-      today: { path: 'internet', pathWord: 'Public internet', ms, msRegion: (rs.find(r => r.pub === ms) || rs[0]).region, egress: egNow, mo: egNow,
+      today: { path: 'internet', pathWord: 'Public internet', ms, msRegion: (rs.find(r => r.pub === ms) || rs[0]).region, egress: egNow, mo: egNow, setup: 'In place today',
         sec: { value: `Public · ${plural(wl, 'workload', 'workloads')}`, tone: 'risk' },
         perf: { value: `${ms} ms p95${healthWord(hToday)}`, tone: TONE_OF_HEALTH[hToday] },
         cost: { value: `${fmt(egNow)}/mo egress`, tone: 'same' } },
@@ -482,7 +500,7 @@ export function movesOf(est, ctx = {}) {
   // The open findings price the egress after, as Cost's Still open does.
   const c = { findings, capacity: ctx.capacity || [], apps: ctx.apps || [], inv: ctx.inv || [], egress: egressOf(est, ctx.base, findings.filter(f => f.priced)) };
   const moves = [...regionMoves(est, c), ...pathMoves(est, c), ...siteMoves(est, c)]
-    .map(m => ({ ...m, impact: m.tiers[REC].net, tiers: m.tiers.map(t => ({ ...t, rec: t.i === REC })) }));
+    .map(m => { const recI = Number.isInteger(m.recI) ? m.recI : REC; return { ...m, recI, impact: m.tiers[recI].net, tiers: m.tiers.map(t => ({ ...t, rec: t.i === recI })) }; });
   moves.sort((a, b) => Math.max(0, b.impact || 0) - Math.max(0, a.impact || 0) || RISK[b.risk] - RISK[a.risk] || b.size - a.size || a.title.localeCompare(b.title));
   return moves.map((m, i) => ({ ...m, rank: i + 1 }));
 }
@@ -501,6 +519,8 @@ export function attachSets(picks) {
     regions: uniq(picks.flatMap(p => p.move.regions)),
     tier: picks.some(p => p.move.need === 'maximum') ? 'maximum' : picks.some(p => p.move.need === 'geodiversity') ? 'geodiversity' : 'standard',
     connectionType: lead ? lead.move.tiers[lead.tier].conn : 'DataCenter/CoLocation to Cloud',
+    // The way the picked tier is (bring your own, AT&T's port, peering), so the order carries it.
+    way: lead ? lead.move.tiers[lead.tier].way || null : null,
     sourceLabel: 'Options',
   };
 }

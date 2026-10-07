@@ -23,6 +23,7 @@
 // Review), never NetBond Advanced's rate card, and it says Modelled.
 // Pure data and functions; naas-app.js binds them.
 import { CATALOG } from './naas-data.js';
+import * as W from './naas-ways.js';
 import { PATHS } from './naas-round2.js';
 import { countOf, servicesOf } from './naas-sites.js';
 import { fmt, plural, siteModeOf, regionOf } from './naas-logic.js';
@@ -232,6 +233,9 @@ export function flowOf(cp, est) {
     // A port an entry sized (Signals' Add a port, third round 2026-09-30): the size of the ports beside it.
     const bw = sets.map(x => x.bandwidth).find(Boolean);
     if (bw && bandwidthsFor(f).includes(bw)) est_('bandwidth', bw);
+    // A move on Recommended names what must always be true for its set (its tags' policies); the order starts with it,
+    // filled from your estate, so Advanced Settings shows it rather than "Not chosen yet" (2026-10-06 notes, C9).
+    if (cp.origin === 'options') est_('policy', (cp.control || []).slice());
     const label = sets.map(x => x.sourceLabel).find(Boolean);
     f.noteTitle = label || cp.sourceLabel || 'From Options';
     // Past two, the banner names two and says there are others; the panel's "All N" opens every one.
@@ -262,6 +266,12 @@ export function flowOf(cp, est) {
   }
   if (cp.colo) f.from.colo = from.colo || 'you';
   f.typed = [...typed];
+  // The way into the cloud (2026-10-06): picked on a Recommended option or a Ways to connect card, carried by the order.
+  const setWay = sets.map(x => x.way).find(Boolean) || null;
+  f.way = cp.way || setWay;
+  if (f.way) f.from.way = cp.way ? (from.way || 'you') : 'estate';
+  f.zone = cp.wayZone || null;
+  f.origin = cp.origin || null;
   // Interconnect - Last Mile IS Maximum resiliency on AWS.
   if (f.ctype === LAST_MILE.label) { f.tier = 'Maximum'; f.from.tier = f.from.ctype; }
   // Where the path enters the AT&T network, when an entry named it only through its sites or regions.
@@ -355,6 +365,8 @@ const locWords = (f) => f.loc.join(' + ');
 // names two and says there are others; the panel's "All N" opens every one.
 const someOf = (xs) => xs.length <= 2 ? xs.join(', ') : `${xs[0]}, ${xs[1]} and others`;
 const regionsWords = (f) => someOf(f.regions);
+/** The way an order rides, named as its cloud names the port ("Your ExpressRoute"); before a cloud is chosen, the way's own title. */
+export const wayWords = (f) => (!f.way ? '' : cloudsOf(f).length ? W.wayLabel(f.way, cloudsOf(f)[0]) : (W.wayOf(f.way) || {}).title || '');
 const coloWords = (f) => [f.colo.a.site, f.colo.b.site].filter(Boolean).join(' and ');
 /** What a step decided, in a few words, for the stepper and the panel. */
 export function stepValue(key, f) {
@@ -443,6 +455,8 @@ export function flowOrder(f, est, tierOverride) {
     const siteQty = f.bulk && f.qty > 1 ? f.qty : 0;
     const conns = isColo(f) || isLmcc(f) || f.ctype === 'Cloud to Cloud' ? 1 : Math.max(1, f.regions.length);
     add(productOf(pid), siteQty || conns, past ? f.bandwidth : null, !!siteQty, past);
+    // The way's own products beside the connection (2026-10-06): the AT&T-provided port, the hosted VNet or VPC, PrivateLink, Cloud WAN.
+    if (f.way && pid === 'netbond') W.wayExtras(f.way, cloudsOf(f)[0] || 'AWS').forEach(p => add(p, conns));
     if (f.ctype === 'Cloud to Cloud') add(productOf('hub'), Math.max(1, f.loc.length));
   }
   if (f.policy.includes('Inline inspection')) add(productOf('ngfw'), 1);
@@ -545,6 +559,7 @@ export function wipRows(f, est) {
   // Attached sites keep where they came from; sites the flow found at the location are your estate's.
   const siteFrom = f.bulk || f.sites.length ? (f.from.sites || 'estate') : sites.length || f.loc.length ? 'estate' : null;
   const rows = [
+    ['way', 'Way to connect', wayWords(f), f.way ? f.from.way : null, 'type', null],
     ['type', 'Connection type', f.ctype, f.from.ctype, 'type', null],
     colo ? ['cloud', 'Colo endpoints', coloWords(f), f.colo.a.site || f.colo.b.site ? f.from.colo : null, 'endpoints', null]
       : ['cloud', c2c(f) ? 'Clouds and regions' : 'Cloud and region', regionsWords(f), f.regions.length ? f.from.regions : null, 'provider', f.regions.length > 2 ? 'regions' : null],
@@ -555,7 +570,7 @@ export function wipRows(f, est) {
     ['term', 'Contract term', f.term === null || f.term === undefined ? '' : termTitle(f.term), f.term === null || f.term === undefined ? null : f.from.term, 'terms', null],
     ['policy', 'Policy', f.policy.join(', '), f.policy.length ? f.from.policy : null, stepKeysFor(f).includes('advanced') ? 'advanced' : 'confirm', null],
   ];
-  return rows.filter(r => r[0] !== 'sites' || carriesSites(f)).map(([key, label, value, st, step, more]) => {
+  return rows.filter(r => (r[0] !== 'sites' || carriesSites(f)) && (r[0] !== 'way' || f.way)).map(([key, label, value, st, step, more]) => {
     const has = !!value && !!st;
     const state = has ? st : 'none';
     const n = more === 'sites' ? sites.length : more === 'regions' ? f.regions.length : 0;
@@ -643,7 +658,7 @@ export function placedRecord(f, est, at, n) {
   const hasTerm = f.term !== null && f.term !== undefined;
   const r = regionsOf(est).find(x => regionName(x) === f.regions[0]);
   return {
-    id: `o${n}`, title: o.title, type: f.ctype || '', what: [f.regions.join(', ') || coloWords(f), locWords(f), f.bandwidth || '', tierOf(f)].filter(Boolean).join(' · '),
+    id: `o${n}`, title: o.title, type: f.ctype || '', way: f.way || null, what: [wayWords(f), f.regions.join(', ') || coloWords(f), locWords(f), f.bandwidth || '', tierOf(f)].filter(Boolean).join(' · '),
     monthly: o.priced ? `${fmt(hasTerm ? termPrice(o.monthly, f.term) : o.monthly)}/mo · Modelled` : PRICE_NOTE,
     term: hasTerm ? termTitle(f.term) : '', policy: f.policy.join(', '), at, stage: ORDER_STAGE, region: r ? r.region : null, fromFlow: true,
   };
