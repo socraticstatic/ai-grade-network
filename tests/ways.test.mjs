@@ -40,6 +40,15 @@ test('prices come from the catalog: NetBond alone, plus the AT&T port, plus the 
   assert.deepEqual(W.wayExtras('byo', 'Azure'), []);
 });
 
+test('each way draws its path: sites, AT&T edge and core, where it joins the cloud (yours dashed), the cloud', () => {
+  assert.deepEqual(W.wayStrip('byo').map(n => [n.short, n.state]), [['Sites', 'set'], ['Edge', 'set'], ['Core', 'set'], ['Your port', 'nodata'], ['Cloud', 'set']]);
+  assert.deepEqual(W.wayStrip('att')[3].short, 'AT&T port');
+  assert.equal(W.wayStrip('peer')[3].icon, 'check-shield');
+  assert.equal(W.wayWho('byo').icon, 'user-access');
+  assert.equal(W.wayWho('att').icon, 'hub');
+  assert.equal(W.wayWho('transit'), null);
+});
+
 test('every card scores the five criteria; cost runs cheapest 5 to dearest 1; the placeholder is unscored', () => {
   const cards = W.wayCards();
   for (const c of cards.filter(x => !x.soon)) {
@@ -55,6 +64,8 @@ test('every card scores the five criteria; cost runs cheapest 5 to dearest 1; th
 test('peering across zones reads slower and says the cloud bills the transfer', () => {
   const intra = W.wayCards('intra').find(c => c.key === 'peer'), inter = W.wayCards('inter').find(c => c.key === 'peer');
   assert.ok(intra.rows[1].score > inter.rows[1].score);
-  assert.match(inter.rows[0].value, /zone transfer/);
-  assert.doesNotMatch(intra.rows[0].value, /zone transfer/);
+  // The value is a figure and a mark of the transfer the cloud bills across zones (2026-10-07: fewer words).
+  assert.match(inter.rows[0].value, /\+ transfer$/);
+  assert.doesNotMatch(intra.rows[0].value, /transfer/);
+  assert.match(inter.rows[0].title, /transfer/);
 });

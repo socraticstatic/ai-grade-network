@@ -185,15 +185,15 @@ export function connectSummary(est) {
   const sites = sitesOf(est), rs = regionsOf(est);
   if (!sites.length && !rs.length) return [];
   const reached = (xs) => { const cl = new Set(); xs.forEach(x => { const t = tunnelOf(x); if (t) { cl.add(t.cloud); return; } rs.forEach(r => { if (gbps(est, x, r) > 0) cl.add(r.cloud); }); }); return cl.size; };
-  const box = (key, icon, filter, one, many) => { const xs = filterSites(sites, filter), n = xs.reduce((a, x) => a + countOf(x.name), 0);
-    return { key, icon, kind: 'sites', filter, n, noun: n === 1 ? one : many, clouds: reached(xs) }; };
+  const box = (key, icon, filter, one, many, short) => { const xs = filterSites(sites, filter), n = xs.reduce((a, x) => a + countOf(x.name), 0);
+    return { key, icon, kind: 'sites', filter, n, noun: n === 1 ? one : many, short, clouds: reached(xs) }; };
   const clouds = new Set(rs.map(r => r.cloud)).size;
   return [
-    box('vpn', 'hub', { svc: ['avpn'] }, 'site on AVPN', 'sites on AVPN'),
-    box('internet', 'globe', { reach: 'internet' }, 'site over the internet', 'sites over the internet'),
-    box('dc', 'large-building', { cls: 'Data center' }, 'data center', 'data centers'),
-    box('iot', 'wireless-network', { kind: 'iot' }, 'wireless or IoT site', 'wireless and IoT sites'),
-    { key: 'clouds', icon: 'cloud', kind: 'regions', filter: null, n: rs.length, noun: rs.length === 1 ? 'cloud region' : 'cloud regions', clouds },
+    box('vpn', 'hub', { svc: ['avpn'] }, 'site on AVPN', 'sites on AVPN', 'on AVPN'),
+    box('internet', 'globe', { reach: 'internet' }, 'site over the internet', 'sites over the internet', 'on internet'),
+    box('dc', 'large-building', { cls: 'Data center' }, 'data center', 'data centers', 'data centers'),
+    box('iot', 'wireless-network', { kind: 'iot' }, 'wireless or IoT site', 'wireless and IoT sites', 'IoT'),
+    { key: 'clouds', icon: 'cloud', kind: 'regions', filter: null, n: rs.length, noun: rs.length === 1 ? 'cloud region' : 'cloud regions', short: 'regions', clouds },
   ].map(b => ({ ...b, cloudWord: b.kind === 'regions' ? `across ${plural(b.clouds, 'cloud', 'clouds')}` : b.n ? `to ${plural(b.clouds, 'cloud', 'clouds')}` : 'None yet' }));
 }
 /** One row per member of a type's set: what it is and how it reaches the cloud today. No figures. */

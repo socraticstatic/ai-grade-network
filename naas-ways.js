@@ -55,30 +55,44 @@ export const CRITERIA = [
 export const WAYS = [
   { key: 'byo', title: 'Bring your own port', kicker: 'NetBond Advanced', icon: 'cable', path: 'netbond',
     line: 'Your Direct Connect, ExpressRoute or Interconnect, carried on the AT&T network. NetBond Advanced as it runs today.',
+    join: ['cable', 'Your port', 'nodata', 'Yours: you order the port from the cloud'], who: 'you',
     clouds: ['AWS', 'Azure', 'GCP', 'Oracle'], products: ['netbond'],
-    score: { perf: [5, 'Private, steady'], sec: [4, 'Off the internet'], effort: [3, 'You order the port'], time: [3, 'About 2 weeks'] } },
+    score: { perf: [5, 'Steady'], sec: [4, 'Private'], effort: [3, 'You'], time: [3, '2 wks'] }, setup: 'You order the port · about 2 weeks' },
   { key: 'att', title: 'AT&T provides the port', kicker: 'NetBond Advanced', icon: 'hub', path: 'netbond',
     line: "AT&T orders the cloud's Direct Connect or ExpressRoute and holds it. One order, one bill.",
+    join: ['hub', 'AT&T port', 'set', "AT&T's: AT&T orders and holds the port"], who: 'att',
     clouds: ['AWS', 'Azure'], products: ['netbond', 'port-att'],
-    score: { perf: [5, 'Private, steady'], sec: [4, 'Off the internet'], effort: [5, 'AT&T does it'], time: [4, '10 business days'] } },
+    score: { perf: [5, 'Steady'], sec: [4, 'Private'], effort: [5, 'AT&T'], time: [4, '10 days'] }, setup: 'AT&T does it · 10 business days' },
   { key: 'peer', title: 'Hosted VNet or VPC', kicker: 'AT&T-hosted', icon: 'check-shield', path: 'netbond', inspect: true,
     line: 'AT&T runs a VNet or VPC with the vSRX pair in your region and peers it to yours. Inspected in path.',
+    join: ['check-shield', 'Hosted VNet', 'set', "AT&T's VNet or VPC with the vSRX pair, peered to yours"], who: 'att',
     clouds: ['AWS', 'Azure', 'GCP'], products: ['netbond', 'hosted'],
-    zones: { intra: { label: 'Same zone', perf: [4, 'One zone, no hop'] }, inter: { label: 'Across zones', perf: [3, 'Crosses zones'], costNote: 'plus zone transfer' } },
-    score: { perf: [4, 'One zone, no hop'], sec: [5, 'Inspected, segmented'], effort: [4, 'AT&T builds it'], time: [2, '3 to 4 weeks'] } },
+    zones: { intra: { label: 'Same zone', perf: [4, 'One zone'] }, inter: { label: 'Across zones', perf: [3, 'Cross-zone'], costNote: '+ transfer' } },
+    score: { perf: [4, 'One zone'], sec: [5, 'Inspected'], effort: [4, 'AT&T'], time: [2, '3-4 wks'] }, setup: 'AT&T builds it · 3 to 4 weeks' },
   { key: 'privatelink', title: 'Hosted PrivateLink', kicker: 'AT&T-hosted', icon: 'padlock', path: 'netbond',
     line: 'Each service you expose gets its own private endpoint. Private, and set up once per service.',
+    join: ['padlock', 'Endpoint', 'set', 'A private endpoint per service'], who: 'att',
     clouds: ['AWS', 'Azure'], products: ['netbond', 'privatelink'], perService: true,
-    score: { perf: [4, 'Private'], sec: [5, 'Private per service'], effort: [1, 'Once per service'], time: [2, '3 to 4 weeks'] } },
+    score: { perf: [4, 'Private'], sec: [5, 'Per service'], effort: [1, 'Per service'], time: [2, '3-4 wks'] }, setup: 'Once per service · 3 to 4 weeks' },
   { key: 'cloudwan', title: 'AT&T to Cloud WAN', kicker: 'Cloud WAN', icon: 'global-network', path: 'netbond',
     line: "The AT&T network joins the cloud's own global WAN: AWS Cloud WAN or Azure Virtual WAN.",
+    join: ['global-network', 'Cloud WAN', 'nodata', "The cloud's own global WAN, yours to run"], who: 'you',
     clouds: ['AWS', 'Azure'], products: ['netbond', 'cloud-wan'],
-    score: { perf: [4, 'Across regions'], sec: [4, 'Off the internet'], effort: [3, 'You run the WAN'], time: [3, '2 to 3 weeks'] } },
+    score: { perf: [4, 'Multi-region'], sec: [4, 'Private'], effort: [3, 'You'], time: [3, '2-3 wks'] }, setup: 'You run the WAN · 2 to 3 weeks' },
   // A placeholder the session agreed to keep ("for now you can just put a placeholder here"); deleted if it does not apply.
   { key: 'transit', title: 'Transit gateway', kicker: 'Transit', icon: 'merge', path: 'netbond', soon: true,
     line: "Attach to your cloud's transit gateway or Virtual WAN hub.",
-    clouds: [], products: [], score: {} },
+    join: ['merge', 'TGW', 'none', "Your cloud's transit gateway"], who: 'you',
+    clouds: [], products: [], score: {}, setup: '' },
 ];
+/**
+ * A way's path, as Govern draws a policy's (2026-10-07, Micah: "less words, more icons"): your sites, AT&T's edge and
+ * core, where the way joins the cloud, the cloud. The join is AT&T's (solid) or yours (dashed).
+ */
+export const wayStrip = (key) => { const w = wayOf(key); if (!w) return [];
+  const node = (k, icon, short, state, title) => ({ key: k, icon, short, state, title });
+  return [node('site', 'large-building', 'Sites', 'set', 'Your sites'), node('edge', 'router', 'Edge', 'set', "AT&T's edge"), node('core', 'hub', 'Core', 'set', "AT&T's core"),
+    node('join', w.join[0], w.join[1], w.join[2], w.join[3]), node('cloud', 'cloud', 'Cloud', w.soon ? 'none' : 'set', 'Your cloud')]; };
 export const wayOf = (key) => WAYS.find(w => w.key === key) || null;
 /** The hosted product a peering way buys for a cloud: a VNet on Azure, a VPC elsewhere. */
 const productIds = (w, cloud) => w.products.map(id => (id === 'hosted' ? (cloud === 'Azure' ? 'hosted-vnet' : 'hosted-vpc') : id));
@@ -106,8 +120,10 @@ export function wayLabel(key, cloud) {
   const port = PORT_NAME[cloud] || 'port';
   return ({ byo: `Your ${port}`, att: `AT&T's ${port}`, peer: `Hosted ${hostedWord(cloud)} peering`, privatelink: 'Hosted PrivateLink', cloudwan: 'AT&T to Cloud WAN', transit: 'Transit gateway' })[key] || '';
 }
-/** Who sets it up and how long, short enough for a card's row. */
-export const waySetup = (key) => { const w = wayOf(key); return w && w.score.effort ? `${w.score.effort[1]} · ${w.score.time[1]}` : ''; };
+/** Who sets it up and how long, in words (the flow's banner, a card's title). */
+export const waySetup = (key) => { const w = wayOf(key); return (w && w.setup) || ''; };
+/** Who sets it up as a glyph and how long, short enough for a card's row: [icon, time, words]. */
+export const wayWho = (key) => { const w = wayOf(key); if (!w || w.soon) return null; return { icon: w.who === 'att' ? 'hub' : 'user-access', who: w.who === 'att' ? 'AT&T' : 'You', time: w.score.time[1], words: w.setup }; };
 export const wayAvailable = (key, cloud) => { const w = wayOf(key); return !!w && !w.soon && w.clouds.includes(isGoogle(cloud) ? 'GCP' : cloud); };
 
 /**
@@ -132,9 +148,9 @@ export function wayCards(zone = 'intra') {
   return WAYS.map(w => {
     const z = w.zones ? (w.zones[zone] || w.zones.intra) : null;
     const monthly = wayMonthly(w.key, 'Azure');
-    const cost = w.soon ? [null, ''] : [costScore(w.key), monthly === null ? 'Priced after survey' : `${fmt(monthly)}/mo${w.perService ? ' a service' : ''}${z && z.costNote ? ` ${z.costNote}` : ''}`];
+    const cost = w.soon ? [null, ''] : [costScore(w.key), monthly === null ? 'By survey' : `${fmt(monthly)}${w.perService ? ' each' : ''}${z && z.costNote ? ` ${z.costNote}` : ''}`];
     const score = { cost, ...w.score, ...(z ? { perf: z.perf } : {}) };
-    return { ...w, monthly, zone: z ? zone : null, rows: CRITERIA.map(c => { const sc = score[c.key] || [null, ''];
+    return { ...w, monthly, zone: z ? zone : null, strip: wayStrip(w.key), rows: CRITERIA.map(c => { const sc = score[c.key] || [null, ''];
       return { ...c, score: sc[0], value: sc[1], segs: segs(sc[0]), title: `${c.label}: ${sc[1] || 'not scored yet'}${sc[0] ? ` (${sc[0]} of 5)` : ''}` }; }) };
   });
 }

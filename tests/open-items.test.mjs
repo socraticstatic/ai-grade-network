@@ -105,3 +105,20 @@ test('a database whose memory climbs is at risk whatever it reads; a signal at i
   const calm = AH.signalsOf(est, 'pci');
   assert.ok(calm.signals.every(g => g.value <= 62 && g.state === 'ok'));
 });
+
+// ---- fewer words (2026-10-07): a card's security value in one word, never the wrong one ----
+test('a security value shortens to one word, private before public', async () => {
+  const { secShort } = await import('../naas-app.js');
+  assert.equal(secShort('Private, off the internet'), 'Private');
+  assert.equal(secShort('Private and inspected'), 'Inspected');
+  assert.equal(secShort('Encrypted, still public'), 'Public');
+  assert.equal(secShort('Public · 28 workloads'), 'Public');
+  assert.equal(secShort('Private for 1 of 2'), 'Private 1/2');
+  assert.equal(secShort('IPsec on AT&T internet'), 'Public');
+  assert.equal(secShort('Private, two paths'), 'Two paths');
+  const v = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'options', moveOpen: 'region:Azure' }));
+  const az = v.moves.find(m => m.key === 'region:Azure');
+  assert.deepEqual(az.tiers.map(t => t.sec.short), ['Private', 'Private', 'Inspected']);
+  assert.equal(az.tSec.short, 'Public');
+  assert.equal(az.short, 'Azure westeurope');
+});

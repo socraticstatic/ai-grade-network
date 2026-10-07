@@ -443,10 +443,14 @@ test('every container the markup opens, it closes', () => {
   // (sc-if, sc-for, button, span), App health (div, span, sc-for for rows, signals and thresholds, button for the steppers
   // and Reset, sc-if for the leak mark and Reset). Recounted, every tag balanced: div 1234 -> 1254, span 1202 -> 1246,
   // sc-if 592 -> 598, sc-for 326 -> 334, button 488 -> 496.
-    ['div', /<div\b/g, /<\/div>/g, 1254],
-    ['span', /<span\b/g, /<\/span>/g, 1246],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 598],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 334],
+  // Fewer words, more icons (2026-10-07): Ways to connect's sentences became a criteria key (sc-for) and an info glyph, each
+  // card's line a path strip (div -1, sc-for +1); Recommended's line leads with the cloud's mark or the sites' glyph and a
+  // badge (sc-if +3, span +7), the summary boxes carry a cloud glyph, setup a who glyph (sc-if +1, span +5). Recounted,
+  // every tag balanced: div 1254 -> 1253, span 1246 -> 1259, sc-if 598 -> 602, sc-for 334 -> 336.
+    ['div', /<div\b/g, /<\/div>/g, 1253],
+    ['span', /<span\b/g, /<\/span>/g, 1259],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 602],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 336],
     ['section', /<section\b/g, /<\/section>/g, 12],
     ['button', /<button\b/g, /<\/button>/g, 496],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],

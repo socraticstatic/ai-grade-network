@@ -382,7 +382,7 @@ function regionMoves(est, ctx) {
       recI: byWays ? 0 : REC, hasSetup: byWays,
       gb: Object.fromEntries(rs.map(r => [r.region, eg[r.region].gb])),
       risk: rs.some(r => F.regionState(r) === 'slo') ? 'slo' : 'exposed',
-      today: { path: 'internet', pathWord: 'Public internet', ms, msRegion: (rs.find(r => r.pub === ms) || rs[0]).region, egress: egNow, mo: egNow, setup: 'In place today',
+      today: { path: 'internet', pathWord: 'Public internet', ms, msRegion: (rs.find(r => r.pub === ms) || rs[0]).region, egress: egNow, mo: egNow, setup: 'In place',
         sec: { value: `Public · ${plural(wl, 'workload', 'workloads')}`, tone: 'risk' },
         perf: { value: `${ms} ms p95${healthWord(hToday)}`, tone: TONE_OF_HEALTH[hToday] },
         cost: { value: `${fmt(egNow)}/mo egress`, tone: 'same' } },

@@ -4512,7 +4512,8 @@ function flowVals(s, set, est, c) {
   const opg = pageRows(shown.slice().reverse().map(ordRow), 6, s.ordersPage, (n) => set({ ordersPage: n }));
   const note = f.note;
   return {
-    wayTypes, wayCards, cfTypes, waySet, wayFoot: 'Each criterion scored 1 to 5, the most favourable 5. Cost is one region at 1 Gbps a month, from the catalog. The scores are estimates.',
+    wayTypes, wayCards, cfTypes, waySet, wayFoot: 'Each criterion scored 1 to 5, the most favourable 5. Cost is one region at 1 Gbps a month, from the catalog. The scores are estimates. Start a way, then pick what it connects.',
+    wayCriteria: W.CRITERIA.map(c => ({ key: c.key, label: c.label, icon: c.icon })),
     goRecommended: () => set({ cnPage: 'options' }),
     cfKey: key, cfSteps, cfTitle: (STEP_HEAD[key] || [])[0] || '', cfDesc: (STEP_HEAD[key] || [])[1] || '',
     cfIsType: key === 'type', cfIsProvider: key === 'provider', cfIsEndpoints: key === 'endpoints', cfIsBasic: key === 'basic', cfIsAdvanced: key === 'advanced', cfIsTerms: key === 'terms', cfIsReview: isLast,
@@ -4962,6 +4963,15 @@ function bwVals(s, set, est0, conns, go) {
 // after each against today. Attach N selected composes ONE order: the contract
 // with the compose flow is compose.prefillSets (M.attachSets).
 export const MOVES_PAGE = 5;
+// One word for a security value on a card (2026-10-07, Micah: "less words, more icons"); the whole value is its title.
+// Private is read before public: "Private, off the internet" is private; a part-covered set keeps its count.
+export const secShort = (v) => { const t = String(v || ''); if (!t) return '';
+  if (/inspect/i.test(t)) return 'Inspected'; if (/two (paths|metros|providers)/i.test(t)) return 'Two paths'; if (/SLA end to end/i.test(t)) return "AT&T's SLA";
+  const part = /^Private for ([\d,]+) of ([\d,]+)/i.exec(t); if (part) return `Private ${part[1]}/${part[2]}`;
+  if (/private/i.test(t) && !/public/i.test(t)) return 'Private'; if (/public|internet|exposed|tunnel|ipsec/i.test(t)) return 'Public'; return t; };
+// The name a move reads on its line: the cloud and region it serves, or the sites; the sentence is its title (2026-10-07).
+const moveShort = (m) => m.kind === 'sites' ? (m.title.replace(/^(Move|Bring) [\d,]+ /, '').replace(/ onto .*$/, '').replace(/^\w/, ch => ch.toUpperCase())) : m.regions.length === 1 ? `${m.cloud} ${m.regions[0]}` : m.cloud;
+const MOVE_BADGE = { second: ['shuffle', 'Second path'], port: ['plus-circle', 'Add a port'] };
 const MOVE_TONE = { good: 'var(--success)', risk: 'var(--warning)', bad: 'var(--error)', slo: 'var(--viz-5)', same: 'var(--text-light)' };
 function movesVals(s, set, go, est, { openF, obAll, conns }) {
   const onPage = s.screen === 's3' && s.tab === 'connect' && cnPageOf(s) === 'options';
@@ -5060,14 +5070,18 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
         // The way this cloud cannot have (Google's AT&T-provided port) holds its column muted and says why.
         if (t.unavailable) return { ...t, key: m.key + ':' + t.i, on: false, pick: () => {}, featured: false, isOption: false, notOption: true, reason: t.unavailable, priceShort: '', aria: `${t.label}: ${t.unavailable}`, title: t.unavailable,
           border: 'var(--border-secondary)', hoverBorder: 'var(--border-secondary)', bg: 'transparent', op: 0.55, cursor: 'default', wordInk: 'var(--text-light)', strip: [], mark: { icon: 'not-available', ink: 'var(--text-light)', bg: 'var(--bg-neutral)' },
-          sec: cell({ value: '', tone: 'same' }), perf: cell({ value: '', tone: 'same' }), cost: cell({ value: '', tone: 'same' }, null, true), setup: '' };
+          sec: { ...cell({ value: '', tone: 'same' }), short: '' }, perf: cell({ value: '', tone: 'same' }), cost: cell({ value: '', tone: 'same' }, null, true), setup: '', hasWho: false, whoIcon: 'wrench', whoWord: '', setupTime: '', setupWords: '' };
         return { ...t, key: m.key + ':' + t.i, on: tOn, pick: pick(t.i), featured: t.rec, isOption: true, notOption: false, reason: '', op: 1, cursor: 'pointer', hoverBorder: 'var(--border-active)', priceShort: t.monthly === null ? '' : `${fmt(t.monthly)}/mo`,
           aria: `${t.intro} Security: ${t.sec.value}${t.sec.delta ? `, ${t.sec.delta}` : ''}. Performance: ${t.perf.value}${t.perf.delta ? `, ${t.perf.delta}` : ''}. Cost: ${t.cost.value}${t.cost.delta ? `, ${t.cost.delta}` : ''}.`,
           title: `${t.intro} ${t.fit}. ${t.price}. Performance: ${t.perfTitle}. Cost: ${t.costTitle}.`,
           // A way wears its own mark (your port a cable, AT&T's the hub, peering the shield), so two ways on one path still read apart.
           border: tOn ? 'var(--cta)' : 'var(--border-secondary)', bg: tOn ? 'var(--bg-accent)' : 'transparent', wordInk: t.rec ? 'var(--link)' : 'var(--text-light)', strip: M.tierStrip(t), mark: t.way && W.wayOf(t.way) ? { ...M.tierMark(t), icon: W.wayOf(t.way).icon } : M.tierMark(t), setup: t.setup || '',
-          sec: cell(t.sec), perf: cell(t.perf), cost: cell(t.cost, null, true) }; });
-    return { ...m, rankF: String(m.rank), sel: on, check: on ? '✓' : '', checkBg: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)',
+          sec: { ...cell(t.sec), short: secShort(t.sec.value) }, perf: cell(t.perf), cost: cell(t.cost, null, true),
+          // Setup as who does it (a glyph) and how long (2026-10-07).
+          ...(() => { const w = t.way ? W.wayWho(t.way) : null; return { hasWho: !!w, whoIcon: w ? w.icon : 'wrench', whoWord: w ? w.who : '', setupTime: w ? w.time : '', setupWords: w ? w.words : t.setup || '' }; })() }; });
+    const badge = MOVE_BADGE[m.kind];
+    return { ...m, rankF: String(m.rank), sel: on, short: moveShort(m), markSrc: m.kind === 'sites' ? '' : W.markFor(m.cloud, s.theme), hasMarkSrc: m.kind !== 'sites' && !!W.MARK[m.cloud], noMarkSrc: m.kind === 'sites' || !W.MARK[m.cloud],
+      hasBadge: !!badge, badgeIcon: badge ? badge[0] : '', badgeWord: badge ? badge[1] : '', check: on ? '✓' : '', checkBg: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)',
       kindIcon: m.kind === 'sites' ? 'large-building' : 'cloud', strip: M.stripOf(m.today.path), mark: M.pathMark(m.today.path),
       selLabel: `${on ? 'Remove' : 'Add'} move ${m.rank}, ${m.title}, ${on ? 'from' : 'to'} the order`,
       toggle: () => set({ moveSel: keep('moveSel', { ...sel, [m.key]: !on }) }),
@@ -5079,7 +5093,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
       counts: m.counts.map(n => ({ ...n, icon: ({ sites: 'large-building', regions: 'cloud', workloads: 'apps' })[n.kind] || 'apps', n: String(n.label).split(' ')[0], title: n.kind === 'sites' ? `Show these ${n.label} on the map` : `Open ${n.label} in Your clouds`, go: n.kind === 'sites' ? siteDoor(m) : cloudDoor(m) })),
       // Today reads once, left of the tiers; every figure in it is a door to what it counts.
       pathWord: m.today.pathWord, todayNote: m.today.cost.modelled ? 'Ports at list price, modelled' : 'Measured',
-      tSec: cell(m.today.sec, setDoor), tPerf: cell(m.today.perf, perfDoor(m)), tCost: cell(m.today.cost, m.today.cost.value === 'Not priced today' ? null : costDoor(m)),
+      tSec: { ...cell(m.today.sec, setDoor), short: secShort(m.today.sec.value) }, tPerf: cell(m.today.perf, perfDoor(m)), tCost: cell(m.today.cost, m.today.cost.value === 'Not priced today' ? null : costDoor(m)),
       tCostTitle: m.today.cost.modelled ? `${m.today.cost.value}: a cloud provider list price applied to your ports, modelled` : m.today.egress !== null ? `${m.today.cost.value}: this month's egress for this set, as Cost splits it. Opens Cost.` : 'Not priced today',
       tCostCursor: m.today.cost.value === 'Not priced today' ? 'default' : 'pointer', tCostHover: m.today.cost.value === 'Not priced today' ? 'none' : 'underline',
       tiers, pick: (() => { const t = tiers.find(x => x.on) || tiers[1] || tiers[0]; return t ? { ...t, headline: t.cost.delta || t.cost.value } : null; })() };
