@@ -100,7 +100,7 @@ await beat('0 NaaS home: the take-away, the snapshot, the map below', async () =
   if (!(await page.locator('#sec-fabric[data-fold="below"]').count())) throw new Error('no Connect map below the home');
   // The map's title sits at the fold. The home has no Lens control, so its legend keys whose path a wire
   // is and Health's state on each dot (third skeptic, 2026-09-30), never a lens.
-  await expect('What you have', '1 connection down', '5 regions without flow logs', 'AT&T and private paths', 'public internet (dotted)');
+  await expect('What you have', '1 down', '5 regions unseen', 'AT&T and private paths', 'public internet (dotted)');
   if ((await page.locator('#sec-fabric').innerText()).includes('security lens')) throw new Error('the home keys a lens it has no control for');
   const neteng = await takeaway();
   await tab('Executive', 'section[aria-label="NaaS home"]');
@@ -180,7 +180,9 @@ await beat('7 Insights: Signals, Your actions and Operations', async () => {
   await rail('Insights');
   // westeurope is not on AT&T, so its flows offer Attach; Steer stays on us-east-1 to eastus (third round, 2026-09-30).
   // Health lists westeurope's latency over SLO too, as the home's chip and this card's list do (w2 second pass, 2026-09-30).
-  await expect('Health', '3 problems · 2 apps affected', 'Latency over SLO', 'Capacity', 'Trace', 'Attach', 'Steer', 'Resize');
+  await expect('Health', 'Latency over SLO', 'Capacity', 'Trace', 'Attach', 'Steer', 'Resize');
+  // The line under each card's title is glyph chips since 2026-10-07; the sentence rides in the title.
+  if (!(await page.locator('.sig-head .h[title="3 problems · 2 apps affected"]').count())) throw new Error('Health lost its 3 problems · 2 apps affected line');
   const lead = await page.locator('[aria-label="Signal cards"] .sig-head .t').allInnerTexts();
   if (!/^Health/.test(lead[0] || '') || !/^Latency over SLO/.test(lead[1] || '') || !/^Capacity/.test(lead[2] || '')) throw new Error(`Network Eng leads with ${lead.slice(0, 3).join(', ')}`);
   await tab('Your actions', '[aria-label="Insights views"]');

@@ -109,10 +109,10 @@ test('P5: FinOps reads Spend\'s Could save with Spend\'s own condition, so it ne
 // ---- P10: the map head names what it counts ----
 
 test('P10: the map head counts regions without flow logs as regions, beside the connections', () => {
-  assert.deepEqual(vals(home('partial')).fabricHealth.map(x => x.text), ['1 connection down', '5 regions without flow logs', '1 of 2 connections healthy']);
+  assert.deepEqual(vals(home('partial')).fabricHealth.map(x => x.text), ['1 down', '5 regions unseen', '1 of 2 healthy']);
   for (const view of LIVE) {
     const blind = vals(home(view)).fabricHealth.find(x => x.key === 'blind');
-    if (blind) assert.match(blind.text, /^\d+ (region|regions) without flow logs$/, view);
+    if (blind) assert.match(blind.text, /^\d+ (region|regions) unseen$/, view);
   }
 });
 

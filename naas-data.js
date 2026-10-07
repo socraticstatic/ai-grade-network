@@ -102,6 +102,9 @@ export const ESTATES = {
     ],
   },
   partial: {
+    // The account team pins Azure's move first (the connect options session, 2026-10-06: "instead of GCP, maybe just make
+    // Azure ... show those three"), so Recommended opens on the three Azure ways; the rest rank by what they save.
+    pinnedMove: 'region:Azure',
     id: 'partial', name: 'Acme Corp', stage: 'partial', clouds: 3, regions: 12, workloads: 322, privatePct: 40, attachedRegions: 5, policiesEnforced: 4, policiesAuthored: 7, observedPct: 61, savedMo: 36000, fabricAttachPct: 38, tags: 14,
     accounts: [
       { id: 'acc-aws', cloud: 'AWS', acct: null, cred: 'Cross-account role', regions: 3, schedule: { kind: 'nightly', at: '02:00' } },
@@ -275,6 +278,7 @@ export const ESTATES = {
     },
   },
   trust: {
+    pinnedMove: 'region:Azure',
     id: 'trust', name: 'Meridian Networks', stage: 'partial', clouds: 3, regions: 14, workloads: 2860, sitesCount: 4120, privatePct: 52, attachedRegions: 8, policiesEnforced: 9, policiesAuthored: 15, observedPct: 58, savedMo: 148000, fabricAttachPct: 61, tags: 42,
     accounts: [
       { id: 'acc-aws', cloud: 'AWS', acct: 'acct 6620-1194-3308', cred: 'Cross-account role', regions: 3, schedule: { kind: 'nightly', at: '02:00' } },

@@ -1020,11 +1020,11 @@ export function vals(c) {
       const ok = rows.length - bad.length - hot.length;
       const parts = [];
       // Health's words (skeptic, 2026-09-30): a degraded connection is Down there, and "healthy" names what it counts.
-      if (bad.length) parts.push({ key: 'bad', dot: 'var(--error)', text: `${bad.length} ${bad.length === 1 ? 'connection' : 'connections'} down`, title: bad.map(r => r.cloud + ' ' + r.region).join(', ') });
+      if (bad.length) parts.push({ key: 'bad', dot: 'var(--error)', text: `${bad.length} down`, title: `${bad.length} ${bad.length === 1 ? 'connection' : 'connections'} down: ${bad.map(r => r.cloud + ' ' + r.region).join(', ')}` });
       if (hot.length) parts.push({ key: 'hot', dot: 'var(--warning)', text: `${hot.length} saturating`, title: hot.map(r => r.region + ' at ' + r.pct + '%').join(', ') });
       // Regions, said so (third skeptic, 2026-09-30): between two connection counts a bare "5" read as 5 of 2 connections.
-      if (blind) parts.push({ key: 'blind', dot: 'var(--text-disabled)', text: `${blind} ${blind === 1 ? 'region' : 'regions'} without flow logs`, title: 'Regions sending no flow logs' });
-      if (rows.length) parts.push({ key: 'ok', dot: 'var(--success)', text: `${ok} of ${rows.length} ${rows.length === 1 ? 'connection' : 'connections'} healthy`, title: 'Connections healthy' });
+      if (blind) parts.push({ key: 'blind', dot: 'var(--text-disabled)', text: `${blind} ${blind === 1 ? 'region' : 'regions'} unseen`, title: `${blind} ${blind === 1 ? 'region sends' : 'regions send'} no flow logs` });
+      if (rows.length) parts.push({ key: 'ok', dot: 'var(--success)', text: `${ok} of ${rows.length} healthy`, title: `${ok} of ${rows.length} ${rows.length === 1 ? 'connection' : 'connections'} healthy` });
       return parts;
     })(), clearHover: () => set({ hoverNode: null, hoverRegion: null }), laneY: L.lane.y, laneH: L.lane.h, bandY: L.bandY, bandH: L.bandH, facH: L.H - L.bandY * 2, strataCardH, strataPadY: strataTight ? 6 : 10, strataRowGap: strataTight ? 3 : 6, footY: L.H - 54, footY2: L.H - 48, heroVisible: heroScreen && heroOpen, heroStrip: heroScreen && !heroOpen, heroCanHide: heroScreen && heroOpen && !heroDefault, toggleHero, heroStripText: isEmpty ? 'Your sites, the AT&T network and your clouds, drawn after the first scan' : `${est.attachedRegions} of ${est.regions} regions on AT&T · ${est.regions - est.attachedRegions} on the public internet · ${(est.sitesCount || est.sites.length).toLocaleString('en-US')} sites`, inDept, overlayLegend: (onHome ? homeLegend({ states: new Set([...heroClouds, ...heroRegions].map(x => x.relState).filter(Boolean)), third: piecesMeta.some(p => p.owner === 'third') || nodesMeta.some(n => n.owner === 'third' && n.op), xc: xconnectsMeta.length > 0 }) : overlayLegend(ovS, R)).map(legendKey), hasOverlay: inDept || s.screen === 's0', scrubT: s.scrubT == null ? 100 : s.scrubT, setScrub: (e) => set({ scrubT: +e.target.value }), showScrub: inDept && s.tab === 'observe', showForecast: inDept && s.tab === 'cost', fcT: s.fcT == null ? 0 : s.fcT, setFc: (e) => set({ fcT: +e.target.value }), fcLabel: (s.fcT || 0) === 0 ? 'today' : '+' + Math.round((s.fcT || 0) * 0.9) + ' days', heroRolled: s.screen === 's0', healthStrip: hp.strip, hasHealth: s.screen !== 's3', healthIncidents: probRows.map((x, i) => ({ ...x, text: `${x.where} · ${x.what} · ${x.age}${x.wl ? ` · ${x.wl.toLocaleString('en-US')} workloads behind it` : ''}`, key: 'hi' + i, dot: F.HEALTH_INK[x.health] || 'var(--warning)', rad: F.healthRadius(x.health), go: go('s3', { layer: 'cloud', tab: 'observe', mapSel: conns.rows.some(r => r.region === x.region) ? 'cx-' + x.region : null, mapRegion: x.region, panelTab: 'impact' }) })), hasIncidents: probRows.length > 0 && s.screen !== 's3',
     headStart: D.HEADSTART.map(h => ({ ...h, key: h.cat, go: go('s7', { browseCat: h.cat }) })), headStartVerdict: isEmpty ? 'AT&T already sees the metros, clouds and paths you could use. Tell us two things and the store composes the rest.' : `${est.name} is recognized. ${estatePhrase(est)} already visible.`,
@@ -1574,12 +1574,26 @@ const HOME_CARD_ICON = { apps: 'apps', onatt: 'padlock', egress: 'bill', exposed
 // What an action gets you, as one glyph; the words are its title.
 const outIcon = (t) => { const x = String(t || '').toLowerCase(); return /cannot see|unseen|blind|telemetry/.test(x) ? 'eye' : /latency|slo/.test(x) ? 'high-meter' : /off the internet|private/.test(x) ? 'hub' : /security|risk|expos/.test(x) ? 'check-shield' : /sav|\$|cost|fee|confirm|send/.test(x) ? 'bill' : /alert/.test(x) ? 'bell' : 'bullseye'; };
 const firstSentence = (t) => { const m = /^(.+?[.!?])\s+[A-Z0-9$]/.exec(String(t || '')); return m ? m[1].replace(/\.$/, '') : String(t || '').replace(/\.$/, ''); };
+// A Signals card's line under its title, as chips (2026-10-07): each part of "3 problems · 2 apps affected" becomes a
+// glyph and its figure, the part itself the chip's title. A part with no figure (a cloud and region, "sample") keeps its words.
+const HEAD_FIG = /(?:None|No) of [\d,]+|[+-]?\$[\d,.]+(?:\/mo)?|[\d,.]+ of [\d,]+|[+-]?[\d,.]+(?: Gbps|%| GB\/day| new)?/;
+const HEAD_ICON = [[/problem|down/i, 'exclamation-circle'], [/apps? affected/i, 'apps'], [/SLO|latency/i, 'clock'], [/spike|^\+[\d.]+%$/i, 'trending-up'],
+  [/peak|above/i, 'high-meter'], [/shrink|^save/i, 'trending-down'], [/^(AWS|Azure|GCP|Oracle|OCI|CoreWeave)\b/, 'cloud'], [/traffic|Gbps|GB\/day/i, 'cloud-transfer'],
+  [/AT&T/, 'hub'], [/egress|\$/i, 'bill'], [/\bnew\b/i, 'globe'], [/no policy/i, 'padlock-open'], [/sample/i, 'information-circle'], [/ports?\b/i, 'minus-circle']];
+export function headChips(head) {
+  return String(head || '').split(' · ').map(p => p.trim()).filter(Boolean).map(part => {
+    const named = /^(AWS|Azure|GCP|Oracle|OCI|CoreWeave)\b/.test(part);
+    const m = named ? null : part.match(HEAD_FIG);
+    const t = named ? part : m ? m[0] : part.split(' ').slice(0, 2).join(' ');
+    return { icon: (HEAD_ICON.find(([re]) => re.test(part)) || [0, 'smart-meter'])[1], t, title: part, ink: /^save/i.test(part) ? 'var(--success)' : 'var(--text-body)' };
+  });
+}
 function glyphPass(out) {
   if (Array.isArray(out.homeCards)) out.homeCards = out.homeCards.map(h => ({ ...h, icon: HOME_CARD_ICON[h.key] || 'pie-chart' }));
   // Insights' cards lead with their mark; a row's action wears its glyph.
   const SIG_ICON = [[/health/i, 'verified'], [/latency/i, 'clock'], [/capacity/i, 'high-meter'], [/talker/i, 'trending-up'], [/cloud-to-cloud|cloud to cloud/i, 'arrows-horizontal'], [/egress|spend|cost/i, 'bill'], [/ai /i, 'ai'], [/expos|reachable/i, 'personal-security'], [/destination/i, 'globe'], [/shadow|unseen|blind/i, 'eye-off'], [/policy|violation/i, 'check-shield'], [/change/i, 'history']];
   const ACT_ICON = { Trace: 'target', Attach: 'cable', Steer: 'shuffle', Resize: 'plus-circle', 'Ask Andi': 'ai', Optimize: 'trending-down', Review: 'checklist', Isolate: 'stop-sign', Inspect: 'firewall' };
-  if (Array.isArray(out.sigCards)) out.sigCards = out.sigCards.map(g => ({ ...g, icon: (SIG_ICON.find(([re]) => re.test(g.title || '')) || [0, 'smart-meter'])[1],
+  if (Array.isArray(out.sigCards)) out.sigCards = out.sigCards.map(g => ({ ...g, icon: (SIG_ICON.find(([re]) => re.test(g.title || '')) || [0, 'smart-meter'])[1], headChips: headChips(g.head),
     rows: Array.isArray(g.rows) ? g.rows.map(r => ({ ...r, actIcon: ACT_ICON[r.act] || 'arrow-right' })) : g.rows }));
   const RING_ICON = { Sites: 'large-building', Clouds: 'cloud', Workloads: 'apps', Apps: 'grid' };
   if (Array.isArray(out.glanceRings)) out.glanceRings = out.glanceRings.map(g => ({ ...g, icon: RING_ICON[String(g.title || '').replace(/^\w/, ch => ch.toUpperCase())] || RING_ICON[g.title] || 'pie-chart' }));
@@ -5021,6 +5035,8 @@ export const secShort = (v) => { const t = String(v || ''); if (!t) return '';
 // The name a move reads on its line: the cloud and region it serves, or the sites; the sentence is its title (2026-10-07).
 const moveShort = (m) => m.kind === 'sites' ? (m.title.replace(/^(Move|Bring) [\d,]+ /, '').replace(/ onto .*$/, '').replace(/^\w/, ch => ch.toUpperCase())) : m.regions.length === 1 ? `${m.cloud} ${m.regions[0]}` : m.cloud;
 const MOVE_BADGE = { second: ['shuffle', 'Second path'], port: ['plus-circle', 'Add a port'] };
+// Pare a card's figure (2026-10-07, Micah: "pare words down along the way"): the percentile and the bucket name are its title's.
+const pare = (v) => String(v || '').replace(/ ms p95/, ' ms').replace(/\/mo egress$/, '/mo').replace(/ · at risk$/, ' · at risk');
 const MOVE_TONE = { good: 'var(--success)', risk: 'var(--warning)', bad: 'var(--error)', slo: 'var(--viz-5)', same: 'var(--text-light)' };
 function movesVals(s, set, go, est, { openF, obAll, conns }) {
   const onPage = s.screen === 's3' && s.tab === 'connect' && cnPageOf(s) === 'options';
@@ -5051,13 +5067,14 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
     const liveKeys = new Set(all.map(m => m.key));
     const done = ordersAll.filter(o => (o.moveKeys || []).some(k => !liveKeys.has(k))).map(o => { const key = (o.moveKeys || []).find(k => !liveKeys.has(k)); const ph = phasesOf(o, o.title, o.region);
       return { key: 'done:' + o.id, title: (o.moveTitles || {})[key] || o.title, what: o.what, monthly: o.monthly, mark: M.pathMark('netbond'), word: ph.landed ? 'On the AT&T network' : 'Ordered', stageWord: ph.word, ...ph }; });
-    // The summary row takes one move's slot, so the page keeps the fold.
-    const size = Math.max(1, MOVES_PAGE - done.length - (summary.length ? 1 : 0));
+    // One recommendation at a time, open and spacious (Micah, 2026-10-07: "make the page more beautiful, open, spacious.
+    // It can be the only option"): the hero is the move, a stepper walks the rest in rank order.
+    const size = 1;
     const pg = pageRows(all, size, s.movePage, (n) => set({ movePage: n, moveOpen: null }));
+    const heroAt = all.length ? Math.min(Math.max(0, s.movePage || 0), all.length - 1) : 0;
     const picked = all.filter(m => m.sel);
-    const openKey = s.moveOpen === 'none' ? null : pg.rows.some(m => m.key === s.moveOpen) ? s.moveOpen : (pg.rows[0] || {}).key;
-    const rows = pg.rows.map(m => { const open = m.key === openKey; return { ...m, open, chevron: open ? 'chevron-down' : 'chevron-right', openLabel: open ? `Hide the tiers for ${m.title}` : `Show the tiers for ${m.title}`, toggleOpen: () => set({ moveOpen: open ? 'none' : m.key }) }; });
-    return { connectSummary: summary, hasConnectSummary: summary.length > 0, moveList: all, moves: rows, movesPager: pg.pager, movesPageSize: size, hasMoves: all.length > 0 || done.length > 0, noMoves: !all.length && !done.length, doneMoves: done, hasDone: done.length > 0,
+    const rows = pg.rows;
+    return { connectSummary: summary, hasConnectSummary: summary.length > 0, moveList: all, moves: rows, movesPager: { ...pg.pager, label: all.length ? `${heroAt + 1} of ${all.length}` : '' }, movesPageSize: size, hasMoves: all.length > 0 || done.length > 0, noMoves: !all.length && !done.length, doneMoves: done, hasDone: done.length > 0,
       movesHead: 'What to connect next, by impact',
       movesSub: all.length ? `${all.length} ${all.length === 1 ? 'move' : 'moves'}, ranked by what the Recommended tier saves a month, then by the risk it closes. Today is measured; what you'd get is modelled at AT&T rates and list prices.` : '',
       movesEmpty: empty ? 'Nothing is discovered yet, so there is nothing to connect. Discovery reads a cloud account and lists what it can move.' : 'Everything discovered is on the AT&T network. Nothing to move.',
@@ -5080,8 +5097,9 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   // The contract with the compose flow is prefillSets. Until that flow reads it, the
   // compose screen's own fields read the same sets: regions bring the metros where
   // they meet the AT&T network, sites come as sites, and nothing is guessed.
-  function composeMoves(picks) {
-    const sets = M.attachSets(picks.map(m => ({ move: m, tier: tierOfMove(m) })));
+  function composeMoves(picks, forceTier) {
+    const tierFor = (m) => (Number.isInteger(forceTier) ? forceTier : tierOfMove(m));
+    const sets = M.attachSets(picks.map(m => ({ move: m, tier: tierFor(m) })));
     const note = `${picks.length === 1 ? picks[0].title : `One order: ${picks.map(labelOf).join('; ')}`}.`;
     const regs = sets.regions.map(id => est.regionsList.find(r => r.region === id)).filter(Boolean);
     const onRamps = Object.values(D.COMPOSE_CHIPS.regions).flat();
@@ -5119,7 +5137,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
         // The way this cloud cannot have (Google's AT&T-provided port) holds its column muted and says why.
         if (t.unavailable) return { ...t, key: m.key + ':' + t.i, on: false, pick: () => {}, featured: false, isOption: false, notOption: true, reason: t.unavailable, priceShort: '', aria: `${t.label}: ${t.unavailable}`, title: t.unavailable,
           border: 'var(--border-secondary)', hoverBorder: 'var(--border-secondary)', bg: 'transparent', op: 0.55, cursor: 'default', wordInk: 'var(--text-light)', strip: [], mark: { icon: 'not-available', ink: 'var(--text-light)', bg: 'var(--bg-neutral)' },
-          sec: { ...cell({ value: '', tone: 'same' }), short: '' }, perf: cell({ value: '', tone: 'same' }), cost: cell({ value: '', tone: 'same' }, null, true), setup: '', hasWho: false, whoIcon: 'wrench', whoWord: '', setupTime: '', setupWords: '' };
+          sec: { ...cell({ value: '', tone: 'same' }), short: '' }, perf: cell({ value: '', tone: 'same' }), cost: cell({ value: '', tone: 'same' }, null, true), setup: '', hasWho: false, whoIcon: 'wrench', whoWord: '', setupTime: '', setupWords: '', metrics: [], connect: () => {}, ctaPrimary: false, ctaWord: '' };
         return { ...t, key: m.key + ':' + t.i, on: tOn, pick: pick(t.i), featured: t.rec, isOption: true, notOption: false, reason: '', op: 1, cursor: 'pointer', hoverBorder: 'var(--border-active)', priceShort: t.monthly === null ? '' : `${fmt(t.monthly)}/mo`,
           aria: `${t.intro} Security: ${t.sec.value}${t.sec.delta ? `, ${t.sec.delta}` : ''}. Performance: ${t.perf.value}${t.perf.delta ? `, ${t.perf.delta}` : ''}. Cost: ${t.cost.value}${t.cost.delta ? `, ${t.cost.delta}` : ''}.`,
           title: `${t.intro} ${t.fit}. ${t.price}. Performance: ${t.perfTitle}. Cost: ${t.costTitle}.`,
@@ -5127,22 +5145,35 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
           border: tOn ? 'var(--cta)' : 'var(--border-secondary)', bg: tOn ? 'var(--bg-accent)' : 'transparent', wordInk: t.rec ? 'var(--link)' : 'var(--text-light)', strip: M.tierStrip(t), mark: t.way && W.wayOf(t.way) ? { ...M.tierMark(t), icon: W.wayOf(t.way).icon } : M.tierMark(t), setup: t.setup || '',
           sec: { ...cell(t.sec), short: secShort(t.sec.value) }, perf: cell(t.perf), cost: cell(t.cost, null, true),
           // Setup as who does it (a glyph) and how long (2026-10-07).
-          ...(() => { const w = t.way ? W.wayWho(t.way) : null; return { hasWho: !!w, whoIcon: w ? w.icon : 'wrench', whoWord: w ? w.who : '', setupTime: w ? w.time : '', setupWords: w ? w.words : t.setup || '' }; })() }; });
+          ...(() => { const w = t.way ? W.wayWho(t.way) : null; const sec = { ...cell(t.sec), short: secShort(t.sec.value) }, perf = cell(t.perf), cost = cell(t.cost, null, true);
+            return { hasWho: !!w, whoIcon: w ? w.icon : 'wrench', whoWord: w ? w.who : '', setupTime: w ? w.time : '', setupWords: w ? w.words : t.setup || '',
+              // The card reads as four glyph rows (2026-10-07): security, performance, cost, who sets it up and how long.
+              metrics: [{ key: 'sec', icon: 'check-shield', v: sec.short, d: '', ink: sec.ink, dink: sec.dink, title: `Security: ${t.sec.value}` },
+                { key: 'perf', icon: 'high-meter', v: pare(perf.value), d: perf.delta, ink: perf.ink, dink: perf.dink, title: `Performance: ${t.perfTitle || perf.value}` },
+                { key: 'cost', icon: 'bill', v: pare(cost.value), d: cost.delta, ink: cost.ink, dink: cost.dink, title: `Cost: ${t.costTitle || cost.value}` },
+                ...(w ? [{ key: 'setup', icon: w.icon, v: `${w.who} · ${w.time}`, d: '', ink: 'var(--text-body)', dink: 'var(--text-light)', title: w.words }] : [])],
+              connect: () => { set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: t.i }) }); composeMoves([m], t.i); }, ctaPrimary: tOn, ctaWord: 'Connect' }; })() }; });
     const badge = MOVE_BADGE[m.kind];
     return { ...m, rankF: String(m.rank), sel: on, short: moveShort(m), markSrc: m.kind === 'sites' ? '' : W.markFor(m.cloud, s.theme), hasMarkSrc: m.kind !== 'sites' && !!W.MARK[m.cloud], noMarkSrc: m.kind === 'sites' || !W.MARK[m.cloud],
-      hasBadge: !!badge, badgeIcon: badge ? badge[0] : '', badgeWord: badge ? badge[1] : '', check: on ? '✓' : '', checkBg: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)',
+      hasBadge: !!badge, badgeIcon: badge ? badge[0] : '', badgeWord: badge ? badge[1] : '',
+      // Pinned by the account team: it leads whatever it saves, and says so (2026-10-07).
+      hasPin: !!m.pinned, pinTitle: 'Pinned first by your AT&T team; the rest rank by what they save', check: on ? '✓' : '', checkBg: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)',
       kindIcon: m.kind === 'sites' ? 'large-building' : 'cloud', strip: M.stripOf(m.today.path), mark: M.pathMark(m.today.path),
       selLabel: `${on ? 'Remove' : 'Add'} move ${m.rank}, ${m.title}, ${on ? 'from' : 'to'} the order`,
       toggle: () => set({ moveSel: keep('moveSel', { ...sel, [m.key]: !on }) }),
       ...(() => { const o = orderOf(m); if (!o) return { hasTask: false, canConnect: true, phases: [], taskWord: '' }; const ph = phasesOf(o, m.title, m.regions[0]); return { hasTask: true, canConnect: false, phases: ph.phases, taskWord: ph.word, taskLanded: ph.landed }; })(),
       attach: () => composeMoves([m]), compare: () => set({ cnPage: 'ways' }), connectTitle: `Start one order: ${m.title.replace(/^\w/, ch => ch.toLowerCase())}, with ${(m.tiers[tierOfMove(m)] || {}).label || ''}`,
-      // The session's five criteria include setup effort and time (2026-10-06): a move whose tiers are ways reads them on a row of their own.
-      hasSetup: !!m.hasSetup, tSetup: m.today.setup || '', openRows: m.hasSetup ? '38px 56px 24px 24px 24px 24px' : '38px 56px 24px 24px 24px',
+      // The session's five criteria include setup effort and time (2026-10-06): a move whose tiers are ways reads them as a fourth metric.
+      hasSetup: !!m.hasSetup, tSetup: m.today.setup || '',
       // A count is a glyph and a number (2026-10-05, "way too text heavy"); its words stay in the title and the aria label.
       counts: m.counts.map(n => ({ ...n, icon: ({ sites: 'large-building', regions: 'cloud', workloads: 'apps' })[n.kind] || 'apps', n: String(n.label).split(' ')[0], title: n.kind === 'sites' ? `Show these ${n.label} on the map` : `Open ${n.label} in Your clouds`, go: n.kind === 'sites' ? siteDoor(m) : cloudDoor(m) })),
       // Today reads once, left of the tiers; every figure in it is a door to what it counts.
       pathWord: m.today.pathWord, todayNote: m.today.cost.modelled ? 'Ports at list price, modelled' : 'Measured',
-      tSec: { ...cell(m.today.sec, setDoor), short: secShort(m.today.sec.value) }, tPerf: cell(m.today.perf, perfDoor(m)), tCost: cell(m.today.cost, m.today.cost.value === 'Not priced today' ? null : costDoor(m)),
+      tSec: { ...cell(m.today.sec, setDoor), short: secShort(m.today.sec.value) }, tPerf: cell(m.today.perf, perfDoor(m)),
+      todayMetrics: [{ key: 'sec', icon: 'check-shield', v: secShort(m.today.sec.value), d: '', ink: cell(m.today.sec).ink, title: `Security: ${m.today.sec.value}`, go: setDoor },
+        { key: 'perf', icon: 'high-meter', v: pare(m.today.perf.value), d: '', ink: cell(m.today.perf).ink, title: `Performance: ${m.today.perf.value}`, go: perfDoor(m) },
+        { key: 'cost', icon: 'bill', v: pare(m.today.cost.value), d: '', ink: cell(m.today.cost).ink, title: `Cost: ${m.today.cost.value}`, go: m.today.cost.value === 'Not priced today' ? (() => {}) : costDoor(m) },
+        ...(m.hasSetup ? [{ key: 'setup', icon: 'check-circle', v: m.today.setup || 'In place', d: '', ink: 'var(--text-light)', title: 'In place today', go: () => {} }] : [])], tCost: cell(m.today.cost, m.today.cost.value === 'Not priced today' ? null : costDoor(m)),
       tCostTitle: m.today.cost.modelled ? `${m.today.cost.value}: a cloud provider list price applied to your ports, modelled` : m.today.egress !== null ? `${m.today.cost.value}: this month's egress for this set, as Cost splits it. Opens Cost.` : 'Not priced today',
       tCostCursor: m.today.cost.value === 'Not priced today' ? 'default' : 'pointer', tCostHover: m.today.cost.value === 'Not priced today' ? 'none' : 'underline',
       tiers, pick: (() => { const t = tiers.find(x => x.on) || tiers[1] || tiers[0]; return t ? { ...t, headline: t.cost.delta || t.cost.value } : null; })() };

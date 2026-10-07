@@ -451,12 +451,21 @@ test('every container the markup opens, it closes', () => {
   // heads are chips (sc-if, sc-for, button), home cards and panels lead with tiles, the per-GB line and Traffic's mix are
   // chips (sc-for), notes became info glyphs (div -3: the note lines, the briefing footnote, the template sentence).
   // Recounted, every tag balanced: div 1253 -> 1250, span 1259 -> 1307, sc-if 602 -> 603, sc-for 336 -> 339, button 496 -> 497.
-    ['div', /<div\b/g, /<\/div>/g, 1250],
-    ['span', /<span\b/g, /<\/span>/g, 1307],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 603],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 339],
-    ['section', /<section\b/g, /<\/section>/g, 12],
-    ['button', /<button\b/g, /<\/button>/g, 497],
+  // Recommended as one hero at a time (2026-10-07, Micah: "more beautiful, open, spacious. It can be the only option"): the
+  // move is a section (section +1) with a head (the cloud's mark under sc-if, the name, Pinned and badge under sc-if, counts
+  // and an info glyph, the phase strip and the stepper), Today and three option cards each with glyph metric rows (sc-for)
+  // and their own Connect; the old header line, its chevron, the open gate and the shared row plan left. The Connect status
+  // line lost no tags. Recounted, every tag balanced: div 1250 -> 1248, span 1307 -> 1281, sc-if 603 -> 601,
+  // sc-for 339 -> 341, section 12 -> 13, button 497 -> 493.
+  // The home cards' footnote and the Signals line under each title as glyph chips (2026-10-07): a chip loop each
+  // (sc-for +2) whose chip is a span holding the glyph span (span +4 across the two). Recounted, every tag balanced:
+  // span 1281 -> 1285, sc-for 341 -> 343.
+    ['div', /<div\b/g, /<\/div>/g, 1248],
+    ['span', /<span\b/g, /<\/span>/g, 1285],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 601],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 343],
+    ['section', /<section\b/g, /<\/section>/g, 13],
+    ['button', /<button\b/g, /<\/button>/g, 493],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

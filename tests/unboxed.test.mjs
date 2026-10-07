@@ -28,7 +28,8 @@ test('lists and tables sit on the page, not in a card', () => {
 
 const pages = (v, rows, pager, size) => {
   assert.ok(v[rows].length <= v[size], `${rows}: ${v[rows].length} > ${v[size]}`);
-  assert.match(v[pager].label, /^(\d+–\d+|0) of \d+$/);
+  // A page of one reads "3 of 7" (Recommended's hero, 2026-10-07).
+  assert.match(v[pager].label, /^(\d+–\d+|\d+|0) of \d+$/);
 };
 
 test('long lists page to fit the fold', () => {

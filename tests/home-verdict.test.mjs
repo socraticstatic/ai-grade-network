@@ -239,9 +239,10 @@ test('V9: the Architect\'s line names the clouds the public regions are on, not 
 test('V10: the map head says down where Health says down, and whose "healthy" it counts', () => {
   const h = vals(home('partial')).fabricHealth.map(x => x.text);
   // "5 regions" (third skeptic, 2026-09-30): a bare 5 between two connection counts read as connections.
-  assert.deepEqual(h, ['1 connection down', '5 regions without flow logs', '1 of 2 connections healthy']);
+  // Pared (2026-10-07): the nouns that keep the counts apart stay, the rest is each part's title.
+  assert.deepEqual(h, ['1 down', '5 regions unseen', '1 of 2 healthy']);
   const m = vals(home('mature')).fabricHealth.map(x => x.text);
-  assert.ok(m.includes('1 connection down') && m.includes('5 of 7 connections healthy'), m.join(' · '));
+  assert.ok(m.includes('1 down') && m.includes('5 of 7 healthy'), m.join(' · '));
   for (const view of LIVE) assert.ok(!vals(home(view)).fabricHealth.some(x => /degraded/.test(x.text)), view);
 });
 

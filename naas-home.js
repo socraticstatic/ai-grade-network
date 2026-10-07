@@ -323,7 +323,21 @@ export function snapshotCards(rk, f, doors) {
     banked: { kLabel: 'Savings banked', big: ow.banked || '$0', of: 'to date', ...(numOf(ow.banked) ? kp('ok', 'Confirmed') : kp('warn', 'Nothing banked')),
       bar: [{ key: 'b', w: numOf(ow.banked) ? '100%' : '0%', ink: 'var(--success)' }], foot: 'Saved by moves already made on the AT&T network' },
   });
-  Object.keys(by).forEach(k2 => Object.assign(by[k2], KPI[k2]));
+  // The footnote as glyph chips (Micah, 2026-10-07: "less words, more icons"; "pare words down along the way"): a glyph and
+  // the figure, the sentence in the title. The bar above already carries the colours, so the chips carry the meaning.
+  const fc = (icon, t, title, ink) => ({ icon, t, title, ink: ink || 'var(--text-body)', iink: ink || 'var(--text-light)' });
+  const pctOf = (n, of) => (of > 0 ? Math.round(n / of * 100) : 0);
+  const CHIPS = {
+    apps: [downN && fc('close-circle', enf(downN), `${downN} down`, HEALTH_INK.down), sloN && fc('clock', enf(sloN), `${sloN} over latency target`, HEALTH_INK.slo), riskN && fc('exclamation-triangle', enf(riskN), `${riskN} at risk`, HEALTH_INK.risk)].filter(Boolean),
+    onatt: [fc('large-building', `${enf(sitesOn)} of ${enf(sitesTotal)}`, `Sites on AT&T: ${enf(sitesOn)} of ${enf(sitesTotal)}`)],
+    egress: nowN > aheadN && aheadN ? [fc('trending-down', `$${enf(nowN - aheadN)}/mo`, `$${enf(nowN - aheadN)}/mo you can avoid in 90 days`, 'var(--success)'), fc('history', '90 days', 'Over the next 90 days')] : [fc('check-circle', 'Nothing to avoid', 'Nothing to avoid yet')],
+    exposed: [fc('globe', `${pctOf(exN, wlN)}%`, `${pctOf(exN, wlN)}% of workloads reachable from outside`)],
+    tags: [bare ? fc('padlock-open', `${enf(bare)} reach anything`, 'A tag with no policy can reach anything', 'var(--warning)') : fc('check-shield', 'Covered', 'Every tag has a policy')],
+    approve: [fc('pie-chart', `${pctOf(ow.mine, allSave)}%`, `${pctOf(ow.mine, allSave)}% of the open savings are FinOps' own moves`)],
+    eng: [fc('person-group', 'Engineering acts', 'Network and architecture moves: FinOps follows up, engineering acts')],
+    banked: [fc('hub', 'On AT&T', 'Saved by moves already made on the AT&T network')],
+  };
+  Object.keys(by).forEach(k2 => Object.assign(by[k2], KPI[k2], { footChips: CHIPS[k2] || [] }));
   return (CARD_ORDER[rk] || CARD_ORDER.neteng).map(k => dotGrid(by[k])).map(c => ({ ...c,
     figs: c.figs.map(x => ({ ...x, hasSwatch: !!x.swatch })), hasSwatch: !!c.swatch, hasSuffix: !!c.suffix }));
 }

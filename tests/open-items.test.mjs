@@ -122,3 +122,32 @@ test('a security value shortens to one word, private before public', async () =>
   assert.equal(az.tSec.short, 'Public');
   assert.equal(az.short, 'Azure westeurope');
 });
+
+// ---- fewer words (2026-10-07): the home cards' footnote and the Signals line as glyph chips, the sentence in the title ----
+test('a home card\'s footnote is glyph chips whose titles say what the footnote said', () => {
+  const v = vals(mkC({ view: 'partial', estateParam: null, screen: 's0' }));
+  for (const c of v.homeCards) {
+    assert.ok(c.footChips.length > 0, c.key);
+    for (const x of c.footChips) assert.ok(x.icon && x.t && x.title && x.t.length <= x.title.length, `${c.key}: ${x.t}`);
+  }
+  const apps = v.homeCards.find(c => c.key === 'apps');
+  assert.deepEqual(apps.footChips.map(x => [x.icon, x.t, x.title]), [['close-circle', '1', '1 down'], ['clock', '1', '1 over latency target'], ['exclamation-triangle', '1', '1 at risk']]);
+  const eg = v.homeCards.find(c => c.key === 'egress');
+  assert.equal(eg.footChips[0].t, '$32,300/mo');
+  assert.equal(eg.footChips[0].ink, 'var(--success)', 'the saving alone wears the success ink');
+});
+
+test('a Signals line splits into a glyph and its figure per part', async () => {
+  const { headChips } = await import('../naas-app.js');
+  const pick = (h) => headChips(h).map(x => [x.icon, x.t]);
+  assert.deepEqual(pick('3 problems · 2 apps affected'), [['exclamation-circle', '3'], ['apps', '2']]);
+  assert.deepEqual(pick('3 of 23 flows over SLO · 1 spike'), [['clock', '3 of 23'], ['trending-up', '1']]);
+  assert.deepEqual(pick('None of 2 above 80% at peak · 1 could shrink'), [['high-meter', 'None of 2'], ['trending-down', '1']]);
+  assert.deepEqual(pick('AWS us-east-1 · 31% of traffic'), [['cloud', 'AWS us-east-1'], ['cloud-transfer', '31%']]);
+  assert.deepEqual(pick('Public egress +$6,800/mo in 11 weeks · +10%'), [['bill', '+$6,800/mo'], ['trending-up', '+10%']]);
+  assert.deepEqual(pick('Save $41,500/mo of $89,600/mo egress'), [['trending-down', '$41,500/mo']]);
+  assert.deepEqual(pick('No ports to measure'), [['minus-circle', 'No ports']]);
+  assert.equal(headChips('3 problems · 2 apps affected')[0].title, '3 problems');
+  const sig = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'signals' }));
+  for (const g of sig.sigCards) assert.ok(g.headChips.length > 0 && g.headChips.every(x => x.icon && x.t), g.title);
+});

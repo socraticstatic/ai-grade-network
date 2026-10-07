@@ -502,7 +502,10 @@ export function movesOf(est, ctx = {}) {
   const moves = [...regionMoves(est, c), ...pathMoves(est, c), ...siteMoves(est, c)]
     .map(m => { const recI = Number.isInteger(m.recI) ? m.recI : REC; return { ...m, recI, impact: m.tiers[recI].net, tiers: m.tiers.map(t => ({ ...t, rec: t.i === recI })) }; });
   moves.sort((a, b) => Math.max(0, b.impact || 0) - Math.max(0, a.impact || 0) || RISK[b.risk] - RISK[a.risk] || b.size - a.size || a.title.localeCompare(b.title));
-  return moves.map((m, i) => ({ ...m, rank: i + 1 }));
+  // A move the account team pinned leads (2026-10-07: the session asked the Azure example lead); the rest keep their rank by impact.
+  const pin = moves.findIndex(m => m.key === est.pinnedMove);
+  if (pin > 0) moves.unshift(...moves.splice(pin, 1));
+  return moves.map((m, i) => ({ ...m, rank: i + 1, pinned: m.key === est.pinnedMove }));
 }
 
 /**

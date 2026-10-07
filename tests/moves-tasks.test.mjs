@@ -43,14 +43,15 @@ test('an order for the move turns Connect into the phase strip: Ordered done, Pr
   assert.ok(d.phases[3].hasDoor);
   d.phases[3].go();
   assert.equal(c.state.tab, 'observe'); assert.equal(c.state.pathPin, '|' + region);
-  // A done row takes a slot, and so does the summary of how the estate connects (2026-10-06), so the page keeps the fold.
-  assert.equal(v.movesPageSize, 3, 'a done row takes a slot so the page keeps the fold');
+  // One move at a time (2026-10-07): a done move is a chip under the hero and takes no slot of its own.
+  assert.equal(v.movesPageSize, 1);
 });
 
 test('the markup draws Connect or the phase strip on the right, and the done rows after the list', () => {
   const a = HTML.indexOf('<sc-if value="{{ cnIsOptions }}"'), b = HTML.indexOf('<!-- /Recommended -->', a);
   const blk = HTML.slice(a, b);
-  assert.match(blk, /<sc-if value="\{\{ mv\.canConnect \}\}"[^>]*><button onClick="\{\{ mv\.attach \}\}"[^>]*>Connect<\/button><\/sc-if>/);
+  // Each option card carries its own Connect (the hero, 2026-10-07), gated on the move having no order yet.
+  assert.match(blk, /<sc-if value="\{\{ mv\.canConnect \}\}"[^>]*><button class="rec-cta"[^>]*onClick="\{\{ tr\.connect \}\}"[^>]*>\{\{ tr\.ctaWord \}\}/);
   assert.match(blk, /<sc-if value="\{\{ mv\.hasTask \}\}"[^>]*>[\s\S]*?<sc-for list="\{\{ mv\.phases \}\}" as="ph"/);
   assert.match(blk, /<sc-for list="\{\{ doneMoves \}\}" as="dn"/);
   assert.ok(blk.indexOf('{{ doneMoves }}') > blk.indexOf('<sc-for list="{{ moves }}"'));

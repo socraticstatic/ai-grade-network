@@ -207,14 +207,18 @@ test('Growing\'s cloud moves offer the session\'s ways: your port, AT&T\'s port,
 const RISK = { down: 4, slo: 3, full: 2, exposed: 1, single: 1, none: 0 };
 test('moves rank by net dollars saved, then by the risk they close, and show the rank', () => {
   for (const view of ESTATES) {
-    const l = listOf(view);
-    l.forEach((m, i) => assert.equal(m.rank, i + 1));
+    const all = listOf(view);
+    all.forEach((m, i) => assert.equal(m.rank, i + 1));
+    // A move the account team pinned leads whatever it saves (the session's Azure example, 2026-10-07); the rest rank.
+    const pin = D.ESTATES[view].pinnedMove;
+    if (pin) assert.equal(all[0].key, pin, `${view}: the pinned move leads`);
+    const l = all.filter(m => m.key !== pin);
     for (let i = 1; i < l.length; i++) {
       const a = l[i - 1], b = l[i];
       const da = Math.max(0, a.impact), db = Math.max(0, b.impact);
       assert.ok(da > db || (da === db && RISK[a.risk] >= RISK[b.risk]), `${view}: ${a.title} (${da}, ${a.risk}) before ${b.title} (${db}, ${b.risk})`);
     }
-    for (const m of l) assert.equal(m.impact, m.tiers[m.recI].net, `${view}: impact is not Recommended's net`);
+    for (const m of all) assert.equal(m.impact, m.tiers[m.recI].net, `${view}: impact is not Recommended's net`);
   }
   // Growing: the two priced cloud moves lead; the flapping finance path outranks the IPsec branches.
   const g = listOf('partial').map(m => m.key);
@@ -227,7 +231,8 @@ test('one ranked list, paged to the fold; no row repeats another\'s reason', () 
   for (const view of ESTATES) {
     const v = vals(on(view));
     assert.ok(v.moves.length <= v.movesPageSize);
-    assert.match(v.movesPager.label, /^\d+–\d+ of \d+$/);
+    // One move at a time (2026-10-07): the pager reads "1 of 7".
+    assert.match(v.movesPager.label, /^\d+ of \d+$/);
     const reasons = v.moveList.map(m => m.reason);
     assert.equal(new Set(reasons).size, reasons.length, `${view} repeats a reason`);
     for (const r of reasons) assert.doesNotMatch(r, /—|\b(?:ER|DX|EQX|GCI)\b/);
@@ -294,13 +299,16 @@ test('picking a tier swaps the row\'s selection and ticks the row', () => {
   const c = on('partial');
   const m = vals(c).moves[0];
   vals(c).moves[0].tiers[1].pick();
-  const after = vals(c).moves.find(x => x.key === m.key);
+  const after = vals(c).moveList.find(x => x.key === m.key);
   assert.deepEqual(after.tiers.map(t => t.on), [false, true, false]);
   assert.equal(after.sel, true);
   // The way a cloud cannot have (Google's AT&T-provided port) never takes the pick.
-  const g = vals(c).moves.find(x => x.key === 'region:GCP');
+  // (Azure leads since the pin, 2026-10-07, so GCP keeps its own default pick here.)
+  const g = vals(c).moveList.find(x => x.key === 'region:GCP');
+  const before = g.tiers.map(t => t.on);
   g.tiers[2].pick();
-  assert.deepEqual(vals(c).moves.find(x => x.key === 'region:GCP').tiers.map(t => t.on), [false, true, false]);
+  assert.deepEqual(vals(c).moveList.find(x => x.key === 'region:GCP').tiers.map(t => t.on), before);
+  assert.equal(before[2], false);
 });
 
 // ---- the order: one compose for everything selected (the contract with connect-flow) ----
@@ -376,8 +384,8 @@ test('the markup draws Recommended as one list of moves with three tier columns'
   assert.match(blk, /<sc-for list="\{\{ moves \}\}"/);
   assert.match(blk, /<sc-for list="\{\{ mv\.tiers \}\}"/);
   assert.match(blk, /<sc-for list="\{\{ mv\.counts \}\}"/);
-  // Connect on the right of every line (Micah, 2026-10-05: "we need a 'connect' on the right - it's still too crowded"); the tick column and Attach selected left the markup.
-  assert.match(blk, /<button onClick="\{\{ mv\.attach \}\}"[^>]*>Connect<\/button>/);
+  // Connect on every option card (the hero, 2026-10-07; first on the right of each line, 2026-10-05); the tick column and Attach selected left the markup.
+  assert.match(blk, /<button class="rec-cta"[^>]*onClick="\{\{ tr\.connect \}\}"/);
   assert.doesNotMatch(blk, /movesAttachOff|role="checkbox"/);
   assert.doesNotMatch(blk, /candGroups/);
   // Nothing loops inside an svg, a table or a select (the dc-runtime foster-parents it).
