@@ -511,12 +511,17 @@ test('every container the markup opens, it closes', () => {
   // deck came (div +2, span -2): div 1290 -> 1292, span 1416 -> 1414. Where the policy is enforced follows the way
   // (the deck, slide 5): a line under the deck, the arrows' key only on NetBond Advanced (span +2, sc-if +1):
   // span 1414 -> 1416, sc-if 648 -> 649.
-    ['div', /<div\b/g, /<\/div>/g, 1292],
-    ['span', /<span\b/g, /<\/span>/g, 1416],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 649],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 369],
+  // The Intent beat (2026-10-08, "we need to understand intent in the flow"): four question columns of glyph answers (div +5,
+  // sc-for +2, button +1 net after the Why door joined the actions), intent glyphs on the cloud's head, why chips on each
+  // option and a score ring, the way's badge on the AT&T wire, the detail as Why and What you get with the weights' bars
+  // (span +22, sc-if +5, sc-for +4). Recounted, every tag balanced: div 1292 -> 1297, span 1416 -> 1438, sc-if 649 -> 654,
+  // sc-for 369 -> 375, button 519 -> 520.
+    ['div', /<div\b/g, /<\/div>/g, 1297],
+    ['span', /<span\b/g, /<\/span>/g, 1438],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 654],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 375],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 519],
+    ['button', /<button\b/g, /<\/button>/g, 520],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

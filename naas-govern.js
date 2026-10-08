@@ -83,7 +83,8 @@ const AREA = {
 const glob = (p) => {
   const a = /^([a-z]{2})-\*$/i.exec(String(p).trim());
   if (a && AREA[a[1].toLowerCase()]) return AREA[a[1].toLowerCase()];
-  return new RegExp('^' + String(p).trim().split('*').map(x => x.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$', 'i');
+  // A comma list names several regions (the journey's intent policy covers a cloud's regions).
+  return new RegExp('^(?:' + String(p).split(',').map(q => q.trim().split('*').map(x => x.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')).join('|') + ')$', 'i');
 };
 
 function matchOf(est, inv, p, opts) {

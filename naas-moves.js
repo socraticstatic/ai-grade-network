@@ -342,10 +342,13 @@ function regionMoves(est, ctx) {
     // The ways the 2026-10-06 session recommends for this cloud, in its order of priority: Azure and AWS three
     // (bring your own port, AT&T's port, hosted peering), Google two and the one it cannot have. A cloud the
     // session did not cover (Oracle, a neocloud) keeps its catalog ladder.
-    const recs = W.recommendedFor(cloud), byWays = recs.length >= 2;
+    // With an intent (the journey's Intent beat, 2026-10-08), the deck's own step: hard rules, re-weighted criteria, the
+    // top pick and two alternatives, each with why. Without one, the session's order.
+    const recs = ctx.intent ? W.rankWays(cloud, ctx.intent) : W.recommendedFor(cloud), byWays = recs.length >= 2;
     const ladder = byWays ? recs.map((r, i) => { const word = i === 0 ? 'Recommended' : `Option ${i + 1}`;
         return r.unavailable ? { i, tier: word, label: W.wayLabel(r.key, cloud), way: r.key, unavailable: r.unavailable, products: [], path: 'netbond', conn: 'DataCenter/CoLocation to Cloud', monthly: null, price: '', intro: '', breakdown: '', fit: '', covers: [] }
-          : tierOf(i, W.wayProducts(r.key, cloud, rs.length), { covers: ids, label: W.wayLabel(r.key, cloud), tier: word, way: r.key }); })
+          : { ...tierOf(i, W.wayProducts(r.key, cloud, rs.length, r.zone), { covers: ids, label: W.wayLabel(r.key, cloud, r.zone), tier: word, way: r.key }),
+            ...(ctx.intent ? { zone: r.zone, why: r.why, misses: r.misses, ipts: r.pts } : {}) }; })
       : f ? ladderTiers(f, ctxT) : regionLadder(cloud).map(([ps, label], i) => tierOf(i, ps.map(id => [id, id === 'c2c' ? 1 : rs.length]), { covers: ids, label }));
     const tiers = ladder.map(t => {
       // The way this cloud cannot have holds its column and says why; it is never picked or priced.
@@ -503,7 +506,7 @@ export function movesOf(est, ctx = {}) {
   if (!est || est.stage === 'empty' || !(est.regionsList || []).length) return [];
   const findings = (ctx.findings || est.findings || []).filter(f => !f.event);
   // The open findings price the egress after, as Cost's Still open does.
-  const c = { findings, capacity: ctx.capacity || [], apps: ctx.apps || [], inv: ctx.inv || [], egress: egressOf(est, ctx.base, findings.filter(f => f.priced)) };
+  const c = { findings, capacity: ctx.capacity || [], apps: ctx.apps || [], inv: ctx.inv || [], egress: egressOf(est, ctx.base, findings.filter(f => f.priced)), intent: ctx.intent || null };
   const moves = [...regionMoves(est, c), ...pathMoves(est, c), ...siteMoves(est, c)]
     .map(m => { const recI = Number.isInteger(m.recI) ? m.recI : REC; return { ...m, recI, impact: m.tiers[recI].net, tiers: m.tiers.map(t => ({ ...t, rec: t.i === recI })) }; });
   moves.sort((a, b) => Math.max(0, b.impact || 0) - Math.max(0, a.impact || 0) || RISK[b.risk] - RISK[a.risk] || b.size - a.size || a.title.localeCompare(b.title));

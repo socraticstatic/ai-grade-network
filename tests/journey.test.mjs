@@ -16,6 +16,8 @@ if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: ()
 const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
 const journey = (extra = {}) => mkC({ view: 'lastmile', estateParam: null, journey: 'existing', screen: 'sj', jStep: 0, ...extra });
 const AZURE = [{ provider: 'Azure', estId: 'lastmile', name: 'Microsoft Azure subscription', cadence: 'daily', at: 1 }];
+// A beat by name: Intent came between Tag and Recommend (2026-10-08) and moved every beat after it by one.
+const B = Object.fromEntries(J.BEATS.map((b, i) => [b.key, i]));
 
 test('the existing customer is AT&T sites with no cloud yet: Growing\'s sites on AT&T access, no IPsec, no tunnel', () => {
   const est = D.ESTATES.lastmile;
@@ -34,19 +36,19 @@ test('the Customer switch opens the journey on its first beat, clean; the steppe
   assert.equal(v.journeyOn, true);
   assert.equal(v.showRail, false, 'no rail in the journey');
   assert.equal(v.showPageTitle, false);
-  // Nine beats since act three (2026-10-08): live, protected, saved.
-  assert.deepEqual(v.jSteps.map(s => s.label), ['Today', 'Source', 'Found', 'Tag', 'Recommend', 'Connect', 'Live', 'Protect', 'Save']);
-  assert.deepEqual(v.jSteps.map(s => s.state), ['cur', 'next', 'next', 'next', 'next', 'next', 'next', 'next', 'next']);
-  assert.deepEqual(v.jSteps.map(s => s.off), [false, false, true, true, true, true, true, true, true], 'a beat opens once the source is in; act three once the order is');
+  // Nine beats since act three (2026-10-08): live, protected, saved; ten since Intent, before the recommendation.
+  assert.deepEqual(v.jSteps.map(s => s.label), ['Today', 'Source', 'Found', 'Tag', 'Intent', 'Recommend', 'Connect', 'Live', 'Protect', 'Save']);
+  assert.deepEqual(v.jSteps.map(s => s.state), ['cur', 'next', 'next', 'next', 'next', 'next', 'next', 'next', 'next', 'next']);
+  assert.deepEqual(v.jSteps.map(s => s.off), [false, false, true, true, true, true, true, true, true, true], 'a beat opens once the source is in; act three once the order is');
   v.setJourney({ target: { value: '' } });
   assert.equal(c.state.journey, null); assert.equal(c.state.screen, 's0');
   assert.equal(vals(c).showRail, true);
 });
 
 test('one sentence a beat tells the story', () => {
-  const lines = [0, 1, 2, 3, 4, 5].map(i => vals(journey({ jStep: i, addedSources: i >= 2 ? AZURE : [] })).jLine);
+  const lines = [0, 1, 2, 3, 4, 5, 6].map(i => vals(journey({ jStep: i, addedSources: i >= 2 ? AZURE : [] })).jLine);
   assert.deepEqual(lines, ['AT&T already carries your 20 sites.', 'Connect a cloud account. Read only.', 'Azure runs 68 workloads on the public internet.',
-    'Tag what matters.', 'Move Azure onto AT&T. Save $3,600 a month.', 'Connect Azure with Your ExpressRoute.']);
+    'Tag what matters.', 'What does Azure need?', 'Move Azure onto AT&T. Save $3,600 a month.', 'Connect Azure with Your ExpressRoute.']);
   for (const l of lines) assert.ok(l.split(' ').length <= 9, l);
 });
 
@@ -70,7 +72,7 @@ test('beat 2: Azure with a read-only role; the scan ticks on the cloud node, add
   v = vals(c);
   assert.equal(v.jCloud.state, 'scanning'); assert.equal(v.jActOff, true); assert.equal(v.jLine, 'Reading your Microsoft Azure subscription.');
   await new Promise(r => setTimeout(r, 2900));
-  assert.equal(c.state.jStep, 2);
+  assert.equal(c.state.jStep, B.found);
   assert.deepEqual(c.state.addedSources.map(a => [a.provider, a.estId]), [['Azure', 'lastmile']]);
 });
 
@@ -94,17 +96,19 @@ test('beat 4: tags suggested by what a workload is; Tag them all, then the tags 
   v.jActGo();
   v = vals(c);
   assert.equal(v.jLine, '4 of 4 workloads tagged.');
-  assert.equal(v.jAct, 'See the recommendation');
+  assert.equal(v.jAct, 'Say what it needs');
   assert.deepEqual(chips('dispatch-svc'), ['Prod'], 'the portal\'s Internet-facing stays the portal\'s');
   const est = estateFor({ view: 'lastmile', estateParam: null, addedSources: AZURE, jTags: c.state.jTags });
   assert.ok(est.regionsList.find(r => r.region === 'westeurope').tags.includes('PCI'));
 });
 
-test('beat 5: the three ways as one choice, Recommended first; the AT&T line is proposed; the sentence follows the pick', () => {
-  const c = journey({ jStep: 4, addedSources: AZURE });
+test('beat 6: the three ways as one choice, Recommended first; the AT&T line is proposed; the sentence follows the pick', () => {
+  const c = journey({ jStep: B.recommend, addedSources: AZURE });
   let v = vals(c);
-  assert.deepEqual(v.jOptions.map(o => [o.label, o.on]), [['Your ExpressRoute', true], ["AT&T's ExpressRoute", false], ['Hosted VNet peering', false]]);
-  assert.deepEqual(v.jOptions.map(o => o.delta), ['saves $3,600', 'saves $3,000', 'adds $922']);
+  // The default intent (production, standard, private, your BGP) ranks the deck's way: NetBond Advanced on your port,
+  // on AT&T's, then the hosted transit gateway (the deck's own example card: NetBond Advanced, Transit Gateway, peering).
+  assert.deepEqual(v.jOptions.map(o => [o.label, o.on]), [['Your ExpressRoute', true], ["AT&T's ExpressRoute", false], ['Hosted transit gateway', false]]);
+  assert.deepEqual(v.jOptions.map(o => o.delta), ['saves $3,600', 'saves $3,000', 'adds $1,068']);
   assert.ok(v.jOptions.every(o => o.hasPts));
   assert.equal(v.jLink, 'proposed'); assert.equal(v.jLinkWord, 'Your ExpressRoute');
   v.jOptions[1].go();
@@ -112,11 +116,11 @@ test('beat 5: the three ways as one choice, Recommended first; the AT&T line is 
   assert.equal(v.jLine, 'Move Azure onto AT&T. Save $3,000 a month.');
   assert.equal(v.jAct, "Choose AT&T's ExpressRoute");
   v.jActGo();
-  assert.equal(c.state.jStep, 5); assert.equal(c.state.jPick, 1);
+  assert.equal(c.state.jStep, B.connect); assert.equal(c.state.jPick, 1);
 });
 
-test('beat 6: one line of the order, Place order; then the line is AT&T\'s, the internet path fades, and the phases follow', () => {
-  const c = journey({ jStep: 5, jPick: 1, addedSources: AZURE });
+test('beat 7: one line of the order, Place order; then the line is AT&T\'s, the internet path fades, and the phases follow', () => {
+  const c = journey({ jStep: B.connect, jPick: 1, addedSources: AZURE });
   let v = vals(c);
   assert.deepEqual(v.jLines.map(l => [l.name, l.n, l.v]), [['NetBond Advanced', 2, '$3,800/mo'], ['Cloud port, AT&T-provided', 2, '$600/mo']]);
   assert.equal(v.jTotal, '$4,400/mo'); assert.equal(v.jRegionsWord, 'eastus · westeurope');
@@ -134,8 +138,8 @@ test('beat 6: one line of the order, Place order; then the line is AT&T\'s, the 
 });
 
 test('a hosted pick adds the hub, priced at review', () => {
-  const v = vals(journey({ jStep: 5, jPick: 2, addedSources: AZURE }));
-  assert.deepEqual(v.jLines.map(l => l.name), ['AT&T cloud on-ramp into the hosted hub, 1 Gbps', 'Cross-AZ peering into your VPC or VNet', 'AT&T hosted hub: vSRX and compute']);
+  const v = vals(journey({ jStep: B.connect, jPick: 2, addedSources: AZURE }));
+  assert.deepEqual(v.jLines.map(l => l.name), ['AT&T cloud on-ramp into the hosted hub, 1 Gbps', 'Shared transit gateway attachment', 'AT&T hosted hub: vSRX and compute']);
   assert.equal(v.jLines[2].v, 'At review');
   assert.match(v.jTotal, / \+ hub$/);
 });
@@ -165,19 +169,19 @@ test('the markup: one stage of three nodes and two wires, the internet path, a s
   assert.doesNotMatch(blk, /<(table|select)\b/);
   assert.match(HTML, /<sc-if value="\{\{ journeyOn \}\}"[^>]*><button class="hdr-theme" onClick="\{\{ toggleTheme \}\}"/);
   assert.match(HTML, /@media \(prefers-reduced-motion: reduce\)\{\.js-wire\[data-state="proposed"\] i/);
-  assert.deepEqual(J.BEATS.map(b2 => b2.key), ['today', 'source', 'found', 'tag', 'recommend', 'connect', 'watch', 'protect', 'save']);
+  assert.deepEqual(J.BEATS.map(b2 => b2.key), ['today', 'source', 'found', 'tag', 'intent', 'recommend', 'connect', 'watch', 'protect', 'save']);
 });
 
 test('the picture carries the figures (2026-10-08): latency on each wire, the monthly before and after, the traffic on the path it rides', () => {
   const found = vals(journey({ jStep: 2, addedSources: AZURE }));
   assert.equal(found.jNetMs, '102 ms'); assert.equal(found.jFlow, 'net'); assert.equal(found.jLinkHasMs, false); assert.equal(found.jMoney.has, false);
-  const rec = vals(journey({ jStep: 4, addedSources: AZURE }));
+  const rec = vals(journey({ jStep: B.recommend, addedSources: AZURE }));
   // Azure's AT&T latency reads 19 ms (the seed's, inside the 20 ms private SLO, as the Oracle seed's is): 102 -> 19.
   assert.equal(rec.jLinkMs, '19 ms'); assert.equal(rec.jLinkDrop, '−83 ms'); assert.equal(rec.jLinkHasDrop, true);
   assert.deepEqual([rec.jMoney.has, rec.jMoney.before, rec.jMoney.after, rec.jMoney.up], [true, '$16,800/mo', '$13,200/mo', false]);
-  const hosted = vals(journey({ jStep: 4, jPick: 2, addedSources: AZURE }));
+  const hosted = vals(journey({ jStep: B.recommend, jPick: 2, addedSources: AZURE }));
   assert.equal(hosted.jMoney.up, true, 'a dearer way reads in heading ink, never green');
-  const c = journey({ jStep: 5, jPick: 1, addedSources: AZURE });
+  const c = journey({ jStep: B.connect, jPick: 1, addedSources: AZURE });
   vals(c).jActGo();
   assert.equal(vals(c).jFlow, 'att', 'the order moves the traffic onto AT&T');
   assert.match(HTML, /<div class="js-stage"[^>]* data-flow="\{\{ jFlow \}\}"/);
@@ -186,12 +190,12 @@ test('the picture carries the figures (2026-10-08): latency on each wire, the mo
 });
 
 // ---- Act three (2026-10-08): live, protected, saved, and attach more ----
-const placedAzure = () => { const c = journey({ jStep: 5, jPick: 1, addedSources: AZURE }); vals(c).jActGo(); vals(c).jActGo(); return c; };
+const placedAzure = () => { const c = journey({ jStep: B.connect, jPick: 1, addedSources: AZURE }); vals(c).jActGo(); vals(c).jActGo(); return c; };
 
 test('beat 7: Go live lands both regions at once; every app blinks green; the internet path is gone; every page reads them private', () => {
   const c = placedAzure();
   let v = vals(c);
-  assert.equal(c.state.jStep, 6); assert.equal(v.jLine, 'Provisioning.'); assert.equal(v.jAct, 'Go live');
+  assert.equal(c.state.jStep, B.watch); assert.equal(v.jLine, 'Provisioning.'); assert.equal(v.jAct, 'Go live');
   v.jActGo();
   v = vals(c);
   assert.deepEqual(c.state.landed, ['eastus', 'westeurope']);
@@ -207,7 +211,7 @@ test('beat 7: Go live lands both regions at once; every app blinks green; the in
 test('beat 8: a deck of policies from the tags, each a real intent with the engine\'s verdicts; hover previews, click enforces, all at once or one by one', () => {
   const c = placedAzure(); vals(c).jActGo(); vals(c).jActGo();
   let v = vals(c);
-  assert.equal(c.state.jStep, 7);
+  assert.equal(c.state.jStep, B.protect);
   assert.deepEqual(v.jDeck.map(d => [d.tag, d.req, d.cloudV, d.netV]), [['PCI', 'Private path required', 'Allowed', 'Denied'], ['Finance', 'Private path required', 'Allowed', 'Denied'], ['Internet-facing', 'Inline security inspection', 'Allowed', 'Allowed'], ['Prod', 'No direct internet path', 'Allowed', 'Denied']]);
   assert.deepEqual(v.jDeck.map(d => d.apps), [['payments-api'], ['payments-api', 'fin-ledger'], ['customer-portal'], ['dispatch-svc', 'customer-portal', 'payments-api', 'fin-ledger']]);
   assert.equal(v.jLine, '4 policies from your tags. Enforce them.'); assert.equal(v.jAct, 'Enforce them all'); assert.equal(v.jVerdict, 'none');
@@ -217,7 +221,7 @@ test('beat 8: a deck of policies from the tags, each a real intent with the engi
   assert.equal(v.jDeck[0].rules[0].dirWord, 'on prem to partner');
   assert.equal(v.jDeckWhere, 'Enforced as route policy on NetBond Advanced'); assert.equal(v.jDeckNba, true);
   // A hosted pick enforces on the vSRX in AT&T's hub and the cloud's route tables (the deck, slide 5), not as BGP route rules.
-  const h = journey({ jStep: 5, jPick: 2, addedSources: AZURE }); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo();
+  const h = journey({ jStep: B.connect, jPick: 2, addedSources: AZURE }); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo();
   const hv = vals(h);
   assert.equal(hv.jDeckHosted, true); assert.match(hv.jDeckWhere, /^Enforced on the vSRX/);
   assert.deepEqual(hv.jDeck[0].rules.map(r => [r.verb, r.label]), [['Inspect', "vSRX in AT&T's hub, L3 to L7"], ['Route', "Your cloud's route tables"]]);
@@ -252,13 +256,13 @@ test('beat 8: a deck of policies from the tags, each a real intent with the engi
 test('beat 9: the saving a month and a year; Attach AWS loops to the source with Azure done; Open the dashboard lands home', async () => {
   const c = placedAzure(); vals(c).jActGo(); vals(c).jActGo(); vals(c).jActGo(); vals(c).jActGo();
   let v = vals(c);
-  assert.equal(c.state.jStep, 8);
+  assert.equal(c.state.jStep, B.save);
   assert.equal(v.jLine, '$3,000 a month. $36,000 a year.');
   assert.deepEqual([v.jSave.month, v.jSave.year, v.jSave.months.length], ['$3,000', '$36,000', 12]);
   assert.deepEqual([v.jNext.has, v.jNext.name], [true, 'AWS']);
   v.jNext.go();
   v = vals(c);
-  assert.equal(c.state.jStep, 1); assert.deepEqual(c.state.jDone, ['Azure']); assert.equal(c.state.jLive, false);
+  assert.equal(c.state.jStep, B.source); assert.deepEqual(c.state.jDone, ['Azure']); assert.equal(c.state.jLive, false);
   assert.equal(v.jAct, 'Scan AWS'); assert.equal(v.jCloud.state, 'picking'); assert.equal(v.jHasDone, true);
   v.jActGo(); await new Promise(r => setTimeout(r, 2900));
   v = vals(c);
@@ -273,7 +277,7 @@ test('beat 9: the saving a month and a year; Attach AWS loops to the source with
   assert.equal(d.state.journey, null); assert.equal(d.state.screen, 's0');
 });
 
-test('beat 4 again (2026-10-08): any known tag from a palette, and your own; beat 5: the picked option in full, in place', () => {
+test('beat 4 again (2026-10-08): any known tag from a palette, and your own; Recommend: the picked option in full, in place', () => {
   const c = journey({ jStep: 3, addedSources: AZURE });
   let v = vals(c);
   const row = v.jRegions[0].apps[0];
@@ -290,7 +294,7 @@ test('beat 4 again (2026-10-08): any known tag from a palette, and your own; bea
   assert.ok(!v.jTagPalette.tags.some(t => t.t === 'Finance'), 'an applied tag leaves the palette');
   v.jTagPalette.close();
   assert.equal(vals(c).jTagPalette.open, false);
-  const r = journey({ jStep: 4, addedSources: AZURE });
+  const r = journey({ jStep: B.recommend, addedSources: AZURE });
   let w = vals(r);
   assert.equal(w.jDetailOpen, false);
   w.toggleDetail();
@@ -301,6 +305,6 @@ test('beat 4 again (2026-10-08): any known tag from a palette, and your own; bea
   assert.match(w.jDetail.metrics[2].words, /^Egress \$16,800 to/);
   assert.deepEqual(w.jDetail.products.map(p => [p.name, p.n]), [['NetBond Advanced', '2']]);
   assert.match(w.jDetail.youDo, /^Accept the connection/);
-  assert.match(HTML, /<button class="js-deeper" onClick="\{\{ toggleDetail \}\}" aria-expanded="\{\{ jDetailOpen \}\}">/);
+  assert.match(HTML, /<button class="js-more js-deeper" onClick="\{\{ toggleDetail \}\}" aria-expanded="\{\{ jDetailOpen \}\}">/);
   assert.match(HTML, /<div class="js-palette" role="group"/);
 });

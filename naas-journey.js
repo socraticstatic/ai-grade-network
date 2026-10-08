@@ -18,6 +18,10 @@ export const BEATS = [
   { key: 'source', label: 'Add a source', short: 'Source', icon: 'plus', title: 'Add a cloud source' },
   { key: 'found', label: 'What it found', short: 'Found', icon: 'search', title: 'What it found' },
   { key: 'tag', label: 'Tag', short: 'Tag', icon: 'checklist', title: 'Tag your workloads' },
+  // Intent before the recommendation (2026-10-08, Micah: "Before recommendations we need some kind of intent screen, and
+  // need to impact choices, and policy options"): purpose, traffic, security, routing; the answers rank the ways
+  // (W.rankWays) and shape the policy deck (intentCard).
+  { key: 'intent', label: 'Intent', short: 'Intent', icon: 'target', title: 'What it needs' },
   { key: 'recommend', label: 'Recommendation', short: 'Recommend', icon: 'lightbulb', title: 'What to connect' },
   { key: 'connect', label: 'Connect', short: 'Connect', icon: 'cable', title: 'Connect' },
   // Act three (2026-10-08, Micah: "after the journey, 'see the dashboard' kind of leaves you hanging ... what if i want
@@ -34,12 +38,29 @@ export const DECK = [
   ['Internet-facing', 'Inline security inspection', 'is inspected in path', 'firewall', 'edge'],
   ['Prod', 'No direct internet path', 'never reaches the internet directly', 'not-available', 'core'],
 ];
-export function policyDeck(rows) {
-  const tags = [...new Set(rows.flatMap(r => (r.applied.length ? r.applied : r.suggested)))];
+export function policyDeck(rows, intent = {}) {
+  // A lab keeps its compliance tags' policies and drops the production one (no direct internet path).
+  const tags = [...new Set(rows.flatMap(r => (r.applied.length ? r.applied : r.suggested)))].filter(t => !(intent.purpose === 'lab' && t === 'Prod'));
   const order = (t) => { const i = DECK.findIndex(d => d[0] === t); return i < 0 ? 99 : i; };
   return tags.sort((a, b) => order(a) - order(b)).map(tag => { const d = DECK.find(x => x[0] === tag) || [tag, 'Private path required', 'stays on AT&T', 'padlock', 'core'];
     const apps = rows.filter(r => (r.applied.length ? r.applied : r.suggested).includes(tag));
     return { tag, req: d[1], word: d[2], icon: d[3], layer: d[4], name: `${tag} ${d[1] === 'Inline security inspection' ? 'inspection' : d[1] === 'No direct internet path' ? 'no direct internet' : 'private path'}`, match: `tag ${tag}`, apps: apps.map(a => a.name), appKeys: apps.map(a => a.key), wl: apps.reduce((s, a) => s + (a.wl || 0), 0) }; });
+}
+/** What the intent asks of the whole cloud, as one policy: each answer that needs the path to do something adds its
+ *  requirement (two paths, a latency SLO, inspection, a per-service allow-list, segments). Null when nothing does. */
+export const INTENT_PARTS = {
+  critical: ['Two paths, diverse metros', 'rides two paths', 'merge', 'Two paths'],
+  priority: ['Latency SLO 20 ms', 'is held to 20 ms', 'high-meter', '20 ms SLO'],
+  inspected: ['Inline security inspection', 'is inspected in path', 'firewall', 'Inspected'],
+  service: ['Per-service allow-list', 'is allow-listed per service', 'restricted', 'Allow-list'],
+  transitive: ['Segment by environment', 'is segmented by environment', 'global-network', 'Segments'],
+};
+export function intentCard(intent = {}, found = { regions: [] }, rows = []) {
+  const parts = ['purpose', 'traffic', 'security', 'routing'].map(k => INTENT_PARTS[intent[k]]).filter(Boolean);
+  if (!parts.length || !found.regions.length) return null;
+  return { tag: 'Intent', intent: true, req: parts.map(p => p[0]).join(' and '), word: parts.map(p => p[1]).join(', ').replace(/, (?=[^,]*$)/, ' and '), icon: 'target', layer: 'core',
+    short: parts.map(p => p[3]).join(' · '), parts: parts.map(p => ({ key: p[3], icon: p[2], t: p[3], title: p[0] })),
+    name: `${found.cloud} intent`, match: `region ${found.regions.map(r => r.region).join(',')}`, apps: rows.map(a => a.name), appKeys: rows.map(a => a.key), wl: rows.reduce((a, r) => a + (r.wl || 0), 0) };
 }
 /** The policy beat 8 proposes, from the tags you applied: the most sensitive tag on the cloud keeps off the internet. */
 export const POLICY_TAGS = [['PCI', 'Private path required', 'never touches the internet'], ['Finance', 'Private path required', 'stays on AT&T'], ['Prod', 'No direct internet path', 'never reaches the internet directly']];
@@ -104,5 +125,5 @@ export function tagRows(found, applied = {}) {
 
 /** Where the journey is: a beat is done once its work is, so the rail and Next agree. */
 export function progressOf({ sourceAdded, tagsApplied, picked, placed, live, protectedBy }) {
-  return { today: true, source: !!sourceAdded, found: !!sourceAdded, tag: !!tagsApplied, recommend: picked !== null && picked !== undefined, connect: !!placed, watch: !!live, protect: !!protectedBy, save: !!live };
+  return { today: true, source: !!sourceAdded, found: !!sourceAdded, tag: !!tagsApplied, intent: !!tagsApplied, recommend: picked !== null && picked !== undefined, connect: !!placed, watch: !!live, protect: !!protectedBy, save: !!live };
 }

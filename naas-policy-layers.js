@@ -79,6 +79,7 @@ const ROUTE_OF = [
   [/inspect|ngfw|ids\/ips|proxy|ddos|firewall/, { 'manip:selective-cv-tagging': { o2p: true }, 'manip:community-value-tag': { p2o: true } }],
   [/segment/, { 'allow:community-value-filter-customer': { o2p: true, p2o: true }, 'deny:community-value-filter-att': { p2o: true } }],
   [/latency slo|two paths|active\/active|fail over/, { 'manip:prepend-advertisements': { o2p: true, p2o: true } }],
+  [/per-service allow-list/, { 'allow:matching-routes': { o2p: true, p2o: true } }],
   [/egress/, { 'deny:block-default-routes': { o2p: true }, 'advanced:advertise-static-routes': { p2o: true } }],
 ];
 /** A policy's NetBond route sheet: its own, or the one its intent implies. {'section:id': {o2p, p2o}} */
@@ -192,7 +193,7 @@ export function evalPolicies(est, policies = []) {
 // ---- The policy engine, evaluated (2026-10-01: "not a real policy engine") ----
 // A flow is { from, to, tag }: from a private cloud, a site or a tag; to a cloud region (its label) or 'the Internet'.
 const CLOUD_LABEL = /^(AWS|Azure|GCP|Oracle|CoreWeave) /;
-const glob = (pat, s) => new RegExp('^' + String(pat).replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$').test(s);
+const glob = (pat, s) => String(pat).split(/\s*,\s*/).some(p1 => new RegExp('^' + p1.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$').test(s));
 function sideA(p, f) {
   const m = p.match || '';
   if (m === f.from) return true;

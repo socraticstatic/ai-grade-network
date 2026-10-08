@@ -141,9 +141,9 @@ export const wayExtras = (key, cloud, zone) => { const w = wayOf(key); if (!w) r
 export const wayHosted = (key) => !!(wayOf(key) || {}).hosted;
 
 /** A way's label for one cloud: the port named as that cloud names it. */
-export function wayLabel(key, cloud) {
+export function wayLabel(key, cloud, zone) {
   const port = PORT_NAME[cloud] || 'port';
-  return ({ byo: `Your ${port}`, att: `AT&T's ${port}`, peer: `Hosted ${hostedWord(cloud)} peering`, privatelink: 'Hosted PrivateLink', cloudwan: 'Hosted Cloud WAN', transit: 'Hosted transit gateway' })[key] || '';
+  return ({ byo: `Your ${port}`, att: `AT&T's ${port}`, peer: `Hosted ${hostedWord(cloud)} peering${zone === 'intra' ? ', same AZ' : ''}`, privatelink: 'Hosted PrivateLink', cloudwan: 'Hosted Cloud WAN', transit: 'Hosted transit gateway' })[key] || '';
 }
 /** The setup level and time, in words (the flow's banner, a card's title); an unproven time says it is a target. */
 export const waySetup = (key) => { const w = wayOf(key); if (!w) return ''; const lv = SETUP_LEVEL[w.level] || ['', ''];
@@ -193,4 +193,102 @@ export function wayCards(zone = 'intra') {
     return { ...w, monthly, zone: z ? z.key : null, zoneLabel: z ? z.label : '', points: wayScore(w.key, 'AWS', zone), strip: wayStrip(w.key), rows: CRITERIA.map(c => { const sc = score[c.key] || [null, ''];
       return { ...c, score: sc[0], value: sc[1], segs: segs(sc[0]), title: `${c.label}: ${sc[1] || 'not scored yet'}${sc[0] ? ` (${sc[0]} of 5, weighs ${c.weight})` : ''}${c.key === 'cost' && w.hosted ? '. Cloud pass-through at 1 Gbps; the hub\'s vSRX, compute and AT&T margin are priced at review' : ''}${c.key === 'setup' ? `. ${waySetup(w.key)}` : ''}` }; }) };
   });
+}
+
+/**
+ * What the connection is for (the journey's Intent beat; Micah, 2026-10-08: "we need to understand intent in the flow -
+ * is it business critical? Is it a lab? Does it need priority traffic? Do you care about security? ... need to impact
+ * choices, and policy options", then "preferred routing (layer 3)? preferred security?"). Four questions, each a few
+ * glyph answers. The answers are the deck's own discovery step (slide 6, "From Discovery to the Right Connection"): hard
+ * rules remove the ways that cannot do what was asked, the five criteria are re-weighted ("Weighted; customer adjusts"),
+ * and the top pick and two alternatives each say why.
+ */
+export const INTENT = [
+  { key: 'purpose', label: 'Purpose', icon: 'target', opts: [
+    ['critical', 'Critical', 'verified', 'Business critical: zone-redundant, SLA-backed, two paths'],
+    ['prod', 'Production', 'apps', 'Production: the deck\'s weights as they stand'],
+    ['lab', 'Lab', 'gear', 'A lab: cost and speed first; one zone is fine'] ] },
+  { key: 'traffic', label: 'Traffic', icon: 'arrows-horizontal', opts: [
+    ['priority', 'Priority', 'high-meter', 'Priority traffic: deterministic latency, held to an SLO'],
+    ['standard', 'Standard', 'smart-meter', 'Standard traffic: best path, no SLO of its own'] ] },
+  { key: 'security', label: 'Security', icon: 'check-shield', opts: [
+    ['private', 'Private', 'padlock', 'A private path: never the public internet, route policy at L3'],
+    ['inspected', 'Inspected', 'firewall', 'Inspected in path: L3 to L7 on the vSRX in AT&T\'s hub'],
+    ['service', 'Per service', 'restricted', 'Per service: expose named services only, no routed reach'] ] },
+  { key: 'routing', label: 'Routing · L3', icon: 'shuffle', opts: [
+    ['bgp', 'Your BGP', 'router', 'You peer BGP with AT&T, as your sites already do: routed both ways'],
+    ['hub', 'AT&T\'s hub', 'hub', 'AT&T runs the routing in its hub; no gateway in your VPC'],
+    ['transitive', 'Transitive', 'merge', 'Many VPCs reach each other through one hub'] ] },
+].map(q => ({ ...q, opts: q.opts.map(([key, label, icon, title]) => ({ key, label, icon, title })) }));
+export const INTENT_DEFAULT = { purpose: 'prod', traffic: 'standard', security: 'private', routing: 'bgp' };
+/** The answers your tags suggest: a Dev or Lab tag reads as a lab, a GPU or AI tag as priority traffic. */
+export function intentFromTags(tags = []) {
+  const t = new Set(tags.map(x => String(x).toLowerCase()));
+  return { ...INTENT_DEFAULT, ...(t.has('dev') || t.has('lab') ? { purpose: 'lab' } : {}), ...(t.has('gpu') || t.has('ai') ? { traffic: 'priority' } : {}) };
+}
+/** Each answer as the deck's rules: weight deltas on the five criteria, a hard rule with its miss, a soft preference. */
+const RULE = {
+  critical: { w: { perf: 10, sec: 5, cost: -10, scale: 5 }, must: (w, z) => z !== 'intra', miss: ['One zone, no redundancy', 'Pinned to one AZ: a zone outage takes it down'] },
+  lab: { w: { cost: 20, setup: 10, perf: -10, sec: -10, scale: -10 } },
+  priority: { w: { perf: 15, cost: -5, setup: -5 } },
+  inspected: { w: { sec: 10, cost: -5 }, must: (w) => !!w.inspect, miss: ['No inspection in path', 'Route policy at L3 only; a firewall VNF on the IPE is on the roadmap'] },
+  service: { w: { sec: 10 }, must: (w) => w.key === 'privatelink', miss: ['Routed, not per service', 'Routed reach into the whole VPC, not named services'] },
+  bgp: { prefer: (w) => !w.hosted },
+  hub: { w: { setup: 5 }, must: (w) => !!w.hosted, miss: ['You run the gateway', 'You run a cloud gateway and BGP in your VPC'] },
+  transitive: { w: { scale: 10 }, must: (w) => !['peer', 'privatelink'].includes(w.key), prefer: (w) => w.key === 'transit', miss: ['Not transitive', 'One peering per VPC; nothing transits it'] },
+};
+const answersOf = (intent) => INTENT.map(q => (intent || {})[q.key] || INTENT_DEFAULT[q.key]);
+/** The five weights an intent sets, each kept at 5 or more, summing to 100. */
+export function intentWeights(intent) {
+  const raw = Object.fromEntries(CRITERIA.map(c => [c.key, c.weight]));
+  for (const a of answersOf(intent)) for (const [k, d] of Object.entries((RULE[a] || {}).w || {})) raw[k] += d;
+  for (const k of Object.keys(raw)) raw[k] = Math.max(5, raw[k]);
+  const sum = Object.values(raw).reduce((x, y) => x + y, 0);
+  const out = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Math.round(v / sum * 100)]));
+  const drift = 100 - Object.values(out).reduce((x, y) => x + y, 0);
+  const top = Object.keys(out).sort((a, b) => out[b] - out[a])[0]; out[top] += drift;
+  return out;
+}
+/** Peering's last hop for an intent: a lab on AWS accepts one zone, so its free same-AZ rung is on offer. */
+export const intentZone = (key, cloud, intent) => (key === 'peer' && cloud === 'AWS' && answersOf(intent)[0] === 'lab' ? 'intra' : 'inter');
+/** Why a way, for an intent: each answer's reason in the deck's words, ok, a caution (warn) or a hard rule it misses. */
+export function wayWhy(key, cloud, intent, zone) {
+  const w = wayOf(key); if (!w) return [];
+  const z = zone || intentZone(key, cloud, intent), sc = wayScores(key, cloud, z), out = [];
+  const r = (kind, icon, short, words) => out.push({ key: `${kind}:${short}`, kind, icon, short, words, ok: kind === 'ok', warn: kind === 'warn', miss: kind === 'miss' });
+  const [purpose, traffic, security, routing] = answersOf(intent);
+  if (purpose === 'critical') { if (!w.hosted) r('ok', 'verified', '99.99% SLA', 'a 99.99% SLA with local redundancy included'); else if (z !== 'intra') r('ok', 'merge', 'Zone-redundant', 'zone-redundant across AZs'); }
+  if (purpose === 'lab') { if (z === 'intra') r('ok', 'bill', '$0 last hop', 'the last hop is free inside one AZ'); else if ((sc.cost || [])[0] >= 5) r('ok', 'bill', 'Lowest monthly', 'the lowest monthly at 1 Gbps'); if (w.level === 'approve') r('ok', 'clock', 'Click + approve', `one action in your console, ${w.time}`); }
+  if (traffic === 'priority') { if ((sc.perf || [])[0] >= 5) r('ok', 'high-meter', w.hosted ? 'Multi-region routing' : 'Deterministic', w.hosted ? 'policy-driven routing across regions' : 'deterministic latency on a private MPLS path'); else r('warn', 'high-meter', 'One more hop', 'one more hop, through AT&T\'s hub'); }
+  if (security === 'private') r('ok', 'padlock', w.hosted ? 'Private IP' : 'Never the internet', w.hosted ? 'private IP end to end' : 'never on the public internet');
+  if (security === 'inspected' && w.inspect) r('ok', 'firewall', 'L3 to L7', 'inspected on the vSRX in AT&T\'s hub, L3 to L7');
+  if (security === 'service' && key === 'privatelink') r('ok', 'restricted', 'Per-service allow-list', 'one endpoint per service, overlapping CIDRs fine');
+  if (routing === 'bgp') { if (!w.hosted) r('ok', 'router', 'Your BGP', 'routed both ways on your BGP, as your sites already run'); else r('warn', 'router', 'Static route', 'no BGP: one static route into AT&T\'s hub'); }
+  if (routing === 'hub' && w.hosted) r('ok', 'hub', 'AT&T runs it', 'no gateway in your VPC: AT&T runs the routing');
+  if (routing === 'transitive') { if (key === 'transit') r('ok', 'merge', 'Transitive', 'many VPCs through one route table'); else if (key === 'cloudwan') r('ok', 'global-network', 'Segments', 'segments decide reach across regions'); else if (!w.hosted) r('ok', 'router', 'Any to any', 'a routed L3VPN: every VPC on the VRF reaches every site'); }
+  if (!w.hosted && purpose !== 'lab') r('ok', 'bill', 'Flat bill', 'a flat bill, 308.99 TB included');
+  // Each way's own best fit, the deck's row of that name.
+  const FIT = { att: ['shopping-bag', 'One order', 'AT&T orders and holds the port: one order, one bill'], peer: ['check-circle', 'Accept + one route', 'you accept the peering and add one route'],
+    transit: ['merge', 'Many VPCs', 'many VPCs or accounts through one hub, inspected centrally'], cloudwan: ['global-network', 'Multi-region', 'policy-driven routing across regions'],
+    privatelink: ['restricted', 'Overlap is fine', 'overlapping CIDRs are fine: NAT on both sides'] }[key];
+  if (FIT && !out.some(x => x.short === FIT[1])) r('ok', FIT[0], FIT[1], FIT[2]);
+  for (const a of answersOf(intent)) { const R = RULE[a]; if (R && R.must && !R.must(w, z)) r('miss', 'not-available', R.miss[0], R.miss[1]); }
+  return out;
+}
+/** A way's score for an intent: the re-weighted criteria out of 100, five more for each soft preference it meets. */
+export function wayScoreFor(key, cloud, intent, zone) {
+  const z = zone || intentZone(key, cloud, intent), sc = wayScores(key, cloud, z), wt = intentWeights(intent);
+  if (CRITERIA.some(c => !sc[c.key] || sc[c.key][0] === null || sc[c.key][0] === undefined)) return null;
+  const base = CRITERIA.reduce((a, c) => a + wt[c.key] * sc[c.key][0] / 5, 0);
+  const pref = answersOf(intent).filter(a => RULE[a] && RULE[a].prefer && RULE[a].prefer(wayOf(key), z)).length * 5;
+  return Math.min(100, Math.round(base + pref));
+}
+/**
+ * The deck's recommendation for an intent: every way the cloud offers, the ones a hard rule removes put behind the rest
+ * (fewest misses first, so a conflict still shows the closest), then by score, then the cheaper. Top pick and two more.
+ */
+export function rankWays(cloud, intent, n = 3) {
+  const all = WAYS.filter(w => wayAvailable(w.key, cloud)).map(w => { const zone = intentZone(w.key, cloud, intent), why = wayWhy(w.key, cloud, intent, zone);
+    return { key: w.key, zone, pts: wayScoreFor(w.key, cloud, intent, zone), why, misses: why.filter(x => x.miss).length, monthly: wayMonthly(w.key, cloud, zone) }; });
+  return all.filter(x => x.pts !== null).sort((a, b) => a.misses - b.misses || b.pts - a.pts || (a.monthly ?? 1e9) - (b.monthly ?? 1e9)).slice(0, n);
 }

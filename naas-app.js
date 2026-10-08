@@ -206,7 +206,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jIntent: null, jFlip: 0, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -5186,6 +5186,10 @@ const journeyProgress = (s) => J.progressOf({ sourceAdded: (s.addedSources || []
   tagsApplied: Object.keys(s.jTags || {}).length > 0, picked: s.jPick, placed: (s.orders || []).some(o => o.journey), live: !!s.jLive, protectedBy: (s.customPolicies || []).some(p => p.journey) });
 // NB: placed/protectedBy here gate the stepper only; journeyVals re-reads them for the cloud this pass is about.
 let journeyTimer = null;
+/** A beat's place in the journey, by name: a beat added in the middle (Intent, 2026-10-08) moves no other code. */
+const JI = Object.fromEntries(J.BEATS.map((b, i) => [b.key, i]));
+/** What the cloud is for: the answers your tags suggest, then the ones you gave on the Intent beat. */
+const journeyIntent = (s) => ({ ...W.intentFromTags(Object.values(s.jTags || {}).flat()), ...(s.jIntent || {}) });
 // The journey as one picture that builds (Micah, 2026-10-08: "make it simpler, more elegant, better in every way"): your
 // sites, the AT&T network, your cloud, on one stage that never leaves the screen. Each beat changes one thing on it and
 // says it in one sentence: the cloud is a question, then Azure, then its workloads tagged, then the AT&T line proposed,
@@ -5196,7 +5200,7 @@ function journeyVals(out, s, set, est) {
     // The Customer switch (2026-10-08: "It needs its own drop down, maybe existing new customer?"): the dashboard, or the
     // existing customer's journey from its first beat; New is next.
     setJourney: (e) => { const v = e.target.value;
-      if (v === 'existing') set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], landed: null,
+      if (v === 'existing') set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jIntent: null, landed: null,
         addedSources: (s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE), orders: (s.orders || []).filter(o => !o.journey && !o.journeyDone), customPolicies: (s.customPolicies || []).filter(p => !p.journey), andiOpen: false });
       else set({ journey: null, screen: 's0' }); } };
   if (!on) return base;
@@ -5216,7 +5220,7 @@ function journeyVals(out, s, set, est) {
       if (n < 4) { set({ jScan: n }); return; }
       clearInterval(journeyTimer);
       // The clouds carried through earlier passes keep their sources; only this cloud's is replaced.
-      set({ jScan: 4, jStep: 2, addedSources: [...(s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE || a.provider !== prov.key), { provider: prov.key, name: `${prov.name} subscription`, cred: prov.cred, cadence: 'daily', at: SCH.nowOf(s), estId: J.JOURNEY_ESTATE }] });
+      set({ jScan: 4, jStep: JI.found, addedSources: [...(s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE || a.provider !== prov.key), { provider: prov.key, name: `${prov.name} subscription`, cred: prov.cred, cadence: 'daily', at: SCH.nowOf(s), estId: J.JOURNEY_ESTATE }] });
     }, 650);
   };
   const found = J.foundOf(est, s.jDone || []), rows = J.tagRows(found, s.jTags || {});
@@ -5250,6 +5254,14 @@ function journeyVals(out, s, set, est) {
   // and after above the cloud, and the traffic itself, as dots that ride the internet path until the order moves them.
   const todayMs = move ? move.today.ms : worstMs, tierMs = tier ? tier.ms : null;
   const beforeMo = move ? move.today.mo : null, afterMo = tier && tier.mo !== null && tier.mo !== undefined ? tier.mo : null;
+  // Why a way, in the deck's card words ("Why: lowest monthly cost, flat bill, routed two-way access ... You do: ..."),
+  // and the five weights the intent set, as bars.
+  const wts = W.intentWeights(journeyIntent(s)), WT_SHORT = { cost: 'Cost', perf: 'Speed', sec: 'Security', setup: 'Effort', scale: 'Scale' };
+  const whyOf = (t) => { const why = t.why || [], oks = why.filter(x => x.ok), cuts = why.filter(x => !x.ok);
+    return { whyLine: oks.length ? `Why: ${oks.map(x => x.words).join(', ')}.` : '', hasWhyLine: oks.length > 0, whyRows: [...oks, ...cuts].map(x => ({ ...x, ink: x.miss ? 'var(--error)' : x.warn ? 'var(--text-light)' : 'var(--link)' })),
+      weights: W.CRITERIA.map(c => ({ key: c.key, icon: c.icon, label: c.label, short: WT_SHORT[c.key], w: String(wts[c.key]), h: `${Math.round(wts[c.key] / Math.max(...Object.values(wts)) * 100)}%`,
+        deck: `${Math.min(100, Math.round(c.weight / Math.max(...Object.values(wts)) * 100))}%`, title: `${c.label}: weighs ${wts[c.key]} of 100${wts[c.key] !== c.weight ? ` (the deck's ${c.weight}, moved by what you said)` : ''}` })),
+      weightsTitle: `Weighed for what you said: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${wts[c.key]}`).join(', ')}` }; };
   // One sentence a beat: the story, not the screen.
   // Act three. Live: the journey's regions land at once (a presenter cannot wait ten days), so every page reads them
   // private. Protect: one policy from the tags you applied, a real one Govern lists. Save: the saving over a year, then
@@ -5259,7 +5271,8 @@ function journeyVals(out, s, set, est) {
   // The policy deck: one card per tag, each a real intent; the engine says what it does to a flow to the cloud and to
   // the internet before you enforce it. Enforced ones are real policies Govern lists and the engine's ladder reads.
   const mine = (s.customPolicies || []).filter(p => p.journey && p.cloud === found.cloud);
-  const deck0 = J.policyDeck(rows), fromSite = `Private cloud · Equinix DC2, Ashburn`, toRegion = found.regions[0] ? `${found.cloud} ${found.regions[0].region}` : '';
+  const intent = journeyIntent(s), iCard = J.intentCard(intent, found, rows);
+  const deck0 = [...(iCard ? [iCard] : []), ...J.policyDeck(rows, intent)], fromSite = `Private cloud · Equinix DC2, Ashburn`, toRegion = found.regions[0] ? `${found.cloud} ${found.regions[0].region}` : '';
   const mkPol = (d) => ({ name: d.name, match: d.match, scope: 'any cloud', req: d.req, path: [], state: 'enforced', custom: true, journey: true, cloud: found.cloud, tag: d.tag });
   const verdictOf = (d, to) => (toRegion ? effectivePolicy(est, [mkPol(d)], { from: fromSite, to, tag: d.tag }).verdict : 'Allowed');
   const enforceOne = (d) => { if (mine.some(p => p.tag === d.tag)) return; const pol0 = mkPol(d); const fig = GV.policyFigures(est, A.inventory(est), pol0) || {};
@@ -5278,6 +5291,8 @@ function journeyVals(out, s, set, est) {
     return { key: `${r.section}:${r.id}`, verb: VERB[r.section][0], cls: VERB[r.section][1], label: r.label, dir: both ? '⇄' : v.o2p ? '→' : '←', dirWord: both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem', title: `${VERB[r.section][0]} ${r.label.toLowerCase()}, ${both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem'}` }; }); };
   const deck = deck0.map(d => { const on = mine.some(p => p.tag === d.tag), vc = verdictOf(d, toRegion), vi = verdictOf(d, 'the Internet');
     return { key: d.tag, ...d, on, off: !on, n: String(d.apps.length), wlF: String(d.wl), appsWord: d.apps.join(', '), hover: s.jPolHover === d.tag, rules: rulesOf(d),
+      // The intent card wears the Intent beat's mark and its parts in short; a tag card, the tag and its requirement.
+      headIcon: d.intent ? 'target' : 'tag', reqWord: d.intent ? d.short : d.req,
       cloudV: vc, netV: vi, cloudCls: vc === 'Denied' ? 'deny' : 'allow', netCls: vi === 'Denied' ? 'deny' : 'allow', netIcon: vi === 'Denied' ? 'close-circle' : 'check-circle',
       stations: ['site', 'edge', 'core', 'cloud'].map(k => ({ key: k, icon: LAYER_ICON[k], state: k === d.layer ? 'set' : 'any', title: k === d.layer ? `${LAYER_SHORT[k]}: ${d.req}` : LAYER_SHORT[k] })),
       title: `${d.name}: ${d.req} for ${d.apps.join(', ')}. To the cloud: ${vc}. To the internet: ${vi}.${on ? ' Enforced.' : ' Click to enforce.'}`,
@@ -5292,54 +5307,57 @@ function journeyVals(out, s, set, est) {
   const yearSave = saving && tier ? tier.net * 12 : 0;
   const months = Array.from({ length: 12 }, (_, i) => ({ key: 'm' + i, h: `${Math.round((i + 1) / 12 * 100)}%`, d: `${i * 60}ms` }));
   const nextProv = J.PROVIDERS.find(p => p.live && !(s.addedSources || []).some(a => a.estId === J.JOURNEY_ESTATE && a.provider === p.key)) || null;
-  const attachMore = () => { if (!nextProv) return; set({ jStep: 1, jScan: null, jProv: nextProv.key, jPick: null, jLive: false, jTags: s.jTags, jDone: [...(s.jDone || []), found.cloud], orders: (s.orders || []).map(o => (o.journey ? { ...o, journey: false, journeyDone: true } : o)) }); };
+  const attachMore = () => { if (!nextProv) return; set({ jStep: JI.source, jScan: null, jProv: nextProv.key, jPick: null, jLive: false, jIntent: null, jTags: s.jTags, jDone: [...(s.jDone || []), found.cloud], orders: (s.orders || []).map(o => (o.journey ? { ...o, journey: false, journeyDone: true } : o)) }); };
   const openHome = () => { set({ journey: null, screen: 's0' }); syncHash('s0'); };
-  const LINE = [
-    `AT&T already carries your ${today.sites} sites.`,
-    scanning ? `Reading your ${prov.name} subscription.` : 'Connect a cloud account. Read only.',
-    `${cloudName} runs ${found.wl} workloads on the public internet.`,
-    tagsOn ? `${rows.filter(r => r.applied.length).length} of ${rows.length} workloads tagged.` : 'Tag what matters.',
-    saving ? `Move ${cloudName} onto AT&T. Save ${saving} a month.` : `Move ${cloudName} onto AT&T.`,
-    placed ? 'Ordered. AT&T is provisioning it.' : `Connect ${cloudName} with ${tier ? tier.label : 'AT&T'}.`,
-    live ? `${cloudName} is live on AT&T.` : 'Provisioning.',
-    hov ? `${hov.tag} ${hov.word}.` : enforcedN === deckN && deckN ? (keptOff ? `All ${deckN} enforced. ${keptOff} workloads never touch the internet.` : `All ${deckN} enforced.`) : enforcedN ? `${enforcedN} of ${deckN} enforced.${keptOff ? ` ${keptOff} workloads never touch the internet.` : ''}` : deckN ? `${deckN} ${deckN === 1 ? 'policy' : 'policies'} from your tags. Enforce them.` : 'Nothing to protect yet.',
-    yearSave ? `${saving} a month. ${fmt(yearSave)} a year.` : 'Nothing saved yet.',
-  ][step];
+  const LINE = {
+    today: `AT&T already carries your ${today.sites} sites.`,
+    source: scanning ? `Reading your ${prov.name} subscription.` : 'Connect a cloud account. Read only.',
+    found: `${cloudName} runs ${found.wl} workloads on the public internet.`,
+    tag: tagsOn ? `${rows.filter(r => r.applied.length).length} of ${rows.length} workloads tagged.` : 'Tag what matters.',
+    intent: `What does ${cloudName} need?`,
+    recommend: saving ? `Move ${cloudName} onto AT&T. Save ${saving} a month.` : `Move ${cloudName} onto AT&T.`,
+    connect: placed ? 'Ordered. AT&T is provisioning it.' : `Connect ${cloudName} with ${tier ? tier.label : 'AT&T'}.`,
+    watch: live ? `${cloudName} is live on AT&T.` : 'Provisioning.',
+    protect: hov ? `${hov.tag} ${hov.word}.` : enforcedN === deckN && deckN ? (keptOff ? `All ${deckN} enforced. ${keptOff} workloads never touch the internet.` : `All ${deckN} enforced.`) : enforcedN ? `${enforcedN} of ${deckN} enforced.${keptOff ? ` ${keptOff} workloads never touch the internet.` : ''}` : deckN ? `${deckN} ${deckN === 1 ? 'policy' : 'policies'} from your tags. Enforce them.` : 'Nothing to protect yet.',
+    save: yearSave ? `${saving} a month. ${fmt(yearSave)} a year.` : 'Nothing saved yet.',
+  }[beat.key];
   // The stage, as this beat draws it.
-  const cloudState = step === 0 ? 'unknown' : step === 1 ? (scanning ? 'scanning' : pr.source ? 'found' : 'picking') : found.has ? 'found' : 'unknown';
-  const link = placed || live ? 'connected' : step >= 4 && tier ? 'proposed' : 'none';
-  const net = !found.has || step < 2 ? 'off' : live ? 'gone' : placed ? 'faded' : 'public';
-  const ACT = [
-    { label: 'Find your clouds', go: to(1), off: false },
-    { label: pr.source ? 'See what it found' : scanning ? 'Scanning' : `Scan ${prov.name === 'Microsoft Azure' ? 'Azure' : prov.name}`, go: pr.source ? to(2) : connectSource, off: scanning },
-    { label: 'Tag the workloads', go: to(3), off: !pr.source },
-    tagsOn ? { label: 'See the recommendation', go: to(4), off: false } : { label: 'Tag them all', go: tagAll, off: !rows.length },
-    { label: tier ? `Choose ${tier.label}` : 'Nothing to connect', go: () => { if (tier) set({ jPick: pickI, jStep: 5 }); }, off: !tier },
-    placed ? { label: 'Watch it go live', go: () => { set({ jStep: 6 }); }, off: false } : { label: 'Place order', go: place, off: !tier },
-    live ? { label: 'Protect it', go: to(7), off: false } : { label: 'Go live', go: goLive, off: !placed },
-    enforcedN ? { label: 'See what it saves', go: to(8), off: false } : { label: deckN > 1 ? 'Enforce them all' : 'Enforce', go: enforceAll, off: !deckN },
-    { label: 'Open the dashboard', go: openHome, off: false },
-  ][step];
-  const need = { found: pr.source, tag: pr.source, recommend: pr.source, connect: pr.source, watch: !!placed, protect: !!placed, save: !!placed };
-  return { ...base, jStep: step, jBeat: beat, jBeatKey: beat.key, jLine: LINE, jIsRec: step === 4, jIsConnect: step === 5,
+  const cloudState = step === JI.today ? 'unknown' : step === JI.source ? (scanning ? 'scanning' : pr.source ? 'found' : 'picking') : found.has ? 'found' : 'unknown';
+  // From the Intent beat on, the AT&T wire proposes the top pick, so an answer changes the picture as it is given.
+  const link = placed || live ? 'connected' : step >= JI.intent && tier ? 'proposed' : 'none';
+  const net = !found.has || step < JI.found ? 'off' : live ? 'gone' : placed ? 'faded' : 'public';
+  const ACT = {
+    today: { label: 'Find your clouds', go: to(JI.source), off: false },
+    source: { label: pr.source ? 'See what it found' : scanning ? 'Scanning' : `Scan ${prov.name === 'Microsoft Azure' ? 'Azure' : prov.name}`, go: pr.source ? to(JI.found) : connectSource, off: scanning },
+    found: { label: 'Tag the workloads', go: to(JI.tag), off: !pr.source },
+    tag: tagsOn ? { label: 'Say what it needs', go: to(JI.intent), off: false } : { label: 'Tag them all', go: tagAll, off: !rows.length },
+    intent: { label: 'See the recommendation', go: to(JI.recommend), off: !tier },
+    recommend: { label: tier ? `Choose ${tier.label}` : 'Nothing to connect', go: () => { if (tier) set({ jPick: pickI, jStep: JI.connect }); }, off: !tier },
+    connect: placed ? { label: 'Watch it go live', go: () => { set({ jStep: JI.watch }); }, off: false } : { label: 'Place order', go: place, off: !tier },
+    watch: live ? { label: 'Protect it', go: to(JI.protect), off: false } : { label: 'Go live', go: goLive, off: !placed },
+    protect: enforcedN ? { label: 'See what it saves', go: to(JI.save), off: false } : { label: deckN > 1 ? 'Enforce them all' : 'Enforce', go: enforceAll, off: !deckN },
+    save: { label: 'Open the dashboard', go: openHome, off: false },
+  }[beat.key];
+  const need = { found: pr.source, tag: pr.source, intent: pr.source, recommend: pr.source, connect: pr.source, watch: !!placed, protect: !!placed, save: !!placed };
+  return { ...base, jStep: step, jBeat: beat, jBeatKey: beat.key, jLine: LINE, jIsIntent: step === JI.intent, jIsRec: step === JI.recommend, jIsConnect: step === JI.connect,
     jSteps: J.BEATS.map((b, i) => { const open = need[b.key] === undefined || !!need[b.key], done = i < step || (i === step && b.key === 'connect' && !!placed);
       return { key: b.key, n: String(i + 1), label: b.short, state: i === step ? 'cur' : done ? 'done' : 'next', cur: i === step, off: !open, icon: done ? 'check-circle' : '', hasIcon: done, noIcon: !done, go: () => { if (open) set({ jStep: i, jScan: null }); }, title: b.title }; }),
     jHasBack: step > 0, jBack: to(step - 1), jAct: ACT.label, jActGo: ACT.go, jActOff: !!ACT.off,
     jExit: () => set({ journey: null, screen: 's0' }),
     // The stage.
-    jWide: step >= 2 && found.has, jLink: link, jLinkWord: link === 'connected' ? 'AT&T private path' : link === 'proposed' ? (tier ? tier.label : '') : '',
+    jWide: step >= JI.found && found.has, jLink: link, jLinkWord: link === 'connected' ? 'AT&T private path' : link === 'proposed' ? (tier ? tier.label : '') : '',
     jNet: net, jNetWord: 'Public internet', jNetMs: todayMs ? `${todayMs} ms` : '', jNetHasMs: !!todayMs,
     // The AT&T wire's latency once a way is proposed, and the drop beside it.
     jLinkMs: tierMs ? `${tierMs} ms` : '', jLinkHasMs: !!tierMs && link !== 'none', jLinkDrop: tierMs && todayMs && todayMs > tierMs ? `−${todayMs - tierMs} ms` : '', jLinkHasDrop: !!(tierMs && todayMs && todayMs > tierMs && link !== 'none'),
     // Before and after, as a pair of figures: today's monthly in grey, the way's in green; shown from the recommendation on.
     // The money pair steps aside on the Protect beat (the deck needs the room; the saving has its own beat next).
-    jMoney: { has: step >= 4 && step !== 7 && beforeMo !== null && afterMo !== null, before: beforeMo !== null ? `${fmt(beforeMo)}/mo` : '', after: afterMo !== null ? `${fmt(afterMo)}/mo` : '', up: afterMo !== null && beforeMo !== null && afterMo > beforeMo,
+    jMoney: { has: step >= JI.intent && step !== JI.protect && beforeMo !== null && afterMo !== null, before: beforeMo !== null ? `${fmt(beforeMo)}/mo` : '', after: afterMo !== null ? `${fmt(afterMo)}/mo` : '', up: afterMo !== null && beforeMo !== null && afterMo > beforeMo,
       beforeTitle: 'Egress a month today, over the public internet', afterTitle: tier ? `A month with ${tier.label}: the connection plus the egress it carries at AT&T's price` : '' },
     // Where the traffic rides: the internet path until the order lands, then the AT&T wire.
-    jFlow: placed ? 'att' : found.has && step >= 2 ? 'net' : 'none',
+    jFlow: placed ? 'att' : found.has && step >= JI.found ? 'net' : 'none',
     jSites: { n: String(today.sites), groups: today.groups.map(g => ({ ...g, nF: String(g.n), title: `${g.n} sites on ${g.full}` })) },
     jCloud: { state: cloudState, unknown: cloudState === 'unknown', picking: cloudState === 'picking', scanning: cloudState === 'scanning', found: cloudState === 'found',
-      mark: found.has ? W.markFor(found.cloud, s.theme) : '', name: cloudName, wl: String(found.wl), tagging: step === 3 },
+      mark: found.has ? W.markFor(found.cloud, s.theme) : '', name: cloudName, wl: String(found.wl), tagging: step === JI.tag },
     jProviders: J.PROVIDERS.map(p => { const pick = p.key === prov.key; return { ...p, on: pick, off: !p.live, title: p.live ? `${p.name}: ${p.cred}` : `${p.name}: not in this demo`, go: () => { if (p.live && !pr.source && !scanning) set({ jProv: p.key }); } }; }),
     jCred: prov.cred,
     jScanSteps: SCAN.map((w, i) => ({ key: 's' + i, word: w, state: s.jScan === null || s.jScan === undefined ? 'next' : i < s.jScan ? 'done' : i === s.jScan ? 'cur' : 'next' })),
@@ -5347,15 +5365,24 @@ function journeyVals(out, s, set, est) {
     jConnectSource: connectSource,
     jRegions: found.regions.map(r => ({ key: r.region, region: r.region, wlF: String(r.wl), msF: `${r.ms} ms`,
       apps: r.apps.map(a => { const row = rows.find(x => x.key === a.key) || { suggested: [], applied: [] };
-        return { key: a.key, name: a.name, icon: KIND_ICON[a.kind] || 'apps', title: a.purpose, hasTags: step >= 3 || row.applied.length > 0, dotDelay: `${rows.findIndex(x => x.key === a.key) * 140}ms`,
-          hl: step === 7 && s.jPolHover ? ((row.applied.length ? row.applied : row.suggested).includes(s.jPolHover) ? 'on' : 'off') : '',
-          chips: [...new Set(step === 3 ? [...row.suggested, ...row.applied] : row.applied)].map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === 3 ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === 3) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }),
-          canAdd: step === 3, picking: s.jTagPick === a.key, pick: () => set({ jTagPick: s.jTagPick === a.key ? null : a.key, jTagNew: '' }) }; }) })),
+        return { key: a.key, name: a.name, icon: KIND_ICON[a.kind] || 'apps', title: a.purpose, hasTags: step >= JI.tag || row.applied.length > 0, dotDelay: `${rows.findIndex(x => x.key === a.key) * 140}ms`,
+          // The intent card covers every workload on the cloud; a tag card, the ones it tags.
+          hl: step === JI.protect && s.jPolHover ? (s.jPolHover === 'Intent' || (row.applied.length ? row.applied : row.suggested).includes(s.jPolHover) ? 'on' : 'off') : '',
+          chips: [...new Set(step === JI.tag ? [...row.suggested, ...row.applied] : row.applied)].map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === JI.tag ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === JI.tag) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }),
+          canAdd: step === JI.tag, picking: s.jTagPick === a.key, pick: () => set({ jTagPick: s.jTagPick === a.key ? null : a.key, jTagNew: '' }) }; }) })),
     jTagCount: String(tagsOn),
+    // The Intent beat (2026-10-08): four questions, glyph answers; each answer re-ranks the ways at once (the wire's label
+    // and the money pair move with it). Your tags suggest the first answers. Once ordered, the answers stand.
+    jIntentQs: W.INTENT.map(q => ({ key: q.key, label: q.label, icon: q.icon, opts: q.opts.map(o => ({ ...o, on: intent[q.key] === o.key, off: !!placed,
+      go: () => { if (!placed) set({ jIntent: { ...(s.jIntent || {}), [q.key]: o.key }, jPick: null, jDetail: false, jFlip: (s.jFlip || 0) + 1 }); } })) })),
+    jIntentChips: W.INTENT.map(q => { const o = q.opts.find(x => x.key === intent[q.key]) || q.opts[0]; return { key: q.key, icon: o.icon, title: `${q.label}: ${o.label}` }; }),
+    jHasIntentChips: step > JI.intent && found.has,
+    // The proposed way as a badge on the AT&T wire, its own glyph; an answer replays its arrival.
+    jLinkBadge: { has: link === 'proposed' && !!tier, not: !(link === 'proposed' && !!tier), icon: tier && tier.mark ? tier.mark.icon : 'hub', flip: (s.jFlip || 0) % 2 ? 'b' : 'a', title: tier ? `${tier.tier}: ${tier.label}` : '' },
     // Once any tag is on, the primary moves on; Tag the rest stays beside it while a suggestion is still off (2026-10-08).
-    jTagRest: { has: step === 3 && tagsOn > 0 && !rows.every(r => r.done), go: tagAll },
+    jTagRest: { has: step === JI.tag && tagsOn > 0 && !rows.every(r => r.done), go: tagAll },
     // Any tag, not only the suggested ones (2026-10-08): a + on each row opens the known tags, and a box takes a new one.
-    jTagPalette: (() => { const key = s.jTagPick; if (!key || step !== 3) return { open: false, key: '', tags: [], text: s.jTagNew || '' };
+    jTagPalette: (() => { const key = s.jTagPick; if (!key || step !== JI.tag) return { open: false, key: '', tags: [], text: s.jTagNew || '' };
       const row = rows.find(r => r.key === key); if (!row) return { open: false, key: '', tags: [], text: '' };
       const known = [...new Set([...J.POLICY_TAGS.map(t => t[0]), 'Internet-facing', 'Dev', 'GPU', 'AI', ...(est.regionsList || []).flatMap(r => r.tags || []), ...rows.flatMap(r => [...r.suggested, ...r.applied]), ...Object.values(s.jTags || {}).flat()])];
       return { open: true, key, name: row.name, text: s.jTagNew || '', setText: (e) => set({ jTagNew: e.target.value }),
@@ -5364,13 +5391,20 @@ function journeyVals(out, s, set, est) {
         tags: known.filter(t => !row.applied.includes(t)).map(t => ({ key: t, t, go: () => putTags(key, [...row.applied, t]) })) }; })(),
     // The choice, three lines; the detail lives on the dashboard's Recommended.
     jOptions: liveMove && !placed ? liveMove.tiers.filter(t => !t.unavailable).map(t => { const i = liveMove.tiers.indexOf(t), sel = i === pickI;
-      return { key: t.key || String(i), label: t.label, tier: t.tier, mark: t.mark, pts: t.pts || '', hasPts: !!t.hasPts, price: t.priceShort, on: sel,
+      // Why, on the card (2026-10-08, Micah: "not just what you get, but why we recommend it"): the pick leads with what
+      // fits; an alternative with what it misses, then what it does well. Two at most; the rest are the detail's.
+      const why = t.why || [], chips = (i === 0 ? why.filter(x => x.ok) : [...why.filter(x => x.miss), ...why.filter(x => x.warn), ...why.filter(x => x.ok)]).slice(0, 2);
+      // The score as a ring; a way a hard rule removes shows the rule's mark, not a score.
+      const out = !!t.misses;
+      return { key: t.key || String(i), label: t.label, tier: t.tier, mark: t.mark, pts: t.pts || '', hasPts: !!t.hasPts && !out, price: t.priceShort, on: sel,
+        out, ptsPct: out || !t.hasPts ? '0%' : `${t.pts}%`, ptsShown: out ? '✕' : t.pts || '', ptsTitle: out ? `Removed by what you said: ${(t.why || []).filter(x => x.miss).map(x => x.words).join('; ')}` : t.ptsTitle || `Scores ${t.pts} of 100`,
+        why: chips.map(x => ({ ...x, ink: x.miss ? 'var(--error)' : x.warn ? 'var(--text-light)' : 'var(--link)', title: `${x.short}: ${x.words}` })), hasWhy: chips.length > 0,
         delta: t.net > 0 ? `saves ${fmt(t.net)}` : t.net < 0 ? `adds ${fmt(-t.net)}` : '', deltaInk: t.net > 0 ? 'var(--success)' : 'var(--text-light)',
-        setup: t.way ? (W.wayWho(t.way) || {}).time || '' : '', setupTitle: t.way ? W.waySetup(t.way) : '', go: () => set({ jPick: i }) }; }) : [],
+        setup: t.way ? (W.wayWho(t.way) || {}).time || '' : '', setupTitle: t.way ? W.waySetup(t.way) : '', go: () => set({ jPick: i, jFlip: (s.jFlip || 0) + (i === pickI ? 0 : 1) }) }; }) : [],
     jHasOptions: !!liveMove && !placed,
     // Depth on what is offered (2026-10-08, "no way to dive deeper"): the picked option's whole card, in place, by a chevron.
-    jDetailOpen: !!s.jDetail && step === 4 && !!tier, toggleDetail: () => set({ jDetail: !s.jDetail }),
-    jDetail: tier ? { label: tier.label, tierWord: tier.tier, intro: tier.intro || '', fit: tier.fit || '', mark: tier.mark, strip: tier.strip || [], pts: tier.pts || '', hasPts: !!tier.hasPts, ptsTitle: tier.ptsTitle || '',
+    jDetailOpen: !!s.jDetail && step === JI.recommend && !!tier, toggleDetail: () => set({ jDetail: !s.jDetail }),
+    jDetail: tier ? { ...whyOf(tier), label: tier.label, tierWord: tier.tier, intro: tier.intro || '', fit: tier.fit || '', mark: tier.mark, strip: tier.strip || [], pts: tier.pts || '', hasPts: !!tier.hasPts, ptsTitle: tier.ptsTitle || '',
       metrics: (tier.metrics || []).map(m2 => ({ ...m2, words: String(m2.title || '').replace(/^[A-Za-z ]+: /, '') })),
       who: tier.whoWord || '', time: tier.setupTime || '', setupWords: tier.setupWords || '', youDo: tier.way && W.wayYouDo(tier.way) ? W.wayYouDo(tier.way).words : '',
       products: (tier.products || []).map(p => { const pp = W.productOf(p.id) || {}; return { key: p.id, name: pp.name || p.id, n: String(p.n), v: pp.price === null || pp.price === undefined ? 'At review' : `${fmt(pp.price)}/mo each` }; }) } : null,
@@ -5378,11 +5412,11 @@ function journeyVals(out, s, set, est) {
     jLines: lines, jTotal: total, jRegionsWord: move ? move.regions.join(' · ') : '',
     jPlaced: !!placed, jNotPlaced: !placed, jPhases: liveMove && liveMove.hasTask ? liveMove.phases : placed ? [['ordered', 'Ordered', 'shopping-bag', 'ok'], ['provisioning', 'Provision', 'wrench', live ? 'ok' : 'set'], ['live', 'Live', 'verified', live ? 'ok' : 'any'], ['insight', 'Insight', 'lightbulb', live ? 'set' : 'any']].map(([key, label, icon, state]) => ({ key, label, icon, state, title: label })) : [],
     // Act three.
-    jIsWatch: step === 6, jIsProtect: step === 7, jIsSave: step === 8, jLive: live, jNotLive: !live,
+    jIsWatch: step === JI.watch, jIsProtect: step === JI.protect, jIsSave: step === JI.save, jLive: live, jNotLive: !live,
     jHealth: found.regions.flatMap(r => r.apps).map((a, i) => ({ key: a.key, d: `${i * 140}ms` })),
-    jDeck: deck, jHasDeck: deckN > 0, jDeckHosted: hostedWay, jDeckNba: !hostedWay, jDeckWhere: hostedWay ? `Enforced on the vSRX in AT&T's hub and your route tables` : `Enforced as route policy on NetBond Advanced`, jDeckRest: { has: step === 7 && enforcedN > 0 && enforcedN < deckN, go: enforceAll, n: String(deckN - enforcedN) },
+    jDeck: deck, jHasDeck: deckN > 0, jDeckHosted: hostedWay, jDeckNba: !hostedWay, jDeckWhere: hostedWay ? `Enforced on the vSRX in AT&T's hub and your route tables` : `Enforced as route policy on NetBond Advanced`, jDeckRest: { has: step === JI.protect && enforcedN > 0 && enforcedN < deckN, go: enforceAll, n: String(deckN - enforcedN) },
     // The wires' stamps: the hovered card's verdicts as a preview, else what the enforced ones add up to.
-    jVerdict: step >= 7 && shown ? (hov && !hov.on ? 'preview' : 'enforced') : 'none', jProtected: step >= 7 && !!shown,
+    jVerdict: step >= JI.protect && shown ? (hov && !hov.on ? 'preview' : 'enforced') : 'none', jProtected: step >= JI.protect && !!shown,
     jStampCloud: shown ? (Array.isArray(shown) ? (shown.some(d => d.cloudV === 'Denied') ? 'Denied' : 'Allowed') : shown.cloudV) : '', jStampNet: shown ? (Array.isArray(shown) ? (shown.some(d => d.netV === 'Denied') ? 'Denied' : 'Allowed') : shown.netV) : '',
     jStampCloudCls: shown && (Array.isArray(shown) ? shown.some(d => d.cloudV === 'Denied') : shown.cloudV === 'Denied') ? 'deny' : 'allow', jStampNetCls: shown && (Array.isArray(shown) ? shown.some(d => d.netV === 'Denied') : shown.netV === 'Denied') ? 'deny' : 'allow',
     jSave: { month: saving, year: yearSave ? fmt(yearSave) : '', has: !!yearSave, months, before: beforeMo !== null ? fmt(beforeMo) : '', after: afterMo !== null ? fmt(afterMo) : '' },
@@ -5391,7 +5425,7 @@ function journeyVals(out, s, set, est) {
 }
 function movesVals(s, set, go, est, { openF, obAll, conns }) {
   // The journey's last two beats read the same moves (2026-10-08).
-  const onPage = (s.screen === 's3' && s.tab === 'connect' && cnPageOf(s) === 'options') || (s.screen === 'sj' && s.journey === 'existing' && (s.jStep || 0) >= 4);
+  const onPage = (s.screen === 's3' && s.tab === 'connect' && cnPageOf(s) === 'options') || (s.screen === 'sj' && s.journey === 'existing' && (s.jStep || 0) >= JI.intent);
   const empty = !est || est.stage === 'empty' || !(est.regionsList || []).length;
   const step = { label: 'Add a source', go: go('s1', { discoverView: 'sources' }) };
   // One move open at a time (Micah, 2026-10-05: "way too crowded"): the first on the page unless a row was opened or closed;
@@ -5439,7 +5473,9 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   };
   if (!onPage || empty) return shell([]);
   const inv = A.inventory(est);
-  const model = M.movesOf(est, { findings: openF.filter(f => !f.event), capacity: OD.capacity(conns, s.obWindow || '30d'), apps: appsOf(est, inv, obAll.flows || []), inv, base: egressBaseFor(est, obAll) });
+  // The journey's intent ranks the ways of its own estate's moves (2026-10-08); the dashboard keeps the session's order.
+  const intent = s.journey === 'existing' && est.id === J.JOURNEY_ESTATE ? journeyIntent(s) : null;
+  const model = M.movesOf(est, { findings: openF.filter(f => !f.event), capacity: OD.capacity(conns, s.obWindow || '30d'), apps: appsOf(est, inv, obAll.flows || []), inv, base: egressBaseFor(est, obAll), intent });
   // Picks are kept per estate, so the demo picker never carries a tick from one estate to another.
   const sel = (s.moveSel || {})[est.id] || {}, tierPick = (s.moveTier || {})[est.id] || {};
   const keep = (k, v) => ({ ...(s[k] || {}), [est.id]: v });
@@ -5507,7 +5543,10 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
                 // What you do, the deck's "Customer does" (2026-10-08).
                 ...(t.way && W.wayYouDo(t.way) ? [{ key: 'you', icon: 'user-access', v: W.wayYouDo(t.way).short, d: '', ink: 'var(--text-body)', dink: 'var(--text-light)', title: `You do: ${W.wayYouDo(t.way).words}` }] : [])],
               // The deck's weighted score out of 100 (Cost 30 · Performance 20 · Security 20 · Effort and time 15 · Scale 15).
-              ...(() => { const pts = t.way ? W.wayScore(t.way, m.cloud) : null; return { pts: pts === null ? '' : String(pts), hasPts: pts !== null, ptsTitle: pts === null ? '' : `Scores ${pts} of 100: cost 30, performance 20, security 20, effort and time 15, scale 15` }; })(),
+              // With an intent, the score is the intent's (the weights it moved, its soft preferences); else the deck's.
+              ...(() => { const pts = Number.isInteger(t.ipts) ? t.ipts : t.way ? W.wayScore(t.way, m.cloud, t.zone || 'inter') : null;
+                const wt = Number.isInteger(t.ipts) ? W.intentWeights(intent) : null;
+                return { pts: pts === null ? '' : String(pts), hasPts: pts !== null, ptsTitle: pts === null ? '' : wt ? `Scores ${pts} of 100 for what you said it needs: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${wt[c.key]}`).join(', ')}` : `Scores ${pts} of 100: cost 30, performance 20, security 20, effort and time 15, scale 15` }; })(),
               connect: () => { set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: t.i }) }); composeMoves([m], t.i); }, ctaPrimary: tOn, ctaWord: 'Connect' }; })() }; });
     const badge = MOVE_BADGE[m.kind];
     return { ...m, rankF: String(m.rank), sel: on, short: moveShort(m), markSrc: m.kind === 'sites' ? '' : W.markFor(m.cloud, s.theme), hasMarkSrc: m.kind !== 'sites' && !!W.MARK[m.cloud], noMarkSrc: m.kind === 'sites' || !W.MARK[m.cloud],
