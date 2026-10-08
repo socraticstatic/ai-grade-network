@@ -5207,6 +5207,7 @@ function journeyVals(out, s, set, est) {
   const step = Math.max(0, Math.min(J.BEATS.length - 1, s.jStep || 0)), beat = J.BEATS[step], pr = journeyProgress(s);
   const to = (i) => () => set({ jStep: i, jScan: null });
   const today = J.todayOf(est);
+  const SITE_INK = { avpn: 'var(--viz-1)', ase: 'var(--viz-2)', abf: 'var(--viz-4)', adi: 'var(--viz-6)' };
   // The source: read-only, then a scan whose four steps tick over on the cloud node; the found regions join the estate as it ends.
   const prov = J.PROVIDERS.find(p => p.key === (s.jProv || J.DEMO_SOURCE)) || J.PROVIDERS[0];
   const scanning = s.jScan !== null && s.jScan !== undefined && s.jScan < 4;
@@ -5368,7 +5369,7 @@ function journeyVals(out, s, set, est) {
   return { ...base, jStep: step, jBeat: beat, jBeatKey: beat.key, jLine: LINE, jIsIntent: step === JI.intent, jIsRec: step === JI.recommend, jIsConnect: step === JI.connect,
     jSteps: J.BEATS.map((b, i) => { const open = need[b.key] === undefined || !!need[b.key], done = i < step || (i === step && b.key === 'connect' && !!placed);
       return { key: b.key, n: String(i + 1), label: b.short, state: i === step ? 'cur' : done ? 'done' : 'next', cur: i === step, off: !open, icon: done ? 'check-circle' : '', hasIcon: done, noIcon: !done, go: () => { if (open) set({ jStep: i, jScan: null }); }, title: b.title }; }),
-    jHasBack: step > 0, jBack: to(step - 1), jAct: ACT.label, jActGo: ACT.go, jActOff: !!ACT.off,
+    jHasBack: step > 0, jBack: to(step - 1), jAct: ACT.label, jActGo: ACT.go, jActOff: !!ACT.off, jActBusy: step === JI.source && scanning,
     jExit: () => set({ journey: null, screen: 's0' }),
     // The stage.
     jWide: step >= JI.found && found.has, jLink: link, jLinkWord: link === 'connected' ? 'AT&T private path' : link === 'proposed' ? (tier ? tier.label : '') : '',
@@ -5381,7 +5382,9 @@ function journeyVals(out, s, set, est) {
       beforeTitle: 'Egress a month today, over the public internet', afterTitle: tier ? `A month with ${tier.label}: the connection plus the egress it carries at AT&T's price` : '' },
     // Where the traffic rides: the internet path until the order lands, then the AT&T wire.
     jFlow: live ? 'att' : found.has && step >= JI.found ? 'net' : 'none',
-    jSites: { n: String(today.sites), groups: today.groups.map(g => ({ ...g, nF: String(g.n), title: `${g.n} sites on ${g.full}` })) },
+    // One ink per access, shared by a site's glyph and its legend: AT&T blues for the private ones, slate for internet access.
+    jSites: { n: String(today.sites), groups: today.groups.map(g => ({ ...g, nF: String(g.n), ink: SITE_INK[g.key], title: `${g.n} sites on ${g.full}` })),
+      cells: today.cells.map((c, i) => ({ ...c, ink: SITE_INK[c.group], d: `${i * 35}ms`, title: `${c.name}: ${c.full}${c.cls ? `, ${c.cls.toLowerCase()}` : ''}` })) },
     jCloud: { state: cloudState, unknown: cloudState === 'unknown', picking: cloudState === 'picking', scanning: cloudState === 'scanning', found: cloudState === 'found',
       mark: found.has ? W.markFor(found.cloud, s.theme) : '', name: cloudName, wl: String(found.wl), tagging: step === JI.tag },
     // Each cloud's mark for the theme (AWS's dark wordmark vanishes on a dark tile).

@@ -83,7 +83,10 @@ const SERVICE = [
 export function todayOf(est) {
   const sites = est.sites || [];
   const groups = SERVICE.map(([key, re, label, icon, full]) => ({ key, label, icon, full, n: sites.filter(s => re.test(s.access || '')).length })).filter(g => g.n);
-  return { sites: sites.length, metros: new Set(sites.map(s => s.metro).filter(Boolean)).size, dcs: sites.filter(s => /data center/i.test(s.cls || '')).length, groups,
+  // Every site, grouped by the access it rides (Micah, 2026-10-08: "the 20 on the left - look at how much space is wasted"):
+  // the stage draws one glyph per real site, so the sentence's 20 is the picture, not a number in an empty card.
+  const cells = SERVICE.flatMap(([key, re, , icon, full]) => sites.filter(s => re.test(s.access || '')).map(s => ({ key: s.name, group: key, icon, name: s.name, metro: s.metro || '', cls: s.cls || '', full })));
+  return { sites: sites.length, metros: new Set(sites.map(s => s.metro).filter(Boolean)).size, dcs: sites.filter(s => /data center/i.test(s.cls || '')).length, groups, cells,
     clouds: (est.regionsList || []).length };
 }
 

@@ -522,10 +522,14 @@ test('every container the markup opens, it closes', () => {
   // The beauty pass (2026-10-08, "give it all a beauty pass", "making text more concise"): Save's figure column left (the
   // headline says both figures) and the tag palette moved into the row it edits without its name cap: div 1303 -> 1302,
   // span 1445 -> 1442.
-    ['div', /<div\b/g, /<\/div>/g, 1302],
-    ['span', /<span\b/g, /<\/span>/g, 1442],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 655],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 379],
+  // Then the order's phases under the picture on Watch too, so Go live ticks them where the eye is (div +2, span +2,
+  // sc-if +1, sc-for +1): div 1302 -> 1304, span 1442 -> 1444, sc-if 655 -> 656, sc-for 379 -> 380.
+  // Your sites as the sites themselves ("the 20 on the left - look at how much space is wasted"): the count and its cap in
+  // one head, a grid of one glyph per site (div +1, span +2, sc-for +1): div 1304 -> 1305, span 1444 -> 1446, sc-for 380 -> 381.
+    ['div', /<div\b/g, /<\/div>/g, 1305],
+    ['span', /<span\b/g, /<\/span>/g, 1446],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 656],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 381],
     ['section', /<section\b/g, /<\/section>/g, 17],
     ['button', /<button\b/g, /<\/button>/g, 521],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],

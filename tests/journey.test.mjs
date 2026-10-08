@@ -56,6 +56,11 @@ test('beat 1: the stage holds your sites by the access AT&T sells, the AT&T netw
   const v = vals(journey());
   assert.equal(v.jSites.n, '20');
   assert.deepEqual(v.jSites.groups.map(g => [g.label, g.n]), [['AVPN', 7], ['Ethernet', 6], ['Internet', 3], ['Fiber', 4]]);
+  // The 20 is drawn as the 20 (2026-10-08): one glyph per real site, grouped and inked by its access, its name in the title.
+  assert.equal(v.jSites.cells.length, 20);
+  assert.deepEqual([...new Set(v.jSites.cells.map(c => c.group))], ['avpn', 'ase', 'adi', 'abf']);
+  assert.match(v.jSites.cells[0].title, /^Ashburn DC: AVPN \(MPLS VPN\), data center$/);
+  assert.equal(v.jSites.cells[0].ink, v.jSites.groups[0].ink, 'a glyph and its legend share one ink');
   assert.equal(v.jCloud.state, 'unknown');
   assert.equal(v.jLink, 'none'); assert.equal(v.jNet, 'off');
   assert.equal(v.jAct, 'Find your clouds');
@@ -70,7 +75,7 @@ test('beat 2: Azure with a read-only role; the scan ticks on the cloud node, add
   assert.equal(v.jAct, 'Scan Azure');
   v.jActGo();
   v = vals(c);
-  assert.equal(v.jCloud.state, 'scanning'); assert.equal(v.jActOff, true); assert.equal(v.jLine, 'Reading your Microsoft Azure subscription.');
+  assert.equal(v.jCloud.state, 'scanning'); assert.equal(v.jActOff, true); assert.equal(v.jActBusy, true, 'the scan reads as work under way, not a dead button'); assert.equal(v.jLine, 'Reading your Microsoft Azure subscription.');
   await new Promise(r => setTimeout(r, 2900));
   assert.equal(c.state.jStep, B.found);
   assert.deepEqual(c.state.addedSources.map(a => [a.provider, a.estId]), [['Azure', 'lastmile']]);
@@ -166,7 +171,7 @@ test('the markup: one stage of three nodes and two wires, the internet path, a s
   assert.equal((blk.match(/class="js-node /g) || []).length, 3);
   assert.equal((blk.match(/class="js-wire"/g) || []).length, 2);
   assert.match(blk, /<div class="js-net" data-state="\{\{ jNet \}\}"/);
-  assert.match(blk, /<button class="js-go" onClick="\{\{ jActGo \}\}" disabled="\{\{ jActOff \}\}">\{\{ jAct \}\}/);
+  assert.match(blk, /<button class="js-go" onClick="\{\{ jActGo \}\}" disabled="\{\{ jActOff \}\}" aria-busy="\{\{ jActBusy \}\}">\{\{ jAct \}\}/);
   assert.doesNotMatch(blk, /<(table|select)\b/);
   assert.match(HTML, /<sc-if value="\{\{ journeyOn \}\}"[^>]*><button class="hdr-theme" onClick="\{\{ toggleTheme \}\}"/);
   assert.match(HTML, /@media \(prefers-reduced-motion: reduce\)\{\.js-wire\[data-state="proposed"\] i/);
@@ -204,6 +209,8 @@ test('beat 7: Go live lands both regions at once; every app blinks green; the in
   assert.deepEqual(c.state.landed, ['eastus', 'westeurope']);
   assert.equal(v.jLine, 'Azure is live on AT&T.'); assert.equal(v.jNet, 'gone'); assert.equal(v.jLink, 'connected'); assert.equal(v.jLive, true);
   assert.deepEqual(v.jPhases.map(p => p.state), ['ok', 'ok', 'ok', 'set']);
+  assert.match(HTML, /<sc-if value="\{\{ jIsWatch \}\}"[^>]*><div class="js-order"><div class="ps big js-phases"/, 'the phases tick on the Watch beat itself');
+  assert.match(HTML, /\.ps\.js-phases \[data-state="ok"\] i\{border-color:var\(--cta\)/, 'done reads blue, as the stepper does');
   assert.equal(v.jHealth.length, 4);
   // The figures survive the move leaving the ranked list: the order snapshotted them at Place.
   assert.equal(v.jLinkMs, '19 ms'); assert.equal(v.jMoney.after, '$13,800/mo');
