@@ -503,12 +503,15 @@ test('every container the markup opens, it closes', () => {
   // (two columns of metric rows, the products, the strip). Recounted, every tag balanced: div 1282 -> 1291,
   // span 1388 -> 1411, sc-if 642 -> 647, sc-for 363 -> 367, button 511 -> 517. The You do row the metrics already carry
   // left the detail (div -1, span -4): div 1291 -> 1290, span 1411 -> 1407.
+  // The policy deck (2026-10-08, "Protect needs visual and options love"): the one policy line became a card loop, each a
+  // button with its tag, count and toggle, its rule, a four-station strip loop and two verdict badges; Enforce the other n
+  // beside the action. Recounted, every tag balanced: span 1407 -> 1416, sc-if 647 -> 648, sc-for 367 -> 369, button 517 -> 519.
     ['div', /<div\b/g, /<\/div>/g, 1290],
-    ['span', /<span\b/g, /<\/span>/g, 1407],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 647],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 367],
+    ['span', /<span\b/g, /<\/span>/g, 1416],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 648],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 369],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 517],
+    ['button', /<button\b/g, /<\/button>/g, 519],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

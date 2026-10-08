@@ -206,7 +206,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -5256,12 +5256,29 @@ function journeyVals(out, s, set, est) {
   // the fork: attach another cloud (the stage keeps this one and asks for the next) or open the dashboard.
   const live = !!s.jLive;
   const goLive = () => { if (!placed || live) return; set({ jLive: true, landed: [...new Set([...landedOf(s), ...(move ? move.regions : [])])] }); };
-  const prop = J.proposedPolicy(est, rows), protectedBy = (s.customPolicies || []).find(p => p.journey && p.cloud === found.cloud) || null;
-  const enforce = () => { if (!prop || protectedBy) return;
-    const pol0 = { name: prop.name, match: prop.match, scope: 'any cloud', req: prop.req, route: {}, path: [], state: 'enforced', custom: true, journey: true, cloud: found.cloud };
-    const fig = GV.policyFigures(est, A.inventory(est), pol0) || {};
-    set({ customPolicies: [...(s.customPolicies || []), { ...pol0, matched: fig.matched ?? null, viol: 0, unit: fig.unit || 'workloads' }] }); };
-  const polApps = prop ? rows.filter(r => r.applied.includes(prop.tag) || r.suggested.includes(prop.tag) && live).map(r => r.name) : [];
+  // The policy deck: one card per tag, each a real intent; the engine says what it does to a flow to the cloud and to
+  // the internet before you enforce it. Enforced ones are real policies Govern lists and the engine's ladder reads.
+  const mine = (s.customPolicies || []).filter(p => p.journey && p.cloud === found.cloud);
+  const deck0 = J.policyDeck(rows), fromSite = `Private cloud · Equinix DC2, Ashburn`, toRegion = found.regions[0] ? `${found.cloud} ${found.regions[0].region}` : '';
+  const mkPol = (d) => ({ name: d.name, match: d.match, scope: 'any cloud', req: d.req, route: {}, path: [], state: 'enforced', custom: true, journey: true, cloud: found.cloud, tag: d.tag });
+  const verdictOf = (d, to) => (toRegion ? effectivePolicy(est, [mkPol(d)], { from: fromSite, to, tag: d.tag }).verdict : 'Allowed');
+  const enforceOne = (d) => { if (mine.some(p => p.tag === d.tag)) return; const pol0 = mkPol(d); const fig = GV.policyFigures(est, A.inventory(est), pol0) || {};
+    set({ customPolicies: [...(s.customPolicies || []), { ...pol0, matched: fig.matched ?? null, viol: 0, unit: fig.unit || 'workloads' }], jPolHover: null }); };
+  const enforceAll = () => { const add = deck0.filter(d => !mine.some(p => p.tag === d.tag)).map(d => { const pol0 = mkPol(d); const fig = GV.policyFigures(est, A.inventory(est), pol0) || {}; return { ...pol0, matched: fig.matched ?? null, viol: 0, unit: fig.unit || 'workloads' }; });
+    if (add.length) set({ customPolicies: [...(s.customPolicies || []), ...add], jPolHover: null }); };
+  const deck = deck0.map(d => { const on = mine.some(p => p.tag === d.tag), vc = verdictOf(d, toRegion), vi = verdictOf(d, 'the Internet');
+    return { key: d.tag, ...d, on, off: !on, n: String(d.apps.length), wlF: String(d.wl), appsWord: d.apps.join(', '), hover: s.jPolHover === d.tag,
+      cloudV: vc, netV: vi, cloudCls: vc === 'Denied' ? 'deny' : 'allow', netCls: vi === 'Denied' ? 'deny' : 'allow', netIcon: vi === 'Denied' ? 'close-circle' : 'check-circle',
+      stations: ['site', 'edge', 'core', 'cloud'].map(k => ({ key: k, icon: LAYER_ICON[k], state: k === d.layer ? 'set' : 'any', title: k === d.layer ? `${LAYER_SHORT[k]}: ${d.req}` : LAYER_SHORT[k] })),
+      title: `${d.name}: ${d.req} for ${d.apps.join(', ')}. To the cloud: ${vc}. To the internet: ${vi}.${on ? ' Enforced.' : ' Click to enforce.'}`,
+      go: () => enforceOne(d), enter: () => set({ jPolHover: d.tag }), leave: () => set({ jPolHover: null }) }; });
+  const enforcedN = deck.filter(d => d.on).length, deckN = deck.length;
+  const protectedBy = enforcedN > 0 ? mine[0] : null;
+  const hov = deck.find(d => d.hover) || null, shown = hov || (enforcedN ? deck.filter(d => d.on) : null);
+  const prop = deck[0] ? { tag: deck[0].tag, word: deck[0].word } : null;
+  // Each app counts once, however many denying policies cover it.
+  const keptKeys = new Set(deck.filter(d => d.on && d.netV === 'Denied').flatMap(d => d.appKeys));
+  const keptOff = rows.filter(r => keptKeys.has(r.key)).reduce((a, r) => a + (r.wl || 0), 0);
   const yearSave = saving && tier ? tier.net * 12 : 0;
   const months = Array.from({ length: 12 }, (_, i) => ({ key: 'm' + i, h: `${Math.round((i + 1) / 12 * 100)}%`, d: `${i * 60}ms` }));
   const nextProv = J.PROVIDERS.find(p => p.live && !(s.addedSources || []).some(a => a.estId === J.JOURNEY_ESTATE && a.provider === p.key)) || null;
@@ -5275,7 +5292,7 @@ function journeyVals(out, s, set, est) {
     saving ? `Move ${cloudName} onto AT&T. Save ${saving} a month.` : `Move ${cloudName} onto AT&T.`,
     placed ? 'Ordered. AT&T is provisioning it.' : `Connect ${cloudName} with ${tier ? tier.label : 'AT&T'}.`,
     live ? `${cloudName} is live on AT&T.` : 'Provisioning.',
-    protectedBy ? `${prop ? prop.tag : 'Payments'} ${prop ? prop.word : 'never touches the internet'}. Enforced.` : prop ? `${prop.tag} ${prop.word}.` : 'Nothing to protect yet.',
+    hov ? `${hov.tag} ${hov.word}.` : enforcedN === deckN && deckN ? (keptOff ? `All ${deckN} enforced. ${keptOff} workloads never touch the internet.` : `All ${deckN} enforced.`) : enforcedN ? `${enforcedN} of ${deckN} enforced.${keptOff ? ` ${keptOff} workloads never touch the internet.` : ''}` : deckN ? `${deckN} ${deckN === 1 ? 'policy' : 'policies'} from your tags. Enforce them.` : 'Nothing to protect yet.',
     yearSave ? `${saving} a month. ${fmt(yearSave)} a year.` : 'Nothing saved yet.',
   ][step];
   // The stage, as this beat draws it.
@@ -5290,7 +5307,7 @@ function journeyVals(out, s, set, est) {
     { label: tier ? `Choose ${tier.label}` : 'Nothing to connect', go: () => { if (tier) set({ jPick: pickI, jStep: 5 }); }, off: !tier },
     placed ? { label: 'Watch it go live', go: () => { set({ jStep: 6 }); }, off: false } : { label: 'Place order', go: place, off: !tier },
     live ? { label: 'Protect it', go: to(7), off: false } : { label: 'Go live', go: goLive, off: !placed },
-    protectedBy ? { label: 'See what it saves', go: to(8), off: false } : { label: 'Enforce', go: enforce, off: !prop },
+    enforcedN ? { label: 'See what it saves', go: to(8), off: false } : { label: deckN > 1 ? 'Enforce them all' : 'Enforce', go: enforceAll, off: !deckN },
     { label: 'Open the dashboard', go: openHome, off: false },
   ][step];
   const need = { found: pr.source, tag: pr.source, recommend: pr.source, connect: pr.source, watch: !!placed, protect: !!placed, save: !!placed };
@@ -5305,7 +5322,8 @@ function journeyVals(out, s, set, est) {
     // The AT&T wire's latency once a way is proposed, and the drop beside it.
     jLinkMs: tierMs ? `${tierMs} ms` : '', jLinkHasMs: !!tierMs && link !== 'none', jLinkDrop: tierMs && todayMs && todayMs > tierMs ? `−${todayMs - tierMs} ms` : '', jLinkHasDrop: !!(tierMs && todayMs && todayMs > tierMs && link !== 'none'),
     // Before and after, as a pair of figures: today's monthly in grey, the way's in green; shown from the recommendation on.
-    jMoney: { has: step >= 4 && beforeMo !== null && afterMo !== null, before: beforeMo !== null ? `${fmt(beforeMo)}/mo` : '', after: afterMo !== null ? `${fmt(afterMo)}/mo` : '', up: afterMo !== null && beforeMo !== null && afterMo > beforeMo,
+    // The money pair steps aside on the Protect beat (the deck needs the room; the saving has its own beat next).
+    jMoney: { has: step >= 4 && step !== 7 && beforeMo !== null && afterMo !== null, before: beforeMo !== null ? `${fmt(beforeMo)}/mo` : '', after: afterMo !== null ? `${fmt(afterMo)}/mo` : '', up: afterMo !== null && beforeMo !== null && afterMo > beforeMo,
       beforeTitle: 'Egress a month today, over the public internet', afterTitle: tier ? `A month with ${tier.label}: the connection plus the egress it carries at AT&T's price` : '' },
     // Where the traffic rides: the internet path until the order lands, then the AT&T wire.
     jFlow: placed ? 'att' : found.has && step >= 2 ? 'net' : 'none',
@@ -5320,6 +5338,7 @@ function journeyVals(out, s, set, est) {
     jRegions: found.regions.map(r => ({ key: r.region, region: r.region, wlF: String(r.wl), msF: `${r.ms} ms`,
       apps: r.apps.map(a => { const row = rows.find(x => x.key === a.key) || { suggested: [], applied: [] };
         return { key: a.key, name: a.name, icon: KIND_ICON[a.kind] || 'apps', title: a.purpose, hasTags: step >= 3 || row.applied.length > 0, dotDelay: `${rows.findIndex(x => x.key === a.key) * 140}ms`,
+          hl: step === 7 && s.jPolHover ? ((row.applied.length ? row.applied : row.suggested).includes(s.jPolHover) ? 'on' : 'off') : '',
           chips: [...new Set(step === 3 ? [...row.suggested, ...row.applied] : row.applied)].map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === 3 ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === 3) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }),
           canAdd: step === 3, picking: s.jTagPick === a.key, pick: () => set({ jTagPick: s.jTagPick === a.key ? null : a.key, jTagNew: '' }) }; }) })),
     jTagCount: String(tagsOn),
@@ -5351,8 +5370,11 @@ function journeyVals(out, s, set, est) {
     // Act three.
     jIsWatch: step === 6, jIsProtect: step === 7, jIsSave: step === 8, jLive: live, jNotLive: !live,
     jHealth: found.regions.flatMap(r => r.apps).map((a, i) => ({ key: a.key, d: `${i * 140}ms` })),
-    jPolicy: prop ? { has: true, name: prop.name, tag: prop.tag, req: prop.req, apps: polApps, appsWord: polApps.join(', '), n: String(polApps.length), on: !!protectedBy } : { has: false, name: '', tag: '', req: '', apps: [], appsWord: '', n: '0', on: false }, jHasPolicy: !!prop,
-    jVerdict: protectedBy && step >= 7 ? 'enforced' : 'none', jProtected: !!protectedBy && step >= 7,
+    jDeck: deck, jHasDeck: deckN > 0, jDeckRest: { has: step === 7 && enforcedN > 0 && enforcedN < deckN, go: enforceAll, n: String(deckN - enforcedN) },
+    // The wires' stamps: the hovered card's verdicts as a preview, else what the enforced ones add up to.
+    jVerdict: step >= 7 && shown ? (hov && !hov.on ? 'preview' : 'enforced') : 'none', jProtected: step >= 7 && !!shown,
+    jStampCloud: shown ? (Array.isArray(shown) ? (shown.some(d => d.cloudV === 'Denied') ? 'Denied' : 'Allowed') : shown.cloudV) : '', jStampNet: shown ? (Array.isArray(shown) ? (shown.some(d => d.netV === 'Denied') ? 'Denied' : 'Allowed') : shown.netV) : '',
+    jStampCloudCls: shown && (Array.isArray(shown) ? shown.some(d => d.cloudV === 'Denied') : shown.cloudV === 'Denied') ? 'deny' : 'allow', jStampNetCls: shown && (Array.isArray(shown) ? shown.some(d => d.netV === 'Denied') : shown.netV === 'Denied') ? 'deny' : 'allow',
     jSave: { month: saving, year: yearSave ? fmt(yearSave) : '', has: !!yearSave, months, before: beforeMo !== null ? fmt(beforeMo) : '', after: afterMo !== null ? fmt(afterMo) : '' },
     jNext: nextProv ? { has: true, name: nextProv.name === 'Microsoft Azure' ? 'Azure' : nextProv.name, mark: nextProv.mark, go: attachMore } : { has: false, name: '', mark: '', go: () => {} },
     jDoneClouds: (s.jDone || []).map(c => ({ key: c, mark: W.markFor(c, s.theme), name: c })), jHasDone: (s.jDone || []).length > 0 };

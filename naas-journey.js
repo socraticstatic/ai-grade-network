@@ -26,6 +26,21 @@ export const BEATS = [
   { key: 'protect', label: 'Protect', short: 'Protect', icon: 'check-shield', title: 'Set a policy' },
   { key: 'save', label: 'Save', short: 'Save', icon: 'bill', title: 'What it saves' },
 ];
+/** The policy deck (2026-10-08, "Protect needs visual and options love"): one card per tag on the cloud, each a real
+ *  intent the engine evaluates. Known tags carry their own intent; a tag of your own keeps a private path. */
+export const DECK = [
+  ['PCI', 'Private path required', 'never touches the internet', 'padlock', 'core'],
+  ['Finance', 'Private path required', 'stays on AT&T', 'padlock', 'core'],
+  ['Internet-facing', 'Inline security inspection', 'is inspected in path', 'firewall', 'edge'],
+  ['Prod', 'No direct internet path', 'never reaches the internet directly', 'not-available', 'core'],
+];
+export function policyDeck(rows) {
+  const tags = [...new Set(rows.flatMap(r => (r.applied.length ? r.applied : r.suggested)))];
+  const order = (t) => { const i = DECK.findIndex(d => d[0] === t); return i < 0 ? 99 : i; };
+  return tags.sort((a, b) => order(a) - order(b)).map(tag => { const d = DECK.find(x => x[0] === tag) || [tag, 'Private path required', 'stays on AT&T', 'padlock', 'core'];
+    const apps = rows.filter(r => (r.applied.length ? r.applied : r.suggested).includes(tag));
+    return { tag, req: d[1], word: d[2], icon: d[3], layer: d[4], name: `${tag} ${d[1] === 'Inline security inspection' ? 'inspection' : d[1] === 'No direct internet path' ? 'no direct internet' : 'private path'}`, match: `tag ${tag}`, apps: apps.map(a => a.name), appKeys: apps.map(a => a.key), wl: apps.reduce((s, a) => s + (a.wl || 0), 0) }; });
+}
 /** The policy beat 8 proposes, from the tags you applied: the most sensitive tag on the cloud keeps off the internet. */
 export const POLICY_TAGS = [['PCI', 'Private path required', 'never touches the internet'], ['Finance', 'Private path required', 'stays on AT&T'], ['Prod', 'No direct internet path', 'never reaches the internet directly']];
 export function proposedPolicy(est, rows = []) {

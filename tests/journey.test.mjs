@@ -204,18 +204,37 @@ test('beat 7: Go live lands both regions at once; every app blinks green; the in
   assert.ok(home.homeCards.find(x => x.key === 'onatt').big === '2', 'the home counts both regions private');
 });
 
-test('beat 8: one policy from the tags you applied, PCI first; Enforce makes it real, and the wires take their verdicts', () => {
+test('beat 8: a deck of policies from the tags, each a real intent with the engine\'s verdicts; hover previews, click enforces, all at once or one by one', () => {
   const c = placedAzure(); vals(c).jActGo(); vals(c).jActGo();
   let v = vals(c);
   assert.equal(c.state.jStep, 7);
-  assert.deepEqual([v.jPolicy.tag, v.jPolicy.req, v.jPolicy.name], ['PCI', 'Private path required', 'PCI private path']);
-  assert.equal(v.jLine, 'PCI never touches the internet.'); assert.equal(v.jVerdict, 'none');
-  v.jActGo();
+  assert.deepEqual(v.jDeck.map(d => [d.tag, d.req, d.cloudV, d.netV]), [['PCI', 'Private path required', 'Allowed', 'Denied'], ['Finance', 'Private path required', 'Allowed', 'Denied'], ['Internet-facing', 'Inline security inspection', 'Allowed', 'Allowed'], ['Prod', 'No direct internet path', 'Allowed', 'Denied']]);
+  assert.deepEqual(v.jDeck.map(d => d.apps), [['payments-api'], ['payments-api', 'fin-ledger'], ['customer-portal'], ['dispatch-svc', 'customer-portal', 'payments-api', 'fin-ledger']]);
+  assert.equal(v.jLine, '4 policies from your tags. Enforce them.'); assert.equal(v.jAct, 'Enforce them all'); assert.equal(v.jVerdict, 'none');
+  // Hover previews: the stamps take that card's verdicts, dashed; the apps it covers light, the rest dim.
+  v.jDeck[2].enter();
   v = vals(c);
-  assert.equal(v.jLine, 'PCI never touches the internet. Enforced.'); assert.equal(v.jVerdict, 'enforced'); assert.equal(v.jPolicy.on, true);
+  assert.equal(v.jVerdict, 'preview'); assert.deepEqual([v.jStampCloud, v.jStampNet], ['Allowed', 'Allowed']);
+  assert.deepEqual(v.jRegions[0].apps.map(a => [a.name, a.hl]), [['dispatch-svc', 'off'], ['customer-portal', 'on']]);
+  assert.equal(v.jLine, 'Internet-facing is inspected in path.');
+  v.jDeck[2].leave();
+  // One at a time.
+  vals(c).jDeck[0].go();
+  v = vals(c);
+  assert.deepEqual(v.jDeck.map(d => d.on), [true, false, false, false]);
+  assert.equal(v.jLine, '1 of 4 enforced. 14 workloads never touch the internet.');
+  assert.equal(v.jVerdict, 'enforced'); assert.deepEqual([v.jStampCloud, v.jStampNet], ['Allowed', 'Denied']);
+  assert.deepEqual([v.jDeckRest.has, v.jDeckRest.n, v.jAct], [true, '3', 'See what it saves']);
   const pol = c.state.customPolicies.find(p => p.journey);
-  assert.deepEqual([pol.name, pol.match, pol.req, pol.state, pol.cloud], ['PCI private path', 'tag PCI', 'Private path required', 'enforced', 'Azure']);
+  assert.deepEqual([pol.name, pol.match, pol.req, pol.state, pol.cloud, pol.tag], ['PCI private path', 'tag PCI', 'Private path required', 'enforced', 'Azure', 'PCI']);
   assert.ok(vals(mkC({ ...c.state, journey: null, screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies' })).polRows.some(r => r.name === 'PCI private path'), 'Govern lists it');
+  // The rest at once.
+  v.jDeckRest.go();
+  v = vals(c);
+  assert.ok(v.jDeck.every(d => d.on)); assert.equal(v.jDeckRest.has, false);
+  assert.equal(v.jLine, 'All 4 enforced. 68 workloads never touch the internet.');
+  assert.equal(c.state.customPolicies.filter(p => p.journey).length, 4);
+  assert.match(HTML, /<button role="listitem" class="js-pcard" data-on="\{\{ pd\.on \}\}" data-hover="\{\{ pd\.hover \}\}" onClick="\{\{ pd\.go \}\}" onMouseEnter="\{\{ pd\.enter \}\}" onMouseLeave="\{\{ pd\.leave \}\}"/);
 });
 
 test('beat 9: the saving a month and a year; Attach AWS loops to the source with Azure done; Open the dashboard lands home', async () => {
