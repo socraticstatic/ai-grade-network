@@ -488,12 +488,15 @@ test('every container the markup opens, it closes', () => {
   // choice, the order line and one action; the rail leaves, a theme switch joins the Customer switch in the header
   // (sc-if +3, button +1). Recounted, every tag balanced: div 1300 -> 1275, span 1453 -> 1362, sc-if 635 -> 629,
   // sc-for 371 -> 359, section 18 -> 17, button 514 -> 511.
-    ['div', /<div\b/g, /<\/div>/g, 1275],
-    ['span', /<span\b/g, /<\/span>/g, 1362],
+  // Gestalt, balance and spacing (2026-10-08): the Spend chart's dollar axis (div, sc-for, span) and gridlines (sc-for),
+  // Sources' second Add a source left (button -1), Orders' empty state centred under a glyph (span +2). Recounted, every
+  // tag balanced: div 1275 -> 1276, span 1362 -> 1366, sc-for 359 -> 361, button 511 -> 510.
+    ['div', /<div\b/g, /<\/div>/g, 1276],
+    ['span', /<span\b/g, /<\/span>/g, 1366],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 629],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 359],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 361],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 511],
+    ['button', /<button\b/g, /<\/button>/g, 510],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

@@ -1168,7 +1168,9 @@ export function vals(c) {
   Object.assign(out, journeyVals(out, s, set, est));
   // Back in the title row: shown once there is somewhere to go back to, named for it.
   Object.assign(out, { backOn: (s.navDepth || 0) > 0, backLabel: s.navBack ? `Back to ${s.navBack}` : 'Back', goBack: () => { try { history.back(); } catch (e) { } } });
-  navLast = navPick(s); navTitle = s.screen === 's0' ? 'NaaS home' : out.pageTitle || 'the last page';
+  // Back names the page you came from by its own name (Traffic, Insights, Orders), never the section you are still in.
+  const railCur = (out.railGroups || []).flatMap(g => g.items || []).find(i => i.cur);
+  navLast = navPick(s); navTitle = s.screen === 's0' ? 'NaaS home' : s.journey === 'existing' ? 'the journey' : railCur ? railCur.label : out.pageTitle || 'the last page';
   return pageLists(glyphPass(out), s, set);
 }
 
@@ -4369,9 +4371,10 @@ function wizardVals(s, est, set, c) {
       actGo: p.viol
         ? () => { c.setState({ screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', mapMode: 'slo', panelTab: 'impact', drill: [], cloudDrill: [], fabDrill: [] }); syncHash('s3', 'cloud', 'observe'); window.scrollTo(0, 0); }
         : () => set({ authoring: { match: p.match, scope: 'any cloud', req: [p.req] } }),
-      actBg: p.viol ? 'var(--cta)' : 'transparent',
-      actInk: p.viol ? '#fff' : 'var(--link)',
-      actBorder: p.viol ? 'var(--cta)' : 'var(--border-primary)' }))
+      // One primary on the page, Author (gestalt review, 2026-10-08): the row's action is secondary.
+      actBg: 'var(--bg-base)',
+      actInk: 'var(--link)',
+      actBorder: 'var(--border-primary)' }))
       // NetBond Advanced's row (2026-10-02): the toggle is the state (and enforces a simulated policy of yours), the square is
       // the engine's precedence, the badges are the verbs, the strip is the path with its glyphs, and the name opens the words.
       .map(p => { const rank = evalPolicies(est, [p]).ordered[0], enforcedNow = p.state === 'enforced';
@@ -5621,6 +5624,10 @@ function costVals(s, set, est, invAll, ob, go, c) {
       const pct = (v) => (v / mx * 100).toFixed(2) + '%';
       const yOf = (v) => +(100 - v / mx * 100).toFixed(2);
       const xOf = (i) => i * 10 + 5;
+      // A dollar scale beside the bars (the reviewer's note on the home chart, 2026-10-08: "we need X and Y axis units"):
+      // round steps from zero to the tallest month, each with its gridline.
+      const yStep = (() => { const raw = mx / 4, mag = Math.pow(10, Math.floor(Math.log10(Math.max(1, raw)))); return [1, 2, 2.5, 5, 10].map(k => k * mag).find(k => k >= raw) || 10 * mag; })();
+      const spendYTicks = []; for (let v = 0; v <= mx; v += yStep) spendYTicks.push({ key: 'y' + v, t: v === 0 ? '$0' : v >= 1e6 ? `$${(v / 1e6).toFixed(1).replace(/\.0$/, '')}M` : `$${Math.round(v / 1000)}K`, top: `${yOf(v)}%` });
       const lastMonth = st.past.length ? st.past[st.past.length - 1].month : null;
       const aheadName = (m) => { if (!lastMonth) return `+${m} mo`; const y = +lastMonth.slice(0, 4), mo = +lastMonth.slice(5, 7) - 1 + m; return `${MON3[mo % 12]} ${y + Math.floor(mo / 12)}`; };
       // A column says its month; the first, and every January, say the year too.
@@ -5657,7 +5664,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
         ],
         // Empty says No egress once: the page's own line, not a second one here (the skeptic, 2026-09-30).
         hasSpendChart: has, noSpendChart: !has && est.stage !== 'empty', spendColsN: cols, fcAsIsGo: toBuckets, fcActGo: toMoves,
-        spendVB: `0 0 ${cols * 10} 100`, spendNowY: has ? yOf(last.spend) : 0, fcAsIsD: line('asIs'), fcActD: line('moved'),
+        spendVB: `0 0 ${cols * 10} 100`, spendYTicks, spendNowY: has ? yOf(last.spend) : 0, fcAsIsD: line('asIs'), fcActD: line('moved'),
         fcAsIsInk: I.asis.color, fcActInk: I.act.color,
         // The next 90 days are shaded, and each line's end says what it is.
         fcBandLeft: (st.past.length / cols * 100).toFixed(2) + '%', fcBandW: (st.next.length / cols * 100).toFixed(2) + '%',
