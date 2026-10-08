@@ -185,6 +185,8 @@ export function init(c) {
   const estateQ = q.get('estate'), estateId = estateQ === 'meridian' ? 'trust' : estateQ;
   if (estateId && D.ESTATES[estateId]) { patch.estateParam = estateId; if (!q.get('view')) patch.view = estateId; }
   if (q.get('mode') === 'browse') patch.screen = 's7';
+  // ?theme=dark opens dark (the journey has no rail, so a presenter's link carries the theme).
+  if (q.get('theme') === 'dark' || q.get('theme') === 'light') patch.theme = q.get('theme');
   // A link straight into the existing customer's journey (2026-10-08): ?journey=existing.
   if (q.get('journey') === 'existing') Object.assign(patch, { journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0 });
   if (q.get('category')) { patch.screen = 's7'; patch.browseCat = q.get('category'); }
@@ -4790,7 +4792,8 @@ function shellVals(s, set, go, est, c, sched) {
   const chrome = (() => {
     try { return (new URLSearchParams(window.location.search).get('chrome') || '').toLowerCase(); } catch (e) { return ''; }
   })();
-  const showRail = !(chrome === 'off' || chrome === 'norail');
+  // The journey is the whole screen (2026-10-08): its stepper replaces the rail.
+  const showRail = !(chrome === 'off' || chrome === 'norail') && s.journey !== 'existing';
   const showHeader = !(chrome === 'off' || chrome === 'noheader');
   const storeCur = s.screen === 's7' || s.screen === 's8';
   const curLayer = top === 'net' ? 'net' : null;
@@ -4884,14 +4887,6 @@ function shellVals(s, set, go, est, c, sched) {
           // The home is NaaS; Connect's title opens Connections, its network map (2026-09-30).
           : key === 'connect' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'picture' })
           : go('s3', { layer: 'cloud', tab: key });
-        // The journey replaces the rail with its six beats (2026-10-08): a beat is open once the ones it needs are done.
-        if (s.journey === 'existing') {
-          const pr = journeyProgress(s), step = s.jStep || 0, need = { found: pr.source, tag: pr.source, recommend: pr.source, connect: pr.recommend };
-          return [{ key: 'journey', hasTitle: true, title: 'Existing customer', titleGo: () => set({ jStep: 0 }), titleCur: false,
-            items: J.BEATS.map((b, i) => { const cur = step === i, open = need[b.key] === undefined || !!need[b.key], done = !cur && pr[b.key] && i < step;
-              return { key: b.key, label: `${i + 1}  ${b.label}`, pad: railBtnPad, sub: done ? 'Done' : '', hasSub: done, cur, go: () => { if (open) set({ jStep: i, jScan: null }); },
-                icon: iconDir + '/' + b.icon + '.svg', bg: cur ? 'var(--sidebar-accent)' : 'transparent', color: cur ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: cur ? '8px' : '4px', op: open ? 1 : 0.4, title: open ? b.title : `${b.title}: after the step before it` }; }) }];
-        }
         return [
           { key: 'home', hasTitle: false, title: '', items: [
             // The NaaS home: the whole network at a glance, by persona (2026-09-30). Connect keeps its map.
@@ -5184,11 +5179,15 @@ const MOVE_TONE = { good: 'var(--success)', risk: 'var(--warning)', bad: 'var(--
 const journeyProgress = (s) => J.progressOf({ sourceAdded: (s.addedSources || []).some(a => a.estId === J.JOURNEY_ESTATE),
   tagsApplied: Object.keys(s.jTags || {}).length > 0, picked: s.jPick, placed: (s.orders || []).some(o => o.journey) });
 let journeyTimer = null;
+// The journey as one picture that builds (Micah, 2026-10-08: "make it simpler, more elegant, better in every way"): your
+// sites, the AT&T network, your cloud, on one stage that never leaves the screen. Each beat changes one thing on it and
+// says it in one sentence: the cloud is a question, then Azure, then its workloads tagged, then the AT&T line proposed,
+// then connected. A slim stepper above it replaces the rail; one action below it moves the story on.
 function journeyVals(out, s, set, est) {
   const on = s.journey === 'existing';
   const base = { journeyOn: on, journeyOff: !on, journeyValue: s.journey || '',
-    // The Customer dropdown (2026-10-08: "It needs its own drop down, maybe existing new customer?"): the dashboard, or
-    // the existing customer's journey from its first beat; New is next.
+    // The Customer switch (2026-10-08: "It needs its own drop down, maybe existing new customer?"): the dashboard, or the
+    // existing customer's journey from its first beat; New is next.
     setJourney: (e) => { const v = e.target.value;
       if (v === 'existing') set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null,
         addedSources: (s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE), orders: (s.orders || []).filter(o => !o.journey), andiOpen: false });
@@ -5196,12 +5195,11 @@ function journeyVals(out, s, set, est) {
   if (!on) return base;
   const step = Math.max(0, Math.min(J.BEATS.length - 1, s.jStep || 0)), beat = J.BEATS[step], pr = journeyProgress(s);
   const to = (i) => () => set({ jStep: i, jScan: null });
-  // Beat 1: what AT&T carries today.
   const today = J.todayOf(est);
-  // Beat 2: a source, read-only, then the scan; the found regions join the estate as the scan ends.
+  // The source: read-only, then a scan whose four steps tick over on the cloud node; the found regions join the estate as it ends.
   const prov = J.PROVIDERS.find(p => p.key === (s.jProv || J.DEMO_SOURCE)) || J.PROVIDERS[0];
   const scanning = s.jScan !== null && s.jScan !== undefined && s.jScan < 4;
-  const SCAN = ['Read the subscription', 'List the regions', 'Find the workloads', 'Map the paths'];
+  const SCAN = ['Reading the subscription', 'Listing the regions', 'Finding the workloads', 'Mapping the paths'];
   const connectSource = () => {
     if (pr.source || scanning) return;
     clearInterval(journeyTimer);
@@ -5213,48 +5211,79 @@ function journeyVals(out, s, set, est) {
       set({ jScan: 4, jStep: 2, addedSources: [...(s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE), { provider: prov.key, name: `${prov.name} subscription`, cred: prov.cred, cadence: 'daily', at: SCH.nowOf(s), estId: J.JOURNEY_ESTATE }] });
     }, 650);
   };
-  // Beat 3 and 4: what it found, and the tags.
   const found = J.foundOf(est), rows = J.tagRows(found, s.jTags || {});
   const KIND_ICON = { web: 'globe', db: 'database', app: 'apps' };
   const putTags = (key, tags) => set({ jTags: { ...(s.jTags || {}), [key]: tags } });
-  // Beat 5 and 6: the move for the cloud the source found, its three ways, and the one you pick.
+  const tagAll = () => set({ jTags: Object.fromEntries(rows.map(r => [r.key, [...new Set([...r.applied, ...r.suggested])]])) });
+  const tagsOn = rows.reduce((a, r) => a + r.applied.length, 0);
+  // The move for the cloud the source found, its three ways, and the one you pick (Recommended until you pick another).
   const move = (out.moveList || []).find(m => m.kind === 'region' && m.cloud === found.cloud) || null;
-  const pickI = Number.isInteger(s.jPick) ? s.jPick : null;
+  const pickI = Number.isInteger(s.jPick) ? s.jPick : move ? (move.recI || 0) : null;
   const tier = move && pickI !== null ? move.tiers[pickI] : null;
   const placed = (s.orders || []).find(o => o.journey) || null;
+  const cloudName = found.cloud === 'Azure' ? 'Azure' : W.CLOUD_NAME[found.cloud] || found.cloud || 'your cloud';
   const lines = tier ? (tier.products || []).map(p => { const pp = W.productOf(p.id) || {}; return { key: p.id, name: pp.name || p.id, n: p.n, v: pp.price === null || pp.price === undefined ? 'At review' : `${fmt(pp.price * p.n)}/mo` }; })
     .concat(tier.way && W.wayHosted(tier.way) ? [{ key: 'hub', name: W.EXTRA['hub-att'].name, n: 1, v: 'At review' }] : []) : [];
+  const total = tier && tier.monthly !== null ? `${fmt(tier.monthly)}/mo${tier.way && W.wayHosted(tier.way) ? ' + hub' : ''}` : 'Priced at review';
   const place = () => { if (!tier || placed) return; const at = new Date(SCH.nowOf(s)); const n = (s.orders || []).length + 1;
-    set({ orders: [...(s.orders || []), { id: `o${n}`, title: `${tier.label} · ${move.short}`, way: tier.way || null, what: [tier.label, move.regions.join(', '), tier.way ? W.waySetup(tier.way) : ''].filter(Boolean).join(' · '),
-      monthly: tier.monthly === null ? 'Priced at review' : `${fmt(tier.monthly)}/mo${tier.way && W.wayHosted(tier.way) ? ' + hub' : ''}`, at: `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`,
+    set({ jPick: pickI, orders: [...(s.orders || []), { id: `o${n}`, title: `${tier.label} · ${move.short}`, way: tier.way || null, what: [tier.label, move.regions.join(', '), tier.way ? W.waySetup(tier.way) : ''].filter(Boolean).join(' · '),
+      monthly: total, at: `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`,
       stage: CF.ORDER_STAGE, region: move.regions[0], fromFlow: true, moveKeys: [move.key], moveTitles: { [move.key]: move.title }, journey: true }] }); };
   const liveMove = move ? (out.moveList || []).find(m => m.key === move.key) || move : null;
-  // Next, by beat: the step's own work first where there is one.
-  const NEXT = [
-    { label: 'Add a cloud source', go: to(1), off: false },
-    { label: pr.source ? 'See what it found' : 'Connect and scan', go: pr.source ? to(2) : connectSource, off: scanning },
-    { label: 'Tag the workloads', go: to(3), off: !pr.source },
-    { label: 'See the recommendation', go: to(4), off: !pr.source },
-    { label: move ? 'Connect with Recommended' : 'Nothing to connect', go: () => { if (move) set({ jPick: move.recI || 0, jStep: 5 }); }, off: !move },
-    { label: placed ? 'Open Orders' : 'Place order', go: placed ? () => { set({ journey: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' }); syncHash('s3', 'cloud', 'connect'); } : place, off: !tier },
+  const saving = tier && tier.net > 0 ? fmt(tier.net) : '';
+  const worstMs = found.regions.reduce((a, r) => Math.max(a, r.ms || 0), 0);
+  // One sentence a beat: the story, not the screen.
+  const LINE = [
+    `AT&T already carries your ${today.sites} sites.`,
+    scanning ? `Reading your ${prov.name} subscription.` : 'Connect a cloud account. Read only.',
+    `${cloudName} runs ${found.wl} workloads on the public internet.`,
+    tagsOn ? `${rows.filter(r => r.applied.length).length} of ${rows.length} workloads tagged.` : 'Tag what matters.',
+    saving ? `Move ${cloudName} onto AT&T. Save ${saving} a month.` : `Move ${cloudName} onto AT&T.`,
+    placed ? 'Ordered. AT&T is provisioning it.' : `Connect ${cloudName} with ${tier ? tier.label : 'AT&T'}.`,
   ][step];
-  return { ...base, jStep: step, jBeat: step === 5 && found.cloud ? { ...beat, title: `Connect to ${W.CLOUD_NAME[found.cloud] === 'Microsoft Azure' ? 'Azure' : W.CLOUD_NAME[found.cloud] || found.cloud}` } : beat, jStepWord: `${step + 1} of ${J.BEATS.length}`, jHasBack: step > 0, jBack: to(step - 1), jNext: NEXT.go, jNextLabel: NEXT.label, jNextOff: !!NEXT.off,
-    jIsToday: step === 0, jIsSource: step === 1, jIsFound: step === 2, jIsTag: step === 3, jIsRec: step === 4, jIsConnect: step === 5,
+  // The stage, as this beat draws it.
+  const cloudState = step === 0 ? 'unknown' : step === 1 ? (scanning ? 'scanning' : pr.source ? 'found' : 'picking') : found.has ? 'found' : 'unknown';
+  const link = placed ? 'connected' : step >= 4 && tier ? 'proposed' : 'none';
+  const net = !found.has || step < 2 ? 'off' : placed ? 'faded' : 'public';
+  const ACT = [
+    { label: 'Find your clouds', go: to(1), off: false },
+    { label: pr.source ? 'See what it found' : scanning ? 'Scanning' : `Scan ${prov.name === 'Microsoft Azure' ? 'Azure' : prov.name}`, go: pr.source ? to(2) : connectSource, off: scanning },
+    { label: 'Tag the workloads', go: to(3), off: !pr.source },
+    tagsOn ? { label: 'See the recommendation', go: to(4), off: false } : { label: 'Tag them all', go: tagAll, off: !rows.length },
+    { label: tier ? `Choose ${tier.label}` : 'Nothing to connect', go: () => { if (tier) set({ jPick: pickI, jStep: 5 }); }, off: !tier },
+    placed ? { label: 'See it in the dashboard', go: () => { set({ journey: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' }); syncHash('s3', 'cloud', 'connect'); }, off: false } : { label: 'Place order', go: place, off: !tier },
+  ][step];
+  const need = { found: pr.source, tag: pr.source, recommend: pr.source, connect: pr.source };
+  return { ...base, jStep: step, jBeat: beat, jBeatKey: beat.key, jLine: LINE, jIsRec: step === 4, jIsConnect: step === 5,
+    jSteps: J.BEATS.map((b, i) => { const open = need[b.key] === undefined || !!need[b.key], done = i < step || (i === step && b.key === 'connect' && !!placed);
+      return { key: b.key, n: String(i + 1), label: b.short, state: i === step ? 'cur' : done ? 'done' : 'next', cur: i === step, off: !open, icon: done ? 'check-circle' : '', hasIcon: done, noIcon: !done, go: () => { if (open) set({ jStep: i, jScan: null }); }, title: b.title }; }),
+    jHasBack: step > 0, jBack: to(step - 1), jAct: ACT.label, jActGo: ACT.go, jActOff: !!ACT.off,
     jExit: () => set({ journey: null, screen: 's0' }),
-    jToday: { ...today, groups: today.groups.map(g => ({ ...g, nF: String(g.n) })), sitesF: String(today.sites), metrosF: String(today.metros), dcsF: String(today.dcs), cloudWord: today.clouds ? `${today.clouds} regions` : 'Not connected', cloudOn: today.clouds > 0 },
-    jProviders: J.PROVIDERS.map(p => { const pick = p.key === prov.key; return { ...p, on: pick, off: !p.live, op: p.live ? 1 : 0.45, title: p.live ? `${p.name}: ${p.cred}` : `${p.name}: not in this demo`, go: () => { if (p.live && !pr.source && !scanning) set({ jProv: p.key }); } }; }),
-    jCred: prov.cred, jProvName: prov.name, jScanning: scanning, jSourceAdded: pr.source, jSourceIdle: !pr.source && !scanning,
-    jScanSteps: SCAN.map((w, i) => ({ key: 's' + i, word: w, state: s.jScan === null || s.jScan === undefined ? 'any' : i < s.jScan ? 'ok' : i === s.jScan ? 'set' : 'any', icon: s.jScan !== null && s.jScan !== undefined && i < s.jScan ? 'check-circle' : ['user-access', 'cloud', 'apps', 'hub'][i] })),
+    // The stage.
+    jWide: step >= 2 && found.has, jLink: link, jLinkWord: link === 'connected' ? 'AT&T private path' : link === 'proposed' ? (tier ? tier.label : '') : '',
+    jNet: net, jNetWord: `Public internet${worstMs ? ` · up to ${worstMs} ms` : ''}`,
+    jSites: { n: String(today.sites), groups: today.groups.map(g => ({ ...g, nF: String(g.n), title: `${g.n} sites on ${g.full}` })) },
+    jCloud: { state: cloudState, unknown: cloudState === 'unknown', picking: cloudState === 'picking', scanning: cloudState === 'scanning', found: cloudState === 'found',
+      mark: found.has ? W.markFor(found.cloud, s.theme) : '', name: cloudName, wl: String(found.wl), tagging: step === 3 },
+    jProviders: J.PROVIDERS.map(p => { const pick = p.key === prov.key; return { ...p, on: pick, off: !p.live, title: p.live ? `${p.name}: ${p.cred}` : `${p.name}: not in this demo`, go: () => { if (p.live && !pr.source && !scanning) set({ jProv: p.key }); } }; }),
+    jCred: prov.cred,
+    jScanSteps: SCAN.map((w, i) => ({ key: 's' + i, word: w, state: s.jScan === null || s.jScan === undefined ? 'next' : i < s.jScan ? 'done' : i === s.jScan ? 'cur' : 'next' })),
+    jScanPct: `${Math.round(((s.jScan || 0) + (scanning ? 0.5 : 0)) / 4 * 100)}%`,
     jConnectSource: connectSource,
-    jFound: { ...found, wlF: String(found.wl), regionsF: String(found.regions.length), appsF: String(found.apps.length), mark: W.markFor(found.cloud, s.theme),
-      regions: found.regions.map(r => ({ ...r, wlF: String(r.wl), msF: `${r.ms} ms`, mark: W.markFor(r.cloud, s.theme), strip: M.stripOf('internet'), apps: r.apps.map(a => ({ ...a, icon: KIND_ICON[a.kind] || 'apps' })) })) },
-    jTagRows: rows.map(r => ({ ...r, icon: KIND_ICON[r.kind] || 'apps', wlF: String(r.wl),
-      chips: r.suggested.map(t => { const has = r.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: applied. Remove it` : `${t}: suggested. Apply it`, go: () => putTags(r.key, has ? r.applied.filter(x => x !== t) : [...r.applied, t]) }; }) })),
-    jTagsDone: rows.length > 0 && rows.every(r => r.done), jApplyAll: () => set({ jTags: Object.fromEntries(rows.map(r => [r.key, [...new Set([...r.applied, ...r.suggested])]])) }),
-    jTagCount: String(rows.reduce((a, r) => a + r.applied.length, 0)),
-    jMoves: liveMove ? [{ ...liveMove, tiers: liveMove.tiers.map((t, i) => ({ ...t, connect: () => set({ jPick: i, jStep: 5 }), ctaWord: 'Choose' })) }] : [], jHasMove: !!liveMove,
-    jPicked: tier ? { ...tier, hasPts: !!tier.hasPts } : null, jHasPick: !!tier, jLines: lines, jTotal: tier && tier.monthly !== null ? `${fmt(tier.monthly)}/mo${tier.way && W.wayHosted(tier.way) ? ' + hub' : ''}` : 'Priced at review',
-    jRegions: move ? move.regions.map(r => ({ key: r, t: r })) : [], jPlaced: !!placed, jNotPlaced: !placed, jPhases: liveMove && liveMove.hasTask ? liveMove.phases : [] };
+    jRegions: found.regions.map(r => ({ key: r.region, region: r.region, wlF: String(r.wl), msF: `${r.ms} ms`,
+      apps: r.apps.map(a => { const row = rows.find(x => x.key === a.key) || { suggested: [], applied: [] };
+        return { key: a.key, name: a.name, icon: KIND_ICON[a.kind] || 'apps', title: a.purpose, hasTags: step >= 3 || row.applied.length > 0,
+          chips: (step === 3 ? row.suggested : row.applied).map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === 3 ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === 3) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }) }; }) })),
+    jTagCount: String(tagsOn),
+    // The choice, three lines; the detail lives on the dashboard's Recommended.
+    jOptions: liveMove ? liveMove.tiers.filter(t => !t.unavailable).map(t => { const i = liveMove.tiers.indexOf(t), sel = i === pickI;
+      return { key: t.key || String(i), label: t.label, tier: t.tier, mark: t.mark, pts: t.pts || '', hasPts: !!t.hasPts, price: t.priceShort, on: sel,
+        delta: t.net > 0 ? `saves ${fmt(t.net)}` : t.net < 0 ? `adds ${fmt(-t.net)}` : '', deltaInk: t.net > 0 ? 'var(--success)' : 'var(--text-light)',
+        setup: t.way ? (W.wayWho(t.way) || {}).time || '' : '', setupTitle: t.way ? W.waySetup(t.way) : '', go: () => set({ jPick: i }) }; }) : [],
+    jHasOptions: !!liveMove,
+    jPicked: tier ? { label: tier.label, mark: tier.mark, pts: tier.pts || '', hasPts: !!tier.hasPts } : null, jHasPick: !!tier,
+    jLines: lines, jTotal: total, jRegionsWord: move ? move.regions.join(' · ') : '',
+    jPlaced: !!placed, jNotPlaced: !placed, jPhases: liveMove && liveMove.hasTask ? liveMove.phases : [] };
 }
 function movesVals(s, set, go, est, { openF, obAll, conns }) {
   // The journey's last two beats read the same moves (2026-10-08).

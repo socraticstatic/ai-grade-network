@@ -14,12 +14,12 @@
 // Pure: the view words and draws it; naas-app.js holds the state and the doors.
 
 export const BEATS = [
-  { key: 'today', label: 'Today', icon: 'home', title: 'Your network on AT&T' },
-  { key: 'source', label: 'Add a source', icon: 'plus', title: 'Add a cloud source' },
-  { key: 'found', label: 'What it found', icon: 'search', title: 'What it found' },
-  { key: 'tag', label: 'Tag', icon: 'checklist', title: 'Tag your workloads' },
-  { key: 'recommend', label: 'Recommendation', icon: 'lightbulb', title: 'What to connect' },
-  { key: 'connect', label: 'Connect', icon: 'cable', title: 'Connect to Azure' },
+  { key: 'today', label: 'Today', short: 'Today', icon: 'home', title: 'Your network on AT&T' },
+  { key: 'source', label: 'Add a source', short: 'Source', icon: 'plus', title: 'Add a cloud source' },
+  { key: 'found', label: 'What it found', short: 'Found', icon: 'search', title: 'What it found' },
+  { key: 'tag', label: 'Tag', short: 'Tag', icon: 'checklist', title: 'Tag your workloads' },
+  { key: 'recommend', label: 'Recommendation', short: 'Recommend', icon: 'lightbulb', title: 'What to connect' },
+  { key: 'connect', label: 'Connect', short: 'Connect', icon: 'cable', title: 'Connect' },
 ];
 export const JOURNEY_ESTATE = 'lastmile';
 export const DEMO_SOURCE = 'Azure';

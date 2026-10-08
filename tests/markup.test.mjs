@@ -483,12 +483,17 @@ test('every container the markup opens, it closes', () => {
   // the Customer dropdown in the rail foot (label +1). Recounted, every tag balanced: div 1255 -> 1300, span 1320 -> 1452,
   // sc-if 612 -> 635, sc-for 349 -> 371, section 16 -> 18, button 504 -> 514, label 31 -> 32. The Customer switch moved from
   // the rail foot to the header, its glyph a span (span 1452 -> 1453): the rail's foot kept Spend inside 900.
-    ['div', /<div\b/g, /<\/div>/g, 1300],
-    ['span', /<span\b/g, /<\/span>/g, 1453],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 635],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 371],
-    ['section', /<section\b/g, /<\/section>/g, 18],
-    ['button', /<button\b/g, /<\/button>/g, 514],
+  // The journey as one stage that builds (2026-10-08, "make it simpler, more elegant, better in every way"): the six beat
+  // screens and the hero's copy became one stage (three nodes, two wires, the internet path), a stepper, the three-way
+  // choice, the order line and one action; the rail leaves, a theme switch joins the Customer switch in the header
+  // (sc-if +3, button +1). Recounted, every tag balanced: div 1300 -> 1275, span 1453 -> 1362, sc-if 635 -> 629,
+  // sc-for 371 -> 359, section 18 -> 17, button 514 -> 511.
+    ['div', /<div\b/g, /<\/div>/g, 1275],
+    ['span', /<span\b/g, /<\/span>/g, 1362],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 629],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 359],
+    ['section', /<section\b/g, /<\/section>/g, 17],
+    ['button', /<button\b/g, /<\/button>/g, 511],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

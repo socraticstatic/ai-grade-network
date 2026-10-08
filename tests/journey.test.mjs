@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { vals } from '../naas-app.js';
+import { vals, estateFor } from '../naas-app.js';
 import * as D from '../naas-data.js';
 import * as J from '../naas-journey.js';
 import { rightRoots } from '../naas-flowmap.js';
@@ -9,8 +9,9 @@ import { mkC } from './harness.mjs';
 
 // The existing customer's journey (Micah, 2026-10-08: "an AT&T existing already last mile, they want to add a new
 // source, they want to tag maybe attach, identify workloads maybe, see recommendations, and maybe upsell the customer
-// with cloud connect ... story-based, and sequential, without too many words"; then: existing only for now, the beats
-// replace the rail, a presenter drives it).
+// with cloud connect ... story-based, and sequential, without too many words"), then "make it simpler, more elegant,
+// better in every way": one stage (your sites, the AT&T network, your cloud) that builds beat by beat, one sentence and
+// one action a beat, a slim stepper in place of the rail.
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
 const journey = (extra = {}) => mkC({ view: 'lastmile', estateParam: null, journey: 'existing', screen: 'sj', jStep: 0, ...extra });
@@ -24,97 +25,110 @@ test('the existing customer is AT&T sites with no cloud yet: Growing\'s sites on
   assert.ok(D.VIEWS.some(v => v.id === 'lastmile'));
 });
 
-test('the Customer dropdown opens the journey on its first beat, clean, and the beats replace the rail', () => {
+test('the Customer switch opens the journey on its first beat, clean; the stepper replaces the rail', () => {
   const c = mkC({ view: 'partial', estateParam: null, screen: 's0', addedSources: AZURE, orders: [{ id: 'o1', journey: true }] });
   vals(c).setJourney({ target: { value: 'existing' } });
   assert.equal(c.state.journey, 'existing'); assert.equal(c.state.view, 'lastmile'); assert.equal(c.state.screen, 'sj'); assert.equal(c.state.jStep, 0);
   assert.equal(c.state.addedSources.length, 0, 'a rehearsal\'s source is gone'); assert.equal(c.state.orders.length, 0, 'and its order');
   const v = vals(c);
   assert.equal(v.journeyOn, true);
-  assert.deepEqual(v.railGroups.map(g => g.title), ['Existing customer']);
-  assert.deepEqual(v.railGroups[0].items.map(i => i.label), ['1  Today', '2  Add a source', '3  What it found', '4  Tag', '5  Recommendation', '6  Connect']);
-  assert.deepEqual(v.railGroups[0].items.map(i => i.op), [1, 1, 0.4, 0.4, 0.4, 0.4], 'a beat opens once the one it needs is done');
+  assert.equal(v.showRail, false, 'no rail in the journey');
   assert.equal(v.showPageTitle, false);
+  assert.deepEqual(v.jSteps.map(s => s.label), ['Today', 'Source', 'Found', 'Tag', 'Recommend', 'Connect']);
+  assert.deepEqual(v.jSteps.map(s => s.state), ['cur', 'next', 'next', 'next', 'next', 'next']);
+  assert.deepEqual(v.jSteps.map(s => s.off), [false, false, true, true, true, true], 'a beat opens once the source is in');
   v.setJourney({ target: { value: '' } });
   assert.equal(c.state.journey, null); assert.equal(c.state.screen, 's0');
+  assert.equal(vals(c).showRail, true);
 });
 
-test('beat 1 says what AT&T carries: 20 sites by the access AT&T sells, and no cloud', () => {
+test('one sentence a beat tells the story', () => {
+  const lines = [0, 1, 2, 3, 4, 5].map(i => vals(journey({ jStep: i, addedSources: i >= 2 ? AZURE : [] })).jLine);
+  assert.deepEqual(lines, ['AT&T already carries your 20 sites.', 'Connect a cloud account. Read only.', 'Azure runs 68 workloads on the public internet.',
+    'Tag what matters.', 'Move Azure onto AT&T. Save $3,600 a month.', 'Connect Azure with Your ExpressRoute.']);
+  for (const l of lines) assert.ok(l.split(' ').length <= 9, l);
+});
+
+test('beat 1: the stage holds your sites by the access AT&T sells, the AT&T network, and a cloud AT&T cannot name', () => {
   const v = vals(journey());
-  assert.equal(v.jBeat.title, 'Your network on AT&T');
-  assert.equal(v.jToday.sitesF, '20');
-  assert.deepEqual(v.jToday.groups.map(g => g.label), ['AVPN', 'Ethernet', 'Internet', 'Fiber']);
-  assert.equal(v.jToday.groups.reduce((a, g) => a + g.n, 0), 20);
-  assert.equal(v.jToday.cloudWord, 'Not connected');
-  assert.equal(v.jNextLabel, 'Add a cloud source');
+  assert.equal(v.jSites.n, '20');
+  assert.deepEqual(v.jSites.groups.map(g => [g.label, g.n]), [['AVPN', 7], ['Ethernet', 6], ['Internet', 3], ['Fiber', 4]]);
+  assert.equal(v.jCloud.state, 'unknown');
+  assert.equal(v.jLink, 'none'); assert.equal(v.jNet, 'off');
+  assert.equal(v.jAct, 'Find your clouds');
 });
 
-test('beat 2 reads Azure with a read-only role; the scan adds the source and lands on what it found', async () => {
+test('beat 2: Azure with a read-only role; the scan ticks on the cloud node, adds the source and moves on', async () => {
   const c = journey({ jStep: 1 });
   let v = vals(c);
+  assert.equal(v.jCloud.state, 'picking');
   assert.deepEqual(v.jProviders.filter(p => !p.off).map(p => p.key), ['Azure'], 'the demo reads Azure');
   assert.equal(v.jCred, 'Reader role on the subscription');
-  assert.equal(v.jNextLabel, 'Connect and scan');
-  v.jNext();
-  assert.equal(c.state.jScan, 0);
-  assert.equal(vals(c).jScanning, true);
-  assert.equal(vals(c).jNextOff, true, 'Next waits while it scans');
+  assert.equal(v.jAct, 'Scan Azure');
+  v.jActGo();
+  v = vals(c);
+  assert.equal(v.jCloud.state, 'scanning'); assert.equal(v.jActOff, true); assert.equal(v.jLine, 'Reading your Microsoft Azure subscription.');
   await new Promise(r => setTimeout(r, 2900));
   assert.equal(c.state.jStep, 2);
   assert.deepEqual(c.state.addedSources.map(a => [a.provider, a.estId]), [['Azure', 'lastmile']]);
 });
 
-test('beat 3 shows what it found: two Azure regions, 68 workloads, four apps, all on the public internet', () => {
+test('beat 3: the cloud node becomes Azure, its regions and apps; the public internet path appears under AT&T', () => {
   const v = vals(journey({ jStep: 2, addedSources: AZURE }));
-  assert.deepEqual(v.jFound.regions.map(r => [r.region, r.wl, r.ms]), [['eastus', 40, 64], ['westeurope', 28, 102]]);
-  assert.equal(v.jFound.wlF, '68'); assert.equal(v.jFound.appsF, '4'); assert.equal(v.jFound.publicN, 2);
-  assert.deepEqual(v.jFound.regions[1].apps.map(a => a.name), ['payments-api', 'fin-ledger']);
+  assert.equal(v.jCloud.state, 'found'); assert.equal(v.jCloud.wl, '68'); assert.equal(v.jWide, true);
+  assert.deepEqual(v.jRegions.map(r => [r.region, r.wlF, r.msF]), [['eastus', '40', '64 ms'], ['westeurope', '28', '102 ms']]);
+  assert.deepEqual(v.jRegions[1].apps.map(a => a.name), ['payments-api', 'fin-ledger']);
+  assert.equal(v.jNet, 'public'); assert.equal(v.jNetWord, 'Public internet · up to 102 ms');
 });
 
-test('beat 4 suggests tags by what a workload is; applied tags join the estate, and never suggest themselves to siblings', async () => {
+test('beat 4: tags suggested by what a workload is; Tag them all, then the tags join the estate and stay with their own', () => {
   const c = journey({ jStep: 3, addedSources: AZURE });
   let v = vals(c);
-  const sug = Object.fromEntries(v.jTagRows.map(r => [r.name, r.suggested]));
-  assert.deepEqual(sug['payments-api'], ['PCI', 'Prod', 'Finance']);
-  assert.deepEqual(sug['customer-portal'], ['Internet-facing', 'Prod']);
-  assert.deepEqual(sug['dispatch-svc'], ['Prod']);
-  v.jApplyAll();
+  const chips = (name) => v.jRegions.flatMap(r => r.apps).find(a => a.name === name).chips.map(x => x.t);
+  assert.deepEqual(chips('payments-api'), ['PCI', 'Prod', 'Finance']);
+  assert.deepEqual(chips('customer-portal'), ['Internet-facing', 'Prod']);
+  assert.deepEqual(chips('dispatch-svc'), ['Prod']);
+  assert.equal(v.jAct, 'Tag them all');
+  v.jActGo();
   v = vals(c);
-  assert.equal(v.jTagsDone, true);
-  assert.deepEqual(vals(c).jTagRows.find(r => r.name === 'dispatch-svc').suggested, ['Prod'], 'the portal\'s Internet-facing stays the portal\'s');
-  // The estate reads them: westeurope carries PCI now, which it did not before the tags.
-  const before = vals(journey({ jStep: 4, addedSources: AZURE })).jMoves[0].foundTags.map(t => t.t);
-  assert.ok(!before.includes('PCI'), before.join(','));
-  const { estateFor } = await import('../naas-app.js');
+  assert.equal(v.jLine, '4 of 4 workloads tagged.');
+  assert.equal(v.jAct, 'See the recommendation');
+  assert.deepEqual(chips('dispatch-svc'), ['Prod'], 'the portal\'s Internet-facing stays the portal\'s');
   const est = estateFor({ view: 'lastmile', estateParam: null, addedSources: AZURE, jTags: c.state.jTags });
   assert.ok(est.regionsList.find(r => r.region === 'westeurope').tags.includes('PCI'));
 });
 
-test('beat 5 is the recommendation for the cloud it found: Azure\'s three ways, each scored; Choose picks it for beat 6', () => {
+test('beat 5: the three ways as one choice, Recommended first; the AT&T line is proposed; the sentence follows the pick', () => {
   const c = journey({ jStep: 4, addedSources: AZURE });
-  const v = vals(c);
-  assert.equal(v.jHasMove, true);
-  assert.deepEqual(v.jMoves[0].tiers.map(t => t.label), ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted VNet peering']);
-  assert.ok(v.jMoves[0].tiers.every(t => t.hasPts && t.ctaWord === 'Choose'));
-  v.jMoves[0].tiers[1].connect();
-  assert.equal(c.state.jPick, 1); assert.equal(c.state.jStep, 5);
+  let v = vals(c);
+  assert.deepEqual(v.jOptions.map(o => [o.label, o.on]), [['Your ExpressRoute', true], ["AT&T's ExpressRoute", false], ['Hosted VNet peering', false]]);
+  assert.deepEqual(v.jOptions.map(o => o.delta), ['saves $3,600', 'saves $3,000', 'adds $922']);
+  assert.ok(v.jOptions.every(o => o.hasPts));
+  assert.equal(v.jLink, 'proposed'); assert.equal(v.jLinkWord, 'Your ExpressRoute');
+  v.jOptions[1].go();
+  v = vals(c);
+  assert.equal(v.jLine, 'Move Azure onto AT&T. Save $3,000 a month.');
+  assert.equal(v.jAct, "Choose AT&T's ExpressRoute");
+  v.jActGo();
+  assert.equal(c.state.jStep, 5); assert.equal(c.state.jPick, 1);
 });
 
-test('beat 6 orders the pick: its lines, its monthly, Place order; the order is a real one, and its phases follow', () => {
+test('beat 6: one line of the order, Place order; then the line is AT&T\'s, the internet path fades, and the phases follow', () => {
   const c = journey({ jStep: 5, jPick: 1, addedSources: AZURE });
   let v = vals(c);
-  assert.equal(v.jBeat.title, 'Connect to Azure');
   assert.deepEqual(v.jLines.map(l => [l.name, l.n, l.v]), [['NetBond for Cloud', 2, '$3,800/mo'], ['Cloud port, AT&T-provided', 2, '$600/mo']]);
-  assert.equal(v.jTotal, '$4,400/mo');
-  assert.equal(v.jNextLabel, 'Place order');
-  v.jNext();
+  assert.equal(v.jTotal, '$4,400/mo'); assert.equal(v.jRegionsWord, 'eastus · westeurope');
+  assert.equal(v.jAct, 'Place order');
+  v.jActGo();
   v = vals(c);
   assert.equal(v.jPlaced, true);
+  assert.equal(v.jLine, 'Ordered. AT&T is provisioning it.');
+  assert.equal(v.jLink, 'connected'); assert.equal(v.jNet, 'faded');
   const o = c.state.orders.find(x => x.journey);
   assert.equal(o.stage, 'Submitted for approval'); assert.deepEqual(o.moveKeys, ['region:Azure']); assert.equal(o.way, 'att');
   assert.deepEqual(v.jPhases.map(p => [p.label, p.state]), [['Ordered', 'ok'], ['Provision', 'set'], ['Live', 'any'], ['Insight', 'any']]);
-  assert.equal(v.jNextLabel, 'Open Orders');
-  v.jNext();
+  assert.equal(v.jAct, 'See it in the dashboard');
+  v.jActGo();
   assert.equal(c.state.journey, null); assert.equal(c.state.cnPage, 'orders');
   assert.ok(vals(c).ordRows.some(r => /AT&T's ExpressRoute/.test(r.title)), 'Orders lists it in the dashboard');
 });
@@ -132,17 +146,24 @@ test('before a cloud is discovered, the map lands its cloud traffic on Clouds no
   const unknown = v.mapNodes.find(n => n.side === 'r' && n.name === 'Clouds not yet discovered');
   assert.ok(unknown && unknown.v > 30, 'most of the sites\' traffic is bound for clouds AT&T cannot name yet');
   assert.ok(Math.abs(col(v, 'l') - col(v, 'r')) < 1e-6, `left ${col(v, 'l')} right ${col(v, 'r')}`);
-  // Once the source names them, the regions take it.
   const after = vals(mkC({ view: 'lastmile', estateParam: null, addedSources: AZURE, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow' }));
   assert.ok(!after.mapNodes.some(n => n.name === 'Clouds not yet discovered'));
   assert.equal(rightRoots(D.ESTATES.partial, []).some(n => n.key === 'cloud:unknown'), false, 'an estate with clouds never draws it');
 });
 
-test('?journey=existing opens the journey; the markup draws a beat per sc-if and the rail foot the Customer dropdown', () => {
+test('the markup: one stage of three nodes and two wires, the internet path, a stepper, one action; the header switch and theme', () => {
   assert.match(HTML, /<select value="\{\{ journeyValue \}\}" onChange="\{\{ setJourney \}\}" aria-label="Customer"/);
   assert.match(HTML, /<option value="new" disabled="true">New customer · next<\/option>/);
-  for (const k of ['jIsToday', 'jIsSource', 'jIsFound', 'jIsTag', 'jIsRec', 'jIsConnect']) assert.match(HTML, new RegExp(`<sc-if value="\\{\\{ ${k} \\}\\}"`), k);
-  assert.match(HTML, /<button class="jr-next" onClick="\{\{ jNext \}\}" disabled="\{\{ jNextOff \}\}">/);
-  assert.match(HTML, /<sc-for list="\{\{ jMoves \}\}" as="mv"[^>]*>\s*<section class="rec-hero" aria-label="\{\{ mv\.title \}\}" data-journey="true">/);
-  assert.deepEqual(J.BEATS.map(b => b.key), ['today', 'source', 'found', 'tag', 'recommend', 'connect']);
+  const a = HTML.indexOf('<section class="js"'), b = HTML.indexOf('</section>', a);
+  const blk = HTML.slice(a, b);
+  assert.match(blk, /<ol class="js-steps"[^>]*><sc-for list="\{\{ jSteps \}\}"/);
+  assert.match(blk, /<div class="js-stage" data-wide="\{\{ jWide \}\}" data-link="\{\{ jLink \}\}" data-net="\{\{ jNet \}\}">/);
+  assert.equal((blk.match(/class="js-node /g) || []).length, 3);
+  assert.equal((blk.match(/class="js-wire"/g) || []).length, 2);
+  assert.match(blk, /<div class="js-net" data-state="\{\{ jNet \}\}"/);
+  assert.match(blk, /<button class="js-go" onClick="\{\{ jActGo \}\}" disabled="\{\{ jActOff \}\}">\{\{ jAct \}\}/);
+  assert.doesNotMatch(blk, /<(table|select)\b/);
+  assert.match(HTML, /<sc-if value="\{\{ journeyOn \}\}"[^>]*><button class="hdr-theme" onClick="\{\{ toggleTheme \}\}"/);
+  assert.match(HTML, /@media \(prefers-reduced-motion: reduce\)\{\.js-wire\[data-state="proposed"\] i/);
+  assert.deepEqual(J.BEATS.map(b2 => b2.key), ['today', 'source', 'found', 'tag', 'recommend', 'connect']);
 });

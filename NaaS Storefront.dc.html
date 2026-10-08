@@ -90,49 +90,84 @@ a{color:#0057b8}a:hover{color:#00388f}
 /* The deck's weighted score out of 100 (2026-10-08), on a way card and on each Recommended option. */
 .way-pts{flex:none;display:grid;place-items:center;min-width:34px;height:26px;padding:0 6px;border-radius:8px;background:var(--bg-accent);color:var(--link);font-size:13px;line-height:26px;font-weight:700;font-variant-numeric:tabular-nums;cursor:help}.way-pts.sm{min-width:30px;height:22px;line-height:22px;font-size:12px;margin-left:8px}
 .rec-found{font-size:11px;line-height:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light);cursor:help}
-/* The existing customer's journey (2026-10-08): one beat a screen, big and few words. */
-.jr{display:grid;gap:28px;padding:8px 0 0}
-.jr-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--border-secondary)}
-.jr-step{font-size:12px;line-height:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--link)}
-.jr-title{margin:0;font-size:32px;line-height:38px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)}
-.jr-nav{display:flex;align-items:center;gap:10px}
-.jr-next{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 22px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap}.jr-next:hover{background:var(--cta-hover)}.jr-next:disabled{background:var(--bg-neutral);color:var(--text-disabled);cursor:not-allowed}
-.jr-cap{font-size:11px;line-height:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light)}
-.jr-big{font-size:56px;line-height:60px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading);font-variant-numeric:tabular-nums}
-.jr-name{font-size:18px;line-height:24px;font-weight:700;color:var(--text-heading)}
-.jr-chips{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap}
-.jr-today{display:grid;grid-template-columns:minmax(0,1.2fr) 40px minmax(0,1fr) 40px minmax(0,1fr);align-items:stretch;gap:0 12px}
-.jr-col{display:grid;gap:18px;align-content:center;justify-items:start;min-height:400px;box-sizing:border-box;padding:28px;border:1px solid var(--border-secondary);border-radius:20px;background:var(--bg-base)}
-.jr-att{justify-items:center;text-align:center;background:var(--band);border-color:var(--band-stroke)}
-.jr-cloud{justify-items:center;text-align:center;border-style:dashed}
-.jr-q{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;border:2px dashed var(--border-primary);color:var(--text-disabled)}
-.ic-tile.s56{width:72px;height:72px;border-radius:18px}
-.jr-arrow{display:grid;place-items:center;color:var(--text-disabled)}
-.jr-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%}
-.jr-group{display:flex;align-items:center;gap:10px;min-width:0}.jr-group b{font-size:20px;line-height:24px;font-variant-numeric:tabular-nums;color:var(--text-heading)}.jr-group span:last-child{font-size:13px;line-height:18px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.jr-source{display:grid;gap:28px;justify-items:start}
-.jr-provs{display:grid;grid-template-columns:repeat(4,minmax(0,200px));gap:16px}
-.jr-prov{display:grid;justify-items:center;gap:14px;padding:28px 16px;border:1px solid var(--border-secondary);border-radius:20px;background:var(--bg-base);font:inherit;font-size:15px;color:var(--text-heading);cursor:pointer}
-.jr-prov:hover{border-color:var(--border-active)}.jr-prov[aria-checked="true"]{border:2px solid var(--cta);background:var(--bg-accent)}.jr-prov:disabled{cursor:not-allowed}
-.jr-mark{display:block;width:56px;height:56px;background:center / contain no-repeat}.jr-mark.sm{width:18px;height:18px}
-.jr-cred{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:14px;background:var(--bg-wash)}.jr-cred b{font-size:15px;color:var(--text-heading)}
-.jr-scan{width:min(820px,100%)}
-.jr-found{display:grid;gap:22px}
-.jr-regions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-.jr-region{display:grid;gap:18px;padding:22px;border:1px solid var(--border-secondary);border-radius:20px;background:var(--bg-base)}
-.jr-apps{display:grid;gap:8px}.jr-app{display:flex;align-items:center;gap:10px;min-width:0}.jr-app b{font-size:14px;color:var(--text-heading)}.jr-app span:last-child{margin-left:auto;font-size:12px;color:var(--text-light)}
-.jr-tag{display:grid;gap:16px}
-.jr-rows{display:grid;gap:8px}
-.jr-row{display:flex;align-items:center;gap:14px;min-height:56px;padding:8px 16px;border-radius:14px;background:var(--bg-wash)}.jr-row>b{min-width:150px;font-size:15px;color:var(--text-heading)}
-.jr-tags{margin-left:auto;display:flex;gap:8px}
-.jr-tagchip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:1px dashed var(--border-primary);border-radius:9999px;background:var(--bg-base);font:inherit;font-size:13px;font-weight:600;color:var(--text-body);cursor:pointer}
-.jr-tagchip[aria-pressed="true"]{border:1px solid var(--cta);background:var(--bg-accent);color:var(--link)}
-.jr-connect{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:24px;align-items:start}
-.jr-order{display:grid;gap:14px;padding:22px;border:1px solid var(--border-secondary);border-radius:20px;background:var(--bg-base)}
-.jr-lines{display:grid;gap:6px}.jr-line{display:grid;grid-template-columns:minmax(0,1fr) 44px auto;gap:12px;align-items:center;font-size:14px;line-height:20px;color:var(--text-body)}.jr-line b{color:var(--text-heading);font-variant-numeric:tabular-nums;text-align:right}
-.jr-n{color:var(--text-light);font-size:12px}.jr-total{grid-template-columns:minmax(0,1fr) auto;padding-top:10px;border-top:1px solid var(--border-secondary);font-weight:700}.jr-total b{font-size:18px}
-.rec-hero[data-journey="true"]{margin-top:-4px}
+/* The existing customer's journey (2026-10-08): one stage that builds, one sentence and one action a beat. */
+.js{display:grid;grid-template-rows:auto minmax(0,1fr);justify-items:center;gap:8px;padding:4px 0 8px;min-height:calc(100vh - 110px);box-sizing:border-box}
+.js-body{display:grid;justify-items:center;align-content:center;gap:22px;width:100%}
+/* What arrives on the stage fades in, so each beat reads as the picture changing, not a new page. */
+@keyframes js-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.js-cloud>*,.js-opts,.js-order,.js-region{animation:js-in .45s cubic-bezier(.22,1,.36,1) both}
+.js-steps{display:flex;align-items:center;gap:0;margin:0;padding:0;list-style:none}
+.js-steps li{display:flex;align-items:center}
+.js-steps li+li::before{content:"";width:40px;height:2px;margin:0 6px;background:var(--border-secondary)}
+.js-steps li[data-state="done"]+li::before,.js-steps li[data-state="cur"]::before{background:var(--cta)}
+.js-steps button{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 10px 0 4px;border:0;border-radius:9999px;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--text-light);cursor:pointer}
+.js-steps button:disabled{cursor:default;opacity:.55}
+.js-steps i{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--border-primary);font-style:normal;font-size:12px;font-weight:700;color:var(--text-light);background:var(--bg-base)}
+.js-steps li[data-state="cur"] button{color:var(--text-heading);background:var(--bg-accent)}
+.js-steps li[data-state="cur"] i{border-color:var(--cta);background:var(--cta);color:#fff}
+.js-steps li[data-state="done"] i{border-color:var(--cta);color:var(--link)}
+.js-line{margin:6px 0 0;max-width:900px;font-size:34px;line-height:42px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading);text-align:center;text-wrap:balance}
+.js-stage{position:relative;display:grid;grid-template-columns:260px minmax(40px,1fr) 150px minmax(40px,1fr) 320px;grid-template-rows:auto 84px;align-items:stretch;width:min(1180px,100%);transition:grid-template-columns .45s cubic-bezier(.22,1,.36,1)}
+.js-stage[data-wide="true"]{grid-template-columns:210px minmax(32px,1fr) 128px minmax(32px,1fr) 470px}
+.js-node{display:grid;align-content:center;justify-items:center;gap:10px;min-height:280px;padding:22px;box-sizing:border-box;border:1px solid var(--border-secondary);border-radius:24px;background:var(--bg-base);text-align:center;transition:border-color .4s,box-shadow .4s,background .4s}
+.js-cap{font-size:11px;line-height:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-light)}
+.js-big{font-size:64px;line-height:64px;font-weight:700;letter-spacing:-.04em;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.js-svc{display:grid;grid-template-columns:repeat(2,auto);gap:8px 14px;justify-content:center}
+.js-svc>span{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;color:var(--text-body);white-space:nowrap}.js-svc b{color:var(--text-heading);font-variant-numeric:tabular-nums}.js-svc .ic{color:var(--text-light)}
+.js-att{align-self:center;min-height:150px;border-radius:9999px;padding:18px 10px;background:var(--band);border-color:var(--band-stroke)}
+.js-att b{font-size:18px;line-height:22px;color:var(--text-heading)}
+.js-hub{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--cta);color:#fff}.js-hub .ic{width:28px;height:28px}
+.js-wire{position:relative;align-self:center;height:28px;display:grid;align-items:center}
+.js-wire i{display:block;height:4px;border-radius:2px;background:var(--cta)}
+.js-wire small{position:absolute;top:100%;left:0;right:0;margin-top:2px;text-align:center;font-size:11px;line-height:14px;font-weight:600;color:var(--text-light);white-space:nowrap}
+.js-wire[data-state="none"] i{height:0;border-top:2px dashed var(--border-primary);background:transparent}
+.js-wire[data-state="proposed"] i{background:repeating-linear-gradient(90deg,var(--cta) 0 10px,transparent 10px 18px);background-size:36px 4px;animation:js-flow 1.2s linear infinite}
+.js-wire[data-state="proposed"] small,.js-wire[data-state="connected"] small{color:var(--link)}
+.js-wire[data-state="connected"] i{height:6px;border-radius:3px;box-shadow:0 0 0 4px color-mix(in srgb,var(--cta) 18%,transparent)}
+@keyframes js-flow{to{background-position:36px 0}}
+.js-cloud[data-state="unknown"]{border-style:dashed;border-width:2px;background:transparent}
+.js-q{position:relative;display:grid;place-items:center;width:92px;height:92px;border-radius:50%;border:2px dashed var(--border-primary);color:var(--text-disabled)}.js-q .ic{width:44px;height:44px}.js-q b{position:absolute;right:-4px;top:-6px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--bg-neutral);color:var(--text-light);font-size:16px}
+.js-soft{font-size:13px;line-height:18px;color:var(--text-light)}
+.js-provs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%}
+.js-provs button{display:grid;place-items:center;height:76px;border:1px solid var(--border-secondary);border-radius:16px;background:var(--bg-base);cursor:pointer}
+.js-provs button[aria-checked="true"]{border:2px solid var(--cta);background:var(--bg-accent)}.js-provs button:disabled{opacity:.35;cursor:not-allowed}
+.js-mark{display:block;width:44px;height:44px;background:center / contain no-repeat}.js-mark.sm{width:24px;height:24px}
+.js-key{display:inline-flex;align-items:center;gap:8px;font-size:13px;line-height:18px;font-weight:600;color:var(--text-body)}.js-key .ic{color:var(--success)}
+.js-ring{--p:0%;display:grid;place-items:center;width:104px;height:104px;border-radius:50%;background:conic-gradient(var(--cta) var(--p),var(--bg-neutral) 0);transition:--p .6s}
+.js-ring .js-mark{width:84px;height:84px;border-radius:50%;background-color:var(--bg-base);background-size:48px}
+.js-scan{display:grid;gap:4px;margin:0;padding:0;list-style:none;font-size:13px;line-height:18px}
+.js-scan li{color:var(--text-disabled);transition:color .3s}.js-scan li[data-state="cur"]{color:var(--text-heading);font-weight:600}.js-scan li[data-state="done"]{color:var(--success)}
+.js-cloud[data-state="found"]{align-content:start;justify-items:stretch;text-align:left;border-color:var(--border-active);box-shadow:0 8px 28px color-mix(in srgb,var(--cta) 10%,transparent)}
+.js-cloudhead{display:flex;align-items:center;gap:10px}.js-cloudhead>b{font-size:18px;line-height:24px;color:var(--text-heading)}.js-cloudhead .kchip{margin-left:auto}
+.js-regions{display:grid;gap:10px}
+.js-region{display:grid;gap:6px;padding:12px 14px;border-radius:14px;background:var(--bg-wash)}
+.js-rhead{display:flex;align-items:center;gap:12px}.js-rhead>b{font-size:15px;color:var(--text-heading);margin-right:auto}
+.js-app{display:flex;align-items:center;gap:8px;min-height:28px;font-size:13px;line-height:18px;color:var(--text-body)}.js-app>.ic{color:var(--text-light)}
+.js-tags{margin-left:auto;display:flex;gap:6px}
+.js-tag{height:24px;padding:0 10px;border:1px dashed var(--border-primary);border-radius:9999px;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--text-light);cursor:pointer;transition:all .2s}
+.js-tag[aria-pressed="true"]{border:1px solid var(--cta);background:var(--bg-accent);color:var(--link)}
+.js-net{grid-column:1 / -1;grid-row:2;position:relative;margin:0 160px 0 130px;border:2px dotted var(--border-primary);border-top:0;border-radius:0 0 48px 48px;opacity:0;transition:opacity .5s,margin .45s}
+.js-stage[data-wide="true"] .js-net{margin:0 235px 0 105px}
+.js-net small{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);padding:0 10px;background:var(--bg-wash);font-size:12px;line-height:16px;font-weight:600;color:var(--warning);white-space:nowrap}
+.js-net[data-state="public"]{opacity:1;border-color:var(--warning)}
+.js-net[data-state="faded"]{opacity:.35}
+.js-opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;width:min(1180px,100%)}
+.js-opt{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border-secondary);border-radius:18px;background:var(--bg-base);font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,background .2s}
+.js-opt:hover{border-color:var(--border-active)}.js-opt[aria-checked="true"]{border:2px solid var(--cta);background:var(--bg-accent);padding:13px 15px}
+.js-opt-t{display:grid;gap:1px;min-width:0;flex:1}.js-opt-t small{font-size:11px;line-height:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light)}.js-opt-t b{font-size:15px;line-height:20px;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.js-opt-n{display:grid;justify-items:end;gap:1px}.js-opt-n b{font-size:14px;line-height:18px;color:var(--text-heading);white-space:nowrap}.js-opt-n small{font-size:12px;line-height:16px;font-weight:600;white-space:nowrap}
+.js-order{width:min(1180px,100%);display:grid;justify-items:center}
+.js-sum{display:flex;align-items:center;gap:16px;width:100%;padding:16px 20px;box-sizing:border-box;border:1px solid var(--border-secondary);border-radius:18px;background:var(--bg-base)}
+.js-lines{display:flex;gap:18px;margin-left:auto;font-size:13px;line-height:18px;color:var(--text-light)}.js-lines b{color:var(--text-body);margin-left:4px}
+.js-total{font-size:20px;line-height:24px;color:var(--text-heading);padding-left:18px;border-left:1px solid var(--border-secondary);white-space:nowrap}
+.js-phases{width:min(760px,100%)}
+.js-act{display:flex;align-items:center;gap:18px}
+.js-back{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 14px;border:0;background:transparent;font:inherit;font-size:14px;font-weight:600;color:var(--text-light);cursor:pointer}.js-back:hover{color:var(--link)}
+.js-go{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 30px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px color-mix(in srgb,var(--cta) 30%,transparent);transition:background .2s,transform .2s}
+.js-go:hover{background:var(--cta-hover);transform:translateY(-1px)}.js-go:disabled{background:var(--bg-neutral);color:var(--text-disabled);box-shadow:none;cursor:not-allowed;transform:none}
+@media (prefers-reduced-motion: reduce){.js-wire[data-state="proposed"] i,.js-cloud>*,.js-opts,.js-order,.js-region{animation:none}.js-stage,.js-net,.js-node{transition:none}}
 .hdr-cust{display:inline-flex;align-items:center;gap:6px;height:36px;margin-left:12px;padding:0 4px 0 12px;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);color:var(--text-light)}
+.hdr-theme{display:grid;place-items:center;width:36px;height:36px;margin-left:8px;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);color:var(--text-heading);cursor:pointer}
 .hdr-cust select{height:32px;border:0;background:transparent;color:var(--text-heading);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .pg-back{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-body);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}.pg-back:hover{border-color:var(--border-active);color:var(--link)}
 .kchip.btn{border:0;background:transparent;padding:2px 4px;margin:-2px -4px;border-radius:6px;font:inherit;font-size:12px;cursor:pointer}.kchip.btn:hover{background:var(--bg-wash)}.kchip.btn:hover b{text-decoration:underline}
@@ -701,6 +736,8 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
   </nav>
   <!-- The Customer switch (2026-10-08, "It needs its own drop down, maybe existing new customer?"): the dashboard, or the existing customer's journey; New is next. In the header, where a presenter finds it on every screen. -->
   <label class="hdr-cust"><span class="ic s16" style="--ic:url('brand/icons/person-group.svg')"></span><select value="{{ journeyValue }}" onChange="{{ setJourney }}" aria-label="Customer"><option value="">Dashboard</option><option value="existing">Existing customer</option><option value="new" disabled="true">New customer · next</option></select></label>
+  <!-- The journey has no rail, so its theme switch sits beside the Customer switch. -->
+  <sc-if value="{{ journeyOn }}" hint-placeholder-val="{{ false }}"><button class="hdr-theme" onClick="{{ toggleTheme }}" aria-label="Switch theme" title="{{ themeTitle }}"><sc-if value="{{ themeIsLight }}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></sc-if><sc-if value="{{ themeIsDark }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></sc-if></button></sc-if>
   <div style="margin-left:auto;display:flex;align-items:center;gap:16px">
     <!-- Ask Andi: outlined pill with the Andi symbol (att_andi_sym). -->
     <button onClick="{{ toggleAndi }}" aria-label="Ask Andi" style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px 0 10px;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="border-color:var(--border-active)"><span aria-hidden="true" style="width:20px;height:20px;flex:none;background:url('{{ iconAndi }}') center / contain no-repeat"></span>Ask Andi</button>
@@ -760,102 +797,47 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
 </sc-if>
 
 <main style="min-width:0;max-width:1392px;margin:0 auto;padding:16px 24px 16px;width:100%;box-sizing:border-box">
-<!-- The existing customer's journey (2026-10-08, Micah: "really focus on the journey for an AT&T existing already last mile ... story-based, and sequential, without too many words"): six beats, one screen each, the rail their list. A presenter drives it; Next is the one action on each beat. -->
+<!-- The existing customer's journey as one picture that builds (2026-10-08, Micah: "really focus on the journey for an AT&T existing already last mile ... story-based, and sequential, without too many words", then "make it simpler, more elegant, better in every way"): your sites, the AT&T network and your cloud on one stage that never leaves the screen. Each beat changes one thing on it and says it in one sentence; a slim stepper replaces the rail; one action moves the story on. -->
 <sc-if value="{{ journeyOn }}" hint-placeholder-val="{{ false }}">
-<section class="jr" aria-label="Existing customer journey">
-  <div class="jr-head">
-    <div style="display:grid;gap:4px;min-width:0"><span class="jr-step">{{ jStepWord }}</span><h1 class="jr-title">{{ jBeat.title }}</h1></div>
-    <div class="jr-nav"><sc-if value="{{ jHasBack }}" hint-placeholder-val="{{ true }}"><button class="pg-back" onClick="{{ jBack }}"><span class="ic s16" style="--ic:url('brand/icons/arrow-right.svg');transform:scaleX(-1)"></span>Back</button></sc-if><button class="jr-next" onClick="{{ jNext }}" disabled="{{ jNextOff }}">{{ jNextLabel }}<span class="ic s16" style="--ic:url('brand/icons/arrow-right.svg')"></span></button></div>
-  </div>
-  <sc-if value="{{ jIsToday }}" hint-placeholder-val="{{ true }}">
-  <div class="jr-today">
-    <div class="jr-col" aria-label="Your sites"><span class="jr-cap">Your sites</span><b class="jr-big">{{ jToday.sitesF }}</b><div class="jr-groups"><sc-for list="{{ jToday.groups }}" as="jg" hint-placeholder-count="4"><div class="jr-group" title="{{ jg.n }} sites on {{ jg.full }}"><span class="ic-tile"><span class="ic s20" style="--ic:url('brand/icons/{{ jg.icon }}.svg')"></span></span><b>{{ jg.nF }}</b><span>{{ jg.label }}</span></div></sc-for></div><span class="jr-chips"><span class="kchip" title="Metros"><span class="ic s14" style="--ic:url('brand/icons/pinpoint.svg')"></span><b>{{ jToday.metrosF }}</b> metros</span><span class="kchip" title="Data centers"><span class="ic s14" style="--ic:url('brand/icons/large-building.svg')"></span><b>{{ jToday.dcsF }}</b> data centers</span></span></div>
-    <span class="jr-arrow" aria-hidden="true"><span class="ic s24" style="--ic:url('brand/icons/arrow-right.svg')"></span></span>
-    <div class="jr-col jr-att" aria-label="The AT&amp;T network"><span class="jr-cap">Carried by</span><span class="ic-tile s56"><span class="ic" style="--ic:url('brand/icons/hub.svg');width:36px;height:36px"></span></span><b class="jr-name">AT&amp;T network</b><span class="kchip"><span class="ic s14" style="--ic:url('brand/icons/check-circle.svg');color:var(--success)"></span><b>Last mile</b> in place</span></div>
-    <span class="jr-arrow" aria-hidden="true"><span class="ic s24" style="--ic:url('brand/icons/arrow-right.svg')"></span></span>
-    <div class="jr-col jr-cloud" data-on="{{ jToday.cloudOn }}" aria-label="Your clouds"><span class="jr-cap">Your clouds</span><span class="jr-q" aria-hidden="true"><span class="ic" style="--ic:url('brand/icons/cloud.svg');width:36px;height:36px"></span></span><b class="jr-name">{{ jToday.cloudWord }}</b><span class="kchip"><span class="ic s14" style="--ic:url('brand/icons/question-circle.svg')"></span>Unknown to AT&amp;T</span></div>
-  </div>
-  </sc-if>
-  <sc-if value="{{ jIsSource }}" hint-placeholder-val="{{ false }}">
-  <div class="jr-source">
-    <div class="jr-provs" role="radiogroup" aria-label="Cloud"><sc-for list="{{ jProviders }}" as="jp" hint-placeholder-count="4"><button role="radio" class="jr-prov" aria-checked="{{ jp.on }}" disabled="{{ jp.off }}" onClick="{{ jp.go }}" title="{{ jp.title }}" style="opacity:{{ jp.op }}"><span class="jr-mark" style="background-image:url('{{ jp.mark }}')"></span><b>{{ jp.name }}</b></button></sc-for></div>
-    <div class="jr-cred"><span class="ic-tile"><span class="ic s20" style="--ic:url('brand/icons/padlock.svg')"></span></span><span style="display:grid;gap:2px"><span class="jr-cap">Read-only</span><b>{{ jCred }}</b></span></div>
-    <sc-if value="{{ jScanning }}" hint-placeholder-val="{{ false }}"><div class="ps big jr-scan" aria-label="Scanning"><sc-for list="{{ jScanSteps }}" as="js" hint-placeholder-count="4"><span data-state="{{ js.state }}"><i><span class="ic s20" style="--ic:url('brand/icons/{{ js.icon }}.svg')"></span></i><b>{{ js.word }}</b></span></sc-for></div></sc-if>
-    <sc-if value="{{ jSourceAdded }}" hint-placeholder-val="{{ false }}"><span class="kchip"><span class="ic s16" style="--ic:url('brand/icons/check-circle.svg');color:var(--success)"></span><b>{{ jProvName }}</b> connected</span></sc-if>
-  </div>
-  </sc-if>
-  <sc-if value="{{ jIsFound }}" hint-placeholder-val="{{ false }}">
-  <div class="jr-found">
-    <div class="jr-chips" role="list" aria-label="Found"><span role="listitem" class="vchip" style="cursor:default"><span class="jr-mark sm" style="background-image:url('{{ jFound.mark }}')"></span><b>{{ jFound.regionsF }}</b>regions</span><span role="listitem" class="vchip" style="cursor:default"><span class="ic s16" style="--ic:url('brand/icons/apps.svg')"></span><b>{{ jFound.wlF }}</b>workloads</span><span role="listitem" class="vchip" style="cursor:default"><span class="ic s16" style="--ic:url('brand/icons/grid.svg')"></span><b>{{ jFound.appsF }}</b>apps</span><span role="listitem" class="vchip" style="cursor:default"><span class="ic s16" style="--ic:url('brand/icons/globe.svg');color:var(--warning)"></span><b>{{ jFound.publicN }}</b>on the public internet</span></div>
-    <div class="jr-regions"><sc-for list="{{ jFound.regions }}" as="jr" hint-placeholder-count="2"><div class="jr-region" aria-label="{{ jr.region }}">
-      <div style="display:flex;align-items:center;gap:12px"><span class="jr-mark" style="background-image:url('{{ jr.mark }}')"></span><span style="display:grid;gap:2px"><b class="jr-name">{{ jr.region }}</b><span class="jr-cap">{{ jr.cloud }}</span></span><span class="kchip" style="margin-left:auto" title="Workloads"><span class="ic s14" style="--ic:url('brand/icons/apps.svg')"></span><b>{{ jr.wlF }}</b></span><span class="kchip" title="Latency from your sites, today"><span class="ic s14" style="--ic:url('brand/icons/clock.svg')"></span><b>{{ jr.msF }}</b></span></div>
-      <div class="ps" aria-label="Today's path"><sc-for list="{{ jr.strip }}" as="jt" hint-placeholder-count="4"><span data-state="{{ jt.state }}" title="{{ jt.title }}"><i><span class="ic s16" style="--ic:url('brand/icons/{{ jt.icon }}.svg')"></span></i><small>{{ jt.short }}</small></span></sc-for></div>
-      <div class="jr-apps"><sc-for list="{{ jr.apps }}" as="ja" hint-placeholder-count="2"><div class="jr-app" title="{{ ja.purpose }}"><span class="ic-tile s28"><span class="ic s16" style="--ic:url('brand/icons/{{ ja.icon }}.svg')"></span></span><b>{{ ja.name }}</b><span>{{ ja.port }}</span></div></sc-for></div>
-    </div></sc-for></div>
-  </div>
-  </sc-if>
-  <sc-if value="{{ jIsTag }}" hint-placeholder-val="{{ false }}">
-  <div class="jr-tag">
-    <div style="display:flex;align-items:center;gap:12px"><span class="kchip"><span class="ic s16" style="--ic:url('brand/icons/tag.svg')"></span><b>{{ jTagCount }}</b> tags applied</span><button class="fx-btn" onClick="{{ jApplyAll }}" style="margin-left:auto;gap:6px"><span class="ic s16" style="--ic:url('brand/icons/check-circle.svg')"></span>Apply suggested</button></div>
-    <div role="list" class="jr-rows"><sc-for list="{{ jTagRows }}" as="jt" hint-placeholder-count="4"><div role="listitem" class="jr-row" title="{{ jt.purpose }}"><span class="ic-tile s28"><span class="ic s16" style="--ic:url('brand/icons/{{ jt.icon }}.svg')"></span></span><b>{{ jt.name }}</b><span class="kchip" title="Region"><span class="ic s14" style="--ic:url('brand/icons/cloud.svg')"></span>{{ jt.region }}</span><span class="kchip" title="Workloads"><span class="ic s14" style="--ic:url('brand/icons/apps.svg')"></span><b>{{ jt.wlF }}</b></span><span class="jr-tags"><sc-for list="{{ jt.chips }}" as="jtc" hint-placeholder-count="2"><button class="jr-tagchip" aria-pressed="{{ jtc.on }}" onClick="{{ jtc.go }}" title="{{ jtc.title }}"><span class="ic s14" style="--ic:url('brand/icons/tag.svg')"></span>{{ jtc.t }}</button></sc-for></span></div></sc-for></div>
-  </div>
-  </sc-if>
-  <sc-if value="{{ jIsRec }}" hint-placeholder-val="{{ false }}">
-  <sc-for list="{{ jMoves }}" as="mv" hint-placeholder-count="1">
-    <section class="rec-hero" aria-label="{{ mv.title }}" data-journey="true">
-      <div class="rec-head">
-        <span class="rec-mark"><sc-if value="{{ mv.hasMarkSrc }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" style="width:32px;height:32px;background:url('{{ mv.markSrc }}') center / contain no-repeat"></span></sc-if><sc-if value="{{ mv.noMarkSrc }}" hint-placeholder-val="{{ false }}"><span class="ic s28" style="--ic:url('brand/icons/{{ mv.kindIcon }}.svg');color:var(--link)"></span></sc-if></span>
-        <div style="display:grid;gap:6px;min-width:0">
-          <div style="display:flex;align-items:center;gap:10px;min-width:0"><h2 class="rec-name" title="{{ mv.title }}">{{ mv.short }}</h2><sc-if value="{{ mv.hasPin }}" hint-placeholder-val="{{ false }}"><span class="rec-badge" title="{{ mv.pinTitle }}"><span class="ic s14" style="--ic:url('brand/icons/pinpoint.svg')"></span>Pinned</span></sc-if><sc-if value="{{ mv.hasBadge }}" hint-placeholder-val="{{ false }}"><span class="rec-badge"><span class="ic s14" style="--ic:url('brand/icons/{{ mv.badgeIcon }}.svg')"></span>{{ mv.badgeWord }}</span></sc-if></div>
-          <div style="display:flex;align-items:center;gap:16px;min-width:0"><span class="rec-found" title="What discovery found in your estate for this move">Found</span><sc-for list="{{ mv.counts }}" as="ct" hint-placeholder-count="2"><button onClick="{{ ct.go }}" title="{{ ct.title }}" aria-label="{{ ct.label }}" class="rec-count"><span class="ic s16" style="--ic:url('brand/icons/{{ ct.icon }}.svg')"></span>{{ ct.n }}</button></sc-for><sc-for list="{{ mv.foundTags }}" as="fg" hint-placeholder-count="1"><span class="kchip" title="{{ fg.title }}"><span class="ic s14" style="--ic:url('brand/icons/tag.svg')"></span><b>{{ fg.t }}</b></span></sc-for><span title="{{ mv.reason }}" class="ic s16" role="img" aria-label="{{ mv.reason }}" style="--ic:url('brand/icons/information-circle.svg');color:var(--text-light);cursor:help"></span></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <sc-if value="{{ mv.hasTask }}" hint-placeholder-val="{{ false }}"><span class="ps sm" aria-label="Where this task is" style="width:240px"><sc-for list="{{ mv.phases }}" as="ph" hint-placeholder-count="4"><span data-state="{{ ph.state }}" title="{{ ph.title }}"><button class="ps-node" onClick="{{ ph.go }}" disabled="{{ ph.noDoor }}" aria-label="{{ ph.title }}"><i><span class="ic s14" style="--ic:url('brand/icons/{{ ph.icon }}.svg')"></span></i></button><small>{{ ph.label }}</small></span></sc-for></span></sc-if>
-          
-        </div>
-      </div>
-      <div class="rec-grid">
-        <div class="rec-card today" aria-label="Today">
-          <div class="rec-top"><span class="rec-tier">Today</span></div>
-          <div class="rec-label"><span class="ic-tile" style="background:{{ mv.mark.bg }};color:{{ mv.mark.ink }}"><span class="ic s20" style="--ic:url('brand/icons/{{ mv.mark.icon }}.svg')"></span></span><span title="{{ mv.pathWord }}">{{ mv.pathWord }}</span></div>
-          <div class="ps" aria-label="Today's path"><sc-for list="{{ mv.strip }}" as="sd" hint-placeholder-count="4"><span data-state="{{ sd.state }}" title="{{ sd.title }}"><i><span class="ic s16" style="--ic:url('brand/icons/{{ sd.icon }}.svg')"></span></i><small>{{ sd.short }}</small></span></sc-for></div>
-          <div class="rec-metrics"><sc-for list="{{ mv.todayMetrics }}" as="tm" hint-placeholder-count="4"><button class="rec-metric" onClick="{{ tm.go }}" title="{{ tm.title }}"><span class="ic s18" style="--ic:url('brand/icons/{{ tm.icon }}.svg')"></span><span style="color:{{ tm.ink }}">{{ tm.v }}</span><span></span></button></sc-for></div>
-        </div>
-        <span class="rec-arrow" aria-hidden="true"><span class="ic s24" style="--ic:url('brand/icons/arrow-right.svg')"></span></span>
-        <sc-for list="{{ mv.tiers }}" as="tr" hint-placeholder-count="3">
-        <div class="rec-card" data-on="{{ tr.on }}" aria-label="{{ tr.aria }}" style="opacity:{{ tr.op }}">
-          <button class="rec-pick" onClick="{{ tr.pick }}" disabled="{{ tr.notOption }}" aria-pressed="{{ tr.on }}" title="{{ tr.title }}">
-            <span class="rec-top"><span class="rec-tier" style="color:{{ tr.wordInk }}">{{ tr.tier }}</span><sc-if value="{{ tr.hasPts }}" hint-placeholder-val="{{ true }}"><span class="way-pts sm" title="{{ tr.ptsTitle }}">{{ tr.pts }}</span></sc-if><span class="rec-price">{{ tr.priceShort }}</span></span>
-            <span class="rec-label"><span class="ic-tile" style="background:{{ tr.mark.bg }};color:{{ tr.mark.ink }}"><span class="ic s20" style="--ic:url('brand/icons/{{ tr.mark.icon }}.svg')"></span></span><span title="{{ tr.label }}">{{ tr.label }}</span></span>
-            <sc-if value="{{ tr.isOption }}" hint-placeholder-val="{{ true }}"><span class="ps" aria-label="{{ tr.tier }}: the path"><sc-for list="{{ tr.strip }}" as="tn" hint-placeholder-count="4"><span data-state="{{ tn.state }}" title="{{ tn.title }}"><i><span class="ic s16" style="--ic:url('brand/icons/{{ tn.icon }}.svg')"></span></i><small>{{ tn.short }}</small></span></sc-for></span></sc-if>
-            <sc-if value="{{ tr.notOption }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;line-height:19px;color:var(--text-light);text-wrap:pretty">{{ tr.reason }}</span></sc-if>
-            <span class="rec-metrics"><sc-for list="{{ tr.metrics }}" as="tq" hint-placeholder-count="4"><span class="rec-metric" title="{{ tq.title }}"><span class="ic s18" style="--ic:url('brand/icons/{{ tq.icon }}.svg')"></span><span style="color:{{ tq.ink }}">{{ tq.v }}</span><small style="color:{{ tq.dink }}">{{ tq.d }}</small></span></sc-for></span>
-          </button>
-          <sc-if value="{{ tr.isOption }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ mv.canConnect }}" hint-placeholder-val="{{ true }}"><button class="rec-cta" data-primary="{{ tr.ctaPrimary }}" onClick="{{ tr.connect }}" title="Start one order with {{ tr.label }}">{{ tr.ctaWord }}<span class="ic s16" style="--ic:url('brand/icons/arrow-right.svg')"></span></button></sc-if></sc-if>
-        </div>
-        </sc-for>
-      </div>
-      
-    </section>
-  </sc-for>
-  </sc-if>
-  <sc-if value="{{ jIsConnect }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ jHasPick }}" hint-placeholder-val="{{ true }}">
-  <div class="jr-connect">
-    <div class="rec-card" data-on="true" aria-label="{{ jPicked.label }}">
-      <span class="rec-top"><span class="rec-tier" style="color:var(--link)">{{ jPicked.tier }}</span><sc-if value="{{ jPicked.hasPts }}" hint-placeholder-val="{{ true }}"><span class="way-pts sm" title="{{ jPicked.ptsTitle }}">{{ jPicked.pts }}</span></sc-if><span class="rec-price">{{ jPicked.priceShort }}</span></span>
-      <span class="rec-label"><span class="ic-tile" style="background:{{ jPicked.mark.bg }};color:{{ jPicked.mark.ink }}"><span class="ic s20" style="--ic:url('brand/icons/{{ jPicked.mark.icon }}.svg')"></span></span><span>{{ jPicked.label }}</span></span>
-      <span class="ps"><sc-for list="{{ jPicked.strip }}" as="jn" hint-placeholder-count="4"><span data-state="{{ jn.state }}" title="{{ jn.title }}"><i><span class="ic s16" style="--ic:url('brand/icons/{{ jn.icon }}.svg')"></span></i><small>{{ jn.short }}</small></span></sc-for></span>
-      <span class="rec-metrics"><sc-for list="{{ jPicked.metrics }}" as="jq" hint-placeholder-count="4"><span class="rec-metric" title="{{ jq.title }}"><span class="ic s18" style="--ic:url('brand/icons/{{ jq.icon }}.svg')"></span><span style="color:{{ jq.ink }}">{{ jq.v }}</span><small style="color:{{ jq.dink }}">{{ jq.d }}</small></span></sc-for></span>
+<section class="js" aria-label="Existing customer journey" data-beat="{{ jBeatKey }}">
+  <ol class="js-steps" aria-label="Steps"><sc-for list="{{ jSteps }}" as="st" hint-placeholder-count="6"><li data-state="{{ st.state }}"><button onClick="{{ st.go }}" disabled="{{ st.off }}" aria-current="{{ st.cur }}" title="{{ st.title }}"><i><sc-if value="{{ st.hasIcon }}" hint-placeholder-val="{{ false }}"><span class="ic s14" style="--ic:url('brand/icons/check-circle.svg')"></span></sc-if><sc-if value="{{ st.noIcon }}" hint-placeholder-val="{{ true }}">{{ st.n }}</sc-if></i><span>{{ st.label }}</span></button></li></sc-for></ol>
+  <div class="js-body">
+  <h1 class="js-line">{{ jLine }}</h1>
+  <div class="js-stage" data-wide="{{ jWide }}" data-link="{{ jLink }}" data-net="{{ jNet }}">
+    <div class="js-node js-sites" aria-label="Your sites">
+      <span class="js-cap">Your sites</span>
+      <b class="js-big">{{ jSites.n }}</b>
+      <div class="js-svc"><sc-for list="{{ jSites.groups }}" as="sg" hint-placeholder-count="4"><span title="{{ sg.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ sg.icon }}.svg')"></span><b>{{ sg.nF }}</b>{{ sg.label }}</span></sc-for></div>
     </div>
-    <div class="jr-order" aria-label="The order">
-      <span class="jr-cap">The order</span>
-      <div class="jr-chips"><sc-for list="{{ jRegions }}" as="jg" hint-placeholder-count="2"><span class="kchip"><span class="ic s14" style="--ic:url('brand/icons/cloud.svg')"></span><b>{{ jg.t }}</b></span></sc-for></div>
-      <div role="list" class="jr-lines"><sc-for list="{{ jLines }}" as="jl" hint-placeholder-count="2"><div role="listitem" class="jr-line"><span>{{ jl.name }}</span><span class="jr-n">× {{ jl.n }}</span><b>{{ jl.v }}</b></div></sc-for></div>
-      <div class="jr-line jr-total"><span>Monthly</span><b>{{ jTotal }}</b></div>
-      <sc-if value="{{ jPlaced }}" hint-placeholder-val="{{ false }}"><div class="ps big" aria-label="Where the order is"><sc-for list="{{ jPhases }}" as="jh" hint-placeholder-count="4"><span data-state="{{ jh.state }}" title="{{ jh.title }}"><i><span class="ic s20" style="--ic:url('brand/icons/{{ jh.icon }}.svg')"></span></i><b>{{ jh.label }}</b></span></sc-for></div></sc-if>
+    <div class="js-wire" data-state="on" aria-hidden="true"><i></i><small>Last mile</small></div>
+    <div class="js-node js-att" aria-label="The AT&amp;T network"><span class="js-hub"><span class="ic" style="--ic:url('brand/icons/hub.svg')"></span></span><b>AT&amp;T</b><span class="js-cap">network</span></div>
+    <div class="js-wire" data-state="{{ jLink }}" aria-hidden="true"><i></i><small>{{ jLinkWord }}</small></div>
+    <div class="js-node js-cloud" data-state="{{ jCloud.state }}" aria-label="Your cloud">
+      <sc-if value="{{ jCloud.unknown }}" hint-placeholder-val="{{ true }}"><span class="js-q"><span class="ic" style="--ic:url('brand/icons/cloud.svg')"></span><b>?</b></span><span class="js-cap">Your cloud</span><span class="js-soft">Unknown to AT&amp;T</span></sc-if>
+      <sc-if value="{{ jCloud.picking }}" hint-placeholder-val="{{ false }}"><div class="js-provs" role="radiogroup" aria-label="Cloud"><sc-for list="{{ jProviders }}" as="jp" hint-placeholder-count="4"><button role="radio" aria-checked="{{ jp.on }}" disabled="{{ jp.off }}" onClick="{{ jp.go }}" title="{{ jp.title }}"><span class="js-mark" style="background-image:url('{{ jp.mark }}')"></span></button></sc-for></div><span class="js-key"><span class="ic s16" style="--ic:url('brand/icons/padlock.svg')"></span>{{ jCred }}</span></sc-if>
+      <sc-if value="{{ jCloud.scanning }}" hint-placeholder-val="{{ false }}"><span class="js-ring" style="--p:{{ jScanPct }}"><span class="js-mark" style="background-image:url('brand/providers/azure.svg')"></span></span><ol class="js-scan"><sc-for list="{{ jScanSteps }}" as="sc" hint-placeholder-count="4"><li data-state="{{ sc.state }}">{{ sc.word }}</li></sc-for></ol></sc-if>
+      <sc-if value="{{ jCloud.found }}" hint-placeholder-val="{{ false }}">
+        <div class="js-cloudhead"><span class="js-mark sm" style="background-image:url('{{ jCloud.mark }}')"></span><b>{{ jCloud.name }}</b><span class="kchip" title="Workloads"><span class="ic s14" style="--ic:url('brand/icons/apps.svg')"></span><b>{{ jCloud.wl }}</b></span></div>
+        <div class="js-regions"><sc-for list="{{ jRegions }}" as="rg" hint-placeholder-count="2"><div class="js-region">
+          <div class="js-rhead"><b>{{ rg.region }}</b><span class="kchip" title="Workloads"><span class="ic s14" style="--ic:url('brand/icons/apps.svg')"></span>{{ rg.wlF }}</span><span class="kchip" title="Latency from your sites, today"><span class="ic s14" style="--ic:url('brand/icons/clock.svg')"></span>{{ rg.msF }}</span></div>
+          <sc-for list="{{ rg.apps }}" as="ap" hint-placeholder-count="2"><div class="js-app" title="{{ ap.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ ap.icon }}.svg')"></span><span>{{ ap.name }}</span><span class="js-tags"><sc-for list="{{ ap.chips }}" as="tg" hint-placeholder-count="2"><button class="js-tag" aria-pressed="{{ tg.on }}" onClick="{{ tg.go }}" title="{{ tg.title }}">{{ tg.t }}</button></sc-for></span></div></sc-for>
+        </div></sc-for></div>
+      </sc-if>
     </div>
+    <div class="js-net" data-state="{{ jNet }}" aria-hidden="true"><small>{{ jNetWord }}</small></div>
   </div>
-  </sc-if></sc-if>
+  <sc-if value="{{ jIsRec }}" hint-placeholder-val="{{ false }}"><div class="js-opts" role="radiogroup" aria-label="Ways to connect"><sc-for list="{{ jOptions }}" as="op" hint-placeholder-count="3"><button role="radio" class="js-opt" aria-checked="{{ op.on }}" onClick="{{ op.go }}" title="{{ op.setupTitle }}">
+    <span class="ic-tile" style="background:{{ op.mark.bg }};color:{{ op.mark.ink }}"><span class="ic s20" style="--ic:url('brand/icons/{{ op.mark.icon }}.svg')"></span></span>
+    <span class="js-opt-t"><small>{{ op.tier }}</small><b>{{ op.label }}</b></span>
+    <span class="js-opt-n"><b>{{ op.price }}</b><small style="color:{{ op.deltaInk }}">{{ op.delta }}</small></span>
+    <sc-if value="{{ op.hasPts }}" hint-placeholder-val="{{ true }}"><span class="way-pts" title="Scores {{ op.pts }} of 100">{{ op.pts }}</span></sc-if>
+  </button></sc-for></div></sc-if>
+  <sc-if value="{{ jIsConnect }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ jHasPick }}" hint-placeholder-val="{{ true }}"><div class="js-order">
+    <sc-if value="{{ jNotPlaced }}" hint-placeholder-val="{{ true }}"><div class="js-sum"><span class="ic-tile" style="background:{{ jPicked.mark.bg }};color:{{ jPicked.mark.ink }}"><span class="ic s20" style="--ic:url('brand/icons/{{ jPicked.mark.icon }}.svg')"></span></span><span class="js-opt-t"><small>{{ jRegionsWord }}</small><b>{{ jPicked.label }}</b></span><span class="js-lines"><sc-for list="{{ jLines }}" as="jl" hint-placeholder-count="2"><span title="{{ jl.name }} × {{ jl.n }}">{{ jl.name }} <b>{{ jl.v }}</b></span></sc-for></span><b class="js-total">{{ jTotal }}</b></div></sc-if>
+    <sc-if value="{{ jPlaced }}" hint-placeholder-val="{{ false }}"><div class="ps big js-phases" aria-label="Where the order is"><sc-for list="{{ jPhases }}" as="jh" hint-placeholder-count="4"><span data-state="{{ jh.state }}" title="{{ jh.title }}"><i><span class="ic s20" style="--ic:url('brand/icons/{{ jh.icon }}.svg')"></span></i><b>{{ jh.label }}</b></span></sc-for></div></sc-if>
+  </div></sc-if></sc-if>
+  <div class="js-act"><sc-if value="{{ jHasBack }}" hint-placeholder-val="{{ true }}"><button class="js-back" onClick="{{ jBack }}"><span class="ic s16" style="--ic:url('brand/icons/arrow-right.svg');transform:scaleX(-1)"></span>Back</button></sc-if><button class="js-go" onClick="{{ jActGo }}" disabled="{{ jActOff }}">{{ jAct }}<span class="ic s18" style="--ic:url('brand/icons/arrow-right.svg')"></span></button></div>
+  </div>
 </section>
 </sc-if>
 <!-- The verdict spans the title row under the title and its controls (2026-09-30, owner decision b): the longer "N are private: ..." sentence wrapped beside Connect's scan controls and pushed the landing past the fold. One line, and no taller than before. -->
