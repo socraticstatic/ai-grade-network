@@ -476,9 +476,11 @@ export function flowOrder(f, est, tierOverride) {
   if (pid) {
     const siteQty = f.bulk && f.qty > 1 ? f.qty : 0;
     const conns = isColo(f) || isLmcc(f) || f.ctype === 'Cloud to Cloud' ? 1 : Math.max(1, f.regions.length);
-    add(productOf(pid), siteQty || conns, past ? f.bandwidth : null, !!siteQty, past);
-    // The way's own products beside the connection (2026-10-06): the AT&T-provided port, the hosted VNet or VPC, PrivateLink, Cloud WAN.
-    if (f.way && pid === 'netbond') W.wayExtras(f.way, cloudsOf(f)[0] || 'AWS').forEach(p => add(p, conns));
+    // A hosted way (the deck, 2026-10-08) replaces NetBond with AT&T's on-ramp into its hub, the last hop into your VPC
+    // and the hub itself, priced at review; NetBond's own ways keep the connection and add the AT&T-provided port.
+    const hostedWay = f.way && pid === 'netbond' && W.wayHosted(f.way);
+    if (!hostedWay) add(productOf(pid), siteQty || conns, past ? f.bandwidth : null, !!siteQty, past);
+    if (f.way && pid === 'netbond') W.wayExtras(f.way, cloudsOf(f)[0] || 'AWS', f.zone || undefined).forEach(p => add(p, p.id === 'hub-att' ? 1 : conns));
     if (f.ctype === 'Cloud to Cloud') add(productOf('hub'), Math.max(1, f.loc.length));
   }
   if (f.policy.includes('Inline inspection')) add(productOf('ngfw'), 1);

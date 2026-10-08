@@ -112,7 +112,8 @@ test('one price rule past the catalog\'s Up to 10 Gbps: the connect flow prices 
   const est = D.ESTATES.trust;
   const at = (bw) => CF.flowOf({ ctype: 'DataCenter / CoLocation to Cloud', regions: ['GCP us-central1'], bandwidth: bw }, est);
   // Inside the line, the catalog price, as Cost bills it.
-  assert.equal(CF.wipPrice(at('10 Gbps'), est).big, '$1,800');
+  // NetBond for Cloud is $1,900 since the stakeholder's deck (2026-10-08: "$1,900 list" at 1 Gbps), was $1,800.
+  assert.equal(CF.wipPrice(at('10 Gbps'), est).big, '$1,900');
   // Past it, AT&T prices it after review, in both flows.
   const big = CF.flowOrder(at('100 Gbps'), est);
   assert.equal(big.lines[0].unpriced, true, JSON.stringify(big.lines[0]));
@@ -122,7 +123,7 @@ test('one price rule past the catalog\'s Up to 10 Gbps: the connect flow prices 
   // The resiliency tiers say the same, never "once the type and region are chosen" when they are.
   for (const tier of CF.TIERS) {
     assert.equal(CF.tierGets(at('100 Gbps'), est, tier).cost, CF.PRICE_NOTE, tier);
-    assert.equal(CF.tierGets(at('10 Gbps'), est, tier).cost, `$${(1800 * CF.TIER_MULT[tier]).toLocaleString('en-US')}/mo`, tier);
+    assert.equal(CF.tierGets(at('10 Gbps'), est, tier).cost, `$${(1900 * CF.TIER_MULT[tier]).toLocaleString('en-US')}/mo`, tier);
   }
   assert.equal(CF.tierGets(CF.flowOf({}, est), est, 'Standard').cost, 'Priced once the type and region are chosen');
   // An order with a priced extra still is not priced by that extra alone.
@@ -130,10 +131,10 @@ test('one price rule past the catalog\'s Up to 10 Gbps: the connect flow prices 
   assert.equal(ngfw.priced, false, 'the connection itself is after review');
   // The drawer: past the line After review, inside it Cost's price; no "whatever the size".
   const c = observe('trust', { bwFor: 'cx-us-central1', bwPick: { id: 'cx-us-central1', ports: 5, mbps: 20000 } });
-  assert.deepEqual(vals(c).bw.money.map(m => m.v), ['$1,800/mo', 'After review', 'After review']);
+  assert.deepEqual(vals(c).bw.money.map(m => m.v), ['$1,900/mo', 'After review', 'After review']);
   c.setState({ bwPick: { id: 'cx-us-central1', ports: 6, mbps: 10000 } });
   const line = vals(c).bw.priceLine;
-  assert.equal(line, '1 region × $1,800 for ports up to 10 Gbps, as Cost bills NetBond.');
+  assert.equal(line, '1 region × $1,900 for ports up to 10 Gbps, as Cost bills NetBond.');
   assert.ok(!/whatever the size/.test(line));
 });
 

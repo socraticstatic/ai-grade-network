@@ -134,7 +134,8 @@ await beat('2 Your sites and Your clouds', async () => {
   // Every count is a door to its set, and the landing carries its moves (the drill rule, 2026-09-30).
   await tab('At a glance');
   // Re-pinned 2026-10-07: the tunnel sites' VPN connections (2026-10-05) moved Spend from $135,650.
-  await expect(/Spend\s*\$136,083/);
+  // Re-pinned 2026-10-08: NetBond at the stakeholder deck's $1,900 (was $1,800), one NetBond region on Growing: +$100.
+  await expect(/Spend\s*\$136,183/);
   await page.locator('[aria-label="Estate at a glance"] button', { hasText: '70 workloads exposed' }).first().click(); await settle();
   // No finding is written about all 70, so the moves are the policy and Andi (2026-10-01: "Open its
   // finding" opened a snoozed one about 7 others in eu-west-1).

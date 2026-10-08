@@ -14,6 +14,6 @@ test('no estate runs an AT&T-hosted VPC today, so no region is billed both', () 
     assert.deepEqual(R.attChargeRows(D.ESTATES[view], inv).map(r => r.key).filter(k => k !== 'nb'), [], view);
   }
   const nb = (view) => (R.attChargeRows(D.ESTATES[view], A.inventory(D.ESTATES[view])).find(r => r.key === 'nb') || { v: 0 }).v;
-  assert.deepEqual([nb('partial'), nb('mature'), nb('trust')], [1800, 3600, 3600]);
+  assert.deepEqual([nb('partial'), nb('mature'), nb('trust')], [1900, 3800, 3800]);
   assert.ok(D.CATALOG.some(p => p.id === 'hosted-vpc'), 'hosted VPC is still offered');
 });

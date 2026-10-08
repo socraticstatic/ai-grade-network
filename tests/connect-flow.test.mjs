@@ -220,8 +220,8 @@ test('Standard, Maximum and Geodiversity each say what they get you, from the pa
     assert.match(t.performance, /^\d+ ms · deterministic$/);
     assert.equal(t.costSub, 'Modelled · list price');
   }
-  // NetBond for Cloud, $1,800 list, times composeOrder's tier multipliers.
-  assert.deepEqual(v.cfTiers.map(t => t.cost), ['$1,800/mo', '$3,960/mo', '$2,880/mo']);
+  // NetBond for Cloud, $1,900 list (the deck, 2026-10-08; was $1,800), times composeOrder's tier multipliers.
+  assert.deepEqual(v.cfTiers.map(t => t.cost), ['$1,900/mo', '$4,180/mo', '$3,040/mo']);
 });
 
 // ---------- 5. the panel ----------

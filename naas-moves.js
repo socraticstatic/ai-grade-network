@@ -90,8 +90,13 @@ const PROD = {
   hub: { name: 'Connection Hub', path: 'netbond', conn: 'AVPN to Cloud' },
   c2c: { name: 'Cloud to Cloud', path: 'netbond', conn: 'Cloud to Cloud' },
   'port-att': { name: 'Cloud port, AT&T-provided', path: 'netbond' },
-  privatelink: { name: 'Hosted PrivateLink', path: 'netbond', inspect: true },
-  'cloud-wan': { name: 'Cloud WAN', path: 'netbond' },
+  // The deck's hosted options (2026-10-08): one AT&T on-ramp into AT&T's hub, the vSRX in path, and a last hop each.
+  'onramp-att': { name: 'AT&T on-ramp', path: 'netbond', gbps: 1 },
+  'lh-intra': { name: 'Same-AZ peering', path: 'netbond', inspect: true },
+  'lh-cross': { name: 'Cross-AZ peering', path: 'netbond', inspect: true },
+  'lh-tgw': { name: 'Transit gateway', path: 'netbond', inspect: true },
+  'lh-cwan': { name: 'Cloud WAN', path: 'netbond', inspect: true },
+  'lh-pl': { name: 'PrivateLink', path: 'netbond', inspect: true },
 };
 
 /** The traffic-weighted 95th percentile of a set of paths: [{ ms, w }]. */
@@ -358,7 +363,7 @@ function regionMoves(est, ctx) {
       const ids0 = t.products.map(p => p.id);
       // A hosted VPC enforces a policy in path only where one is enforced on these tags (Govern > Policies).
       const enforced = tags.find(tg => policyTags.has(String(tg).toLowerCase()));
-      const hostedWord = ids0.includes('hosted-vnet') ? 'VNet' : 'VPC';
+      const hostedWord = ids0.includes('hosted-vnet') || (t.way && W.wayHosted(t.way) && cloud === 'Azure') ? 'VNet' : 'VPC';
       const port = W.PORT_NAME[cloud] || 'port';
       const fit = t.fit || (t.way === 'att' ? `AT&T orders and holds the ${port}` : t.way === 'byo' ? `Your own ${port}, carried by AT&T` : ids0[0] === 'i2c' ? `Encrypted, up to 1 Gbps a region`
         : inspect ? (enforced ? `Enforces your ${enforced} policy in path` : `Inspected in AT&T's ${hostedWord}`)

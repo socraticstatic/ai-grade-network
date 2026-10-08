@@ -188,14 +188,16 @@ test('Growing\'s cloud moves offer the session\'s ways: your port, AT&T\'s port,
   // Re-pinned (2026-10-06, the connect options session): NetBond Advanced on your own port is recommended, then on the
   // port AT&T orders and holds, then peering into an AT&T-hosted VPC; all three ride the AT&T network.
   const aws = listOf('partial').find(m => m.kind === 'region' && m.cloud === 'AWS');
-  assert.deepEqual(aws.tiers.map(t => t.products.map(p => p.id).join('+')), ['netbond', 'netbond+port-att', 'netbond+hosted-vpc']);
+  // Re-pinned (2026-10-08, the deck): hosted peering rides AT&T's on-ramp and peers across AZs, $1,900 + $300 + $4,161.
+  assert.deepEqual(aws.tiers.map(t => t.products.map(p => p.id).join('+')), ['netbond', 'netbond+port-att', 'onramp-att+lh-cross']);
   assert.deepEqual(aws.tiers.map(t => t.path), ['netbond', 'netbond', 'netbond']);
   assert.deepEqual(aws.tiers.map(t => t.label), ['Your Direct Connect', "AT&T's Direct Connect", 'Hosted VPC peering']);
   const az = listOf('partial').find(m => m.kind === 'region' && m.cloud === 'Azure');
   assert.deepEqual(az.tiers.map(t => t.label), ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted VNet peering']);
-  assert.deepEqual(az.tiers.map(t => t.monthly), [1800, 2100, 4200]);
+  assert.deepEqual(az.tiers.map(t => t.monthly), [1900, 2200, 4161]);
   const gcp = listOf('partial').find(m => m.kind === 'region' && m.cloud === 'GCP');
-  assert.deepEqual(gcp.tiers.map(t => t.way), ['byo', 'peer', 'att']);
+  // The deck peers on AWS and Azure only; Google's hosted way is PrivateLink (its PSC).
+  assert.deepEqual(gcp.tiers.map(t => t.way), ['byo', 'privatelink', 'att']);
   assert.match(gcp.tiers[2].unavailable, /Not on Google Cloud/);
   const ipsec = listOf('partial').find(m => m.kind === 'sites');
   assert.deepEqual(ipsec.tiers.map(t => t.products.map(p => p.id).join('+')), ['adi', 'ase', 'avpn']);
@@ -512,5 +514,6 @@ test('every tier asks the compose flow for the connection type its set and produ
 test('each tier shows its catalog price in its column, and the page says they are Starting at prices', () => {
   const v = vals(on('partial'));
   assert.match(v.movesWith, /Starting at/);
-  for (const m of v.moveList) for (const t of m.tiers) assert.equal(t.priceShort, t.monthly === null ? '' : `${fmt(t.monthly)}/mo`);
+  // A hosted way's figure is cloud pass-through; its hub is priced at review, and the price says so (2026-10-08).
+  for (const m of v.moveList) for (const t of m.tiers) assert.equal(t.priceShort, t.monthly === null ? '' : `${fmt(t.monthly)}${t.way && ['peer', 'transit', 'cloudwan', 'privatelink'].includes(t.way) ? ' + hub' : '/mo'}`);
 });

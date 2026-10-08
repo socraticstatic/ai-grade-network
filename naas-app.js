@@ -4540,7 +4540,8 @@ function flowVals(s, set, est, c) {
   const wayCards = W.wayCards(s.wayZone || 'intra').map(w => ({ ...w, start: startWay(w), notSoon: !w.soon, op: w.soon ? 0.62 : 1,
     tileBg: w.soon ? 'var(--bg-neutral)' : 'var(--bg-accent)', tileInk: w.soon ? 'var(--text-light)' : 'var(--link)',
     logos: w.clouds.map(cl => ({ key: cl, src: W.markFor(cl, s.theme), name: W.CLOUD_NAME[cl] || cl })), hasLogos: w.clouds.length > 0,
-    hasZones: !!w.zones, zoneChips: w.zones ? Object.entries(w.zones).map(([k, z]) => { const on = (s.wayZone || 'intra') === k; return { key: k, label: z.label, on, go: () => set({ wayZone: k }), bg: on ? 'var(--cta)' : 'transparent', ink: on ? '#fff' : 'var(--text-light)' }; }) : [],
+    hasZones: !!w.zones, zoneChips: w.zones ? Object.entries(w.zones).map(([k, z]) => { const on = (s.wayZone || 'intra') === k; return { key: k, label: z.label, title: `${z.label}: ${z.clouds.join(' and ')}`, on, go: () => set({ wayZone: k }), bg: on ? 'var(--cta)' : 'transparent', ink: on ? '#fff' : 'var(--text-light)' }; }) : [],
+    pts: w.points === null ? '' : String(w.points), hasPts: w.points !== null, ptsTitle: `Scores ${w.points} of 100: cost 30, performance 20, security 20, effort and time 15, scale 15`,
     rows: w.rows.map(r => ({ ...r, segs: r.segs.map(g => ({ ...g, bg: g.on ? 'var(--link)' : 'var(--bg-neutral)' })), valueInk: r.score === null ? 'var(--text-disabled)' : 'var(--text-heading)' })) }));
   const cfTypes = CF.ALL_TYPES.map(t => ({ ...tile(t), pick: pickType(t) }));
   // The set a count opens: exactly what it counted, as a list on the page, paged.
@@ -4699,7 +4700,7 @@ function flowVals(s, set, est, c) {
   const opg = pageRows(shown.slice().reverse().map(ordRow), 6, s.ordersPage, (n) => set({ ordersPage: n }));
   const note = f.note;
   return {
-    wayTypes, wayCards, cfTypes, waySet, wayFoot: 'Each criterion scored 1 to 5, the most favourable 5. Cost is one region at 1 Gbps a month, from the catalog. The scores are estimates. Start a way, then pick what it connects.',
+    wayTypes, wayCards, cfTypes, waySet, wayFoot: 'From the Cloud Connectivity Decision Matrix (October 2026). Each criterion scored 1 to 5, the most favourable 5, and weighted to a score out of 100: cost 30, performance 20, security 20, effort and time 15, scale 15. Cost is one region at 1 Gbps a month on us-east-1 list rates; a hosted way is cloud pass-through, and its hub (vSRX, compute, AT&T margin) is priced at review. Only NetBond Advanced\'s setup time is proven in market; the rest are proof-of-concept targets. Start a way, then pick what it connects.',
     wayCriteria: W.CRITERIA.map(c => ({ key: c.key, label: c.label, icon: c.icon })),
     goRecommended: () => set({ cnPage: 'options' }),
     cfKey: key, cfSteps, cfTitle: (STEP_HEAD[key] || [])[0] || '', cfDesc: (STEP_HEAD[key] || [])[1] || '',
@@ -5262,7 +5263,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
         if (t.unavailable) return { ...t, key: m.key + ':' + t.i, on: false, pick: () => {}, featured: false, isOption: false, notOption: true, reason: t.unavailable, priceShort: '', aria: `${t.label}: ${t.unavailable}`, title: t.unavailable,
           border: 'var(--border-secondary)', hoverBorder: 'var(--border-secondary)', bg: 'transparent', op: 0.55, cursor: 'default', wordInk: 'var(--text-light)', strip: [], mark: { icon: 'not-available', ink: 'var(--text-light)', bg: 'var(--bg-neutral)' },
           sec: { ...cell({ value: '', tone: 'same' }), short: '' }, perf: cell({ value: '', tone: 'same' }), cost: cell({ value: '', tone: 'same' }, null, true), setup: '', hasWho: false, whoIcon: 'wrench', whoWord: '', setupTime: '', setupWords: '', metrics: [], connect: () => {}, ctaPrimary: false, ctaWord: '' };
-        return { ...t, key: m.key + ':' + t.i, on: tOn, pick: pick(t.i), featured: t.rec, isOption: true, notOption: false, reason: '', op: 1, cursor: 'pointer', hoverBorder: 'var(--border-active)', priceShort: t.monthly === null ? '' : `${fmt(t.monthly)}/mo`,
+        return { ...t, key: m.key + ':' + t.i, on: tOn, pick: pick(t.i), featured: t.rec, isOption: true, notOption: false, reason: '', op: 1, cursor: 'pointer', hoverBorder: 'var(--border-active)', priceShort: t.monthly === null ? '' : `${fmt(t.monthly)}${t.way && W.wayHosted(t.way) ? ' + hub' : '/mo'}`,
           aria: `${t.intro} Security: ${t.sec.value}${t.sec.delta ? `, ${t.sec.delta}` : ''}. Performance: ${t.perf.value}${t.perf.delta ? `, ${t.perf.delta}` : ''}. Cost: ${t.cost.value}${t.cost.delta ? `, ${t.cost.delta}` : ''}.`,
           title: `${t.intro} ${t.fit}. ${t.price}. Performance: ${t.perfTitle}. Cost: ${t.costTitle}.`,
           // A way wears its own mark (your port a cable, AT&T's the hub, peering the shield), so two ways on one path still read apart.
@@ -5275,11 +5276,17 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
               metrics: [{ key: 'sec', icon: 'check-shield', v: sec.short, d: '', ink: sec.ink, dink: sec.dink, title: `Security: ${t.sec.value}` },
                 { key: 'perf', icon: 'high-meter', v: pare(perf.value), d: perf.delta, ink: perf.ink, dink: perf.dink, title: `Performance: ${t.perfTitle || perf.value}` },
                 { key: 'cost', icon: 'bill', v: pare(cost.value), d: cost.delta, ink: cost.ink, dink: cost.dink, title: `Cost: ${t.costTitle || cost.value}` },
-                ...(w ? [{ key: 'setup', icon: w.icon, v: `${w.who} · ${w.time}`, d: '', ink: 'var(--text-body)', dink: 'var(--text-light)', title: w.words }] : [])],
+                ...(w ? [{ key: 'setup', icon: w.icon, v: `${w.who} · ${w.time}`, d: '', ink: 'var(--text-body)', dink: 'var(--text-light)', title: w.words }] : []),
+                // What you do, the deck's "Customer does" (2026-10-08).
+                ...(t.way && W.wayYouDo(t.way) ? [{ key: 'you', icon: 'user-access', v: W.wayYouDo(t.way).short, d: '', ink: 'var(--text-body)', dink: 'var(--text-light)', title: `You do: ${W.wayYouDo(t.way).words}` }] : [])],
+              // The deck's weighted score out of 100 (Cost 30 · Performance 20 · Security 20 · Effort and time 15 · Scale 15).
+              ...(() => { const pts = t.way ? W.wayScore(t.way, m.cloud) : null; return { pts: pts === null ? '' : String(pts), hasPts: pts !== null, ptsTitle: pts === null ? '' : `Scores ${pts} of 100: cost 30, performance 20, security 20, effort and time 15, scale 15` }; })(),
               connect: () => { set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: t.i }) }); composeMoves([m], t.i); }, ctaPrimary: tOn, ctaWord: 'Connect' }; })() }; });
     const badge = MOVE_BADGE[m.kind];
     return { ...m, rankF: String(m.rank), sel: on, short: moveShort(m), markSrc: m.kind === 'sites' ? '' : W.markFor(m.cloud, s.theme), hasMarkSrc: m.kind !== 'sites' && !!W.MARK[m.cloud], noMarkSrc: m.kind === 'sites' || !W.MARK[m.cloud],
       hasBadge: !!badge, badgeIcon: badge ? badge[0] : '', badgeWord: badge ? badge[1] : '',
+      // What discovery found that shaped the pick (the deck's "Found:" line), the facts the estate holds and nothing more.
+      foundTags: [...new Set((est.regionsList || []).filter(r => r.cloud === m.cloud && (m.regions || []).includes(r.region)).flatMap(r => r.tags || []))].slice(0, 2).map(tg => ({ key: tg, t: tg, title: `Its workloads are tagged ${tg}` })),
       // Pinned by the account team: it leads whatever it saves, and says so (2026-10-07).
       hasPin: !!m.pinned, pinTitle: 'Pinned first by your AT&T team; the rest rank by what they save', check: on ? '✓' : '', checkBg: on ? 'var(--cta)' : 'transparent', checkRing: on ? 'var(--cta)' : 'var(--border-primary)',
       kindIcon: m.kind === 'sites' ? 'large-building' : 'cloud', strip: M.stripOf(m.today.path), mark: M.pathMark(m.today.path),

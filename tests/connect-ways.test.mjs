@@ -20,24 +20,28 @@ const wip = (v, key) => v.cfWip.find(r => r.key === key);
 
 test('Ways to connect draws the six ways, each scored on the five criteria, with its clouds as marks', () => {
   const v = vals(ways());
-  assert.deepEqual(v.wayCards.map(w => w.key), ['byo', 'att', 'peer', 'privatelink', 'cloudwan', 'transit']);
+  // Re-pinned (2026-10-08): the deck's order, transit gateway real, a weighted score on every card.
+  assert.deepEqual(v.wayCards.map(w => w.key), ['byo', 'att', 'peer', 'transit', 'cloudwan', 'privatelink']);
   for (const w of v.wayCards) {
     assert.equal(w.rows.length, 5, w.key);
     for (const r of w.rows) { assert.equal(r.segs.length, 5); assert.ok(r.segs.every(g => g.bg), `${w.key} ${r.key}`); }
     for (const l of w.logos) assert.match(l.src, /^brand\/providers\/[a-z-]+\.svg$/, `${w.key} ${l.key}`);
   }
-  assert.equal(v.wayCards.find(w => w.key === 'transit').notSoon, false, 'transit gateway is the placeholder');
-  assert.ok(v.wayFoot.includes('estimates'), 'the footnote says the scores are estimates');
+  assert.ok(v.wayCards.every(w => w.notSoon && w.hasPts && /^\d+$/.test(w.pts)), 'every way is live and scored');
+  assert.ok(v.wayFoot.includes('proof-of-concept'), 'the footnote says which times are targets');
+  assert.ok(v.wayFoot.includes('Decision Matrix'), 'and where the figures come from');
 });
 
 test('peering\'s zone chips switch its scores between one zone and across zones', () => {
   const c = ways();
   const peer = () => vals(c).wayCards.find(w => w.key === 'peer');
   assert.deepEqual(peer().zoneChips.map(z => [z.key, z.on]), [['intra', true], ['inter', false]]);
-  const before = peer().rows.find(r => r.key === 'perf').score;
+  const before = peer().monthly;
   peer().zoneChips.find(z => z.key === 'inter').go();
   assert.equal(c.state.wayZone, 'inter');
-  assert.ok(peer().rows.find(r => r.key === 'perf').score < before);
+  // Across AZs (the deck): zone-redundant, and the last hop bills $0.01/GB each way.
+  assert.ok(peer().monthly > before);
+  assert.match(peer().zoneChips.find(z => z.key === 'intra').title, /AWS$/, 'same AZ is AWS only');
 });
 
 test('Start carries the way into the flow, which asks next what you connect from; Back returns to Ways to connect', () => {
@@ -77,10 +81,13 @@ test('a way a cloud cannot carry dims that cloud on Choose Provider: AT&T cannot
   assert.equal(v2.cfWay.title, "AT&T's ExpressRoute", 'once the cloud is chosen, the way reads as that cloud names its port');
 });
 
-test('the order prices the way: AT&T\'s port beside NetBond, the hosted VNet for peering, nothing more for your own port', () => {
+test('the order prices the way: AT&T\'s port beside NetBond; a hosted way the on-ramp, its last hop and the hub in place of NetBond', () => {
   const lineIds = (way) => { const c = ways(); vals(c).wayCards.find(w => w.key === way).start(); vals(c).cfTypes.find(t => t.label === 'DataCenter / CoLocation to Cloud').pick(); vals(c).cfNext(); vals(c).cfClouds.find(x => x.cloud === 'Azure').regions[0].pick(); return vals(c).cfOrder.lines.map(l => l.product); };
   assert.ok(lineIds('att').some(p => /^Cloud port, AT&T-provided/.test(p)), lineIds('att').join(' | '));
-  assert.ok(lineIds('peer').some(p => /AT&T-hosted VNet/.test(p)), lineIds('peer').join(' | '));
+  // Re-pinned (2026-10-08, the deck): a hosted way rides AT&T's on-ramp into its hub, not NetBond; Azure peers across AZs.
+  const peer = lineIds('peer');
+  assert.deepEqual(peer.slice(0, 3), ['AT&T cloud on-ramp into the hosted hub, 1 Gbps', 'Cross-AZ peering into your VPC or VNet', 'AT&T hosted hub: vSRX and compute'], peer.join(' | '));
+  assert.ok(!peer.some(p => /^NetBond for Cloud/.test(p)), peer.join(' | '));
   assert.ok(!lineIds('byo').some(p => /Cloud port|hosted/i.test(p)), lineIds('byo').join(' | '));
 });
 

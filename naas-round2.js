@@ -397,8 +397,10 @@ export function attChargeRows(est, invAll) {
   const nbOnly = new Set([...nb].filter(g => !hostedRegs.some(r => r.region === g)));
   // Each row carries what it counts, one part per region (Cost by region and by cloud, 2026-09-30).
   const perReg = (test, rate) => hostedRegs.map(r => { const n = (r.vpcs || []).filter(test).length; return { key: r.region, kind: 'region', region: r.region, n, v: n * rate }; }).filter(p => p.n > 0);
+  // NetBond bills at the catalog's price, the one Review quotes ($1,900 since the stakeholder's deck, 2026-10-08).
+  const NB = catPrice('netbond');
   return [
-    { key: 'nb', label: 'NetBond on-ramps', sub: `${nbOnly.size} ${nbOnly.size === 1 ? 'region' : 'regions'} × $1,800`, v: nbOnly.size * 1800, regions: [...nbOnly], parts: [...nbOnly].map(g => ({ key: g, kind: 'region', region: g, n: 1, v: 1800 })) },
+    { key: 'nb', label: 'NetBond on-ramps', sub: `${nbOnly.size} ${nbOnly.size === 1 ? 'region' : 'regions'} × ${fmt(NB)}`, v: nbOnly.size * NB, regions: [...nbOnly], parts: [...nbOnly].map(g => ({ key: g, kind: 'region', region: g, n: 1, v: NB })) },
     { key: 'hv', label: 'Hosted VPC / VNet', sub: `${hostedN} × $2,400`, v: hostedN * 2400, parts: perReg(v => v.managed, 2400) },
     { key: 'l3', label: 'Customer L3 attach', sub: `${l3N} × $400`, v: l3N * 400, parts: perReg(v => v.priv && !v.managed, 400) },
   ].filter(r => r.v > 0);
@@ -433,7 +435,7 @@ const REMOTE_RATE = 0.3;
 const PRICE_OF = { avpn: 'avpn', aseod: 'ase', adi: 'adi', abf: 'abf', aiab: 'mobility' };
 const catPrice = (id) => ((CATALOG.find(p => p.id === id) || {}).price) || 0;
 // The words each AT&T charge counts in (By leg reads count × unit, 2026-09-30).
-const ATT_WORDS = { nb: { unit: 1800, nouns: ['region', 'regions'] }, hv: { unit: 2400, nouns: ['hosted VPC', 'hosted VPCs'] }, l3: { unit: 400, nouns: ['L3 attach', 'L3 attaches'] } };
+const ATT_WORDS = { nb: { unit: catPrice('netbond'), nouns: ['region', 'regions'] }, hv: { unit: 2400, nouns: ['hosted VPC', 'hosted VPCs'] }, l3: { unit: 400, nouns: ['L3 attach', 'L3 attaches'] } };
 const each = (v) => (Number.isInteger(v) ? fmt(v) : '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 /**
  * The cloud that bills an estate's IPsec tunnels: the cloud of its IPsec egress bucket,

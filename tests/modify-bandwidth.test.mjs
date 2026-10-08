@@ -76,34 +76,35 @@ test('one price for one connection: the drawer reads the NetBond line Cost > By 
   // Every connection AT&T sells is one NetBond region on Cost's line, at its one price.
   for (const view of ['partial', 'mature', 'trust']) {
     const nb = nbLine(view), unit = nb.v / nb.regions.length;
-    assert.equal(unit, 1800, `${view}: the catalog's NetBond for Cloud`);
+    // NetBond for Cloud is $1,900 since the stakeholder's deck (2026-10-08), was $1,800.
+    assert.equal(unit, 1900, `${view}: the catalog's NetBond for Cloud`);
     const sold = cap(view).filter(BW.sells);
     assert.deepEqual(sold.map(r => r.region).sort(), [...nb.regions].sort(), `${view}: one NetBond connection per region Cost bills`);
     let sum = 0;
     for (const r of sold) {
       const v = vals(observe(view, { bwFor: r.id }));
       assert.equal(v.bw.money[0].l, 'Current monthly');
-      assert.equal(v.bw.money[0].v, '$1,800/mo', `${view} ${r.id}`);
-      sum += 1800;
+      assert.equal(v.bw.money[0].v, '$1,900/mo', `${view} ${r.id}`);
+      sum += 1900;
     }
     assert.equal(sum, nb.v, `${view}: the drawers add up to Cost's NetBond line`);
   }
   // Resize keeps the connection, so it never claims the whole NetBond bill back.
   const c = observe('partial', { bwFor: 'cx-us-east-1', bwPick: { id: 'cx-us-east-1', ports: 2, mbps: 10000 } });
   const v = vals(c);
-  assert.deepEqual(v.bw.money.map(m => m.v), ['$1,800/mo', '$1,800/mo', 'No change']);
+  assert.deepEqual(v.bw.money.map(m => m.v), ['$1,900/mo', '$1,900/mo', 'No change']);
   assert.equal(v.bw.money[2].ink, 'var(--text-heading)', 'no change reads plain, never the savings ink');
-  assert.match(v.bw.priceLine, /1 region × \$1,800/, 'the price says whose rule it is');
-  assert.ok(!/-\$1,800/.test(JSON.stringify(v.bw)));
-  // Bank scale: $1,800 on each, never $37,800 or $9,000.
-  for (const id of ['cx-us-east-1', 'cx-us-central1']) assert.equal(vals(observe('trust', { bwFor: id })).bw.money[0].v, '$1,800/mo', id);
+  assert.match(v.bw.priceLine, /1 region × \$1,900/, 'the price says whose rule it is');
+  assert.ok(!/-\$1,900/.test(JSON.stringify(v.bw)));
+  // Bank scale: $1,900 on each, never $37,800 or $9,000.
+  for (const id of ['cx-us-east-1', 'cx-us-central1']) assert.equal(vals(observe('trust', { bwFor: id })).bw.money[0].v, '$1,900/mo', id);
 });
 
 test('a port past the catalog\'s 10 Gbps line is priced by AT&T after review, never stretched', () => {
   assert.equal(BW.PORT_CEIL_MBPS, 10000, 'the catalog says Up to 10 Gbps');
   const c = observe('trust', { bwFor: 'cx-us-east-1', bwPick: { id: 'cx-us-east-1', ports: 20, mbps: 25000 } });
   const v = vals(c);
-  assert.deepEqual(v.bw.money.map(m => m.v), ['$1,800/mo', 'After review', 'After review']);
+  assert.deepEqual(v.bw.money.map(m => m.v), ['$1,900/mo', 'After review', 'After review']);
   assert.ok(!/\$90,000/.test(JSON.stringify(v.bw)));
   assert.match(v.bw.priceLine, /^25 Gbps a port is past the catalog's 10 Gbps line\. Priced by AT&T after review\.$/);
 });
@@ -166,7 +167,7 @@ test('Apply change asks for approval, as the retired Resize did; Submit places a
   assert.equal(v.bw.approver, approver, 'the approver on the estate\'s own domain, as Review names it');
   // Round 3 (2026-09-30): Notify repeated the Approver input below it; the approver is said once, in the input.
   assert.deepEqual(v.bw.review.map(r => r.k), ['Change', 'Monthly', 'Timeline']);
-  assert.deepEqual(v.bw.review.map(r => r.v), ['3 × 10 Gbps to 2 × 10 Gbps', '$1,800/mo, no change', '1 business day, takes effect Wed, Sep 30']);
+  assert.deepEqual(v.bw.review.map(r => r.v), ['3 × 10 Gbps to 2 × 10 Gbps', '$1,900/mo, no change', '1 business day, takes effect Wed, Sep 30']);
   // Back keeps the pick.
   v.bw.back(); v = vals(c);
   assert.equal(v.bw.isPick, true); assert.equal(v.bw.newLabel, '2 × 10 Gbps');
@@ -191,7 +192,7 @@ test('Apply change asks for approval, as the retired Resize did; Submit places a
   assert.ok(row, JSON.stringify(v.ordRows));
   assert.equal(row.title, 'Modify bandwidth, AWS us-east-1');
   assert.equal(row.type, 'NetBond'); assert.equal(row.what, '3 × 10 Gbps to 2 × 10 Gbps');
-  assert.equal(row.monthly, '$1,800/mo, no change');
+  assert.equal(row.monthly, '$1,900/mo, no change');
   assert.equal(row.stage, 'Submitted for approval');
   assert.equal(row.atLine, 'Takes effect Wed, Sep 30');
   assert.equal(row.sub, 'Placed at 07:00 · approver k.osei@acme.com');
@@ -228,7 +229,7 @@ test('an order lands on its day, by the one clock', () => {
   const cp = growingEast();
   assert.equal(BW.dayF(BW.effectiveAt(AT)), 'Wed, Sep 30');
   assert.equal(BW.dayF(BW.effectiveAt(Date.parse('2026-10-02T15:00:00Z'))), 'Mon, Oct 5');
-  const o = BW.orderOf(cp, { ports: 2, mbps: 10000 }, AT, 'partial', { n: 1, approver: 'a@b.com', unit: 1800 });
+  const o = BW.orderOf(cp, { ports: 2, mbps: 10000 }, AT, 'partial', { n: 1, approver: 'a@b.com', unit: 1900 });
   assert.equal(BW.stageOf(o, AT), 'pending');
   assert.equal(BW.stageOf(o, o.effectiveAt - 1), 'pending');
   assert.equal(BW.stageOf(o, o.effectiveAt), 'live');

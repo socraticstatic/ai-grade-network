@@ -52,7 +52,7 @@ test('AT&T bills NetBond only where it carries the on-ramp', () => {
     const nb = R.attChargeRows(est, A.inventory(est)).find(x => x.key === 'nb');
     const n = est.regionsList.filter(L.attHolds).length;
     if (!n) { assert.ok(!nb, `${view} bills NetBond with none attached`); continue; }
-    assert.equal(nb.v, n * 1800, `${view}: ${nb.sub}`);
+    assert.equal(nb.v, n * 1900, `${view}: ${nb.sub}`);
   }
   assert.ok(!/^function attChargeRows/m.test(readFileSync(new URL('../naas-app.js', import.meta.url), 'utf8')), 'one function, in naas-round2.js');
 });
@@ -84,9 +84,9 @@ test('D-6: NetBond bills only NetBond connections; Direct Connect, ExpressRoute 
     assert.deepEqual(nb ? [...nb.regions].sort() : [], NB[view], view);
   }
   const nb = R.attChargeRows(D.ESTATES.partial, A.inventory(D.ESTATES.partial)).find(x => x.key === 'nb');
-  assert.equal(nb.sub, '1 region × $1,800');
+  assert.equal(nb.sub, '1 region × $1,900');
   const v = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'cost', costPanel: 'charges' }));
-  assert.equal(v.attCharges.find(x => x.key === 'nb').sub, '1 region × $1,800', 'the AT&T charges tab reads the same row');
+  assert.equal(v.attCharges.find(x => x.key === 'nb').sub, '1 region × $1,900', 'the AT&T charges tab reads the same row');
 });
 
 test('D-6: the facilities picture and the On-ramp column hold only NetBond (and Equinix, a third party)', () => {

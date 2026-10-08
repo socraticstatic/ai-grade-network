@@ -73,7 +73,8 @@ test('By region and By cloud: the bars, the member chips and a picked member\'s 
   // $132,250 became $132,683 on 2026-10-05: Boston and Houston ride SD-WAN (2 x $180) and
   // Minneapolis and Dublin two IPsec connections (2 x $36.50).
   const p = vals(cost('partial', { costPanel: 'money' }));
-  assert.equal(p.regionTotalF, '$132,683');
+  // $132,683 became $132,783 on 2026-10-08: NetBond at the stakeholder deck's $1,900, was $1,800 (one NetBond region).
+  assert.equal(p.regionTotalF, '$132,783');
 });
 
 test('Insights\' new destinations wear no money colour: one ink, the class in words', () => {

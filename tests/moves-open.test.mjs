@@ -26,7 +26,9 @@ test('one move at a time; on Growing the pinned Azure move leads with its three 
   assert.equal(v.movesPager.label, `1 of ${v.moveList.length}`);
   // Each card reads as glyph rows, not prose: security, performance, cost, who sets it up.
   for (const t of az.tiers) {
-    assert.deepEqual(t.metrics.map(x => x.key), ['sec', 'perf', 'cost', 'setup'], t.label);
+    // The deck's "Customer does" as a fifth row (2026-10-08), and a weighted score on the card.
+    assert.deepEqual(t.metrics.map(x => x.key), ['sec', 'perf', 'cost', 'setup', 'you'], t.label);
+    assert.ok(t.hasPts && +t.pts > 0 && +t.pts <= 100, t.label);
     for (const x of t.metrics) assert.ok(x.icon && x.v && x.title, `${t.label} ${x.key}`);
   }
   assert.deepEqual(az.todayMetrics.map(x => x.key), ['sec', 'perf', 'cost', 'setup']);

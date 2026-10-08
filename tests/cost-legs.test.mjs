@@ -69,7 +69,7 @@ test('D-6: By leg bills NetBond only for NetBond regions, and the connectivity t
     const nb = legsOf(view).connect.rows.find(r => r.key === 'nb');
     assert.deepEqual([...nb.regions].sort(), want[view], view);
     assert.equal(nb.n, want[view].length, view);
-    assert.equal(nb.v, want[view].length * 1800, view);
+    assert.equal(nb.v, want[view].length * 1900, view);
     const v = vals(cost(view));
     assert.equal(v.legTiles.find(t => t.key === 'connect').v, '$' + Math.round(legsOf(view).connect.total).toLocaleString('en-US'), view);
   }

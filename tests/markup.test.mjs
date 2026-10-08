@@ -475,10 +475,13 @@ test('every container the markup opens, it closes', () => {
   // ends and x axis, an sc-for each, i for the grid and the Today line) and its range toggle (div, sc-for, button); Back in
   // the title row and on the home (sc-if, button, span). Recounted, every tag balanced: div 1249 -> 1255, span 1311 -> 1315,
   // sc-if 608 -> 610, sc-for 342 -> 348, button 498 -> 504.
+  // The stakeholder's deck (2026-10-08): a weighted score on each way card and each Recommended option (sc-if, span), the
+  // Found label and the move's tags as chips (span, sc-for). Recounted, every tag balanced: span 1315 -> 1320,
+  // sc-if 610 -> 612, sc-for 348 -> 349.
     ['div', /<div\b/g, /<\/div>/g, 1255],
-    ['span', /<span\b/g, /<\/span>/g, 1315],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 610],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 348],
+    ['span', /<span\b/g, /<\/span>/g, 1320],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 612],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 349],
     ['section', /<section\b/g, /<\/section>/g, 16],
     ['button', /<button\b/g, /<\/button>/g, 504],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
