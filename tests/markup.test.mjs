@@ -519,8 +519,11 @@ test('every container the markup opens, it closes', () => {
   // Why as a story (2026-10-08, "make the 'why' more beautiful"): the floating detail became a panel over the stage, three
   // columns (the pick, its ring and the weights' two stacked bars with a legend; each answer paired with its reasons; what
   // you get as tiles) and a close button: div 1297 -> 1303, span 1438 -> 1445, sc-if 654 -> 655, sc-for 375 -> 379, button 520 -> 521.
-    ['div', /<div\b/g, /<\/div>/g, 1303],
-    ['span', /<span\b/g, /<\/span>/g, 1445],
+  // The beauty pass (2026-10-08, "give it all a beauty pass", "making text more concise"): Save's figure column left (the
+  // headline says both figures) and the tag palette moved into the row it edits without its name cap: div 1303 -> 1302,
+  // span 1445 -> 1442.
+    ['div', /<div\b/g, /<\/div>/g, 1302],
+    ['span', /<span\b/g, /<\/span>/g, 1442],
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 655],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 379],
     ['section', /<section\b/g, /<\/section>/g, 17],

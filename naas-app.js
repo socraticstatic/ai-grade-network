@@ -5225,6 +5225,8 @@ function journeyVals(out, s, set, est) {
   };
   const found = J.foundOf(est, s.jDone || []), rows = J.tagRows(found, s.jTags || {});
   const KIND_ICON = { web: 'globe', db: 'database', app: 'apps' };
+  // A tag keeps its slot in every row, so the same tag lines up down the card and adding one moves nothing.
+  const TAG_SLOT = ['PCI', 'Finance', 'Internet-facing', 'Prod'];
   const putTags = (key, tags) => set({ jTags: { ...(s.jTags || {}), [key]: tags } });
   const tagAll = () => set({ jTags: Object.fromEntries(rows.map(r => [r.key, [...new Set([...r.applied, ...r.suggested])]])) });
   const tagsOn = rows.reduce((a, r) => a + r.applied.length, 0);
@@ -5346,8 +5348,10 @@ function journeyVals(out, s, set, est) {
   // The stage, as this beat draws it.
   const cloudState = step === JI.today ? 'unknown' : step === JI.source ? (scanning ? 'scanning' : pr.source ? 'found' : 'picking') : found.has ? 'found' : 'unknown';
   // From the Intent beat on, the AT&T wire proposes the top pick, so an answer changes the picture as it is given.
-  const link = placed || live ? 'connected' : step >= JI.intent && tier ? 'proposed' : 'none';
-  const net = !found.has || step < JI.found ? 'off' : live ? 'gone' : placed ? 'faded' : 'public';
+  // Ordered is not live (the critic, 2026-10-08: "the Watch beat has nothing to watch"): while AT&T provisions, the way stays
+  // proposed and the traffic stays on the internet; Go live moves it, and that is the beat's picture.
+  const link = live ? 'connected' : step >= JI.intent && tier ? 'proposed' : 'none';
+  const net = !found.has || step < JI.found ? 'off' : live ? 'gone' : 'public';
   const ACT = {
     today: { label: 'Find your clouds', go: to(JI.source), off: false },
     source: { label: pr.source ? 'See what it found' : scanning ? 'Scanning' : `Scan ${prov.name === 'Microsoft Azure' ? 'Azure' : prov.name}`, go: pr.source ? to(JI.found) : connectSource, off: scanning },
@@ -5376,12 +5380,13 @@ function journeyVals(out, s, set, est) {
     jMoney: { has: step >= JI.intent && step !== JI.protect && beforeMo !== null && afterMo !== null, before: beforeMo !== null ? `${fmt(beforeMo)}/mo` : '', after: afterMo !== null ? `${fmt(afterMo)}/mo` : '', up: afterMo !== null && beforeMo !== null && afterMo > beforeMo,
       beforeTitle: 'Egress a month today, over the public internet', afterTitle: tier ? `A month with ${tier.label}: the connection plus the egress it carries at AT&T's price` : '' },
     // Where the traffic rides: the internet path until the order lands, then the AT&T wire.
-    jFlow: placed ? 'att' : found.has && step >= JI.found ? 'net' : 'none',
+    jFlow: live ? 'att' : found.has && step >= JI.found ? 'net' : 'none',
     jSites: { n: String(today.sites), groups: today.groups.map(g => ({ ...g, nF: String(g.n), title: `${g.n} sites on ${g.full}` })) },
     jCloud: { state: cloudState, unknown: cloudState === 'unknown', picking: cloudState === 'picking', scanning: cloudState === 'scanning', found: cloudState === 'found',
       mark: found.has ? W.markFor(found.cloud, s.theme) : '', name: cloudName, wl: String(found.wl), tagging: step === JI.tag },
-    jProviders: J.PROVIDERS.map(p => { const pick = p.key === prov.key; return { ...p, on: pick, off: !p.live, title: p.live ? `${p.name}: ${p.cred}` : `${p.name}: not in this demo`, go: () => { if (p.live && !pr.source && !scanning) set({ jProv: p.key }); } }; }),
-    jCred: prov.cred,
+    // Each cloud's mark for the theme (AWS's dark wordmark vanishes on a dark tile).
+    jProviders: J.PROVIDERS.map(p => { const pick = p.key === prov.key; return { ...p, mark: W.markFor(p.key, s.theme) || p.mark, on: pick, off: !p.live, title: p.live ? `${p.name}: ${p.cred}` : `${p.name}: not in this demo`, go: () => { if (p.live && !pr.source && !scanning) set({ jProv: p.key }); } }; }),
+    jCred: prov.cred, jScanMark: W.markFor(prov.key, s.theme) || prov.mark,
     jScanSteps: SCAN.map((w, i) => ({ key: 's' + i, word: w, state: s.jScan === null || s.jScan === undefined ? 'next' : i < s.jScan ? 'done' : i === s.jScan ? 'cur' : 'next' })),
     jScanPct: `${Math.round(((s.jScan || 0) + (scanning ? 0.5 : 0)) / 4 * 100)}%`,
     jConnectSource: connectSource,
@@ -5390,8 +5395,8 @@ function journeyVals(out, s, set, est) {
         return { key: a.key, name: a.name, icon: KIND_ICON[a.kind] || 'apps', title: a.purpose, hasTags: step >= JI.tag || row.applied.length > 0, dotDelay: `${rows.findIndex(x => x.key === a.key) * 140}ms`,
           // The intent card covers every workload on the cloud; a tag card, the ones it tags.
           hl: step === JI.protect && s.jPolHover ? (s.jPolHover === 'Intent' || (row.applied.length ? row.applied : row.suggested).includes(s.jPolHover) ? 'on' : 'off') : '',
-          chips: [...new Set(step === JI.tag ? [...row.suggested, ...row.applied] : row.applied)].map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === JI.tag ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === JI.tag) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }),
-          canAdd: step === JI.tag, picking: s.jTagPick === a.key, pick: () => set({ jTagPick: s.jTagPick === a.key ? null : a.key, jTagNew: '' }) }; }) })),
+          chips: [...new Set(step === JI.tag ? [...row.suggested, ...row.applied] : row.applied)].sort((x, y) => TAG_SLOT.indexOf(x) - TAG_SLOT.indexOf(y)).map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === JI.tag ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === JI.tag) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }),
+          canAdd: step === JI.tag, picking: step === JI.tag && s.jTagPick === a.key, pick: () => set({ jTagPick: s.jTagPick === a.key ? null : a.key, jTagNew: '' }) }; }) })),
     jTagCount: String(tagsOn),
     // The Intent beat (2026-10-08): four questions, glyph answers; each answer re-ranks the ways at once (the wire's label
     // and the money pair move with it). Your tags suggest the first answers. Once ordered, the answers stand.
@@ -5444,7 +5449,7 @@ function journeyVals(out, s, set, est) {
     jStampCloud: shown ? (Array.isArray(shown) ? (shown.some(d => d.cloudV === 'Denied') ? 'Denied' : 'Allowed') : shown.cloudV) : '', jStampNet: shown ? (Array.isArray(shown) ? (shown.some(d => d.netV === 'Denied') ? 'Denied' : 'Allowed') : shown.netV) : '',
     jStampCloudCls: shown && (Array.isArray(shown) ? shown.some(d => d.cloudV === 'Denied') : shown.cloudV === 'Denied') ? 'deny' : 'allow', jStampNetCls: shown && (Array.isArray(shown) ? shown.some(d => d.netV === 'Denied') : shown.netV === 'Denied') ? 'deny' : 'allow',
     jSave: { month: saving, year: yearSave ? fmt(yearSave) : '', has: !!yearSave, months, before: beforeMo !== null ? fmt(beforeMo) : '', after: afterMo !== null ? fmt(afterMo) : '' },
-    jNext: nextProv ? { has: true, name: nextProv.name === 'Microsoft Azure' ? 'Azure' : nextProv.name, mark: nextProv.mark, go: attachMore } : { has: false, name: '', mark: '', go: () => {} },
+    jNext: nextProv ? { has: true, name: nextProv.name === 'Microsoft Azure' ? 'Azure' : nextProv.name, mark: W.markFor(nextProv.key, s.theme) || nextProv.mark, go: attachMore } : { has: false, name: '', mark: '', go: () => {} },
     jDoneClouds: (s.jDone || []).map(c => ({ key: c, mark: W.markFor(c, s.theme), name: c })), jHasDone: (s.jDone || []).length > 0 };
 }
 function movesVals(s, set, go, est, { openF, obAll, conns }) {

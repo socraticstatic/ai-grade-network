@@ -92,7 +92,7 @@ a{color:#0057b8}a:hover{color:#00388f}
 .rec-found{font-size:11px;line-height:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light);cursor:help}
 /* The existing customer's journey (2026-10-08): one stage that builds, one sentence and one action a beat. */
 .js{display:grid;grid-template-rows:auto minmax(0,1fr);justify-items:center;gap:8px;padding:4px 0 8px;min-height:calc(100vh - 110px);box-sizing:border-box}
-.js-body{position:relative;display:grid;justify-items:center;align-content:center;gap:22px;width:100%}
+.js-body{position:relative;display:grid;justify-items:center;align-content:start;gap:22px;width:100%;padding-top:6px}
 /* What arrives on the stage fades in, so each beat reads as the picture changing, not a new page. */
 @keyframes js-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .js-cloud>*,.js-opts,.js-order,.js-region{animation:js-in .45s cubic-bezier(.22,1,.36,1) both}
@@ -101,17 +101,17 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js-steps li+li::before{content:"";width:40px;height:2px;margin:0 6px;background:var(--border-secondary)}
 .js-steps li[data-state="done"]+li::before,.js-steps li[data-state="cur"]::before{background:var(--cta)}
 .js-steps button{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 10px 0 4px;border:0;border-radius:9999px;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--text-light);cursor:pointer}
-.js-steps button:disabled{cursor:default;opacity:.55}
+.js-steps button:disabled{cursor:default;color:var(--text-disabled)}.js-steps button:disabled i{color:var(--text-disabled);border-color:var(--border-secondary)}
 .js-steps i{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--border-primary);font-style:normal;font-size:12px;font-weight:700;color:var(--text-light);background:var(--bg-base)}
 .js-steps li[data-state="cur"] button{color:var(--text-heading);background:var(--bg-accent)}
 .js-steps li[data-state="cur"] i{border-color:var(--cta);background:var(--cta);color:#fff}
-.js-steps li[data-state="done"] i{border-color:var(--cta);color:var(--link)}
+.js-steps li[data-state="done"] i{border-color:transparent;background:transparent;color:var(--link)}.js-steps li[data-state="done"] i>.ic{width:28px;height:28px}
 .js-line{margin:6px 0 0;max-width:900px;font-size:34px;line-height:42px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading);text-align:center;text-wrap:balance}
-.js-stage{position:relative;display:grid;grid-template-columns:260px minmax(40px,1fr) 150px minmax(40px,1fr) 320px;grid-template-rows:auto 84px;align-items:stretch;width:min(1180px,100%);transition:grid-template-columns .45s cubic-bezier(.22,1,.36,1)}
+.js-stage{position:relative;display:grid;grid-template-columns:290px minmax(40px,1fr) 150px minmax(40px,1fr) 290px;grid-template-rows:auto 84px;align-items:stretch;width:min(1180px,100%);transition:grid-template-columns .45s cubic-bezier(.22,1,.36,1)}
 .js-stage[data-wide="true"]{grid-template-columns:210px minmax(32px,1fr) 128px minmax(32px,1fr) 470px}
 /* Every node is three rows, the top and bottom equal, so its oval (the hub, the question, the scan ring, the count) sits
    on the line that joins the nodes (Micah, 2026-10-08: "vertically align the ovals to the center of the horizontal line"). */
-.js-node{display:grid;grid-template-rows:minmax(0,1fr) auto minmax(0,1fr);align-content:stretch;justify-items:center;gap:10px;min-height:280px;padding:22px;box-sizing:border-box;border:1px solid var(--border-secondary);border-radius:24px;background:var(--bg-base);text-align:center;transition:border-color .4s,box-shadow .4s,background .4s}
+.js-node{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto minmax(0,1fr);align-content:stretch;justify-items:center;gap:10px;min-height:338px;padding:22px;box-sizing:border-box;border:1px solid var(--border-secondary);border-radius:24px;background:var(--bg-base);text-align:center;transition:border-color .4s,box-shadow .4s,background .4s}
 .js-node>:first-child:not(:only-child){align-self:end}.js-node>:last-child:not(:only-child){align-self:start}
 .js-cap{font-size:11px;line-height:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-light)}
 .js-big{font-size:64px;line-height:64px;font-weight:700;letter-spacing:-.04em;color:var(--text-heading);font-variant-numeric:tabular-nums}
@@ -122,39 +122,45 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js-hub{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--cta);color:#fff}.js-hub .ic{width:28px;height:28px}
 .js-wire{position:relative;align-self:center;height:28px;display:grid;align-items:center}
 .js-wire i{display:block;height:4px;border-radius:2px;background:var(--cta)}
-.js-wire small{position:absolute;top:100%;left:0;right:0;margin-top:2px;text-align:center;font-size:11px;line-height:14px;font-weight:600;color:var(--text-light);white-space:nowrap}
+.js-stage[data-wide="true"] .js-sites{padding-left:12px;padding-right:12px}.js-stage[data-wide="true"] .js-svc{column-gap:8px}
+/* J. both wires' notes share one centre line: a plain note is as tall as the way's badge. */
+.js-wire small{position:absolute;top:100%;left:0;right:0;margin-top:6px;text-align:center;font-size:11px;line-height:34px;font-weight:600;color:var(--text-light);white-space:nowrap}
 .js-wire[data-state="none"] i{height:0;border-top:2px dashed var(--border-primary);background:transparent}
 .js-wire[data-state="proposed"] i{background:repeating-linear-gradient(90deg,var(--cta) 0 10px,transparent 10px 18px);background-size:36px 4px;animation:js-flow 1.2s linear infinite}
 .js-wire[data-state="proposed"] small,.js-wire[data-state="connected"] small{color:var(--link)}
 .js-wire[data-state="connected"] i{height:6px;border-radius:3px;box-shadow:0 0 0 4px color-mix(in srgb,var(--cta) 18%,transparent)}
 @keyframes js-flow{to{background-position:36px 0}}
 .js-cloud[data-state="unknown"]{border-style:dashed;border-width:2px;background:transparent}
-.js-q{position:relative;display:grid;place-items:center;width:92px;height:92px;border-radius:50%;border:2px dashed var(--border-primary);color:var(--text-disabled)}.js-q .ic{width:44px;height:44px}.js-q b{position:absolute;right:-4px;top:-6px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--bg-neutral);color:var(--text-light);font-size:16px}
+.js-q{position:relative;display:grid;place-items:center;width:60px;height:60px;border-radius:50%;border:2px dashed var(--border-primary);color:var(--text-disabled)}.js-q .ic{width:30px;height:30px}.js-q b{position:absolute;right:-6px;top:-6px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--bg-neutral);color:var(--text-light);font-size:13px}
 .js-soft{font-size:13px;line-height:18px;color:var(--text-light)}
 .js-provs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%}
 .js-provs button{display:grid;place-items:center;height:76px;border:1px solid var(--border-secondary);border-radius:16px;background:var(--bg-base);cursor:pointer}
-.js-provs button[aria-checked="true"]{border:2px solid var(--cta);background:var(--bg-accent)}.js-provs button:disabled{opacity:.35;cursor:not-allowed}
+.js-provs button[aria-checked="true"]{border:2px solid var(--cta);background:var(--bg-accent)}.js-provs button:disabled{opacity:.5;cursor:not-allowed}
+/* One box for every mark, so a square mark and a wordmark read at one optical size. */
+.js-provs .js-mark{width:80px;height:40px}.js-provs button:disabled .js-mark{filter:grayscale(1)}
 .js-mark{display:block;width:44px;height:44px;background:center / contain no-repeat}.js-mark.sm{width:24px;height:24px}
-.js-key{display:inline-flex;align-items:center;gap:8px;font-size:13px;line-height:18px;font-weight:600;color:var(--text-body)}.js-key .ic{color:var(--success)}
+.js-key{display:inline-flex;align-items:center;gap:8px;font-size:13px;line-height:18px;font-weight:600;color:var(--text-body)}.js-key .ic{color:var(--text-light)}
 .js-ring{--p:0%;display:grid;place-items:center;width:104px;height:104px;border-radius:50%;background:conic-gradient(var(--cta) var(--p),var(--bg-neutral) 0);transition:--p .6s}
 .js-ring .js-mark{width:84px;height:84px;border-radius:50%;background-color:var(--bg-base);background-size:48px}
-.js-scan{display:grid;gap:4px;margin:0;padding:0;list-style:none;font-size:13px;line-height:18px}
-.js-scan li{color:var(--text-disabled);transition:color .3s}.js-scan li[data-state="cur"]{color:var(--text-heading);font-weight:600}.js-scan li[data-state="done"]{color:var(--success)}
+.js-scan{display:grid;margin:0;padding:0;list-style:none;font-size:13px;line-height:18px}
+.js-scan li{grid-area:1 / 1;opacity:0;color:var(--text-disabled);transition:opacity .3s,color .3s}.js-scan li[data-state="cur"]{opacity:1;color:var(--text-heading);font-weight:600}.js-scan li[data-state="done"]{color:var(--text-light)}
 .js-cloud[data-state="found"]{grid-template-rows:auto;align-content:start;justify-items:stretch;text-align:left;border-color:var(--border-active);box-shadow:0 8px 28px color-mix(in srgb,var(--cta) 10%,transparent)}
-.js-cloudhead{display:flex;align-items:center;gap:10px}.js-cloudhead>b{font-size:18px;line-height:24px;color:var(--text-heading)}.js-cloudhead .kchip{margin-left:auto}
+.js-cloudhead{display:flex;align-items:center;gap:10px}.js-cloudhead>b{font-size:18px;line-height:24px;color:var(--text-heading)}.js-cloudhead .kchip{margin-left:auto}.js-cloudhead .js-ichips{margin-left:auto}.js-cloudhead .js-ichips+.kchip{margin-left:0}
 .js-regions{display:grid;gap:10px}
-.js-region{display:grid;gap:6px;padding:12px 14px;border-radius:14px;background:var(--bg-wash)}
+.js-region{display:grid;gap:4px;padding:10px 0 0;border-top:1px solid var(--border-secondary)}
+/* Each region animates in, so each is its own layer: the one whose palette is open rises over the rest. */
+.js-region{position:relative}.js-region:has(.js-palette){z-index:7}
 .js-rhead{display:flex;align-items:center;gap:12px}.js-rhead>b{font-size:15px;color:var(--text-heading);margin-right:auto}
-.js-app{display:flex;align-items:center;gap:8px;min-height:28px;font-size:13px;line-height:18px;color:var(--text-body)}.js-app>.ic{color:var(--text-light)}
+.js-app{position:relative;display:flex;align-items:center;gap:8px;min-height:28px;font-size:13px;line-height:18px;color:var(--text-body)}.js-app>.ic{color:var(--text-light)}
 .js-tags{margin-left:auto;display:flex;gap:6px}
 .js-tag{height:24px;padding:0 10px;border:1px dashed var(--border-primary);border-radius:9999px;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--text-light);cursor:pointer;transition:all .2s}
 .js-tag[aria-pressed="true"]{border:1px solid var(--cta);background:var(--bg-accent);color:var(--link)}
 .js-tag-add{width:24px;padding:0;display:grid;place-items:center}.js-tag-add[aria-expanded="true"]{border-style:solid;border-color:var(--cta);color:var(--link)}
-.js-palette{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--bg-accent);animation:js-in .3s cubic-bezier(.22,1,.36,1) both}
-.js-palette .js-cap{margin-right:6px}.js-palette .js-tag{background:var(--bg-base)}
+.js-palette{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:6;display:flex;align-items:center;gap:6px;flex-wrap:wrap;box-sizing:border-box;padding:10px 40px 10px 12px;border:1px solid var(--border-active);border-radius:12px;background:var(--bg-base);box-shadow:0 12px 28px color-mix(in srgb,var(--text-heading) 14%,transparent);animation:js-in .3s cubic-bezier(.22,1,.36,1) both}
+.js-palette .js-tag{background:var(--bg-base)}.js-newtag input::placeholder{color:var(--text-light);opacity:1}
 .js-newtag{display:inline-flex;align-items:center;height:24px;border:1px solid var(--border-primary);border-radius:9999px;background:var(--bg-base);overflow:hidden}
 .js-newtag input{width:88px;height:100%;border:0;padding:0 0 0 10px;background:transparent;font:inherit;font-size:12px;color:var(--text-heading);outline:none}.js-newtag button{height:100%;padding:0 6px;border:0;background:transparent;color:var(--link);cursor:pointer}
-.js-pal-x{margin-left:auto;border:0;background:transparent;padding:0;color:var(--text-light);cursor:pointer}
+.js-pal-x{position:absolute;right:12px;top:12px;margin-left:auto;border:0;background:transparent;padding:0;color:var(--text-light);cursor:pointer}
 .js-deeper{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:0;border-radius:8px;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer}.js-deeper:hover{background:var(--bg-neutral)}
 .js-deeper .ic{transition:transform .25s}.js-deeper[aria-expanded="true"] .ic{transform:rotate(180deg)}
 /* Why, as a story (Micah, 2026-10-08: "make the 'why' more beautiful"): it covers the stage exactly, so the picture turns
@@ -199,11 +205,10 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js-gt{display:flex;align-items:center;gap:10px;min-width:0}.js-gt>span:last-child{display:grid;min-width:0}.js-gt b{font-size:14px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.js-gt b small{margin-left:6px;font-size:11px;font-weight:700}.js-gt>span:last-child>small{font-size:11px;line-height:14px;color:var(--text-light)}
 .js-whyp .ps{margin:2px 0 4px}
 .js-detail-p{display:grid;gap:4px;padding-top:12px;border-top:1px solid var(--border-secondary)}.js-detail-p>span{display:flex;align-items:center;gap:8px;min-width:0;font-size:12px;line-height:16px;color:var(--text-body)}.js-detail-p>span>span:not(.ic){min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.js-detail-p b{flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}.js-detail-p b{color:var(--text-heading)}.js-detail-p em{margin-left:auto;font-style:normal;color:var(--text-light);white-space:nowrap}
-.js-net{grid-column:1 / -1;grid-row:2;position:relative;margin:0 160px 0 130px;border:2px dotted var(--border-primary);border-top:0;border-radius:0 0 48px 48px;opacity:0;transition:opacity .5s,margin .45s}
+.js-net{grid-column:1 / -1;grid-row:2;position:relative;margin:0 145px;border:2px dotted var(--border-primary);border-top:0;border-radius:0 0 48px 48px;opacity:0;transition:opacity .5s,margin .45s}
 .js-stage[data-wide="true"] .js-net{margin:0 235px 0 105px}
 .js-net small{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);padding:0 10px;background:var(--bg-wash);font-size:12px;line-height:16px;font-weight:600;color:var(--warning);white-space:nowrap}
 .js-net[data-state="public"]{opacity:1;border-color:var(--viz-5)}.js-net[data-state="public"] small{color:var(--viz-5)}
-.js-net[data-state="faded"]{opacity:.3;border-color:var(--border-primary)}.js-net[data-state="faded"] small{color:var(--text-disabled)}
 .js-net small b{margin-left:8px;font-weight:700;font-variant-numeric:tabular-nums}
 /* The traffic itself: dots that ride the internet path while it carries them, and the AT&T wire once the order moves them. */
 .js-dots{position:absolute;left:-2px;right:-2px;bottom:-2px;height:0;border-bottom:4px dotted transparent;pointer-events:none}
@@ -214,56 +219,55 @@ a{color:#0057b8}a:hover{color:#00388f}
 @keyframes js-ride{to{background-position:16px 50%,0 0}}
 .js-stage[data-flow="att"] .js-wire[data-state="connected"] i{animation-name:js-ride-wire}@keyframes js-ride-wire{to{background-position:16px 50%}}
 .js-ms{position:absolute;bottom:100%;left:0;right:0;margin-bottom:4px;display:flex;justify-content:center;align-items:baseline;gap:6px;font-size:14px;line-height:18px;font-weight:700;color:var(--link);font-variant-numeric:tabular-nums;white-space:nowrap}
-.js-ms em{font-style:normal;font-size:11px;line-height:14px;font-weight:700;color:var(--success)}
+.js-ms em{font-style:normal;font-size:11px;line-height:14px;font-weight:700;color:var(--text-light)}
 .js-money{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 10px;border-radius:12px;background:var(--bg-wash)}
 .js-money>span:not(.ic){display:grid;gap:1px;text-align:center}.js-money small{font-size:10px;line-height:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light)}
-.js-money b{font-size:16px;line-height:20px;font-variant-numeric:tabular-nums;color:var(--text-light)}.js-money>span:last-child b{color:var(--success)}.js-money[data-up="true"]>span:last-child b{color:var(--text-heading)}
+.js-money b{font-size:16px;line-height:20px;font-variant-numeric:tabular-nums;color:var(--text-light)}.js-money>span:last-child b{color:var(--text-heading)}.js-money[data-up="true"]>span:last-child b{color:var(--text-heading)}
 .js-money>.ic{color:var(--text-disabled)}
 /* Act three (2026-10-08): live, protected, saving. The internet path goes; health dots blink on; verdicts stamp the wires; the saving grows across a year. */
 .js-net[data-state="gone"]{opacity:0}
 .js-dot{display:none;width:8px;height:8px;border-radius:50%;background:var(--text-disabled);flex:none}
-.js-stage[data-live="true"] .js-dot{display:block;animation:js-blink .5s ease-out both}
-@keyframes js-blink{0%{background:var(--text-disabled);transform:scale(.6)}60%{transform:scale(1.4)}100%{background:var(--success);transform:scale(1)}}
+.js-stage[data-live="true"] .js-dot{display:block;position:absolute;left:11px;top:3px;width:7px;height:7px;box-shadow:0 0 0 2px var(--bg-base);animation:js-blink .5s ease-out both}
+@keyframes js-blink{0%{background:var(--text-disabled);transform:scale(.6)}60%{transform:scale(1.4)}100%{background:var(--link);transform:scale(1)}}
 .js-verdict{position:absolute;left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;border-radius:9999px;font-size:11px;line-height:22px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;animation:js-stamp .4s cubic-bezier(.22,1,.36,1) both}
-.js-wire .js-verdict{top:calc(100% + 20px)}
+.js-wire .js-verdict{top:calc(100% + 46px)}
 .js-verdict.allow{background:color-mix(in srgb,var(--success) 14%,var(--bg-base));color:var(--success)}.js-verdict.deny{background:color-mix(in srgb,var(--error) 14%,var(--bg-base));color:var(--error)}
 .js-net small .js-verdict{position:static;transform:none;margin-left:10px}
-.js-stage[data-verdict="enforced"] .js-net,.js-stage[data-verdict="preview"] .js-net{opacity:.55}
+.js[data-beat="protect"] .js-net,.js-stage[data-verdict="enforced"] .js-net,.js-stage[data-verdict="preview"] .js-net{opacity:1;border-color:var(--border-secondary)}.js[data-beat="protect"] .js-net small,.js-stage[data-verdict="enforced"] .js-net small,.js-stage[data-verdict="preview"] .js-net small{color:var(--text-light)}
 @keyframes js-stamp{from{opacity:0;transform:translateX(-50%) scale(1.4)}to{opacity:1;transform:translateX(-50%) scale(1)}}
 .js-net small .js-verdict{animation-name:js-stamp2}@keyframes js-stamp2{from{opacity:0;transform:scale(1.4)}to{opacity:1;transform:none}}
 .js-deck{display:flex;gap:10px;width:min(1180px,100%)}
 .js-pcard{flex:1 1 0;min-width:0;display:grid;gap:7px;padding:10px 12px;border:1px solid var(--border-secondary);border-radius:16px;background:var(--bg-base);font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .2s;animation:js-in .4s cubic-bezier(.22,1,.36,1) both}
 .js-pcard:nth-child(2){animation-delay:60ms}.js-pcard:nth-child(3){animation-delay:120ms}.js-pcard:nth-child(4){animation-delay:180ms}
 .js-pcard[data-hover="true"]{border-color:var(--border-active);box-shadow:0 8px 24px rgba(0,0,0,.10);transform:translateY(-2px)}
-.js-pcard[data-on="true"]{border-color:var(--text-heading);cursor:default}
+.js-pcard[data-on="true"]{border-color:var(--border-active);cursor:default}
 .js-deckwrap{display:grid;gap:8px;width:min(1180px,100%)}
 .js-deckkey{display:flex;justify-content:center;align-items:center;gap:22px;font-size:11px;line-height:14px;color:var(--text-light)}.js-deckwhere{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--text-body)}.js-deckwhere .ic{color:var(--text-light)}.js-deckkey b{margin-right:4px;font-weight:700;color:var(--text-body)}
 .js-pcard-h{display:flex;align-items:center;gap:6px}.js-pcard-h>b{font-size:14px;line-height:18px;color:var(--text-heading)}.js-pcard-h>.ic{color:var(--text-light)}.js-pcard-h .kchip{margin-left:4px}.js-pcard-h .fw-toggle{margin-left:auto}
 .js-pcard-r{display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.js-pcard-r>.ic{flex:none;color:var(--text-light)}
 .js-rules{display:grid;gap:4px;padding-top:6px;border-top:1px solid var(--border-secondary)}
 .js-rule{display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;line-height:16px;color:var(--text-body)}.js-rule>span:nth-child(2){flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.js-rule>b{flex:none;width:16px;text-align:center;font-weight:700;color:var(--text-heading)}
-.js-rule .fw-badge{height:18px;line-height:18px;padding:0 6px;font-size:10px}
+.js-rule .fw-badge{flex:none;display:inline-flex;justify-content:center;min-width:52px;box-sizing:border-box;height:18px;line-height:18px;padding:0 6px;font-size:10px}
 .js-app[data-hl="on"]{background:var(--bg-accent);border-radius:8px;margin:0 -6px;padding:0 6px}.js-app[data-hl="on"]>span:nth-child(3){font-weight:700;color:var(--text-heading)}
 .js-app[data-hl="off"]{opacity:.4}
 .js-app{transition:opacity .25s,background .25s}
 .js-stage[data-verdict="preview"] .js-verdict{opacity:.85;outline:1.5px dashed currentColor;outline-offset:1px}
-.js-year{display:flex;align-items:flex-end;gap:28px;width:min(760px,100%);margin-top:-6px;animation:js-in .45s cubic-bezier(.22,1,.36,1) both}
-.js-bars{display:flex;align-items:flex-end;gap:6px;flex:1;height:64px}
-.js-bars i{flex:1;border-radius:4px 4px 0 0;background:var(--success);transform-origin:bottom;animation:js-grow .5s cubic-bezier(.22,1,.36,1) both}
+.js-year{display:flex;align-items:flex-end;gap:0;width:min(640px,100%);margin-top:-6px;animation:js-in .45s cubic-bezier(.22,1,.36,1) both}
+.js-bars{display:flex;align-items:flex-end;gap:10px;flex:1;height:56px}
+.js-bars i{flex:1;border-radius:4px 4px 0 0;background:color-mix(in srgb,var(--success) 72%,var(--bg-wash));transform-origin:bottom;animation:js-grow .5s cubic-bezier(.22,1,.36,1) both}
 @keyframes js-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-.js-year-f{display:grid;gap:8px}.js-year-f span{display:grid}.js-year-f small{font-size:11px;line-height:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light)}.js-year-f b{font-size:26px;line-height:30px;color:var(--success);font-variant-numeric:tabular-nums;white-space:nowrap}
 .js-more{display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 18px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);font:inherit;font-size:14px;font-weight:700;color:var(--text-heading);cursor:pointer}.js-more:hover{border-color:var(--border-active)}
-.js-done{position:absolute;right:-10px;top:-14px;display:flex;gap:6px}.js-done>span{display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 6px;border-radius:9999px;background:var(--bg-base);border:1px solid var(--border-secondary);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.js-done{position:absolute;right:0;bottom:calc(100% + 8px);display:flex;gap:6px}.js-done>span{display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 6px;border-radius:9999px;background:var(--bg-base);border:1px solid var(--border-secondary)}
 /* The Intent beat (2026-10-08, "we need to understand intent in the flow"): four questions, each a row of glyph answers. */
 .js-intent{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:min(1180px,100%);animation:js-in .45s cubic-bezier(.22,1,.36,1) both}
 /* Four columns, grouped by proximity and a hairline, not boxed (nothing boxed); each answer a glyph disc and a word. */
-.js-iq{display:grid;align-content:start;gap:10px;padding:0 20px;border-left:1px solid var(--border-secondary)}.js-iq:first-child{padding-left:0;border-left:0}.js-iq:last-child{padding-right:0}
+.js-iq{display:grid;align-content:start;gap:10px;padding:0 16px;border-left:1px solid var(--border-secondary)}.js-iq:first-child{border-left:0}
 .js-iq>.js-cap{display:flex;align-items:center;justify-content:center;gap:6px}
-.js-iopts{display:flex;gap:6px}
-.js-io{flex:1 1 0;min-width:0;display:grid;justify-items:center;gap:8px;padding:12px 4px 11px;border:1px solid transparent;border-radius:16px;background:transparent;font:inherit;cursor:pointer;transition:background .2s,border-color .2s,box-shadow .2s}
+.js-iopts{display:flex;justify-content:center;gap:8px}
+.js-io{flex:0 0 80px;min-width:0;display:grid;justify-items:center;gap:8px;padding:12px 4px 11px;border:1px solid transparent;border-radius:16px;background:transparent;font:inherit;cursor:pointer;transition:background .2s,border-color .2s,box-shadow .2s}
 .js-io>i{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:var(--bg-neutral);color:var(--text-light);transition:background .25s,color .25s}.js-io>i .ic{width:22px;height:22px}
 .js-io b{font-size:13px;line-height:16px;font-weight:600;color:var(--text-light);white-space:nowrap}
-.js-io:hover>i{background:var(--bg-accent);color:var(--link)}.js-io:hover b{color:var(--text-body)}
+.js-io>i{box-shadow:inset 0 0 0 1px var(--border-secondary)}.js-io[aria-checked="true"]>i{box-shadow:none}.js-io:hover>i{background:var(--bg-accent);color:var(--link)}.js-io:hover b{color:var(--text-body)}
 .js-io[aria-checked="true"]{background:var(--bg-base);border-color:var(--border-secondary);box-shadow:0 8px 22px color-mix(in srgb,var(--cta) 12%,transparent)}
 .js-io[aria-checked="true"]>i{background:var(--cta);color:#fff;animation:js-pop .4s cubic-bezier(.22,1,.36,1)}.js-io[aria-checked="true"] b{color:var(--text-heading);font-weight:700}
 @keyframes js-pop{0%{transform:scale(.7)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
@@ -274,14 +278,14 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js-wbadge[data-flip="a"]{animation:js-arrive-a .5s cubic-bezier(.22,1,.36,1) both}.js-wbadge[data-flip="b"]{animation:js-arrive-b .5s cubic-bezier(.22,1,.36,1) both}
 @keyframes js-arrive-a{from{opacity:0;transform:translate(-50%,8px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @keyframes js-arrive-b{from{opacity:0;transform:translate(-50%,8px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
-.js-ichips{display:inline-flex;align-items:center;gap:8px;padding-left:10px;border-left:1px solid var(--border-secondary);color:var(--link)}
+.js-ichips{display:inline-flex;align-items:center;gap:8px;padding-right:10px;border-right:1px solid var(--border-secondary);color:var(--link)}
 .js-opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;width:min(1180px,100%)}
 .js-opt{display:grid;grid-template-columns:44px minmax(0,1fr) 48px;grid-template-areas:"tile text ring" "tile num ring" "why why why";align-items:center;gap:2px 12px;padding:14px 16px;border:1px solid var(--border-secondary);border-radius:18px;background:var(--bg-base);font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,background .2s}
 .js-opt:hover{border-color:var(--border-active)}.js-opt[aria-checked="true"]{border:2px solid var(--cta);background:var(--bg-accent);padding:13px 15px}
 .js-opt>.ic-tile{grid-area:tile;width:44px;height:44px;border-radius:12px}
 .js-score{grid-area:ring;--p:0%;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:conic-gradient(var(--cta) var(--p),var(--bg-neutral) 0)}
 .js-score>b{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--bg-base);font-size:14px;line-height:1;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
-.js-opt[aria-checked="true"] .js-score>b{background:var(--bg-accent)}
+.js-opt[aria-checked="true"] .js-score>b{background:var(--bg-accent)}.js-opt>.ic-tile{background:var(--tile)}.js-opt[aria-checked="true"]>.ic-tile{background:var(--bg-base)}
 .js-score[data-out="true"]{background:var(--bg-neutral)}.js-score[data-out="true"]>b{color:var(--error)}
 .js-opt-t{display:grid;gap:1px;min-width:0;flex:1}.js-opt-t small{font-size:11px;line-height:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light)}.js-opt-t b{font-size:15px;line-height:20px;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Why, on the card: the pick's reasons, an alternative's miss first. */
@@ -293,8 +297,11 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js-sum{display:flex;align-items:center;gap:16px;width:100%;padding:16px 20px;box-sizing:border-box;border:1px solid var(--border-secondary);border-radius:18px;background:var(--bg-base)}
 .js-lines{display:flex;gap:18px;margin-left:auto;font-size:13px;line-height:18px;color:var(--text-light)}.js-lines b{color:var(--text-body);margin-left:4px}
 .js-total{font-size:20px;line-height:24px;color:var(--text-heading);padding-left:18px;border-left:1px solid var(--border-secondary);white-space:nowrap}
-.js-phases{width:min(760px,100%)}
-.js-act{display:flex;align-items:center;gap:18px}
+.js-phases{width:min(760px,100%)}.js-phases [data-state="ok"] i{border-color:var(--cta);background:var(--bg-base);color:var(--link)}
+.js:is([data-beat="connect"],[data-beat="watch"],[data-beat="save"]) .js-tag[aria-pressed="true"]{border-color:var(--border-secondary);background:transparent;color:var(--text-body);cursor:default}
+/* A. the primary action sits on the page's axis on every beat; Back hangs left of it, a second action right. */
+.js-act{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;column-gap:18px;width:min(1180px,100%)}
+.js-act>.js-back{grid-area:1 / 1;justify-self:end}.js-go:disabled .ic{display:none}.js-act>.js-go{grid-area:1 / 2}.js-act>.js-more{grid-area:1 / 3;justify-self:start}
 .js-back{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 14px;border:0;background:transparent;font:inherit;font-size:14px;font-weight:600;color:var(--text-light);cursor:pointer}.js-back:hover{color:var(--link)}
 .js-go{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 30px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px color-mix(in srgb,var(--cta) 30%,transparent);transition:background .2s,transform .2s}
 .js-go:hover{background:var(--cta-hover);transform:translateY(-1px)}.js-go:disabled{background:var(--bg-neutral);color:var(--text-disabled);box-shadow:none;cursor:not-allowed;transform:none}
@@ -952,19 +959,18 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
     <div class="js-node js-cloud" data-state="{{ jCloud.state }}" aria-label="Your cloud">
       <sc-if value="{{ jCloud.unknown }}" hint-placeholder-val="{{ true }}"><span class="js-cap">Your cloud</span><span class="js-q"><span class="ic" style="--ic:url('brand/icons/cloud.svg')"></span><b>?</b></span><span class="js-soft">Unknown to AT&amp;T</span></sc-if>
       <sc-if value="{{ jCloud.picking }}" hint-placeholder-val="{{ false }}"><div class="js-provs" role="radiogroup" aria-label="Cloud" style="grid-row:2"><sc-for list="{{ jProviders }}" as="jp" hint-placeholder-count="4"><button role="radio" aria-checked="{{ jp.on }}" disabled="{{ jp.off }}" onClick="{{ jp.go }}" title="{{ jp.title }}"><span class="js-mark" style="background-image:url('{{ jp.mark }}')"></span></button></sc-for></div><span class="js-key" style="grid-row:3"><span class="ic s16" style="--ic:url('brand/icons/padlock.svg')"></span>{{ jCred }}</span></sc-if>
-      <sc-if value="{{ jCloud.scanning }}" hint-placeholder-val="{{ false }}"><span class="js-ring" style="--p:{{ jScanPct }};grid-row:2"><span class="js-mark" style="background-image:url('brand/providers/azure.svg')"></span></span><ol class="js-scan" style="grid-row:3"><sc-for list="{{ jScanSteps }}" as="sc" hint-placeholder-count="4"><li data-state="{{ sc.state }}">{{ sc.word }}</li></sc-for></ol></sc-if>
+      <sc-if value="{{ jCloud.scanning }}" hint-placeholder-val="{{ false }}"><span class="js-ring" style="--p:{{ jScanPct }};grid-row:2"><span class="js-mark" style="background-image:url('{{ jScanMark }}')"></span></span><ol class="js-scan" style="grid-row:3"><sc-for list="{{ jScanSteps }}" as="sc" hint-placeholder-count="4"><li data-state="{{ sc.state }}">{{ sc.word }}</li></sc-for></ol></sc-if>
       <sc-if value="{{ jCloud.found }}" hint-placeholder-val="{{ false }}">
-        <div class="js-cloudhead"><span class="js-mark sm" style="background-image:url('{{ jCloud.mark }}')"></span><b>{{ jCloud.name }}</b><span class="kchip" title="Workloads"><span class="ic s14" style="--ic:url('brand/icons/apps.svg')"></span><b>{{ jCloud.wl }}</b></span><sc-if value="{{ jHasIntentChips }}" hint-placeholder-val="{{ false }}"><span class="js-ichips" aria-label="What it needs"><sc-for list="{{ jIntentChips }}" as="ix" hint-placeholder-count="4"><span class="ic s16" role="img" aria-label="{{ ix.title }}" title="{{ ix.title }}" style="--ic:url('brand/icons/{{ ix.icon }}.svg')"></span></sc-for></span></sc-if></div>
+        <div class="js-cloudhead"><span class="js-mark sm" style="background-image:url('{{ jCloud.mark }}')"></span><b>{{ jCloud.name }}</b><sc-if value="{{ jHasIntentChips }}" hint-placeholder-val="{{ false }}"><span class="js-ichips" aria-label="What it needs"><sc-for list="{{ jIntentChips }}" as="ix" hint-placeholder-count="4"><span class="ic s16" role="img" aria-label="{{ ix.title }}" title="{{ ix.title }}" style="--ic:url('brand/icons/{{ ix.icon }}.svg')"></span></sc-for></span></sc-if><span class="kchip" title="Workloads"><span class="ic s14" style="--ic:url('brand/icons/apps.svg')"></span><b>{{ jCloud.wl }}</b></span></div>
         <sc-if value="{{ jMoney.has }}" hint-placeholder-val="{{ false }}"><div class="js-money" data-up="{{ jMoney.up }}"><span title="{{ jMoney.beforeTitle }}"><small>Today</small><b>{{ jMoney.before }}</b></span><span class="ic s16" style="--ic:url('brand/icons/arrow-right.svg')"></span><span title="{{ jMoney.afterTitle }}"><small>On AT&amp;T</small><b>{{ jMoney.after }}</b></span></div></sc-if>
         <div class="js-regions"><sc-for list="{{ jRegions }}" as="rg" hint-placeholder-count="2"><div class="js-region">
           <div class="js-rhead"><b>{{ rg.region }}</b><span class="kchip" title="Workloads"><span class="ic s14" style="--ic:url('brand/icons/apps.svg')"></span>{{ rg.wlF }}</span><span class="kchip" title="Latency from your sites, today"><span class="ic s14" style="--ic:url('brand/icons/clock.svg')"></span>{{ rg.msF }}</span></div>
-          <sc-for list="{{ rg.apps }}" as="ap" hint-placeholder-count="2"><div class="js-app" data-hl="{{ ap.hl }}" title="{{ ap.title }}"><i class="js-dot" style="animation-delay:{{ ap.dotDelay }}"></i><span class="ic s16" style="--ic:url('brand/icons/{{ ap.icon }}.svg')"></span><span>{{ ap.name }}</span><span class="js-tags"><sc-for list="{{ ap.chips }}" as="tg" hint-placeholder-count="2"><button class="js-tag" aria-pressed="{{ tg.on }}" onClick="{{ tg.go }}" title="{{ tg.title }}">{{ tg.t }}</button></sc-for><sc-if value="{{ ap.canAdd }}" hint-placeholder-val="{{ false }}"><button class="js-tag js-tag-add" aria-expanded="{{ ap.picking }}" onClick="{{ ap.pick }}" title="Another tag for {{ ap.name }}"><span class="ic s14" style="--ic:url('brand/icons/plus.svg')"></span></button></sc-if></span></div></sc-for>
+          <sc-for list="{{ rg.apps }}" as="ap" hint-placeholder-count="2"><div class="js-app" data-hl="{{ ap.hl }}" title="{{ ap.title }}"><i class="js-dot" style="animation-delay:{{ ap.dotDelay }}"></i><span class="ic s16" style="--ic:url('brand/icons/{{ ap.icon }}.svg')"></span><span>{{ ap.name }}</span><span class="js-tags"><sc-for list="{{ ap.chips }}" as="tg" hint-placeholder-count="2"><button class="js-tag" aria-pressed="{{ tg.on }}" onClick="{{ tg.go }}" title="{{ tg.title }}">{{ tg.t }}</button></sc-for><sc-if value="{{ ap.canAdd }}" hint-placeholder-val="{{ false }}"><button class="js-tag js-tag-add" aria-expanded="{{ ap.picking }}" onClick="{{ ap.pick }}" title="Another tag for {{ ap.name }}"><span class="ic s14" style="--ic:url('brand/icons/plus.svg')"></span></button></sc-if></span><sc-if value="{{ ap.picking }}" hint-placeholder-val="{{ false }}"><div class="js-palette" role="group" aria-label="Tags for {{ ap.name }}"><sc-for list="{{ jTagPalette.tags }}" as="pt" hint-placeholder-count="6"><button class="js-tag" onClick="{{ pt.go }}" title="Tag {{ jTagPalette.name }} {{ pt.t }}">{{ pt.t }}</button></sc-for><span class="js-newtag"><input value="{{ jTagPalette.text }}" onChange="{{ jTagPalette.setText }}" onKeyDown="{{ jTagPalette.keyDown }}" placeholder="Your own" aria-label="A new tag"></input><button onClick="{{ jTagPalette.add }}" aria-label="Add the tag"><span class="ic s14" style="--ic:url('brand/icons/arrow-right.svg')"></span></button></span><button class="js-pal-x" onClick="{{ jTagPalette.close }}" aria-label="Close"><span class="ic s14" style="--ic:url('brand/icons/close-circle.svg')"></span></button></div></sc-if></div></sc-for>
         </div></sc-for></div>
-        <sc-if value="{{ jTagPalette.open }}" hint-placeholder-val="{{ false }}"><div class="js-palette" role="group" aria-label="Tags for {{ jTagPalette.name }}"><span class="js-cap">{{ jTagPalette.name }}</span><sc-for list="{{ jTagPalette.tags }}" as="pt" hint-placeholder-count="6"><button class="js-tag" onClick="{{ pt.go }}" title="Tag {{ jTagPalette.name }} {{ pt.t }}">{{ pt.t }}</button></sc-for><span class="js-newtag"><input value="{{ jTagPalette.text }}" onChange="{{ jTagPalette.setText }}" onKeyDown="{{ jTagPalette.keyDown }}" placeholder="Your own" aria-label="A new tag"></input><button onClick="{{ jTagPalette.add }}" aria-label="Add the tag"><span class="ic s14" style="--ic:url('brand/icons/arrow-right.svg')"></span></button></span><button class="js-pal-x" onClick="{{ jTagPalette.close }}" aria-label="Close"><span class="ic s14" style="--ic:url('brand/icons/close-circle.svg')"></span></button></div></sc-if>
       </sc-if>
     </div>
     <div class="js-net" data-state="{{ jNet }}" aria-hidden="true"><i class="js-dots"></i><small>{{ jNetWord }}<sc-if value="{{ jNetHasMs }}" hint-placeholder-val="{{ true }}"><b>{{ jNetMs }}</b></sc-if><sc-if value="{{ jProtected }}" hint-placeholder-val="{{ false }}"><span class="js-verdict {{ jStampNetCls }}"><span class="ic s14" style="--ic:url('brand/icons/close-circle.svg')"></span>{{ jStampNet }}</span></sc-if></small></div>
-    <sc-if value="{{ jHasDone }}" hint-placeholder-val="{{ false }}"><div class="js-done" aria-label="Already on AT&amp;T"><sc-for list="{{ jDoneClouds }}" as="dc" hint-placeholder-count="1"><span title="{{ dc.name }}: on AT&amp;T"><span class="js-mark sm" style="background-image:url('{{ dc.mark }}')"></span><span class="ic s14" style="--ic:url('brand/icons/check-circle.svg');color:var(--success)"></span></span></sc-for></div></sc-if>
+    <sc-if value="{{ jHasDone }}" hint-placeholder-val="{{ false }}"><div class="js-done" aria-label="Already on AT&amp;T"><sc-for list="{{ jDoneClouds }}" as="dc" hint-placeholder-count="1"><span title="{{ dc.name }}: on AT&amp;T"><span class="js-mark sm" style="background-image:url('{{ dc.mark }}')"></span><span class="ic s14" style="--ic:url('brand/icons/check-circle.svg');color:var(--link)"></span></span></sc-for></div></sc-if>
     <!-- Why, as a story (Micah, 2026-10-08: "make the 'why' more beautiful"): it covers the stage exactly, so the picture turns over: the pick and its score with the weights your answers set against the deck's; each answer joined to what this way does about it; what you get. -->
     <sc-if value="{{ jDetailOpen }}" hint-placeholder-val="{{ false }}"><div class="js-whyp" role="dialog" aria-label="Why {{ jDetail.label }}" title="{{ jDetail.whyLine }}">
       <div class="js-whyp-a">
@@ -991,7 +997,7 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
   <!-- The Intent beat (2026-10-08, Micah: "is it business critical? Is it a lab? Does it need priority traffic? Do you care about security? ... preferred routing (layer 3)? preferred security?"): four questions, glyph answers; the wire above proposes the top pick as they change. -->
   <sc-if value="{{ jIsIntent }}" hint-placeholder-val="{{ false }}"><div class="js-intent" role="group" aria-label="What it needs"><sc-for list="{{ jIntentQs }}" as="iq" hint-placeholder-count="4"><div class="js-iq" role="radiogroup" aria-label="{{ iq.label }}"><span class="js-cap"><span class="ic s14" style="--ic:url('brand/icons/{{ iq.icon }}.svg')"></span>{{ iq.label }}</span><div class="js-iopts"><sc-for list="{{ iq.opts }}" as="io" hint-placeholder-count="3"><button role="radio" class="js-io" aria-checked="{{ io.on }}" disabled="{{ io.off }}" onClick="{{ io.go }}" title="{{ io.title }}"><i><span class="ic" style="--ic:url('brand/icons/{{ io.icon }}.svg')"></span></i><b>{{ io.label }}</b></button></sc-for></div></div></sc-for></div></sc-if>
   <sc-if value="{{ jIsRec }}" hint-placeholder-val="{{ false }}"><div class="js-opts" role="radiogroup" aria-label="Ways to connect"><sc-for list="{{ jOptions }}" as="op" hint-placeholder-count="3"><button role="radio" class="js-opt" aria-checked="{{ op.on }}" onClick="{{ op.go }}" title="{{ op.setupTitle }}">
-    <span class="ic-tile" style="background:{{ op.mark.bg }};color:{{ op.mark.ink }}"><span class="ic s20" style="--ic:url('brand/icons/{{ op.mark.icon }}.svg')"></span></span>
+    <span class="ic-tile" style="--tile:{{ op.mark.bg }};color:{{ op.mark.ink }}"><span class="ic s20" style="--ic:url('brand/icons/{{ op.mark.icon }}.svg')"></span></span>
     <span class="js-opt-t"><small>{{ op.tier }}</small><b>{{ op.label }}</b></span>
     <span class="js-opt-n"><b>{{ op.price }}</b><small style="color:{{ op.deltaInk }}">{{ op.delta }}</small></span>
     <span class="js-score" style="--p:{{ op.ptsPct }}" data-out="{{ op.out }}" title="{{ op.ptsTitle }}"><b>{{ op.ptsShown }}</b></span>
@@ -1009,7 +1015,7 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
     <span class="js-pcard-r" title="{{ pd.req }}"><span class="ic s16" style="--ic:url('brand/icons/{{ pd.icon }}.svg')"></span>{{ pd.reqWord }}</span>
     <span class="js-rules"><sc-for list="{{ pd.rules }}" as="rr" hint-placeholder-count="2"><span class="js-rule" title="{{ rr.title }}"><span class="fw-badge {{ rr.cls }}">{{ rr.verb }}</span><span>{{ rr.label }}</span><b aria-label="{{ rr.dirWord }}">{{ rr.dir }}</b></span></sc-for></span>
   </button></sc-for></div><div class="js-deckkey"><span class="js-deckwhere"><span class="ic s14" style="--ic:url('brand/icons/hub.svg')"></span>{{ jDeckWhere }}</span><sc-if value="{{ jDeckNba }}" hint-placeholder-val="{{ true }}"><span><b>→</b> on prem to partner</span><span><b>←</b> partner to on prem</span><span><b>⇄</b> both</span></sc-if></div></div></sc-if></sc-if>
-  <sc-if value="{{ jIsSave }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ jSave.has }}" hint-placeholder-val="{{ true }}"><div class="js-year" aria-label="Saving over twelve months"><div class="js-bars"><sc-for list="{{ jSave.months }}" as="mo" hint-placeholder-count="12"><i style="height:{{ mo.h }};animation-delay:{{ mo.d }}"></i></sc-for></div><div class="js-year-f"><span><small>A month</small><b>{{ jSave.month }}</b></span><span><small>A year</small><b>{{ jSave.year }}</b></span></div></div></sc-if></sc-if>
+  <sc-if value="{{ jIsSave }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ jSave.has }}" hint-placeholder-val="{{ true }}"><div class="js-year" aria-label="Saving over twelve months"><div class="js-bars"><sc-for list="{{ jSave.months }}" as="mo" hint-placeholder-count="12"><i style="height:{{ mo.h }};animation-delay:{{ mo.d }}"></i></sc-for></div></div></sc-if></sc-if>
   <div class="js-act"><sc-if value="{{ jHasBack }}" hint-placeholder-val="{{ true }}"><button class="js-back" onClick="{{ jBack }}"><span class="ic s16" style="--ic:url('brand/icons/arrow-right.svg');transform:scaleX(-1)"></span>Back</button></sc-if><button class="js-go" onClick="{{ jActGo }}" disabled="{{ jActOff }}">{{ jAct }}<span class="ic s18" style="--ic:url('brand/icons/arrow-right.svg')"></span></button><sc-if value="{{ jIsRec }}" hint-placeholder-val="{{ false }}"><button class="js-more js-deeper" onClick="{{ toggleDetail }}" aria-expanded="{{ jDetailOpen }}"><span class="ic s16" style="--ic:url('brand/icons/lightbulb.svg')"></span><span>Why {{ jDetail.label }}</span></button></sc-if><sc-if value="{{ jDeckRest.has }}" hint-placeholder-val="{{ false }}"><button class="js-more" onClick="{{ jDeckRest.go }}"><span class="ic s16" style="--ic:url('brand/icons/check-shield.svg')"></span><span>Enforce the other {{ jDeckRest.n }}</span></button></sc-if><sc-if value="{{ jTagRest.has }}" hint-placeholder-val="{{ false }}"><button class="js-more" onClick="{{ jTagRest.go }}"><span class="ic s16" style="--ic:url('brand/icons/tag.svg')"></span>Tag the rest</button></sc-if><sc-if value="{{ jIsSave }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ jNext.has }}" hint-placeholder-val="{{ true }}"><button class="js-more" onClick="{{ jNext.go }}"><span class="js-mark sm" style="background-image:url('{{ jNext.mark }}')"></span><span>Attach {{ jNext.name }}</span><span class="ic s16" style="--ic:url('brand/icons/plus-circle.svg')"></span></button></sc-if></sc-if></div>
   </div>
 </section>

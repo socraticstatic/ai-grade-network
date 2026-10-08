@@ -89,7 +89,7 @@ test('beat 4: tags suggested by what a workload is; Tag them all, then the tags 
   const c = journey({ jStep: 3, addedSources: AZURE });
   let v = vals(c);
   const chips = (name) => v.jRegions.flatMap(r => r.apps).find(a => a.name === name).chips.map(x => x.t);
-  assert.deepEqual(chips('payments-api'), ['PCI', 'Prod', 'Finance']);
+  assert.deepEqual(chips('payments-api'), ['PCI', 'Finance', 'Prod'], 'a tag keeps its slot: PCI, Finance, Internet-facing, then Prod beside the +');
   assert.deepEqual(chips('customer-portal'), ['Internet-facing', 'Prod']);
   assert.deepEqual(chips('dispatch-svc'), ['Prod']);
   assert.equal(v.jAct, 'Tag them all');
@@ -129,7 +129,8 @@ test('beat 7: one line of the order, Place order; then the line is AT&T\'s, the 
   v = vals(c);
   assert.equal(v.jPlaced, true);
   assert.equal(v.jLine, 'Ordered. AT&T is provisioning it.');
-  assert.equal(v.jLink, 'connected'); assert.equal(v.jNet, 'faded');
+  // Ordered is not live: the way stays proposed and the traffic on the internet until Go live (the Watch beat's picture).
+  assert.equal(v.jLink, 'proposed'); assert.equal(v.jNet, 'public'); assert.equal(v.jFlow, 'net');
   const o = c.state.orders.find(x => x.journey);
   assert.equal(o.stage, 'Submitted for approval'); assert.deepEqual(o.moveKeys, ['region:Azure']); assert.equal(o.way, 'att');
   assert.deepEqual(v.jPhases.map(p => [p.label, p.state]), [['Ordered', 'ok'], ['Provision', 'set'], ['Live', 'any'], ['Insight', 'any']]);
@@ -183,7 +184,9 @@ test('the picture carries the figures (2026-10-08): latency on each wire, the mo
   assert.equal(hosted.jMoney.up, true, 'a dearer way reads in heading ink, never green');
   const c = journey({ jStep: B.connect, jPick: 1, addedSources: AZURE });
   vals(c).jActGo();
-  assert.equal(vals(c).jFlow, 'att', 'the order moves the traffic onto AT&T');
+  assert.equal(vals(c).jFlow, 'net', 'ordered, the traffic still rides the internet');
+  vals(c).jActGo(); vals(c).jActGo();
+  assert.equal(vals(c).jFlow, 'att', 'Go live moves the traffic onto AT&T');
   assert.match(HTML, /<div class="js-stage"[^>]* data-flow="\{\{ jFlow \}\}"/);
   assert.match(HTML, /<i class="js-dots"><\/i>/);
   assert.match(HTML, /<div class="js-money" data-up="\{\{ jMoney\.up \}\}">/);
@@ -293,6 +296,7 @@ test('beat 4 again (2026-10-08): any known tag from a palette, and your own; Rec
   v = vals(c);
   assert.deepEqual(c.state.jTags['eastus:dispatch-svc'], ['Finance', 'Depot']);
   assert.ok(v.jRegions[0].apps[0].chips.find(x => x.t === 'Depot' && x.on), 'your own tag is a chip, on');
+  assert.deepEqual(v.jRegions[0].apps[0].chips.map(x => x.t), ['Depot', 'Finance', 'Prod'], 'your own leads; the known tags keep their slots');
   assert.ok(!v.jTagPalette.tags.some(t => t.t === 'Finance'), 'an applied tag leaves the palette');
   v.jTagPalette.close();
   assert.equal(vals(c).jTagPalette.open, false);
@@ -308,5 +312,5 @@ test('beat 4 again (2026-10-08): any known tag from a palette, and your own; Rec
   assert.deepEqual(w.jDetail.products.map(p => [p.name, p.n]), [['NetBond Advanced', '2']]);
   assert.match(w.jDetail.youDo, /^Accept the connection/);
   assert.match(HTML, /<button class="js-more js-deeper" onClick="\{\{ toggleDetail \}\}" aria-expanded="\{\{ jDetailOpen \}\}">/);
-  assert.match(HTML, /<div class="js-palette" role="group"/);
+  assert.match(HTML, /<sc-if value="\{\{ ap\.picking \}\}"[^>]*><div class="js-palette" role="group" aria-label="Tags for \{\{ ap\.name \}\}">/, 'the palette opens in the row it edits');
 });
