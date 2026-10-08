@@ -5258,10 +5258,28 @@ function journeyVals(out, s, set, est) {
   // and the five weights the intent set, as bars.
   const wts = W.intentWeights(journeyIntent(s)), WT_SHORT = { cost: 'Cost', perf: 'Speed', sec: 'Security', setup: 'Effort', scale: 'Scale' };
   const whyOf = (t) => { const why = t.why || [], oks = why.filter(x => x.ok), cuts = why.filter(x => !x.ok);
-    return { whyLine: oks.length ? `Why: ${oks.map(x => x.words).join(', ')}.` : '', hasWhyLine: oks.length > 0, whyRows: [...oks, ...cuts].map(x => ({ ...x, ink: x.miss ? 'var(--error)' : x.warn ? 'var(--text-light)' : 'var(--link)' })),
+    return { whyLine: oks.length ? `Why: ${oks.map(x => `${x.short}, ${x.words}`).join('; ')}.` : '', hasWhyLine: oks.length > 0, whyRows: [...oks, ...cuts].map(x => ({ ...x, ink: x.miss ? 'var(--error)' : x.warn ? 'var(--text-light)' : 'var(--link)' })),
       weights: W.CRITERIA.map(c => ({ key: c.key, icon: c.icon, label: c.label, short: WT_SHORT[c.key], w: String(wts[c.key]), h: `${Math.round(wts[c.key] / Math.max(...Object.values(wts)) * 100)}%`,
         deck: `${Math.min(100, Math.round(c.weight / Math.max(...Object.values(wts)) * 100))}%`, title: `${c.label}: weighs ${wts[c.key]} of 100${wts[c.key] !== c.weight ? ` (the deck's ${c.weight}, moved by what you said)` : ''}` })),
-      weightsTitle: `Weighed for what you said: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${wts[c.key]}`).join(', ')}` }; };
+      weightsTitle: `Weighed for what you said: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${wts[c.key]}`).join(', ')}`,
+      // The Why as a story (Micah, 2026-10-08: "make the 'why' more beautiful"): each answer you gave, joined to what this
+      // way does about it; an answer that asks nothing of the path says so quietly. Then what fits besides.
+      pairs: W.INTENT.map(q => { const o = q.opts.find(x => x.key === iNow[q.key]) || q.opts[0];
+        const got = why.filter(x => x.q === q.key), rs = got.length ? got : [{ key: 'n:' + o.key, kind: 'quiet', icon: o.icon, short: (QUIET[o.key] || ['As it stands'])[0], words: (QUIET[o.key] || ['', 'nothing more asked of the path'])[1] }];
+        const kind = rs.some(x => x.miss) ? 'miss' : rs.some(x => x.ok) ? 'ok' : rs.some(x => x.warn) ? 'warn' : 'quiet';
+        return { key: q.key, kind, q: q.label, aIcon: o.icon, aLabel: o.label, reasons: rs.map(x => ({ ...x, title: `${x.short}: ${x.words}` })), title: `${q.label}: ${o.label}` }; }),
+      also: why.filter(x => !x.q && x.ok).map(x => ({ ...x, title: `${x.short}: ${x.words}` })), hasAlso: why.some(x => !x.q && x.ok),
+      // The weights as two stacked bars of 100: yours, and the deck's under it, so the shift is the picture.
+      wtYou: W.CRITERIA.map((c, i) => ({ key: c.key, icon: c.icon, short: WT_SHORT[c.key], w: String(wts[c.key]), shade: WT_SHADE[i], ink: i < 3 ? '#fff' : 'var(--link)', showIcon: wts[c.key] >= 12,
+        move: wts[c.key] - c.weight, moveWord: wts[c.key] === c.weight ? '' : `${wts[c.key] > c.weight ? '+' : '−'}${Math.abs(wts[c.key] - c.weight)}`, moveInk: wts[c.key] > c.weight ? 'var(--link)' : 'var(--text-light)',
+        title: `${c.label}: ${wts[c.key]} of 100${wts[c.key] !== c.weight ? `; the deck weighs it ${c.weight}` : ', as the deck weighs it'}` })),
+      wtDeck: W.CRITERIA.map((c, i) => ({ key: c.key, w: String(c.weight), shade: WT_SHADE[i], title: `The deck: ${c.label.toLowerCase()} ${c.weight}` })),
+      // The pick's own figures for the head: its score ring, price and what it saves.
+      ptsPct: t.hasPts ? `${t.pts}%` : '0%', price: t.priceShort || '', delta: t.net > 0 ? `saves ${fmt(t.net)}` : t.net < 0 ? `adds ${fmt(-t.net)}` : '', deltaInk: t.net > 0 ? 'var(--success)' : 'var(--text-light)' }; };
+  const iNow = journeyIntent(s);
+  // An answer that asks nothing of the path, in its own quiet words.
+  const QUIET = { prod: ['Balanced', 'the deck\'s weights as they stand'], standard: ['Best path', 'no latency target of its own'], lab: ['Cost first', 'cost and setup weigh more'] };
+  const WT_SHADE = ['100%', '78%', '58%', '40%', '26%'];
   // One sentence a beat: the story, not the screen.
   // Act three. Live: the journey's regions land at once (a presenter cannot wait ten days), so every page reads them
   // private. Protect: one policy from the tags you applied, a real one Govern lists. Save: the saving over a year, then
@@ -5281,14 +5299,18 @@ function journeyVals(out, s, set, est) {
     if (add.length) set({ customPolicies: [...(s.customPolicies || []), ...add], jPolHover: null }); };
   // A card speaks NetBond Advanced's grammar (Micah, 2026-10-08: "is it on prem to partner, partner to on prem? allow,
   // deny, manipulate? Advertise?"): the route rules the intent pushes, each with its verb and its direction.
+  // A rule in its short name on the card; NetBond's whole name stays in the row's title (2026-10-08: "work on text layout,
+  // and on making text more concise").
+  const RULE_SHORT = { 'block-default-routes': 'Default routes', 'matching-routes': 'Matching routes', 'community-value-filter-customer': 'Your BGP CVs', 'community-value-filter-att': 'AT&T BGP CVs',
+    'prepend-advertisements': 'Prepend ASNs', 'selective-cv-tagging': 'CV tagging', 'community-value-tag': 'Tag by CV', 'advertise-static-routes': 'Static routes' };
   const VERB = { deny: ['Deny', 'deny'], manip: ['Manipulate', 'manip'], allow: ['Allow', 'allow'], advanced: ['Advertise', 'adv'] };
   // Where the policy is enforced follows the way you picked (the deck, slide 5): on NetBond Advanced, the IPE's L3VPN
   // route policy, rule by rule with its direction; on a hosted way, the intent compiles to the vSRX in AT&T's hub (L3 to
   // L7) and to the cloud's route tables.
   const hostedWay = !!(tier && tier.way && W.wayHosted(tier.way));
-  const rulesOf = (d) => { if (hostedWay) return [{ key: 'vsrx', verb: 'Inspect', cls: 'manip', label: 'vSRX in AT&T\'s hub, L3 to L7', dir: '', dirWord: '', title: `${d.req}: compiled to the vSRX in AT&T's hub` }, { key: 'rt', verb: 'Route', cls: 'adv', label: 'Your cloud\'s route tables', dir: '', dirWord: '', title: `${d.req}: compiled to your route tables` }];
+  const rulesOf = (d) => { if (hostedWay) return [{ key: 'vsrx', verb: 'Inspect', cls: 'manip', label: 'vSRX, L3 to L7', dir: '', dirWord: '', title: `${d.req}: compiled to the vSRX in AT&T's hub, L3 to L7` }, { key: 'rt', verb: 'Route', cls: 'adv', label: 'Route tables', dir: '', dirWord: '', title: `${d.req}: compiled to your route tables` }];
     const rt = routeRulesOf(mkPol(d)); return ROUTE_RULES.filter(r => { const v = rt[`${r.section}:${r.id}`]; return v && (v.o2p || v.p2o); }).map(r => { const v = rt[`${r.section}:${r.id}`], both = v.o2p && v.p2o;
-    return { key: `${r.section}:${r.id}`, verb: VERB[r.section][0], cls: VERB[r.section][1], label: r.label, dir: both ? '⇄' : v.o2p ? '→' : '←', dirWord: both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem', title: `${VERB[r.section][0]} ${r.label.toLowerCase()}, ${both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem'}` }; }); };
+    return { key: `${r.section}:${r.id}`, verb: VERB[r.section][0], cls: VERB[r.section][1], label: RULE_SHORT[r.id] || r.label, dir: both ? '⇄' : v.o2p ? '→' : '←', dirWord: both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem', title: `${VERB[r.section][0]} ${r.label.toLowerCase()}, ${both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem'}` }; }); };
   const deck = deck0.map(d => { const on = mine.some(p => p.tag === d.tag), vc = verdictOf(d, toRegion), vi = verdictOf(d, 'the Internet');
     return { key: d.tag, ...d, on, off: !on, n: String(d.apps.length), wlF: String(d.wl), appsWord: d.apps.join(', '), hover: s.jPolHover === d.tag, rules: rulesOf(d),
       // The intent card wears the Intent beat's mark and its parts in short; a tag card, the tag and its requirement.
@@ -5405,9 +5427,11 @@ function journeyVals(out, s, set, est) {
     // Depth on what is offered (2026-10-08, "no way to dive deeper"): the picked option's whole card, in place, by a chevron.
     jDetailOpen: !!s.jDetail && step === JI.recommend && !!tier, toggleDetail: () => set({ jDetail: !s.jDetail }),
     jDetail: tier ? { ...whyOf(tier), label: tier.label, tierWord: tier.tier, intro: tier.intro || '', fit: tier.fit || '', mark: tier.mark, strip: tier.strip || [], pts: tier.pts || '', hasPts: !!tier.hasPts, ptsTitle: tier.ptsTitle || '',
-      metrics: (tier.metrics || []).map(m2 => ({ ...m2, words: String(m2.title || '').replace(/^[A-Za-z ]+: /, '') })),
+      metrics: (tier.metrics || []).map(m2 => ({ ...m2, words: String(m2.title || '').replace(/^[A-Za-z ]+: /, ''),
+        v: m2.key === 'setup' ? (tier.setupTime || m2.v) : m2.key === 'perf' ? String(m2.v).replace(/ · .*$/, '') : m2.v,
+        label: m2.key === 'setup' ? `${tier.whoWord === 'You' ? 'You set' : 'AT&T sets'} it up` : ({ sec: 'Security', perf: 'Latency', cost: 'A month', you: 'You do' })[m2.key] || '' })),
       who: tier.whoWord || '', time: tier.setupTime || '', setupWords: tier.setupWords || '', youDo: tier.way && W.wayYouDo(tier.way) ? W.wayYouDo(tier.way).words : '',
-      products: (tier.products || []).map(p => { const pp = W.productOf(p.id) || {}; return { key: p.id, name: pp.name || p.id, n: String(p.n), v: pp.price === null || pp.price === undefined ? 'At review' : `${fmt(pp.price)}/mo each` }; }) } : null,
+      products: (tier.products || []).map(p => { const pp = W.productOf(p.id) || {}; return { key: p.id, name: pp.name || p.id, n: String(p.n), v: pp.price === null || pp.price === undefined ? 'At review' : `${fmt(pp.price)} each` }; }) } : null,
     jPicked: tier ? { label: tier.label, mark: tier.mark, pts: tier.pts || '', hasPts: !!tier.hasPts } : null, jHasPick: !!tier,
     jLines: lines, jTotal: total, jRegionsWord: move ? move.regions.join(' · ') : '',
     jPlaced: !!placed, jNotPlaced: !placed, jPhases: liveMove && liveMove.hasTask ? liveMove.phases : placed ? [['ordered', 'Ordered', 'shopping-bag', 'ok'], ['provisioning', 'Provision', 'wrench', live ? 'ok' : 'set'], ['live', 'Live', 'verified', live ? 'ok' : 'any'], ['insight', 'Insight', 'lightbulb', live ? 'set' : 'any']].map(([key, label, icon, state]) => ({ key, label, icon, state, title: label })) : [],

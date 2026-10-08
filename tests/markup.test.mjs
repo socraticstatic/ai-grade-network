@@ -516,12 +516,15 @@ test('every container the markup opens, it closes', () => {
   // option and a score ring, the way's badge on the AT&T wire, the detail as Why and What you get with the weights' bars
   // (span +22, sc-if +5, sc-for +4). Recounted, every tag balanced: div 1292 -> 1297, span 1416 -> 1438, sc-if 649 -> 654,
   // sc-for 369 -> 375, button 519 -> 520.
-    ['div', /<div\b/g, /<\/div>/g, 1297],
-    ['span', /<span\b/g, /<\/span>/g, 1438],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 654],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 375],
+  // Why as a story (2026-10-08, "make the 'why' more beautiful"): the floating detail became a panel over the stage, three
+  // columns (the pick, its ring and the weights' two stacked bars with a legend; each answer paired with its reasons; what
+  // you get as tiles) and a close button: div 1297 -> 1303, span 1438 -> 1445, sc-if 654 -> 655, sc-for 375 -> 379, button 520 -> 521.
+    ['div', /<div\b/g, /<\/div>/g, 1303],
+    ['span', /<span\b/g, /<\/span>/g, 1445],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 655],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 379],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 520],
+    ['button', /<button\b/g, /<\/button>/g, 521],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

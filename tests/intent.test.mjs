@@ -90,12 +90,21 @@ test('the recommendation says why: reasons on each card, the deck\'s Why line an
   assert.equal(alt.hasPts, false, 'a way a hard rule removes shows no score');
   v.toggleDetail();
   v = vals(c);
-  assert.match(v.jDetail.whyLine, /^Why: .*one endpoint per service/);
+  assert.match(v.jDetail.whyLine, /^Why: Per-service allow-list, one endpoint each/);
   assert.deepEqual(v.jDetail.weights.map(w => w.key), ['cost', 'perf', 'sec', 'setup', 'scale']);
   assert.equal(v.jDetail.weights.reduce((a, w) => a + Number(w.w), 0), 100);
   assert.match(v.jDetail.weightsTitle, /^Weighed for what you said: cost \d+/);
   assert.match(HTML, /<span>Why \{\{ jDetail\.label \}\}<\/span><\/button>/);
-  assert.match(HTML, /<div class="js-detail-l" aria-label="Why" title="\{\{ jDetail\.whyLine \}\}">/);
+  // Why as a story (2026-10-08, "make the 'why' more beautiful"): every answer joined to what it got; the weights as yours
+  // over the deck's; the panel covers the stage exactly.
+  assert.deepEqual(v.jDetail.pairs.map(p => [p.aLabel, p.kind]), [['Production', 'quiet'], ['Standard', 'quiet'], ['Per service', 'ok'], ['Your BGP', 'warn']]);
+  assert.equal(v.jDetail.pairs[2].reasons[0].short, 'Per-service allow-list');
+  assert.deepEqual(v.jDetail.wtYou.map(w => w.key), ['cost', 'perf', 'sec', 'setup', 'scale']);
+  assert.equal(v.jDetail.wtYou.reduce((a, w) => a + Number(w.w), 0), 100); assert.equal(v.jDetail.wtDeck.reduce((a, w) => a + Number(w.w), 0), 100);
+  assert.match(HTML, /<sc-if value="\{\{ jDetailOpen \}\}"[^>]*><div class="js-whyp" role="dialog" aria-label="Why \{\{ jDetail\.label \}\}"/);
+  const st = HTML.indexOf('<div class="js-stage"'), wp = HTML.indexOf('<div class="js-whyp"'), sEnd = HTML.indexOf('<sc-if value="{{ jIsIntent }}"');
+  assert.ok(st < wp && wp < sEnd, 'the Why lives inside the stage');
+  assert.match(HTML, /\.js-whyp\{position:absolute;inset:0;/);
   assert.match(HTML, /<span class="js-score" style="--p:\{\{ op\.ptsPct \}\}"/);
   assert.match(HTML, /<span class="js-wbadge" data-flip="\{\{ jLinkBadge\.flip \}\}"/);
   assert.match(HTML, /<span class="js-why" aria-label="Why">/);
@@ -124,7 +133,7 @@ test('the intent shapes the policy deck: one intent card leads, a real policy th
   // A workload not tagged yet reads its suggested tags, so every tag the cloud's workloads carry has its card.
   assert.deepEqual(v.jDeck.map(d => d.tag), ['Intent', 'PCI', 'Finance', 'Internet-facing', 'Prod']);
   assert.deepEqual([v.jDeck[0].headIcon, v.jDeck[0].reqWord], ['target', '20 ms SLO']);
-  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'Prepend extra BGP ASNs', '⇄']]);
+  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'Prepend ASNs', '⇄']]);
   v.jDeck[0].enter(); v = vals(c);
   assert.equal(v.jLine, 'Intent is held to 20 ms.');
   assert.ok(v.jRegions.flatMap(r => r.apps).every(a => a.hl === 'on'), 'the intent covers every workload on the cloud');
