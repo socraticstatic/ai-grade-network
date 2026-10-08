@@ -5260,14 +5260,24 @@ function journeyVals(out, s, set, est) {
   // the internet before you enforce it. Enforced ones are real policies Govern lists and the engine's ladder reads.
   const mine = (s.customPolicies || []).filter(p => p.journey && p.cloud === found.cloud);
   const deck0 = J.policyDeck(rows), fromSite = `Private cloud · Equinix DC2, Ashburn`, toRegion = found.regions[0] ? `${found.cloud} ${found.regions[0].region}` : '';
-  const mkPol = (d) => ({ name: d.name, match: d.match, scope: 'any cloud', req: d.req, route: {}, path: [], state: 'enforced', custom: true, journey: true, cloud: found.cloud, tag: d.tag });
+  const mkPol = (d) => ({ name: d.name, match: d.match, scope: 'any cloud', req: d.req, path: [], state: 'enforced', custom: true, journey: true, cloud: found.cloud, tag: d.tag });
   const verdictOf = (d, to) => (toRegion ? effectivePolicy(est, [mkPol(d)], { from: fromSite, to, tag: d.tag }).verdict : 'Allowed');
   const enforceOne = (d) => { if (mine.some(p => p.tag === d.tag)) return; const pol0 = mkPol(d); const fig = GV.policyFigures(est, A.inventory(est), pol0) || {};
     set({ customPolicies: [...(s.customPolicies || []), { ...pol0, matched: fig.matched ?? null, viol: 0, unit: fig.unit || 'workloads' }], jPolHover: null }); };
   const enforceAll = () => { const add = deck0.filter(d => !mine.some(p => p.tag === d.tag)).map(d => { const pol0 = mkPol(d); const fig = GV.policyFigures(est, A.inventory(est), pol0) || {}; return { ...pol0, matched: fig.matched ?? null, viol: 0, unit: fig.unit || 'workloads' }; });
     if (add.length) set({ customPolicies: [...(s.customPolicies || []), ...add], jPolHover: null }); };
+  // A card speaks NetBond Advanced's grammar (Micah, 2026-10-08: "is it on prem to partner, partner to on prem? allow,
+  // deny, manipulate? Advertise?"): the route rules the intent pushes, each with its verb and its direction.
+  const VERB = { deny: ['Deny', 'deny'], manip: ['Manipulate', 'manip'], allow: ['Allow', 'allow'], advanced: ['Advertise', 'adv'] };
+  // Where the policy is enforced follows the way you picked (the deck, slide 5): on NetBond Advanced, the IPE's L3VPN
+  // route policy, rule by rule with its direction; on a hosted way, the intent compiles to the vSRX in AT&T's hub (L3 to
+  // L7) and to the cloud's route tables.
+  const hostedWay = !!(tier && tier.way && W.wayHosted(tier.way));
+  const rulesOf = (d) => { if (hostedWay) return [{ key: 'vsrx', verb: 'Inspect', cls: 'manip', label: 'vSRX in AT&T\'s hub, L3 to L7', dir: '', dirWord: '', title: `${d.req}: compiled to the vSRX in AT&T's hub` }, { key: 'rt', verb: 'Route', cls: 'adv', label: 'Your cloud\'s route tables', dir: '', dirWord: '', title: `${d.req}: compiled to your route tables` }];
+    const rt = routeRulesOf(mkPol(d)); return ROUTE_RULES.filter(r => { const v = rt[`${r.section}:${r.id}`]; return v && (v.o2p || v.p2o); }).map(r => { const v = rt[`${r.section}:${r.id}`], both = v.o2p && v.p2o;
+    return { key: `${r.section}:${r.id}`, verb: VERB[r.section][0], cls: VERB[r.section][1], label: r.label, dir: both ? '⇄' : v.o2p ? '→' : '←', dirWord: both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem', title: `${VERB[r.section][0]} ${r.label.toLowerCase()}, ${both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem'}` }; }); };
   const deck = deck0.map(d => { const on = mine.some(p => p.tag === d.tag), vc = verdictOf(d, toRegion), vi = verdictOf(d, 'the Internet');
-    return { key: d.tag, ...d, on, off: !on, n: String(d.apps.length), wlF: String(d.wl), appsWord: d.apps.join(', '), hover: s.jPolHover === d.tag,
+    return { key: d.tag, ...d, on, off: !on, n: String(d.apps.length), wlF: String(d.wl), appsWord: d.apps.join(', '), hover: s.jPolHover === d.tag, rules: rulesOf(d),
       cloudV: vc, netV: vi, cloudCls: vc === 'Denied' ? 'deny' : 'allow', netCls: vi === 'Denied' ? 'deny' : 'allow', netIcon: vi === 'Denied' ? 'close-circle' : 'check-circle',
       stations: ['site', 'edge', 'core', 'cloud'].map(k => ({ key: k, icon: LAYER_ICON[k], state: k === d.layer ? 'set' : 'any', title: k === d.layer ? `${LAYER_SHORT[k]}: ${d.req}` : LAYER_SHORT[k] })),
       title: `${d.name}: ${d.req} for ${d.apps.join(', ')}. To the cloud: ${vc}. To the internet: ${vi}.${on ? ' Enforced.' : ' Click to enforce.'}`,
@@ -5370,7 +5380,7 @@ function journeyVals(out, s, set, est) {
     // Act three.
     jIsWatch: step === 6, jIsProtect: step === 7, jIsSave: step === 8, jLive: live, jNotLive: !live,
     jHealth: found.regions.flatMap(r => r.apps).map((a, i) => ({ key: a.key, d: `${i * 140}ms` })),
-    jDeck: deck, jHasDeck: deckN > 0, jDeckRest: { has: step === 7 && enforcedN > 0 && enforcedN < deckN, go: enforceAll, n: String(deckN - enforcedN) },
+    jDeck: deck, jHasDeck: deckN > 0, jDeckHosted: hostedWay, jDeckNba: !hostedWay, jDeckWhere: hostedWay ? `Enforced on the vSRX in AT&T's hub and your route tables` : `Enforced as route policy on NetBond Advanced`, jDeckRest: { has: step === 7 && enforcedN > 0 && enforcedN < deckN, go: enforceAll, n: String(deckN - enforcedN) },
     // The wires' stamps: the hovered card's verdicts as a preview, else what the enforced ones add up to.
     jVerdict: step >= 7 && shown ? (hov && !hov.on ? 'preview' : 'enforced') : 'none', jProtected: step >= 7 && !!shown,
     jStampCloud: shown ? (Array.isArray(shown) ? (shown.some(d => d.cloudV === 'Denied') ? 'Denied' : 'Allowed') : shown.cloudV) : '', jStampNet: shown ? (Array.isArray(shown) ? (shown.some(d => d.netV === 'Denied') ? 'Denied' : 'Allowed') : shown.netV) : '',

@@ -223,13 +223,13 @@ test('the S6 Review for the East attach shows Quantity 1,640 and a total that sc
   eastRow.go();
 
   const v = vals(c);
-  const netbond = v.orderLines.find(l => l.product === 'NetBond for Cloud');
+  const netbond = v.orderLines.find(l => l.product === 'NetBond Advanced');
   assert.ok(netbond, 'the NetBond line is missing from orderLines');
   assert.equal(netbond.qty, 1640);
   // Fix round 2, finding G: the Quantity column binds qtyF, not the raw
   // number, so 1,640 renders with its thousands separator.
   assert.equal(netbond.qtyF, '1,640');
-  // NetBond for Cloud is $1,900 since the stakeholder's deck (2026-10-08: "$1,900 list" at 1 Gbps), was $1,800.
+  // NetBond Advanced is $1,900 since the stakeholder's deck (2026-10-08: "$1,900 list" at 1 Gbps), was $1,800.
   assert.equal(netbond.monthlyF, '$1,900/mo per site');
   assert.equal(netbond.monthly, 1900 * 1640);
 
@@ -265,7 +265,7 @@ test('authorPolicy clears the gap route\'s label and quantity (a NEW order)', ()
   assert.equal(c.state.compose.qty, 1);
   assert.equal(v.hasParsedNote, false, 'the stale alert must not resurface even if the wizard is later stepped to noteStep 0');
 
-  const netbond = v.orderLines.find(l => l.product === 'NetBond for Cloud');
+  const netbond = v.orderLines.find(l => l.product === 'NetBond Advanced');
   assert.equal(netbond.qty, 1);
   assert.equal(netbond.monthlyF, '$1,900/mo');
   assert.equal(v.pricedTotalF, '$4,300/mo', 'the base\'s total for a plain attach on Ashburn - not the 1,640-site total');
@@ -293,7 +293,7 @@ test('a workload bulk Isolate never sets compose.qty (qty is a site count, not a
   assert.match(c.state.compose.note, /^Isolate 6 exposed workloads in us-east-1: bring them off the public path\.$/);
 
   const v2 = vals(c);
-  const netbond = v2.orderLines.find(l => l.product === 'NetBond for Cloud');
+  const netbond = v2.orderLines.find(l => l.product === 'NetBond Advanced');
   assert.equal(netbond.qty, 1);
   assert.equal(netbond.qtyF, '1');
   assert.equal(netbond.monthlyF, '$1,900/mo', 'no "per site" suffix - six workloads did not buy six circuits');
@@ -377,7 +377,7 @@ test('a plain wizard order (no compose.qty set) still renders Quantity 1 and the
     compose: { outcome: 'u1', source: ['Data center'], dest: ['Clouds'], regionTab: 'US East', metros: ['Ashburn'], resiliency: 'Standard', control: ['Private path required'] },
   });
   const v = vals(c);
-  const netbond = v.orderLines.find(l => l.product === 'NetBond for Cloud');
+  const netbond = v.orderLines.find(l => l.product === 'NetBond Advanced');
   assert.equal(netbond.qty, 1);
   assert.equal(netbond.monthlyF, '$1,900/mo');
   assert.equal(netbond.monthly, 1900);
@@ -416,8 +416,8 @@ test('finding H: a new order after the drawer\'s bulk attach (no sourceLabel, bu
   assert.equal(c.state.compose.qty, 292); // Atlanta's public sites: East's own rollup is off AT&T (2026-09-29)
   assert.equal(c.state.compose.sourceLabel, undefined, 'the drawer never writes a label - this is the gap the round-2 guard missed');
   assert.equal(vals(c).pricedTotalF, '$557,200/mo');
-  // The flow prices the same count per site: NetBond for Cloud at its list price, 292 times.
-  const bulk = vals(c).cfOrder.lines.find(l => l.product === 'NetBond for Cloud');
+  // The flow prices the same count per site: NetBond Advanced at its list price, 292 times.
+  const bulk = vals(c).cfOrder.lines.find(l => l.product === 'NetBond Advanced');
   assert.equal(bulk.qty, 292);
   assert.equal(bulk.perSite, true);
 
@@ -431,10 +431,10 @@ test('finding H: a new order after the drawer\'s bulk attach (no sourceLabel, bu
   // A second new order must not resurrect the 292-site order either - it was cleaned, not hidden.
   vals(c).wayTypes.find(t => t.label === 'DataCenter / CoLocation to Cloud').start();
   v = vals(c);
-  const netbond = v.cfOrder.lines.find(l => l.product === 'NetBond for Cloud');
+  const netbond = v.cfOrder.lines.find(l => l.product === 'NetBond Advanced');
   assert.equal(netbond.qty, 1, 'a new order must not silently restore the 292-site quantity');
   assert.equal(netbond.monthly, 1900);
-  assert.equal(v.cfOrder.monthly, 1900, 'NetBond for Cloud at list, one connection');
+  assert.equal(v.cfOrder.monthly, 1900, 'NetBond Advanced at list, one connection');
 });
 
 // Finding I: chooseTier and steerBucket build fresh compose literals with no
@@ -540,7 +540,7 @@ test('R3: a marketplace product choice does not survive into a later gap order\'
 
   v = vals(c);
   assert.equal(v.pricedTotalF, '$3,118,400/mo', 'S4 already promised this number');
-  const netbond = v.orderLines.find(l => l.product === 'NetBond for Cloud');
+  const netbond = v.orderLines.find(l => l.product === 'NetBond Advanced');
   assert.ok(netbond, 'Review\'s order lines must include the NetBond line, not the frozen product order');
   assert.equal(netbond.qty, 1640);
   assert.equal(netbond.qtyF, '1,640');
@@ -562,7 +562,7 @@ test('N1: a new order from Ways to connect always drops the stale Review; a choi
   assert.equal(c.state.compose.outcome, 'u1');
   assert.equal(c.state.compose.sourceLabel, undefined, 'a plain wizard order carries no label');
   assert.equal(c.state.compose.bulk, undefined, 'a plain wizard order carries no bulk count');
-  c.state.order = { lines: [{ line: 1, product: 'NetBond for Cloud', qty: 1, monthly: 1800 }], monthly: 1800, title: 'A stale snapshot' };
+  c.state.order = { lines: [{ line: 1, product: 'NetBond Advanced', qty: 1, monthly: 1800 }], monthly: 1800, title: 'A stale snapshot' };
 
   vals(c).wayTypes.find(t => t.label === 'Cloud to Cloud').start();
   assert.equal(c.state.order, null, 'a new order must always drop the stale Review');

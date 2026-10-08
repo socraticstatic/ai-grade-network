@@ -506,9 +506,14 @@ test('every container the markup opens, it closes', () => {
   // The policy deck (2026-10-08, "Protect needs visual and options love"): the one policy line became a card loop, each a
   // button with its tag, count and toggle, its rule, a four-station strip loop and two verdict badges; Enforce the other n
   // beside the action. Recounted, every tag balanced: span 1407 -> 1416, sc-if 647 -> 648, sc-for 367 -> 369, button 517 -> 519.
-    ['div', /<div\b/g, /<\/div>/g, 1290],
+  // Then the cards in NetBond's grammar (Micah: "is it on prem to partner ... allow, deny, manipulate? Advertise?"): the
+  // station strip and the two verdict badges left, NetBond's rule rows (verb badge, rule, direction) and a key under the
+  // deck came (div +2, span -2): div 1290 -> 1292, span 1416 -> 1414. Where the policy is enforced follows the way
+  // (the deck, slide 5): a line under the deck, the arrows' key only on NetBond Advanced (span +2, sc-if +1):
+  // span 1414 -> 1416, sc-if 648 -> 649.
+    ['div', /<div\b/g, /<\/div>/g, 1292],
     ['span', /<span\b/g, /<\/span>/g, 1416],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 648],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 649],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 369],
     ['section', /<section\b/g, /<\/section>/g, 17],
     ['button', /<button\b/g, /<\/button>/g, 519],

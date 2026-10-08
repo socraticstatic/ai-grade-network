@@ -118,7 +118,7 @@ test('beat 5: the three ways as one choice, Recommended first; the AT&T line is 
 test('beat 6: one line of the order, Place order; then the line is AT&T\'s, the internet path fades, and the phases follow', () => {
   const c = journey({ jStep: 5, jPick: 1, addedSources: AZURE });
   let v = vals(c);
-  assert.deepEqual(v.jLines.map(l => [l.name, l.n, l.v]), [['NetBond for Cloud', 2, '$3,800/mo'], ['Cloud port, AT&T-provided', 2, '$600/mo']]);
+  assert.deepEqual(v.jLines.map(l => [l.name, l.n, l.v]), [['NetBond Advanced', 2, '$3,800/mo'], ['Cloud port, AT&T-provided', 2, '$600/mo']]);
   assert.equal(v.jTotal, '$4,400/mo'); assert.equal(v.jRegionsWord, 'eastus · westeurope');
   assert.equal(v.jAct, 'Place order');
   v.jActGo();
@@ -211,6 +211,18 @@ test('beat 8: a deck of policies from the tags, each a real intent with the engi
   assert.deepEqual(v.jDeck.map(d => [d.tag, d.req, d.cloudV, d.netV]), [['PCI', 'Private path required', 'Allowed', 'Denied'], ['Finance', 'Private path required', 'Allowed', 'Denied'], ['Internet-facing', 'Inline security inspection', 'Allowed', 'Allowed'], ['Prod', 'No direct internet path', 'Allowed', 'Denied']]);
   assert.deepEqual(v.jDeck.map(d => d.apps), [['payments-api'], ['payments-api', 'fin-ledger'], ['customer-portal'], ['dispatch-svc', 'customer-portal', 'payments-api', 'fin-ledger']]);
   assert.equal(v.jLine, '4 policies from your tags. Enforce them.'); assert.equal(v.jAct, 'Enforce them all'); assert.equal(v.jVerdict, 'none');
+  // Each card is NetBond's sheet for its intent: the verb, the rule, the direction (2026-10-08).
+  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Deny', 'Block default routes', '→'], ['Allow', 'Matching routes', '⇄']]);
+  assert.deepEqual(v.jDeck[2].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'Selective CV tagging', '→'], ['Manipulate', 'Community value to tag routes', '←']]);
+  assert.equal(v.jDeck[0].rules[0].dirWord, 'on prem to partner');
+  assert.equal(v.jDeckWhere, 'Enforced as route policy on NetBond Advanced'); assert.equal(v.jDeckNba, true);
+  // A hosted pick enforces on the vSRX in AT&T's hub and the cloud's route tables (the deck, slide 5), not as BGP route rules.
+  const h = journey({ jStep: 5, jPick: 2, addedSources: AZURE }); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo();
+  const hv = vals(h);
+  assert.equal(hv.jDeckHosted, true); assert.match(hv.jDeckWhere, /^Enforced on the vSRX/);
+  assert.deepEqual(hv.jDeck[0].rules.map(r => [r.verb, r.label]), [['Inspect', "vSRX in AT&T's hub, L3 to L7"], ['Route', "Your cloud's route tables"]]);
+  assert.match(HTML, /<span class="js-rule" title="\{\{ rr\.title \}\}"><span class="fw-badge \{\{ rr\.cls \}\}">\{\{ rr\.verb \}\}<\/span>/);
+  assert.match(HTML, /<div class="js-deckkey"/);
   // Hover previews: the stamps take that card's verdicts, dashed; the apps it covers light, the rest dim.
   v.jDeck[2].enter();
   v = vals(c);
@@ -287,7 +299,7 @@ test('beat 4 again (2026-10-08): any known tag from a palette, and your own; bea
   assert.equal(w.jDetail.label, 'Your ExpressRoute');
   assert.deepEqual(w.jDetail.metrics.map(m => m.key), ['sec', 'perf', 'cost', 'setup', 'you']);
   assert.match(w.jDetail.metrics[2].words, /^Egress \$16,800 to/);
-  assert.deepEqual(w.jDetail.products.map(p => [p.name, p.n]), [['NetBond for Cloud', '2']]);
+  assert.deepEqual(w.jDetail.products.map(p => [p.name, p.n]), [['NetBond Advanced', '2']]);
   assert.match(w.jDetail.youDo, /^Accept the connection/);
   assert.match(HTML, /<button class="js-deeper" onClick="\{\{ toggleDetail \}\}" aria-expanded="\{\{ jDetailOpen \}\}">/);
   assert.match(HTML, /<div class="js-palette" role="group"/);

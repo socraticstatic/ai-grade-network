@@ -107,12 +107,12 @@ test('Bank scale: the Traffic map\'s Add a port opens Modify bandwidth in place 
 
 test('one price rule past the catalog\'s Up to 10 Gbps: the connect flow prices it after review, as the drawer does', () => {
   const nb = D.CATALOG.find(p => p.id === 'netbond');
-  assert.equal(CF.ceilMbpsOf(nb), 10000, 'NetBond for Cloud: Up to 10 Gbps');
+  assert.equal(CF.ceilMbpsOf(nb), 10000, 'NetBond Advanced: Up to 10 Gbps');
   assert.equal(BW.PORT_CEIL_MBPS, CF.ceilMbpsOf(nb), 'the drawer reads the same line');
   const est = D.ESTATES.trust;
   const at = (bw) => CF.flowOf({ ctype: 'DataCenter / CoLocation to Cloud', regions: ['GCP us-central1'], bandwidth: bw }, est);
   // Inside the line, the catalog price, as Cost bills it.
-  // NetBond for Cloud is $1,900 since the stakeholder's deck (2026-10-08: "$1,900 list" at 1 Gbps), was $1,800.
+  // NetBond Advanced is $1,900 since the stakeholder's deck (2026-10-08: "$1,900 list" at 1 Gbps), was $1,800.
   assert.equal(CF.wipPrice(at('10 Gbps'), est).big, '$1,900');
   // Past it, AT&T prices it after review, in both flows.
   const big = CF.flowOrder(at('100 Gbps'), est);
@@ -201,7 +201,7 @@ test('a landed resize keeps the traffic: peak and average stay, whatever the new
 test('Reset demo clears what rehearsal ordered: no bandwidth change is left in progress', () => {
   const c = observe('partial', { bwFor: 'cx-us-east-1' });
   order(c, { ports: 2, mbps: 10000 });
-  const placed = { id: 'o9', title: 'Rehearsed connection', type: 'NetBond for Cloud', what: '', monthly: '', term: '', policy: '', at: '07:00', stage: 'Submitted for approval' };
+  const placed = { id: 'o9', title: 'Rehearsed connection', type: 'NetBond Advanced', what: '', monthly: '', term: '', policy: '', at: '07:00', stage: 'Submitted for approval' };
   c.setState({ bwFor: null, bwStep: null, orders: [...c.state.orders, placed] });
   assert.equal(vals(c).gaugeRows.find(x => x.id === 'cx-us-east-1').hasPortsNote, true);
   vals(c).resetDemo();

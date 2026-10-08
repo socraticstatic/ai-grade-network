@@ -76,8 +76,8 @@ test('one price for one connection: the drawer reads the NetBond line Cost > By 
   // Every connection AT&T sells is one NetBond region on Cost's line, at its one price.
   for (const view of ['partial', 'mature', 'trust']) {
     const nb = nbLine(view), unit = nb.v / nb.regions.length;
-    // NetBond for Cloud is $1,900 since the stakeholder's deck (2026-10-08), was $1,800.
-    assert.equal(unit, 1900, `${view}: the catalog's NetBond for Cloud`);
+    // NetBond Advanced is $1,900 since the stakeholder's deck (2026-10-08), was $1,800.
+    assert.equal(unit, 1900, `${view}: the catalog's NetBond Advanced`);
     const sold = cap(view).filter(BW.sells);
     assert.deepEqual(sold.map(r => r.region).sort(), [...nb.regions].sort(), `${view}: one NetBond connection per region Cost bills`);
     let sum = 0;

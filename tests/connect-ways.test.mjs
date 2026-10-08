@@ -87,7 +87,7 @@ test('the order prices the way: AT&T\'s port beside NetBond; a hosted way the on
   // Re-pinned (2026-10-08, the deck): a hosted way rides AT&T's on-ramp into its hub, not NetBond; Azure peers across AZs.
   const peer = lineIds('peer');
   assert.deepEqual(peer.slice(0, 3), ['AT&T cloud on-ramp into the hosted hub, 1 Gbps', 'Cross-AZ peering into your VPC or VNet', 'AT&T hosted hub: vSRX and compute'], peer.join(' | '));
-  assert.ok(!peer.some(p => /^NetBond for Cloud/.test(p)), peer.join(' | '));
+  assert.ok(!peer.some(p => /^NetBond Advanced/.test(p)), peer.join(' | '));
   assert.ok(!lineIds('byo').some(p => /Cloud port|hosted/i.test(p)), lineIds('byo').join(' | '));
 });
 
