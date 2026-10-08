@@ -470,12 +470,17 @@ test('every container the markup opens, it closes', () => {
   // cloud glyph) under two sc-ifs and the path as a chip, the impact a chip loop; Egress spend's head a 90 days chip; the
   // FinOps panel's what-if arrow and 78% lower chip (in both copies). Recounted, every tag balanced: span 1297 -> 1311,
   // sc-if 606 -> 608, sc-for 341 -> 342.
-    ['div', /<div\b/g, /<\/div>/g, 1249],
-    ['span', /<span\b/g, /<\/span>/g, 1311],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 608],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 342],
+  // The reviewer's notes (2026-10-08): the home bar's segments are buttons and the card chips too (button +, i -); App
+  // health's state chips (div, sc-for, button) in place of its sentence; the egress chart's axes (div for the y axis, plot,
+  // ends and x axis, an sc-for each, i for the grid and the Today line) and its range toggle (div, sc-for, button); Back in
+  // the title row and on the home (sc-if, button, span). Recounted, every tag balanced: div 1249 -> 1255, span 1311 -> 1315,
+  // sc-if 608 -> 610, sc-for 342 -> 348, button 498 -> 504.
+    ['div', /<div\b/g, /<\/div>/g, 1255],
+    ['span', /<span\b/g, /<\/span>/g, 1315],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 610],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 348],
     ['section', /<section\b/g, /<\/section>/g, 16],
-    ['button', /<button\b/g, /<\/button>/g, 498],
+    ['button', /<button\b/g, /<\/button>/g, 504],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

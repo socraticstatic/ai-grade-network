@@ -19,7 +19,7 @@
 // healthTiles, pathFlowAll); this module only picks, words and draws them.
 // The doors arrive as functions from naas-app.js, so a figure here opens
 // exactly the set its page counts.
-import { HEALTH_INK, HEALTH_WORD, healthRadius } from './naas-flowmap.js';
+import { HEALTH_INK, HEALTH_WORD, HEALTH_FILL_BAR, healthRadius } from './naas-flowmap.js';
 
 /**
  * Which four cards show, by persona, leading card first. No card repeats the
@@ -185,7 +185,24 @@ export function sparkOf(past, asIs, moved) {
   const P = past.map(pt), today = P[last] || [SPARK.pad, SPARK.h - SPARK.pad];
   const A = [today, ...asIs.map((v, i) => pt(v, last + 1 + i))], M = [today, ...moved.map((v, i) => pt(v, last + 1 + i))];
   const end = A[A.length - 1], pc = (v, of) => `${(v / of * 100).toFixed(2)}%`;
-  return { past: d(P), asIs: d(A), act: d(M),
+  // The axes (reviewer, 2026-10-08: "there are no units on this graph ... we need X and Y axis units at least"): dollar
+  // ticks at a round step across the chart's own span, and time under it, from the first month to Today to 90 days on.
+  const raw = span / 3, mag = Math.pow(10, Math.floor(Math.log10(Math.max(1, raw))));
+  const step = [1, 2, 2.5, 5, 10].map(k => k * mag).find(k => k >= raw) || 10 * mag;
+  const money = (v) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1).replace(/\.0$/, '')}M` : step >= 1000 ? `$${Math.round(v / 1000)}K` : `$${(v / 1000).toFixed(1)}K`);
+  const yTicks = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-6; v += step) yTicks.push({ key: 'y' + v, v, t: money(v), top: pc(pt(v, 0)[1], SPARK.h) });
+  const L = past.length;
+  const xTicks = [{ key: 'x0', t: `${L} mo ago`, left: pc(P.length ? P[0][0] : SPARK.pad, SPARK.w), tx: 'translateX(0)' },
+    ...(L >= 6 ? [{ key: 'xm', t: `${Math.round(L / 2)} mo ago`, left: pc(pt(0, Math.round((L - 1) / 2))[0], SPARK.w), tx: 'translateX(-50%)' }] : []),
+    { key: 'xt', t: 'Today', left: pc(today[0], SPARK.w), tx: 'translateX(-50%)' },
+    { key: 'x90', t: '+90 days', left: pc(end[0], SPARK.w), tx: 'translateX(-100%)' }];
+  const mEnd = M[M.length - 1], kOf = (v) => `$${(v / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+  const ends = asIs.length ? [{ key: 'asis', t: kOf(asIs[asIs.length - 1]), top: pc(end[1], SPARK.h), ink: 'var(--text-light)', title: 'In 90 days, as is' },
+    { key: 'act', t: kOf(moved[moved.length - 1]), top: pc(mEnd[1], SPARK.h), ink: 'var(--success)', title: 'In 90 days, if you act' }] : [];
+  // Two end labels never sit on top of each other.
+  if (ends.length === 2 && Math.abs(parseFloat(ends[0].top) - parseFloat(ends[1].top)) < 12) { const mid = (parseFloat(ends[0].top) + parseFloat(ends[1].top)) / 2; ends[0].top = `${mid - 6}%`; ends[1].top = `${mid + 6}%`; }
+  return { past: d(P), asIs: d(A), act: d(M), yTicks, xTicks, ends, lo, hi,
     // The months that happened, filled to the floor.
     area: P.length ? `${d(P)} L${today[0]},${SPARK.h} L${P[0][0]},${SPARK.h} Z` : '',
     todayL: pc(today[0], SPARK.w), todayT: pc(today[1], SPARK.h), asIsT: pc(end[1], SPARK.h) };
@@ -297,12 +314,15 @@ export function snapshotCards(rk, f, doors) {
   const PILL = { bad: ['var(--error)', 'color-mix(in srgb, var(--error) 12%, transparent)'], warn: ['var(--warning)', 'color-mix(in srgb, var(--warning) 14%, transparent)'], ok: ['var(--success)', 'color-mix(in srgb, var(--success) 12%, transparent)'] };
   const kp = (tone, t) => ({ pill: t, pillInk: PILL[tone][0], pillBg: PILL[tone][1], hasPill: !!t });
   const cnt = (st) => flows.filter(r => r.state === st).length;
+  const appDoor = (st) => (doors.appState ? doors.appState(st) : doors.health());
   const okN = cnt('ok'), downN = cnt('down'), sloN = cnt('slo'), riskN = cnt('risk'), badN = flows.length - okN;
   const lastPast = cols.filter(x => x.kind === 'past').slice(-1)[0] || {};
   const nowN = numOf(spend.spend), aheadN = numOf(spend.ahead), endAsIs = next.length ? next[next.length - 1].asIsN : nowN;
   const KPI = {
     apps: { kLabel: 'Apps healthy', big: enf(okN), of: `of ${enf(flows.length)}`, ...(badN ? kp(downN ? 'bad' : 'warn', `${badN} need attention`) : kp('ok', 'All healthy')),
-      bar: [['ok', okN, HEALTH_INK.ok], ['down', downN, HEALTH_INK.down], ['slo', sloN, HEALTH_INK.slo], ['risk', riskN, HEALTH_INK.risk]].filter(x => x[1]).map(([key, n, ink]) => ({ key, w: pct(n, flows.length), ink })),
+      // Each state is a door to App health listing just those apps (reviewer, 2026-10-08: "make the bar clickable so only
+      // those areas of issues can be listed in a table format").
+      bar: [['ok', okN], ['down', downN], ['slo', sloN], ['risk', riskN]].filter(x => x[1]).map(([key, n]) => ({ key, w: pct(n, flows.length), ink: HEALTH_FILL_BAR[key], go: appDoor(key), title: `${n} ${HEALTH_WORD[key] || key}: list ${n === 1 ? 'it' : 'them'}` })),
       foot: [downN && `${downN} down`, sloN && `${sloN} over latency target`, riskN && `${riskN} at risk`].filter(Boolean).join(' · ') || 'Every app inside its target' },
     onatt: { kLabel: 'Private on AT&T', big: enf(regPriv), of: `of ${enf(regTotal)} regions`, ...(regTotal - regPriv ? kp('warn', `${enf(regTotal - regPriv)} public`) : kp('ok', 'All private')),
       bar: [{ key: 'priv', w: pct(regPriv, regTotal), ink: INK_PRIV }], foot: `Sites on AT&T: ${enf(sitesOn)} of ${enf(sitesTotal)}` },
@@ -328,7 +348,7 @@ export function snapshotCards(rk, f, doors) {
   const fc = (icon, t, title, ink) => ({ icon, t, title, ink: ink || 'var(--text-body)', iink: ink || 'var(--text-light)' });
   const pctOf = (n, of) => (of > 0 ? Math.round(n / of * 100) : 0);
   const CHIPS = {
-    apps: [downN && fc('close-circle', enf(downN), `${downN} down`, HEALTH_INK.down), sloN && fc('clock', enf(sloN), `${sloN} over latency target`, HEALTH_INK.slo), riskN && fc('exclamation-triangle', enf(riskN), `${riskN} at risk`, HEALTH_INK.risk)].filter(Boolean),
+    apps: [downN && { ...fc('close-circle', enf(downN), `${downN} down`, HEALTH_INK.down), go: appDoor('down') }, sloN && { ...fc('clock', enf(sloN), `${sloN} over latency target`, HEALTH_INK.slo), go: appDoor('slo') }, riskN && { ...fc('exclamation-triangle', enf(riskN), `${riskN} at risk`, HEALTH_INK.risk), go: appDoor('risk') }].filter(Boolean),
     onatt: [fc('large-building', `${enf(sitesOn)} of ${enf(sitesTotal)}`, `Sites on AT&T: ${enf(sitesOn)} of ${enf(sitesTotal)}`)],
     egress: nowN > aheadN && aheadN ? [fc('trending-down', `$${enf(nowN - aheadN)}/mo`, `$${enf(nowN - aheadN)}/mo you can avoid in 90 days`, 'var(--success)'), fc('history', '90 days', 'Over the next 90 days')] : [fc('check-circle', 'Nothing to avoid', 'Nothing to avoid yet')],
     exposed: [fc('globe', `${pctOf(exN, wlN)}%`, `${pctOf(exN, wlN)}% of workloads reachable from outside`)],
@@ -337,7 +357,9 @@ export function snapshotCards(rk, f, doors) {
     eng: [fc('person-group', 'Engineering acts', 'Network and architecture moves: FinOps follows up, engineering acts')],
     banked: [fc('hub', 'On AT&T', 'Saved by moves already made on the AT&T network')],
   };
-  Object.keys(by).forEach(k2 => Object.assign(by[k2], KPI[k2], { footChips: CHIPS[k2] || [] }));
+  // A segment or chip with no door of its own opens its card's page.
+  Object.keys(by).forEach(k2 => { const k = KPI[k2] || {}, home = by[k2].valueGo || by[k2].go || (() => {});
+    Object.assign(by[k2], k, { bar: (k.bar || []).map(b => ({ ...b, go: b.go || home, title: b.title || `Open ${by[k2].door || 'it'}` })), footChips: (CHIPS[k2] || []).map(x => ({ ...x, go: x.go || home })) }); });
   return (CARD_ORDER[rk] || CARD_ORDER.neteng).map(k => dotGrid(by[k])).map(c => ({ ...c,
     figs: c.figs.map(x => ({ ...x, hasSwatch: !!x.swatch })), hasSwatch: !!c.swatch, hasSuffix: !!c.suffix }));
 }

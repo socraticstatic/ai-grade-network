@@ -151,6 +151,12 @@ export function hashRoute(hash) {
 }
 
 export function init(c) {
+  navC = c;
+  if (!window.__naasPopWired) {
+    window.__naasPopWired = true;
+    window.addEventListener('popstate', (e) => { const st = e.state; if (!st || !st.naas) return;
+      c.setState({ ...st.naas, navDepth: st.naasDepth || 0, navBack: st.naasBack || '', mapSel: null, drill: [], cloudDrill: [], fabDrill: [], engPick: null }); window.scrollTo(0, 0); });
+  }
   // The hash was read once at boot, so a link to #s3/cloud/cost only worked on
   // a cold load - pasting it into an open tab changed the URL and nothing else.
   if (!window.__naasHashWired) {
@@ -185,6 +191,8 @@ export function init(c) {
   if (hash[2] && TABS.includes(hash[2])) patch.tab = hash[2];
   c.setState(patch);
   if ((patch.screen || c.state.screen) === 's1') runScan(c, estateFor({ ...c.state, ...patch }));
+  // The landing's own entry, so Back can return to it.
+  setTimeout(() => { try { history.replaceState({ ...(history.state || {}), naas: navPick(c.state), naasDepth: (history.state && history.state.naasDepth) || 0 }, '', location.href); } catch (e) { } }, 0);
 }
 
 // Every naas.* key the app saves (2026-09-30). Reset demo clears them all, so a
@@ -193,7 +201,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, appState: null, homeRange: 12, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -1147,6 +1155,9 @@ export function vals(c) {
   Object.assign(out, governVals(out, s, set, { go, est, invAll: A.inventory(est0),
     orderMove: (f, label, cloud) => chooseTier(c, f, label, D.CATALOG.find(p => p.id === (cloud === 'Azure' ? 'hosted-vnet' : 'hosted-vpc')), est) }));
   if (s.screen === 's3' && s.tab === 'observe' && s.obPage === 'insights' && out.insPanelBrief) Object.assign(out, { andiSub: out.briefText, hasAndiSub: true });
+  // Back in the title row: shown once there is somewhere to go back to, named for it.
+  Object.assign(out, { backOn: (s.navDepth || 0) > 0, backLabel: s.navBack ? `Back to ${s.navBack}` : 'Back', goBack: () => { try { history.back(); } catch (e) { } } });
+  navLast = navPick(s); navTitle = s.screen === 's0' ? 'NaaS home' : out.pageTitle || 'the last page';
   return pageLists(glyphPass(out), s, set);
 }
 
@@ -1233,7 +1244,9 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
     sitesOn: () => picture({ reach: 'att' }),
     sitesOff: () => picture({ reach: 'outside' }),
     // Apps healthy opens what healthy means (2026-10-06 session: "when you click on it ... what is the definition for them").
-    health: () => obs({ obPanel: 'health', healthView: 'cloud' }),
+    health: () => obs({ obPanel: 'health', healthView: 'cloud', appState: null }),
+    // A state on the Apps healthy bar opens App health on just those apps (reviewer, 2026-10-08).
+    appState: (st) => obs({ obPanel: 'health', healthView: 'cloud', appState: st }),
     // An app's dot opens its own path in Paths, on the page that holds it.
     appPath: (tag) => { const ix = pathAll.findIndex(r => String(r.key).startsWith(tag + '|'));
       return obs({ obPanel: 'paths', pathSel: ix >= 0 ? pathAll[ix].key : null, pathsPage: ix >= 0 ? Math.floor(ix / 8) : 0 }); },
@@ -1292,10 +1305,14 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
       // The trio reads one clock (Micah, 2026-10-05: "make sure the math adds up"): in 90 days as is, in 90 days if you act, and
       // the difference. It used to subtract the 90-day forecast from today's run-rate, which read "You save $0" on an estate
       // whose spend grows faster than its moves save. Unit cost per GB (Dev's FinOps home, 2026-10-01): the rates the app prices egress at everywhere.
-      return { spark: eg.spark, today: tile('spend'), asIs: ahead.asIsV || tile('spend'), act: tile('ahead'), save: asIs > ah ? `$${(asIs - ah).toLocaleString('en-US')}` : '$0', go: eg.go, perGb: 'Per GB: $0.09 on the internet, $0.02 on the AT&T network, 78% lower',
+      // The window under the line, 6 or 12 months back, as the reviewer's sample had it (2026-10-08).
+      const cols = out.spendCols || [], range = s.homeRange === 6 ? 6 : 12;
+      const pastN = cols.filter(x => x.kind === 'past').map(x => x.spendN), nx = cols.filter(x => x.kind === 'next');
+      const spark = pastN.length ? HM.sparkOf(pastN.slice(-range), nx.map(x => x.asIsN), nx.map(x => x.movedN)) : eg.spark;
+      return { spark, ranges: [6, 12].map(k => ({ key: 'r' + k, label: `${k} mo`, on: range === k, go: () => set({ homeRange: k }) })), today: tile('spend'), asIs: ahead.asIsV || tile('spend'), act: tile('ahead'), save: asIs > ah ? `$${(asIs - ah).toLocaleString('en-US')}` : '$0', go: eg.go, perGb: 'Per GB: $0.09 on the internet, $0.02 on the AT&T network, 78% lower',
         // The unit cost as marks and figures (2026-10-07: fewer words).
         rates: [{ key: 'i', icon: 'globe', v: '$0.09/GB', title: 'Per GB through the internet' }, { key: 'a', icon: 'hub', v: '$0.02/GB', title: 'Per GB on the AT&T network' }, { key: 'd', icon: 'trending-down', v: '78% lower', title: '78% lower per GB on the AT&T network' }],
-        note: 'Monthly run-rate: the last year and the next 90 days. In 90 days as is, if you act, and the difference.' }; })(),
+        note: `Monthly egress run-rate: the last ${range} months and the next 90 days. In 90 days as is, if you act, and the difference.` }; })(),
     ...(() => { // Dev's FinOps home (2026-10-01): the waterfall, what if, who pays, unit cost, and FinOps' own work.
       const isFin = rk === 'finops' && !isEmpty, start = HM.numOf(tile('spend'));
       if (!isFin || !start) return { homeFin: false, homeFinOff: true };
@@ -1673,8 +1690,26 @@ function explainNav(c, ex) {
   };
 }
 
+// Back (reviewer, 2026-10-08: "for each page, we need to make sure a user can go back to previous page"). Every page
+// change used to replace the browser's history entry, so the browser's Back left the storefront. Now each page change
+// pushes an entry that remembers where you were (the page, its view and its filters), the entry you leave keeps where
+// you were in it, and Back, the browser's or the title row's, restores it.
+const NAV_KEYS = ['screen', 'layer', 'tab', 'cnPage', 'obPage', 'obPanel', 'obTab', 'insPanel', 'govPanel', 'costPanel', 'estPanel', 'discoverView',
+  'healthView', 'appState', 'polFilter', 'polOpen', 'polPage', 'tagFilter', 'tagPage', 'siteFilter', 'cloudTrailE', 'cloudPage', 'pathSel', 'pathPin', 'pathsPage',
+  'logTab', 'explain', 'spendList', 'scanStep', 'engFlow', 'movePage'];
+export const navPick = (st) => Object.fromEntries(NAV_KEYS.filter(k => st && k in st).map(k => [k, st[k]]));
+let navC = null, navLast = null, navTitle = '';
 function syncHash(screen, layer, tab) {
-  try { history.replaceState(null, '', location.pathname + location.search + '#' + [screen, screen === 's3' ? layer : null, screen === 's3' ? tab : null].filter(Boolean).join('/')); } catch (e) { }
+  try {
+    const url = location.pathname + location.search + '#' + [screen, screen === 's3' ? layer : null, screen === 's3' ? tab : null].filter(Boolean).join('/');
+    if (!navC) { history.replaceState(history.state, '', url); return; }
+    const depth = (history.state && history.state.naasDepth) || 0, from = navTitle, left = navLast;
+    // The page you leave keeps where you were in it.
+    if (left) history.replaceState({ ...(history.state || {}), naas: left, naasDepth: depth }, '', location.href);
+    // The new page's entry, once its state has landed; a change that moved nothing pushes nothing.
+    setTimeout(() => { try { const snap = navPick(navC.state); if (left && JSON.stringify(snap) === JSON.stringify(left)) { history.replaceState({ ...(history.state || {}), naas: snap, naasDepth: depth }, '', url); return; }
+      history.pushState({ naas: snap, naasDepth: depth + 1, naasBack: from }, '', url); navC.setState({ navDepth: depth + 1, navBack: from }); } catch (e) { } }, 0);
+  } catch (e) { }
 }
 
 let scanTimer = null;
@@ -3399,7 +3434,13 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       chgLegend: [['var(--error)', 'Route'], ['var(--link)', 'Config'], ['var(--warning)', 'Maintenance']].map(([color, label]) => ({ key: label, color, label })) };
     return { ...pathVals, pathFlowAll: all, pathFlowRows: rows, segHeads, healthTiles, problemRows, hasProblems: problemRows.length > 0,
       healthViews, healthByApp: healthView === 'app', healthBySegment: healthView === 'segment', healthInCloud: healthView === 'cloud',
-      appHealthRows, appThreshCtl, appThreshChanged, appThreshReset: () => set({ appThresh: null }), appHealthOk: `${all.filter(r => r.state === 'ok').length} of ${all.length}`, segRows, segOpen: !!segKey, segTable: healthView === 'segment' && !segKey, segLevel: drill ? drill.level : null, segDrillRows, segCrumbs,
+      appHealthRows: s.appState ? appHealthRows.filter(r => r.state === s.appState) : appHealthRows,
+      // The states as chips over the table, each with its count; the bar's door lands on one (reviewer, 2026-10-08).
+      appStateChips: [['', 'All', 'apps', 'var(--text-body)'], ['down', 'Down', 'close-circle', F.HEALTH_INK.down], ['slo', 'Over', 'clock', F.HEALTH_INK.slo], ['risk', 'At risk', 'exclamation-triangle', F.HEALTH_INK.risk], ['ok', 'Healthy', 'check-circle', F.HEALTH_INK.ok]]
+        .map(([k, word, icon, ink]) => { const n = k ? appHealthRows.filter(r => r.state === k).length : appHealthRows.length, on = (s.appState || '') === k;
+          return { key: k || 'all', word, icon, ink, n: String(n), on, off: !n && !!k, title: k ? `${n} ${n === 1 ? 'app' : 'apps'} ${word.toLowerCase()}` : `All ${n} apps`, go: () => set({ appState: k || null }) }; })
+        .filter(x => x.key === 'all' || +x.n > 0),
+      appThreshCtl, appThreshChanged, appThreshReset: () => set({ appThresh: null }), appHealthOk: `${all.filter(r => r.state === 'ok').length} of ${all.length}`, segRows, segOpen: !!segKey, segTable: healthView === 'segment' && !segKey, segLevel: drill ? drill.level : null, segDrillRows, segCrumbs,
       segOwner: segHead ? segHead.ownerLabel : '', segSource: segHead ? segHead.source : '', segLimited: !!(segHead && segHead.limited) };
   })();
   // Insights > Operations (notes, 2026-09-30, C1): tickets, how long fixes take,

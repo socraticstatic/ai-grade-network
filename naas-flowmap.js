@@ -30,6 +30,10 @@ export const HEALTH_WORD = { ok: 'Healthy', risk: 'At risk', slo: 'Over SLO', do
  * themes, and Down is also the square dot, so the two never rest on colour alone.
  */
 export const HEALTH_INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: 'var(--viz-5)', down: 'var(--error)' };
+// Where Down and Over SLO sit side by side as fills (a bar's segments), Over SLO draws in stripes of its ink, so the two
+// read apart by pattern as well as by colour (reviewer, 2026-10-08: "two red color are so close it will be hard to
+// differentiate"). The palette ruling (no orange, no purple) leaves no third hue for it.
+export const HEALTH_FILL_BAR = { ...HEALTH_INK, slo: 'repeating-linear-gradient(135deg, var(--viz-5) 0 3px, color-mix(in srgb, var(--viz-5) 28%, var(--bg-base)) 3px 6px)' };
 export const healthRadius = (state) => (state === 'down' ? '2px' : '9999px');
 const PUBLIC_IPS = ['104.18.32.7', '142.250.72.14', '3.5.140.2', '52.94.236.248', '20.60.132.10', '35.190.247.10'];
 const AI_HOSTS = ['api.openai.com', 'api.anthropic.com', 'bedrock-runtime', 'aiplatform.googleapis.com'];
