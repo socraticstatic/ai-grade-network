@@ -18,6 +18,8 @@ export const LAYERS = [
 export const VIEWS = [
   { id: 'live', label: 'Live estate' },
   { id: 'empty', label: 'New customer' },
+  // The existing customer's journey (2026-10-08): AT&T sites, no cloud yet; the Customer dropdown opens its six beats.
+  { id: 'lastmile', label: 'Existing customer' },
   { id: 'small', label: 'Small business' },
   { id: 'partial', label: 'Growing' },
   { id: 'mature', label: 'Established' },
@@ -52,7 +54,23 @@ const ERP_APPS = {
   payables: ['erp-payables', '12.2.12', '8080/tcp', 'supplier invoices and payments', 'app'],
   ebs: ['ebs-app', '12.2.12', '443/tcp', 'E-Business Suite web entry and forms', 'web'],
 };
+// The existing AT&T customer's cloud (the MVP journey, 2026-10-08): an Azure subscription that freight dispatch, the
+// customer portal and payments run in, on the public internet today. Added in the journey's second beat.
+const AZ_APPS = {
+  dispatch: ['dispatch-svc', '1.8.3', '8443/tcp', 'freight dispatch and routing', 'app'],
+  portal: ['customer-portal', '5.1.2', '443/tcp', 'customer web portal', 'web'],
+  payments: ['payments-api', '3.4.1', '443/tcp', 'card payments and settlement', 'app'],
+  ledger: ['fin-ledger', '2.9.0', '5432/tcp', 'general ledger and period close', 'db'],
+};
 export const FOUND_SOURCES = {
+  Azure: {
+    regions: [
+      { ...REG('Azure', 'eastus', 40, false, null, 64, 11, ['Prod']), apps: [AZ_APPS.dispatch, AZ_APPS.portal] },
+      { ...REG('Azure', 'westeurope', 28, false, null, 102, 74, ['Finance']), apps: [AZ_APPS.payments, AZ_APPS.ledger] },
+    ],
+    bucket: { id: 'azr', name: 'Azure egress', cloud: 'Azure', today: 16800, fabric: 5600, finding: 'newcloud-azure' },
+    finding: { kind: 'newcloud-azure', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your sites', pathDst: '2 Azure regions', head: '2 Azure regions found on the public internet', ev: 'eastus and westeurope carry 68 workloads, payments among them, over public egress.', priced: true, save: 7400, why: 'NetBond reaches Azure ExpressRoute in Ashburn and Amsterdam.', ladder: ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted VNet peering'] },
+  },
   Oracle: {
     regions: [
       { ...REG('Oracle', 'us-ashburn-1', 48, false, null, 44, 11, ['ERP', 'Finance']), apps: [ERP_APPS.ledger, ERP_APPS.payables, ERP_APPS.ebs] },
@@ -328,6 +346,17 @@ export const ESTATES = {
     ],
   },
 };
+
+// The existing AT&T customer (the MVP journey, 2026-10-08: "an AT&T existing already last mile ... add a new source,
+// tag, identify workloads, see recommendations, and upsell the customer with cloud connect"). AT&T already carries its
+// sites: Growing's sites on AT&T access, without the branches on IPsec over the internet and without any tunnel to a
+// cloud. Its clouds are unknown until the journey adds a source (FOUND_SOURCES.Azure). It is not on the Estate list's
+// demo set; the Customer dropdown opens it.
+ESTATES.lastmile = (() => {
+  const sites = ESTATES.partial.sites.filter(st => !/IPsec/i.test(st.access || '')).map(({ tunnel, tunnelTo, ...st }) => st);
+  return { id: 'lastmile', name: 'Calloway Freight', stage: 'partial', pinnedMove: 'region:Azure', clouds: 0, regions: 0, workloads: 0, privatePct: 0, attachedRegions: 0,
+    policiesEnforced: 0, policiesAuthored: 0, observedPct: 0, savedMo: 0, fabricAttachPct: 0, tags: 0, accounts: [], sites, regionsList: [], regionsExtra: 0, arcs: [], policies: [], buckets: [], findings: [] };
+})();
 
 export const KINDS = { ipsec: 'IPsec on the internet', tunnel: 'Tunnels on the internet', blindspots: 'Blind spots', degraded: 'Degraded paths', avoidable: 'Avoidable egress', crosscloud: 'Cross-cloud over the internet', pci: 'PCI on public paths', uninspected: 'Uninspected internet-facing', unsegmented: 'Unsegmented', single: 'Single path', onecloud: 'One cloud', nothub: 'Not in a hub', month: 'Month to month', unmonitored: 'Unmonitored', aiuntracked: 'Untracked AI traffic' };
 

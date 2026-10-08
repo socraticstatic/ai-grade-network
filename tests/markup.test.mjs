@@ -478,14 +478,19 @@ test('every container the markup opens, it closes', () => {
   // The stakeholder's deck (2026-10-08): a weighted score on each way card and each Recommended option (sc-if, span), the
   // Found label and the move's tags as chips (span, sc-for). Recounted, every tag balanced: span 1315 -> 1320,
   // sc-if 610 -> 612, sc-for 348 -> 349.
-    ['div', /<div\b/g, /<\/div>/g, 1255],
-    ['span', /<span\b/g, /<\/span>/g, 1320],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 612],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 349],
-    ['section', /<section\b/g, /<\/section>/g, 16],
-    ['button', /<button\b/g, /<\/button>/g, 504],
+  // The existing customer's journey (2026-10-08): a story section of six beats under sc-ifs (section +2 with the hero's
+  // copy for its Recommendation beat), each beat's chips, cards and rows (div, span, sc-for, button), Back and Next, and
+  // the Customer dropdown in the rail foot (label +1). Recounted, every tag balanced: div 1255 -> 1300, span 1320 -> 1452,
+  // sc-if 612 -> 635, sc-for 349 -> 371, section 16 -> 18, button 504 -> 514, label 31 -> 32. The Customer switch moved from
+  // the rail foot to the header, its glyph a span (span 1452 -> 1453): the rail's foot kept Spend inside 900.
+    ['div', /<div\b/g, /<\/div>/g, 1300],
+    ['span', /<span\b/g, /<\/span>/g, 1453],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 635],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 371],
+    ['section', /<section\b/g, /<\/section>/g, 18],
+    ['button', /<button\b/g, /<\/button>/g, 514],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
-    ['label', /<label\b/g, /<\/label>/g, 31],
+    ['label', /<label\b/g, /<\/label>/g, 32],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

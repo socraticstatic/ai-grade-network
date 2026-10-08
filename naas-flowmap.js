@@ -155,7 +155,12 @@ export function rightRoots(est, flows, by = 'cloud', left = null) {
   const dests = destRoots(est.regionsList, sp.cloudFab, sp.pubV, by);
   const dcs = dcSites(est);
   const dc = sp.dcV > 0.001 ? [{ kind: 'dc', key: 'dc:yours', name: `Your data centers · ${dcs.length}`, v: sp.dcV, fabV: sp.dcV, pubV: 0, byRamp: {}, wan: sp.dcV, hasChildren: dcs.length > 1, state: 'ok' }] : [];
-  return [...dests, ...dc];
+  // Before any cloud is discovered (the existing customer's journey, 2026-10-08), AT&T still sees the traffic leave its
+  // sites for the clouds, over the internet; it lands on one destination until a source names its regions.
+  const toClouds = (sp.cloudFab || 0) + (sp.pubV || 0);
+  const unknown = !(est.regionsList || []).length && toClouds > 0.001
+    ? [{ kind: 'cloud', key: 'cloud:unknown', name: 'Clouds not yet discovered', v: toClouds, fabV: 0, pubV: toClouds, byRamp: {}, parts: [], hasChildren: false, state: 'slo' }] : [];
+  return [...dests, ...unknown, ...dc];
 }
 /** What each private path carries across the whole estate, before a window
  *  scales it: Gbps by on-ramp, and on the private WAN. The Cost view divides
