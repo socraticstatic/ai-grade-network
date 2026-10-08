@@ -344,8 +344,10 @@ a{color:#0057b8}a:hover{color:#00388f}
 .hm-spark>i{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--viz-1);box-shadow:0 0 0 2px var(--bg-base)}
 .hm-spark>small{position:absolute;right:0;transform:translateY(-135%);font-size:11px;line-height:14px;font-weight:600;color:var(--text-light);white-space:nowrap}
 /* AT&T icons as masks (2026-10-02): one file per glyph in brand/icons, tinted by currentColor, so one set serves both themes and every ink. */
-.ic{display:inline-block;flex:none;width:18px;height:18px;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
-.ic.s14{width:14px;height:14px}.ic.s16{width:16px;height:16px}.ic.s18{width:18px;height:18px}.ic.s20{width:20px;height:20px}.ic.s24{width:24px;height:24px}.ic.s28{width:28px;height:28px}
+/* Icons a size up and a weight up (Micah, 2026-10-08: "They're so small and thin that they're pointless!"): each class draws
+   2px larger than its name, and every icon file carries a 1px screen-weight stroke (scripts/icon-weight.mjs). */
+.ic{display:inline-block;flex:none;width:20px;height:20px;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
+.ic.s14{width:16px;height:16px}.ic.s16{width:18px;height:18px}.ic.s18{width:20px;height:20px}.ic.s20{width:22px;height:22px}.ic.s24{width:24px;height:24px}.ic.s28{width:28px;height:28px}
 .ic-tile{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:10px;background:var(--bg-accent);color:var(--link)}
 .ic-tile.s32{width:32px;height:32px;border-radius:8px}.ic-tile.s28{width:28px;height:28px;border-radius:7px}
 /* Ways to connect (2026-10-06): NetBond Advanced's choice cards (ConnectionTypeGrid.tsx) in theme tokens; a meter is five segments lit to the score. */
@@ -359,8 +361,8 @@ a{color:#0057b8}a:hover{color:#00388f}
 .way-logo{width:20px;height:20px;flex:none;background:center / contain no-repeat}
 .way-zones{display:inline-flex;margin-left:auto;padding:2px;border:1px solid var(--border-secondary);border-radius:9999px}
 .way-zones button{height:20px;padding:0 9px;border:0;border-radius:9999px;font:inherit;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
-.way-rows{display:grid;gap:5px;align-content:start;padding-top:8px;border-top:1px solid var(--border-secondary)}
-.way-row{display:grid;grid-template-columns:16px 84px minmax(0,1fr);align-items:center;gap:10px;min-width:0;color:var(--text-body)}
+.way-rows{display:grid;gap:4px;align-content:start;padding-top:8px;border-top:1px solid var(--border-secondary)}
+.way-row{display:grid;grid-template-columns:18px 84px minmax(0,1fr);align-items:center;gap:10px;min-width:0;color:var(--text-body)}
 .way-meter{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}.way-meter i{display:block;height:6px;border-radius:3px}
 .way-val{font-size:12px;line-height:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .way-start{height:32px;padding:0 16px;border:0;border-radius:8px;background:var(--cta);color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
