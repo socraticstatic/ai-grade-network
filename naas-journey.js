@@ -20,7 +20,19 @@ export const BEATS = [
   { key: 'tag', label: 'Tag', short: 'Tag', icon: 'checklist', title: 'Tag your workloads' },
   { key: 'recommend', label: 'Recommendation', short: 'Recommend', icon: 'lightbulb', title: 'What to connect' },
   { key: 'connect', label: 'Connect', short: 'Connect', icon: 'cable', title: 'Connect' },
+  // Act three (2026-10-08, Micah: "after the journey, 'see the dashboard' kind of leaves you hanging ... what if i want
+  // to set a policy, or watch how much it might save me, or attach more?"): live, protected, and the saving over a year.
+  { key: 'watch', label: 'Watch', short: 'Live', icon: 'verified', title: 'Live on AT&T' },
+  { key: 'protect', label: 'Protect', short: 'Protect', icon: 'check-shield', title: 'Set a policy' },
+  { key: 'save', label: 'Save', short: 'Save', icon: 'bill', title: 'What it saves' },
 ];
+/** The policy beat 8 proposes, from the tags you applied: the most sensitive tag on the cloud keeps off the internet. */
+export const POLICY_TAGS = [['PCI', 'Private path required', 'never touches the internet'], ['Finance', 'Private path required', 'stays on AT&T'], ['Prod', 'No direct internet path', 'never reaches the internet directly']];
+export function proposedPolicy(est, rows = []) {
+  const tags = new Set(rows.length ? rows.flatMap(r => r.applied.length ? r.applied : r.suggested) : (est.regionsList || []).filter(r => r.fresh).flatMap(r => r.tags || []));
+  const hit = POLICY_TAGS.find(([t]) => tags.has(t));
+  return hit ? { tag: hit[0], req: hit[1], word: hit[2], name: `${hit[0]} private path`, match: `tag ${hit[0]}` } : null;
+}
 export const JOURNEY_ESTATE = 'lastmile';
 export const DEMO_SOURCE = 'Azure';
 
@@ -42,7 +54,7 @@ export function todayOf(est) {
 /** Beat 2: the clouds a source can read; the demo reads Azure (Oracle reads too). */
 export const PROVIDERS = [
   { key: 'Azure', name: 'Microsoft Azure', mark: 'brand/providers/azure.svg', cred: 'Reader role on the subscription', live: true },
-  { key: 'AWS', name: 'AWS', mark: 'brand/providers/aws.svg', cred: 'Read-only IAM role', live: false },
+  { key: 'AWS', name: 'AWS', mark: 'brand/providers/aws.svg', cred: 'Read-only IAM role', live: true },
   { key: 'GCP', name: 'Google Cloud', mark: 'brand/providers/google-icon.svg', cred: 'Viewer service account', live: false },
   { key: 'Oracle', name: 'Oracle Cloud', mark: 'brand/providers/oracle.svg', cred: 'Read-only policy', live: false },
 ];
@@ -59,8 +71,9 @@ export function suggestedTags(app, regionTags = []) {
 }
 
 /** Beat 3: the regions and workloads the new source found, each region's path today. */
-export function foundOf(est) {
-  const fresh = (est.regionsList || []).filter(r => r.fresh);
+export function foundOf(est, done = []) {
+  // The cloud this pass of the journey is about: the newest source, never one already carried through (attach more).
+  const fresh = (est.regionsList || []).filter(r => r.fresh && !done.includes(r.cloud));
   // A region's own tags seed the suggestions; the ones you apply join it, and must not suggest themselves to its other workloads.
   const regions = fresh.map(r => ({ key: r.region, cloud: r.cloud, region: r.region, wl: r.wl, ms: r.pub, priv: !!r.priv, tags: r.baseTags || r.tags || [],
     apps: (r.apps || []).map(([name, version, port, purpose, kind]) => ({ key: `${r.region}:${name}`, name, version, port, purpose, kind, region: r.region })) }));
@@ -75,6 +88,6 @@ export function tagRows(found, applied = {}) {
 }
 
 /** Where the journey is: a beat is done once its work is, so the rail and Next agree. */
-export function progressOf({ sourceAdded, tagsApplied, picked, placed }) {
-  return { today: true, source: !!sourceAdded, found: !!sourceAdded, tag: !!tagsApplied, recommend: picked !== null && picked !== undefined, connect: !!placed };
+export function progressOf({ sourceAdded, tagsApplied, picked, placed, live, protectedBy }) {
+  return { today: true, source: !!sourceAdded, found: !!sourceAdded, tag: !!tagsApplied, recommend: picked !== null && picked !== undefined, connect: !!placed, watch: !!live, protect: !!protectedBy, save: !!live };
 }

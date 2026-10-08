@@ -34,9 +34,10 @@ test('the Customer switch opens the journey on its first beat, clean; the steppe
   assert.equal(v.journeyOn, true);
   assert.equal(v.showRail, false, 'no rail in the journey');
   assert.equal(v.showPageTitle, false);
-  assert.deepEqual(v.jSteps.map(s => s.label), ['Today', 'Source', 'Found', 'Tag', 'Recommend', 'Connect']);
-  assert.deepEqual(v.jSteps.map(s => s.state), ['cur', 'next', 'next', 'next', 'next', 'next']);
-  assert.deepEqual(v.jSteps.map(s => s.off), [false, false, true, true, true, true], 'a beat opens once the source is in');
+  // Nine beats since act three (2026-10-08): live, protected, saved.
+  assert.deepEqual(v.jSteps.map(s => s.label), ['Today', 'Source', 'Found', 'Tag', 'Recommend', 'Connect', 'Live', 'Protect', 'Save']);
+  assert.deepEqual(v.jSteps.map(s => s.state), ['cur', 'next', 'next', 'next', 'next', 'next', 'next', 'next', 'next']);
+  assert.deepEqual(v.jSteps.map(s => s.off), [false, false, true, true, true, true, true, true, true], 'a beat opens once the source is in; act three once the order is');
   v.setJourney({ target: { value: '' } });
   assert.equal(c.state.journey, null); assert.equal(c.state.screen, 's0');
   assert.equal(vals(c).showRail, true);
@@ -62,7 +63,7 @@ test('beat 2: Azure with a read-only role; the scan ticks on the cloud node, add
   const c = journey({ jStep: 1 });
   let v = vals(c);
   assert.equal(v.jCloud.state, 'picking');
-  assert.deepEqual(v.jProviders.filter(p => !p.off).map(p => p.key), ['Azure'], 'the demo reads Azure');
+  assert.deepEqual(v.jProviders.filter(p => !p.off).map(p => p.key), ['Azure', 'AWS'], 'the demo reads Azure first, AWS when you attach more');
   assert.equal(v.jCred, 'Reader role on the subscription');
   assert.equal(v.jAct, 'Scan Azure');
   v.jActGo();
@@ -128,10 +129,8 @@ test('beat 6: one line of the order, Place order; then the line is AT&T\'s, the 
   const o = c.state.orders.find(x => x.journey);
   assert.equal(o.stage, 'Submitted for approval'); assert.deepEqual(o.moveKeys, ['region:Azure']); assert.equal(o.way, 'att');
   assert.deepEqual(v.jPhases.map(p => [p.label, p.state]), [['Ordered', 'ok'], ['Provision', 'set'], ['Live', 'any'], ['Insight', 'any']]);
-  assert.equal(v.jAct, 'See it in the dashboard');
-  v.jActGo();
-  assert.equal(c.state.journey, null); assert.equal(c.state.cnPage, 'orders');
-  assert.ok(vals(c).ordRows.some(r => /AT&T's ExpressRoute/.test(r.title)), 'Orders lists it in the dashboard');
+  assert.equal(v.jAct, 'Watch it go live');
+  assert.ok(vals(mkC({ ...c.state, journey: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' })).ordRows.some(r => /AT&T's ExpressRoute/.test(r.title)), 'Orders lists it in the dashboard');
 });
 
 test('a hosted pick adds the hub, priced at review', () => {
@@ -158,7 +157,7 @@ test('the markup: one stage of three nodes and two wires, the internet path, a s
   const a = HTML.indexOf('<section class="js"'), b = HTML.indexOf('</section>', a);
   const blk = HTML.slice(a, b);
   assert.match(blk, /<ol class="js-steps"[^>]*><sc-for list="\{\{ jSteps \}\}"/);
-  assert.match(blk, /<div class="js-stage" data-wide="\{\{ jWide \}\}" data-link="\{\{ jLink \}\}" data-net="\{\{ jNet \}\}" data-flow="\{\{ jFlow \}\}">/);
+  assert.match(blk, /<div class="js-stage" data-wide="\{\{ jWide \}\}" data-link="\{\{ jLink \}\}" data-net="\{\{ jNet \}\}" data-flow="\{\{ jFlow \}\}" data-live="\{\{ jLive \}\}" data-verdict="\{\{ jVerdict \}\}">/);
   assert.equal((blk.match(/class="js-node /g) || []).length, 3);
   assert.equal((blk.match(/class="js-wire"/g) || []).length, 2);
   assert.match(blk, /<div class="js-net" data-state="\{\{ jNet \}\}"/);
@@ -166,14 +165,15 @@ test('the markup: one stage of three nodes and two wires, the internet path, a s
   assert.doesNotMatch(blk, /<(table|select)\b/);
   assert.match(HTML, /<sc-if value="\{\{ journeyOn \}\}"[^>]*><button class="hdr-theme" onClick="\{\{ toggleTheme \}\}"/);
   assert.match(HTML, /@media \(prefers-reduced-motion: reduce\)\{\.js-wire\[data-state="proposed"\] i/);
-  assert.deepEqual(J.BEATS.map(b2 => b2.key), ['today', 'source', 'found', 'tag', 'recommend', 'connect']);
+  assert.deepEqual(J.BEATS.map(b2 => b2.key), ['today', 'source', 'found', 'tag', 'recommend', 'connect', 'watch', 'protect', 'save']);
 });
 
 test('the picture carries the figures (2026-10-08): latency on each wire, the monthly before and after, the traffic on the path it rides', () => {
   const found = vals(journey({ jStep: 2, addedSources: AZURE }));
   assert.equal(found.jNetMs, '102 ms'); assert.equal(found.jFlow, 'net'); assert.equal(found.jLinkHasMs, false); assert.equal(found.jMoney.has, false);
   const rec = vals(journey({ jStep: 4, addedSources: AZURE }));
-  assert.equal(rec.jLinkMs, '74 ms'); assert.equal(rec.jLinkDrop, '−28 ms'); assert.equal(rec.jLinkHasDrop, true);
+  // Azure's AT&T latency reads 19 ms (the seed's, inside the 20 ms private SLO, as the Oracle seed's is): 102 -> 19.
+  assert.equal(rec.jLinkMs, '19 ms'); assert.equal(rec.jLinkDrop, '−83 ms'); assert.equal(rec.jLinkHasDrop, true);
   assert.deepEqual([rec.jMoney.has, rec.jMoney.before, rec.jMoney.after, rec.jMoney.up], [true, '$16,800/mo', '$13,200/mo', false]);
   const hosted = vals(journey({ jStep: 4, jPick: 2, addedSources: AZURE }));
   assert.equal(hosted.jMoney.up, true, 'a dearer way reads in heading ink, never green');
@@ -183,4 +183,61 @@ test('the picture carries the figures (2026-10-08): latency on each wire, the mo
   assert.match(HTML, /<div class="js-stage"[^>]* data-flow="\{\{ jFlow \}\}"/);
   assert.match(HTML, /<i class="js-dots"><\/i>/);
   assert.match(HTML, /<div class="js-money" data-up="\{\{ jMoney\.up \}\}">/);
+});
+
+// ---- Act three (2026-10-08): live, protected, saved, and attach more ----
+const placedAzure = () => { const c = journey({ jStep: 5, jPick: 1, addedSources: AZURE }); vals(c).jActGo(); vals(c).jActGo(); return c; };
+
+test('beat 7: Go live lands both regions at once; every app blinks green; the internet path is gone; every page reads them private', () => {
+  const c = placedAzure();
+  let v = vals(c);
+  assert.equal(c.state.jStep, 6); assert.equal(v.jLine, 'Provisioning.'); assert.equal(v.jAct, 'Go live');
+  v.jActGo();
+  v = vals(c);
+  assert.deepEqual(c.state.landed, ['eastus', 'westeurope']);
+  assert.equal(v.jLine, 'Azure is live on AT&T.'); assert.equal(v.jNet, 'gone'); assert.equal(v.jLink, 'connected'); assert.equal(v.jLive, true);
+  assert.deepEqual(v.jPhases.map(p => p.state), ['ok', 'ok', 'ok', 'set']);
+  assert.equal(v.jHealth.length, 4);
+  // The figures survive the move leaving the ranked list: the order snapshotted them at Place.
+  assert.equal(v.jLinkMs, '19 ms'); assert.equal(v.jMoney.after, '$13,800/mo');
+  const home = vals(mkC({ ...c.state, journey: null, screen: 's0' }));
+  assert.ok(home.homeCards.find(x => x.key === 'onatt').big === '2', 'the home counts both regions private');
+});
+
+test('beat 8: one policy from the tags you applied, PCI first; Enforce makes it real, and the wires take their verdicts', () => {
+  const c = placedAzure(); vals(c).jActGo(); vals(c).jActGo();
+  let v = vals(c);
+  assert.equal(c.state.jStep, 7);
+  assert.deepEqual([v.jPolicy.tag, v.jPolicy.req, v.jPolicy.name], ['PCI', 'Private path required', 'PCI private path']);
+  assert.equal(v.jLine, 'PCI never touches the internet.'); assert.equal(v.jVerdict, 'none');
+  v.jActGo();
+  v = vals(c);
+  assert.equal(v.jLine, 'PCI never touches the internet. Enforced.'); assert.equal(v.jVerdict, 'enforced'); assert.equal(v.jPolicy.on, true);
+  const pol = c.state.customPolicies.find(p => p.journey);
+  assert.deepEqual([pol.name, pol.match, pol.req, pol.state, pol.cloud], ['PCI private path', 'tag PCI', 'Private path required', 'enforced', 'Azure']);
+  assert.ok(vals(mkC({ ...c.state, journey: null, screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies' })).polRows.some(r => r.name === 'PCI private path'), 'Govern lists it');
+});
+
+test('beat 9: the saving a month and a year; Attach AWS loops to the source with Azure done; Open the dashboard lands home', async () => {
+  const c = placedAzure(); vals(c).jActGo(); vals(c).jActGo(); vals(c).jActGo(); vals(c).jActGo();
+  let v = vals(c);
+  assert.equal(c.state.jStep, 8);
+  assert.equal(v.jLine, '$3,000 a month. $36,000 a year.');
+  assert.deepEqual([v.jSave.month, v.jSave.year, v.jSave.months.length], ['$3,000', '$36,000', 12]);
+  assert.deepEqual([v.jNext.has, v.jNext.name], [true, 'AWS']);
+  v.jNext.go();
+  v = vals(c);
+  assert.equal(c.state.jStep, 1); assert.deepEqual(c.state.jDone, ['Azure']); assert.equal(c.state.jLive, false);
+  assert.equal(v.jAct, 'Scan AWS'); assert.equal(v.jCloud.state, 'picking'); assert.equal(v.jHasDone, true);
+  v.jActGo(); await new Promise(r => setTimeout(r, 2900));
+  v = vals(c);
+  assert.equal(v.jLine, 'AWS runs 54 workloads on the public internet.');
+  assert.equal(v.jCloud.name, 'AWS');
+  assert.deepEqual(c.state.addedSources.map(a => a.provider).sort(), ['AWS', 'Azure'], 'Azure stays discovered');
+  assert.equal(v.jVerdict, 'none', 'the earlier policy\'s stamps do not sit on a wire that is not there yet');
+  // Open the dashboard: the home, with the estate changed.
+  const d = placedAzure(); vals(d).jActGo(); vals(d).jActGo(); vals(d).jActGo(); vals(d).jActGo();
+  assert.equal(vals(d).jAct, 'Open the dashboard');
+  vals(d).jActGo();
+  assert.equal(d.state.journey, null); assert.equal(d.state.screen, 's0');
 });

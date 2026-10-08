@@ -206,7 +206,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -297,11 +297,14 @@ function panelShape(pairs) {
   };
 }
 
+/** The regions that have landed this session: one from Orders' Go live, or several from the journey (2026-10-08). */
+export const landedOf = (s) => (Array.isArray(s.landed) ? s.landed : s.landed ? [s.landed] : []);
 export function vals(c) {
   const s = c.state, set = (p) => c.setState(p), estRaw = estateFor(s);
   const steered = s.steered || [];
   const persona = PERSONA_NAME[s.persona] || 'Cloud & Platform Architect';
-  const est0 = { ...estRaw, regionsList: estRaw.regionsList.map(r => r.region === s.landed ? { ...r, priv: true, ramp: r.ramp || 'NetBond', rel: 'ok', landed: true } : r), attachedRegions: estRaw.attachedRegions + (s.landed ? 1 : 0) };
+  const landedRs = landedOf(s);
+  const est0 = { ...estRaw, regionsList: estRaw.regionsList.map(r => landedRs.includes(r.region) ? { ...r, priv: true, ramp: r.ramp || 'NetBond', rel: 'ok', landed: true } : r), attachedRegions: estRaw.attachedRegions + landedRs.length };
   // Every policy counts by Govern's one rule (w2-govern, 2026-09-30), off this estate as it stands:
   // a region attached or a source added this session moves its figures, and every page reads them.
   est0.policies = GV.figured(est0, A.inventory(est0), { siteTags: ((s.siteTags || {})[est0.id]) || {} });
@@ -5179,8 +5182,9 @@ const MOVE_BADGE = { second: ['shuffle', 'Second path'], port: ['plus-circle', '
 const pare = (v) => String(v || '').replace(/ ms p95/, ' ms').replace(/\/mo egress$/, '/mo').replace(/ · at risk$/, ' · at risk');
 const MOVE_TONE = { good: 'var(--success)', risk: 'var(--warning)', bad: 'var(--error)', slo: 'var(--viz-5)', same: 'var(--text-light)' };
 // ---- The existing customer's journey (2026-10-08) ----
-const journeyProgress = (s) => J.progressOf({ sourceAdded: (s.addedSources || []).some(a => a.estId === J.JOURNEY_ESTATE),
-  tagsApplied: Object.keys(s.jTags || {}).length > 0, picked: s.jPick, placed: (s.orders || []).some(o => o.journey) });
+const journeyProgress = (s) => J.progressOf({ sourceAdded: (s.addedSources || []).some(a => a.estId === J.JOURNEY_ESTATE && !(s.jDone || []).includes(a.provider)),
+  tagsApplied: Object.keys(s.jTags || {}).length > 0, picked: s.jPick, placed: (s.orders || []).some(o => o.journey), live: !!s.jLive, protectedBy: (s.customPolicies || []).some(p => p.journey) });
+// NB: placed/protectedBy here gate the stepper only; journeyVals re-reads them for the cloud this pass is about.
 let journeyTimer = null;
 // The journey as one picture that builds (Micah, 2026-10-08: "make it simpler, more elegant, better in every way"): your
 // sites, the AT&T network, your cloud, on one stage that never leaves the screen. Each beat changes one thing on it and
@@ -5192,8 +5196,8 @@ function journeyVals(out, s, set, est) {
     // The Customer switch (2026-10-08: "It needs its own drop down, maybe existing new customer?"): the dashboard, or the
     // existing customer's journey from its first beat; New is next.
     setJourney: (e) => { const v = e.target.value;
-      if (v === 'existing') set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null,
-        addedSources: (s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE), orders: (s.orders || []).filter(o => !o.journey), andiOpen: false });
+      if (v === 'existing') set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], landed: null,
+        addedSources: (s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE), orders: (s.orders || []).filter(o => !o.journey && !o.journeyDone), customPolicies: (s.customPolicies || []).filter(p => !p.journey), andiOpen: false });
       else set({ journey: null, screen: 's0' }); } };
   if (!on) return base;
   const step = Math.max(0, Math.min(J.BEATS.length - 1, s.jStep || 0)), beat = J.BEATS[step], pr = journeyProgress(s);
@@ -5211,19 +5215,23 @@ function journeyVals(out, s, set, est) {
     journeyTimer = setInterval(() => { n += 1;
       if (n < 4) { set({ jScan: n }); return; }
       clearInterval(journeyTimer);
-      set({ jScan: 4, jStep: 2, addedSources: [...(s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE), { provider: prov.key, name: `${prov.name} subscription`, cred: prov.cred, cadence: 'daily', at: SCH.nowOf(s), estId: J.JOURNEY_ESTATE }] });
+      // The clouds carried through earlier passes keep their sources; only this cloud's is replaced.
+      set({ jScan: 4, jStep: 2, addedSources: [...(s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE || a.provider !== prov.key), { provider: prov.key, name: `${prov.name} subscription`, cred: prov.cred, cadence: 'daily', at: SCH.nowOf(s), estId: J.JOURNEY_ESTATE }] });
     }, 650);
   };
-  const found = J.foundOf(est), rows = J.tagRows(found, s.jTags || {});
+  const found = J.foundOf(est, s.jDone || []), rows = J.tagRows(found, s.jTags || {});
   const KIND_ICON = { web: 'globe', db: 'database', app: 'apps' };
   const putTags = (key, tags) => set({ jTags: { ...(s.jTags || {}), [key]: tags } });
   const tagAll = () => set({ jTags: Object.fromEntries(rows.map(r => [r.key, [...new Set([...r.applied, ...r.suggested])]])) });
   const tagsOn = rows.reduce((a, r) => a + r.applied.length, 0);
   // The move for the cloud the source found, its three ways, and the one you pick (Recommended until you pick another).
-  const move = (out.moveList || []).find(m => m.kind === 'region' && m.cloud === found.cloud) || null;
+  // Once the order lands, the move leaves the ranked list (it is done), so beats 7 to 9 read the figures the order
+  // snapshotted at Place: the way, its latency, its monthly and its saving. Before that, the live move.
+  const placed = (s.orders || []).find(o => o.journey && o.snap && o.snap.move.cloud === found.cloud) || null;
+  const liveMove0 = (out.moveList || []).find(m => m.kind === 'region' && m.cloud === found.cloud) || null;
+  const move = liveMove0 || (placed && placed.snap ? placed.snap.move : null);
   const pickI = Number.isInteger(s.jPick) ? s.jPick : move ? (move.recI || 0) : null;
-  const tier = move && pickI !== null ? move.tiers[pickI] : null;
-  const placed = (s.orders || []).find(o => o.journey) || null;
+  const tier = placed && placed.snap ? placed.snap.tier : move && pickI !== null ? move.tiers[pickI] : null;
   const cloudName = found.cloud === 'Azure' ? 'Azure' : W.CLOUD_NAME[found.cloud] || found.cloud || 'your cloud';
   const lines = tier ? (tier.products || []).map(p => { const pp = W.productOf(p.id) || {}; return { key: p.id, name: pp.name || p.id, n: p.n, v: pp.price === null || pp.price === undefined ? 'At review' : `${fmt(pp.price * p.n)}/mo` }; })
     .concat(tier.way && W.wayHosted(tier.way) ? [{ key: 'hub', name: W.EXTRA['hub-att'].name, n: 1, v: 'At review' }] : []) : [];
@@ -5231,8 +5239,11 @@ function journeyVals(out, s, set, est) {
   const place = () => { if (!tier || placed) return; const at = new Date(SCH.nowOf(s)); const n = (s.orders || []).length + 1;
     set({ jPick: pickI, orders: [...(s.orders || []), { id: `o${n}`, title: `${tier.label} · ${move.short}`, way: tier.way || null, what: [tier.label, move.regions.join(', '), tier.way ? W.waySetup(tier.way) : ''].filter(Boolean).join(' · '),
       monthly: total, at: `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`,
-      stage: CF.ORDER_STAGE, region: move.regions[0], fromFlow: true, moveKeys: [move.key], moveTitles: { [move.key]: move.title }, journey: true }] }); };
-  const liveMove = move ? (out.moveList || []).find(m => m.key === move.key) || move : null;
+      stage: CF.ORDER_STAGE, region: move.regions[0], fromFlow: true, moveKeys: [move.key], moveTitles: { [move.key]: move.title }, journey: true,
+      // What the picture reads after the move is done (2026-10-08): plain data, no functions, so the order stays serialisable.
+      snap: { move: { key: move.key, cloud: move.cloud, regions: move.regions.slice(), short: move.short, title: move.title, today: { ms: move.today.ms, mo: move.today.mo }, recI: move.recI || 0, tiers: [] },
+        tier: { label: tier.label, tier: tier.tier, way: tier.way || null, ms: tier.ms, mo: tier.mo, monthly: tier.monthly, net: tier.net, pts: tier.pts || '', hasPts: !!tier.hasPts, mark: tier.mark, priceShort: tier.priceShort, strip: tier.strip, metrics: tier.metrics, products: tier.products } } }] }); };
+  const liveMove = liveMove0;
   const saving = tier && tier.net > 0 ? fmt(tier.net) : '';
   const worstMs = found.regions.reduce((a, r) => Math.max(a, r.ms || 0), 0);
   // The figures on the picture (2026-10-08, "storytelling without more text"): latency on each wire, the monthly before
@@ -5240,6 +5251,22 @@ function journeyVals(out, s, set, est) {
   const todayMs = move ? move.today.ms : worstMs, tierMs = tier ? tier.ms : null;
   const beforeMo = move ? move.today.mo : null, afterMo = tier && tier.mo !== null && tier.mo !== undefined ? tier.mo : null;
   // One sentence a beat: the story, not the screen.
+  // Act three. Live: the journey's regions land at once (a presenter cannot wait ten days), so every page reads them
+  // private. Protect: one policy from the tags you applied, a real one Govern lists. Save: the saving over a year, then
+  // the fork: attach another cloud (the stage keeps this one and asks for the next) or open the dashboard.
+  const live = !!s.jLive;
+  const goLive = () => { if (!placed || live) return; set({ jLive: true, landed: [...new Set([...landedOf(s), ...(move ? move.regions : [])])] }); };
+  const prop = J.proposedPolicy(est, rows), protectedBy = (s.customPolicies || []).find(p => p.journey && p.cloud === found.cloud) || null;
+  const enforce = () => { if (!prop || protectedBy) return;
+    const pol0 = { name: prop.name, match: prop.match, scope: 'any cloud', req: prop.req, route: {}, path: [], state: 'enforced', custom: true, journey: true, cloud: found.cloud };
+    const fig = GV.policyFigures(est, A.inventory(est), pol0) || {};
+    set({ customPolicies: [...(s.customPolicies || []), { ...pol0, matched: fig.matched ?? null, viol: 0, unit: fig.unit || 'workloads' }] }); };
+  const polApps = prop ? rows.filter(r => r.applied.includes(prop.tag) || r.suggested.includes(prop.tag) && live).map(r => r.name) : [];
+  const yearSave = saving && tier ? tier.net * 12 : 0;
+  const months = Array.from({ length: 12 }, (_, i) => ({ key: 'm' + i, h: `${Math.round((i + 1) / 12 * 100)}%`, d: `${i * 60}ms` }));
+  const nextProv = J.PROVIDERS.find(p => p.live && !(s.addedSources || []).some(a => a.estId === J.JOURNEY_ESTATE && a.provider === p.key)) || null;
+  const attachMore = () => { if (!nextProv) return; set({ jStep: 1, jScan: null, jProv: nextProv.key, jPick: null, jLive: false, jTags: s.jTags, jDone: [...(s.jDone || []), found.cloud], orders: (s.orders || []).map(o => (o.journey ? { ...o, journey: false, journeyDone: true } : o)) }); };
+  const openHome = () => { set({ journey: null, screen: 's0' }); syncHash('s0'); };
   const LINE = [
     `AT&T already carries your ${today.sites} sites.`,
     scanning ? `Reading your ${prov.name} subscription.` : 'Connect a cloud account. Read only.',
@@ -5247,20 +5274,26 @@ function journeyVals(out, s, set, est) {
     tagsOn ? `${rows.filter(r => r.applied.length).length} of ${rows.length} workloads tagged.` : 'Tag what matters.',
     saving ? `Move ${cloudName} onto AT&T. Save ${saving} a month.` : `Move ${cloudName} onto AT&T.`,
     placed ? 'Ordered. AT&T is provisioning it.' : `Connect ${cloudName} with ${tier ? tier.label : 'AT&T'}.`,
+    live ? `${cloudName} is live on AT&T.` : 'Provisioning.',
+    protectedBy ? `${prop ? prop.tag : 'Payments'} ${prop ? prop.word : 'never touches the internet'}. Enforced.` : prop ? `${prop.tag} ${prop.word}.` : 'Nothing to protect yet.',
+    yearSave ? `${saving} a month. ${fmt(yearSave)} a year.` : 'Nothing saved yet.',
   ][step];
   // The stage, as this beat draws it.
   const cloudState = step === 0 ? 'unknown' : step === 1 ? (scanning ? 'scanning' : pr.source ? 'found' : 'picking') : found.has ? 'found' : 'unknown';
-  const link = placed ? 'connected' : step >= 4 && tier ? 'proposed' : 'none';
-  const net = !found.has || step < 2 ? 'off' : placed ? 'faded' : 'public';
+  const link = placed || live ? 'connected' : step >= 4 && tier ? 'proposed' : 'none';
+  const net = !found.has || step < 2 ? 'off' : live ? 'gone' : placed ? 'faded' : 'public';
   const ACT = [
     { label: 'Find your clouds', go: to(1), off: false },
     { label: pr.source ? 'See what it found' : scanning ? 'Scanning' : `Scan ${prov.name === 'Microsoft Azure' ? 'Azure' : prov.name}`, go: pr.source ? to(2) : connectSource, off: scanning },
     { label: 'Tag the workloads', go: to(3), off: !pr.source },
     tagsOn ? { label: 'See the recommendation', go: to(4), off: false } : { label: 'Tag them all', go: tagAll, off: !rows.length },
     { label: tier ? `Choose ${tier.label}` : 'Nothing to connect', go: () => { if (tier) set({ jPick: pickI, jStep: 5 }); }, off: !tier },
-    placed ? { label: 'See it in the dashboard', go: () => { set({ journey: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' }); syncHash('s3', 'cloud', 'connect'); }, off: false } : { label: 'Place order', go: place, off: !tier },
+    placed ? { label: 'Watch it go live', go: () => { set({ jStep: 6 }); }, off: false } : { label: 'Place order', go: place, off: !tier },
+    live ? { label: 'Protect it', go: to(7), off: false } : { label: 'Go live', go: goLive, off: !placed },
+    protectedBy ? { label: 'See what it saves', go: to(8), off: false } : { label: 'Enforce', go: enforce, off: !prop },
+    { label: 'Open the dashboard', go: openHome, off: false },
   ][step];
-  const need = { found: pr.source, tag: pr.source, recommend: pr.source, connect: pr.source };
+  const need = { found: pr.source, tag: pr.source, recommend: pr.source, connect: pr.source, watch: !!placed, protect: !!placed, save: !!placed };
   return { ...base, jStep: step, jBeat: beat, jBeatKey: beat.key, jLine: LINE, jIsRec: step === 4, jIsConnect: step === 5,
     jSteps: J.BEATS.map((b, i) => { const open = need[b.key] === undefined || !!need[b.key], done = i < step || (i === step && b.key === 'connect' && !!placed);
       return { key: b.key, n: String(i + 1), label: b.short, state: i === step ? 'cur' : done ? 'done' : 'next', cur: i === step, off: !open, icon: done ? 'check-circle' : '', hasIcon: done, noIcon: !done, go: () => { if (open) set({ jStep: i, jScan: null }); }, title: b.title }; }),
@@ -5286,18 +5319,26 @@ function journeyVals(out, s, set, est) {
     jConnectSource: connectSource,
     jRegions: found.regions.map(r => ({ key: r.region, region: r.region, wlF: String(r.wl), msF: `${r.ms} ms`,
       apps: r.apps.map(a => { const row = rows.find(x => x.key === a.key) || { suggested: [], applied: [] };
-        return { key: a.key, name: a.name, icon: KIND_ICON[a.kind] || 'apps', title: a.purpose, hasTags: step >= 3 || row.applied.length > 0,
+        return { key: a.key, name: a.name, icon: KIND_ICON[a.kind] || 'apps', title: a.purpose, hasTags: step >= 3 || row.applied.length > 0, dotDelay: `${rows.findIndex(x => x.key === a.key) * 140}ms`,
           chips: (step === 3 ? row.suggested : row.applied).map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === 3 ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === 3) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }) }; }) })),
     jTagCount: String(tagsOn),
     // The choice, three lines; the detail lives on the dashboard's Recommended.
-    jOptions: liveMove ? liveMove.tiers.filter(t => !t.unavailable).map(t => { const i = liveMove.tiers.indexOf(t), sel = i === pickI;
+    jOptions: liveMove && !placed ? liveMove.tiers.filter(t => !t.unavailable).map(t => { const i = liveMove.tiers.indexOf(t), sel = i === pickI;
       return { key: t.key || String(i), label: t.label, tier: t.tier, mark: t.mark, pts: t.pts || '', hasPts: !!t.hasPts, price: t.priceShort, on: sel,
         delta: t.net > 0 ? `saves ${fmt(t.net)}` : t.net < 0 ? `adds ${fmt(-t.net)}` : '', deltaInk: t.net > 0 ? 'var(--success)' : 'var(--text-light)',
         setup: t.way ? (W.wayWho(t.way) || {}).time || '' : '', setupTitle: t.way ? W.waySetup(t.way) : '', go: () => set({ jPick: i }) }; }) : [],
-    jHasOptions: !!liveMove,
+    jHasOptions: !!liveMove && !placed,
     jPicked: tier ? { label: tier.label, mark: tier.mark, pts: tier.pts || '', hasPts: !!tier.hasPts } : null, jHasPick: !!tier,
     jLines: lines, jTotal: total, jRegionsWord: move ? move.regions.join(' · ') : '',
-    jPlaced: !!placed, jNotPlaced: !placed, jPhases: liveMove && liveMove.hasTask ? liveMove.phases : [] };
+    jPlaced: !!placed, jNotPlaced: !placed, jPhases: liveMove && liveMove.hasTask ? liveMove.phases : placed ? [['ordered', 'Ordered', 'shopping-bag', 'ok'], ['provisioning', 'Provision', 'wrench', live ? 'ok' : 'set'], ['live', 'Live', 'verified', live ? 'ok' : 'any'], ['insight', 'Insight', 'lightbulb', live ? 'set' : 'any']].map(([key, label, icon, state]) => ({ key, label, icon, state, title: label })) : [],
+    // Act three.
+    jIsWatch: step === 6, jIsProtect: step === 7, jIsSave: step === 8, jLive: live, jNotLive: !live,
+    jHealth: found.regions.flatMap(r => r.apps).map((a, i) => ({ key: a.key, d: `${i * 140}ms` })),
+    jPolicy: prop ? { has: true, name: prop.name, tag: prop.tag, req: prop.req, apps: polApps, appsWord: polApps.join(', '), n: String(polApps.length), on: !!protectedBy } : { has: false, name: '', tag: '', req: '', apps: [], appsWord: '', n: '0', on: false }, jHasPolicy: !!prop,
+    jVerdict: protectedBy && step >= 7 ? 'enforced' : 'none', jProtected: !!protectedBy && step >= 7,
+    jSave: { month: saving, year: yearSave ? fmt(yearSave) : '', has: !!yearSave, months, before: beforeMo !== null ? fmt(beforeMo) : '', after: afterMo !== null ? fmt(afterMo) : '' },
+    jNext: nextProv ? { has: true, name: nextProv.name === 'Microsoft Azure' ? 'Azure' : nextProv.name, mark: nextProv.mark, go: attachMore } : { has: false, name: '', mark: '', go: () => {} },
+    jDoneClouds: (s.jDone || []).map(c => ({ key: c, mark: W.markFor(c, s.theme), name: c })), jHasDone: (s.jDone || []).length > 0 };
 }
 function movesVals(s, set, go, est, { openF, obAll, conns }) {
   // The journey's last two beats read the same moves (2026-10-08).
@@ -5314,7 +5355,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   // An order that remembers its moves belongs to those alone (a landed region spawns a second-path move the order must not claim); an older order, by its region.
   const orderOf = (m) => ordersAll.find(o => ((o.moveKeys || []).length ? o.moveKeys.includes(m.key) : !!(o.region && m.regions && m.regions.includes(o.region))));
   const PHASES = [['ordered', 'Ordered', 'shopping-bag'], ['provisioning', 'Provision', 'wrench'], ['live', 'Live', 'verified'], ['insight', 'Insight', 'lightbulb']];
-  const phasesOf = (o, title, region) => { const landed = !!(s.landed && o.region && o.region === s.landed);
+  const phasesOf = (o, title, region) => { const landed = !!(o.region && landedOf(s).includes(o.region));
     const state = (i) => (landed ? (i < 3 ? 'ok' : 'set') : i === 0 ? 'ok' : i === 1 ? 'set' : 'any');
     const doors = [() => set({ cnPage: 'orders' }), () => set({ cnPage: 'orders' }), landed ? () => set({ cnPage: 'picture' }) : null,
       landed && region ? go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', obPanel: 'paths', pathPin: '|' + region, pathSel: '|' + region, pathsPage: 0 }) : null];

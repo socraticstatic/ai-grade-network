@@ -494,12 +494,16 @@ test('every container the markup opens, it closes', () => {
   // The journey's figures on the picture (2026-10-08): latency on the AT&T wire under two sc-ifs, the money pair under
   // one (div +1, span +3), the latency on the internet path under one. Recounted, every tag balanced: div 1276 -> 1277,
   // span 1366 -> 1369, sc-if 629 -> 633.
-    ['div', /<div\b/g, /<\/div>/g, 1277],
-    ['span', /<span\b/g, /<\/span>/g, 1369],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 633],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 361],
+  // Act three of the journey (2026-10-08): health dots on the apps (i), verdict stamps on both wires, the policy line, the
+  // year of saving (a bar loop), the done clouds beside the cloud, Attach more in the action row (div +5, span +19,
+  // sc-if +9, sc-for +2, button +1). Recounted, every tag balanced: div 1277 -> 1282, span 1369 -> 1388, sc-if 633 -> 642,
+  // sc-for 361 -> 363, button 510 -> 511.
+    ['div', /<div\b/g, /<\/div>/g, 1282],
+    ['span', /<span\b/g, /<\/span>/g, 1388],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 642],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 363],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 510],
+    ['button', /<button\b/g, /<\/button>/g, 511],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];
