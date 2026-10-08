@@ -241,3 +241,35 @@ test('beat 9: the saving a month and a year; Attach AWS loops to the source with
   vals(d).jActGo();
   assert.equal(d.state.journey, null); assert.equal(d.state.screen, 's0');
 });
+
+test('beat 4 again (2026-10-08): any known tag from a palette, and your own; beat 5: the picked option in full, in place', () => {
+  const c = journey({ jStep: 3, addedSources: AZURE });
+  let v = vals(c);
+  const row = v.jRegions[0].apps[0];
+  assert.equal(row.canAdd, true); assert.equal(v.jTagPalette.open, false);
+  row.pick();
+  v = vals(c);
+  assert.equal(v.jTagPalette.open, true); assert.equal(v.jTagPalette.name, 'dispatch-svc');
+  assert.ok(v.jTagPalette.tags.some(t => t.t === 'Finance') && v.jTagPalette.tags.some(t => t.t === 'Dev'), 'the known tags are on offer');
+  v.jTagPalette.tags.find(t => t.t === 'Finance').go();
+  v.jTagPalette.setText({ target: { value: 'Depot' } }); vals(c).jTagPalette.add();
+  v = vals(c);
+  assert.deepEqual(c.state.jTags['eastus:dispatch-svc'], ['Finance', 'Depot']);
+  assert.ok(v.jRegions[0].apps[0].chips.find(x => x.t === 'Depot' && x.on), 'your own tag is a chip, on');
+  assert.ok(!v.jTagPalette.tags.some(t => t.t === 'Finance'), 'an applied tag leaves the palette');
+  v.jTagPalette.close();
+  assert.equal(vals(c).jTagPalette.open, false);
+  const r = journey({ jStep: 4, addedSources: AZURE });
+  let w = vals(r);
+  assert.equal(w.jDetailOpen, false);
+  w.toggleDetail();
+  w = vals(r);
+  assert.equal(w.jDetailOpen, true);
+  assert.equal(w.jDetail.label, 'Your ExpressRoute');
+  assert.deepEqual(w.jDetail.metrics.map(m => m.key), ['sec', 'perf', 'cost', 'setup', 'you']);
+  assert.match(w.jDetail.metrics[2].words, /^Egress \$16,800 to/);
+  assert.deepEqual(w.jDetail.products.map(p => [p.name, p.n]), [['NetBond for Cloud', '2']]);
+  assert.match(w.jDetail.youDo, /^Accept the connection/);
+  assert.match(HTML, /<button class="js-deeper" onClick="\{\{ toggleDetail \}\}" aria-expanded="\{\{ jDetailOpen \}\}">/);
+  assert.match(HTML, /<div class="js-palette" role="group"/);
+});

@@ -206,7 +206,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -5320,14 +5320,31 @@ function journeyVals(out, s, set, est) {
     jRegions: found.regions.map(r => ({ key: r.region, region: r.region, wlF: String(r.wl), msF: `${r.ms} ms`,
       apps: r.apps.map(a => { const row = rows.find(x => x.key === a.key) || { suggested: [], applied: [] };
         return { key: a.key, name: a.name, icon: KIND_ICON[a.kind] || 'apps', title: a.purpose, hasTags: step >= 3 || row.applied.length > 0, dotDelay: `${rows.findIndex(x => x.key === a.key) * 140}ms`,
-          chips: (step === 3 ? row.suggested : row.applied).map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === 3 ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === 3) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }) }; }) })),
+          chips: [...new Set(step === 3 ? [...row.suggested, ...row.applied] : row.applied)].map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === 3 ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === 3) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }),
+          canAdd: step === 3, picking: s.jTagPick === a.key, pick: () => set({ jTagPick: s.jTagPick === a.key ? null : a.key, jTagNew: '' }) }; }) })),
     jTagCount: String(tagsOn),
+    // Once any tag is on, the primary moves on; Tag the rest stays beside it while a suggestion is still off (2026-10-08).
+    jTagRest: { has: step === 3 && tagsOn > 0 && !rows.every(r => r.done), go: tagAll },
+    // Any tag, not only the suggested ones (2026-10-08): a + on each row opens the known tags, and a box takes a new one.
+    jTagPalette: (() => { const key = s.jTagPick; if (!key || step !== 3) return { open: false, key: '', tags: [], text: s.jTagNew || '' };
+      const row = rows.find(r => r.key === key); if (!row) return { open: false, key: '', tags: [], text: '' };
+      const known = [...new Set([...J.POLICY_TAGS.map(t => t[0]), 'Internet-facing', 'Dev', 'GPU', 'AI', ...(est.regionsList || []).flatMap(r => r.tags || []), ...rows.flatMap(r => [...r.suggested, ...r.applied]), ...Object.values(s.jTags || {}).flat()])];
+      return { open: true, key, name: row.name, text: s.jTagNew || '', setText: (e) => set({ jTagNew: e.target.value }),
+        keyDown: (e) => { if (e.key === 'Enter') { const t = String(s.jTagNew || '').trim(); if (t) putTags(key, [...new Set([...row.applied, t])]); set({ jTagNew: '' }); } if (e.key === 'Escape') set({ jTagPick: null, jTagNew: '' }); },
+        add: () => { const t = String(s.jTagNew || '').trim(); if (t) putTags(key, [...new Set([...row.applied, t])]); set({ jTagNew: '' }); }, close: () => set({ jTagPick: null, jTagNew: '' }),
+        tags: known.filter(t => !row.applied.includes(t)).map(t => ({ key: t, t, go: () => putTags(key, [...row.applied, t]) })) }; })(),
     // The choice, three lines; the detail lives on the dashboard's Recommended.
     jOptions: liveMove && !placed ? liveMove.tiers.filter(t => !t.unavailable).map(t => { const i = liveMove.tiers.indexOf(t), sel = i === pickI;
       return { key: t.key || String(i), label: t.label, tier: t.tier, mark: t.mark, pts: t.pts || '', hasPts: !!t.hasPts, price: t.priceShort, on: sel,
         delta: t.net > 0 ? `saves ${fmt(t.net)}` : t.net < 0 ? `adds ${fmt(-t.net)}` : '', deltaInk: t.net > 0 ? 'var(--success)' : 'var(--text-light)',
         setup: t.way ? (W.wayWho(t.way) || {}).time || '' : '', setupTitle: t.way ? W.waySetup(t.way) : '', go: () => set({ jPick: i }) }; }) : [],
     jHasOptions: !!liveMove && !placed,
+    // Depth on what is offered (2026-10-08, "no way to dive deeper"): the picked option's whole card, in place, by a chevron.
+    jDetailOpen: !!s.jDetail && step === 4 && !!tier, toggleDetail: () => set({ jDetail: !s.jDetail }),
+    jDetail: tier ? { label: tier.label, tierWord: tier.tier, intro: tier.intro || '', fit: tier.fit || '', mark: tier.mark, strip: tier.strip || [], pts: tier.pts || '', hasPts: !!tier.hasPts, ptsTitle: tier.ptsTitle || '',
+      metrics: (tier.metrics || []).map(m2 => ({ ...m2, words: String(m2.title || '').replace(/^[A-Za-z ]+: /, '') })),
+      who: tier.whoWord || '', time: tier.setupTime || '', setupWords: tier.setupWords || '', youDo: tier.way && W.wayYouDo(tier.way) ? W.wayYouDo(tier.way).words : '',
+      products: (tier.products || []).map(p => { const pp = W.productOf(p.id) || {}; return { key: p.id, name: pp.name || p.id, n: String(p.n), v: pp.price === null || pp.price === undefined ? 'At review' : `${fmt(pp.price)}/mo each` }; }) } : null,
     jPicked: tier ? { label: tier.label, mark: tier.mark, pts: tier.pts || '', hasPts: !!tier.hasPts } : null, jHasPick: !!tier,
     jLines: lines, jTotal: total, jRegionsWord: move ? move.regions.join(' · ') : '',
     jPlaced: !!placed, jNotPlaced: !placed, jPhases: liveMove && liveMove.hasTask ? liveMove.phases : placed ? [['ordered', 'Ordered', 'shopping-bag', 'ok'], ['provisioning', 'Provision', 'wrench', live ? 'ok' : 'set'], ['live', 'Live', 'verified', live ? 'ok' : 'any'], ['insight', 'Insight', 'lightbulb', live ? 'set' : 'any']].map(([key, label, icon, state]) => ({ key, label, icon, state, title: label })) : [],

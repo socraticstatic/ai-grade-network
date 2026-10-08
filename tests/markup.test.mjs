@@ -498,12 +498,17 @@ test('every container the markup opens, it closes', () => {
   // year of saving (a bar loop), the done clouds beside the cloud, Attach more in the action row (div +5, span +19,
   // sc-if +9, sc-for +2, button +1). Recounted, every tag balanced: div 1277 -> 1282, span 1369 -> 1388, sc-if 633 -> 642,
   // sc-for 361 -> 363, button 510 -> 511.
-    ['div', /<div\b/g, /<\/div>/g, 1282],
-    ['span', /<span\b/g, /<\/span>/g, 1388],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 642],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 363],
+  // Tags of your own and depth on the offer (2026-10-08): a + on each app row and the palette under the regions (sc-if,
+  // sc-for, buttons, the new-tag box), Tag the rest beside the action, the picked option's whole card under a chevron
+  // (two columns of metric rows, the products, the strip). Recounted, every tag balanced: div 1282 -> 1291,
+  // span 1388 -> 1411, sc-if 642 -> 647, sc-for 363 -> 367, button 511 -> 517. The You do row the metrics already carry
+  // left the detail (div -1, span -4): div 1291 -> 1290, span 1411 -> 1407.
+    ['div', /<div\b/g, /<\/div>/g, 1290],
+    ['span', /<span\b/g, /<\/span>/g, 1407],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 647],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 367],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 511],
+    ['button', /<button\b/g, /<\/button>/g, 517],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];
