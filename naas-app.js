@@ -5235,6 +5235,10 @@ function journeyVals(out, s, set, est) {
   const liveMove = move ? (out.moveList || []).find(m => m.key === move.key) || move : null;
   const saving = tier && tier.net > 0 ? fmt(tier.net) : '';
   const worstMs = found.regions.reduce((a, r) => Math.max(a, r.ms || 0), 0);
+  // The figures on the picture (2026-10-08, "storytelling without more text"): latency on each wire, the monthly before
+  // and after above the cloud, and the traffic itself, as dots that ride the internet path until the order moves them.
+  const todayMs = move ? move.today.ms : worstMs, tierMs = tier ? tier.ms : null;
+  const beforeMo = move ? move.today.mo : null, afterMo = tier && tier.mo !== null && tier.mo !== undefined ? tier.mo : null;
   // One sentence a beat: the story, not the screen.
   const LINE = [
     `AT&T already carries your ${today.sites} sites.`,
@@ -5264,7 +5268,14 @@ function journeyVals(out, s, set, est) {
     jExit: () => set({ journey: null, screen: 's0' }),
     // The stage.
     jWide: step >= 2 && found.has, jLink: link, jLinkWord: link === 'connected' ? 'AT&T private path' : link === 'proposed' ? (tier ? tier.label : '') : '',
-    jNet: net, jNetWord: `Public internet${worstMs ? ` · up to ${worstMs} ms` : ''}`,
+    jNet: net, jNetWord: 'Public internet', jNetMs: todayMs ? `${todayMs} ms` : '', jNetHasMs: !!todayMs,
+    // The AT&T wire's latency once a way is proposed, and the drop beside it.
+    jLinkMs: tierMs ? `${tierMs} ms` : '', jLinkHasMs: !!tierMs && link !== 'none', jLinkDrop: tierMs && todayMs && todayMs > tierMs ? `−${todayMs - tierMs} ms` : '', jLinkHasDrop: !!(tierMs && todayMs && todayMs > tierMs && link !== 'none'),
+    // Before and after, as a pair of figures: today's monthly in grey, the way's in green; shown from the recommendation on.
+    jMoney: { has: step >= 4 && beforeMo !== null && afterMo !== null, before: beforeMo !== null ? `${fmt(beforeMo)}/mo` : '', after: afterMo !== null ? `${fmt(afterMo)}/mo` : '', up: afterMo !== null && beforeMo !== null && afterMo > beforeMo,
+      beforeTitle: 'Egress a month today, over the public internet', afterTitle: tier ? `A month with ${tier.label}: the connection plus the egress it carries at AT&T's price` : '' },
+    // Where the traffic rides: the internet path until the order lands, then the AT&T wire.
+    jFlow: placed ? 'att' : found.has && step >= 2 ? 'net' : 'none',
     jSites: { n: String(today.sites), groups: today.groups.map(g => ({ ...g, nF: String(g.n), title: `${g.n} sites on ${g.full}` })) },
     jCloud: { state: cloudState, unknown: cloudState === 'unknown', picking: cloudState === 'picking', scanning: cloudState === 'scanning', found: cloudState === 'found',
       mark: found.has ? W.markFor(found.cloud, s.theme) : '', name: cloudName, wl: String(found.wl), tagging: step === 3 },

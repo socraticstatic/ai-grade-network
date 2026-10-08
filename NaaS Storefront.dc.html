@@ -152,8 +152,21 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js-net{grid-column:1 / -1;grid-row:2;position:relative;margin:0 160px 0 130px;border:2px dotted var(--border-primary);border-top:0;border-radius:0 0 48px 48px;opacity:0;transition:opacity .5s,margin .45s}
 .js-stage[data-wide="true"] .js-net{margin:0 235px 0 105px}
 .js-net small{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);padding:0 10px;background:var(--bg-wash);font-size:12px;line-height:16px;font-weight:600;color:var(--warning);white-space:nowrap}
-.js-net[data-state="public"]{opacity:1;border-color:var(--warning)}
-.js-net[data-state="faded"]{opacity:.35}
+.js-net[data-state="public"]{opacity:1;border-color:var(--viz-5)}.js-net[data-state="public"] small{color:var(--viz-5)}
+.js-net[data-state="faded"]{opacity:.3;border-color:var(--border-primary)}.js-net[data-state="faded"] small{color:var(--text-disabled)}
+.js-net small b{margin-left:8px;font-weight:700;font-variant-numeric:tabular-nums}
+/* The traffic itself: dots that ride the internet path while it carries them, and the AT&T wire once the order moves them. */
+.js-dots{position:absolute;left:-2px;right:-2px;bottom:-2px;height:0;border-bottom:4px dotted transparent;pointer-events:none}
+.js-stage[data-flow="net"] .js-dots{border-bottom:4px dotted var(--viz-5);border-image:repeating-linear-gradient(90deg,var(--viz-5) 0 4px,transparent 4px 16px) 0 0 4 0;animation:js-ride 1.4s linear infinite}
+.js-stage[data-flow="att"] .js-wire[data-state="connected"] i{background:radial-gradient(circle,#fff 0 1.6px,transparent 2.2px) 0 50% / 16px 6px repeat-x,var(--cta);animation:js-ride 1.1s linear infinite}
+@keyframes js-ride{to{background-position:16px 50%;border-image-source:repeating-linear-gradient(90deg,var(--viz-5) 16px 20px,transparent 20px 32px)}}
+.js-stage[data-flow="net"] .js-net{border-bottom-color:transparent}
+.js-ms{position:absolute;bottom:100%;left:0;right:0;margin-bottom:4px;display:flex;justify-content:center;align-items:baseline;gap:6px;font-size:14px;line-height:18px;font-weight:700;color:var(--link);font-variant-numeric:tabular-nums;white-space:nowrap}
+.js-ms em{font-style:normal;font-size:11px;line-height:14px;font-weight:700;color:var(--success)}
+.js-money{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 10px;border-radius:12px;background:var(--bg-wash)}
+.js-money>span:not(.ic){display:grid;gap:1px;text-align:center}.js-money small{font-size:10px;line-height:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light)}
+.js-money b{font-size:16px;line-height:20px;font-variant-numeric:tabular-nums;color:var(--text-light)}.js-money>span:last-child b{color:var(--success)}.js-money[data-up="true"]>span:last-child b{color:var(--text-heading)}
+.js-money>.ic{color:var(--text-disabled)}
 .js-opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;width:min(1180px,100%)}
 .js-opt{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border-secondary);border-radius:18px;background:var(--bg-base);font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,background .2s}
 .js-opt:hover{border-color:var(--border-active)}.js-opt[aria-checked="true"]{border:2px solid var(--cta);background:var(--bg-accent);padding:13px 15px}
@@ -168,7 +181,7 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js-back{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 14px;border:0;background:transparent;font:inherit;font-size:14px;font-weight:600;color:var(--text-light);cursor:pointer}.js-back:hover{color:var(--link)}
 .js-go{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 30px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px color-mix(in srgb,var(--cta) 30%,transparent);transition:background .2s,transform .2s}
 .js-go:hover{background:var(--cta-hover);transform:translateY(-1px)}.js-go:disabled{background:var(--bg-neutral);color:var(--text-disabled);box-shadow:none;cursor:not-allowed;transform:none}
-@media (prefers-reduced-motion: reduce){.js-wire[data-state="proposed"] i,.js-cloud>*,.js-opts,.js-order,.js-region{animation:none}.js-stage,.js-net,.js-node{transition:none}}
+@media (prefers-reduced-motion: reduce){.js-wire[data-state="proposed"] i,.js-cloud>*,.js-opts,.js-order,.js-region,.js-dots,.js-stage[data-flow="att"] .js-wire[data-state="connected"] i{animation:none}.js-stage,.js-net,.js-node{transition:none}}
 .hdr-cust{display:inline-flex;align-items:center;gap:6px;height:36px;margin-left:12px;padding:0 4px 0 12px;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);color:var(--text-light)}
 .hdr-theme{display:grid;place-items:center;width:36px;height:36px;margin-left:8px;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);color:var(--text-heading);cursor:pointer}
 .hdr-cust select{height:32px;border:0;background:transparent;color:var(--text-heading);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
@@ -808,7 +821,7 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
   <ol class="js-steps" aria-label="Steps"><sc-for list="{{ jSteps }}" as="st" hint-placeholder-count="6"><li data-state="{{ st.state }}"><button onClick="{{ st.go }}" disabled="{{ st.off }}" aria-current="{{ st.cur }}" title="{{ st.title }}"><i><sc-if value="{{ st.hasIcon }}" hint-placeholder-val="{{ false }}"><span class="ic s14" style="--ic:url('brand/icons/check-circle.svg')"></span></sc-if><sc-if value="{{ st.noIcon }}" hint-placeholder-val="{{ true }}">{{ st.n }}</sc-if></i><span>{{ st.label }}</span></button></li></sc-for></ol>
   <div class="js-body">
   <h1 class="js-line">{{ jLine }}</h1>
-  <div class="js-stage" data-wide="{{ jWide }}" data-link="{{ jLink }}" data-net="{{ jNet }}">
+  <div class="js-stage" data-wide="{{ jWide }}" data-link="{{ jLink }}" data-net="{{ jNet }}" data-flow="{{ jFlow }}">
     <div class="js-node js-sites" aria-label="Your sites">
       <span class="js-cap">Your sites</span>
       <b class="js-big">{{ jSites.n }}</b>
@@ -816,20 +829,21 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
     </div>
     <div class="js-wire" data-state="on" aria-hidden="true"><i></i><small>Last mile</small></div>
     <div class="js-node js-att" aria-label="The AT&amp;T network"><b>AT&amp;T</b><span class="js-hub"><span class="ic" style="--ic:url('brand/icons/hub.svg')"></span></span><span class="js-cap">network</span></div>
-    <div class="js-wire" data-state="{{ jLink }}" aria-hidden="true"><i></i><small>{{ jLinkWord }}</small></div>
+    <div class="js-wire" data-state="{{ jLink }}" aria-hidden="true"><i></i><sc-if value="{{ jLinkHasMs }}" hint-placeholder-val="{{ false }}"><b class="js-ms">{{ jLinkMs }}<sc-if value="{{ jLinkHasDrop }}" hint-placeholder-val="{{ true }}"><em>{{ jLinkDrop }}</em></sc-if></b></sc-if><small>{{ jLinkWord }}</small></div>
     <div class="js-node js-cloud" data-state="{{ jCloud.state }}" aria-label="Your cloud">
       <sc-if value="{{ jCloud.unknown }}" hint-placeholder-val="{{ true }}"><span class="js-cap">Your cloud</span><span class="js-q"><span class="ic" style="--ic:url('brand/icons/cloud.svg')"></span><b>?</b></span><span class="js-soft">Unknown to AT&amp;T</span></sc-if>
       <sc-if value="{{ jCloud.picking }}" hint-placeholder-val="{{ false }}"><div class="js-provs" role="radiogroup" aria-label="Cloud" style="grid-row:2"><sc-for list="{{ jProviders }}" as="jp" hint-placeholder-count="4"><button role="radio" aria-checked="{{ jp.on }}" disabled="{{ jp.off }}" onClick="{{ jp.go }}" title="{{ jp.title }}"><span class="js-mark" style="background-image:url('{{ jp.mark }}')"></span></button></sc-for></div><span class="js-key" style="grid-row:3"><span class="ic s16" style="--ic:url('brand/icons/padlock.svg')"></span>{{ jCred }}</span></sc-if>
       <sc-if value="{{ jCloud.scanning }}" hint-placeholder-val="{{ false }}"><span class="js-ring" style="--p:{{ jScanPct }};grid-row:2"><span class="js-mark" style="background-image:url('brand/providers/azure.svg')"></span></span><ol class="js-scan" style="grid-row:3"><sc-for list="{{ jScanSteps }}" as="sc" hint-placeholder-count="4"><li data-state="{{ sc.state }}">{{ sc.word }}</li></sc-for></ol></sc-if>
       <sc-if value="{{ jCloud.found }}" hint-placeholder-val="{{ false }}">
         <div class="js-cloudhead"><span class="js-mark sm" style="background-image:url('{{ jCloud.mark }}')"></span><b>{{ jCloud.name }}</b><span class="kchip" title="Workloads"><span class="ic s14" style="--ic:url('brand/icons/apps.svg')"></span><b>{{ jCloud.wl }}</b></span></div>
+        <sc-if value="{{ jMoney.has }}" hint-placeholder-val="{{ false }}"><div class="js-money" data-up="{{ jMoney.up }}"><span title="{{ jMoney.beforeTitle }}"><small>Today</small><b>{{ jMoney.before }}</b></span><span class="ic s16" style="--ic:url('brand/icons/arrow-right.svg')"></span><span title="{{ jMoney.afterTitle }}"><small>On AT&amp;T</small><b>{{ jMoney.after }}</b></span></div></sc-if>
         <div class="js-regions"><sc-for list="{{ jRegions }}" as="rg" hint-placeholder-count="2"><div class="js-region">
           <div class="js-rhead"><b>{{ rg.region }}</b><span class="kchip" title="Workloads"><span class="ic s14" style="--ic:url('brand/icons/apps.svg')"></span>{{ rg.wlF }}</span><span class="kchip" title="Latency from your sites, today"><span class="ic s14" style="--ic:url('brand/icons/clock.svg')"></span>{{ rg.msF }}</span></div>
           <sc-for list="{{ rg.apps }}" as="ap" hint-placeholder-count="2"><div class="js-app" title="{{ ap.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ ap.icon }}.svg')"></span><span>{{ ap.name }}</span><span class="js-tags"><sc-for list="{{ ap.chips }}" as="tg" hint-placeholder-count="2"><button class="js-tag" aria-pressed="{{ tg.on }}" onClick="{{ tg.go }}" title="{{ tg.title }}">{{ tg.t }}</button></sc-for></span></div></sc-for>
         </div></sc-for></div>
       </sc-if>
     </div>
-    <div class="js-net" data-state="{{ jNet }}" aria-hidden="true"><small>{{ jNetWord }}</small></div>
+    <div class="js-net" data-state="{{ jNet }}" aria-hidden="true"><i class="js-dots"></i><small>{{ jNetWord }}<sc-if value="{{ jNetHasMs }}" hint-placeholder-val="{{ true }}"><b>{{ jNetMs }}</b></sc-if></small></div>
   </div>
   <sc-if value="{{ jIsRec }}" hint-placeholder-val="{{ false }}"><div class="js-opts" role="radiogroup" aria-label="Ways to connect"><sc-for list="{{ jOptions }}" as="op" hint-placeholder-count="3"><button role="radio" class="js-opt" aria-checked="{{ op.on }}" onClick="{{ op.go }}" title="{{ op.setupTitle }}">
     <span class="ic-tile" style="background:{{ op.mark.bg }};color:{{ op.mark.ink }}"><span class="ic s20" style="--ic:url('brand/icons/{{ op.mark.icon }}.svg')"></span></span>

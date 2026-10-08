@@ -491,9 +491,12 @@ test('every container the markup opens, it closes', () => {
   // Gestalt, balance and spacing (2026-10-08): the Spend chart's dollar axis (div, sc-for, span) and gridlines (sc-for),
   // Sources' second Add a source left (button -1), Orders' empty state centred under a glyph (span +2). Recounted, every
   // tag balanced: div 1275 -> 1276, span 1362 -> 1366, sc-for 359 -> 361, button 511 -> 510.
-    ['div', /<div\b/g, /<\/div>/g, 1276],
-    ['span', /<span\b/g, /<\/span>/g, 1366],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 629],
+  // The journey's figures on the picture (2026-10-08): latency on the AT&T wire under two sc-ifs, the money pair under
+  // one (div +1, span +3), the latency on the internet path under one. Recounted, every tag balanced: div 1276 -> 1277,
+  // span 1366 -> 1369, sc-if 629 -> 633.
+    ['div', /<div\b/g, /<\/div>/g, 1277],
+    ['span', /<span\b/g, /<\/span>/g, 1369],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 633],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 361],
     ['section', /<section\b/g, /<\/section>/g, 17],
     ['button', /<button\b/g, /<\/button>/g, 510],

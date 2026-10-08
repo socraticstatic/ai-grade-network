@@ -78,7 +78,8 @@ test('beat 3: the cloud node becomes Azure, its regions and apps; the public int
   assert.equal(v.jCloud.state, 'found'); assert.equal(v.jCloud.wl, '68'); assert.equal(v.jWide, true);
   assert.deepEqual(v.jRegions.map(r => [r.region, r.wlF, r.msF]), [['eastus', '40', '64 ms'], ['westeurope', '28', '102 ms']]);
   assert.deepEqual(v.jRegions[1].apps.map(a => a.name), ['payments-api', 'fin-ledger']);
-  assert.equal(v.jNet, 'public'); assert.equal(v.jNetWord, 'Public internet · up to 102 ms');
+  // The latency is a figure of its own on the path (2026-10-08), not part of the word.
+  assert.equal(v.jNet, 'public'); assert.equal(v.jNetWord, 'Public internet'); assert.equal(v.jNetMs, '102 ms');
 });
 
 test('beat 4: tags suggested by what a workload is; Tag them all, then the tags join the estate and stay with their own', () => {
@@ -157,7 +158,7 @@ test('the markup: one stage of three nodes and two wires, the internet path, a s
   const a = HTML.indexOf('<section class="js"'), b = HTML.indexOf('</section>', a);
   const blk = HTML.slice(a, b);
   assert.match(blk, /<ol class="js-steps"[^>]*><sc-for list="\{\{ jSteps \}\}"/);
-  assert.match(blk, /<div class="js-stage" data-wide="\{\{ jWide \}\}" data-link="\{\{ jLink \}\}" data-net="\{\{ jNet \}\}">/);
+  assert.match(blk, /<div class="js-stage" data-wide="\{\{ jWide \}\}" data-link="\{\{ jLink \}\}" data-net="\{\{ jNet \}\}" data-flow="\{\{ jFlow \}\}">/);
   assert.equal((blk.match(/class="js-node /g) || []).length, 3);
   assert.equal((blk.match(/class="js-wire"/g) || []).length, 2);
   assert.match(blk, /<div class="js-net" data-state="\{\{ jNet \}\}"/);
@@ -166,4 +167,20 @@ test('the markup: one stage of three nodes and two wires, the internet path, a s
   assert.match(HTML, /<sc-if value="\{\{ journeyOn \}\}"[^>]*><button class="hdr-theme" onClick="\{\{ toggleTheme \}\}"/);
   assert.match(HTML, /@media \(prefers-reduced-motion: reduce\)\{\.js-wire\[data-state="proposed"\] i/);
   assert.deepEqual(J.BEATS.map(b2 => b2.key), ['today', 'source', 'found', 'tag', 'recommend', 'connect']);
+});
+
+test('the picture carries the figures (2026-10-08): latency on each wire, the monthly before and after, the traffic on the path it rides', () => {
+  const found = vals(journey({ jStep: 2, addedSources: AZURE }));
+  assert.equal(found.jNetMs, '102 ms'); assert.equal(found.jFlow, 'net'); assert.equal(found.jLinkHasMs, false); assert.equal(found.jMoney.has, false);
+  const rec = vals(journey({ jStep: 4, addedSources: AZURE }));
+  assert.equal(rec.jLinkMs, '74 ms'); assert.equal(rec.jLinkDrop, '−28 ms'); assert.equal(rec.jLinkHasDrop, true);
+  assert.deepEqual([rec.jMoney.has, rec.jMoney.before, rec.jMoney.after, rec.jMoney.up], [true, '$16,800/mo', '$13,200/mo', false]);
+  const hosted = vals(journey({ jStep: 4, jPick: 2, addedSources: AZURE }));
+  assert.equal(hosted.jMoney.up, true, 'a dearer way reads in heading ink, never green');
+  const c = journey({ jStep: 5, jPick: 1, addedSources: AZURE });
+  vals(c).jActGo();
+  assert.equal(vals(c).jFlow, 'att', 'the order moves the traffic onto AT&T');
+  assert.match(HTML, /<div class="js-stage"[^>]* data-flow="\{\{ jFlow \}\}"/);
+  assert.match(HTML, /<i class="js-dots"><\/i>/);
+  assert.match(HTML, /<div class="js-money" data-up="\{\{ jMoney\.up \}\}">/);
 });
