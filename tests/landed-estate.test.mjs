@@ -13,7 +13,9 @@ import * as J from '../naas-journey.js';
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 if (typeof globalThis.requestAnimationFrame === 'undefined') globalThis.requestAnimationFrame = () => 0;
 const order = (o) => ({ id: 'o1', title: 'x', what: 'x', monthly: '$1/mo', at: '09:00', stage: 'Submitted for approval', fromFlow: true, region: 'us-west-2', est: 'partial', ...o });
-const orders = (view, o) => mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', orders: [order(o)] });
+// The order is the estate's it is placed on (2026-10-09: Orders once listed every estate's orders, so Established's
+// "already attached" case went live with Growing's order and landed it on Growing).
+const orders = (view, o) => mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', orders: [order({ est: view, ...o })] });
 const reg = (c, id) => vals(c).allRegions.find(r => r.region === id);
 const goLive = (c) => { const row = vals(c).ordRows[0]; assert.equal(row.canGoLive, true); row.goLive(); };
 

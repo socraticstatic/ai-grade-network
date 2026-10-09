@@ -23,6 +23,12 @@
 // (Add a source > Oracle > Add and scan) and measures Sources again: the
 // added row's Remove button exists only then. --no-add skips that beat.
 //
+// Last, on every estate with a Recommended page, it walks an order to Go live ("the order beat", 2026-10-09):
+// Recommended > AT&T's ExpressRoute (else the first Connect) > 1 Gbps > 12-month > Review, each wizard step as it
+// opens, each Review tab, Place order, Go live from the order's row, where Orders must show Pending actions with its
+// stages, Observe and Dismiss;
+// then every page and tab past Home and Discover again, trail "after Go live". --no-order skips it.
+//
 // Headless only. It never opens a window and never touches Micah's Comet or
 // Chrome (verification-is-headless, 2026-09-19). Files are served from this
 // repo through page.route, so no dev server runs. index.html is never loaded:
@@ -31,7 +37,7 @@
 // Usage:
 //   node scripts/fold.mjs [--estates partial,mature,trust,small,empty]
 //                         [--pages observe,cost] [--theme light|dark|both]
-//                         [--shots <dir>] [--quiet] [--no-add]
+//                         [--shots <dir>] [--quiet] [--no-add] [--no-order]
 // --pages matches a rail group title (Discover, Connect, Observe, Govern,
 // Cost) or a rail link label, case-insensitive. Exit 1 on any FAIL.
 //
@@ -39,7 +45,7 @@
 // checkout. Change PW if that path moves.
 //
 // Baseline at e7298bf (2026-09-30): 274 checks across 5 estates x light/dark,
-// 0 FAIL. BASELINE is empty; any FAIL is new. FOLD_LIMIT=850 proves the
+// 0 FAIL. BASELINE was empty until the order beat (2026-10-09); any FAIL not in it is new. FOLD_LIMIT=850 proves the
 // scroll check bites (every page then fails); FOLD_WIDTH=1300 does the same
 // for the two width checks. The width and word checks landed at 90f511e with
 // 20 FAIL: Sources after Add and scan scrolled to 1474px on four estates in
@@ -48,6 +54,9 @@
 // The v2 home (2026-09-30): 462 checks, 0 FAIL. Empty's home lost its five
 // role tabs (one step, nothing to personalize), so 472 became 462.
 // FOLD_LIMIT=600 fails every live home on "above the map": the allowance bites.
+// The order beat (2026-10-09) on the code before its fixes, Growing light, Connect to Cost: 34 FAIL, among them Review
+// at 964, Traffic at 1030 and Govern > Layers at 986 under the banner, Orders with no banner, and Logs > User activity
+// under a flow explanation it does not carry.
 
 import { readFile, mkdir } from 'node:fs/promises';
 import { join, dirname, extname } from 'node:path';
@@ -66,7 +75,21 @@ const WLIMIT = +(process.env.FOLD_WIDTH || W); // the same for the width checks
 const ALLOW = ['.rail-scroll', '[data-fold-allow]', '[role="dialog"]', 'aside[aria-label*="Andi"]'];
 
 // Lines that already failed at e7298bf: none.
-export const BASELINE = [];
+// The order beat's first full run (2026-10-09) reached three states no walk had, none of them the banner's or Review's;
+// each line stays here until it is fixed, and any FAIL beyond them is new.
+//   Recommended after Go live, 929px on Growing, Bank scale and Small: the done chip under the hero (pinned there by
+//   tests/moves-tasks.test.mjs, 2026-10-07) takes ~54px on a page with ~23px to spare. Where a done move lives is open.
+//   Traffic > Paths after Go live with the added Oracle source, 906px on Established and Bank scale: eight rows of
+//   uneven height (a row with a loss figure stands taller) on a page sized for eight.
+//   Connections after Go live with the added Oracle source on Established: six cloud groups and the roll-up line in a
+//   right column that holds five; "Internet / SaaS" lands on "10 smaller regions rolled up".
+const inBoth = (estates, keys) => estates.flatMap(e => ['light', 'dark'].flatMap(t => keys.map(k => `${e} ${t} ${k}`)));
+export const BASELINE = [
+  ...inBoth(['partial', 'trust'], ['connect/Recommended > after Go live', ...['Recommended', 'Ways to connect', 'Orders'].map(p => `connect/${p} > after Go live > Recommended`)]),
+  ...inBoth(['small'], ['get connected/Recommended > after Go live', 'get connected/Recommended > after Go live > Recommended']),
+  ...inBoth(['mature', 'trust'], ['observe/Traffic > after Go live > Paths']),
+  ...inBoth(['mature'], ['connect/Connections > after Go live']),
+];
 
 const args = process.argv.slice(2);
 const opt = (f, d) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : d; };
@@ -77,6 +100,7 @@ const themes = theme === 'both' ? ['light', 'dark'] : [theme];
 const shots = opt('--shots', null);
 const quiet = args.includes('--quiet');
 const addBeat = !args.includes('--no-add');
+const orderBeat = !args.includes('--no-order');
 if (shots) await mkdir(shots, { recursive: true });
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json', '.ttf': 'font/ttf', '.otf': 'font/otf' };
@@ -260,6 +284,59 @@ async function clickTab(page, label) {
   return false;
 }
 
+// One rail page and its in-page tabs, two deep: measured as it lands and on every tab. A prefix names a beat the page
+// is walked again after (the order beat's "after Go live"); the Signals role chips are walked on the first pass only.
+async function walkPage(page, estate, th, errors, l, prefix = '') {
+  if (!(await clickRail(page, l.label))) return;
+  // Discover runs its scan on arrival (four 750ms steps, naas-app.js startScan);
+  // the tabs render only once it lands.
+  if (l.group === 'discover') await page.waitForTimeout(3600);
+  const pageName = `${l.group}/${l.label}`;
+  const seen = new Set();
+  const walk = async (depth, trail) => {
+    errors.length = 0;
+    const m = { ...(await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT })), ...(await page.evaluate(foldMarks)) };
+    report(estate, th, pageName, trail || '(landing)', m, errors);
+    if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail || 'landing'}`.replace(/[^\w.-]+/g, '_') + '.png') });
+    // Signals pages its cards (2026-09-30): the second page is measured too,
+    // and, where it lands, every role's cards on both pages (the role chips
+    // sit in the panel, so the tab walk never reaches them).
+    const sigPage2 = async (name) => {
+      const nextSig = page.locator('button[aria-label="Next signals"]:visible');
+      if (!(await nextSig.count())) return;
+      await nextSig.first().click(); await settle(page);
+      errors.length = 0;
+      report(estate, th, pageName, `${name} > page 2`, await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT }), errors);
+      if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${name}-p2`.replace(/[^\w.-]+/g, '_') + '.png') });
+      await page.locator('button[aria-label="Previous signals"]:visible').first().click(); await settle(page);
+    };
+    await sigPage2(trail || '(landing)');
+    const chips = page.locator('[aria-label="Signals for"] [role="tab"]:visible');
+    if (!trail && await chips.count()) {
+      const on = await chips.evaluateAll(els => els.findIndex(e => e.getAttribute('aria-selected') === 'true'));
+      for (let i = 0; i < await chips.count(); i++) {
+        if (i === on) continue;
+        const role = ((await chips.nth(i).textContent()) || '').trim();
+        await chips.nth(i).click(); await settle(page);
+        errors.length = 0;
+        report(estate, th, pageName, `Signals for ${role}`, await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT }), errors);
+        if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${role}`.replace(/[^\w.-]+/g, '_') + '.png') });
+        await sigPage2(`Signals for ${role}`);
+      }
+      if (on >= 0) { await chips.nth(on).click(); await settle(page); }
+    }
+    if (depth >= 2) return;
+    const tabs = (await page.evaluate(tabLabels)).filter(t => !seen.has(t));
+    tabs.forEach(t => seen.add(t));
+    for (const t of tabs) {
+      if (!(await clickTab(page, t))) continue;
+      await walk(depth + 1, trail ? `${trail} > ${t}` : t);
+    }
+  };
+  await walk(0, prefix);
+  await clickRail(page, l.label);
+}
+
 const pw = await import(PW);
 const browser = await pw.chromium.launch({ headless: true });
 const lines = [];
@@ -303,56 +380,7 @@ try {
       }
       const links = await page.evaluate(railLinks);
       const want = links.filter(l => !pages.length || pages.includes(l.group) || pages.includes(l.label.toLowerCase()));
-      for (const l of want) {
-        if (!(await clickRail(page, l.label))) continue;
-        // Discover runs its scan on arrival (four 750ms steps, naas-app.js startScan);
-        // the tabs render only once it lands.
-        if (l.group === 'discover') await page.waitForTimeout(3600);
-        const pageName = `${l.group}/${l.label}`;
-        const seen = new Set();
-        const walk = async (depth, trail) => {
-          errors.length = 0;
-          const m = { ...(await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT })), ...(await page.evaluate(foldMarks)) };
-          report(estate, th, pageName, trail || '(landing)', m, errors);
-          if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail || 'landing'}`.replace(/[^\w.-]+/g, '_') + '.png') });
-          // Signals pages its cards (2026-09-30): the second page is measured too,
-          // and, where it lands, every role's cards on both pages (the role chips
-          // sit in the panel, so the tab walk never reaches them).
-          const sigPage2 = async (name) => {
-            const nextSig = page.locator('button[aria-label="Next signals"]:visible');
-            if (!(await nextSig.count())) return;
-            await nextSig.first().click(); await settle(page);
-            errors.length = 0;
-            report(estate, th, pageName, `${name} > page 2`, await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT }), errors);
-            if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${name}-p2`.replace(/[^\w.-]+/g, '_') + '.png') });
-            await page.locator('button[aria-label="Previous signals"]:visible').first().click(); await settle(page);
-          };
-          await sigPage2(trail || '(landing)');
-          const chips = page.locator('[aria-label="Signals for"] [role="tab"]:visible');
-          if (!trail && await chips.count()) {
-            const on = await chips.evaluateAll(els => els.findIndex(e => e.getAttribute('aria-selected') === 'true'));
-            for (let i = 0; i < await chips.count(); i++) {
-              if (i === on) continue;
-              const role = ((await chips.nth(i).textContent()) || '').trim();
-              await chips.nth(i).click(); await settle(page);
-              errors.length = 0;
-              report(estate, th, pageName, `Signals for ${role}`, await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT }), errors);
-              if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${role}`.replace(/[^\w.-]+/g, '_') + '.png') });
-              await sigPage2(`Signals for ${role}`);
-            }
-            if (on >= 0) { await chips.nth(on).click(); await settle(page); }
-          }
-          if (depth >= 2) return;
-          const tabs = (await page.evaluate(tabLabels)).filter(t => !seen.has(t));
-          tabs.forEach(t => seen.add(t));
-          for (const t of tabs) {
-            if (!(await clickTab(page, t))) continue;
-            await walk(depth + 1, trail ? `${trail} > ${t}` : t);
-          }
-        };
-        await walk(0, '');
-        await clickRail(page, l.label);
-      }
+      for (const l of want) await walkPage(page, estate, th, errors, l);
       // The added-source beat (2026-09-30), last so every page above is
       // measured on the estate as it loads: Sources > Add a source > Oracle >
       // Add and scan, then measure. The added row's Remove button only exists
@@ -392,6 +420,81 @@ try {
             const m = { ...(await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT })), ...(await page.evaluate(foldMarks)) };
             report(estate, th, pageName, trail, m, errors);
             if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail}`.replace(/[^\w.-]+/g, '_') + '.png') });
+          }
+        }
+      }
+      // The order beat (2026-10-09), last since it places an order: an order walked to Go live as a person does it, and
+      // what only that walk reaches. The connect wizard's Review (it ran to 964px on Growing), on each of its tabs; Orders as
+      // Place order and then Go live leave it, where the Pending actions banner must stand with its stages, Observe and
+      // Dismiss; then every page and tab past Home and Discover again with the order live (Small's are under Get
+      // connected), since the banner once
+      // stood over all of them and ran Govern > Layers to 986px). Recommended > AT&T's ExpressRoute where a card offers
+      // it, else the first Connect; the first metro where a step asks for a location (Small), 1 Gbps where it asks for a
+      // bandwidth; 12-month for the term. The wizard's own Next
+      // is matched by its exact name: "Next: Observe →" in the page head and "Next recommendation" are not it.
+      if (orderBeat && want.some(l => l.label === 'Recommended')) {
+        const byName = (name) => page.getByRole('button', { name, exact: true });
+        const measured = async (pageName, trail, missed) => {
+          const m = { ...(await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT })), ...(await page.evaluate(foldMarks)) };
+          report(estate, th, pageName, trail, m, missed ? [missed, ...errors] : errors);
+          if (shots) await page.screenshot({ path: join(shots, `${estate}-${th}-${pageName}-${trail}`.replace(/[^\w.-]+/g, '_') + '.png') });
+          errors.length = 0;
+        };
+        errors.length = 0;
+        await clickRail(page, 'Recommended');
+        const att = page.locator('.rec-card', { hasText: "AT&T's ExpressRoute" }).locator('.rec-cta:visible');
+        const cta = (await att.count()) ? att.first() : page.locator('.rec-cta:visible').first();
+        let missed = (await cta.count()) ? null : 'no Connect on Recommended';
+        if (!missed) { await cta.click(); await settle(page); }
+        const stepsSeen = new Set();
+        // The steps an entry filled before it landed you (Connection Type and Choose Provider from Recommended), from the
+        // rail; Next then walks back through the rest, as only Next leads forward.
+        const railStep = (name) => page.locator('nav[aria-label="Steps"] button', { has: page.locator('.lbl > span', { hasText: name }) }).first();
+        const landedOn = missed ? '' : ((await page.locator('nav[aria-label="Steps"] [aria-selected="true"] .lbl > span').first().textContent().catch(() => '')) || '').trim();
+        for (const name of landedOn ? (await page.locator('nav[aria-label="Steps"] .lbl > span').allTextContents()).map(x => x.trim()) : []) {
+          if (name === landedOn) break;
+          if (await railStep(name).isDisabled()) continue;
+          stepsSeen.add(name); await railStep(name).click(); await settle(page);
+          await measured('connect/Recommended', `order > ${name}`);
+        }
+        for (let i = 0; !missed && i < 12 && !(await byName('Place order').count()); i++) {
+          // Each step as it opens, once: the wizard's frame holds on every step, not only on Review.
+          const stepName = ((await page.locator('nav[aria-label="Steps"] [aria-selected="true"] .lbl > span').first().textContent().catch(() => '')) || '').trim();
+          if (stepName && !stepsSeen.has(stepName)) { stepsSeen.add(stepName); await measured('connect/Recommended', `order > ${stepName}`); }
+          const next = page.getByRole('button', { name: /^Next: [^→]+$/ }).first();
+          if (!(await next.count())) { missed = 'no Next in the wizard'; break; }
+          const label = ((await next.textContent()) || '').trim();
+          if (label === 'Next: Review') { const t = page.locator('main button:visible', { hasText: '12-month' }).first(); if (await t.count()) { await t.click(); await settle(page); } }
+          // A step that waits says why beside Next ("Pick a location.", "Pick a bandwidth."): the first metro, then 1 Gbps.
+          const why = async () => ((await next.locator('xpath=ancestor::div[1]').innerText().catch(() => '')) || '').replace(/\s+/g, ' ').trim();
+          if (await next.isDisabled() && /Pick a location/.test(await why())) { const mt = page.locator('main button[aria-pressed="false"]').filter({ hasText: /(AWS|Azure|GCP|Oracle) [a-z]/ }).first(); if (await mt.count()) { await mt.click(); await settle(page); } }
+          if (await next.isDisabled()) { const bw = byName('1 Gbps'); if (await bw.count()) { await bw.first().click(); await settle(page); } }
+          if (await next.isDisabled()) { missed = `"${label}" stays off: ${await why()}`; break; }
+          await next.click(); await settle(page);
+        }
+        if (!missed && !(await byName('Place order').count())) missed = 'no Review after 12 steps';
+        if (missed) await measured('connect/Recommended', 'order > Review', missed);
+        else {
+          await measured('connect/Recommended', 'order > Review');
+          const rvTabs = page.locator('[aria-label="Review views"] [role="tab"]');
+          for (let i = 0; i < await rvTabs.count(); i++) {
+            const t = rvTabs.nth(i), name = ((await t.textContent()) || '').trim();
+            await t.click(); await settle(page);
+            await measured('connect/Recommended', `order > Review > ${name}`);
+          }
+          await byName('Place order').first().click(); await settle(page);
+          await measured('connect/Orders', 'order > after Place order');
+          const goLive = byName('Go live');
+          if (!(await goLive.count())) await measured('connect/Orders', 'order > after Go live', 'no "Go live" on Orders');
+          else {
+            await goLive.first().click(); await settle(page);
+            const ban = page.locator('section[aria-label="Pending actions"]');
+            const banMiss = !(await ban.count()) ? 'no Pending actions on Orders after Go live'
+              : !(await ban.locator('li').count()) ? 'Pending actions without its stages'
+              : !(await ban.getByRole('button', { name: 'Observe', exact: true }).count()) ? 'Pending actions without Observe'
+              : !(await ban.getByRole('button', { name: 'Dismiss', exact: true }).count()) ? 'Pending actions without Dismiss' : null;
+            await measured('connect/Orders', 'order > after Go live', banMiss);
+            for (const l of want.filter(x => !['home', 'discover'].includes(x.group))) await walkPage(page, estate, th, errors, l, 'after Go live');
           }
         }
       }
