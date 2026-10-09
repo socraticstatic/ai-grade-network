@@ -638,9 +638,14 @@ test('Place order lands on Orders; Deliver now validates the region that order r
   assert.equal(c.state.orders.at(-1).region, 'us-central1');
   vals(c).deliverNow();
   // 2026-10-09, one order lifecycle: the landed set is a list that only grows; a live order reads Live, in the phases' blue.
-  assert.deepEqual(c.state.landed, ['us-central1']);
+  // The landing names its estate and order.
+  assert.deepEqual(c.state.landed, [{ est: 'partial', region: 'us-central1', order: 'o1' }]);
   Object.assign(c.state, { screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' });
   assert.equal(vals(c).ordRows[0].stage, 'Live');
+  // Internet to Cloud goes live over the internet: nothing private is attached, so the region stays public.
+  const r = vals(c).allRegions.find(x => x.region === 'us-central1');
+  assert.deepEqual([r.priv, !!r.landed, r.way], [false, false, null]);
+  assert.match(c.state.events.at(-1).text, /over the internet.*Nothing private attached/);
 });
 
 test('the Connect tabs name the destinations: Recommended, Ways to connect, Orders', () => {

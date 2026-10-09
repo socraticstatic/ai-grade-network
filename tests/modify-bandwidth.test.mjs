@@ -199,8 +199,12 @@ test('Apply change asks for approval, as the retired Resize did; Submit places a
   assert.equal(v.hasOrdRows, true);
   // Another estate's Orders do not list it.
   assert.ok(!vals(mkC({ view: 'mature', estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', orders: c.state.orders })).ordRows.some(r => r.kind === 'bandwidth'));
-  // Deliver now validates the region a connect-flow order reaches, never a bandwidth change's.
-  assert.ok(/kind !== 'bandwidth'/.test(SRC.slice(SRC.indexOf('deliverNow:'), SRC.indexOf('deliverNow:') + 400)), 'Deliver now skips bandwidth orders');
+  // Deliver now validates the region a connect-flow order reaches, never a bandwidth change's (2026-10-09: it reads the
+  // banner's order, this estate's latest that is not a bandwidth change; read as behaviour, not as source text).
+  const d = mkC({ view: 'partial', estateParam: null, screen: 's2', submitted: true, orders: c.state.orders });
+  if (typeof globalThis.requestAnimationFrame === 'undefined') globalThis.requestAnimationFrame = () => 0;
+  vals(d).deliverNow();
+  assert.ok(!d.state.landed || !d.state.landed.length, 'Deliver now skips bandwidth orders');
 });
 
 test('a size that drops traffic needs a second confirm, in red', () => {

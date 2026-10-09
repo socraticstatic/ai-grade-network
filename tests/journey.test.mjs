@@ -207,7 +207,7 @@ test('beat 7: Go live lands both regions at once; every app blinks green; the in
   assert.equal(c.state.jStep, B.watch); assert.equal(v.jLine, 'Provisioning.'); assert.equal(v.jAct, 'Go live');
   v.jActGo();
   v = vals(c);
-  assert.deepEqual(c.state.landed, ['eastus', 'westeurope']);
+  assert.deepEqual(c.state.landed.map(e => [e.est, e.region, e.order]), [['lastmile', 'eastus', 'o1'], ['lastmile', 'westeurope', 'o1']], 'landed on the journey estate, for its order');
   assert.equal(v.jLine, 'Azure is live on AT&T.'); assert.equal(v.jNet, 'gone'); assert.equal(v.jLink, 'connected'); assert.equal(v.jLive, true);
   assert.deepEqual(v.jPhases.map(p => p.state), ['done', 'done', 'done', 'set'], 'one lifecycle: finished phases are done, the stepper\'s blue');
   assert.match(HTML, /<sc-if value="\{\{ jIsWatch \}\}"[^>]*><div class="js-order"><div class="ps big js-phases"/, 'the phases tick on the Watch beat itself');

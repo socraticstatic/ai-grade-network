@@ -140,26 +140,79 @@ export const wayExtras = (key, cloud, zone) => { const w = wayOf(key); if (!w) r
   return w.hosted ? [...productIds(w, cloud, zone), 'hub-att'].map(productOf).filter(Boolean) : productIds(w, cloud, zone).filter(id => id !== 'netbond').map(productOf).filter(Boolean); };
 export const wayHosted = (key) => !!(wayOf(key) || {}).hosted;
 
+// ---- Landings, per estate (2026-10-09: "Make landed regions honest per estate") ----
+// A landing is { est, region, order }: the region an order delivered, on the estate it was placed on. A bare region id
+// (older state, and tests that set one) still lands on whichever estate is shown, as every landing once did.
+export const landedEntries = (s) => (Array.isArray(s && s.landed) ? s.landed : s && s.landed ? [s.landed] : []).filter(Boolean);
+const onEst = (e, estId) => typeof e === 'string' || !e.est || !estId || e.est === estId;
+const idOf = (e) => (typeof e === 'string' ? e : e.region);
+/** The regions landed on one estate. */
+export const landedIdsOn = (s, estId) => [...new Set(landedEntries(s).filter(e => onEst(e, estId)).map(idOf))];
+/** One region's landing on one estate, or null. */
+export const landingOf = (s, estId, region) => landedEntries(s).find(e => onEst(e, estId) && idOf(e) === region) || null;
+/** The regions one order has landed on an estate. A landing records its order, so a later order for the same region is
+ *  not Live until its own Go live; a bare id or a landing with no order on record counts for every order. */
+export const landedIdsFor = (s, estId, orderId) => [...new Set(landedEntries(s).filter(e => onEst(e, estId) && (typeof e === 'string' || !e.order || e.order === orderId)).map(idOf))];
+/** Land regions for an order on an estate: the set only grows, one landing per region and order. */
+export function landWith(s, regions, estId, orderId) {
+  const have = new Set(landedIdsFor(s, estId, orderId || null)), add = [];
+  for (const region of (regions || []).filter(Boolean)) if (!have.has(region)) { have.add(region); add.push({ est: estId || null, region, order: orderId || null }); }
+  return [...landedEntries(s), ...add];
+}
+/** The order a region's landing delivered. Of several landed orders the latest that attaches something private wins (a
+ *  NetBond order after an Internet to Cloud one makes the region private); an older landing with no order on record reads
+ *  the last order this estate placed for it. */
+export function landingOrder(s, estId, region) {
+  const es = landedEntries(s).filter(e => onEst(e, estId) && idOf(e) === region); if (!es.length) return null;
+  const mine = ((s && s.orders) || []).filter(o => o && o.kind !== 'bandwidth' && (!o.est || !estId || o.est === estId) && (o.regions || [o.region]).includes(region));
+  const named = es.map(e => (typeof e === 'object' && e.order ? mine.find(o => o.id === e.order) : null)).filter(Boolean);
+  const pool = named.length ? named : es.some(e => typeof e === 'string' || !e.order) ? mine.slice(-1) : [];
+  return [...pool].reverse().find(o => landingKind(o) !== 'internet') || pool[pool.length - 1] || null;
+}
+// The types NetBond carries (TYPE_PRODUCT in naas-connect-flow.js): only on these does an order's way price, and land.
+const NETBOND_TYPES = new Set(['AVPN to Cloud', 'DataCenter/CoLocation to Cloud', 'DataCenter / CoLocation to Cloud', 'IoT to Cloud', 'Layer 2 to Cloud']);
+/** Whether an order's way is the one it lands: a known way, on a type NetBond carries (or a journey order, which has no type). */
+export const wayCarried = (o) => !!(o && o.way && wayOf(o.way) && !o.lmcc && !/last mile/i.test(o.type || '') && (!o.type || NETBOND_TYPES.has(o.type)));
+/** What an order attaches when it lands. Its type comes first: Interconnect - Last Mile (AWS only) is the cloud's own
+ *  port; Internet to Cloud goes live over the internet and attaches nothing private. A way counts only where NetBond
+ *  carries the type (flowOrder adds the way's products only then): a hosted way is the hub, else NetBond. A catalog order
+ *  that bought a hosted VPC is the hub; every other type, and a landing with no order on record, is NetBond. */
+export function landingKind(o) {
+  if (!o) return 'netbond';
+  if (o.lmcc || /last mile/i.test(o.type || '')) return 'direct';
+  if (o.type === 'Internet to Cloud') return 'internet';
+  if (wayCarried(o)) return wayHosted(o.way) ? 'hosted' : 'netbond';
+  if (o.hosted) return 'hosted';
+  return 'netbond';
+}
+const CLOUD_RAMP = { AWS: 'DX', Azure: 'ER', GCP: 'Interconnect', Google: 'Interconnect' };
+/** A region as its landing leaves it. A region already attached stays as it was (a landing never re-stamps a ramp or counts
+ *  twice). A public one: NetBond for a NetBond type (the hub's own on-ramp, for a hosted way); Last Mile is the cloud's own
+ *  port; Internet to Cloud changes nothing. */
+export function landedRegion(r, o) {
+  const k = landingKind(o);
+  if (!r || r.priv || k === 'internet') return r;
+  if (k === 'direct') return { ...r, priv: true, ramp: CLOUD_RAMP[r.cloud] || 'DX', rel: 'ok', landed: true };
+  return { ...r, priv: true, ramp: 'NetBond', rel: 'ok', landed: true };
+}
+
 // ---- What sits at the AT&T edge for one region (2026-10-09, the policy engine's slice 2) ----
 // The engine compiles an intent to the enforcement point a region really has: NetBond's route sheet, the vSRX in AT&T's
 // hosted hub, or nothing of AT&T's (the cloud's own port, a third party's fabric). Never invented: a landed order that
-// names its way says it; else the estate's stated ramp (connModeOf); else nothing is on record.
-const landedIds = (s) => (Array.isArray(s && s.landed) ? s.landed : s && s.landed ? [s.landed] : []);
-/** A region's way and where that is stated: {cls: 'hosted'|'netbond'|'direct'|'third'|null, key, from, ref}. An order from
- *  another estate never counts; an order that predates the estate stamp still does. */
+// names its way says it; else the region as its landing leaves it (landedRegion, the same stamp the app's estate uses);
+// else the estate's stated ramp; else nothing is on record. Another estate's landing or order never counts.
+/** A region's way and where that is stated: {cls: 'hosted'|'netbond'|'direct'|'third'|null, key, from, ref}. */
 export function regionWay(r, s = {}, estId = null) {
   if (!r) return { cls: null, key: null, from: 'none', ref: null };
-  const landed = landedIds(s).includes(r.region);
-  const mine = ((s && s.orders) || []).filter(o => o && o.kind !== 'bandwidth' && (!o.est || !estId || o.est === estId) && (o.regions || [o.region]).includes(r.region));
-  const last = mine[mine.length - 1] || null, placed = landed ? last : null;
-  if (placed && placed.way && wayOf(placed.way)) return { cls: wayHosted(placed.way) ? 'hosted' : 'netbond', key: placed.way, from: 'order', ref: placed.id || null };
-  const mode = connModeOf(r);
-  if (mode === 'direct' || mode === 'third') return { cls: mode, key: null, from: 'ramp', ref: r.ramp };
-  // A landed order that names no way reads as the estate stamps the landing (est0: NetBond), so this page and every other
-  // say the same thing (2026-10-09 review). Whether a Last Mile or Internet to Cloud landing should stamp NetBond at all
-  // is est0's to settle, not this function's.
-  if (mode === 'netbond') return { cls: 'netbond', key: null, from: placed ? 'order' : landed ? 'landed' : 'ramp', ref: placed ? placed.id || null : r.ramp || 'NetBond' };
-  return { cls: null, key: null, from: 'public', ref: null };
+  // A region attached before any landing (private, never stamped landed) stays as the estate states it.
+  const landing = r.priv && !r.landed ? null : landingOf(s, estId, r.region), placed = landing ? landingOrder(s, estId, r.region) : null;
+  if (placed && wayCarried(placed)) return { cls: wayHosted(placed.way) ? 'hosted' : 'netbond', key: placed.way, from: 'order', ref: placed.id || null };
+  if (placed && landingKind(placed) === 'hosted') return { cls: 'hosted', key: null, from: 'order', ref: placed.id || null };
+  const eff = landing && !r.landed ? landedRegion(r, placed) : r;
+  const mode = connModeOf(eff), from = placed ? 'order' : landing ? 'landed' : 'ramp', ref = placed ? placed.id || null : eff.ramp || null;
+  if (mode === 'direct' || mode === 'third') return { cls: mode, key: null, from, ref };
+  if (mode === 'netbond') return { cls: 'netbond', key: null, from, ref: ref || 'NetBond' };
+  return { cls: null, key: null, from: placed ? 'order' : 'public', ref: placed ? placed.id || null : null };
 }
 
 /** A way's label for one cloud: the port named as that cloud names it. */

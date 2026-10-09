@@ -66,7 +66,8 @@ test('Orders carries Go live on a placed order, and it lights the task', () => {
   assert.equal(row.canGoLive, true);
   row.goLive();
   // 2026-10-09, one order lifecycle: the landed set is a list that only grows; a live order reads Live, in the phases' blue.
-  assert.deepEqual(c.state.landed, [region]);
+  // Each landing names its estate and order, so it never lands on another estate.
+  assert.deepEqual(c.state.landed, [{ est: 'mature', region, order: 'o1' }]);
   assert.equal(vals(c).ordRows[0].stage, 'Live');
   assert.equal(vals(c).ordRows[0].canGoLive, false);
   c.setState({ cnPage: 'options' });

@@ -299,10 +299,20 @@ function panelShape(pairs) {
   };
 }
 
-/** The regions that have landed this session: one from Orders' Go live, or several from the journey (2026-10-08). */
-export const landedOf = (s) => (Array.isArray(s.landed) ? s.landed : s.landed ? [s.landed] : []);
-/** Land regions: the landed set only grows, so a second Go live never un-lands the first (2026-10-09). */
-const landWith = (s, regions) => [...new Set([...landedOf(s), ...regions.filter(Boolean)])];
+/** The regions that have landed on one estate this session: one from Orders' Go live, or several from the journey
+ *  (2026-10-08). Each landing names its estate and order since 2026-10-09 ("Make landed regions honest per estate"), so
+ *  landing us-west-2 on Growing never lands it on Bank scale; a bare region id (older state) lands on any estate. */
+export const landedOf = (s, estId) => W.landedIdsOn(s, estId);
+/** Land regions for an order on an estate: the landed set only grows, so a second Go live never un-lands the first. */
+const landWith = (s, regions, estId, orderId) => W.landWith(s, regions, estId, orderId);
+/** What a landing says happened, by what the order attached (2026-10-09: "Hosted VPC on AT&T" was said of every landing). */
+function landingEvent(o, region, r) {
+  const k = W.landingKind(o);
+  if (r && r.priv) return `${region} validated · live. It was already attached on ${rampName(r)}; first flow logs received.`;
+  if (k === 'internet') return `${region} validated · live, over the internet; first flow logs received. Nothing private attached.`;
+  if (k === 'direct') return `${region} validated · live on ${rampName(W.landedRegion(r || { region }, o))}, your own ports; first flow logs received; coverage up by one region.`;
+  return `${region} validated · live. ${k === 'hosted' ? "AT&T's hosted hub, the vSRX in path" : 'NetBond on AT&T'}; first flow logs received; coverage up by one region.`;
+}
 /**
  * One order's lifecycle, for every surface that shows it (the journey's Connect and Live beats, Recommended's task row,
  * Orders): Ordered, Provision, Live, Insight, finished phases 'done' (the stepper's blue; 'ok' stays health's green), the
@@ -319,11 +329,13 @@ export function vals(c) {
   const s = c.state, set = (p) => c.setState(p), estRaw = estateFor(s);
   const steered = s.steered || [];
   const persona = PERSONA_NAME[s.persona] || 'Cloud & Platform Architect';
-  const landedRs = landedOf(s);
-  // Each region also says what sits at its AT&T edge (2026-10-09, the policy engine's slice 2): the way a landed order
-  // names, else the estate's stated ramp, else nothing on record (W.regionWay). The engine compiles to it.
-  const est0 = { ...estRaw, regionsList: estRaw.regionsList.map(r => { const r1 = landedRs.includes(r.region) ? { ...r, priv: true, ramp: r.ramp || 'NetBond', rel: 'ok', landed: true } : r;
-    return { ...r1, way: W.regionWay(r1, s, estRaw.id).cls }; }), attachedRegions: estRaw.attachedRegions + landedRs.length };
+  // A landed region is what its order attached, on this estate only (2026-10-09): private on NetBond or the hosted hub's
+  // on-ramp for a named way, on the cloud's own port for Last Mile, still public for Internet to Cloud. Each region also
+  // says what sits at its AT&T edge (W.regionWay, the policy engine's slice 2), read from the same landing.
+  const regs0 = estRaw.regionsList.map(r => { const r1 = W.landingOf(s, estRaw.id, r.region) ? W.landedRegion(r, W.landingOrder(s, estRaw.id, r.region)) : r;
+    return { ...r1, way: W.regionWay(r1, s, estRaw.id).cls }; });
+  // Only a region a landing made private counts as newly attached (landedRegion never re-stamps an attached one).
+  const est0 = { ...estRaw, regionsList: regs0, attachedRegions: estRaw.attachedRegions + regs0.filter(r => r.landed).length };
   // Every policy counts by Govern's one rule (w2-govern, 2026-09-30), off this estate as it stands:
   // a region attached or a source added this session moves its figures, and every page reads them.
   est0.policies = GV.figured(est0, A.inventory(est0), { siteTags: ((s.siteTags || {})[est0.id]) || {} });
@@ -1001,7 +1013,8 @@ export function vals(c) {
   const mapH = 60 + mapRows.length * 30;
   const mapSites = (bigEstate ? est.sites : est.sites).slice(0, 7).map((st, i) => ({ ...st, key: 'ms' + i, y: 30 + i * 30 }));
   const ow = s.openWorkload && est.regionsList.find(r => r.region === s.openWorkload);
-  const chain = ow ? [{ key: 'fm', step: 'First mile', v: est.sites[0] ? est.sites[0].access : 'Internet' }, { key: 'or', step: 'On-ramp', v: ow.priv ? rampName(ow) : 'Public internet' }, { key: 'hv', step: ow.cloud === 'Azure' ? 'Hosted VNet' : 'Hosted VPC', v: ow.priv ? `AT&T-hosted ${ow.cloud === 'Azure' ? 'VNet' : 'VPC'} ${ow.region}` : 'None' }, { key: 'wl', step: 'Workload', v: `${ow.wl} in ${ow.region}` }] : [];
+  // A hosted VPC only where a hosted way landed (2026-10-09: every private region once read "AT&T-hosted").
+  const chain = ow ? [{ key: 'fm', step: 'First mile', v: est.sites[0] ? est.sites[0].access : 'Internet' }, { key: 'or', step: 'On-ramp', v: ow.priv ? rampName(ow) : 'Public internet' }, { key: 'hv', step: ow.cloud === 'Azure' ? 'Hosted VNet' : 'Hosted VPC', v: ow.priv && ow.way === 'hosted' ? `AT&T-hosted ${ow.cloud === 'Azure' ? 'VNet' : 'VPC'} ${ow.region}` : 'None' }, { key: 'wl', step: 'Workload', v: `${ow.wl} in ${ow.region}` }] : [];
   const chainPolicies = ow ? est.policies.filter(p => (ow.tags || []).some(t => p.match.includes(t))).map(p => ({ key: p.name, ...p })) : [];
 
   // ---- packages / tailored ----
@@ -1015,9 +1028,17 @@ export function vals(c) {
   const floorVerdict = isEmpty ? '0 connections · 41 metros · 12 clouds reachable' : `${est.privatePct}% of ${est.workloads.toLocaleString('en-US')} workloads private · ${est.findings.length} to close`;
   // Recommended carries the task's phases on its own rows (2026-10-05), so the pending banner stays off that page.
   // The banner never stands over Connect, where Orders and the task rows carry the order's phases (2026-10-09).
-  const showPending = s.submitted && !s.pendingDismissed && (s.screen === 's2' || s.screen === 's6' || (s.screen === 's3' && landedOf(s).length > 0 && s.tab !== 'connect'));
-  const landedAll = landedOf(s).length > 0;
-  const pendingStages = D.LIFECYCLE.map((l, i) => landedAll ? ({ key: l, label: l, fill: 'var(--cta)', ring: 'var(--cta)', color: 'var(--text-heading)', line: 'var(--cta)' }) : ({ key: l, label: l, fill: i < 2 ? 'var(--cta)' : i === 2 ? 'var(--bg-accent)' : 'var(--bg-base)', ring: i <= 2 ? 'var(--cta)' : 'var(--border-primary)', color: i <= 2 ? 'var(--text-heading)' : 'var(--text-disabled)', line: i < 2 ? 'var(--cta)' : 'var(--border-secondary)' }));
+  // The pending banner speaks for this estate's latest order, and says Live once that order has landed (2026-10-09:
+  // any landing on any estate once lit it, and its Go live went dead for an order with no region to deliver).
+  const pendOrder = (s.orders || []).filter(o => o.kind !== 'bandwidth' && (!o.est || o.est === estRaw.id)).at(-1) || null;
+  const pendRegions = pendOrder ? (pendOrder.regions || [pendOrder.region]).filter(Boolean) : [];
+  const landedAll = !!pendOrder && pendRegions.length > 0 && orderPhases(pendOrder, W.landedIdsFor(s, estRaw.id, pendOrder.id)).landed;
+  const showPending = s.submitted && !s.pendingDismissed && !!pendOrder && (s.screen === 's2' || s.screen === 's6' || (s.screen === 's3' && landedAll && s.tab !== 'connect'));
+  // The stages follow what the order attaches (2026-10-09): the hosted VPC's lifecycle (D.LIFECYCLE, its vSRX pair) only for
+  // a hosted way; NetBond, your own ports or the internet otherwise. It once showed a vSRX pair for every order.
+  const PEND_STAGES = { hosted: D.LIFECYCLE, netbond: ['Order accepted', 'NetBond port', 'BGP session up', 'Route policy pushed', 'Validated live'],
+    direct: ['Order accepted', 'Your ports', 'BGP session up', 'Validated live'], internet: ['Order accepted', 'Internet path', 'Validated live'] };
+  const pendingStages = (pendOrder ? PEND_STAGES[W.landingKind(pendOrder)] : D.LIFECYCLE).map((l, i) => landedAll ? ({ key: l, label: l, fill: 'var(--cta)', ring: 'var(--cta)', color: 'var(--text-heading)', line: 'var(--cta)' }) : ({ key: l, label: l, fill: i < 2 ? 'var(--cta)' : i === 2 ? 'var(--bg-accent)' : 'var(--bg-base)', ring: i <= 2 ? 'var(--cta)' : 'var(--border-primary)', color: i <= 2 ? 'var(--text-heading)' : 'var(--text-disabled)', line: i < 2 ? 'var(--cta)' : 'var(--border-secondary)' }));
 
   const out = {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', themeTitle: s.theme === 'light' ? 'Dark mode' : 'Light mode', themeIsLight: s.theme !== 'dark', themeIsDark: s.theme === 'dark', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
@@ -1037,12 +1058,16 @@ export function vals(c) {
     goFront: go('s3', { layer: 'cloud', tab: 'connect' }), goFloor: go('s3', { layer: 'cloud', tab: 'connect' }), goHome: go('s0'), goDiscover: go('s1'), goCompose: () => { c.setState({ screen: 's4', ...(composeStarted(cp) ? { compose: { ...cp, step: cp.step || 0 } } : { compose: prefillCompose(est) }) }); window.scrollTo(0, 0); syncHash('s4'); }, goBrowse: go('s7', { browseCat: null, browseQuery: '' }), goRecommend: go('s5'), goReview: go('s6'),
     hasTasks: s.submitted, taskCount: 1, showPending, pendingStages, landed: landedAll, notLanded: !landedAll, pendingSub: landedAll ? 'Validated · live. First flow logs are in.' : 'Submitted for approval',
     // The region the last order placed reaches is the one delivered (the connect flow, 2026-09-30).
-    deliverNow: () => { const lastPlaced = (s.orders || []).filter(o => o.kind !== 'bandwidth').at(-1); const cand = (lastPlaced && lastPlaced.region) || (s.compose && s.compose.prefillRegion ? s.compose.prefillRegion.split(' ')[1] : null) || (estRaw.regionsList.find(r => !r.priv) || {}).region; if (!cand) return; c.setState({ landed: landWith(s, [cand]), layer: 'cloud', tab: 'observe', screen: 's3', events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `${cand} validated · live. Hosted VPC on AT&T; first flow logs received; coverage up by one region.` }] }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
+    // Only what this estate ordered is delivered: no order, nothing lands (2026-10-09: it once landed the estate's first
+    // public region, which nothing had ordered).
+    deliverNow: () => { const fresh = pendRegions.length && !landedAll;
+      c.setState({ ...(fresh ? { landed: landWith(s, pendRegions, estRaw.id, pendOrder.id), events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: landingEvent(pendOrder, pendRegions[0], estRaw.regionsList.find(r => r.region === pendRegions[0])) }] } : {}),
+        layer: 'cloud', tab: 'observe', screen: 's3' }); syncHash('s3', 'cloud', 'observe'); scrollToResult('S3 Department'); },
     ...shellVals(s, set, go, est, c, sched),
     headOpen: s.headOpen !== false, headClosed: s.headOpen === false, toggleHead: () => { const v = s.headOpen === false; set({ headOpen: v }); try { localStorage.setItem('naas.headOpen', String(v)); } catch (e) {} }, headRot: s.headOpen === false ? 'rotate(-90deg)' : 'rotate(0deg)',
     ...andiVals(s, set, go, est, ob, { conns, floorVerdict, connectVerdict, governVerdict, costVerdict, discoverVerdict, stageKicker, findingCard, sortF, findingsFor, isEmpty, totalSave, persona, personaTab }),
     verdictChips, pageVerdict: s.screen === 's3' ? (s.tab === 'govern' ? governVerdict : s.tab === 'cost' ? costVerdict : s.tab === 'observe' ? (observeHead || ob.verdict) : connectVerdict) : s.screen === 's2' ? floorVerdict0 : '', pageStat: s.screen === 's3' ? ({ connect: connectStat(est, s.layer), observe: `${(ob.total || 0).toFixed(1)} Gbps · ${ob.covPct || 0}% on AT&T · ${conns.degraded} degraded · ${conns.rows.filter(r => r.hot && !r.degraded).length} saturating · ${(ob.blind || []).length} blind`, govern: `${[...(est.policies || []), ...(s.customPolicies || [])].filter(p => p.state === 'enforced').length} of ${(est.policies || []).length + (s.customPolicies || []).length} policies enforced · ${violationsN.toLocaleString('en-US')} violations`, cost: `${totalSave ? fmt(totalSave) + '/mo on the table · ' : ''}${fmt(ob.savingsMo || 0)}/mo saved · ${fmt(ob.egressMo || 0)}/mo egress` }[s.tab] || '') : s.screen === 's2' ? floorVerdict : '', hasPageSub: s.screen === 's3' || s.screen === 's2', personaLine: PERSONA_LINE[persona] || '', connectEmptyHead, connectEmptySub: isEmpty ? 'Start with one of the packages below.' : 'Nothing to close here today. The products estates like yours chose, if you want to add more.',
-    persona: s.persona || 'neteng', personaName: persona, setPersona: (e) => set({ persona: e.target.value }), personas: PERSONAS.map(p => ({ key: p, label: p })), moreByTab, hasMoreByTab: moreByTab.length > 0, pendingTitle: (s.order && s.order.title) || 'Hosted VPC order', dismissPending: () => set({ pendingDismissed: true }),
+    persona: s.persona || 'neteng', personaName: persona, setPersona: (e) => set({ persona: e.target.value }), personas: PERSONAS.map(p => ({ key: p, label: p })), moreByTab, hasMoreByTab: moreByTab.length > 0, pendingTitle: (pendOrder && pendOrder.title) || 'Your order', pendGoLive: !landedAll && pendRegions.length > 0, dismissPending: () => set({ pendingDismissed: true }),
     estateName: est.name, isEmpty, isPartial, isMature, notEmpty: !isEmpty, stageKicker, floorVerdict,
     // Discover has two views: the estate, and its sources (source management).
     // A page is titled by its group (2026-09-29 consistency pass); the rail says which view.
@@ -1166,7 +1191,9 @@ export function vals(c) {
     ...flowVals(s, set, est, c),
     freeText: s.freeText, setFreeText: (e) => set({ freeText: e.target.value }), parseText: () => parseText(c, s.freeText, est),
     // review
-    hasOrder: orderLines.length > 0, noOrder: orderLines.length === 0, orderLines, orderPolicies, hasOrderPolicies: orderPolicies.length > 0, orderInspection, orderVisibleLine, unpriced, hasUnpriced: hasPrice && unpriced.length > 0, orderPriced: hasPrice, orderUnpriced: !hasPrice, priceNote: PRICE_NOTE, pricedTotalF: hasPrice ? fmt(pricedTotal) + '/mo' : '', termTotalF: hasPrice ? fmt(termTotal) + '/mo' : '', termDisc, hasTermSave, termSaveF: hasTermSave ? `save ${termDisc}% vs on-demand` : '', termLabel: s.term ? `${s.term}-month` : 'On-demand', termOptions, orderSave: ord.savings ? `save ${fmt(ord.savings)}/mo vs public egress` : '', hasOrderSave: !!ord.savings, orderTimeline: `${orderDays} business ${orderDays === 1 ? 'day' : 'days'}`, reviewSrc, reviewDst, approver: s.approver == null ? `j.martinez@${mailDomain(est)}` : s.approver, setApprover: (e) => set({ approver: e.target.value }), orderTitle: ord.title || 'Order', pathDesc: ord.pathDesc || '', submit: () => { const placed = s.orders || []; const rec = { id: `o${placed.length + 1}`, title: ord.title || 'Order', type: (ord.lines || [])[0] ? ord.lines[0].product : '', what: `${reviewSrc} · ${reviewDst}`, monthly: hasPrice ? `${fmt(termTotal)}/mo · ${s.term ? s.term + '-month' : 'On-demand'}` : PRICE_NOTE, term: s.term ? `${s.term}-month` : 'On-demand', policy: (ord.policies || []).map(p => p.req).join(', '), at: SCH.hhmm(SCH.nowOf(s)), stage: CF.ORDER_STAGE }; set({ orders: [...placed, rec], submitted: true, pendingDismissed: false, screen: 's2' }); window.scrollTo(0, 0); syncHash('s2'); }, saveProposal: () => set({ proposalSaved: true }), proposalSaved: !!s.proposalSaved, reviewShield: !!ord.shield, reviewWires: ord.wires || 1,
+    hasOrder: orderLines.length > 0, noOrder: orderLines.length === 0, orderLines, orderPolicies, hasOrderPolicies: orderPolicies.length > 0, orderInspection, orderVisibleLine, unpriced, hasUnpriced: hasPrice && unpriced.length > 0, orderPriced: hasPrice, orderUnpriced: !hasPrice, priceNote: PRICE_NOTE, pricedTotalF: hasPrice ? fmt(pricedTotal) + '/mo' : '', termTotalF: hasPrice ? fmt(termTotal) + '/mo' : '', termDisc, hasTermSave, termSaveF: hasTermSave ? `save ${termDisc}% vs on-demand` : '', termLabel: s.term ? `${s.term}-month` : 'On-demand', termOptions, orderSave: ord.savings ? `save ${fmt(ord.savings)}/mo vs public egress` : '', hasOrderSave: !!ord.savings, orderTimeline: `${orderDays} business ${orderDays === 1 ? 'day' : 'days'}`, reviewSrc, reviewDst, approver: s.approver == null ? `j.martinez@${mailDomain(est)}` : s.approver, setApprover: (e) => set({ approver: e.target.value }), orderTitle: ord.title || 'Order', pathDesc: ord.pathDesc || '', submit: () => { const placed = s.orders || []; const prods = (ord.lines || []).map(l => String(l.product || l.id || ''));
+      // The estate it was placed on, and what it attaches when it lands: a hosted VPC is the hub; Last Mile the cloud's port (2026-10-09).
+      const rec = { id: `o${placed.length + 1}`, title: ord.title || 'Order', type: (ord.lines || [])[0] ? ord.lines[0].product : '', est: estRaw.id, hosted: prods.some(x => /hosted v(pc|net)/i.test(x)), lmcc: prods.some(x => /last mile|lmcc/i.test(x)), what: `${reviewSrc} · ${reviewDst}`, monthly: hasPrice ? `${fmt(termTotal)}/mo · ${s.term ? s.term + '-month' : 'On-demand'}` : PRICE_NOTE, term: s.term ? `${s.term}-month` : 'On-demand', policy: (ord.policies || []).map(p => p.req).join(', '), at: SCH.hhmm(SCH.nowOf(s)), stage: CF.ORDER_STAGE }; set({ orders: [...placed, rec], submitted: true, pendingDismissed: false, screen: 's2' }); window.scrollTo(0, 0); syncHash('s2'); }, saveProposal: () => set({ proposalSaved: true }), proposalSaved: !!s.proposalSaved, reviewShield: !!ord.shield, reviewWires: ord.wires || 1,
     // browse
     browseQuery: s.browseQuery, setQuery: (e) => set({ browseQuery: e.target.value }), browseSort: s.browseSort, setSort: (e) => set({ browseSort: e.target.value }), filtersOpen: s.filtersOpen, toggleFilters: () => set({ filtersOpen: !s.filtersOpen }), filterCount, filterLabel: filterCount ? `Filters (${filterCount})` : 'Filters', categories, curated, results, resultCount: results.length, browsing, backToMarket: () => set({ browseQuery: '', browseCat: null, filterProviders: [], priceCeil: 0 }), providerChips: providers.map(p => ({ key: p, label: p, on: s.filterProviders.includes(p), click: () => set({ filterProviders: s.filterProviders.includes(p) ? s.filterProviders.filter(x => x !== p) : [...s.filterProviders, p] }) })), priceChips: [1000, 2500, 5000].map(v => ({ key: 'p' + v, label: `Under ${fmt(v)}/mo`, on: s.priceCeil === v, click: () => set({ priceCeil: s.priceCeil === v ? 0 : v }) })), visionTiles, browseCatLabel: s.browseCat ? D.CATEGORIES.find(cc => cc.id === s.browseCat).label : q ? `Results for "${s.browseQuery}"` : 'Results',
     lmccHero: productCard(c, D.CATALOG.find(p => p.id === 'lmcc'), est), catalogAll: D.CATALOG,
@@ -4787,8 +4814,11 @@ function flowVals(s, set, est, c) {
     if (!isLast || CF.blockOf(key, f)) return;
     const rec = CF.placedRecord(f, est, SCH.hhmm(SCH.nowOf(s)), orders.length + 1);
     const cpz = s.compose || {}; rec.moveKeys = cpz.moveKeys || []; rec.moveTitles = cpz.moveTitles || {};
-    // The estate it was placed on, so a region's way never reads another estate's order (2026-10-09).
-    rec.est = est.id;
+    // The estate it was placed on, so a region's way never reads another estate's order, every region it reaches (Go live
+    // lands them all), and whether the tier fork made it Interconnect - Last Mile (2026-10-09).
+    rec.est = est.id; rec.lmcc = CF.isLmcc(f);
+    const regIds = (f.regions || []).map(n => ((est.regionsList || []).find(r => CF.regionName(r) === n) || {}).region).filter(Boolean);
+    if (regIds.length) rec.regions = [...new Set(regIds)];
     const all = [...orders, rec];
     c.setState({ orders: all, ordersPage: 0, order: { ...ord, lines: ord.lines.map(l => ({ ...l, term: CF.termTitle(f.term) })) }, submitted: true, pendingDismissed: false, compose: BLANK_COMPOSE(), screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', waySet: null, wipList: null, wipListPage: 0, cfArea: null });
     scrollTop(); syncHash('s3', 'cloud', 'connect');
@@ -4830,14 +4860,14 @@ function flowVals(s, set, est, c) {
   // Orders: the one in progress, and the ones placed this session.
   const started = composeStarted(cp);
   // An order's stage is its own until Deliver now validates the region it reaches.
-  const stageOf = (o) => orderPhases(o, landedOf(s)).word;
+  const stageOf = (o) => orderPhases(o, W.landedIdsFor(s, o.est || est.id, o.id)).word;
   // A bandwidth change (Modify bandwidth, 2026-09-30) is an order of this estate's: Live from its day on the one clock.
   const nowMs = SCH.nowOf(s), shown = orders.filter(o => o.kind !== 'bandwidth' || o.est === est.id);
   const ordRow = (o) => { if (o.kind === 'bandwidth') { const live = BW.stageOf(o, nowMs) === 'live';
       return { ...o, key: o.id, stage: live ? 'Live' : o.stage, atLine: `${live ? 'Took' : 'Takes'} effect ${o.effectiveF}`, sub: `Placed at ${o.at} · approver ${o.approver}`, stageInk: 'var(--cta)' }; }
     return { ...o, key: o.id, stage: stageOf(o), atLine: `Placed at ${o.at}`, sub: [o.term, o.policy].filter(Boolean).join(' · '), stageInk: 'var(--cta)',
       // Go live (2026-10-05, task rows): the demo's delivery, on the order itself, where the task's Provision phase points. It validates the region the order reaches; the task's Live and Insight phases light from it.
-      canGoLive: !!o.region && !!o.fromFlow && stageOf(o) === o.stage, goLive: () => set({ landed: landWith(s, o.regions || [o.region]), events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: `${o.region} validated · live. Hosted VPC on AT&T; first flow logs received; coverage up by one region.` }] }) }; };
+      canGoLive: !!o.region && !!o.fromFlow && stageOf(o) === o.stage, goLive: () => set({ landed: landWith(s, o.regions || [o.region], o.est || est.id, o.id), events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: landingEvent(o, o.region, (est.regionsList || []).find(r => r.region === o.region)) }] }) }; };
   const opg = pageRows(shown.slice().reverse().map(ordRow), 6, s.ordersPage, (n) => set({ ordersPage: n }));
   const note = f.note;
   return {
@@ -5374,7 +5404,7 @@ function journeyVals(out, s, set, est) {
     // The Customer switch (2026-10-08: "It needs its own drop down, maybe existing new customer?"): the dashboard, or the
     // existing customer's journey from its first beat; New is next.
     setJourney: (e) => { const v = e.target.value;
-      if (v === 'existing') set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jIntent: null, landed: null,
+      if (v === 'existing') set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jIntent: null, landed: W.landedEntries(s).filter(e => typeof e === 'object' && e.est && e.est !== J.JOURNEY_ESTATE),
         addedSources: (s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE), orders: (s.orders || []).filter(o => !o.journey && !o.journeyDone), customPolicies: (s.customPolicies || []).filter(p => !p.journey), andiOpen: false });
       else set({ journey: null, screen: 's0' }); } };
   if (!on) return base;
@@ -5437,7 +5467,7 @@ function journeyVals(out, s, set, est) {
   // private. Protect: one policy from the tags you applied, a real one Govern lists. Save: the saving over a year, then
   // the fork: attach another cloud (the stage keeps this one and asks for the next) or open the dashboard.
   const live = !!s.jLive;
-  const goLive = () => { if (!placed || live) return; set({ jLive: true, landed: landWith(s, move ? move.regions : []) }); };
+  const goLive = () => { if (!placed || live) return; set({ jLive: true, landed: landWith(s, move ? move.regions : [], est.id, placed.id) }); };
   // The policy deck: one card per tag, each a real intent; the engine says what it does to a flow to the cloud and to
   // the internet before you enforce it. Enforced ones are real policies Govern lists and the engine's ladder reads.
   const mine = (s.customPolicies || []).filter(p => p.journey && p.cloud === found.cloud);
@@ -5593,7 +5623,7 @@ function journeyVals(out, s, set, est) {
     jDetail: tier ? whyPanelOf(tier, iNow) : null,
     jPicked: tier ? { label: tier.label, mark: tier.mark, pts: tier.pts || '', hasPts: !!tier.hasPts } : null, jHasPick: !!tier,
     jLines: lines, jTotal: total, jRegionsWord: move ? move.regions.join(' · ') : '',
-    jPlaced: !!placed, jNotPlaced: !placed, jPhases: liveMove && liveMove.hasTask ? liveMove.phases : placed ? orderPhases({ ...placed, regions: placed.regions || (move ? move.regions : [placed.region]) }, live ? landWith(s, move ? move.regions : []) : landedOf(s)).phases : [],
+    jPlaced: !!placed, jNotPlaced: !placed, jPhases: liveMove && liveMove.hasTask ? liveMove.phases : placed ? orderPhases({ ...placed, regions: placed.regions || (move ? move.regions : [placed.region]) }, live ? [...W.landedIdsFor(s, est.id, placed.id), ...(move ? move.regions : [])] : W.landedIdsFor(s, est.id, placed.id)).phases : [],
     // Act three.
     jIsWatch: step === JI.watch, jIsProtect: step === JI.protect, jIsSave: step === JI.save, jLive: live, jNotLive: !live,
     jHealth: found.regions.flatMap(r => r.apps).map((a, i) => ({ key: a.key, d: `${i * 140}ms` })),
@@ -5617,10 +5647,12 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   // insight"): a move that has an order shows its phase in place of Connect: Ordered, Provisioning, Live, Insight; each
   // phase is a door (the order, the connection, the path's insight). A move whose region has landed leaves the ranked
   // list and stays as a done row, so the task closes where it was started.
-  const ordersAll = (s.orders || []).filter(o => o && o.kind !== 'bandwidth');
+  // This estate's orders only (2026-10-09: a Growing order lit Bank scale's move as Live).
+  const ordersAll = (s.orders || []).filter(o => o && o.kind !== 'bandwidth' && (!o.est || o.est === est.id));
   // An order that remembers its moves belongs to those alone (a landed region spawns a second-path move the order must not claim); an older order, by its region.
-  const orderOf = (m) => ordersAll.find(o => ((o.moveKeys || []).length ? o.moveKeys.includes(m.key) : !!(o.region && m.regions && m.regions.includes(o.region))));
-  const phasesOf = (o, title, region) => { const op = orderPhases(o, landedOf(s)), landed = op.landed;
+  // An Internet to Cloud order attaches nothing private, so by region it never claims a move that would (2026-10-09).
+  const orderOf = (m) => ordersAll.find(o => ((o.moveKeys || []).length ? o.moveKeys.includes(m.key) : !!(o.region && m.regions && m.regions.includes(o.region)) && W.landingKind(o) !== 'internet'));
+  const phasesOf = (o, title, region) => { const op = orderPhases(o, W.landedIdsFor(s, o.est || est.id, o.id)), landed = op.landed;
     const doors = [() => set({ cnPage: 'orders' }), () => set({ cnPage: 'orders' }), landed ? () => set({ cnPage: 'picture' }) : null,
       landed && region ? go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', obPanel: 'paths', pathPin: '|' + region, pathSel: '|' + region, pathsPage: 0 }) : null];
     return { landed, word: op.word, phases: op.phases.map((ph, i) => ({ ...ph, hasDoor: !!doors[i], go: doors[i] || (() => {}) })) }; };
@@ -5632,7 +5664,8 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   const shell = (all) => {
     const liveKeys = new Set(all.map(m => m.key));
     const done = ordersAll.filter(o => (o.moveKeys || []).some(k => !liveKeys.has(k))).map(o => { const key = (o.moveKeys || []).find(k => !liveKeys.has(k)); const ph = phasesOf(o, o.title, o.region);
-      return { key: 'done:' + o.id, title: (o.moveTitles || {})[key] || o.title, what: o.what, monthly: o.monthly, mark: M.pathMark('netbond'), word: ph.landed ? 'On the AT&T network' : 'Ordered', stageWord: ph.word, ...ph }; });
+      return { key: 'done:' + o.id, title: (o.moveTitles || {})[key] || o.title, what: o.what, monthly: o.monthly, mark: M.pathMark(W.landingKind(o) === 'direct' ? 'native' : W.landingKind(o) === 'internet' ? 'internet' : 'netbond', { inspect: W.landingKind(o) === 'hosted' }),
+        stageWord: ph.word, ...ph, word: ph.landed ? ({ direct: 'On your own ports', internet: 'Live over the internet' })[W.landingKind(o)] || 'On the AT&T network' : 'Ordered' }; });
     // One recommendation at a time, open and spacious (Micah, 2026-10-07: "make the page more beautiful, open, spacious.
     // It can be the only option"): the hero is the move, a stepper walks the rest in rank order.
     const size = 1;
