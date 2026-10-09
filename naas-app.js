@@ -4591,7 +4591,9 @@ function flowVals(s, set, est, c) {
     tileBg: w.soon ? 'var(--bg-neutral)' : 'var(--bg-accent)', tileInk: w.soon ? 'var(--text-light)' : 'var(--link)',
     logos: w.clouds.map(cl => ({ key: cl, src: W.markFor(cl, s.theme), name: W.CLOUD_NAME[cl] || cl })), hasLogos: w.clouds.length > 0,
     hasZones: !!w.zones, zoneChips: w.zones ? Object.entries(w.zones).map(([k, z]) => { const on = (s.wayZone || 'intra') === k; return { key: k, label: z.label, title: `${z.label}: ${z.clouds.join(' and ')}`, on, go: () => set({ wayZone: k }), bg: on ? 'var(--cta)' : 'transparent', ink: on ? '#fff' : 'var(--text-light)' }; }) : [],
-    pts: w.points === null ? '' : String(w.points), hasPts: w.points !== null, ptsTitle: `Scores ${w.points} of 100: cost 30, performance 20, security 20, effort and time 15, scale 15`,
+    // The journey's ring here too (2026-10-09): scored by the estate's answers, a way a hard rule removes shows the cross.
+    pts: w.points === null ? '' : String(w.points), hasPts: w.points !== null, out: !!w.misses, ptsPct: w.points === null || w.misses ? '0%' : `${w.points}%`, ptsShown: w.misses ? '✕' : w.points === null ? '' : String(w.points),
+    ptsTitle: w.misses ? `Removed by what you said: ${w.missWords}` : `Scores ${w.points} of 100 for this estate's answers: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${W.intentWeights(w.answers)[c.key]}`).join(', ')}`,
     rows: w.rows.map(r => ({ ...r, segs: r.segs.map(g => ({ ...g, bg: g.on ? 'var(--link)' : 'var(--bg-neutral)' })), valueInk: r.score === null ? 'var(--text-disabled)' : 'var(--text-heading)' })) }));
   const cfTypes = CF.ALL_TYPES.map(t => ({ ...tile(t), pick: pickType(t) }));
   // The set a count opens: exactly what it counted, as a list on the page, paged.
