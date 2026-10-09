@@ -215,7 +215,7 @@ export function defaults() {
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
     // The connect flow (2026-09-30): the set a Ways to connect figure opened, the orders placed this session, the location area shown.
-    waySet: null, waySetPage: 0, wayZone: 'intra', appThresh: null, orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0,
+    waySet: null, waySetPage: 0, wayZone: 'intra', appThresh: null, orders: [], ordersPage: 0, cfArea: null, cfRvTab: null, wipList: null, wipListPage: 0,
     order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null,
     simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36,
     // Modify bandwidth (2026-09-30): the connection it is open on, the size picked ({ id, ports, mbps }),
@@ -1027,13 +1027,14 @@ export function vals(c) {
 
   const floorVerdict = isEmpty ? '0 connections · 41 metros · 12 clouds reachable' : `${est.privatePct}% of ${est.workloads.toLocaleString('en-US')} workloads private · ${est.findings.length} to close`;
   // Recommended carries the task's phases on its own rows (2026-10-05), so the pending banner stays off that page.
-  // The banner never stands over Connect, where Orders and the task rows carry the order's phases (2026-10-09).
+  // Once the order lands, the banner stands only on Connect > Orders, beside the order it speaks for (2026-10-09: over every
+  // Observe, Govern and Cost page it ran Traffic to 1030px and Govern > Layers to 986px, and Traffic has 3px to spare).
   // The pending banner speaks for this estate's latest order, and says Live once that order has landed (2026-10-09:
   // any landing on any estate once lit it, and its Go live went dead for an order with no region to deliver).
   const pendOrder = (s.orders || []).filter(o => o.kind !== 'bandwidth' && (!o.est || o.est === estRaw.id)).at(-1) || null;
   const pendRegions = pendOrder ? (pendOrder.regions || [pendOrder.region]).filter(Boolean) : [];
   const landedAll = !!pendOrder && pendRegions.length > 0 && orderPhases(pendOrder, W.landedIdsFor(s, estRaw.id, pendOrder.id)).landed;
-  const showPending = s.submitted && !s.pendingDismissed && !!pendOrder && (s.screen === 's2' || s.screen === 's6' || (s.screen === 's3' && landedAll && s.tab !== 'connect'));
+  const showPending = s.submitted && !s.pendingDismissed && !!pendOrder && (s.screen === 's2' || s.screen === 's6' || (s.screen === 's3' && landedAll && s.layer === 'cloud' && s.tab === 'connect' && cnPageOf(s) === 'orders'));
   // The stages follow what the order attaches (2026-10-09): the hosted VPC's lifecycle (D.LIFECYCLE, its vSRX pair) only for
   // a hosted way; NetBond, your own ports or the internet otherwise. It once showed a vSRX pair for every order.
   const PEND_STAGES = { hosted: D.LIFECYCLE, netbond: ['Order accepted', 'NetBond port', 'BGP session up', 'Route policy pushed', 'Validated live'],
@@ -2641,8 +2642,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     key: 'ep' + i, label: x.label, value: x.value, share: x.share, w: x.w,
     go: () => set({ logQ: x.q || '', obPage: 'logs', sub: null, scrollToSec: 'sec-logs', scrollNonce: (s.scrollNonce || 0) + 1 }),
   })) : [];
+  // The explanation speaks for flow records ("3 of 24 records carry it"), so it stands over Flow records only (2026-10-09:
+  // it stayed up over User activity, where it explains nothing, and ran that tab to 962px).
   const explainVals = {
-    explainOn: !!explain, explainOff: !explain,
+    explainOn: !!explain && logTab === 'flow', explainOff: !explain,
     explainLabel: explain ? explain.label : '',
     explainValue: explain ? explain.value : '',
     explainSub: explain ? explain.sub : '',
@@ -4856,7 +4859,7 @@ function flowVals(s, set, est, c) {
     const regIds = (f.regions || []).map(n => ((est.regionsList || []).find(r => CF.regionName(r) === n) || {}).region).filter(Boolean);
     if (regIds.length) rec.regions = [...new Set(regIds)];
     const all = [...orders, rec];
-    c.setState({ orders: all, ordersPage: 0, order: { ...ord, lines: ord.lines.map(l => ({ ...l, term: CF.termTitle(f.term) })) }, submitted: true, pendingDismissed: false, compose: BLANK_COMPOSE(), screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', waySet: null, wipList: null, wipListPage: 0, cfArea: null });
+    c.setState({ orders: all, ordersPage: 0, order: { ...ord, lines: ord.lines.map(l => ({ ...l, term: CF.termTitle(f.term) })) }, submitted: true, pendingDismissed: false, compose: BLANK_COMPOSE(), screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', waySet: null, wipList: null, wipListPage: 0, cfArea: null, cfRvTab: null });
     scrollTop(); syncHash('s3', 'cloud', 'connect');
   };
   // Your order, in progress. "All N sites" and "All N regions" open exactly
@@ -4892,13 +4895,21 @@ function flowVals(s, set, est, c) {
       priceBig: price.has ? `${price.big}/mo` : PRICE_NOTE, priceSub: price.has ? cfTotal.label : '', standUp: f.way && W.waySetup(f.way) ? W.waySetup(f.way) : rides ? rides.setup : '' }; })();
   // The review, NetBond Advanced's ReviewStep rows in the storefront's words.
   const reviewRows = CF.wipRows(f, est).map(r => ({ key: r.key, label: r.label, value: r.value, word: r.word, ink: WIP_INK[r.state].ink }));
+  // Review fits the fold (2026-10-09: 964px on Growing at 1440x900). The order summary and your selections share one slot
+  // as two tabs, the summary first since the panel beside it already lists every selection; the selections are a grid of
+  // three across, not a column of rows. Both stand in the slot, the one not picked hidden, so Place order holds still.
+  const rvTab = s.cfRvTab === 'picks' ? 'picks' : 'summary';
+  const cfRvTabs = [['summary', 'Order summary', 'bill'], ['picks', `Your selections · ${reviewRows.length}`, 'checklist']].map(([k, label, icon]) => { const on = rvTab === k;
+    return { key: k, label, icon, on, go: () => set({ cfRvTab: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; });
   const lines = ord.lines.map(l => ({ ...l, key: 'l' + l.line, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? PRICE_NOTE : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : `${fmt(l.monthly)}/mo`, ink: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
   // Orders: the one in progress, and the ones placed this session.
   const started = composeStarted(cp);
   // An order's stage is its own until Deliver now validates the region it reaches.
   const stageOf = (o) => orderPhases(o, W.landedIdsFor(s, o.est || est.id, o.id)).word;
   // A bandwidth change (Modify bandwidth, 2026-09-30) is an order of this estate's: Live from its day on the one clock.
-  const nowMs = SCH.nowOf(s), shown = orders.filter(o => o.kind !== 'bandwidth' || o.est === est.id);
+  // Every order is this estate's (2026-10-09: Orders listed Growing's order on Bank scale too); one that names no estate,
+  // older state, shows wherever it is read, as Recommended's ordersAll does.
+  const nowMs = SCH.nowOf(s), shown = orders.filter(o => o && (o.kind === 'bandwidth' ? o.est === est.id : !o.est || o.est === est.id));
   const ordRow = (o) => { if (o.kind === 'bandwidth') { const live = BW.stageOf(o, nowMs) === 'live';
       return { ...o, key: o.id, stage: live ? 'Live' : o.stage, atLine: `${live ? 'Took' : 'Takes'} effect ${o.effectiveF}`, sub: `Placed at ${o.at} · approver ${o.approver}`, stageInk: 'var(--cta)' }; }
     return { ...o, key: o.id, stage: stageOf(o), atLine: `Placed at ${o.at}`, sub: [o.term, o.policy].filter(Boolean).join(' · '), stageInk: 'var(--cta)',
@@ -4944,7 +4955,7 @@ function flowVals(s, set, est, c) {
     cfNextLabel: isLast ? 'Place order' : `Next: ${CF.STEP_META[keys[ki + 1]].title}`, cfNextDisabled: !!block, cfNextBg: block ? 'var(--bg-neutral)' : 'var(--cta)', cfNextInk: block ? 'var(--text-disabled)' : '#fff',
     cfPlace: place, cfCanPlace: isLast && !block,
     cfName: f.name, cfNamePlaceholder: CF.defaultName(f), cfNameHelp: `Leave it blank and it is named ${CF.defaultName(f)}.`, cfSetName: (e) => put({ name: e.target.value }),
-    cfReviewRows: reviewRows, cfLines: lines, cfOrder: ord, cfShield: ord.shield,
+    cfReviewRows: reviewRows, cfLines: lines, cfOrder: ord, cfShield: ord.shield, cfRvTabs, cfRvSumVis: rvTab === 'summary' ? 'visible' : 'hidden', cfRvPickVis: rvTab === 'picks' ? 'visible' : 'hidden',
     cfWipTitle: 'Your order, in progress', cfWip: wip, cfWipList, cfDiagram, cfStrip, cfOutcome, cfPrice: price, cfPriced: price.has, cfUnpriced: !price.has,
     hasParsedNote: !!note && key === noteKey, parsedNote: note || '', parsedNoteTitle: f.noteTitle,
     // Orders.

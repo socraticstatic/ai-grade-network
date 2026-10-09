@@ -83,7 +83,9 @@ test('a landed region\'s second-path move does not inherit the old order; the pe
   if (second) { assert.equal(second.hasTask, false, `${second.title} claims the landed order`); assert.equal(second.canConnect, true); }
   assert.equal(v.doneMoves.length, 1);
   assert.equal(v.showPending, false);
-  // The banner never stands over Connect, where Orders and the task rows carry the phases (2026-10-09); it still shows elsewhere.
-  assert.equal(vals(on('mature', { cnPage: 'picture', submitted: true, landed: region, orders: c.state.orders })).showPending, false, 'not over Connect');
-  assert.equal(vals(on('mature', { tab: 'observe', submitted: true, landed: region, orders: c.state.orders })).showPending, true, 'the banner still shows elsewhere');
+  // Once the order lands the banner stands on Connect > Orders only (2026-10-09: over every Observe, Govern and Cost page it
+  // pushed them past the fold); tests/go-live-fold.test.mjs walks it.
+  assert.equal(vals(on('mature', { cnPage: 'picture', submitted: true, landed: region, orders: c.state.orders })).showPending, false, 'not over the picture');
+  assert.equal(vals(on('mature', { tab: 'observe', submitted: true, landed: region, orders: c.state.orders })).showPending, false, 'not over Observe');
+  assert.equal(vals(on('mature', { cnPage: 'orders', submitted: true, landed: region, orders: c.state.orders })).showPending, true, 'on Orders, beside the order');
 });

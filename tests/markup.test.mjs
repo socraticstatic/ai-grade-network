@@ -537,7 +537,12 @@ test('every container the markup opens, it closes', () => {
   // switch), four columns each with a head, a body of tier bands and rows, a pinned default row, and a pager
   // (div +12, span +28, sc-if +8, sc-for +6, button +6): div 1324 -> 1336, span 1488 -> 1516, sc-if 670 -> 678,
   // sc-for 394 -> 400, button 525 -> 531.
-    ['div', /<div\b/g, /<\/div>/g, 1336],
+  // Review fits the fold (2026-10-09, it ran to 964px): the order summary and your selections became two tabs over one
+  // slot, a tablist of one tab loop and the slot holding both panels (div +2); the selections a grid of fixed cells, so
+  // the "Order summary" caption and each row's value wrapper went and each tab carries its glyph (span -1, sc-for +1,
+  // button +1). The pending banner moved under the Connect views whole (no tag moves): div 1336 -> 1338,
+  // span 1518 -> 1517, sc-for 400 -> 401, button 533 -> 534.
+    ['div', /<div\b/g, /<\/div>/g, 1338],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -545,14 +550,14 @@ test('every container the markup opens, it closes', () => {
   // and an enforced row's state is its toggle (span -1, sc-if +1): span 1482 -> 1481, sc-if 665 -> 666.
   // Into the policy engine from the flows (2026-10-09): a link in the wizard's Advanced Settings and one in the journey's
   // Protect deck key, each a button and its glyph (span +2, button +2): span 1516 -> 1518, button 531 -> 533.
-    ['span', /<span\b/g, /<\/span>/g, 1518],
+    ['span', /<span\b/g, /<\/span>/g, 1517],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 677],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 400],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 401],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 533],
+    ['button', /<button\b/g, /<\/button>/g, 534],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];
