@@ -152,13 +152,16 @@ export function metroSites(m) {
  * and run through the AT&T core. `access` is the canonical string the path
  * model (naas-things accessThing) reads.
  */
+// Each access also carries the one short word, glyph and ink every site surface uses (2026-10-09, "integrate into the rest
+// of the site"): the journey's sites, Estate's ring and Sources read them. AT&T blues for the private ones; slate for
+// internet access, AT&T's own or a carrier's.
 export const SERVICE = {
-  avpn:  { key: 'avpn',  label: 'AVPN',               name: 'AT&T VPN (MPLS)',                 onAtt: true,  access: 'AVPN' },
-  aseod: { key: 'aseod', label: 'ASE on Demand',      name: 'AT&T Switched Ethernet on Demand', onAtt: true,  access: 'ASE on Demand' },
-  adi:   { key: 'adi',   label: 'ADI',                name: 'AT&T Dedicated Internet',          onAtt: true,  access: 'ADI' },
-  abf:   { key: 'abf',   label: 'Business Fiber',     name: 'AT&T Business Fiber',              onAtt: true,  access: 'Business Fiber' },
-  aiab:  { key: 'aiab',  label: 'AIA-B',              name: 'AT&T Internet Air for Business',   onAtt: true,  access: 'AIA-B' },
-  tpa:   { key: 'tpa',   label: 'Third Party Access', name: 'Another carrier\'s access',        onAtt: false, access: 'Third Party Access' },
+  avpn:  { key: 'avpn',  label: 'AVPN',               name: 'AT&T VPN (MPLS)',                 onAtt: true,  access: 'AVPN',               short: 'AVPN',        icon: 'router',           ink: 'var(--viz-1)' },
+  aseod: { key: 'aseod', label: 'ASE on Demand',      name: 'AT&T Switched Ethernet on Demand', onAtt: true,  access: 'ASE on Demand',      short: 'Ethernet',    icon: 'ethernet',         ink: 'var(--viz-2)' },
+  adi:   { key: 'adi',   label: 'ADI',                name: 'AT&T Dedicated Internet',          onAtt: true,  access: 'ADI',                short: 'Internet',    icon: 'globe',            ink: 'var(--viz-6)' },
+  abf:   { key: 'abf',   label: 'Business Fiber',     name: 'AT&T Business Fiber',              onAtt: true,  access: 'Business Fiber',     short: 'Fiber',       icon: 'cable',            ink: 'var(--viz-4)' },
+  aiab:  { key: 'aiab',  label: 'AIA-B',              name: 'AT&T Internet Air for Business',   onAtt: true,  access: 'AIA-B',              short: 'Internet Air', icon: 'wireless-network', ink: 'var(--viz-6)' },
+  tpa:   { key: 'tpa',   label: 'Third Party Access', name: 'Another carrier\'s access',        onAtt: false, access: 'Third Party Access', short: 'Third party', icon: 'padlock-open',     ink: 'var(--viz-6)' },
 };
 const SERVICE_OF_ACCESS = { avpn: 'avpn', ase: 'aseod', adi: 'adi', abf: 'abf', sdwan: 'avpn', mobility: 'aiab', ipsec: 'tpa', aiab: 'aiab' };
 /**

@@ -58,8 +58,9 @@ test('beat 1: the stage holds your sites by the access AT&T sells, the AT&T netw
   assert.deepEqual(v.jSites.groups.map(g => [g.label, g.n]), [['AVPN', 7], ['Ethernet', 6], ['Internet', 3], ['Fiber', 4]]);
   // The 20 is drawn as the 20 (2026-10-08): one glyph per real site, grouped and inked by its access, its name in the title.
   assert.equal(v.jSites.cells.length, 20);
-  assert.deepEqual([...new Set(v.jSites.cells.map(c => c.group))], ['avpn', 'ase', 'adi', 'abf']);
-  assert.match(v.jSites.cells[0].title, /^Ashburn DC: AVPN \(MPLS VPN\), data center$/);
+  // One access model (2026-10-09): the groups are naas-sites' SERVICE keys, named by its full names.
+  assert.deepEqual([...new Set(v.jSites.cells.map(c => c.group))], ['avpn', 'aseod', 'adi', 'abf']);
+  assert.match(v.jSites.cells[0].title, /^Ashburn DC: AT&T VPN \(MPLS\), data center$/);
   assert.equal(v.jSites.cells[0].ink, v.jSites.groups[0].ink, 'a glyph and its legend share one ink');
   assert.equal(v.jCloud.state, 'unknown');
   assert.equal(v.jLink, 'none'); assert.equal(v.jNet, 'off');

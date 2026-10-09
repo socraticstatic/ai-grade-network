@@ -957,7 +957,7 @@ export function vals(c) {
     { label: 'Reading AT&T access records', src: 'NetBond, AVPN (MPLS VPN), ADI (Dedicated Internet), ABF (Business Fiber)' },
     { label: 'Checking on-ramp coverage per metro', src: '41 metros' },
     { label: 'Joining utilization and egress spend', src: 'last 30 days' },
-  ].map((st, i) => ({ ...st, key: 'sc' + i, done: s.scanStep > i, active: s.scanStep === i, color: s.scanStep > i ? 'var(--success)' : s.scanStep === i ? 'var(--cta)' : 'var(--border-primary)', textColor: s.scanStep >= i ? 'var(--text-heading)' : 'var(--text-disabled)' }));
+  ].map((st, i) => ({ ...st, key: 'sc' + i, done: s.scanStep > i, active: s.scanStep === i, color: s.scanStep > i ? 'var(--cta)' : s.scanStep === i ? 'var(--cta)' : 'var(--border-primary)', textColor: s.scanStep >= i ? 'var(--text-heading)' : 'var(--text-disabled)' }));
   // The app promised "refreshed daily" three times during onboarding and then
   // never mentioned it again. The promise is now a choice, made where the scan
   // ends, and the three intake strings read it back.
@@ -2373,7 +2373,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // 2026-10-01: three of Established's seven services had no legend row and a 1px arc).
   const LEGEND_WORD = { 'Third Party Access': 'Third party' };
   const ringOf = (key, title, rows, centre, centreSub, head, cta, go2, dr) => {
-    const segs = DR.ringSegs(rows.map((r, i) => ({ ...r, color: r.color || `var(--viz-${(i % 6) + 1})` })), { merge: dr.merge, otherLabel: () => 'Others' })
+    // A ring's own palette is the AT&T blues (2026-10-09): --viz-3 is the saving's green and reads as one on a count.
+    const segs = DR.ringSegs(rows.map((r, i) => ({ ...r, color: r.color || `var(--viz-${[1, 2, 4][i % 3]})` })), { merge: dr.merge, otherLabel: () => 'Others' })
       .map(r => ({ key: r.key || r.label, label: r.label, n: r.v, from: r.from, to: r.to, color: r.color, go: r.door, title: r.rest ? `${r.label} ${enf(r.v)}: ${r.rest.map(x => `${x.label} ${enf(x.v)}`).join(', ')}` : `${r.label} ${enf(r.v)}` }));
     const d = { ring: DR.ringOf(segs) };
     const pick = (e) => { const el = e && e.currentTarget; if (!el || !el.getBoundingClientRect || !e.detail || !segs.length) return dr.centre(e);
@@ -2381,11 +2382,12 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       return i < 0 ? dr.centre(e) : segs[i].go(e); };
     return { key, title, ring: d.ring, centre, centreSub, head, cta, go: go2, segs, pick, centreGo: dr.centre, headCan: !!dr.head, headCant: !dr.head, headGo: dr.head || (() => {}),
       ringLabel: `${title}: ${centre} ${centreSub}. ${segs.map(sg => sg.title).join('; ')}`,
-      legend: segs.map(sg => ({ key: sg.key, color: sg.color, label: LEGEND_WORD[sg.label] || sg.label, n: enf(sg.n), can: true, go: sg.go, title: `Open ${sg.title}` })) }; };
+      // A row that has a glyph shows it in its ink (the access model, 2026-10-09), else the ring's square.
+      legend: segs.map(sg => { const ic = (rows.find(r => (r.key || r.label) === sg.key) || {}).icon || ''; return { key: sg.key, color: sg.color, icon: ic, hasIcon: !!ic, noIcon: !ic, label: LEGEND_WORD[sg.label] || sg.label, n: enf(sg.n), can: true, go: sg.go, title: `Open ${sg.title}` }; }) }; };
   const byCloudRegs = {}; eRegs.forEach(r => { byCloudRegs[r.cloud] = (byCloudRegs[r.cloud] || 0) + 1; });
   const exposedN = apps.reduce((a, x) => a + x.exposed, 0);
   const glanceRings = [
-    ringOf('sites', 'Sites', Object.values(eSvcTally).sort((a, b) => b.n - a.n).map((t, i) => ({ key: t.v.key, label: t.v.label, v: t.n, color: t.v.onAtt ? `var(--viz-${[1, 2, 3, 5][i % 4]})` : 'var(--viz-4)', door: dd.sites('prim:' + t.v.key) })), enf(eSiteN), 'sites', eAttN === eSiteN ? 'All on AT&T' : `${enf(eAttN)} on AT&T`, 'Your sites', eToSites,
+    ringOf('sites', 'Sites', Object.values(eSvcTally).sort((a, b) => b.n - a.n).map(t => ({ key: t.v.key, label: t.v.short || t.v.label, v: t.n, color: t.v.ink || 'var(--viz-6)', icon: t.v.icon, door: dd.sites('prim:' + t.v.key) })), enf(eSiteN), 'sites', eAttN === eSiteN ? 'All on AT&T' : `${enf(eAttN)} on AT&T`, 'Your sites', eToSites,
       { centre: dd.sites(null), head: eAttN ? dd.sites('att') : null, merge: (rest) => dd.sites('prim:' + rest.map(r => r.key).join(',')) }),
     ringOf('clouds', 'Clouds', Object.entries(byCloudRegs).sort((a, b) => b[1] - a[1]).map(([cl, n]) => ({ key: cl, label: cl, v: n, door: dd.clouds(null, ['cloud:' + cl]) })), enf(eRegs.length), eRegs.length === 1 ? 'region' : 'regions', `${ePrivRegs.length} private`, 'Your clouds', () => set({ estPanel: 'clouds' }),
       { centre: dd.clouds({ unit: 'region' }), head: ePrivRegs.length ? dd.clouds({ unit: 'region', state: 'priv' }) : null, merge: (rest) => dd.clouds({ unit: 'region', clouds: rest.map(r => r.key) }) }),
@@ -5274,7 +5276,6 @@ function journeyVals(out, s, set, est) {
   const step = Math.max(0, Math.min(J.BEATS.length - 1, s.jStep || 0)), beat = J.BEATS[step], pr = journeyProgress(s);
   const to = (i) => () => set({ jStep: i, jScan: null });
   const today = J.todayOf(est);
-  const SITE_INK = { avpn: 'var(--viz-1)', ase: 'var(--viz-2)', abf: 'var(--viz-4)', adi: 'var(--viz-6)' };
   // The source: read-only, then a scan whose four steps tick over on the cloud node; the found regions join the estate as it ends.
   const prov = J.PROVIDERS.find(p => p.key === (s.jProv || J.DEMO_SOURCE)) || J.PROVIDERS[0];
   const scanning = s.jScan !== null && s.jScan !== undefined && s.jScan < 4;
@@ -5428,8 +5429,8 @@ function journeyVals(out, s, set, est) {
     // Where the traffic rides: the internet path until the order lands, then the AT&T wire.
     jFlow: live ? 'att' : found.has && step >= JI.found ? 'net' : 'none',
     // One ink per access, shared by a site's glyph and its legend: AT&T blues for the private ones, slate for internet access.
-    jSites: { n: String(today.sites), groups: today.groups.map(g => ({ ...g, nF: String(g.n), ink: SITE_INK[g.key], title: `${g.n} sites on ${g.full}` })),
-      cells: today.cells.map((c, i) => ({ ...c, ink: SITE_INK[c.group], d: `${i * 35}ms`, title: `${c.name}: ${c.full}${c.cls ? `, ${c.cls.toLowerCase()}` : ''}` })) },
+    jSites: { n: String(today.sites), groups: today.groups.map(g => ({ ...g, nF: String(g.n), title: `${g.n} sites on ${g.full}` })),
+      cells: today.cells.map((c, i) => ({ ...c, d: `${i * 35}ms`, title: `${c.name}: ${c.full}${c.cls ? `, ${c.cls.toLowerCase()}` : ''}` })) },
     jCloud: { state: cloudState, unknown: cloudState === 'unknown', picking: cloudState === 'picking', scanning: cloudState === 'scanning', found: cloudState === 'found',
       mark: found.has ? W.markFor(found.cloud, s.theme) : '', name: cloudName, wl: String(found.wl), tagging: step === JI.tag },
     // Each cloud's mark for the theme (AWS's dark wordmark vanishes on a dark tile).

@@ -12,6 +12,7 @@
 // the workloads, the recommendation, and the Cloud Connect order. A presenter drives it on scripted data: the estate
 // is ESTATES.lastmile (AT&T sites, no cloud yet) and the source it adds is FOUND_SOURCES.Azure.
 // Pure: the view words and draws it; naas-app.js holds the state and the doors.
+import * as S from './naas-sites.js';
 
 export const BEATS = [
   { key: 'today', label: 'Today', short: 'Today', icon: 'home', title: 'Your network on AT&T' },
@@ -72,21 +73,17 @@ export function proposedPolicy(est, rows = []) {
 export const JOURNEY_ESTATE = 'lastmile';
 export const DEMO_SOURCE = 'Azure';
 
-/** The access a site rides, as AT&T sells it. */
-const SERVICE = [
-  ['avpn', /AVPN/, 'AVPN', 'router', 'AVPN (MPLS VPN)'],
-  ['ase', /ASE/, 'Ethernet', 'ethernet', 'AT&T Switched Ethernet'],
-  ['adi', /ADI/, 'Internet', 'globe', 'AT&T Dedicated Internet'],
-  ['abf', /ABF|Business Fiber/, 'Fiber', 'cable', 'AT&T Business Fiber'],
-];
-/** Beat 1: the sites AT&T carries, by the access it sells them. */
+/** Beat 1: the sites AT&T carries, by the access it sells them, read from the one access model (naas-sites SERVICE, 2026-10-09). */
 export function todayOf(est) {
   const sites = est.sites || [];
-  const groups = SERVICE.map(([key, re, label, icon, full]) => ({ key, label, icon, full, n: sites.filter(s => re.test(s.access || '')).length })).filter(g => g.n);
+  const primary = (st) => S.servicesOf(st)[0] || S.SERVICE.tpa;
+  const order = Object.keys(S.SERVICE);
+  const keys = [...new Set(sites.map(st => primary(st).key))].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  const groups = keys.map(key => { const v = S.SERVICE[key]; return { key, label: v.short, icon: v.icon, ink: v.ink, full: v.name, n: sites.filter(st => primary(st).key === key).length }; });
   // Every site, grouped by the access it rides (Micah, 2026-10-08: "the 20 on the left - look at how much space is wasted"):
   // the stage draws one glyph per real site, so the sentence's 20 is the picture, not a number in an empty card.
-  const cells = SERVICE.flatMap(([key, re, , icon, full]) => sites.filter(s => re.test(s.access || '')).map(s => ({ key: s.name, group: key, icon, name: s.name, metro: s.metro || '', cls: s.cls || '', full })));
-  return { sites: sites.length, metros: new Set(sites.map(s => s.metro).filter(Boolean)).size, dcs: sites.filter(s => /data center/i.test(s.cls || '')).length, groups, cells,
+  const cells = keys.flatMap(key => { const v = S.SERVICE[key]; return sites.filter(st => primary(st).key === key).map(st => ({ key: st.name, group: key, icon: v.icon, ink: v.ink, name: st.name, metro: st.metro || '', cls: st.cls || '', full: v.name })); });
+  return { sites: sites.length, metros: new Set(sites.map(st => st.metro).filter(Boolean)).size, dcs: sites.filter(st => /data center/i.test(st.cls || '')).length, groups, cells,
     clouds: (est.regionsList || []).length };
 }
 

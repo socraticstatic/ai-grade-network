@@ -531,10 +531,11 @@ test('every container the markup opens, it closes', () => {
   // hero, the footer link gone: div 1305 -> 1323, span 1447 -> 1483, sc-if 657 -> 663, sc-for 381 -> 394, button 521 -> 525.
     ['div', /<div\b/g, /<\/div>/g, 1323],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
-    ['span', /<span\b/g, /<\/span>/g, 1483],
+  // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
+    ['span', /<span\b/g, /<\/span>/g, 1484],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 663],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 665],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 394],
     ['section', /<section\b/g, /<\/section>/g, 17],
     ['button', /<button\b/g, /<\/button>/g, 525],
