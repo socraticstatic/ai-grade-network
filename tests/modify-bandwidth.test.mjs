@@ -257,7 +257,7 @@ test('an order lands on its day, by the one clock', () => {
   // Orders reads it live.
   c.setState({ tab: 'connect', cnPage: 'orders' }); v = vals(c);
   const row = v.ordRows.find(r => r.kind === 'bandwidth');
-  assert.equal(row.stage, 'Live'); assert.equal(row.atLine, 'Took effect Wed, Sep 30'); assert.equal(row.stageInk, 'var(--success)');
+  assert.equal(row.stage, 'Live'); assert.equal(row.atLine, 'Took effect Wed, Sep 30'); assert.equal(row.stageInk, 'var(--cta)', 'a stage reads in the phases\' blue; green is the saving\'s (2026-10-09)');
   // Optimize has nothing left to resize there: two ports hold the peak at 62%.
   c.setState({ tab: 'cost', costPanel: 'optimize' }); v = vals(c);
   const opt = v.optRows.find(r => r.key === 'capacity');

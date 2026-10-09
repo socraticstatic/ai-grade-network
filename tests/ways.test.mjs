@@ -67,7 +67,8 @@ test('every card scores the deck\'s five criteria and a weighted score out of 10
   for (const c of cards) {
     assert.deepEqual(c.rows.map(r => r.key), ['cost', 'perf', 'sec', 'setup', 'scale'], c.key);
     c.rows.forEach(r => { assert.ok(r.score >= 1 && r.score <= 5, `${c.key} ${r.key}`); assert.equal(r.segs.length, 5); });
-    assert.equal(c.points, Math.round(c.rows.reduce((a, r) => a + r.weight * r.score / 5, 0)), c.key);
+    // Scored as Recommended scores (2026-10-09): the default answers add five to a way that meets your BGP, the soft preference.
+    assert.equal(c.points, Math.min(100, Math.round(c.rows.reduce((a, r) => a + r.weight * r.score / 5, 0)) + (W.wayHosted(c.key) ? 0 : 5)), c.key);
   }
   const cost = Object.fromEntries(cards.map(c => [c.key, c.rows[0].score]));
   assert.ok(cost.byo > cost.att && cost.att > cost.peer && cost.peer > cost.transit && cost.transit > cost.privatelink, JSON.stringify(cost));

@@ -93,7 +93,7 @@ test('Small reads its one move off its Connect finding; Empty has none and says 
   assert.equal(sm[0].finding, 'onecloud');
   // Re-pinned (2026-10-06, the connect options session): an AWS region set is offered the session's three ways, in its
   // order of priority; the Connect finding still names why the move exists.
-  assert.deepEqual(sm[0].tiers.map(t => t.way), ['byo', 'att', 'peer']);
+  assert.deepEqual(sm[0].tiers.map(t => t.way), ['byo', 'att', 'transit']);
   const e = vals(on('empty'));
   assert.equal(e.moveList.length, 0);
   assert.equal(e.noMoves, true);
@@ -146,7 +146,8 @@ test('a finding on the Connect tab lends its ladder; otherwise the catalog serve
     const est = D.ESTATES[view];
     for (const m of listOf(view)) {
       // A cloud region set is offered the session's ways for its cloud, in its order (2026-10-06), whatever finding named it.
-      if (byWays(m)) { assert.deepEqual(m.tiers.map(t => t.way), W.recommendedFor(m.cloud).map(r => r.key), `${view} ${m.title}`); continue; }
+      // One ranking (2026-10-09): the deck's step over the move's own answers, then the rung the cloud cannot have.
+      if (byWays(m)) { assert.deepEqual(m.tiers.map(t => t.way), [...W.rankWays(m.cloud, m.tiers[0].answers).map(r => r.key), ...W.recommendedFor(m.cloud).filter(r => r.unavailable).map(r => r.key)], `${view} ${m.title}`); continue; }
       const f = m.finding && est.findings.find(x => x.kind === m.finding);
       if (f) { assert.equal(f.tab, 'connect'); assert.deepEqual(m.tiers.map(t => t.rung), f.ladder, `${view} ${m.title}`); continue; }
       const priced = m.tiers.map(t => t.monthly);
@@ -189,12 +190,14 @@ test('Growing\'s cloud moves offer the session\'s ways: your port, AT&T\'s port,
   // port AT&T orders and holds, then peering into an AT&T-hosted VPC; all three ride the AT&T network.
   const aws = listOf('partial').find(m => m.kind === 'region' && m.cloud === 'AWS');
   // Re-pinned (2026-10-08, the deck): hosted peering rides AT&T's on-ramp and peers across AZs, $1,900 + $300 + $4,161.
-  assert.deepEqual(aws.tiers.map(t => t.products.map(p => p.id).join('+')), ['netbond', 'netbond+port-att', 'onramp-att+lh-cross']);
+  assert.deepEqual(aws.tiers.map(t => t.products.map(p => p.id).join('+')), ['netbond', 'netbond+port-att', 'onramp-att+lh-tgw']);
   assert.deepEqual(aws.tiers.map(t => t.path), ['netbond', 'netbond', 'netbond']);
-  assert.deepEqual(aws.tiers.map(t => t.label), ['Your Direct Connect', "AT&T's Direct Connect", 'Hosted VPC peering']);
+  // 2026-10-09: one ranking for the site, the deck's slide-6 step (rankWays) on every estate; under the default answers the
+  // hosted transit gateway ranks third where the 10-06 session put peering (one model, not two that drift).
+  assert.deepEqual(aws.tiers.map(t => t.label), ['Your Direct Connect', "AT&T's Direct Connect", 'Hosted transit gateway']);
   const az = listOf('partial').find(m => m.kind === 'region' && m.cloud === 'Azure');
-  assert.deepEqual(az.tiers.map(t => t.label), ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted VNet peering']);
-  assert.deepEqual(az.tiers.map(t => t.monthly), [1900, 2200, 4161]);
+  assert.deepEqual(az.tiers.map(t => t.label), ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted transit gateway']);
+  assert.deepEqual(az.tiers.map(t => t.monthly), [1900, 2200, 4234]);
   const gcp = listOf('partial').find(m => m.kind === 'region' && m.cloud === 'GCP');
   // The deck peers on AWS and Azure only; Google's hosted way is PrivateLink (its PSC).
   assert.deepEqual(gcp.tiers.map(t => t.way), ['byo', 'privatelink', 'att']);
@@ -458,7 +461,7 @@ test('within a move no two tiers read as the same product', () => {
   }
   assert.deepEqual(listOf('partial').find(m => m.kind === 'second').tiers.map(t => t.label), ['NetBond', 'NetBond, second metro', 'Maximum resiliency']);
   assert.deepEqual(listOf('trust').find(m => m.kind === 'sites').tiers.map(t => t.label), ['1 Connection Hub', '2 Connection Hubs', 'Hubs + SD-WAN steer']);
-  assert.deepEqual(listOf('small')[0].tiers.map(t => t.label), ['Your Direct Connect', "AT&T's Direct Connect", 'Hosted VPC peering']);
+  assert.deepEqual(listOf('small')[0].tiers.map(t => t.label), ['Your Direct Connect', "AT&T's Direct Connect", 'Hosted transit gateway']);
 });
 
 test('a port move offers capacity at every tier', () => {

@@ -21,7 +21,9 @@ test('one move at a time; on Growing the pinned Azure move leads with its three 
   assert.equal(az.key, 'region:Azure');
   assert.equal(az.hasPin, true);
   assert.equal(az.rank, 1);
-  assert.deepEqual(az.tiers.map(t => t.way), ['byo', 'att', 'peer'], 'the whiteboard\'s three Azure options');
+  // 2026-10-09: one ranking for the site, the deck's slide-6 step (rankWays) on every estate; under the default answers the
+  // hosted transit gateway ranks third where the 10-06 session put peering (one model, not two that drift).
+  assert.deepEqual(az.tiers.map(t => t.way), ['byo', 'att', 'transit'], 'the deck\'s top pick and two alternatives');
   assert.deepEqual(az.tiers.map(t => t.tier), ['Recommended', 'Option 2', 'Option 3']);
   assert.equal(v.movesPager.label, `1 of ${v.moveList.length}`);
   // Each card reads as glyph rows, not prose: security, performance, cost, who sets it up.
@@ -63,7 +65,7 @@ test('each card\'s Connect orders that way, whichever card is picked', () => {
   assert.equal(az.tiers.filter(t => t.ctaPrimary).length, 1, 'the picked card\'s Connect is the primary one');
   az.tiers[2].connect();
   assert.equal(c.state.screen, 's4');
-  assert.equal(c.state.compose.way, 'peer');
+  assert.equal(c.state.compose.way, 'transit');
   assert.deepEqual(c.state.compose.moveKeys, ['region:Azure']);
   const c2 = on('partial');
   vals(c2).moves[0].tiers[1].connect();

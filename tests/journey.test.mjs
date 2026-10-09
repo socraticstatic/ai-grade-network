@@ -138,7 +138,7 @@ test('beat 7: one line of the order, Place order; then the line is AT&T\'s, the 
   assert.equal(v.jLink, 'proposed'); assert.equal(v.jNet, 'public'); assert.equal(v.jFlow, 'net');
   const o = c.state.orders.find(x => x.journey);
   assert.equal(o.stage, 'Submitted for approval'); assert.deepEqual(o.moveKeys, ['region:Azure']); assert.equal(o.way, 'att');
-  assert.deepEqual(v.jPhases.map(p => [p.label, p.state]), [['Ordered', 'ok'], ['Provision', 'set'], ['Live', 'any'], ['Insight', 'any']]);
+  assert.deepEqual(v.jPhases.map(p => [p.label, p.state]), [['Ordered', 'done'], ['Provision', 'set'], ['Live', 'any'], ['Insight', 'any']]);
   assert.equal(v.jAct, 'Watch it go live');
   assert.ok(vals(mkC({ ...c.state, journey: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' })).ordRows.some(r => /AT&T's ExpressRoute/.test(r.title)), 'Orders lists it in the dashboard');
 });
@@ -208,12 +208,16 @@ test('beat 7: Go live lands both regions at once; every app blinks green; the in
   v = vals(c);
   assert.deepEqual(c.state.landed, ['eastus', 'westeurope']);
   assert.equal(v.jLine, 'Azure is live on AT&T.'); assert.equal(v.jNet, 'gone'); assert.equal(v.jLink, 'connected'); assert.equal(v.jLive, true);
-  assert.deepEqual(v.jPhases.map(p => p.state), ['ok', 'ok', 'ok', 'set']);
+  assert.deepEqual(v.jPhases.map(p => p.state), ['done', 'done', 'done', 'set'], 'one lifecycle: finished phases are done, the stepper\'s blue');
   assert.match(HTML, /<sc-if value="\{\{ jIsWatch \}\}"[^>]*><div class="js-order"><div class="ps big js-phases"/, 'the phases tick on the Watch beat itself');
-  assert.match(HTML, /\.ps\.js-phases \[data-state="ok"\] i\{border-color:var\(--cta\)/, 'done reads blue, as the stepper does');
+  assert.match(HTML, /\.ps \[data-state="done"\] i\{border-color:var\(--cta\)/, 'done reads blue, as the stepper does, on every phase strip');
+  assert.match(HTML, /\.ps \[data-state="ok"\] i\{border-color:var\(--success\)/, 'health keeps its green');
   assert.equal(v.jHealth.length, 4);
   // The figures survive the move leaving the ranked list: the order snapshotted them at Place.
   assert.equal(v.jLinkMs, '19 ms'); assert.equal(v.jMoney.after, '$13,800/mo');
+  // One lifecycle (2026-10-09): Orders reads the journey's Go live; it once still said Submitted for approval.
+  const ord = vals(mkC({ ...c.state, journey: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' })).ordRows.find(r => r.journey);
+  assert.equal(ord.stage, 'Live'); assert.equal(ord.canGoLive, false);
   const home = vals(mkC({ ...c.state, journey: null, screen: 's0' }));
   assert.ok(home.homeCards.find(x => x.key === 'onatt').big === '2', 'the home counts both regions private');
 });

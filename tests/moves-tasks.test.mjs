@@ -29,7 +29,7 @@ test('an order for the move turns Connect into the phase strip: Ordered done, Pr
   const row = v.moves.find(x => x.key === m.key);
   assert.ok(row, 'the move stays listed while its region is still public');
   assert.equal(row.hasTask, true); assert.equal(row.canConnect, false);
-  assert.deepEqual(row.phases.map(p => [p.key, p.state]), [['ordered', 'ok'], ['provisioning', 'set'], ['live', 'any'], ['insight', 'any']]);
+  assert.deepEqual(row.phases.map(p => [p.key, p.state]), [['ordered', 'done'], ['provisioning', 'set'], ['live', 'any'], ['insight', 'any']]);
   assert.ok(row.phases[0].hasDoor && !row.phases[2].hasDoor && !row.phases[3].hasDoor);
   row.phases[0].go(); assert.equal(c.state.cnPage, 'orders');
   // The region lands: the move is done, and Insight is the door to its path.
@@ -39,7 +39,7 @@ test('an order for the move turns Connect into the phase strip: Ordered done, Pr
   assert.equal(v.doneMoves.length, 1);
   const d = v.doneMoves[0];
   assert.equal(d.title, m.title);
-  assert.deepEqual(d.phases.map(p => p.state), ['ok', 'ok', 'ok', 'set']);
+  assert.deepEqual(d.phases.map(p => p.state), ['done', 'done', 'done', 'set']);
   assert.ok(d.phases[3].hasDoor);
   d.phases[3].go();
   assert.equal(c.state.tab, 'observe'); assert.equal(c.state.pathPin, '|' + region);
@@ -65,11 +65,12 @@ test('Orders carries Go live on a placed order, and it lights the task', () => {
   const row = vals(c).ordRows[0];
   assert.equal(row.canGoLive, true);
   row.goLive();
-  assert.equal(c.state.landed, region);
-  assert.equal(vals(c).ordRows[0].stage, 'Validated · live');
+  // 2026-10-09, one order lifecycle: the landed set is a list that only grows; a live order reads Live, in the phases' blue.
+  assert.deepEqual(c.state.landed, [region]);
+  assert.equal(vals(c).ordRows[0].stage, 'Live');
   assert.equal(vals(c).ordRows[0].canGoLive, false);
   c.setState({ cnPage: 'options' });
-  assert.deepEqual(vals(c).doneMoves[0].phases.map(p => p.state), ['ok', 'ok', 'ok', 'set']);
+  assert.deepEqual(vals(c).doneMoves[0].phases.map(p => p.state), ['done', 'done', 'done', 'set']);
 });
 
 test('a landed region\'s second-path move does not inherit the old order; the pending banner stays off Recommended', () => {
@@ -81,5 +82,7 @@ test('a landed region\'s second-path move does not inherit the old order; the pe
   if (second) { assert.equal(second.hasTask, false, `${second.title} claims the landed order`); assert.equal(second.canConnect, true); }
   assert.equal(v.doneMoves.length, 1);
   assert.equal(v.showPending, false);
-  assert.equal(vals(on('mature', { cnPage: 'picture', submitted: true, landed: region, orders: c.state.orders })).showPending, true, 'the banner still shows elsewhere');
+  // The banner never stands over Connect, where Orders and the task rows carry the phases (2026-10-09); it still shows elsewhere.
+  assert.equal(vals(on('mature', { cnPage: 'picture', submitted: true, landed: region, orders: c.state.orders })).showPending, false, 'not over Connect');
+  assert.equal(vals(on('mature', { tab: 'observe', submitted: true, landed: region, orders: c.state.orders })).showPending, true, 'the banner still shows elsewhere');
 });

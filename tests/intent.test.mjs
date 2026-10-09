@@ -144,7 +144,7 @@ test('the intent shapes the policy deck: one intent card leads, a real policy th
   assert.deepEqual(lab.jDeck.map(d => d.tag), ['PCI', 'Finance', 'Internet-facing'], 'a lab keeps compliance and inspection, and drops the production policy');
 });
 
-test('once ordered, the answers stand; the dashboard keeps the session\'s order', () => {
+test('once ordered, the answers stand; the dashboard ranks by the same model', () => {
   const c = journey({ jStep: B.connect, jPick: 0 });
   vals(c).jActGo();
   c.state.jStep = B.intent;
@@ -152,9 +152,10 @@ test('once ordered, the answers stand; the dashboard keeps the session\'s order'
   assert.ok(v.jIntentQs.every(q => q.opts.every(o => o.off)));
   v.jIntentQs[0].opts[2].go();
   assert.equal(c.state.jIntent ?? null, null, 'a placed order is not re-ranked under it');
-  // Recommended on the dashboard has no intent: the whiteboard's three Azure ways.
+  // Recommended on the dashboard ranks by the same model (2026-10-09): its own estate's answers, none given here, so the
+  // defaults and the region's tags: the deck's top pick and two alternatives.
   const dash = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'options', jIntent: { security: 'inspected' } }));
-  assert.deepEqual(dash.moves[0].tiers.map(t => t.way), ['byo', 'att', 'peer']);
+  assert.deepEqual(dash.moves[0].tiers.map(t => t.way), ['byo', 'att', 'transit']);
 });
 
 test('the markup: four question groups of glyph answers, the AT&T node a rounded rectangle', () => {

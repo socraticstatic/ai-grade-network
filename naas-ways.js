@@ -186,11 +186,14 @@ export function wayScore(key, cloud = 'AWS', zone = 'inter') {
  * The ways as Ways to connect draws them: each with its five criteria scored, its clouds, its price and its score, on
  * the deck's reference rates (us-east-1). zone picks peering's last hop ('intra' or 'inter').
  */
-export function wayCards(zone = 'intra') {
+export function wayCards(zone = 'intra', answers = {}) {
+  // Scored as Recommended scores them (2026-10-09): the deck's criteria re-weighted by the estate's answers, the hard rules
+  // marking a way that cannot do what was asked. With no answers, the defaults: the deck's weights and your BGP.
+  const it = { ...INTENT_DEFAULT, ...answers };
   return WAYS.map(w => {
     const z = zoneOf(w, 'AWS', zone);
-    const monthly = wayMonthly(w.key, 'AWS', zone), score = wayScores(w.key, 'AWS', zone);
-    return { ...w, monthly, zone: z ? z.key : null, zoneLabel: z ? z.label : '', points: wayScore(w.key, 'AWS', zone), strip: wayStrip(w.key), rows: CRITERIA.map(c => { const sc = score[c.key] || [null, ''];
+    const monthly = wayMonthly(w.key, 'AWS', zone), score = wayScores(w.key, 'AWS', zone), misses = wayWhy(w.key, 'AWS', it, z ? z.key : zone).filter(x => x.miss);
+    return { ...w, monthly, zone: z ? z.key : null, zoneLabel: z ? z.label : '', points: wayScoreFor(w.key, 'AWS', it, z ? z.key : zone), misses: misses.length, missWords: misses.map(x => x.words).join('; '), answers: it, strip: wayStrip(w.key), rows: CRITERIA.map(c => { const sc = score[c.key] || [null, ''];
       return { ...c, score: sc[0], value: sc[1], segs: segs(sc[0]), title: `${c.label}: ${sc[1] || 'not scored yet'}${sc[0] ? ` (${sc[0]} of 5, weighs ${c.weight})` : ''}${c.key === 'cost' && w.hosted ? '. Cloud pass-through at 1 Gbps; the hub\'s vSRX, compute and AT&T margin are priced at review' : ''}${c.key === 'setup' ? `. ${waySetup(w.key)}` : ''}` }; }) };
   });
 }

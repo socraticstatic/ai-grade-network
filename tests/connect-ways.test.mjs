@@ -94,7 +94,9 @@ test('the order prices the way: AT&T\'s port beside NetBond; a hosted way the on
 test('Connect on an Azure option carries its way; the flow lands on the profile and Back returns to Recommended', () => {
   const c = recommended();
   const az = vals(c).moveList.find(m => m.key === 'region:Azure');
-  assert.deepEqual(az.tiers.map(t => t.label), ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted VNet peering']);
+  // 2026-10-09: one ranking for the site, the deck's slide-6 step (rankWays) on every estate; under the default answers the
+  // hosted transit gateway ranks third where the 10-06 session put peering (one model, not two that drift).
+  assert.deepEqual(az.tiers.map(t => t.label), ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted transit gateway']);
   assert.equal(az.hasSetup, true, 'a move whose tiers are ways reads setup on a row of its own');
   assert.ok(az.tiers.every(t => t.setup), 'every option says who sets it up and how long');
   az.tiers[1].pick();

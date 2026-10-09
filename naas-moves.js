@@ -344,11 +344,14 @@ function regionMoves(est, ctx) {
     // session did not cover (Oracle, a neocloud) keeps its catalog ladder.
     // With an intent (the journey's Intent beat, 2026-10-08), the deck's own step: hard rules, re-weighted criteria, the
     // top pick and two alternatives, each with why. Without one, the session's order.
-    const recs = ctx.intent ? W.rankWays(cloud, ctx.intent) : W.recommendedFor(cloud), byWays = recs.length >= 2;
+    // One ranking for the site (2026-10-09, "integrate into the rest of the site"): the deck's step on every estate, the
+    // region's own tags answering what the estate has not; a way the cloud cannot have keeps its rung, said as such.
+    const it = { ...W.intentFromTags(tags), ...(ctx.intent || {}) };
+    const recs = [...W.rankWays(cloud, it), ...W.recommendedFor(cloud).filter(r => r.unavailable)], byWays = recs.length >= 2;
     const ladder = byWays ? recs.map((r, i) => { const word = i === 0 ? 'Recommended' : `Option ${i + 1}`;
         return r.unavailable ? { i, tier: word, label: W.wayLabel(r.key, cloud), way: r.key, unavailable: r.unavailable, products: [], path: 'netbond', conn: 'DataCenter/CoLocation to Cloud', monthly: null, price: '', intro: '', breakdown: '', fit: '', covers: [] }
           : { ...tierOf(i, W.wayProducts(r.key, cloud, rs.length, r.zone), { covers: ids, label: W.wayLabel(r.key, cloud, r.zone), tier: word, way: r.key }),
-            ...(ctx.intent ? { zone: r.zone, why: r.why, misses: r.misses, ipts: r.pts } : {}) }; })
+            zone: r.zone, why: r.why, misses: r.misses, ipts: r.pts, answers: it }; })
       : f ? ladderTiers(f, ctxT) : regionLadder(cloud).map(([ps, label], i) => tierOf(i, ps.map(id => [id, id === 'c2c' ? 1 : rs.length]), { covers: ids, label }));
     const tiers = ladder.map(t => {
       // The way this cloud cannot have holds its column and says why; it is never picked or priced.
