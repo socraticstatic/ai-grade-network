@@ -283,7 +283,10 @@ test('V14: the fold may not cut the map: its diagram starts at the fold or below
 
 test('V14: the home fills the first screen, so the map\'s title sits at the fold', () => {
   const i = HTML.indexOf('aria-label="NaaS home"');
-  assert.match(HTML.slice(i, i + 400), /min-height:calc\(100vh - \d+px\)/, 'the home does not fill the first screen');
+  // 2026-10-09: the first screen is held only when the map follows it (homeMinH), tall enough that the map's title clears the fold.
+  assert.match(HTML.slice(i, i + 400), /min-height:\{\{ homeMinH \}\}/, 'the home does not fill the first screen');
+  assert.match(vals(mkC({ view: 'partial', estateParam: null, screen: 's0' })).homeMinH, /^calc\(100vh - \d+px\)$/);
+  assert.equal(vals(mkC({ view: 'empty', estateParam: null, screen: 's0' })).homeMinH, '0', 'an empty estate has no map below');
 });
 
 // The third skeptic (2026-09-30) found Connect's lens on the home, which has no Lens control: a red
