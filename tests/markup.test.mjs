@@ -526,15 +526,18 @@ test('every container the markup opens, it closes', () => {
   // sc-if +1, sc-for +1): div 1302 -> 1304, span 1442 -> 1444, sc-if 655 -> 656, sc-for 379 -> 380.
   // Your sites as the sites themselves ("the 20 on the left - look at how much space is wasted"): the count and its cap in
   // one head, a grid of one glyph per site (div +1, span +2, sc-for +1): div 1304 -> 1305, span 1444 -> 1446, sc-for 380 -> 381.
-    ['div', /<div\b/g, /<\/div>/g, 1305],
+  // Recommended speaks the journey (2026-10-09, "integrate into the rest of the site"): the needs glyphs in the head, the score
+  // ring and the reason chips on each card, the journey's Why panel (a copy bound to mv.why) and its four questions over the
+  // hero, the footer link gone: div 1305 -> 1323, span 1447 -> 1483, sc-if 657 -> 663, sc-for 381 -> 394, button 521 -> 525.
+    ['div', /<div\b/g, /<\/div>/g, 1323],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
-    ['span', /<span\b/g, /<\/span>/g, 1447],
+    ['span', /<span\b/g, /<\/span>/g, 1483],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 657],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 381],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 663],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 394],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 521],
+    ['button', /<button\b/g, /<\/button>/g, 525],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

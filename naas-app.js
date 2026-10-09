@@ -5217,6 +5217,50 @@ const intentOf = (s, est) => (est && est.id === J.JOURNEY_ESTATE ? journeyIntent
 // sites, the AT&T network, your cloud, on one stage that never leaves the screen. Each beat changes one thing on it and
 // says it in one sentence: the cloud is a question, then Azure, then its workloads tagged, then the AT&T line proposed,
 // then connected. A slim stepper above it replaces the rail; one action below it moves the story on.
+// ---- Why and the score, shared by the journey and Recommended (2026-10-09, "integrate into the rest of the site") ----
+/** A way's score as the journey's ring: the figure, its arc, a cross when a hard rule removes the way, and its title. */
+export function scoreOf(t) {
+  const out = !!(t && t.misses), has = !!(t && t.hasPts) && !out;
+  return { pts: (t && t.pts) || '', hasPts: has, ptsPct: has ? `${t.pts}%` : '0%', ptsShown: out ? '✕' : (t && t.pts) || '', out,
+    ptsTitle: out ? `Removed by what you said: ${((t && t.why) || []).filter(x => x.miss).map(x => x.words).join('; ')}` : (t && t.ptsTitle) || (t && t.pts ? `Scores ${t.pts} of 100` : '') };
+}
+/** A card's two reasons: the pick's fits; an alternative's miss first, then what to watch, then a fit. */
+export function whyChips(why = [], isPick = false, n = 2) {
+  const xs = isPick ? why.filter(x => x.ok) : [...why.filter(x => x.miss), ...why.filter(x => x.warn), ...why.filter(x => x.ok)];
+  return xs.slice(0, n).map(x => ({ ...x, ink: x.miss ? 'var(--error)' : x.warn ? 'var(--text-light)' : 'var(--link)', title: `${x.short}: ${x.words}` }));
+}
+// An answer that asks nothing of the path, in its own quiet words; the weights' shades and short names.
+const QUIET = { prod: ['Balanced', 'the deck\'s weights as they stand'], standard: ['Best path', 'no latency target of its own'], lab: ['Cost first', 'cost and setup weigh more'] };
+const WT_SHADE = ['100%', '78%', '58%', '40%', '26%'];
+const WT_SHORT = { cost: 'Cost', perf: 'Speed', sec: 'Security', setup: 'Effort', scale: 'Scale' };
+/**
+ * Why a way, as the journey tells it (Micah, 2026-10-08: "not just what you get, but why we recommend it", "make the 'why'
+ * more beautiful"): each answer joined to what this way does about it, what fits besides, the weights the answers set
+ * against the deck's, the pick's own figures, and what you get. One builder for the journey's Why and Recommended's.
+ */
+export function whyPanelOf(t, answers) {
+  const why = t.why || [], oks = why.filter(x => x.ok), cuts = why.filter(x => !x.ok), wts = W.intentWeights(answers);
+  return { whyLine: oks.length ? `Why: ${oks.map(x => `${x.short}, ${x.words}`).join('; ')}.` : '', hasWhyLine: oks.length > 0, whyRows: [...oks, ...cuts].map(x => ({ ...x, ink: x.miss ? 'var(--error)' : x.warn ? 'var(--text-light)' : 'var(--link)' })),
+    weights: W.CRITERIA.map(c => ({ key: c.key, icon: c.icon, label: c.label, short: WT_SHORT[c.key], w: String(wts[c.key]), h: `${Math.round(wts[c.key] / Math.max(...Object.values(wts)) * 100)}%`,
+      deck: `${Math.min(100, Math.round(c.weight / Math.max(...Object.values(wts)) * 100))}%`, title: `${c.label}: weighs ${wts[c.key]} of 100${wts[c.key] !== c.weight ? ` (the deck's ${c.weight}, moved by what you said)` : ''}` })),
+    weightsTitle: `Weighed for what you said: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${wts[c.key]}`).join(', ')}`,
+    pairs: W.INTENT.map(q => { const o = q.opts.find(x => x.key === answers[q.key]) || q.opts[0];
+      const got = why.filter(x => x.q === q.key), rs = got.length ? got : [{ key: 'n:' + o.key, kind: 'quiet', icon: o.icon, short: (QUIET[o.key] || ['As it stands'])[0], words: (QUIET[o.key] || ['', 'nothing more asked of the path'])[1] }];
+      const kind = rs.some(x => x.miss) ? 'miss' : rs.some(x => x.ok) ? 'ok' : rs.some(x => x.warn) ? 'warn' : 'quiet';
+      return { key: q.key, kind, q: q.label, aIcon: o.icon, aLabel: o.label, reasons: rs.map(x => ({ ...x, title: `${x.short}: ${x.words}` })), title: `${q.label}: ${o.label}` }; }),
+    also: why.filter(x => !x.q && x.ok).map(x => ({ ...x, title: `${x.short}: ${x.words}` })), hasAlso: why.some(x => !x.q && x.ok),
+    wtYou: W.CRITERIA.map((c, i) => ({ key: c.key, icon: c.icon, short: WT_SHORT[c.key], w: String(wts[c.key]), shade: WT_SHADE[i], ink: i < 3 ? '#fff' : 'var(--link)', showIcon: wts[c.key] >= 12,
+      move: wts[c.key] - c.weight, moveWord: wts[c.key] === c.weight ? '' : `${wts[c.key] > c.weight ? '+' : '−'}${Math.abs(wts[c.key] - c.weight)}`, moveInk: wts[c.key] > c.weight ? 'var(--link)' : 'var(--text-light)',
+      title: `${c.label}: ${wts[c.key]} of 100${wts[c.key] !== c.weight ? `; the deck weighs it ${c.weight}` : ', as the deck weighs it'}` })),
+    wtDeck: W.CRITERIA.map((c, i) => ({ key: c.key, w: String(c.weight), shade: WT_SHADE[i], title: `The deck: ${c.label.toLowerCase()} ${c.weight}` })),
+    ...scoreOf(t), price: t.priceShort || '', delta: t.net > 0 ? `saves ${fmt(t.net)}` : t.net < 0 ? `adds ${fmt(-t.net)}` : '', deltaInk: t.net > 0 ? 'var(--success)' : 'var(--text-light)',
+    label: t.label, tierWord: t.tier, intro: t.intro || '', fit: t.fit || '', mark: t.mark, strip: t.strip || [],
+    metrics: (t.metrics || []).map(m2 => ({ ...m2, words: String(m2.title || '').replace(/^[A-Za-z ]+: /, ''),
+      v: m2.key === 'setup' ? (t.setupTime || m2.v) : m2.key === 'perf' ? String(m2.v).replace(/ · .*$/, '') : m2.v,
+      label: m2.key === 'setup' ? `${t.whoWord === 'You' ? 'You set' : 'AT&T sets'} it up` : m2.key === 'you' ? 'You do' : '', hasLabel: m2.key === 'setup' || m2.key === 'you' })),
+    who: t.whoWord || '', time: t.setupTime || '', setupWords: t.setupWords || '', youDo: t.way && W.wayYouDo(t.way) ? W.wayYouDo(t.way).words : '',
+    products: (t.products || []).map(p => { const pp = W.productOf(p.id) || {}; return { key: p.id, name: pp.name || p.id, n: String(p.n), v: pp.price === null || pp.price === undefined ? 'At review' : `${fmt(pp.price)} each` }; }) };
+}
 function journeyVals(out, s, set, est) {
   const on = s.journey === 'existing';
   const base = { journeyOn: on, journeyOff: !on, journeyValue: s.journey || '',
@@ -5281,32 +5325,7 @@ function journeyVals(out, s, set, est) {
   // and after above the cloud, and the traffic itself, as dots that ride the internet path until the order moves them.
   const todayMs = move ? move.today.ms : worstMs, tierMs = tier ? tier.ms : null;
   const beforeMo = move ? move.today.mo : null, afterMo = tier && tier.mo !== null && tier.mo !== undefined ? tier.mo : null;
-  // Why a way, in the deck's card words ("Why: lowest monthly cost, flat bill, routed two-way access ... You do: ..."),
-  // and the five weights the intent set, as bars.
-  const wts = W.intentWeights(journeyIntent(s)), WT_SHORT = { cost: 'Cost', perf: 'Speed', sec: 'Security', setup: 'Effort', scale: 'Scale' };
-  const whyOf = (t) => { const why = t.why || [], oks = why.filter(x => x.ok), cuts = why.filter(x => !x.ok);
-    return { whyLine: oks.length ? `Why: ${oks.map(x => `${x.short}, ${x.words}`).join('; ')}.` : '', hasWhyLine: oks.length > 0, whyRows: [...oks, ...cuts].map(x => ({ ...x, ink: x.miss ? 'var(--error)' : x.warn ? 'var(--text-light)' : 'var(--link)' })),
-      weights: W.CRITERIA.map(c => ({ key: c.key, icon: c.icon, label: c.label, short: WT_SHORT[c.key], w: String(wts[c.key]), h: `${Math.round(wts[c.key] / Math.max(...Object.values(wts)) * 100)}%`,
-        deck: `${Math.min(100, Math.round(c.weight / Math.max(...Object.values(wts)) * 100))}%`, title: `${c.label}: weighs ${wts[c.key]} of 100${wts[c.key] !== c.weight ? ` (the deck's ${c.weight}, moved by what you said)` : ''}` })),
-      weightsTitle: `Weighed for what you said: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${wts[c.key]}`).join(', ')}`,
-      // The Why as a story (Micah, 2026-10-08: "make the 'why' more beautiful"): each answer you gave, joined to what this
-      // way does about it; an answer that asks nothing of the path says so quietly. Then what fits besides.
-      pairs: W.INTENT.map(q => { const o = q.opts.find(x => x.key === iNow[q.key]) || q.opts[0];
-        const got = why.filter(x => x.q === q.key), rs = got.length ? got : [{ key: 'n:' + o.key, kind: 'quiet', icon: o.icon, short: (QUIET[o.key] || ['As it stands'])[0], words: (QUIET[o.key] || ['', 'nothing more asked of the path'])[1] }];
-        const kind = rs.some(x => x.miss) ? 'miss' : rs.some(x => x.ok) ? 'ok' : rs.some(x => x.warn) ? 'warn' : 'quiet';
-        return { key: q.key, kind, q: q.label, aIcon: o.icon, aLabel: o.label, reasons: rs.map(x => ({ ...x, title: `${x.short}: ${x.words}` })), title: `${q.label}: ${o.label}` }; }),
-      also: why.filter(x => !x.q && x.ok).map(x => ({ ...x, title: `${x.short}: ${x.words}` })), hasAlso: why.some(x => !x.q && x.ok),
-      // The weights as two stacked bars of 100: yours, and the deck's under it, so the shift is the picture.
-      wtYou: W.CRITERIA.map((c, i) => ({ key: c.key, icon: c.icon, short: WT_SHORT[c.key], w: String(wts[c.key]), shade: WT_SHADE[i], ink: i < 3 ? '#fff' : 'var(--link)', showIcon: wts[c.key] >= 12,
-        move: wts[c.key] - c.weight, moveWord: wts[c.key] === c.weight ? '' : `${wts[c.key] > c.weight ? '+' : '−'}${Math.abs(wts[c.key] - c.weight)}`, moveInk: wts[c.key] > c.weight ? 'var(--link)' : 'var(--text-light)',
-        title: `${c.label}: ${wts[c.key]} of 100${wts[c.key] !== c.weight ? `; the deck weighs it ${c.weight}` : ', as the deck weighs it'}` })),
-      wtDeck: W.CRITERIA.map((c, i) => ({ key: c.key, w: String(c.weight), shade: WT_SHADE[i], title: `The deck: ${c.label.toLowerCase()} ${c.weight}` })),
-      // The pick's own figures for the head: its score ring, price and what it saves.
-      ptsPct: t.hasPts ? `${t.pts}%` : '0%', price: t.priceShort || '', delta: t.net > 0 ? `saves ${fmt(t.net)}` : t.net < 0 ? `adds ${fmt(-t.net)}` : '', deltaInk: t.net > 0 ? 'var(--success)' : 'var(--text-light)' }; };
   const iNow = journeyIntent(s);
-  // An answer that asks nothing of the path, in its own quiet words.
-  const QUIET = { prod: ['Balanced', 'the deck\'s weights as they stand'], standard: ['Best path', 'no latency target of its own'], lab: ['Cost first', 'cost and setup weigh more'] };
-  const WT_SHADE = ['100%', '78%', '58%', '40%', '26%'];
   // One sentence a beat: the story, not the screen.
   // Act three. Live: the journey's regions land at once (a presenter cannot wait ten days), so every page reads them
   // private. Protect: one policy from the tags you applied, a real one Govern lists. Save: the saving over a year, then
@@ -5449,25 +5468,18 @@ function journeyVals(out, s, set, est) {
         tags: known.filter(t => !row.applied.includes(t)).map(t => ({ key: t, t, go: () => putTags(key, [...row.applied, t]) })) }; })(),
     // The choice, three lines; the detail lives on the dashboard's Recommended.
     jOptions: liveMove && !placed ? liveMove.tiers.filter(t => !t.unavailable).map(t => { const i = liveMove.tiers.indexOf(t), sel = i === pickI;
-      // Why, on the card (2026-10-08, Micah: "not just what you get, but why we recommend it"): the pick leads with what
-      // fits; an alternative with what it misses, then what it does well. Two at most; the rest are the detail's.
-      const why = t.why || [], chips = (i === 0 ? why.filter(x => x.ok) : [...why.filter(x => x.miss), ...why.filter(x => x.warn), ...why.filter(x => x.ok)]).slice(0, 2);
-      // The score as a ring; a way a hard rule removes shows the rule's mark, not a score.
-      const out = !!t.misses;
-      return { key: t.key || String(i), label: t.label, tier: t.tier, tierShort: i === 0 ? t.tier : '', mark: t.mark, pts: t.pts || '', hasPts: !!t.hasPts && !out, price: t.priceShort, on: sel,
-        out, ptsPct: out || !t.hasPts ? '0%' : `${t.pts}%`, ptsShown: out ? '✕' : t.pts || '', ptsTitle: out ? `Removed by what you said: ${(t.why || []).filter(x => x.miss).map(x => x.words).join('; ')}` : t.ptsTitle || `Scores ${t.pts} of 100`,
-        why: chips.map(x => ({ ...x, ink: x.miss ? 'var(--error)' : x.warn ? 'var(--text-light)' : 'var(--link)', title: `${x.short}: ${x.words}` })), hasWhy: chips.length > 0,
+      // Why and the score, from the helpers Recommended shares (2026-10-09): the pick leads with what fits; an alternative
+      // with what it misses; a way a hard rule removes shows the rule's cross, not a score.
+      const chips = whyChips(t.why || [], i === 0);
+      return { key: t.key || String(i), label: t.label, tier: t.tier, tierShort: i === 0 ? t.tier : '', mark: t.mark, price: t.priceShort, on: sel, ...scoreOf(t),
+        why: chips, hasWhy: chips.length > 0,
         delta: t.net > 0 ? `saves ${fmt(t.net)}` : t.net < 0 ? `adds ${fmt(-t.net)}` : '', deltaInk: t.net > 0 ? 'var(--success)' : 'var(--text-light)',
         setup: t.way ? (W.wayWho(t.way) || {}).time || '' : '', setupTitle: t.way ? W.waySetup(t.way) : '', go: () => set({ jPick: i, jFlip: (s.jFlip || 0) + (i === pickI ? 0 : 1) }) }; }) : [],
     jHasOptions: !!liveMove && !placed,
     // Depth on what is offered (2026-10-08, "no way to dive deeper"): the picked option's whole card, in place, by a chevron.
     jDetailOpen: !!s.jDetail && step === JI.recommend && !!tier, toggleDetail: () => set({ jDetail: !s.jDetail }),
-    jDetail: tier ? { ...whyOf(tier), label: tier.label, tierWord: tier.tier, intro: tier.intro || '', fit: tier.fit || '', mark: tier.mark, strip: tier.strip || [], pts: tier.pts || '', hasPts: !!tier.hasPts, ptsTitle: tier.ptsTitle || '',
-      metrics: (tier.metrics || []).map(m2 => ({ ...m2, words: String(m2.title || '').replace(/^[A-Za-z ]+: /, ''),
-        v: m2.key === 'setup' ? (tier.setupTime || m2.v) : m2.key === 'perf' ? String(m2.v).replace(/ · .*$/, '') : m2.v,
-        label: m2.key === 'setup' ? `${tier.whoWord === 'You' ? 'You set' : 'AT&T sets'} it up` : m2.key === 'you' ? 'You do' : '', hasLabel: m2.key === 'setup' || m2.key === 'you' })),
-      who: tier.whoWord || '', time: tier.setupTime || '', setupWords: tier.setupWords || '', youDo: tier.way && W.wayYouDo(tier.way) ? W.wayYouDo(tier.way).words : '',
-      products: (tier.products || []).map(p => { const pp = W.productOf(p.id) || {}; return { key: p.id, name: pp.name || p.id, n: String(p.n), v: pp.price === null || pp.price === undefined ? 'At review' : `${fmt(pp.price)} each` }; }) } : null,
+    // Why, built by the one function Recommended uses too (2026-10-09).
+    jDetail: tier ? whyPanelOf(tier, iNow) : null,
     jPicked: tier ? { label: tier.label, mark: tier.mark, pts: tier.pts || '', hasPts: !!tier.hasPts } : null, jHasPick: !!tier,
     jLines: lines, jTotal: total, jRegionsWord: move ? move.regions.join(' · ') : '',
     jPlaced: !!placed, jNotPlaced: !placed, jPhases: liveMove && liveMove.hasTask ? liveMove.phases : placed ? orderPhases({ ...placed, regions: placed.regions || (move ? move.regions : [placed.region]) }, live ? landWith(s, move ? move.regions : []) : landedOf(s)).phases : [],
@@ -5536,6 +5548,11 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   // Picks are kept per estate, so the demo picker never carries a tick from one estate to another.
   const sel = (s.moveSel || {})[est.id] || {}, tierPick = (s.moveTier || {})[est.id] || {};
   const keep = (k, v) => ({ ...(s[k] || {}), [est.id]: v });
+  // An answer on the dashboard writes the one store (2026-10-09): the journey's own for its estate, so its Intent beat and
+  // Recommended edit one object; this estate's otherwise. Picks were indices into the old ranking, so they clear.
+  const setIntentFor = (q, o) => (est.id === J.JOURNEY_ESTATE
+    ? set({ jIntent: { ...(s.jIntent || {}), [q]: o }, jPick: null, jFlip: (s.jFlip || 0) + 1, moveTier: keep('moveTier', {}), recWhy: keep('recWhy', null) })
+    : set({ intents: { ...(s.intents || {}), [est.id]: { ...((s.intents || {})[est.id] || {}), [q]: o } }, moveTier: keep('moveTier', {}), recWhy: keep('recWhy', null) }));
   // A move preselects its recommendation: the session's first way on a cloud region, a ladder's middle rung elsewhere.
   const tierOfMove = (m) => (Number.isInteger(tierPick[m.key]) ? tierPick[m.key] : Number.isInteger(m.recI) ? m.recI : 1);
   const labelOf = (m) => m.title.replace(/^(Move|Bring|Put|Add) /, '').replace(/ onto AT&T( access)?$| on the AT&T network$/, '');
@@ -5606,6 +5623,12 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
                 return { pts: pts === null ? '' : String(pts), hasPts: pts !== null, ptsTitle: pts === null ? '' : wt ? `Scores ${pts} of 100 for what you said it needs: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${wt[c.key]}`).join(', ')}` : `Scores ${pts} of 100: cost 30, performance 20, security 20, effort and time 15, scale 15` }; })(),
               connect: () => { set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: t.i }) }); composeMoves([m], t.i); }, ctaPrimary: tOn, ctaWord: 'Connect' }; })() }; });
     const badge = MOVE_BADGE[m.kind];
+    // The journey's score ring and reason chips on every card, from the shared helpers; the Why panel per estate.
+    const answers = (tiers.find(t => t.answers) || {}).answers || W.INTENT_DEFAULT, whyKey = (s.recWhy || {})[est.id], hasTaskM = !!orderOf(m);
+    const intentOpen = (s.recIntent || {})[est.id] === m.key;
+    const tiersR = tiers.map(t => (t.notOption ? { ...t, ...scoreOf({}), wchips: [], hasWhy: false, whyOn: false, whyGo: () => {} } : (() => { const k = `${m.key}:${t.i}`, chips = whyChips(t.why || [], t.i === 0);
+      return { ...t, ...scoreOf(t), wchips: chips.map((x, i) => ({ ...x, word: i === 0 })), hasWhy: chips.length > 0, whyOn: whyKey === k, whyGo: () => set({ recWhy: keep('recWhy', whyKey === k ? null : k), recIntent: keep('recIntent', null) }) }; })()));
+    const whyT = tiersR.find(t => t.whyOn) || null;
     return { ...m, rankF: String(m.rank), sel: on, short: moveShort(m), markSrc: m.kind === 'sites' ? '' : W.markFor(m.cloud, s.theme), hasMarkSrc: m.kind !== 'sites' && !!W.MARK[m.cloud], noMarkSrc: m.kind === 'sites' || !W.MARK[m.cloud],
       hasBadge: !!badge, badgeIcon: badge ? badge[0] : '', badgeWord: badge ? badge[1] : '',
       // What discovery found that shaped the pick (the deck's "Found:" line), the facts the estate holds and nothing more.
@@ -5630,7 +5653,15 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
         ...(m.hasSetup ? [{ key: 'setup', icon: 'check-circle', v: m.today.setup || 'In place', d: '', ink: 'var(--text-light)', title: 'In place today', go: () => {} }] : [])], tCost: cell(m.today.cost, m.today.cost.value === 'Not priced today' ? null : costDoor(m)),
       tCostTitle: m.today.cost.modelled ? `${m.today.cost.value}: a cloud provider list price applied to your ports, modelled` : m.today.egress !== null ? `${m.today.cost.value}: this month's egress for this set, as Cost splits it. Opens Cost.` : 'Not priced today',
       tCostCursor: m.today.cost.value === 'Not priced today' ? 'default' : 'pointer', tCostHover: m.today.cost.value === 'Not priced today' ? 'none' : 'underline',
-      tiers, pick: (() => { const t = tiers.find(x => x.on) || tiers[1] || tiers[0]; return t ? { ...t, headline: t.cost.delta || t.cost.value } : null; })() };
+      tiers: tiersR, pick: (() => { const t = tiersR.find(x => x.on) || tiersR[1] || tiersR[0]; return t ? { ...t, headline: t.cost.delta || t.cost.value } : null; })(),
+      // What it needs (2026-10-09, "integrate into the rest of the site"): the four answers the move is ranked by, as the
+      // journey's glyphs; a click opens the journey's questions over the page, and an answer re-ranks every move of the estate.
+      intentChips: W.INTENT.map(q => { const o = q.opts.find(x => x.key === answers[q.key]) || q.opts[0]; return { key: q.key, icon: o.icon, title: `${q.label}: ${o.label}` }; }),
+      intentTitle: `What it needs: ${W.INTENT.map(q => (q.opts.find(x => x.key === answers[q.key]) || q.opts[0]).label).join(', ')}`,
+      intentOpen, intentToggle: () => set({ recIntent: keep('recIntent', intentOpen ? null : m.key) }),
+      intentQs: W.INTENT.map(q => ({ key: q.key, label: q.label, icon: q.icon, opts: q.opts.map(o => ({ ...o, on: answers[q.key] === o.key, off: hasTaskM, go: () => { if (!hasTaskM) setIntentFor(q.key, o.key); } })) })),
+      // Why, as the journey tells it, over the cards.
+      whyOpen: !!whyT, why: whyT ? whyPanelOf(whyT, answers) : null, whyClose: () => set({ recWhy: keep('recWhy', null) }) };
   });
   return shell(all);
 }
