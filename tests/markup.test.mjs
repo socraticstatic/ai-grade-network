@@ -548,7 +548,8 @@ test('every container the markup opens, it closes', () => {
     ['span', /<span\b/g, /<\/span>/g, 1518],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 678],
+  // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 677],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 400],
     ['section', /<section\b/g, /<\/section>/g, 17],
     ['button', /<button\b/g, /<\/button>/g, 533],

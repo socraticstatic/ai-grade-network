@@ -213,7 +213,6 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js-stage[data-wide="true"] .js-net{margin:0 235px 0 105px}
 .js-net small{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);padding:0 10px;background:var(--bg-wash);font-size:12px;line-height:16px;font-weight:600;color:var(--warning);white-space:nowrap}
 .js-net[data-state="public"]{opacity:1;border-color:var(--viz-5)}.js-net[data-state="public"] small{color:var(--viz-5)}
-.js-net small b{margin-left:8px;font-weight:700;font-variant-numeric:tabular-nums}
 /* The traffic itself: dots that ride the internet path while it carries them, and the AT&T wire once the order moves them. */
 .js-dots{position:absolute;left:-2px;right:-2px;bottom:-2px;height:0;border-bottom:4px dotted transparent;pointer-events:none}
 /* The U keeps its whole dotted border, corners and all (2026-10-08, "the bottom lines don't line up"); the traffic rides a strip inset by the corner radius, painted over the straight run alone. */
@@ -1044,7 +1043,7 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
         </div></sc-for></div>
       </sc-if>
     </div>
-    <div class="js-net" data-state="{{ jNet }}" aria-hidden="true"><i class="js-dots"></i><small>{{ jNetWord }}<sc-if value="{{ jNetHasMs }}" hint-placeholder-val="{{ true }}"><b>{{ jNetMs }}</b></sc-if><sc-if value="{{ jProtected }}" hint-placeholder-val="{{ false }}"><span class="js-verdict {{ jStampNetCls }}"><span class="ic s14" style="--ic:url('brand/icons/close-circle.svg')"></span>{{ jStampNet }}</span></sc-if></small></div>
+    <div class="js-net" data-state="{{ jNet }}" aria-hidden="true"><i class="js-dots"></i><small>{{ jNetWord }}<sc-if value="{{ jProtected }}" hint-placeholder-val="{{ false }}"><span class="js-verdict {{ jStampNetCls }}"><span class="ic s14" style="--ic:url('brand/icons/close-circle.svg')"></span>{{ jStampNet }}</span></sc-if></small></div>
     <sc-if value="{{ jHasDone }}" hint-placeholder-val="{{ false }}"><div class="js-done" aria-label="Already on AT&amp;T"><sc-for list="{{ jDoneClouds }}" as="dc" hint-placeholder-count="1"><span title="{{ dc.name }}: on AT&amp;T"><span class="js-mark sm" style="background-image:url('{{ dc.mark }}')"></span><span class="ic s14" style="--ic:url('brand/icons/check-circle.svg');color:var(--link)"></span></span></sc-for></div></sc-if>
     <!-- Why, as a story (Micah, 2026-10-08: "make the 'why' more beautiful"): it covers the stage exactly, so the picture turns over: the pick and its score with the weights your answers set against the deck's; each answer joined to what this way does about it; what you get. -->
     <sc-if value="{{ jDetailOpen }}" hint-placeholder-val="{{ false }}"><div class="js-whyp" role="dialog" aria-label="Why {{ jDetail.label }}" title="{{ jDetail.whyLine }}">

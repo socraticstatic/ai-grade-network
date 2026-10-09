@@ -5605,7 +5605,8 @@ function journeyVals(out, s, set, est) {
     jExit: () => set({ journey: null, screen: 's0' }),
     // The stage.
     jWide: step >= JI.found && found.has, jLink: link, jLinkWord: link === 'connected' ? 'AT&T private path' : link === 'proposed' ? (tier ? tier.label : '') : '',
-    jNet: net, jNetWord: 'Public internet', jNetMs: todayMs ? `${todayMs} ms` : '', jNetHasMs: !!todayMs,
+    // The public path is drawn and named, never timed (Micah, 2026-10-09: "remove the 102 ms as we won't know that").
+    jNet: net, jNetWord: 'Public internet',
     // The AT&T wire's latency once a way is proposed, and the drop beside it.
     jLinkMs: tierMs ? `${tierMs} ms` : '', jLinkHasMs: !!tierMs && link !== 'none', jLinkDrop: tierMs && todayMs && todayMs > tierMs ? `−${todayMs - tierMs} ms` : '', jLinkHasDrop: !!(tierMs && todayMs && todayMs > tierMs && link !== 'none'),
     // Before and after, as a pair of figures: today's monthly in grey, the way's in green; shown from the recommendation on.

@@ -88,7 +88,9 @@ test('beat 3: the cloud node becomes Azure, its regions and apps; the public int
   assert.deepEqual(v.jRegions.map(r => [r.region, r.wlF, r.msF]), [['eastus', '40', '64 ms'], ['westeurope', '28', '102 ms']]);
   assert.deepEqual(v.jRegions[1].apps.map(a => a.name), ['payments-api', 'fin-ledger']);
   // The latency is a figure of its own on the path (2026-10-08), not part of the word.
-  assert.equal(v.jNet, 'public'); assert.equal(v.jNetWord, 'Public internet'); assert.equal(v.jNetMs, '102 ms');
+  assert.equal(v.jNet, 'public'); assert.equal(v.jNetWord, 'Public internet');
+  // The public path is named, never timed: nobody measures it (2026-10-09).
+  assert.equal(v.jNetMs, undefined); assert.doesNotMatch(HTML, /jNetMs|jNetHasMs/);
 });
 
 test('beat 4: tags suggested by what a workload is; Tag them all, then the tags join the estate and stay with their own', () => {
@@ -181,7 +183,7 @@ test('the markup: one stage of three nodes and two wires, the internet path, a s
 
 test('the picture carries the figures (2026-10-08): latency on each wire, the monthly before and after, the traffic on the path it rides', () => {
   const found = vals(journey({ jStep: 2, addedSources: AZURE }));
-  assert.equal(found.jNetMs, '102 ms'); assert.equal(found.jFlow, 'net'); assert.equal(found.jLinkHasMs, false); assert.equal(found.jMoney.has, false);
+  assert.equal(found.jNetMs, undefined); assert.equal(found.jFlow, 'net'); assert.equal(found.jLinkHasMs, false); assert.equal(found.jMoney.has, false);
   const rec = vals(journey({ jStep: B.recommend, addedSources: AZURE }));
   // Azure's AT&T latency reads 19 ms (the seed's, inside the 20 ms private SLO, as the Oracle seed's is): 102 -> 19.
   assert.equal(rec.jLinkMs, '19 ms'); assert.equal(rec.jLinkDrop, '−83 ms'); assert.equal(rec.jLinkHasDrop, true);
