@@ -256,8 +256,10 @@ export function decide(est, policies, flow, opts = {}) {
   });
   const has = (s) => layers.some(l => l.stamp === s);
   const compliance = has('violated') ? 'Violated' : has('unenforceable') ? 'Unenforceable' : has('undetermined') ? 'Undetermined' : (has('holds') || has('blocks')) ? 'Holds' : 'None';
-  // The class: whether any workload is there to carry it (a flow no workload makes is a what-if).
-  const empty = !x.internet && (!x.region || !x.wl.length);
+  // The class: whether any workload is there to carry it (a flow no workload makes is a what-if). A tag the journey had you
+  // apply to a region's workloads (estateFor keeps the region's own tags as baseTags) makes its class real too.
+  const applied = x.region && x.region.baseTags ? (x.region.tags || []).filter(tg => !x.region.baseTags.includes(tg)) : [];
+  const empty = !x.internet && (!x.region || (!x.wl.length && !(flow.tag && applied.some(tg => GV.tagKey(tg) === GV.tagKey(flow.tag)))));
   return { flow, dir, verdict, decidedBy: decider ? decider.name : '', blocker: blockAt, compliance, layers, rungs, empty,
     path: { crosses: x.crosses, internet: x.internet, way: x.way, netbond: pepOnPath('netbond', x) } };
 }

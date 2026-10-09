@@ -543,13 +543,15 @@ test('every container the markup opens, it closes', () => {
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
   // sc-if +0, button -1): span 1484 -> 1482, button 525 -> 524.
   // and an enforced row's state is its toggle (span -1, sc-if +1): span 1482 -> 1481, sc-if 665 -> 666.
-    ['span', /<span\b/g, /<\/span>/g, 1516],
+  // Into the policy engine from the flows (2026-10-09): a link in the wizard's Advanced Settings and one in the journey's
+  // Protect deck key, each a button and its glyph (span +2, button +2): span 1516 -> 1518, button 531 -> 533.
+    ['span', /<span\b/g, /<\/span>/g, 1518],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 678],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 400],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 531],
+    ['button', /<button\b/g, /<\/button>/g, 533],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

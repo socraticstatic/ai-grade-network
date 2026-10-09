@@ -208,7 +208,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, layDir: 'o2p', layLit: null, layPage: 0, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jIntent: null, intents: {}, jFlip: 0, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, layDir: 'o2p', layLit: null, layPage: 0, engReturn: null, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jIntent: null, intents: {}, jFlip: 0, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -361,7 +361,7 @@ export function vals(c) {
     // Discover's new filter is a landing's, and a map's panel is the map's (skeptic, 2026-10-01): a way
     // back to Estate never opens new-filtered, nor under the connection panel a bandwidth door left open.
     // Consistency: every navigation drops the map's selection, not only Estate's.
-    govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null, govBack: null, govFrom: null, newOnly: false, mapSel: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
+    govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null, govBack: null, govFrom: null, newOnly: false, mapSel: null, engReturn: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -1217,7 +1217,10 @@ export function vals(c) {
   if (s.screen === 's3' && s.tab === 'observe' && s.obPage === 'insights' && out.insPanelBrief) Object.assign(out, { andiSub: out.briefText, hasAndiSub: true });
   Object.assign(out, journeyVals(out, s, set, est));
   // Back in the title row: shown once there is somewhere to go back to, named for it.
-  Object.assign(out, { backOn: (s.navDepth || 0) > 0, backLabel: s.navBack ? `Back to ${s.navBack}` : 'Back', goBack: () => { try { history.back(); } catch (e) { } } });
+  // A dive into the policy engine returns to its own step, whatever the history holds (2026-10-09).
+  const engRet = s.engReturn && s.screen === 's3' ? s.engReturn : null;
+  Object.assign(out, { backOn: !!engRet || (s.navDepth || 0) > 0, backLabel: engRet ? engRet.label : s.navBack ? `Back to ${s.navBack}` : 'Back',
+    goBack: engRet ? () => returnFromEngine(c) : () => { try { history.back(); } catch (e) { } } });
   // Back names the page you came from by its own name (Traffic, Insights, Orders), never the section you are still in.
   const railCur = (out.railGroups || []).flatMap(g => g.items || []).find(i => i.cur);
   navLast = navPick(s); navTitle = s.screen === 's0' ? 'NaaS home' : s.journey === 'existing' ? 'the journey' : railCur ? railCur.label : out.pageTitle || 'the last page';
@@ -1763,6 +1766,34 @@ function explainNav(c, ex) {
     });
     syncHash('s3', 'cloud', 'observe');
   };
+}
+
+// Into the policy engine from a flow, and back (Micah, 2026-10-09: "the simple policy options should have a link
+// somewhere, without losing one's place in the flow, to dive into the new policy engine"). The wizard's Advanced Settings
+// and the journey's Protect beat open Govern > Policy engine on their own flow, with what you picked so far read in as a
+// staged policy ("Your order"; the journey's cards not yet enforced), and the title row's Back returns to the very step:
+// the order in progress and the journey's beat live in state the trip never touches. Any other navigation drops the return.
+function diveToEngine(c, ret, flow, preview) {
+  const s = c.state;
+  // The journey's stage shows whenever its mode is on, so a dive steps out of the mode and Back steps back in.
+  c.setState({ screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'engine', govDrill: null, polFilter: null, engPick: null, engAll: false, layLit: null,
+    ...(ret.restore || {}).journey ? { journey: null } : {}, engFlow: flow, engStaged: true, engReturn: { ...ret, staged: !!s.engStaged, preview: preview || [] } });
+  window.scrollTo(0, 0); syncHash('s3', 'cloud', 'govern');
+}
+/** The estate as a dive's order would land it: the region the order attaches reads as delivered (what each layer will do
+ *  with the order's picks), labelled on the screen; nothing is placed. Without a pending order it is the estate as it is. */
+function diveEst(est, s) {
+  const l = s.engReturn && s.engReturn.landing; if (!l) return est;
+  const k = W.landingKind(l.order);
+  return { ...est, regionsList: est.regionsList.map(r => { if (r.region !== l.region || r.priv) return r; const r1 = W.landedRegion(r, l.order); return r1 === r ? r : { ...r1, way: k }; }) };
+}
+const diveChip = (s) => { const l = s.engReturn && s.engReturn.landing; if (!l) return [];
+  const k = W.landingKind(l.order), how = { hosted: "AT&T's hosted hub", netbond: 'NetBond on AT&T', direct: "the cloud's own port" }[k] || 'the internet';
+  return [{ key: 'dive', icon: 'shopping-bag', t: 'Your order', title: `${l.label} reads as your order would land it, on ${how}. Nothing is placed yet; Back returns to your order`, ink: 'var(--link)' }]; };
+function returnFromEngine(c) {
+  const r = c.state.engReturn; if (!r) return;
+  c.setState({ screen: r.screen, engReturn: null, engStaged: r.staged, engFlow: null, engPick: null, ...(r.restore || {}) });
+  window.scrollTo(0, 0); syncHash(r.screen);
 }
 
 // Back (reviewer, 2026-10-08: "for each page, we need to make sure a user can go back to previous page"). Every page
@@ -4457,7 +4488,7 @@ function wizardVals(s, est, set, c) {
           badges: verbBadges(p), kindIcon: assetIcon(p.match), open: s.polOpen === p.name, toggleOpen: () => set({ polOpen: s.polOpen === p.name ? null : p.name }),
           layers: p.layers.map(l => ({ ...l, icon: LAYER_ICON[l.key], state: l.broken ? 'broken' : l.set ? 'set' : 'any' })) }; }),
     // The policy engine (2026-10-01): every policy in precedence order, what each compiles onto each connection, conflicts.
-    ...(() => { const all = [...(s.layer === 'cloud' ? layerPolicies(s, est, 'all') : []), ...(s.customPolicies || [])];
+    ...(() => { const all = [...(s.layer === 'cloud' ? layerPolicies(s, est, 'all') : []), ...(s.customPolicies || []), ...((s.engReturn && s.engReturn.preview) || [])];
       // The list's summary stays (tests read it); the unbound rows, connections and conflicts that read RANK are gone
       // (2026-10-09): Layers is the per-connection view now.
       const e = evalPolicies(est, all);
@@ -4467,8 +4498,13 @@ function wizardVals(s, est, set, c) {
         // the left (three pickers, not a wall of chips), every policy is checked in precedence order in the middle (the
         // one that decides is lit, the rest say whether they were overridden or skip the flow), and the result comes out
         // on the right: the verdict, the four stations and what each enforces, and only the route rules NetBond pushes.
-        ...(() => { const inv = A.inventory(est), stagedOn = !!s.engStaged, eo = { inv, staged: stagedOn, match: { siteTags: ((s.siteTags || {})[est.id]) || {} } };
-          const flows = PM.engineFlows(est, all), froms = [...new Set(flows.map(x => x.from))].slice(0, 6), tos = [...new Set(flows.map(x => x.to))].slice(0, 9);
+        // `est` here is the estate as a dive's pending order would land it (diveEst), else the estate as it is.
+        ...((est) => { const inv = A.inventory(est), stagedOn = !!s.engStaged, eo = { inv, staged: stagedOn, match: { siteTags: ((s.siteTags || {})[est.id]) || {} } };
+          const flows = PM.engineFlows(est, all), froms0 = [...new Set(flows.map(x => x.from))].slice(0, 6), tos0 = [...new Set(flows.map(x => x.to))].slice(0, 9);
+          // A dive from a flow opens on that flow: its ends join the pickers even past their caps.
+          const dive = s.engReturn && s.engFlow ? s.engFlow : null, fromsAll = new Set(flows.map(x => x.from)), tosAll = new Set(flows.map(x => x.to));
+          const froms = dive && fromsAll.has(dive.from) && !froms0.includes(dive.from) ? [dive.from, ...froms0] : froms0;
+          const tos = dive && tosAll.has(dive.to) && !tos0.includes(dive.to) ? [dive.to, ...tos0] : tos0;
           const tags = [...new Set(flows.map(x => x.tag).filter(Boolean))].slice(0, 6);
           // The honest engine (2026-10-09, slice 1 of the research plan): one matcher (Govern's), the path each flow really
           // takes, and a stamp per layer. The whole estate is decided once (memoised); the examples and the head read it.
@@ -4549,14 +4585,14 @@ function wizardVals(s, est, set, c) {
             engStagedTitle: stagedOn ? `Staged policies decide as if enforced. Turn off to read only what is enforced` : `${pl(stagedN, 'staged policy waits', 'staged policies wait')} until enforced. Turn on to see what they would do`,
             engSheet: sheet, engSheetN: pushed.length, engPushed: pushed, hasEngPushed: pushed.length > 0 && !all12, noEngPushed: !pushed.length && !all12,
             engShowStrip: !all12, engAll: all12, engAllLabel: all12 ? 'Pushed only' : `All ${ruleN}`, engAllTitle: all12 ? 'Show only the rules NetBond pushes for this flow' : `Show every rule on NetBond's sheet, ${ruleN} in all`, toggleEngAll: () => set({ engAll: !all12 }),
-            engPushedWord: pl(pushed.length, 'rule', 'rules'), engHeadChips, engExamples, hasEngExamples: engExamples.length > 1 };
-        })(),
+            engPushedWord: pl(pushed.length, 'rule', 'rules'), engHeadChips: [...diveChip(s), ...engHeadChips], engExamples, hasEngExamples: engExamples.length > 1 };
+        })(diveEst(est, s)),
       }; })(),
     // Govern > Layers (2026-10-09, slice 2 of the policy engine: "we need a robust policy engine per layer"). The rulebase:
     // every policy compiled to each layer's enforcement point, four columns in the path's order, tier bands read top to
     // bottom, a default per direction pinned at each foot. A row says when its enforcement point is not really there.
     // Clicking a row lights that policy in every column; the bar above names it and opens its row in Policies.
-    ...(() => { const all = [...(s.layer === 'cloud' ? layerPolicies(s, est, 'all') : []), ...(s.customPolicies || [])];
+    ...((est) => { const all = [...(s.layer === 'cloud' ? layerPolicies(s, est, 'all') : []), ...(s.customPolicies || []), ...((s.engReturn && s.engReturn.preview) || [])];
       const dir = s.layDir === 'p2o' ? 'p2o' : 'o2p', lit = s.layLit || null;
       const rb = PM.rulebase(est, all, { inv: A.inventory(est), match: { siteTags: ((s.siteTags || {})[est.id]) || {} } });
       const LAY_SLOT = 7, COL = { site: 'Site', edge: 'Edge', core: 'Core', cloud: 'Cloud' };
@@ -4590,7 +4626,7 @@ function wizardVals(s, est, set, c) {
       const vis = byDir.flat(), pl = (n, a, b) => `${n} ${n === 1 ? a : b}`;
       const C = { rows: vis.length, unenforceable: vis.filter(r => r.cap === 'unenforceable').length, asserted: vis.filter(r => r.cap === 'asserted').length,
         dead: new Set(vis.filter(r => r.cap === 'dead').map(r => r.pid)).size, staged: new Set(vis.filter(r => r.staged).map(r => r.pid)).size };
-      const layHeadChips = [...(C.rows ? [{ key: 'rows', icon: 'list', t: String(C.rows), title: `${pl(C.rows, 'compiled row', 'compiled rows')} ${dir === 'o2p' ? 'from your sites to the cloud' : 'from the cloud to your sites'}`, ink: 'var(--text-body)' }] : []),
+      const layHeadChips = [...diveChip(s), ...(C.rows ? [{ key: 'rows', icon: 'list', t: String(C.rows), title: `${pl(C.rows, 'compiled row', 'compiled rows')} ${dir === 'o2p' ? 'from your sites to the cloud' : 'from the cloud to your sites'}`, ink: 'var(--text-body)' }] : []),
         ...(C.unenforceable ? [{ key: 'unenf', icon: 'lock-off', t: String(C.unenforceable), title: `${pl(C.unenforceable, 'row has', 'rows have')} no enforcement point on the regions their policy reaches`, ink: 'var(--warning)' }] : []),
         ...(C.asserted ? [{ key: 'assert', icon: 'eye', t: String(C.asserted), title: `${pl(C.asserted, 'row is', 'rows are')} asserted on customer VPCs AT&T only reads`, ink: 'var(--text-light)' }] : []),
         ...(C.dead ? [{ key: 'dead', icon: 'eye-off', t: String(C.dead), title: `${pl(C.dead, 'policy matches', 'policies match')} nothing today`, ink: 'var(--warning)' }] : []),
@@ -4602,7 +4638,7 @@ function wizardVals(s, est, set, c) {
         layDirs: [['o2p', 'Site to cloud', 'arrow-right'], ['p2o', 'Cloud to site', 'curved-arrow']].map(([k, label, icon]) => ({ key: k, label, icon, on: dir === k, go: () => set({ layDir: k, layPage: 0 }) })),
         layPage: page,
         layPager: { many: pages > 1, label: `${page + 1} of ${pages}`, prevOp: page > 0 ? 1 : 0.4, nextOp: page < pages - 1 ? 1 : 0.4, prev: () => { if (page > 0) set({ layPage: page - 1 }); }, next: () => { if (page < pages - 1) set({ layPage: page + 1 }); } } };
-    })(),
+    })(diveEst(est, s)),
     tplKinds: [['between', 'Between assets'], ['layered', 'Layered']].map(([k, l]) => { const on = (s.govTplKind || 'layered') === k; return { key: k, label: l, on, go: () => set({ govTplKind: k }), bg: on ? 'var(--bg-base)' : 'transparent', weight: on ? 700 : 500 }; }),
     // Multi-layer starting points: a rule at every layer, carried into the author.
     examplePolicies: (s.govTplKind || 'layered') === 'between' ? BETWEEN_TEMPLATES.map(t => { const r = resolveTemplate(est, t);
@@ -4889,6 +4925,16 @@ function flowVals(s, set, est, c) {
     // The path-by-path table left the profile (2026-10-06): the way you picked already carries cost, security and performance.
     cfPaths, cfPathsFor: CF.pathsFor(f, est), cfShowPaths: false, cfTotal,
     cfQos, hasCfQos: cfQos.length > 0, cfPolicy, cfPolicySent, cfTerms, cfEndpoints,
+    // Into the policy engine with this order's picks as a staged policy, and back to this step (2026-10-09).
+    cfEngineGo: () => { const reqs = f.policy.map(k => (CF.POLICY_FOR_CONTROL[k] || {}).req || k).filter(Boolean);
+      const reg = (est.regionsList || []).find(r => CF.regionName(r) === f.regions[0]) || null, to = reg ? CF.regionName(reg) : 'the Internet';
+      const srcs = [...new Set(PM.engineFlows(est, []).map(x => x.from))], mine = CF.orderSites(f, est).map(st => st.name);
+      const from = srcs.find(x => mine.includes(x)) || srcs.find(x => (est.sites || []).some(st => (f.loc || []).includes(st.metro) && (st.name === x || x.endsWith(`, ${st.metro}`)))) || srcs[0] || '';
+      const preview = reqs.length && reg ? [{ name: 'Your order', match: `region ${reg.region}`, scope: 'any cloud', req: reqs.join(' and '), path: [], state: 'simulated', custom: true }] : [];
+      // The order is not placed yet: the engine reads its region as the order would land it (diveEst), and says so.
+      const landing = reg && !reg.priv ? { region: reg.region, label: CF.regionName(reg), order: { type: f.ctype || '', way: f.way || null, lmcc: CF.isLmcc(f) } } : null;
+      diveToEngine(c, { label: 'Back to your order', screen: 's4', landing }, { from, to, tag: '' }, preview); },
+    cfEngineTitle: 'Open the policy engine on this order: what each layer does with your picks, before you place it. Back returns here',
     cfBlock: block, hasCfBlock: !!block, cfNext: next, cfBack: back, cfHasBack: ki > 0 || !!toOrigin, cfBackVis: ki > 0 || toOrigin ? 'visible' : 'hidden', cfNotLast: !isLast,
     cfBackLabel: toOrigin ? (origin === 'options' ? 'Back to Recommended' : 'Back to Ways to connect') : 'Back',
     // The way this order rides, above the step: its mark, its name for this cloud, and the door back to where it was chosen.
@@ -5627,6 +5673,13 @@ function journeyVals(out, s, set, est) {
     // Act three.
     jIsWatch: step === JI.watch, jIsProtect: step === JI.protect, jIsSave: step === JI.save, jLive: live, jNotLive: !live,
     jHealth: found.regions.flatMap(r => r.apps).map((a, i) => ({ key: a.key, d: `${i * 140}ms` })),
+    // Into the policy engine on the journey's flow, its cards not yet enforced read in as staged, and back to this beat.
+    jEngineGo: () => { const preview = deck0.filter(d => !mine.some(p => p.tag === d.tag)).map(d => ({ ...mkPol(d), state: 'simulated' }));
+      // It opens on the first tag card's own workloads: the region they sit in, so the flow is real, never a what-if.
+      const card = deck0.find(d => !d.intent) || null, home = card && (card.appKeys || [])[0] ? String(card.appKeys[0]).split(':')[0] : null;
+      diveToEngine({ state: s, setState: set }, { label: 'Back to the journey', screen: 'sj', restore: { journey: 'existing' } },
+        { from: fromSite, to: home ? `${found.cloud} ${home}` : toRegion || 'the Internet', tag: card ? card.tag : '' }, preview); },
+    jEngineTitle: 'Open the policy engine on this flow: what each layer does with these policies, before you enforce them. Back returns here',
     jDeck: deck, jHasDeck: deckN > 0, jDeckHosted: hostedWay, jDeckNba: !hostedWay, jDeckWhere: hostedWay ? `vSRX and your route tables` : `NetBond Advanced route policy`, jDeckWhereTitle: hostedWay ? `Enforced on the vSRX in AT&T's hub, L3 to L7, and in your cloud's route tables` : `Enforced as route policy on NetBond Advanced, on AT&T's IPE`, jDeckRest: { has: step === JI.protect && enforcedN > 0 && enforcedN < deckN, go: enforceAll, n: String(deckN - enforcedN) },
     // The wires' stamps: the hovered card's verdicts as a preview, else what the enforced ones add up to.
     jVerdict: step >= JI.protect && shown ? (hov && !hov.on ? 'preview' : 'enforced') : 'none', jProtected: step >= JI.protect && !!shown,
