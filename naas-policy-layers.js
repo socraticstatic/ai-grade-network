@@ -322,6 +322,11 @@ export function assetIcon(label) {
 export function verbBadges(p) {
   const out = [], seen = new Set(), add = (key, label, cls) => { if (!seen.has(key)) { seen.add(key); out.push({ key, label, cls }); } };
   const rt = routeRulesOf(p);
+  // A route verb carries the directions its rules push, as the journey's cards read them (2026-10-09): → on prem to
+  // partner, ← partner to on prem, ⇄ both.
+  const dirs = {}; for (const rr of ROUTE_RULES) { const v = rt[`${rr.section}:${rr.id}`] || {}; if (v.o2p || v.p2o) { const d = dirs[rr.section] = dirs[rr.section] || { o2p: false, p2o: false }; d.o2p = d.o2p || !!v.o2p; d.p2o = d.p2o || !!v.p2o; } }
+  const arrow = (sec) => { const d = dirs[sec]; return !d ? '' : d.o2p && d.p2o ? '⇄' : d.o2p ? '→' : '←'; };
+  const dirWord = (sec) => { const d = dirs[sec]; return !d ? '' : d.o2p && d.p2o ? 'both ways' : d.o2p ? 'on prem to partner' : 'partner to on prem'; };
   for (const rr of ROUTE_RULES) { const v = rt[`${rr.section}:${rr.id}`] || {}; if (!(v.o2p || v.p2o)) continue;
     if (rr.section === 'deny') add('deny', 'Deny', 'deny'); else if (rr.section === 'allow') add('allow', 'Allow', 'allow'); else if (rr.section === 'manip') add('manip', 'Manipulate', 'manip'); else add('adv', 'Advertise', 'adv'); }
   const words = [String((p && p.req) || ''), ...((p && p.path) || []), ...Object.values(policyLayers(p))].join(' · ').toLowerCase();
@@ -333,7 +338,8 @@ export function verbBadges(p) {
   if (/encrypt/.test(words)) add('encrypt', 'Encrypt', '');
   if (/zero-trust|private access/.test(words)) add('access', 'Access', '');
   if (/cost-aware/.test(words)) add('cost', 'Cost', '');
-  return out.slice(0, 3);
+  return out.slice(0, 3).map(b => { const sec = { deny: 'deny', allow: 'allow', manip: 'manip', adv: 'advanced' }[b.key]; const dir = sec ? arrow(sec) : '';
+    return { ...b, dir, hasDir: !!dir, title: dir ? `${b.label}, ${dirWord(sec)}` : b.label }; });
 }
 /** Every glyph the app binds by name; tests/icons.test.mjs checks each is on disk. */
 export const ICON_NAMES = [...new Set([...Object.values(LAYER_ICON), 'hybrid-cloud', 'tag', 'large-building', 'globe', 'global-network', 'cloud', 'target'])];

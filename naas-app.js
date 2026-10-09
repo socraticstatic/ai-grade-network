@@ -4405,6 +4405,8 @@ function wizardVals(s, est, set, c) {
         return { ...p, prio: prioOf.get(p.name) || '·', prioWhy: rank ? PRIO_WHY[rank.rank] : 'a draft', isOn: enforcedNow, toggleCls: enforcedNow ? 'inert' : '',
           toggleTitle: enforcedNow ? 'Enforced' : p.state === 'simulated' ? 'Simulated. Enforce it' : 'Draft',
           toggleGo: enforcedNow ? () => {} : p.custom ? () => set({ customPolicies: (s.customPolicies || []).map(x => x.name === p.name ? { ...x, state: 'enforced' } : x) }) : () => set({ authoring: { match: p.match, scope: p.scope || 'any cloud', req: [p.req] } }),
+          // An enforced row's toggle is its state; a simulated or drafted one says so in light ink (2026-10-09).
+          showState: p.state !== 'enforced',
           badges: verbBadges(p), kindIcon: assetIcon(p.match), open: s.polOpen === p.name, toggleOpen: () => set({ polOpen: s.polOpen === p.name ? null : p.name }),
           layers: p.layers.map(l => ({ ...l, icon: LAYER_ICON[l.key], state: l.broken ? 'broken' : l.set ? 'set' : 'any' })) }; }),
     // The policy engine (2026-10-01): every policy in precedence order, what each compiles onto each connection, conflicts.

@@ -532,13 +532,16 @@ test('every container the markup opens, it closes', () => {
     ['div', /<div\b/g, /<\/div>/g, 1323],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
-    ['span', /<span\b/g, /<\/span>/g, 1484],
+  // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
+  // sc-if +0, button -1): span 1484 -> 1482, button 525 -> 524.
+  // and an enforced row's state is its toggle (span -1, sc-if +1): span 1482 -> 1481, sc-if 665 -> 666.
+    ['span', /<span\b/g, /<\/span>/g, 1481],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 665],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 666],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 394],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 525],
+    ['button', /<button\b/g, /<\/button>/g, 524],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];
