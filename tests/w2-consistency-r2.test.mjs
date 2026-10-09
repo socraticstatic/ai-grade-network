@@ -74,7 +74,7 @@ test('A Signals traffic figure lands on the records it counts, or says no sample
             if (k === 'slo') assert.equal(rec.path, / · on AT&T$/.test(r.sub) ? 'private' : 'public', `${say}: the flow runs ${r.sub}`);
             else if (outside) assert.equal(rec.path, 'public', `${say}: the row counts traffic outside AT&T`);
             else if (onRow) assert.equal(rec.path, 'private', `${say}: the row counts traffic on AT&T`);
-            if (/egress|exposure/.test(cd.title) && /cross-cloud public/.test(r.sub)) assert.equal(rec.pattern, 'clouds', `${say}: the row counts its cross-cloud pair`);
+            if (/egress|exposure/.test(cd.title) && r.xPub) assert.equal(rec.pattern, 'clouds', `${say}: the row counts its cross-cloud pair`);
           }
         }
       });

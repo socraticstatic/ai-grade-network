@@ -122,10 +122,14 @@ export function talkers(T, lens = 'share', { pubMo = 0, covPct = 0, billsPub = {
   const pubG = (t) => (t.pubG != null ? +t.pubG : t.priv ? 0 : t.gbps);
   const out = all.filter(t => pubG(t) > 0).sort((a, b) => pubG(b) - pubG(a)), on = all.filter(t => !(pubG(t) > 0));
   const outG = out.reduce((a, t) => a + pubG(t), 0), outMax = Math.max(0, ...out.map(pubG));
-  const outSub = (t) => (t.priv ? `${t.ramp || 'On AT&T'} · cross-cloud public` : t.sub);
+  // Short enough to read at the consumer type size (2026-10-09): the bar's ink says on AT&T or public; the words say what
+  // the figure is. `xPub` marks a row whose figure is a cross-cloud pair riding the public internet (drills read the flag,
+  // never the words).
+  const outSub = (t) => (t.priv ? 'Cross-cloud, public' : t.sub);
   const base = (t) => ({ key: t.key, region: t.region, label: t.label, sub: t.sub, priv: !!t.priv, fig: 'map' });
   // A region carrying a cross-cloud pair names its Gbps on its line, so its figure reads as its connection's and its pair's.
-  const lineOf = (t) => (t.xG > 0 ? `${t.priv ? t.ramp || 'On AT&T' : 'public internet'} · ${gb(t.xG)} cross-cloud${t.xPub ? ' public' : ''}` : t.sub);
+  const lineOf = (t) => (t.xG > 0 ? `${gb(t.xG)} cross-cloud${t.xPub ? ', public' : ''}` : t.sub);
+  const xPubOf = (t, out) => (out ? !!t.priv : t.xG > 0 && !!t.xPub);
   const bar = (t, max) => [{ key: 's', fill: t.priv ? AT.ink : PUB.ink, w: pctW(t.gbps, max) }];
   const outBar = (t) => [{ key: 's', fill: PUB.ink, w: pctW(pubG(t), outMax) }];
   // Each region's share of what leaves AT&T, whole percents that add up to 100 (largest remainder).
@@ -142,9 +146,9 @@ export function talkers(T, lens = 'share', { pubMo = 0, covPct = 0, billsPub = {
     const outClouds = new Set(out.map(t => t.cloud));
     const bills = (t) => (!outClouds.has(t.cloud) && (billsPub[t.cloud] || []).length ? billsPub[t.cloud] : null);
     const rows = [
-      ...out.map(t => ({ ...base(t), sub: outSub(t), v: gb(pubG(t)), v2: share.get(t), segs: outBar(t), act: 'Optimize', actKind: 'optimize' })),
+      ...out.map(t => ({ ...base(t), sub: outSub(t), xPub: xPubOf(t, true), v: gb(pubG(t)), v2: share.get(t), segs: outBar(t), act: 'Optimize', actKind: 'optimize' })),
       ...on.map(t => (bills(t) ? { ...base(t), sub: `${bills(t).join(' and ')} bills public`, v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Optimize', actKind: 'optimize' }
-        : { ...base(t), sub: lineOf(t), v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Ask Andi', actKind: 'andi-region' })),
+        : { ...base(t), sub: lineOf(t), xPub: xPubOf(t), v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Ask Andi', actKind: 'andi-region' })),
     ];
     // Each figure says what it counts (w2, 2026-09-30): the dollars are what the buckets bill public, a
     // bucket on NetBond included (Bank scale's GPU inference); the Gbps are what leaves AT&T.
@@ -156,8 +160,8 @@ export function talkers(T, lens = 'share', { pubMo = 0, covPct = 0, billsPub = {
     // draws nothing (2026-09-30). The head's share of traffic is Coverage's
     // complement; each row's share is of the exposed, so the rows add up to it.
     const rows = [
-      ...out.map(t => ({ ...base(t), sub: outSub(t), v: gb(pubG(t)), v2: share.get(t), segs: outBar(t), act: 'Set policy', actKind: 'policy-region' })),
-      ...on.map(t => ({ ...base(t), sub: lineOf(t), v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Policies', actKind: 'policies' })),
+      ...out.map(t => ({ ...base(t), sub: outSub(t), xPub: xPubOf(t, true), v: gb(pubG(t)), v2: share.get(t), segs: outBar(t), act: 'Set policy', actKind: 'policy-region' })),
+      ...on.map(t => ({ ...base(t), sub: lineOf(t), xPub: xPubOf(t), v: gb(t.gbps), v2: 'On AT&T', segs: [], act: 'Policies', actKind: 'policies' })),
     ];
     const head = out.length ? `${gb(outG)} public · ${100 - covPct}% of traffic` : 'Every region rides AT&T';
     return { key: 'talkers', title: 'Top talkers by exposure', head, rows, legend: [{ ...PUB, label: 'Exposed, public internet' }], empty: 'No traffic yet.' };
@@ -167,7 +171,7 @@ export function talkers(T, lens = 'share', { pubMo = 0, covPct = 0, billsPub = {
   // and the rows' On AT&T added up past the head). A row with a pair names it on its line.
   const splitBar = (t, max) => { const p = Math.min(t.gbps, pubG(t)), o = t.gbps - p;
     return [...(o > 0 ? [{ key: 'on', fill: AT.ink, w: pctW(o, max) }] : []), ...(p > 0 ? [{ key: 'pub', fill: PUB.ink, w: pctW(p, max) }] : [])]; };
-  const rows = all.map(t => ({ ...base(t), sub: lineOf(t), v: t.share, v2: gb(t.gbps), segs: splitBar(t, gMax), ...(t.priv ? { act: 'Ask Andi', actKind: 'andi-region' } : { act: 'Attach', actKind: 'attach' }) }));
+  const rows = all.map(t => ({ ...base(t), sub: lineOf(t), xPub: xPubOf(t), v: t.share, v2: gb(t.gbps), segs: splitBar(t, gMax), ...(t.priv ? { act: 'Ask Andi', actKind: 'andi-region' } : { act: 'Attach', actKind: 'attach' }) }));
   if (lens === 'coverage') {
     const priv = all.filter(t => t.priv);
     return { key: 'talkers', title: 'Top talkers by coverage', head: `${priv.length || 'None'} of ${all.length} ${all.length === 1 ? 'region' : 'regions'} on AT&T · ${covPct}% of traffic`, rows, legend: [AT, PUB], empty: 'No traffic yet.' };
@@ -219,7 +223,7 @@ export function multi(rows, { privN = 0, totalN = rows.length } = {}) {
  */
 export function slo(rows, { total = 0, spikes = [], closest = null } = {}) {
   const all = [
-    ...spikes.map(p => ({ key: p.key, region: p.region, label: 'Latency spike', sub: `${p.where} · public internet`, ms: p.ms, v: `${p.ms} ms`, v2: 'p95 at peak', fig: 'finding', act: 'Trace', actKind: 'trace' })),
+    ...spikes.map(p => ({ key: p.key, region: p.region, label: 'Latency spike', sub: `${p.where} · internet`, ms: p.ms, v: `${p.ms} ms`, v2: 'p95 at peak', fig: 'finding', act: 'Trace', actKind: 'trace' })),
     ...rows.map(f => ({ key: f.key, id: f.id, region: f.region, label: f.label || f.name, sub: `${f.where} · ${f.path}`, ms: f.ms, v: `${f.ms} ms`, v2: gb(f.gbps), fig: 'map-slo', ...flowAct(f) })),
   ].sort((a, b) => b.ms - a.ms);
   const max = Math.max(0, ...all.map(r => r.ms));
@@ -260,7 +264,7 @@ export function spend(B) {
   const rows = all.map(b => { const sv = save(b);
     // Money in blue is AT&T price, Cost's word for it (w2 second pass, 2026-09-30): GCP's GPU bucket read
     // "$12,400/mo on AT&T" with GCP not attached, beside traffic cards whose blue is On AT&T.
-    return { key: b.id, label: b.name, sub: sv ? `${b.cloud} · ${money(b.fabric)}/mo at AT&T price` : `${b.cloud} · at AT&T price`, v: `${money(b.today)}/mo`, v2: sv ? `save ${money(sv)}` : '', fig: 'bucket',
+    return { key: b.id, label: b.name, sub: sv ? `${b.cloud} · ${money(b.fabric)} at AT&T price` : `${b.cloud} · at AT&T price`, v: `${money(b.today)}/mo`, v2: sv ? `save ${money(sv)}` : '', fig: 'bucket',
       segs: sv ? [{ key: 'att', fill: AT.ink, w: pctW(b.fabric, max) }, { key: 'save', fill: SAVE, w: pctW(sv, max) }] : [{ key: 'att', fill: AT.ink, w: pctW(b.today, max) }],
       ...(sv ? { act: 'Optimize', actKind: 'optimize' } : { act: 'By bucket', actKind: 'bucket' }) }; });
   return { key: 'spend', title: 'Spend by bucket', head: !total ? 'No egress spend yet' : saveT ? `Save ${money(saveT)}/mo of ${money(total)}/mo egress` : `${money(total)}/mo egress, all at AT&T price`,
