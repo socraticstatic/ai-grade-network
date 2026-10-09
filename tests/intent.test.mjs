@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { vals } from '../naas-app.js';
 import * as J from '../naas-journey.js';
 import * as W from '../naas-ways.js';
-import { effectivePolicy, routeRulesOf } from '../naas-policy-layers.js';
+import { routeRulesOf } from '../naas-policy-layers.js';
+import { decide } from '../naas-policy-model.js';
 import * as D from '../naas-data.js';
 import { mkC } from './harness.mjs';
 
@@ -122,8 +123,8 @@ test('the intent shapes the policy deck: one intent card leads, a real policy th
   // The comma list matches both regions in the engine, and nothing else.
   const est = { ...D.ESTATES.lastmile, regionsList: [{ cloud: 'Azure', region: 'eastus' }, { cloud: 'Azure', region: 'westeurope' }] };
   const pol = { name: 'x', match: card.match, scope: 'any cloud', req: card.req, state: 'enforced' };
-  assert.equal(effectivePolicy(est, [pol], { from: 'HQ', to: 'Azure westeurope' }).decidedBy, 'x');
-  assert.notEqual(effectivePolicy(est, [pol], { from: 'HQ', to: 'Azure northeurope' }).decidedBy, 'x');
+  assert.equal(decide(est, [pol], { from: 'HQ', to: 'Azure westeurope' }).decidedBy, 'x');
+  assert.notEqual(decide(est, [pol], { from: 'HQ', to: 'Azure northeurope' }).decidedBy, 'x');
   assert.equal(J.intentCard({}, { cloud: 'Azure', regions: [{ region: 'eastus' }] }, []), null, 'the default intent asks nothing more of the path');
   // In the journey: placed, live, on Protect.
   const run = (jIntent) => { const c = journey({ jStep: B.connect, jPick: 0, jIntent, jTags: { 'eastus:dispatch-svc': ['Prod'], 'westeurope:payments-api': ['PCI', 'Prod'] } });

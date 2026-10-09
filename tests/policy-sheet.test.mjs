@@ -4,7 +4,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { vals } from '../naas-app.js';
 import { mkC } from './harness.mjs';
 import { ESTATES } from '../naas-data.js';
-import { routeRulesOf, flowSheet, verbBadges, evalPolicies, ROUTE_RULES, ROUTE_SECTIONS } from '../naas-policy-layers.js';
+import { routeRulesOf, verbBadges, evalPolicies, ROUTE_RULES, ROUTE_SECTIONS } from '../naas-policy-layers.js';
+import { flowSheet } from '../naas-policy-model.js';
 
 // The Policy engine on NetBond Advanced's verbs (Micah, 2026-10-05: "doesn't look like a good engine with AT&T's
 // allow, deny, manipulate, advertise that's on netbond advanced"). An estate policy carries no route sheet of its

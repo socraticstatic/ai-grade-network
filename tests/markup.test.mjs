@@ -529,19 +529,23 @@ test('every container the markup opens, it closes', () => {
   // Recommended speaks the journey (2026-10-09, "integrate into the rest of the site"): the needs glyphs in the head, the score
   // ring and the reason chips on each card, the journey's Why panel (a copy bound to mv.why) and its four questions over the
   // hero, the footer link gone: div 1305 -> 1323, span 1447 -> 1483, sc-if 657 -> 663, sc-for 381 -> 394, button 521 -> 525.
-    ['div', /<div\b/g, /<\/div>/g, 1323],
+  // The honest engine (2026-10-09, "we need a robust policy engine per layer"): the head's right side holds the Staged
+  // toggle beside Start from a template (div +1, span +2, sc-if +1, button +1); each station wears its stamp and its reason
+  // code (span +1, sc-if +2); the verdict row carries the compliance chip and a What-if note (span +4, sc-if +1):
+  // div 1323 -> 1324, span 1481 -> 1488, sc-if 666 -> 670, button 524 -> 525.
+    ['div', /<div\b/g, /<\/div>/g, 1324],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
   // sc-if +0, button -1): span 1484 -> 1482, button 525 -> 524.
   // and an enforced row's state is its toggle (span -1, sc-if +1): span 1482 -> 1481, sc-if 665 -> 666.
-    ['span', /<span\b/g, /<\/span>/g, 1481],
+    ['span', /<span\b/g, /<\/span>/g, 1488],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 666],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 670],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 394],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 524],
+    ['button', /<button\b/g, /<\/button>/g, 525],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

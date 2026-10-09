@@ -80,13 +80,16 @@ const AREA = {
   eu: /^(eu-|europe-|westeurope|northeurope|uk|france|germany|switzerland|norway|sweden|poland|italy|spain)/i,
   ap: /^(ap-|asia-|australia|japan|southeastasia|eastasia|korea|india|central-india|south-india)/i,
 };
-const glob = (p) => {
+export const regionGlob = (p) => {
   const a = /^([a-z]{2})-\*$/i.exec(String(p).trim());
   if (a && AREA[a[1].toLowerCase()]) return AREA[a[1].toLowerCase()];
   // A comma list names several regions (the journey's intent policy covers a cloud's regions).
   return new RegExp('^(?:' + String(p).split(',').map(q => q.trim().split('*').map(x => x.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')).join('|') + ')$', 'i');
 };
 
+/** What a policy's match side names in this estate (2026-10-09: one matcher, Govern's and the engine's, so a
+ *  residency rule `region eu-*` reaches westeurope and europe-west1 in both): {unit, rows}, rows null when unmeasured. */
+export const members = (est, inv, p, opts) => matchOf(est, inv, p, opts);
 function matchOf(est, inv, p, opts) {
   const m = String((p && p.match) || '').trim();
   let x;
@@ -94,7 +97,7 @@ function matchOf(est, inv, p, opts) {
     if (tagKey(x[1]) === 'remotesite') return { unit: 'site', rows: remoteSites(est) };
     return { unit: 'workload', rows: tagSet(inv, x[1]).workloads };
   }
-  if ((x = /^region\s+(.+)$/i.exec(m))) { const re = glob(x[1]); return { unit: 'workload', rows: workloadsOf(inv).filter(r => re.test(r.region)) }; }
+  if ((x = /^region\s+(.+)$/i.exec(m))) { const re = regionGlob(x[1]); return { unit: 'workload', rows: workloadsOf(inv).filter(r => re.test(r.region)) }; }
   if ((x = /^(remote-site|branch|site)\s+(.+)$/i.exec(m))) {
     const who = x[2].trim();
     if (/^any$/i.test(who)) return { unit: 'site', rows: remoteSites(est) };

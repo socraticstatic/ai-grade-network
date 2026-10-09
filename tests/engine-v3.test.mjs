@@ -4,7 +4,9 @@ import { readFileSync, existsSync } from 'node:fs';
 import { vals } from '../naas-app.js';
 import { mkC } from './harness.mjs';
 import * as D from '../naas-data.js';
-import { effectivePolicy, flowSheet, evalPolicies, ROUTE_RULES, forbidsInternet } from '../naas-policy-layers.js';
+import { evalPolicies, ROUTE_RULES, forbidsInternet } from '../naas-policy-layers.js';
+import * as A from '../naas-addendum.js';
+import { decide, flowSheet, STAMP } from '../naas-policy-model.js';
 
 // The policy engine as an engine (Micah, 2026-10-07: "The policy engine needs a deep UI and UX pass"). Left to right:
 // a flow goes in (three pickers in place of a wall of 22 chips), every live policy is read in precedence order (the
@@ -40,20 +42,21 @@ test('the flow is three pickers, each a glyph and its value, with the options be
   assert.equal(vals(c).engPickOpen, false, 'the scrim closes it too');
 });
 
-test('the engine opens on a contest: two policies meet, the first in precedence decides, the other is overridden', () => {
-  for (const view of ['partial', 'mature']) {
+test('the engine opens on a real flow that breaks: the decider lit, three layers holding, the cloud violated with its code', () => {
+  // Honest since 2026-10-09: no contest to stage (a later policy agrees or adds; nothing is overridden), so the engine
+  // opens on the real flow that breaks with the most layers still holding.
+  for (const view of ['partial', 'mature', 'trust']) {
     const v = vals(eng(view));
-    assert.ok(v.engMatchN >= 2, `${view}: ${v.engMatchN} policies meet`);
+    assert.equal(v.engExamples[0].key, 'violated'); assert.equal(v.engExamples[0].on, true);
     const lit = v.engLadder.filter(x => x.lit);
     assert.equal(lit.length, 1);
-    assert.equal(lit[0].name, v.engDecided);
-    assert.equal(lit[0].state, 'won');
-    assert.ok(v.engLadder.some(x => x.state === 'over'), `${view}: something is overridden`);
-    assert.equal(v.engExamples[0].word, 'Contested');
-    assert.equal(v.engExamples[0].on, true);
+    assert.equal(lit[0].name, v.engDecided); assert.equal(lit[0].state, 'decides'); assert.equal(lit[0].word, 'Decides');
+    assert.equal(v.engCompWord, 'Violated'); assert.equal(v.engWhatIf, false, 'a real flow, workloads behind it');
+    assert.deepEqual(v.engStations.map(x => x.state), ['set', 'set', 'set', 'broken'], view);
+    const cloud = v.engStations[3];
+    assert.equal(cloud.hasCode, false, 'EXPOSED only repeats "6 exposed": it stays in the tooltip'); assert.equal(cloud.stamp, 'close-circle');
+    assert.match(cloud.title, /Cloud & workload: Violated \(CLOUD_EXPOSED\)\. 6 exposed, asked by PCI private path/);
   }
-  // Bank scale has no flow two policies meet; its first example says Decided, not Contested.
-  assert.equal(vals(eng('trust')).engExamples[0].word, 'Decided');
 });
 
 test('the ladder lists every live policy in the order the engine reads them, numbered as Violations & policies numbers them', () => {
@@ -62,21 +65,21 @@ test('the ladder lists every live policy in the order the engine reads them, num
     const order = evalPolicies(est, est.policies).ordered.map(p => p.name);
     assert.deepEqual(v.engLadder.map(x => x.name), order, view);
     assert.deepEqual(v.engLadder.map(x => x.prio), order.map((_, i) => String(i + 1)));
-    for (const r of v.engLadder) { assert.ok(['won', 'over', 'skip'].includes(r.state)); assert.ok(onDisk(r.glyph) && onDisk(r.icon), r.name); assert.ok(r.title); }
+    for (const r of v.engLadder) { assert.ok(['decides', 'adds', 'agrees', 'staged', 'skip'].includes(r.state)); assert.ok(onDisk(r.glyph) && onDisk(r.icon), r.name); assert.ok(r.title); }
     assert.equal(v.engMatchN, v.engLadder.filter(x => x.state !== 'skip').length);
   }
 });
 
 test('a private-path or no-internet intent denies a flow to the Internet; inspection applies to it; a flow to a cloud is allowed', () => {
-  const est = D.ESTATES.partial, all = est.policies, from = 'Private cloud · Equinix DC2, Ashburn';
-  const pci = effectivePolicy(est, all, { from, to: 'the Internet', tag: 'PCI' });
+  const est = D.ESTATES.partial, all = est.policies, from = 'Private cloud · Equinix DC2, Ashburn', inv = A.inventory(est);
+  const pci = decide(est, all, { from, to: 'the Internet', tag: 'PCI' }, { inv });
   assert.equal(pci.verdict, 'Denied'); assert.equal(pci.decidedBy, 'PCI private path');
-  const prod = effectivePolicy(est, all, { from, to: 'the Internet', tag: 'Prod' });
+  const prod = decide(est, all, { from, to: 'the Internet', tag: 'Prod' }, { inv });
   assert.equal(prod.verdict, 'Denied'); assert.equal(prod.decidedBy, 'Prod no direct internet');
-  const web = effectivePolicy(est, all, { from, to: 'the Internet', tag: 'Internet-facing' });
+  const web = decide(est, all, { from, to: 'the Internet', tag: 'Internet-facing' }, { inv });
   assert.equal(web.verdict, 'Allowed'); assert.equal(web.decidedBy, 'Internet-facing inspection');
-  assert.equal(effectivePolicy(est, all, { from, to: 'AWS eu-west-1', tag: 'PCI' }).verdict, 'Allowed');
-  assert.equal(effectivePolicy(est, all, { from, to: 'the Internet', tag: '' }).decidedBy, 'No policy: the default path');
+  assert.equal(decide(est, all, { from, to: 'AWS eu-west-1', tag: 'PCI' }, { inv }).verdict, 'Allowed');
+  assert.equal(decide(est, all, { from, to: 'the Internet', tag: '' }, { inv }).decidedBy, '', 'no policy: the default path');
   assert.ok(forbidsInternet({ req: 'No direct internet path' }) && forbidsInternet({ req: 'Private path required' }) && !forbidsInternet({ req: 'Inline security inspection' }));
   // A denied flow to the Internet pushes its deny alone; the private path's allow is not for it.
   const sheet = flowSheet(est, all, { from, to: 'the Internet', tag: 'PCI' });
@@ -90,7 +93,7 @@ test('the result: the verdict, the decider as a door, four stations, and only th
   assert.equal(v.engVerdict, 'Allowed'); assert.equal(v.engVerdictCls, 'allow');
   assert.equal(v.engDecidedIsPolicy, true);
   assert.deepEqual(v.engStations.map(x => x.station), ['Sites', 'Edge', 'Core', 'Cloud']);
-  for (const x of v.engStations) { assert.ok(onDisk(x.icon)); assert.equal(x.state, x.text === 'Any' ? 'any' : 'set'); }
+  for (const x of v.engStations) { assert.ok(onDisk(x.icon)); assert.ok(Object.values(STAMP).some(S => S.ps === x.state), x.state); if (x.hasStamp) assert.ok(onDisk(x.stamp), x.stamp); }
   assert.deepEqual(v.engPushed.map(r => `${r.cls}:${r.label}`), ['deny:Block default routes', 'allow:Matching routes']);
   for (const r of v.engPushed) { assert.ok(r.by && onDisk(r.icon)); assert.ok(r.dirs.length >= 1 && r.dirs.some(d => d.on)); for (const d of r.dirs) assert.match(d.word, /^(On prem → Partner|Partner → On prem)$/); }
   assert.equal(v.engSheetN, 2);
@@ -101,11 +104,13 @@ test('the result: the verdict, the decider as a door, four stations, and only th
   assert.equal(v.hasEngPushed, false);
   assert.equal(v.engSheet.flatMap(s => s.rules).length, ROUTE_RULES.length);
   assert.deepEqual(v.engSheet.map(s => s.cls), ['deny', 'manip', 'allow', 'adv']);
-  // Denied: the badge, the core station broken, and the decider still a door.
+  // Denied: the badge, the site blocks where it would break out, the rest off the path, and the decider still a door.
   vals(c).engExamples.find(x => x.key === 'denied').go();
   v = vals(c);
   assert.equal(v.engVerdict, 'Denied'); assert.equal(v.engVerdictCls, 'deny'); assert.equal(v.engVerdictIcon, 'close-circle');
-  assert.equal(v.engStations.find(x => x.key === 'core').state, 'broken');
+  assert.deepEqual(v.engStations.map(x => x.state), ['down', 'none', 'none', 'none']);
+  assert.equal(v.engStations[0].code.replace(/\u200b/g, ''), 'BREAKOUT_BLOCKED'); assert.equal(v.engStations[1].text, 'Not on path');
+  assert.equal(v.engCompWord, 'Holds');
   assert.equal(v.engAll, false, 'an example starts on the pushed rules');
   // No policy: the default path, nothing pushed.
   vals(c).engExamples.find(x => x.key === 'free').go();
@@ -113,6 +118,8 @@ test('the result: the verdict, the decider as a door, four stations, and only th
   assert.equal(v.engDecidedIsDefault, true); assert.equal(v.engDecided, 'Default path');
   assert.equal(v.engSheetN, 0); assert.equal(v.noEngPushed, true);
   assert.ok(v.engLadder.every(x => x.state === 'skip'));
+  assert.ok(v.engLadder.every(x => /^(Not this tag|Not from here|Not to here|No match)$/.test(x.word)), 'a miss names the side that missed');
+  assert.equal(v.engCompWord, 'Nothing asked');
 });
 
 test('a policy on the ladder opens in Violations & policies, its row open on its page, and the page keeps the fold', () => {
@@ -126,14 +133,33 @@ test('a policy on the ladder opens in Violations & policies, its row open on its
   assert.ok(v.polRows.some(r => r.name === lad[lad.length - 1].name && r.open), 'the policy is on the page it opened to, and open');
 });
 
-test('the head says what the engine holds in glyph chips, and an estate with no flow says so', () => {
-  const v = vals(eng());
-  assert.equal(v.engHeadChips[0].t, '7');
+test('the head counts what decides, what is violated on real flows and what matches nothing; Clean only when none', () => {
+  const c = eng();
+  let v = vals(c);
+  assert.deepEqual(v.engHeadChips.map(x => `${x.key}:${x.t}`), ['pol:4', 'viol:3', 'dead:2'], 'four enforced decide; three staged wait');
   assert.ok(v.engHeadChips.every(x => onDisk(x.icon) && x.title));
+  assert.match(v.engHeadChips[1].title, /PCI private path \(CLOUD_EXPOSED\)/);
+  assert.match(v.engHeadChips[2].title, /Finance segmentation, no site is in Finance; GPU latency SLO, no workload is tagged GPU/);
+  assert.ok(!v.engHeadChips.some(x => x.key === 'clean'), 'never Clean while Govern counts PCI exposed');
+  assert.ok(vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies' })).verdictChips.some(x => /exposed/.test(x.label)));
+  // Staged: three wait; the toggle reads them as if enforced, and EU residency now decides westeurope.
+  assert.equal(v.hasEngStaged, true); assert.equal(v.engStagedN, '3'); assert.equal(v.engStaged, false);
+  v.toggleEngStaged(); v = vals(c);
+  assert.equal(v.engStaged, true); assert.equal(v.engHeadChips[0].t, '7');
+  vals(c).engPickers[1].options.find(o => o.label === 'Azure westeurope').go(); vals(c).engPickers[2].options.find(o => o.label === 'Nothing tagged').go();
+  v = vals(c);
+  assert.equal(v.engDecided, 'EU residency');
+  v.toggleEngStaged(); v = vals(c);
+  assert.equal(v.engDecidedIsDefault, true, 'enforced only: no policy decides westeurope');
+  assert.equal(v.engLadder.find(x => x.name === 'EU residency').word, 'Staged');
+  // A what-if: a flow no workload makes says so.
+  vals(c).engPickers[1].options.find(o => o.label === 'AWS eu-west-1').go(); vals(c).engPickers[2].options.find(o => o.label === 'tag PCI').go();
+  v = vals(c);
+  assert.equal(v.engWhatIf, true); assert.match(v.engWhatIfTitle, /No workload carries PCI in AWS eu-west-1 today/);
   const sm = vals(eng('small'));
   assert.equal(sm.engHas, false); assert.equal(sm.engEmpty, true);
   assert.match(sm.engEmptyText, /No data center or private cloud/);
-  assert.equal(sm.hasEngExamples, false);
+  assert.equal(sm.hasEngExamples, false); assert.equal(sm.hasEngStaged, false);
 });
 
 test('Govern\'s head is chips with their doors: enforced opens the filter, the finding its drill', () => {
@@ -159,6 +185,10 @@ test('the markup reads left to right: flow, policies in order, result; NetBond\'
   assert.match(blk, /class="fw-prio sm">\{\{ ld\.prio \}\}/);
   assert.match(blk, /class="fw-badge big \{\{ engVerdictCls \}\}"/);
   assert.match(blk, /<div class="ps big eng-ps"[^>]*><sc-for list="\{\{ engStations \}\}"/);
+  assert.match(blk, /<em class="ps-stamp" role="img" aria-label="\{\{ st\.stampWord \}\}">/);
+  assert.match(blk, /<sc-if value="\{\{ st\.hasCode \}\}"[^>]*><code class="eng-code">\{\{ st\.code \}\}<\/code>/);
+  assert.match(blk, /<span class="eng-comp" title="\{\{ engCompTitle \}\}"/);
+  assert.match(blk, /<button class="eng-stg" aria-pressed="\{\{ engStaged \}\}" onClick="\{\{ toggleEngStaged \}\}"/);
   assert.match(blk, /<div role="listitem" class="fw-row eng-rule">/);
   assert.match(blk, /<span class="fw-toggle sm inert" aria-pressed="\{\{ dr\.on \}\}"/);
   assert.match(blk, /<sc-if value="\{\{ engAll \}\}"[^>]*><div class="eng-sheet"/);

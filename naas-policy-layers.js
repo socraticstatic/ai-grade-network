@@ -171,9 +171,14 @@ export function resolveTemplate(est, t) {
 // it, and the conflicts between them (one allows what another denies, for the same pair and direction).
 const RANK = (p) => /^Private cloud · |^site /.test(p.match || '') && /^(AWS|Azure|GCP|Oracle|CoreWeave) /.test(p.scope || '') ? 0
   : /^(AWS|Azure|GCP|Oracle|CoreWeave) /.test(p.scope || '') ? 1 : /^(tag|branch|remote-site) /.test(p.match || '') ? 2 : /\*/.test(p.match || '') ? 3 : 4;
+/** Precedence, the one sort (2026-10-09): an explicit priority, then the most specific, then a deny before an allow,
+ *  then the order written. Govern's numbering, the connections below and the engine (naas-policy-model.js) all read it. */
+const deniesRoutes = (p) => { const v = routeRulesOf(p)['deny:matching-routes'] || {}; return !!(v.o2p || v.p2o); };
+export const precedenceOf = (ps) => ps.map((p, i) => ({ p, i, rank: RANK(p), deny: deniesRoutes(p) }))
+  .sort((x, y) => (x.p.priority ?? 99) - (y.p.priority ?? 99) || x.rank - y.rank || (y.deny - x.deny) || x.i - y.i);
 export function evalPolicies(est, policies = []) {
   const live = policies.filter(p => p.state !== 'draft');
-  const ordered = live.map((p, i) => ({ ...p, rank: RANK(p), i })).sort((x, y) => x.rank - y.rank || x.i - y.i);
+  const ordered = precedenceOf(live).map(({ p, rank, i }) => ({ ...p, rank, i }));
   const byConn = new Map(), conflicts = [];
   for (const p of ordered) {
     const r = (est.regionsList || []).find(x => p.scope === `${x.cloud} ${x.region}`);
@@ -195,95 +200,24 @@ export function evalPolicies(est, policies = []) {
   return { ordered, connections, conflicts, summary: `${pl(ordered.length, 'policy', 'policies')} · ${pl(connections.length, 'connection', 'connections')} · ${pl(ruleN, 'rule', 'rules')} pushed · ${pl(conflicts.length, 'conflict', 'conflicts')}` };
 }
 
-// ---- The policy engine, evaluated (2026-10-01: "not a real policy engine") ----
-// A flow is { from, to, tag }: from a private cloud, a site or a tag; to a cloud region (its label) or 'the Internet'.
-const CLOUD_LABEL = /^(AWS|Azure|GCP|Oracle|CoreWeave) /;
-const glob = (pat, s) => String(pat).split(/\s*,\s*/).some(p1 => new RegExp('^' + p1.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$').test(s));
-function sideA(p, f) {
-  const m = p.match || '';
-  if (m === f.from) return true;
-  if (/^tag /.test(m)) return !!f.tag && m.slice(4) === f.tag;
-  if (/^region /.test(m)) return CLOUD_LABEL.test(f.to) && glob(m.slice(7), f.to.split(' ').slice(1).join(' '));
-  return false;
-}
+// ---- The policy engine, evaluated: moved to naas-policy-model.js (2026-10-09, slice 1 of the research plan) ----
 // The internet in the engine (2026-10-07, the engine could only ever say Allowed): an intent that keeps traffic private
 // (a private path, no direct internet) forbids the public internet outright, so a flow to the Internet that it matches is
-// Denied; an intent about the internet (inspection) applies to those flows too. Any other cloud-wide intent leaves them be.
+// Denied. The engine reads its intent catalog; this test of the words stays for the composer and the tests.
+const CLOUD_LABEL = /^(AWS|Azure|GCP|Oracle|CoreWeave) /;
 const FORBIDS_INTERNET = /no direct internet|private path|never the internet/i;
 export const forbidsInternet = (p) => FORBIDS_INTERNET.test(String(p.req || '')) || (p.path || []).includes('Never the internet');
-const speaksInternet = (p) => forbidsInternet(p) || /internet|inspection/i.test(`${p.req || ''} ${(p.path || []).join(' ')}`);
-function sideB(p, f) {
-  const sc = p.scope || 'any cloud';
-  if (sc === f.to) return true;
-  if (sc === 'any cloud') return CLOUD_LABEL.test(f.to) || (f.to === 'the Internet' && speaksInternet(p));
-  if (sc === 'the Internet') return f.to === 'the Internet';
-  return false;
-}
-/** What a policy sets, layer by layer, and whether it denies or allows routes. */
+/** What a policy sets, layer by layer, and whether it denies or allows routes (intended against configured reads it). */
 function contributions(p) {
   const out = [];
   for (const q of String(p.req || '').split(' and ').map(x => x.trim()).filter(Boolean)) out.push({ layer: layerOfReq(q), text: q });
   for (const g of SERVICE_GROUPS) for (const o of g.opts) if ((p.path || []).includes(o.label)) out.push({ layer: o.layer, text: o.label });
-  let deny = false, allow = false;
   const rt = routeRulesOf(p);
-  for (const rr of ROUTE_RULES) { const v = rt[`${rr.section}:${rr.id}`] || {};
-    for (const [dir, word] of [['o2p', 'on premise → partner'], ['p2o', 'partner → on premise']]) if (v[dir]) {
-      // Only denying the matching routes stops the flow; blocking a default route or filtering CVs shapes it.
-      if (rr.section === 'deny' && rr.id === 'matching-routes') deny = true; if (rr.section === 'allow' && rr.id === 'matching-routes') allow = true;
-      // A derived rule restates an intent already on its own layer; only a sheet of the policy's own reaches the edge.
-      if (p.route) out.push({ layer: 'edge', text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${word})` }); } }
-  return { out, deny, allow };
-}
-/** Precedence: an explicit priority, then the most specific, then deny before allow, then the order written. */
-const precedence = (ps) => ps.map((p, i) => ({ p, i, c: contributions(p), rank: RANK(p) }))
-  .sort((x, y) => (x.p.priority ?? 99) - (y.p.priority ?? 99) || x.rank - y.rank || (y.c.deny - x.c.deny) || x.i - y.i);
-export function effectivePolicy(est, policies, flow) {
-  const live = policies.filter(p => p.state !== 'draft');
-  const ranked = precedence(live), layers = {}, trace = [];
-  let verdict = 'Allowed', decidedBy = '';
-  for (const { p, c } of ranked) {
-    if (!(sideA(p, flow) && sideB(p, flow))) { trace.push({ name: p.name, result: 'Does not match' }); continue; }
-    let won = false, blocker = '';
-    const deny = c.deny || (flow.to === 'the Internet' && forbidsInternet(p));
-    if (deny && verdict !== 'Denied') { verdict = 'Denied'; decidedBy = p.name; won = true; }
-    for (const x of c.out) { if (!layers[x.layer]) { layers[x.layer] = { text: x.text, by: p.name }; won = true; } else if (layers[x.layer].by !== p.name && !blocker) blocker = layers[x.layer].by; }
-    if (won && !decidedBy) decidedBy = p.name;
-    trace.push({ name: p.name, result: won ? 'Won' : `Overridden by ${blocker || decidedBy}` });
-  }
-  return { verdict, decidedBy: decidedBy || 'No policy: the default path', trace,
-    layers: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: (layers[l.key] || {}).text || 'Default', by: (layers[l.key] || {}).by || '' })) };
-}
-/** The flows the engine checks: every private cloud, data center and tag against every region and the Internet. */
-export function engineFlows(est, policies = []) {
-  const sites = est.sites || [];
-  const froms = [...sites.filter(st => st.colo && st.colo.kind === 'Private cloud').map(st => `Private cloud · ${st.colo.provider} ${st.colo.facility}, ${st.metro}`),
-    ...sites.filter(st => /\bDC\b|data cent/i.test(st.name) && !(st.colo && st.colo.kind === 'Private cloud')).map(st => st.name)];
-  const tags = [...new Set(policies.map(p => p.match || '').filter(m => /^tag /.test(m)).map(m => m.slice(4)))];
-  const tos = [...(est.regionsList || []).map(r => `${r.cloud} ${r.region}`), 'the Internet'];
-  const out = [];
-  for (const from of froms) for (const to of tos) for (const tag of ['', ...tags]) out.push({ from, to, tag });
-  return out;
-}
-/** Policies that match some flow and never decide anything, with the policy that most often beats them. */
-export function shadowedPolicies(est, policies) {
-  const live = policies.filter(p => p.state !== 'draft'), seen = {};
-  for (const f of engineFlows(est, live)) for (const t of effectivePolicy(est, live, f).trace) {
-    if (t.result === 'Does not match') continue;
-    const s = seen[t.name] = seen[t.name] || { won: 0, by: {} };
-    if (t.result === 'Won') s.won += 1; else { const b = t.result.replace(/^Overridden by /, ''); s.by[b] = (s.by[b] || 0) + 1; }
-  }
-  return Object.entries(seen).filter(([, s]) => !s.won).map(([name, s]) => ({ name, by: Object.entries(s.by).sort((a, b) => b[1] - a[1])[0][0] }));
-}
-/** NetBond Advanced's Configure > Policies sheet, read for one flow (2026-10-05): every rule, per direction, on when a
- *  live policy that matches the flow pushes it, naming the policy first in precedence. `can` is the direction NetBond offers. */
-export function flowSheet(est, policies, flow) {
-  const live = policies.filter(p => p.state !== 'draft');
-  const hits = precedence(live).filter(({ p }) => sideA(p, flow) && sideB(p, flow)).map(x => x.p);
-  return ROUTE_SECTIONS.map(([sk, sl]) => ({ key: sk, label: sl, rules: ROUTE_RULES.filter(r => r.section === sk).map(r => {
-    // A policy that forbids the internet allows its routes on the private path only: a flow to the Internet gets its deny alone.
-    const k = `${sk}:${r.id}`, pushes = (p) => !(sk === 'allow' && flow.to === 'the Internet' && forbidsInternet(p));
-    const dir = (d) => { const by = hits.find(p => pushes(p) && (routeRulesOf(p)[k] || {})[d]); return { on: !!by, by: by ? by.name : '' }; };
-    return { key: k, id: r.id, label: r.label, can: { o2p: r.o2p, p2o: r.p2o }, o2p: dir('o2p'), p2o: dir('p2o') }; }) }));
+  // A derived rule restates an intent already on its own layer; only a sheet of the policy's own reaches the edge.
+  if (p.route) for (const rr of ROUTE_RULES) { const v = rt[`${rr.section}:${rr.id}`] || {};
+    for (const [dir, word] of [['o2p', 'on premise → partner'], ['p2o', 'partner → on premise']]) if (v[dir])
+      out.push({ layer: 'edge', text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${word})` }); }
+  return { out };
 }
 /** Per connection: what the policies intend, what the connection has today, and whether they agree. */
 export function intendedVsConfigured(est, policies) {
