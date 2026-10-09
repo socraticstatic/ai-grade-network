@@ -1039,7 +1039,8 @@ export function vals(c) {
   // a hosted way; NetBond, your own ports or the internet otherwise. It once showed a vSRX pair for every order.
   const PEND_STAGES = { hosted: D.LIFECYCLE, netbond: ['Order accepted', 'NetBond port', 'BGP session up', 'Route policy pushed', 'Validated live'],
     direct: ['Order accepted', 'Your ports', 'BGP session up', 'Validated live'], internet: ['Order accepted', 'Internet path', 'Validated live'] };
-  const pendingStages = (pendOrder ? PEND_STAGES[W.landingKind(pendOrder)] : D.LIFECYCLE).map((l, i) => landedAll ? ({ key: l, label: l, fill: 'var(--cta)', ring: 'var(--cta)', color: 'var(--text-heading)', line: 'var(--cta)' }) : ({ key: l, label: l, fill: i < 2 ? 'var(--cta)' : i === 2 ? 'var(--bg-accent)' : 'var(--bg-base)', ring: i <= 2 ? 'var(--cta)' : 'var(--border-primary)', color: i <= 2 ? 'var(--text-heading)' : 'var(--text-disabled)', line: i < 2 ? 'var(--cta)' : 'var(--border-secondary)' }));
+  // Its connectors run between stages only (2026-10-09: one trailed after the last stage).
+  const pendingStages = (pendOrder ? PEND_STAGES[W.landingKind(pendOrder)] : D.LIFECYCLE).map((l, i, all) => ({ ...(landedAll ? ({ key: l, label: l, fill: 'var(--cta)', ring: 'var(--cta)', color: 'var(--text-heading)', line: 'var(--cta)' }) : ({ key: l, label: l, fill: i < 2 ? 'var(--cta)' : i === 2 ? 'var(--bg-accent)' : 'var(--bg-base)', ring: i <= 2 ? 'var(--cta)' : 'var(--border-primary)', color: i <= 2 ? 'var(--text-heading)' : 'var(--text-disabled)', line: i < 2 ? 'var(--cta)' : 'var(--border-secondary)' })), ...(i === all.length - 1 ? { line: 'transparent' } : {}) }));
 
   const out = {
     theme: s.theme, themeLabel: s.theme === 'light' ? 'Dark' : 'Light', themeTitle: s.theme === 'light' ? 'Dark mode' : 'Light mode', themeIsLight: s.theme !== 'dark', themeIsDark: s.theme === 'dark', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
@@ -4892,7 +4893,9 @@ function flowVals(s, set, est, c) {
   const cfOutcome = (() => { const r0 = CF.sampleRegion(f, est), rides = CF.pathTable(f, est).find(p => p.rides) || null, has = f.regions.length > 0 && !!r0 && !!rides;
     return { has, none: !has, todayPath: r0 ? (r0.priv ? 'Private on the AT&T network' : 'Public internet') : 'Not measured', todayMs: r0 ? `${r0.priv ? r0.fab : r0.pub} ms p95` : '',
       afterPath: rides ? (rides.key === 'internet' ? 'Internet attach' : f.way ? CF.wayWords(f) : 'Private on the AT&T network') : '', afterLine: rides ? `${rides.performance} · ${rides.reliability} · ${rides.security}` : '',
-      priceBig: price.has ? `${price.big}/mo` : PRICE_NOTE, priceSub: price.has ? cfTotal.label : '', standUp: f.way && W.waySetup(f.way) ? W.waySetup(f.way) : rides ? rides.setup : '' }; })();
+      priceBig: price.has ? `${price.big}/mo` : PRICE_NOTE, priceSub: price.has ? cfTotal.label : '', standUp: f.way && W.waySetup(f.way) ? W.waySetup(f.way) : rides ? rides.setup : '',
+      // A way's setup is on its card above Review, so the line under the outcome says only what the card does not (2026-10-09).
+      standLine: f.way && W.waySetup(f.way) ? 'The policy ships with the order.' : rides && rides.setup ? `${rides.setup}. The policy ships with it.` : 'The policy ships with the order.' }; })();
   // The review, NetBond Advanced's ReviewStep rows in the storefront's words.
   const reviewRows = CF.wipRows(f, est).map(r => ({ key: r.key, label: r.label, value: r.value, word: r.word, ink: WIP_INK[r.state].ink }));
   // Review fits the fold (2026-10-09: 964px on Growing at 1440x900). The order summary and your selections share one slot
@@ -4954,7 +4957,7 @@ function flowVals(s, set, est, c) {
         setup: w ? W.waySetup(w.key) : '', canChange: !!origin, change: origin ? () => { c.setState({ screen: 's3', layer: 'cloud', tab: 'connect', cnPage: origin }); scrollTop(); syncHash('s3', 'cloud', 'connect'); } : () => {}, changeLabel: origin === 'options' ? 'Change on Recommended' : 'Change' }; })(),
     cfNextLabel: isLast ? 'Place order' : `Next: ${CF.STEP_META[keys[ki + 1]].title}`, cfNextDisabled: !!block, cfNextBg: block ? 'var(--bg-neutral)' : 'var(--cta)', cfNextInk: block ? 'var(--text-disabled)' : '#fff',
     cfPlace: place, cfCanPlace: isLast && !block,
-    cfName: f.name, cfNamePlaceholder: CF.defaultName(f), cfNameHelp: `Leave it blank and it is named ${CF.defaultName(f)}.`, cfSetName: (e) => put({ name: e.target.value }),
+    cfName: f.name, cfNamePlaceholder: CF.defaultName(f), cfSetName: (e) => put({ name: e.target.value }),
     cfReviewRows: reviewRows, cfLines: lines, cfOrder: ord, cfShield: ord.shield, cfRvTabs, cfRvSumVis: rvTab === 'summary' ? 'visible' : 'hidden', cfRvPickVis: rvTab === 'picks' ? 'visible' : 'hidden',
     cfWipTitle: 'Your order, in progress', cfWip: wip, cfWipList, cfDiagram, cfStrip, cfOutcome, cfPrice: price, cfPriced: price.has, cfUnpriced: !price.has,
     hasParsedNote: !!note && key === noteKey, parsedNote: note || '', parsedNoteTitle: f.noteTitle,

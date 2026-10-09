@@ -542,7 +542,11 @@ test('every container the markup opens, it closes', () => {
   // the "Order summary" caption and each row's value wrapper went and each tab carries its glyph (span -1, sc-for +1,
   // button +1). The pending banner moved under the Connect views whole (no tag moves): div 1336 -> 1338,
   // span 1518 -> 1517, sc-for 400 -> 401, button 533 -> 534.
-    ['div', /<div\b/g, /<\/div>/g, 1338],
+  // The connect flow's frame (2026-10-09, "the connect screens all feel very unorganized, and scrunched"): the header
+  // block that held the title and the entry's note went, the note moving into the step's column (div -1); Review's
+  // stand-up line is one run of text so the flex gap no longer opens a space before its full stop (span +1), and the
+  // name's help line, which said the placeholder again, went (span -1): div 1338 -> 1337, span 1517 unmoved.
+    ['div', /<div\b/g, /<\/div>/g, 1337],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,

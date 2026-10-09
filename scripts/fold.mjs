@@ -24,8 +24,9 @@
 // added row's Remove button exists only then. --no-add skips that beat.
 //
 // Last, on every estate with a Recommended page, it walks an order to Go live ("the order beat", 2026-10-09):
-// Recommended > AT&T's ExpressRoute (else the first Connect) > 1 Gbps > 12-month > Review, each Review tab, Place
-// order, Go live from the order's row, where Orders must show Pending actions with its stages, Observe and Dismiss;
+// Recommended > AT&T's ExpressRoute (else the first Connect) > 1 Gbps > 12-month > Review, each wizard step as it
+// opens, each Review tab, Place order, Go live from the order's row, where Orders must show Pending actions with its
+// stages, Observe and Dismiss;
 // then every page and tab past Home and Discover again, trail "after Go live". --no-order skips it.
 //
 // Headless only. It never opens a window and never touches Micah's Comet or
@@ -445,7 +446,21 @@ try {
         const cta = (await att.count()) ? att.first() : page.locator('.rec-cta:visible').first();
         let missed = (await cta.count()) ? null : 'no Connect on Recommended';
         if (!missed) { await cta.click(); await settle(page); }
+        const stepsSeen = new Set();
+        // The steps an entry filled before it landed you (Connection Type and Choose Provider from Recommended), from the
+        // rail; Next then walks back through the rest, as only Next leads forward.
+        const railStep = (name) => page.locator('nav[aria-label="Steps"] button', { has: page.locator('.lbl > span', { hasText: name }) }).first();
+        const landedOn = missed ? '' : ((await page.locator('nav[aria-label="Steps"] [aria-selected="true"] .lbl > span').first().textContent().catch(() => '')) || '').trim();
+        for (const name of landedOn ? (await page.locator('nav[aria-label="Steps"] .lbl > span').allTextContents()).map(x => x.trim()) : []) {
+          if (name === landedOn) break;
+          if (await railStep(name).isDisabled()) continue;
+          stepsSeen.add(name); await railStep(name).click(); await settle(page);
+          await measured('connect/Recommended', `order > ${name}`);
+        }
         for (let i = 0; !missed && i < 12 && !(await byName('Place order').count()); i++) {
+          // Each step as it opens, once: the wizard's frame holds on every step, not only on Review.
+          const stepName = ((await page.locator('nav[aria-label="Steps"] [aria-selected="true"] .lbl > span').first().textContent().catch(() => '')) || '').trim();
+          if (stepName && !stepsSeen.has(stepName)) { stepsSeen.add(stepName); await measured('connect/Recommended', `order > ${stepName}`); }
           const next = page.getByRole('button', { name: /^Next: [^→]+$/ }).first();
           if (!(await next.count())) { missed = 'no Next in the wizard'; break; }
           const label = ((await next.textContent()) || '').trim();
