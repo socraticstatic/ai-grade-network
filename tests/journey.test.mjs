@@ -335,3 +335,15 @@ test('tags show where they do work: Tag, Intent and Protect; the beats between c
   assert.ok(chipsAt('tag').includes('PCI')); assert.ok(chipsAt('intent').includes('PCI'));
   assert.deepEqual(chipsAt('recommend'), []); assert.deepEqual(chipsAt('connect', { jPick: 0 }), []);
 });
+
+test('the home offers the journey (2026-10-09): sites and no cloud read its first beat, and Find your clouds resumes at Source', () => {
+  const c = mkC({ view: 'lastmile', estateParam: null, screen: 's0' });
+  const v = vals(c);
+  assert.equal(v.homeTake.head, 'AT&T already carries your 20 sites.');
+  assert.equal(v.homeTake.cta, 'Find your clouds');
+  assert.deepEqual(v.homeTake.parts.map(p => p.t), ['7 AVPN', '6 Ethernet', '3 Internet', '4 Fiber']);
+  assert.ok(v.homeCards.every(k => !k.hasPill), 'a card with nothing to count wears no verdict');
+  v.homeTake.go();
+  assert.deepEqual([c.state.journey, c.state.screen, c.state.jStep], ['existing', 'sj', B.source]);
+  assert.notEqual(vals(mkC({ view: 'partial', estateParam: null, screen: 's0' })).homeTake.key, 'journey', 'an estate with clouds keeps its own take-away');
+});

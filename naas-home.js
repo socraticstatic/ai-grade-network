@@ -313,23 +313,25 @@ export function snapshotCards(rk, f, doors) {
   const pct = (n, of) => (of > 0 ? `${Math.max(0, Math.min(100, n / of * 100)).toFixed(1)}%` : '0%');
   const PILL = { bad: ['var(--error)', 'color-mix(in srgb, var(--error) 12%, transparent)'], warn: ['var(--warning)', 'color-mix(in srgb, var(--warning) 14%, transparent)'], ok: ['var(--link)', 'color-mix(in srgb, var(--link) 12%, transparent)'] };
   const kp = (tone, t) => ({ pill: t, pillInk: PILL[tone][0], pillBg: PILL[tone][1], hasPill: !!t });
+  // A card with nothing to count wears no verdict (2026-10-09): 'All healthy' over 0 of 0 says nothing true.
+  const NOPILL = { pill: '', pillInk: 'var(--text-light)', pillBg: 'transparent', hasPill: false };
   const cnt = (st) => flows.filter(r => r.state === st).length;
   const appDoor = (st) => (doors.appState ? doors.appState(st) : doors.health());
   const okN = cnt('ok'), downN = cnt('down'), sloN = cnt('slo'), riskN = cnt('risk'), badN = flows.length - okN;
   const lastPast = cols.filter(x => x.kind === 'past').slice(-1)[0] || {};
   const nowN = numOf(spend.spend), aheadN = numOf(spend.ahead), endAsIs = next.length ? next[next.length - 1].asIsN : nowN;
   const KPI = {
-    apps: { kLabel: 'Apps healthy', big: enf(okN), of: `of ${enf(flows.length)}`, ...(badN ? kp(downN ? 'bad' : 'warn', `${badN} need attention`) : kp('ok', 'All healthy')),
+    apps: { kLabel: 'Apps healthy', big: enf(okN), of: `of ${enf(flows.length)}`, ...(badN ? kp(downN ? 'bad' : 'warn', `${badN} need attention`) : flows.length ? kp('ok', 'All healthy') : NOPILL),
       // Each state is a door to App health listing just those apps (reviewer, 2026-10-08: "make the bar clickable so only
       // those areas of issues can be listed in a table format").
       bar: [['ok', okN], ['down', downN], ['slo', sloN], ['risk', riskN]].filter(x => x[1]).map(([key, n]) => ({ key, w: pct(n, flows.length), ink: HEALTH_FILL_BAR[key], go: appDoor(key), title: `${n} ${HEALTH_WORD[key] || key}: list ${n === 1 ? 'it' : 'them'}` })),
       foot: [downN && `${downN} down`, sloN && `${sloN} over latency target`, riskN && `${riskN} at risk`].filter(Boolean).join(' · ') || 'Every app inside its target' },
-    onatt: { kLabel: 'Private on AT&T', big: enf(regPriv), of: `of ${enf(regTotal)} regions`, ...(regTotal - regPriv ? kp('warn', `${enf(regTotal - regPriv)} public`) : kp('ok', 'All private')),
+    onatt: { kLabel: 'Private on AT&T', big: enf(regPriv), of: `of ${enf(regTotal)} regions`, ...(regTotal - regPriv ? kp('warn', `${enf(regTotal - regPriv)} public`) : regTotal ? kp('ok', 'All private') : NOPILL),
       bar: [{ key: 'priv', w: pct(regPriv, regTotal), ink: INK_PRIV }], foot: `Sites on AT&T: ${enf(sitesOn)} of ${enf(sitesTotal)}` },
-    egress: { kLabel: 'Egress spend', big: spend.spend || '$0', of: '/mo', ...(endAsIs > nowN ? kp('warn', 'Rising') : kp('ok', 'Flat')),
+    egress: { kLabel: 'Egress spend', big: spend.spend || '$0', of: '/mo', ...(endAsIs > nowN ? kp('warn', 'Rising') : nowN ? kp('ok', 'Flat') : NOPILL),
       bar: [{ key: 'att', w: pct(lastPast.attN || 0, lastPast.spendN || 1), ink: 'var(--viz-1)' }, { key: 'out', w: pct(lastPast.outN || 0, lastPast.spendN || 1), ink: 'var(--warning)' }],
       foot: nowN > aheadN && aheadN ? `$${enf(nowN - aheadN)}/mo you can avoid in 90 days` : 'Nothing to avoid yet' },
-    exposed: { kLabel: 'Exposed workloads', big: enf(exN), of: `of ${enf(wlN)}`, ...(numOf(gv.value) ? kp('bad', `${gv.value} violations`) : kp('ok', 'No violations')),
+    exposed: { kLabel: 'Exposed workloads', big: enf(exN), of: `of ${enf(wlN)}`, ...(numOf(gv.value) ? kp('bad', `${gv.value} violations`) : wlN ? kp('ok', 'No violations') : NOPILL),
       bar: [{ key: 'ex', w: pct(exN, wlN), ink: 'var(--error)' }], foot: `${wlN ? Math.round(exN / wlN * 100) : 0}% of workloads reachable from outside` },
     tags: { kLabel: 'Tags with no policy', big: enf(bare), of: `of ${enf(tagRows.length)}`, ...(bare ? kp('warn', `${enf(bare)} uncovered`) : kp('ok', 'All covered')),
       bar: [{ key: 'cov', w: pct(tagRows.length - bare, tagRows.length), ink: 'var(--link)' }], foot: bare ? 'A tag with no policy can reach anything' : 'Every tag has a policy' },

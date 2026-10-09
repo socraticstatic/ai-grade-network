@@ -1178,7 +1178,7 @@ export function vals(c) {
     ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll, probs, segCtx, incChanges),
   };
   Object.assign(out, briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }));
-  Object.assign(out, homeVals(out, s, set, { go, isEmpty, openSave, openF }));
+  Object.assign(out, homeVals(out, s, set, { go, isEmpty, openSave, openF, est }));
   // After the home, which reads Govern's whole lists: Govern's filters narrow only its own page.
   Object.assign(out, governVals(out, s, set, { go, est, invAll: A.inventory(est0),
     orderMove: (f, label, cloud) => chooseTier(c, f, label, D.CATALOG.find(p => p.id === (cloud === 'Azure' ? 'hosted-vnet' : 'hosted-vpc')), est) }));
@@ -1251,7 +1251,7 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
 // every figure is a field vals() already computed for the page it opens, and
 // every door here opens exactly the set that figure counts. It reads
 // problemRows before pageLists pages them.
-export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
+export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est = null }) {
   const rk = roleKeyOf(s);
   const stat = (k) => String(((out.invStats || []).find(x => x.key === k) || {}).v ?? '');
   const roll = (k) => (out.rollup || []).find(r => r.key === k) || {};
@@ -1296,6 +1296,11 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
   const healthy = ((out.healthTiles || []).find(x => x.key === 'ok') || {}).v || '';
   const pubClouds = (out.allRegions || []).filter(r => !r.priv).map(r => r.cloud);
   const couldT = (out.spendTiles || []).find(t => t.key === 'could') || {};
+  const today = est && (est.sites || []).length && !(est.regionsList || []).length ? J.todayOf(est) : null;
+  const resume = () => { set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: Math.max(J.BEATS.findIndex(b => b.key === 'source'), s.jStep || 0) }); };
+  const journeyTake = today && est.id === J.JOURNEY_ESTATE ? { key: 'journey', head: `AT&T already carries your ${today.sites} sites.`, sub: '', cta: 'Find your clouds', ink: 'var(--link)',
+    tint: 'color-mix(in srgb, var(--link) 14%, transparent)', wash: 'color-mix(in srgb, var(--link) 7%, var(--bg-base))', icon: 'brand/icons-light/cloud.svg', go: resume, headGo: resume, headOff: false,
+    parts: today.groups.map((g, i) => ({ key: g.key, t: `${g.n} ${g.label}`, sep: i > 0, off: false, go: resume })) } : null;
   const take = isEmpty ? null : HM.takeAway(rk, { probs, acts, onTableF: openSave ? fmt(openSave) : '', spend: tile('spend'), could: { l: couldT.l, v: couldT.v || '', u: couldT.u, sub: couldT.sub }, banked: tile('banked'),
     exposed: stat('e'), govern: roll('govern'), connect: roll('connect'), pubWl: (String(wlG.head || '').match(/^[\d,]+/) || ['0'])[0], pubClouds, healthy });
   // The take-away's doors: its action, its headline and each part of its line open the set they name,
@@ -1322,7 +1327,12 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [] }) {
   // one has left it for Your actions (skeptic, 2026-09-30).
   const waiting = acts.filter(a => a.waiting);
   return {
-    homeTake: take && { key: take.key, head: take.head, sub: take.sub, cta: take.cta, ink: take.ink,
+    // The home offers the journey (2026-10-09, "integrate into the rest of the site"): an estate with sites and no cloud yet
+    // reads the journey's first beat, its sites by access as parts, and Find your clouds resumes the story at Source.
+    // The first screen is held only when the map follows it: the map's title then clears the fold rather than straddling it
+    // on a home whose rows end short (the journey's estate, 2026-10-09). An empty estate has no map below.
+    homeMinH: isEmpty ? '0' : 'calc(100vh - 116px)',
+    homeTake: journeyTake || take && { key: take.key, head: take.head, sub: take.sub, cta: take.cta, ink: take.ink,
       tint: `color-mix(in srgb, ${take.ink} 14%, transparent)`, wash: `color-mix(in srgb, ${take.ink} 7%, var(--bg-base))`,
       icon: `brand/icons-light/${take.icon}.svg`, go: doorOf(take.door), headGo: doorOf(take.headDoor) || (() => {}), headOff: !doorOf(take.headDoor),
       parts: take.parts.map((p, i) => { const g = doorOf(p.door, p.arg); return { key: 'p' + i, t: p.t, sep: i > 0, off: !g, go: g || (() => {}) }; }) },
