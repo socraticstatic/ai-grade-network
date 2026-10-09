@@ -20,7 +20,7 @@
 // leave out the vSRX licence, hub compute and AT&T's margin, so an order adds the hub as a line priced at review. Only
 // NetBond Advanced's provisioning time is proven in market; the rest are proof-of-concept targets and say so.
 import { CATALOG } from './naas-data.js';
-import { fmt } from './naas-logic.js';
+import { fmt, connModeOf } from './naas-logic.js';
 
 /** What the cloud calls its private port, the thing a customer brings or AT&T provides. */
 export const PORT_NAME = { AWS: 'Direct Connect', Azure: 'ExpressRoute', GCP: 'Interconnect', 'Google Cloud': 'Interconnect', Oracle: 'FastConnect' };
@@ -139,6 +139,28 @@ export const wayProducts = (key, cloud, n = 1, zone) => { const w = wayOf(key); 
 export const wayExtras = (key, cloud, zone) => { const w = wayOf(key); if (!w) return [];
   return w.hosted ? [...productIds(w, cloud, zone), 'hub-att'].map(productOf).filter(Boolean) : productIds(w, cloud, zone).filter(id => id !== 'netbond').map(productOf).filter(Boolean); };
 export const wayHosted = (key) => !!(wayOf(key) || {}).hosted;
+
+// ---- What sits at the AT&T edge for one region (2026-10-09, the policy engine's slice 2) ----
+// The engine compiles an intent to the enforcement point a region really has: NetBond's route sheet, the vSRX in AT&T's
+// hosted hub, or nothing of AT&T's (the cloud's own port, a third party's fabric). Never invented: a landed order that
+// names its way says it; else the estate's stated ramp (connModeOf); else nothing is on record.
+const landedIds = (s) => (Array.isArray(s && s.landed) ? s.landed : s && s.landed ? [s.landed] : []);
+/** A region's way and where that is stated: {cls: 'hosted'|'netbond'|'direct'|'third'|null, key, from, ref}. An order from
+ *  another estate never counts; an order that predates the estate stamp still does. */
+export function regionWay(r, s = {}, estId = null) {
+  if (!r) return { cls: null, key: null, from: 'none', ref: null };
+  const landed = landedIds(s).includes(r.region);
+  const mine = ((s && s.orders) || []).filter(o => o && o.kind !== 'bandwidth' && (!o.est || !estId || o.est === estId) && (o.regions || [o.region]).includes(r.region));
+  const last = mine[mine.length - 1] || null, placed = landed ? last : null;
+  if (placed && placed.way && wayOf(placed.way)) return { cls: wayHosted(placed.way) ? 'hosted' : 'netbond', key: placed.way, from: 'order', ref: placed.id || null };
+  const mode = connModeOf(r);
+  if (mode === 'direct' || mode === 'third') return { cls: mode, key: null, from: 'ramp', ref: r.ramp };
+  // A landed order that names no way reads as the estate stamps the landing (est0: NetBond), so this page and every other
+  // say the same thing (2026-10-09 review). Whether a Last Mile or Internet to Cloud landing should stamp NetBond at all
+  // is est0's to settle, not this function's.
+  if (mode === 'netbond') return { cls: 'netbond', key: null, from: placed ? 'order' : landed ? 'landed' : 'ramp', ref: placed ? placed.id || null : r.ramp || 'NetBond' };
+  return { cls: null, key: null, from: 'public', ref: null };
+}
 
 /** A way's label for one cloud: the port named as that cloud names it. */
 export function wayLabel(key, cloud, zone) {

@@ -1,7 +1,10 @@
 // Policies across the layers of the path (Micah, 2026-09-29: "give me policies
 // that are multi-layer"). A policy says what it requires at each layer a flow
 // crosses: the site and its first mile, the AT&T edge, the AT&T core, the cloud
-// and its workloads. Pure data and functions; the view reads them.
+// and its workloads. Pure data and functions; the view reads them. Since slice 2 of
+// the policy engine (2026-10-09) every per-layer word comes from one compile table
+// (naas-policy-compile.js): RANK, ROUTE_OF, layerOfReq, ACROSS and contributions are gone.
+import { intentsOf, compilePolicy, netbondOf, homeLayer, tierOf, tierN, priorities, actionOf } from './naas-policy-compile.js';
 
 export const POLICY_LAYERS = [
   { key: 'site', label: 'Sites & first mile' },
@@ -10,33 +13,20 @@ export const POLICY_LAYERS = [
   { key: 'cloud', label: 'Cloud & workload' },
 ];
 
-/** The layer a single rule constrains, by what it asks for. */
-export function layerOfReq(req) {
-  const r = String(req || '').toLowerCase();
-  if (/inspect|firewall|ngfw|ddos|terminate|hand off|on-ramp port/.test(r)) return 'edge';
-  if (/breakout|first mile|avpn|switched ethernet|sd-wan|third party access|site/.test(r)) return 'site';
-  if (/subnet|vpc|vnet|workload|endpoint|region only/.test(r)) return 'cloud';
-  return 'core';
-}
-
-// What the estate's own policies already imply at the other layers. Each keeps
-// its own rule on its own layer; the rest is what enforcing it takes end to end.
-const ACROSS = {
-  'Private path required': { site: 'No internet breakout at the site', edge: 'Private on-ramp at the AT&T edge', cloud: 'Private subnets only' },
-  'Inline security inspection': { core: 'Egress through AT&T, never direct', cloud: 'Public subnets behind the edge' },
-  'Segment intra-tag only': { site: 'Its own segment at the site', edge: 'Segment-aware firewall', cloud: 'Its own VPCs only' },
-  'No direct internet path': { site: 'No local internet breakout', edge: 'Inspect what leaves at the AT&T edge' },
-  'Latency SLO 15 ms': { site: 'Data centers on 10G first miles', edge: 'Dedicated on-ramp port', cloud: 'Regions on a private path' },
-};
-
-/** A policy's rule at each layer ('' where it says nothing there). */
+/** A policy's rule at each layer ('' where it says nothing there): what a template wrote, else each phrase on its home
+ *  layer in the words written, and every other layer its compile reaches in that row's words. */
 export function policyLayers(p) {
   const out = Object.fromEntries(POLICY_LAYERS.map(l => [l.key, '']));
   if (p && p.layers) return { ...out, ...p.layers };
-  if (!p || !p.req) return out;
-  const own = layerOfReq(p.req);
-  const across = p.custom ? {} : (ACROSS[p.req] || {});
-  return { ...out, ...across, [own]: p.req };
+  if (!p) return out;
+  // A path pick sits on the layer the composer and the templates give it (SERVICE_GROUPS); a rule on its intent's home.
+  // Several on one layer read together, as the composer's strip does (2026-10-09 review).
+  const put = (L, ph) => { out[L] = out[L] ? `${out[L]} · ${ph}` : ph; };
+  for (const q of String(p.req || '').split(/\s+and\s+/i).map(x => x.trim()).filter(Boolean)) put(homeLayer(q), q);
+  for (const ph of (p.path || []).map(x => String(x).trim()).filter(Boolean)) { const o = SERVICE_GROUPS.flatMap(g => g.opts).find(x => x.label === ph); put(o ? o.layer : homeLayer(ph), ph); }
+  // A deny row's words are the object of its verb ("Deny local breakout"); on its own in a cell it reads "No local breakout".
+  for (const r of compilePolicy(p, ROUTE_RULES)) if (!out[r.layer]) out[r.layer] = r.verb === 'deny' ? `No ${r.text.replace(/^\w/, ch => ch.toLowerCase())}` : r.text;
+  return out;
 }
 
 /** Starting points that set a rule at every layer. */
@@ -59,42 +49,26 @@ export const MULTI_LAYER = [
 ];
 
 // NetBond Advanced's route policy (Configure > Policies, RestrictedIPv4Policy.tsx), rule by rule and
-// direction by direction: o2p is On Premise → Partner, p2o is Partner → On Premise (2026-10-01).
+// direction by direction: o2p is On Premise → Partner, p2o is Partner → On Premise (2026-10-01). `o2p`/`p2o` are the
+// directions NetBond offers (only hideOnPremiseToPartner hides one; 2026-10-09 Block Default Routes and Selective CV
+// Tagging offer both, as NetBond does), and `nb` is the label exactly as NetBond shows it.
 export const ROUTE_SECTIONS = [['deny', 'Deny actions'], ['manip', 'Manipulations'], ['allow', 'Allow actions'], ['advanced', 'Advanced']];
 export const ROUTE_RULES = [
-  { section: 'deny', id: 'matching-routes', label: 'Matching routes', o2p: true, p2o: true },
-  { section: 'deny', id: 'block-default-routes', label: 'Block default routes', o2p: true, p2o: false },
-  { section: 'deny', id: 'community-value-filter-customer', label: 'Community value filter, your BGP CVs', o2p: true, p2o: true },
-  { section: 'deny', id: 'community-value-filter-att', label: 'Community value filter, AT&T BGP CVs', o2p: false, p2o: true },
-  { section: 'manip', id: 'prepend-advertisements', label: 'Prepend extra BGP ASNs', o2p: true, p2o: true },
-  { section: 'manip', id: 'selective-cv-tagging', label: 'Selective CV tagging', o2p: true, p2o: false },
-  { section: 'manip', id: 'community-value-tag', label: 'Community value to tag routes', o2p: false, p2o: true },
-  { section: 'allow', id: 'matching-routes', label: 'Matching routes', o2p: true, p2o: true },
-  { section: 'allow', id: 'community-value-filter-customer', label: 'Community value filter, your BGP CVs', o2p: true, p2o: true },
-  { section: 'allow', id: 'community-value-filter-att', label: 'Community value filter, AT&T BGP CVs', o2p: false, p2o: true },
-  { section: 'advanced', id: 'advertise-static-routes', label: 'Advertise static routes', o2p: true, p2o: true },
+  { section: 'deny', id: 'matching-routes', label: 'Matching routes', nb: 'Matching Routes', o2p: true, p2o: true },
+  { section: 'deny', id: 'block-default-routes', label: 'Block default routes', nb: 'Block Default Routes', o2p: true, p2o: true },
+  { section: 'deny', id: 'community-value-filter-customer', label: 'Community value filter, your BGP CVs', nb: 'Community Value Filter with Customer-Provided BGP CVs', o2p: true, p2o: true },
+  { section: 'deny', id: 'community-value-filter-att', label: 'Community value filter, AT&T BGP CVs', nb: 'Community Value Filter with AT&T-Provided BGP CVs', o2p: false, p2o: true },
+  { section: 'manip', id: 'prepend-advertisements', label: 'Prepend extra BGP ASNs', nb: 'Prepend Advertisements With Extra BGP ASNs', o2p: true, p2o: true },
+  { section: 'manip', id: 'selective-cv-tagging', label: 'Selective CV tagging', nb: 'Selective CV Tagging to Routes/Prefixes', o2p: true, p2o: true },
+  { section: 'manip', id: 'community-value-tag', label: 'Community value to tag routes', nb: 'Community Value to Tag Routes', o2p: false, p2o: true },
+  { section: 'allow', id: 'matching-routes', label: 'Matching routes', nb: 'Matching routes', o2p: true, p2o: true },
+  { section: 'allow', id: 'community-value-filter-customer', label: 'Community value filter, your BGP CVs', nb: 'Community Value Filter with Customer-Provided BGP CVs', o2p: true, p2o: true },
+  { section: 'allow', id: 'community-value-filter-att', label: 'Community value filter, AT&T BGP CVs', nb: 'Community Value Filter with AT&T-Provided BGP CVs', o2p: false, p2o: true },
+  { section: 'advanced', id: 'advertise-static-routes', label: 'Advertise static routes', nb: 'Advertise Static Routes', o2p: true, p2o: true },
 ];
-// What NetBond Advanced's sheet pushes for an intent (2026-10-05, Micah: "allow, deny, manipulate, advertise ... you were
-// supposed to use that as a foundation"). An estate policy says what it requires; this is the route policy that enforces
-// it, rule by rule: a private path blocks the default route out and allows the matching routes; inspection steers by CV
-// tags; segmentation filters by community; an SLO or a second path prepends ASNs on the path to deprioritise; egress
-// through AT&T blocks the default route out and advertises AT&T's static routes in. A policy with a sheet of its own keeps it.
-const ROUTE_OF = [
-  [/private path|never the internet|no direct internet|via the at&t|private on-ramp/, { 'deny:block-default-routes': { o2p: true }, 'allow:matching-routes': { o2p: true, p2o: true } }],
-  [/inspect|ngfw|ids\/ips|proxy|ddos|firewall/, { 'manip:selective-cv-tagging': { o2p: true }, 'manip:community-value-tag': { p2o: true } }],
-  [/segment/, { 'allow:community-value-filter-customer': { o2p: true, p2o: true }, 'deny:community-value-filter-att': { p2o: true } }],
-  [/latency slo|two paths|active\/active|fail over/, { 'manip:prepend-advertisements': { o2p: true, p2o: true } }],
-  [/per-service allow-list/, { 'allow:matching-routes': { o2p: true, p2o: true } }],
-  [/egress/, { 'deny:block-default-routes': { o2p: true }, 'advanced:advertise-static-routes': { p2o: true } }],
-];
-/** A policy's NetBond route sheet: its own, or the one its intent implies. {'section:id': {o2p, p2o}} */
-export function routeRulesOf(p) {
-  if (p && p.route) return p.route;
-  const words = [String((p && p.req) || ''), ...((p && p.path) || []), ...Object.values(p && p.layers ? p.layers : {})].join(' · ').toLowerCase();
-  const out = {};
-  for (const [re, rules] of ROUTE_OF) if (re.test(words)) for (const [k, v] of Object.entries(rules)) out[k] = { ...(out[k] || {}), ...v };
-  return out;
-}
+/** A policy's NetBond route sheet: its own when any toggle is on, else what its intents compile to (naas-policy-compile.js).
+ *  {'section:id': {o2p, p2o}}. A composer policy that toggled nothing (route: {}) now derives its sheet like any other. */
+export const routeRulesOf = (p) => netbondOf(p, ROUTE_RULES);
 // What the path between two assets must do (Micah, 2026-10-01: "multi-path routing with diversity to from between
 // cloud assets, inline service insertion, access, encrypt/decrypt, controlled egress"), each on the layer that enforces it.
 export const SERVICE_GROUPS = [
@@ -131,7 +105,7 @@ export function pairOutcome(est, au, price = {}) {
   // What it pushes, layer by layer, in the order a flow crosses them.
   const pushed = [];
   for (const g of SERVICE_GROUPS) for (const o of g.opts) if (picks.includes(o.label)) pushed.push({ layer: o.layer, text: o.label });
-  for (const q of req) pushed.push({ layer: layerOfReq(q), text: q });
+  for (const q of req) pushed.push({ layer: homeLayer(q), text: q });
   for (const rr of ROUTE_RULES) { const v = (au.route || {})[`${rr.section}:${rr.id}`] || {}; const ds = [v.o2p && 'on premise → partner', v.p2o && 'partner → on premise'].filter(Boolean);
     if (ds.length) pushed.push({ layer: 'edge', text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${ds.join(', ')})` }); }
   const ORDER = ['site', 'edge', 'core', 'cloud'];
@@ -166,19 +140,19 @@ export function resolveTemplate(est, t) {
   return { match: side(t.a), scope: side(t.b), path: t.path.slice(), route: JSON.parse(JSON.stringify(t.route)), req: [], templateName: t.name };
 }
 
-// The policy engine (2026-10-01): every policy in precedence order (an asset pair beats a tag or branch,
-// which beats a region pattern, which beats any), the rules each compiles onto the connection that carries
-// it, and the conflicts between them (one allows what another denies, for the same pair and direction).
-const RANK = (p) => /^Private cloud · |^site /.test(p.match || '') && /^(AWS|Azure|GCP|Oracle|CoreWeave) /.test(p.scope || '') ? 0
-  : /^(AWS|Azure|GCP|Oracle|CoreWeave) /.test(p.scope || '') ? 1 : /^(tag|branch|remote-site) /.test(p.match || '') ? 2 : /\*/.test(p.match || '') ? 3 : 4;
-/** Precedence, the one sort (2026-10-09): an explicit priority, then the most specific, then a deny before an allow,
- *  then the order written. Govern's numbering, the connections below and the engine (naas-policy-model.js) all read it. */
-const deniesRoutes = (p) => { const v = routeRulesOf(p)['deny:matching-routes'] || {}; return !!(v.o2p || v.p2o); };
-export const precedenceOf = (ps) => ps.map((p, i) => ({ p, i, rank: RANK(p), deny: deniesRoutes(p) }))
-  .sort((x, y) => (x.p.priority ?? 99) - (y.p.priority ?? 99) || x.rank - y.rank || (y.deny - x.deny) || x.i - y.i);
+// The policy engine (2026-10-01): every policy in precedence order, the rules each compiles onto the connection that
+// carries it, and the conflicts between them (one allows what another denies, for the same pair and direction).
+/** Precedence, the one sort (2026-10-09, slice 2): the tier (AT&T, Estate, Owners, Baseline), then the visible integer
+ *  priority (a policy's own, else ten apart in the order written within its tier), then a deny before an allow at the
+ *  same priority, then the order written. Specificity is no longer a sort key. Govern's numbering, the connections below
+ *  and the engine (naas-policy-model.js) all read it. Ours, not NetBond's: NetBond states no evaluation order. */
+const deniesRoutes = (p) => { const v = routeRulesOf(p)['deny:matching-routes'] || {}; return !!(v.o2p || v.p2o) || actionOf(p) === 'deny'; };
+export const precedenceOf = (ps) => { const pr = priorities(ps);
+  return ps.map((p, i) => ({ p, i, tier: tierOf(p), priority: pr[i], deny: deniesRoutes(p) }))
+    .sort((x, y) => tierN(x.tier) - tierN(y.tier) || x.priority - y.priority || (y.deny - x.deny) || x.i - y.i); };
 export function evalPolicies(est, policies = []) {
   const live = policies.filter(p => p.state !== 'draft');
-  const ordered = precedenceOf(live).map(({ p, rank, i }) => ({ ...p, rank, i }));
+  const ordered = precedenceOf(live).map(({ p, tier, priority, i }) => ({ ...p, tier, priority, i }));
   const byConn = new Map(), conflicts = [];
   for (const p of ordered) {
     const r = (est.regionsList || []).find(x => p.scope === `${x.cloud} ${x.region}`);
@@ -207,25 +181,18 @@ export function evalPolicies(est, policies = []) {
 const CLOUD_LABEL = /^(AWS|Azure|GCP|Oracle|CoreWeave) /;
 const FORBIDS_INTERNET = /no direct internet|private path|never the internet/i;
 export const forbidsInternet = (p) => FORBIDS_INTERNET.test(String(p.req || '')) || (p.path || []).includes('Never the internet');
-/** What a policy sets, layer by layer, and whether it denies or allows routes (intended against configured reads it). */
-function contributions(p) {
-  const out = [];
-  for (const q of String(p.req || '').split(' and ').map(x => x.trim()).filter(Boolean)) out.push({ layer: layerOfReq(q), text: q });
-  for (const g of SERVICE_GROUPS) for (const o of g.opts) if ((p.path || []).includes(o.label)) out.push({ layer: o.layer, text: o.label });
-  const rt = routeRulesOf(p);
-  // A derived rule restates an intent already on its own layer; only a sheet of the policy's own reaches the edge.
-  if (p.route) for (const rr of ROUTE_RULES) { const v = rt[`${rr.section}:${rr.id}`] || {};
-    for (const [dir, word] of [['o2p', 'on premise → partner'], ['p2o', 'partner → on premise']]) if (v[dir])
-      out.push({ layer: 'edge', text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${word})` }); }
-  return { out };
-}
 /** Per connection: what the policies intend, what the connection has today, and whether they agree. */
 export function intendedVsConfigured(est, policies) {
   const byReg = new Map();
   for (const p of policies.filter(x => x.state !== 'draft')) {
     const r = (est.regionsList || []).find(x => p.scope === `${x.cloud} ${x.region}`); if (!r) continue;
     const c = byReg.get(r.region) || { key: r.region, region: r.region, label: `${r.cloud} ${r.region}`, rows: [] };
-    for (const x of contributions(p).out) {
+    // What it intends: its phrases, and its own NetBond sheet as authored (a derived row restates an intent already listed).
+    const own = [...String(p.req || '').split(/\s+and\s+/i), ...(p.path || [])].map(x => String(x).trim()).filter(Boolean).map(q => ({ layer: homeLayer(q), text: q }));
+    if (p.route) for (const rr of ROUTE_RULES) { const v = p.route[`${rr.section}:${rr.id}`] || {};
+      for (const [dir, word] of [['o2p', 'on premise → partner'], ['p2o', 'partner → on premise']]) if (v[dir])
+        own.push({ layer: 'edge', text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${word})` }); }
+    for (const x of own) {
       const privateIntent = ['Via the AT&T network', 'Never the internet'].includes(x.text);
       const row = privateIntent
         ? (r.priv ? { configured: 'Private on the AT&T network', status: 'In sync' } : { configured: 'Rides the public internet today', status: 'Drift' })
@@ -252,28 +219,21 @@ export function assetIcon(label) {
   if (/^region /.test(s) || /^any cloud$/i.test(s) || CLOUD_LABEL.test(s)) return 'cloud';
   return 'target';
 }
-// NetBond Advanced's four verbs (Allow, Deny, Manipulate, Advertise) in its colors, then what the path asks for, in neutral: three at most.
+// The verbs a policy compiles to across its layers (Deny, Allow, Manipulate, Advertise, in NetBond's colors), then what
+// the path asks for, in neutral: three at most. A verb carries the directions its rows run (2026-10-09, from the compile
+// table, so an SLO is a Manipulate of the class of service and never a prepend).
+const INTENT_BADGE = { private: ['path', 'Path'], 'no-internet': ['path', 'Path'], 'two-paths': ['path', 'Path'], 'no-breakout': ['path', 'Path'], inspect: ['inspect', 'Inspect'],
+  segment: ['segment', 'Segment'], slo: ['slo', 'SLO'], egress: ['egress', 'Egress'], encrypt: ['encrypt', 'Encrypt'], 'zero-trust': ['access', 'Access'], 'allow-list': ['inspect', 'Inspect'] };
 export function verbBadges(p) {
   const out = [], seen = new Set(), add = (key, label, cls) => { if (!seen.has(key)) { seen.add(key); out.push({ key, label, cls }); } };
-  const rt = routeRulesOf(p);
-  // A route verb carries the directions its rules push, as the journey's cards read them (2026-10-09): → on prem to
-  // partner, ← partner to on prem, ⇄ both.
-  const dirs = {}; for (const rr of ROUTE_RULES) { const v = rt[`${rr.section}:${rr.id}`] || {}; if (v.o2p || v.p2o) { const d = dirs[rr.section] = dirs[rr.section] || { o2p: false, p2o: false }; d.o2p = d.o2p || !!v.o2p; d.p2o = d.p2o || !!v.p2o; } }
-  const arrow = (sec) => { const d = dirs[sec]; return !d ? '' : d.o2p && d.p2o ? '⇄' : d.o2p ? '→' : '←'; };
-  const dirWord = (sec) => { const d = dirs[sec]; return !d ? '' : d.o2p && d.p2o ? 'both ways' : d.o2p ? 'on prem to partner' : 'partner to on prem'; };
-  for (const rr of ROUTE_RULES) { const v = rt[`${rr.section}:${rr.id}`] || {}; if (!(v.o2p || v.p2o)) continue;
-    if (rr.section === 'deny') add('deny', 'Deny', 'deny'); else if (rr.section === 'allow') add('allow', 'Allow', 'allow'); else if (rr.section === 'manip') add('manip', 'Manipulate', 'manip'); else add('adv', 'Advertise', 'adv'); }
-  const words = [String((p && p.req) || ''), ...((p && p.path) || []), ...Object.values(policyLayers(p))].join(' · ').toLowerCase();
-  if (/private path|never the internet|via the at&t|no direct internet|two paths|active\/active|fail over|private on-ramp/.test(words)) add('path', 'Path', '');
-  if (/inspect|ngfw|ids\/ips|proxy|firewall|ddos/.test(words)) add('inspect', 'Inspect', '');
-  if (/segment/.test(words)) add('segment', 'Segment', '');
-  if (/latency slo/.test(words)) add('slo', 'SLO', '');
-  if (/egress/.test(words)) add('egress', 'Egress', '');
-  if (/encrypt/.test(words)) add('encrypt', 'Encrypt', '');
-  if (/zero-trust|private access/.test(words)) add('access', 'Access', '');
-  if (/cost-aware/.test(words)) add('cost', 'Cost', '');
-  return out.slice(0, 3).map(b => { const sec = { deny: 'deny', allow: 'allow', manip: 'manip', adv: 'advanced' }[b.key]; const dir = sec ? arrow(sec) : '';
-    return { ...b, dir, hasDir: !!dir, title: dir ? `${b.label}, ${dirWord(sec)}` : b.label }; });
+  const rows = compilePolicy(p || {}, ROUTE_RULES), dirs = {};
+  for (const r of rows) { const d = dirs[r.verb] = dirs[r.verb] || { o2p: false, p2o: false }; if (r.dir !== 'p2o') d.o2p = true; if (r.dir !== 'o2p') d.p2o = true; }
+  for (const [v, key, label] of [['deny', 'deny', 'Deny'], ['allow', 'allow', 'Allow'], ['manip', 'manip', 'Manipulate'], ['adv', 'adv', 'Advertise']]) if (dirs[v]) add(key, label, key);
+  for (const it of intentsOf(p || {})) { const b = INTENT_BADGE[it.key] || (/cost-aware/.test(it.key) ? ['cost', 'Cost'] : null); if (b) add(b[0], b[1], ''); }
+  const arrow = (v) => { const d = dirs[v]; return !d ? '' : d.o2p && d.p2o ? '⇄' : d.o2p ? '→' : '←'; };
+  const dirWord = (v) => { const d = dirs[v]; return !d ? '' : d.o2p && d.p2o ? 'both ways' : d.o2p ? 'on prem to partner' : 'partner to on prem'; };
+  return out.slice(0, 3).map(b => { const dir = ['deny', 'allow', 'manip', 'adv'].includes(b.key) ? arrow(b.key) : '';
+    return { ...b, dir, hasDir: !!dir, title: dir ? `${b.label}, ${dirWord(b.key)}` : b.label }; });
 }
 /** Every glyph the app binds by name; tests/icons.test.mjs checks each is on disk. */
 export const ICON_NAMES = [...new Set([...Object.values(LAYER_ICON), 'hybrid-cloud', 'tag', 'large-building', 'globe', 'global-network', 'cloud', 'target'])];

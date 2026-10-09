@@ -47,9 +47,10 @@ test('verb badges: NetBond Advanced\'s four in their colors, the path\'s asks in
   const b = verbBadges({ req: 'Private path required', route: { 'deny:block-default-routes': { o2p: true, p2o: false }, 'allow:matching-routes': { o2p: true, p2o: false } }, path: ['NGFW inline'] });
   assert.deepEqual(b.map(x => x.label), ['Deny', 'Allow', 'Path']);
   assert.deepEqual(b.map(x => x.cls), ['deny', 'allow', '']);
-  // An intent derives its NetBond verbs (routeRulesOf, 2026-10-05), so the verb leads and the path's asks follow.
-  assert.deepEqual(verbBadges({ req: 'Inline security inspection' }).map(x => x.label), ['Manipulate', 'Inspect', 'Egress']);
-  assert.deepEqual(verbBadges({ req: 'Latency SLO 15 ms' }).map(x => x.label), ['Manipulate', 'Path', 'SLO']);
+  // The verbs come from every layer's compiled rows (2026-10-09, slice 2), so the verb leads and the path's asks follow:
+  // inspection allows through the vSRX and tags CVs on NetBond; an SLO manipulates the class of service.
+  assert.deepEqual(verbBadges({ req: 'Inline security inspection' }).map(x => x.label), ['Allow', 'Manipulate', 'Inspect']);
+  assert.deepEqual(verbBadges({ req: 'Latency SLO 15 ms' }).map(x => x.label), ['Manipulate', 'SLO']);
 });
 
 import { vals } from '../naas-app.js';

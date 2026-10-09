@@ -32,7 +32,9 @@ test('step 2: the composer names a private cloud on one side and a cloud region 
 });
 
 test('step 2: route rules follow NetBond Advanced, direction by direction, and ride the policy', () => {
-  assert.equal(ROUTE_RULES.find(r => r.id === 'block-default-routes').p2o, false);
+  // Offered directions as NetBond's code offers them (2026-10-09): Block Default Routes both ways, the AT&T CV filter p2o only.
+  assert.equal(ROUTE_RULES.find(r => r.id === 'block-default-routes').p2o, true);
+  assert.equal(ROUTE_RULES.find(r => r.id === 'selective-cv-tagging').p2o, true);
   assert.equal(ROUTE_RULES.find(r => r.id === 'community-value-filter-att').o2p, false);
   const c = gov({ match: 'Private cloud · Equinix DC2, Ashburn', scope: 'AWS us-east-1', req: ['Private path required'], tab: 'route' });
   const v = vals(c);

@@ -21,7 +21,7 @@ import * as SCH from './naas-schedule.js';
 import * as VD from './naas-verdicts.js';
 import * as LC from './naas-lifecycle.js';
 import * as SG from './naas-signals.js';
-import { POLICY_LAYERS, policyLayers, layerOfReq, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, ROUTE_PATHS, routeRulesOf, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies, intendedVsConfigured, LAYER_ICON, LAYER_SHORT, assetIcon, verbBadges } from './naas-policy-layers.js';
+import { POLICY_LAYERS, policyLayers, MULTI_LAYER, ROUTE_RULES, ROUTE_SECTIONS, routeRulesOf, SERVICE_GROUPS, pairOutcome, BETWEEN_TEMPLATES, resolveTemplate, evalPolicies, intendedVsConfigured, LAYER_ICON, LAYER_SHORT, assetIcon, verbBadges } from './naas-policy-layers.js';
 import { appsOf } from './naas-apps.js';
 import * as M from './naas-moves.js';
 import { rampName } from './naas-things.js';
@@ -35,6 +35,7 @@ import * as AH from './naas-app-health.js';
 import * as DR from './naas-drill.js';
 import * as GV from './naas-govern.js';
 import * as PM from './naas-policy-model.js';
+import * as PC from './naas-policy-compile.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product', s9: 'Help', sj: 'Journey' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
@@ -207,7 +208,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jIntent: null, intents: {}, jFlip: 0, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, layDir: 'o2p', layLit: null, layPage: 0, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jIntent: null, intents: {}, jFlip: 0, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -319,7 +320,10 @@ export function vals(c) {
   const steered = s.steered || [];
   const persona = PERSONA_NAME[s.persona] || 'Cloud & Platform Architect';
   const landedRs = landedOf(s);
-  const est0 = { ...estRaw, regionsList: estRaw.regionsList.map(r => landedRs.includes(r.region) ? { ...r, priv: true, ramp: r.ramp || 'NetBond', rel: 'ok', landed: true } : r), attachedRegions: estRaw.attachedRegions + landedRs.length };
+  // Each region also says what sits at its AT&T edge (2026-10-09, the policy engine's slice 2): the way a landed order
+  // names, else the estate's stated ramp, else nothing on record (W.regionWay). The engine compiles to it.
+  const est0 = { ...estRaw, regionsList: estRaw.regionsList.map(r => { const r1 = landedRs.includes(r.region) ? { ...r, priv: true, ramp: r.ramp || 'NetBond', rel: 'ok', landed: true } : r;
+    return { ...r1, way: W.regionWay(r1, s, estRaw.id).cls }; }), attachedRegions: estRaw.attachedRegions + landedRs.length };
   // Every policy counts by Govern's one rule (w2-govern, 2026-09-30), off this estate as it stands:
   // a region attached or a source added this session moves its figures, and every page reads them.
   est0.policies = GV.figured(est0, A.inventory(est0), { siteTags: ((s.siteTags || {})[est0.id]) || {} });
@@ -1406,12 +1410,12 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est =
 // each row opening the thing itself on Discover, with a way back. The counts come
 // from one rule (naas-govern.js), so a figure is the length of the list it opens.
 // A count of things never lands on Logs.
-const GOV_PANEL = { policies: 'Violations & policies', tags: 'Tags', templates: 'Templates' };
+const GOV_PANEL = { policies: 'Violations & policies', tags: 'Tags', templates: 'Templates', layers: 'Layers' };
 // The set a finding's head counts: the violations of the rule it names (naas-govern.js counts its head the same way).
 const FINDING_RULE = GV.FINDING_RULE;
 const POL_FILTERS = ['enforced', 'unenforced', 'viol'];
 export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} }) {
-  const gk = out.govPanelTags ? 'tags' : out.govPanelTemplates ? 'templates' : 'policies';
+  const gk = out.govPanelTags ? 'tags' : out.govPanelTemplates ? 'templates' : out.govPanelLayers ? 'layers' : 'policies';
   const onGov = s.screen === 's3' && s.tab === 'govern' && s.layer === 'cloud';
   const siteTags = ((s.siteTags || {})[est.id]) || {};
   const nf = (x) => Number(x || 0).toLocaleString('en-US');
@@ -1604,7 +1608,7 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
 
   return {
     ...drillVals,
-    govListPolicies: !!out.govPanelPolicies && !dr, govListTags: !!out.govPanelTags && !dr, govListTemplates: !!out.govPanelTemplates && !dr,
+    govListPolicies: !!out.govPanelPolicies && !dr, govListTags: !!out.govPanelTags && !dr, govListTemplates: !!out.govPanelTemplates && !dr, govListLayers: !!out.govPanelLayers && !dr,
     govPanels: (out.govPanels || []).map(g => ({ ...g, go: () => set({ govPanel: g.key, govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null }) })),
     polRows, governFindings, hasGovernFindings: governFindings.length > 0,
     polFilterOn: !!pf, polFilterLabel: pfLabel, clearPolFilter: () => set({ polFilter: null, polPage: 0 }),
@@ -1638,7 +1642,7 @@ const ANDI_SHRINK = { appRows: 1, cloudRows: 1, placeRows: 1 };
 // Fewer words, more icons (2026-10-07): every page tab leads with its glyph, every role chip with its own and carries its
 // question as its title (the question left the page), and a page whose head is chips draws them in place of the sentence.
 const TAB_ICON = { 'Recommended': 'bullseye', 'Ways to connect': 'cable', 'Orders': 'shopping-bag', 'At a glance': 'pie-chart', 'Your clouds': 'cloud', 'Your sites': 'large-building', 'Business units': 'person-group',
-  'Violations & policies': 'exclamation-triangle', 'Templates': 'list', 'Policy engine': 'gear', 'Tags': 'tag', 'Signals': 'smart-meter', 'Your actions': 'checklist', 'Operations': 'wrench', 'Findings': 'exclamation-circle',
+  'Violations & policies': 'exclamation-triangle', 'Layers': 'grid', 'Templates': 'list', 'Policy engine': 'gear', 'Tags': 'tag', 'Signals': 'smart-meter', 'Your actions': 'checklist', 'Operations': 'wrench', 'Findings': 'exclamation-circle',
   'Monthly briefing': 'lightbulb', 'Traffic': 'global-network', 'Over time': 'trending-up', 'Where it goes': 'map', 'Health': 'verified', 'Paths': 'shuffle', 'Capacity': 'high-meter', 'Changes': 'history',
   'Optimize': 'trending-down', 'Spend': 'bill', 'By leg': 'merge', 'By region': 'map', 'By destination': 'target', 'By first mile': 'ethernet', 'Flow records': 'list', 'User activity': 'user-access',
   'Overview': 'grid', 'Tickets': 'checklist', 'Availability': 'verified', 'Maintenance & Changes': 'wrench' };
@@ -4335,14 +4339,23 @@ function wizardVals(s, est, set, c) {
   const polSentence = (p) => ({ match: p.match, scope: p.scope || (/internet/i.test(p.req) ? 'the Internet' : 'any cloud'), req: p.req.toLowerCase() });
   // The list and the engine agree on precedence (2026-10-02): the square on each row is the engine's number.
   const allPol = [...(s.layer === 'cloud' ? layerPolicies(s, est, 'all') : []), ...(s.customPolicies || [])];
-  const prioOf = new Map(evalPolicies(est, allPol).ordered.map((p, i) => [p.name, i + 1]));
-  const PRIO_WHY = ['an asset pair beats everything', 'a region beats a tag', 'a tag or branch beats a pattern', 'a pattern beats any', 'the broadest rule'];
+  // The precedence square (2026-10-09, slice 2): the place in the one sort the engine and Layers read, its title the tier
+  // and the priority that put it there. Specificity no longer sorts ("an asset pair beats everything" is gone).
+  const ordAll = evalPolicies(est, allPol).ordered, prioOf = new Map(ordAll.map((p, i) => [p.name, i + 1])), rankOf = new Map(ordAll.map(p => [p.name, p]));
+  const prioWhyOf = (p) => { const o = rankOf.get(p.name); if (!o) return 'a draft'; const T = PC.POLICY_TIERS.find(x => x.key === o.tier) || {}; return `${T.label} tier, priority ${o.priority}`; };
+  // A row's broken cells are the layers the engine finds it violated on real flows (2026-10-09 review: once the phrase's
+  // home layer, so PCI read broken at the core while its exposed workloads break it in the cloud). A staged policy reads
+  // what staging would find.
+  const sweepOpts = { inv: A.inventory(est), match: { siteTags: ((s.siteTags || {})[est.id]) || {} } };
+  const brokeIn = (sw) => new Map(sw.violated.map(v => [v.name, new Set(v.layers)]));
+  const brokeE = brokeIn(PM.sweep(est, allPol, sweepOpts)), brokeS = brokeIn(PM.sweep(est, allPol, { ...sweepOpts, staged: true }));
+  const brokenOf = (p) => (PM.STAGED.has(p.state) ? brokeS : brokeE).get(p.name) || new Set();
   return {
     aNotReady: !aReady, aReady,
     // govern
     notAuthoring: !au,
     // Two tabs, one at a time (2026-09-28, no scrolling).
-    ...(() => { const gk = ['templates', 'tags', 'engine'].includes(s.govPanel) ? s.govPanel : 'policies'; return { govPanels: [['policies', 'Violations & policies'], ['templates', 'Templates'], ['engine', 'Policy engine'], ['tags', 'Tags']].map(([k, l]) => { const on = gk === k; return { key: k, label: l, on, go: () => set({ govPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), govPanelPolicies: gk === 'policies', govPanelTemplates: gk === 'templates', govPanelEngine: gk === 'engine', govPanelTags: gk === 'tags' }; })(),
+    ...(() => { const gk = ['templates', 'tags', 'engine', 'layers'].includes(s.govPanel) ? s.govPanel : 'policies'; return { govPanels: [['policies', 'Violations & policies'], ['layers', 'Layers'], ['templates', 'Templates'], ['engine', 'Policy engine'], ['tags', 'Tags']].map(([k, l]) => { const on = gk === k; return { key: k, label: l, on, go: () => set({ govPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), govPanelPolicies: gk === 'policies', govPanelLayers: gk === 'layers', govPanelTemplates: gk === 'templates', govPanelEngine: gk === 'engine', govPanelTags: gk === 'tags' }; })(),
     authoring: !!au, openAuthor: openAuthor(), closeAuthor: () => set({ authoring: null }), aMatch: A_MATCH.map(v => aCard('match', v, true)), aScope: A_SCOPE.map(v => aCard('scope', v, true)), aReq: D.COMPOSE_CHIPS.control.map(v => aCard('req', v, false)),
     ...(() => { // The composer as NetBond Advanced lays out Configure > Policies (2026-10-02): a vertical tab group with icons and category
       // heads, rules as wash rows with a toggle per direction, Reset and the verbs in the footer. The route rules are NetBond Advanced's as they are (2026-10-01).
@@ -4362,7 +4375,7 @@ function wizardVals(s, est, set, c) {
       // The strip under the sentence: what this policy sets at each layer, live as you pick (a template's layers, the rules, the path picks, the route rules at the edge).
       const per = Object.fromEntries(POLICY_LAYERS.map(l => [l.key, []]));
       if (au && au.layers) for (const l of POLICY_LAYERS) if (au.layers[l.key]) per[l.key].push(au.layers[l.key]);
-      for (const q of (au && au.req) || []) per[layerOfReq(q)].push(q);
+      for (const q of (au && au.req) || []) per[PC.homeLayer(q)].push(q);
       for (const g of SERVICE_GROUPS) for (const o of g.opts) if (paths.includes(o.label)) per[o.layer].push(o.label);
       const rn = Object.values(rt).filter(v => v && (v.o2p || v.p2o)).length; if (rn) per.edge.push(`${rn} route ${rn === 1 ? 'rule' : 'rules'}`);
       const aStrip = POLICY_LAYERS.map(l => { const xs = [...new Set(per[l.key])]; return { key: l.key, label: l.label, icon: LAYER_ICON[l.key], state: xs.length ? 'set' : 'any', text: xs.join(' · ') || 'Any' }; });
@@ -4390,7 +4403,7 @@ function wizardVals(s, est, set, c) {
     polRows: (s.layer === 'cloud' ? [...layerPolicies(s, est, 'all'), ...(s.customPolicies || [])] : layerPolicies(s, est, 'all')).map((p, i) => ({ ...p, key: 'pr' + i, sent: polSentence(p),
       appliesTo: `${p.match} · ${(p.matched || 0).toLocaleString('en-US')} matched`,
       // A rule sits in the layer it governs; a violation is marked where it breaks.
-      layers: (() => { const L = policyLayers(p), own = layerOfReq(String(p.req).split(' and ')[0]); return POLICY_LAYERS.map(l => { const text = L[l.key], broken = p.viol > 0 && l.key === own && !!text;
+      layers: (() => { const L = policyLayers(p), broke = brokenOf(p); return POLICY_LAYERS.map(l => { const text = L[l.key], broken = broke.has(l.key);
         return { key: l.key, label: l.label, text: text || 'Any', set: !!text, broken, ink: broken ? 'var(--error)' : text ? 'var(--text-heading)' : 'var(--text-disabled)', bar: broken ? 'var(--error)' : text ? 'var(--cta)' : 'var(--border-secondary)', weight: broken ? 600 : 400 }; }); })(), dot: p.state === 'enforced' ? 'var(--success)' : p.state === 'simulated' ? 'var(--warning)' : 'var(--text-disabled)', violColor: p.viol ? 'var(--error)' : 'var(--text-light)', hasViol: p.viol > 0, violLabel: p.viol ? `${p.viol} violations` : 'no violations', matchedLabel: `${p.matched} matched`,
       // A violation you cannot act on is a number on a wall. Every violating
       // policy opens the workloads breaking it, on the map, filtered to them.
@@ -4408,8 +4421,8 @@ function wizardVals(s, est, set, c) {
       actBorder: 'var(--border-primary)' }))
       // NetBond Advanced's row (2026-10-02): the toggle is the state (and enforces a simulated policy of yours), the square is
       // the engine's precedence, the badges are the verbs, the strip is the path with its glyphs, and the name opens the words.
-      .map(p => { const rank = evalPolicies(est, [p]).ordered[0], enforcedNow = p.state === 'enforced';
-        return { ...p, prio: prioOf.get(p.name) || '·', prioWhy: rank ? PRIO_WHY[rank.rank] : 'a draft', isOn: enforcedNow, toggleCls: enforcedNow ? 'inert' : '',
+      .map(p => { const enforcedNow = p.state === 'enforced';
+        return { ...p, prio: prioOf.get(p.name) || '·', prioWhy: prioWhyOf(p), isOn: enforcedNow, toggleCls: enforcedNow ? 'inert' : '',
           toggleTitle: enforcedNow ? 'Enforced' : p.state === 'simulated' ? 'Simulated. Enforce it' : 'Draft',
           toggleGo: enforcedNow ? () => {} : p.custom ? () => set({ customPolicies: (s.customPolicies || []).map(x => x.name === p.name ? { ...x, state: 'enforced' } : x) }) : () => set({ authoring: { match: p.match, scope: p.scope || 'any cloud', req: [p.req] } }),
           // An enforced row's toggle is its state; a simulated or drafted one says so in light ink (2026-10-09).
@@ -4418,11 +4431,10 @@ function wizardVals(s, est, set, c) {
           layers: p.layers.map(l => ({ ...l, icon: LAYER_ICON[l.key], state: l.broken ? 'broken' : l.set ? 'set' : 'any' })) }; }),
     // The policy engine (2026-10-01): every policy in precedence order, what each compiles onto each connection, conflicts.
     ...(() => { const all = [...(s.layer === 'cloud' ? layerPolicies(s, est, 'all') : []), ...(s.customPolicies || [])];
-      const e = evalPolicies(est, all), RANKW = ['Asset pair', 'To a region', 'Tag or branch', 'Region pattern', 'Any'];
-      return { engineSummary: e.summary, engineRows: e.ordered.slice(0, 7).map((p, i) => ({ key: 'e' + i, n: i + 1, name: p.name || p.match, line: `When ${p.match} reaches ${p.scope || 'any cloud'}${p.req ? `, require ${String(p.req).toLowerCase()}` : ''}${(p.path || []).length ? `, ${p.path.map(x => x.replace(/^\w/, ch => ch.toLowerCase())).join(', ')}` : ''}`, rank: RANKW[p.rank], state: p.state || 'enforced' })),
-        engineMore: e.ordered.length > 7 ? `+${e.ordered.length - 7} more, lower precedence` : '', hasEngineMore: e.ordered.length > 7,
-        engineConns: e.connections.map(c => ({ key: c.key, label: c.label, rules: c.rules.slice(0, 6).map((r, i) => ({ key: c.key + i, text: r.text, from: r.from })) })), hasEngineConns: e.connections.length > 0, noEngineConns: !e.connections.length,
-        engineConflicts: e.conflicts, hasEngineConflicts: e.conflicts.length > 0, noEngineConflicts: !e.conflicts.length,
+      // The list's summary stays (tests read it); the unbound rows, connections and conflicts that read RANK are gone
+      // (2026-10-09): Layers is the per-connection view now.
+      const e = evalPolicies(est, all);
+      return { engineSummary: e.summary,
         engineStart: () => set({ govPanel: 'templates', govTplKind: 'between' }),
         // The engine as an engine (2026-10-07, Micah: "The policy engine needs a deep UI and UX pass"): a flow goes in on
         // the left (three pickers, not a wall of chips), every policy is checked in precedence order in the middle (the
@@ -4465,7 +4477,9 @@ function wizardVals(s, est, set, c) {
             const coded = CODED.has(l.stamp) && !String(l.text).toLowerCase().includes(bare.toLowerCase().replace(/_/g, ' '));
             return { key: l.key, station: LAYER_SHORT[l.key], icon: LAYER_ICON[l.key], text: l.text, state: S0.ps, stamp: S0.icon, hasStamp: !!S0.icon, stampWord: S0.word,
               code: coded ? bare.replace(/_/g, '_\u200b') : '', hasCode: coded,
-              title: `${(POLICY_LAYERS.find(x => x.key === l.key) || {}).label}: ${S0.word}${l.code && l.stamp !== 'notonpath' ? ` (${l.code})` : ''}. ${l.text}${l.by ? `, asked by ${l.by}` : ''}` }; }) : [];
+              // The row that decided this layer (slice 2): its tier, priority, verb and policy, or the layer's default.
+              title: `${(POLICY_LAYERS.find(x => x.key === l.key) || {}).label}: ${S0.word}${l.code && l.stamp !== 'notonpath' ? ` (${l.code})` : ''}. ${l.text}${l.by ? `, asked by ${l.by}` : ''}.${l.rule
+                ? (l.rule.byDefault ? ` Decided by its default: ${l.rule.verb} ${l.rule.text.toLowerCase()}${l.rule.audit ? ', in Audit' : ''}.` : ` Decided by ${l.rule.policy}, ${l.rule.tierLabel} ${l.rule.priority}: ${l.rule.verb} ${l.rule.text.toLowerCase()}.`) : ''}` }; }) : [];
           const comp = r ? PM.COMPLIANCE[r.compliance] : PM.COMPLIANCE.None;
           // NetBond Advanced's sheet for this flow (2026-10-05): each section wears its verb badge, each row the policy that sets it.
           const VERB = { deny: ['Deny', 'deny', 'var(--error)'], manip: ['Manipulate', 'manip', 'var(--warning)'], allow: ['Allow', 'allow', 'var(--link)'], advanced: ['Advertise', 'adv', 'var(--link)'] };
@@ -4474,7 +4488,9 @@ function wizardVals(s, est, set, c) {
           const sheet = r ? PM.flowSheet(est, all, ef, eo).map(sec => { const on = sec.rules.filter(x => x.o2p.on || x.p2o.on).length;
             return { key: sec.key, label: sec.label, verb: VERB[sec.key][0], cls: VERB[sec.key][1], ink: VERB[sec.key][2], icon: ROUTE_ICON[sec.key], count: `${on} of ${sec.rules.length}`, n: on,
               rules: sec.rules.map(x => { const by = x.o2p.by || x.p2o.by, isOn = x.o2p.on || x.p2o.on;
-                return { key: x.key, label: x.label, on: isOn, verb: VERB[sec.key][0], cls: VERB[sec.key][1], icon: RULE_ICON[x.id] || 'gear', ink: isOn ? VERB[sec.key][2] : 'var(--text-disabled)', by, hasBy: !!by, byGo: by ? openPol(by) : () => {},
+                return { key: x.key, label: x.label, on: isOn, verb: VERB[sec.key][0], cls: VERB[sec.key][1], icon: RULE_ICON[x.id] || 'gear', ink: isOn ? VERB[sec.key][2] : 'var(--text-disabled)', by, hasBy: !!by,
+                  // NetBond's own baseline row is no policy of yours: its door is the Layers tab, where it sits in the Baseline tier.
+                  byGo: by && polByName.has(by) ? openPol(by) : by ? () => set({ govPanel: 'layers', layLit: by, layDir: 'o2p', layPage: 'lit' }) : () => {},
                   o2pOn: x.o2p.on, p2oOn: x.p2o.on, o2pOff: !x.can.o2p, p2oOff: !x.can.p2o,
                   // NetBond's row: a toggle per direction it offers, the direction beside it.
                   dirs: DIRS.filter(([d]) => x.can[d]).map(([d, w]) => ({ key: d, word: w, on: x[d].on, title: x[d].on ? `${w}: pushed by ${x[d].by}` : `${w}: nothing pushes it on this flow` })) }; }) }; }) : [];
@@ -4509,6 +4525,57 @@ function wizardVals(s, est, set, c) {
             engPushedWord: pl(pushed.length, 'rule', 'rules'), engHeadChips, engExamples, hasEngExamples: engExamples.length > 1 };
         })(),
       }; })(),
+    // Govern > Layers (2026-10-09, slice 2 of the policy engine: "we need a robust policy engine per layer"). The rulebase:
+    // every policy compiled to each layer's enforcement point, four columns in the path's order, tier bands read top to
+    // bottom, a default per direction pinned at each foot. A row says when its enforcement point is not really there.
+    // Clicking a row lights that policy in every column; the bar above names it and opens its row in Policies.
+    ...(() => { const all = [...(s.layer === 'cloud' ? layerPolicies(s, est, 'all') : []), ...(s.customPolicies || [])];
+      const dir = s.layDir === 'p2o' ? 'p2o' : 'o2p', lit = s.layLit || null;
+      const rb = PM.rulebase(est, all, { inv: A.inventory(est), match: { siteTags: ((s.siteTags || {})[est.id]) || {} } });
+      const LAY_SLOT = 7, COL = { site: 'Site', edge: 'Edge', core: 'Core', cloud: 'Cloud' };
+      const VERB = { deny: ['Deny', 'deny'], allow: ['Allow', 'allow'], manip: ['Manipulate', 'manip'], adv: ['Advertise', 'adv'], always: ['Always', 'allow'], pass: ['Pass', ''] };
+      const CAP = { dead: ['eye-off', 'Matches nothing', 'var(--warning)'], unenforceable: ['lock-off', 'No enforcement point', 'var(--warning)'], notonpath: ['minus-circle', 'Not on the path', 'var(--text-disabled)'],
+        asserted: ['eye', 'Asserted, not enforced', 'var(--text-light)'], undetermined: ['question-circle', 'Undetermined', 'var(--text-light)'] };
+      const tierOfKey = (k) => PC.POLICY_TIERS.find(x => x.key === k) || PC.POLICY_TIERS[1];
+      const openPol = (name) => { const i = all.findIndex(p => p.name === name); return () => set({ govPanel: 'policies', polOpen: name, polFilter: null, polPage: i < 0 ? 0 : Math.floor(i / (PAGE_SIZE.polRows[1] - 1)), layLit: null }); };
+      // A NetBond row's direction is its routes', and it governs the session both ways, so it shows either way.
+      const byDir = rb.cols.map(c => c.rows.filter(r => r.pep === 'netbond' || r.dir === 'both' || r.dir === dir));
+      const pages = Math.max(1, ...byDir.map(rs => Math.ceil(rs.length / LAY_SLOT)));
+      // A door that lights a row (the engine's NetBond baseline) lands on the page that holds it.
+      const litAt = s.layPage === 'lit' && lit ? Math.max(0, ...byDir.map(rs => { const i = rs.findIndex(r => r.pid === lit); return i < 0 ? 0 : Math.floor(i / LAY_SLOT); })) : null;
+      const page = Math.min(Math.max(0, litAt ?? (+s.layPage || 0)), pages - 1);
+      const NBDIR = { o2p: 'On Premise → Partner', p2o: 'Partner → On Premise', both: 'both ways' };
+      const rowVm = (r) => { const T = tierOfKey(r.tier), V = VERB[r.verb] || [r.verb, ''], cap = r.cap !== 'ok' ? CAP[r.cap] : null, pep = PC.PEPS[r.pep] || {};
+        const on = lit === r.pid;
+        return { key: r.id, prio: String(r.priority), verb: V[0], cls: V[1], text: r.text, sub: r.name, pepIcon: pep.icon || 'gear', staged: !!r.staged, lit: on, dim: !!lit && !on,
+          hasCap: !!cap, capIcon: cap ? cap[0] : '', capInk: cap ? cap[2] : '', capWord: cap ? cap[1] : '',
+          title: `${T.label} tier, priority ${r.priority}: ${V[0]} ${r.text.toLowerCase()} on the ${pep.word || r.pep}${r.pep === 'netbond' ? `, routes ${NBDIR[r.dir]}` : ''}. ${r.name}${r.staged ? `, ${r.state}, not enforced` : ''}${r.baseline ? ", as NetBond's default sheet shows it" : ''}. ${r.why}`,
+          go: () => set({ layLit: on ? null : r.pid }) }; };
+      const layCols = rb.cols.map((c, ci) => { const rows = byDir[ci], slice = rows.slice(page * LAY_SLOT, page * LAY_SLOT + LAY_SLOT), d = c.defaults[dir], DV = VERB[d.verb];
+        const peps = c.peps.map(x => ({ key: x.key, icon: x.icon, word: x.word }));
+        return { key: c.key, label: COL[c.key], icon: LAYER_ICON[c.key], combine: c.combine, peps, pepWords: peps.map(x => x.word).join(' · '), n: String(rows.length),
+          title: `${(POLICY_LAYERS.find(l => l.key === c.key) || {}).label}: ${peps.map(x => x.word).join(', ')}. ${c.combine}: rows are read top to bottom, tier then priority, a deny before an allow`,
+          bands: PC.POLICY_TIERS.filter(T => slice.some(r => r.tier === T.key)).map(T => ({ key: c.key + T.key, tier: T.key, label: T.label, icon: T.icon, n: String(rows.filter(r => r.tier === T.key).length),
+            title: `${T.label}: ${T.who}`, rows: slice.filter(r => r.tier === T.key).map(rowVm) })),
+          empty: !rows.length, dflt: { verb: DV[0], cls: DV[1], text: d.text, audit: !!d.audit, title: d.title } }; });
+      const litRow = lit ? rb.cols.flatMap(c => c.rows).find(r => r.pid === lit) : null;
+      // The head counts what the direction shown holds; a count that is zero stays silent.
+      const vis = byDir.flat(), pl = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+      const C = { rows: vis.length, unenforceable: vis.filter(r => r.cap === 'unenforceable').length, asserted: vis.filter(r => r.cap === 'asserted').length,
+        dead: new Set(vis.filter(r => r.cap === 'dead').map(r => r.pid)).size, staged: new Set(vis.filter(r => r.staged).map(r => r.pid)).size };
+      const layHeadChips = [...(C.rows ? [{ key: 'rows', icon: 'list', t: String(C.rows), title: `${pl(C.rows, 'compiled row', 'compiled rows')} ${dir === 'o2p' ? 'from your sites to the cloud' : 'from the cloud to your sites'}`, ink: 'var(--text-body)' }] : []),
+        ...(C.unenforceable ? [{ key: 'unenf', icon: 'lock-off', t: String(C.unenforceable), title: `${pl(C.unenforceable, 'row has', 'rows have')} no enforcement point on the regions their policy reaches`, ink: 'var(--warning)' }] : []),
+        ...(C.asserted ? [{ key: 'assert', icon: 'eye', t: String(C.asserted), title: `${pl(C.asserted, 'row is', 'rows are')} asserted on customer VPCs AT&T only reads`, ink: 'var(--text-light)' }] : []),
+        ...(C.dead ? [{ key: 'dead', icon: 'eye-off', t: String(C.dead), title: `${pl(C.dead, 'policy matches', 'policies match')} nothing today`, ink: 'var(--warning)' }] : []),
+        ...(C.staged ? [{ key: 'staged', icon: 'clock', t: String(C.staged), title: `${pl(C.staged, 'policy is', 'policies are')} staged: in the rulebase, not enforced`, ink: 'var(--text-light)' }] : []),
+        ...(rb.errors.length ? [{ key: 'err', icon: 'exclamation-triangle', t: String(rb.errors.length), title: rb.errors.map(x => x.text).join('; '), ink: 'var(--error)' }] : [])];
+      return { layCols, layHeadChips, layHasLit: !!litRow, layLitName: litRow ? litRow.name : '', layLitIcon: litRow ? assetIcon(litRow.match) : 'tag',
+        layLitWhere: litRow ? `${tierOfKey(litRow.tier).label} · ${litRow.priority}` : '', layLitTitle: litRow ? `${litRow.name}: ${tierOfKey(litRow.tier).label} tier, priority ${litRow.priority}${litRow.staged ? `, ${litRow.state}` : ''}` : '',
+        layLitOpen: litRow && !litRow.baseline ? openPol(litRow.name) : () => {}, layLitCanOpen: !!litRow && !litRow.baseline, layLitClear: () => set({ layLit: null }),
+        layDirs: [['o2p', 'Site to cloud', 'arrow-right'], ['p2o', 'Cloud to site', 'curved-arrow']].map(([k, label, icon]) => ({ key: k, label, icon, on: dir === k, go: () => set({ layDir: k, layPage: 0 }) })),
+        layPage: page,
+        layPager: { many: pages > 1, label: `${page + 1} of ${pages}`, prevOp: page > 0 ? 1 : 0.4, nextOp: page < pages - 1 ? 1 : 0.4, prev: () => { if (page > 0) set({ layPage: page - 1 }); }, next: () => { if (page < pages - 1) set({ layPage: page + 1 }); } } };
+    })(),
     tplKinds: [['between', 'Between assets'], ['layered', 'Layered']].map(([k, l]) => { const on = (s.govTplKind || 'layered') === k; return { key: k, label: l, on, go: () => set({ govTplKind: k }), bg: on ? 'var(--bg-base)' : 'transparent', weight: on ? 700 : 500 }; }),
     // Multi-layer starting points: a rule at every layer, carried into the author.
     examplePolicies: (s.govTplKind || 'layered') === 'between' ? BETWEEN_TEMPLATES.map(t => { const r = resolveTemplate(est, t);
@@ -4720,6 +4787,8 @@ function flowVals(s, set, est, c) {
     if (!isLast || CF.blockOf(key, f)) return;
     const rec = CF.placedRecord(f, est, SCH.hhmm(SCH.nowOf(s)), orders.length + 1);
     const cpz = s.compose || {}; rec.moveKeys = cpz.moveKeys || []; rec.moveTitles = cpz.moveTitles || {};
+    // The estate it was placed on, so a region's way never reads another estate's order (2026-10-09).
+    rec.est = est.id;
     const all = [...orders, rec];
     c.setState({ orders: all, ordersPage: 0, order: { ...ord, lines: ord.lines.map(l => ({ ...l, term: CF.termTitle(f.term) })) }, submitted: true, pendingDismissed: false, compose: BLANK_COMPOSE(), screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', waySet: null, wipList: null, wipListPage: 0, cfArea: null });
     scrollTop(); syncHash('s3', 'cloud', 'connect');
@@ -4780,6 +4849,8 @@ function flowVals(s, set, est, c) {
     // Review carries the policy chips only where the flow has no Advanced Settings (Last Mile, Colo to Colo).
     cfShowPolicy: isLast && !keys.includes('advanced'),
     cfPolicyRouting, cfPolicySecurity, cfRouteRules, hasCfRouteRules: cfRouteRules.length > 0, noCfRouteRules: cfRouteRules.length === 0, cfSecuritySoon,
+    // A requirement NetBond carries no route rule for (no direct internet, an SLO) says where it is enforced instead (2026-10-09).
+    cfRouteNoneText: f.policy.some(k => CF.POLICY_FOR_CONTROL[k]) ? 'NetBond carries no route rule for this: the site and the core enforce it.' : 'Pick a routing requirement and the route rules it pushes show here.',
     cfClouds, hasCfClouds: cfClouds.length > 0, noCfClouds: cfClouds.length === 0, cfMulti: f.ctype === 'Cloud to Cloud',
     // With no cloud found, the step's door is the one that finds one; the order waits in Orders.
     cfAddSource: () => { c.setState({ screen: 's1', discoverView: 'sources' }); scrollTop(); syncHash('s1'); },
@@ -5349,7 +5420,7 @@ function journeyVals(out, s, set, est) {
   const place = () => { if (!tier || placed) return; const at = new Date(SCH.nowOf(s)); const n = (s.orders || []).length + 1;
     set({ jPick: pickI, orders: [...(s.orders || []), { id: `o${n}`, title: `${tier.label} · ${move.short}`, way: tier.way || null, what: [tier.label, move.regions.join(', '), tier.way ? W.waySetup(tier.way) : ''].filter(Boolean).join(' · '),
       monthly: total, at: `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`,
-      stage: CF.ORDER_STAGE, region: move.regions[0], regions: move.regions.slice(), cloud: move.cloud, fromFlow: true, moveKeys: [move.key], moveTitles: { [move.key]: move.title }, journey: true,
+      stage: CF.ORDER_STAGE, region: move.regions[0], regions: move.regions.slice(), cloud: move.cloud, est: est.id, fromFlow: true, moveKeys: [move.key], moveTitles: { [move.key]: move.title }, journey: true,
       // What the picture reads after the move is done (2026-10-08): plain data, no functions, so the order stays serialisable.
       snap: { move: { key: move.key, cloud: move.cloud, regions: move.regions.slice(), short: move.short, title: move.title, today: { ms: move.today.ms, mo: move.today.mo }, recI: move.recI || 0, tiers: [] },
         tier: { label: tier.label, tier: tier.tier, way: tier.way || null, ms: tier.ms, mo: tier.mo, monthly: tier.monthly, net: tier.net, pts: tier.pts || '', hasPts: !!tier.hasPts, mark: tier.mark, priceShort: tier.priceShort, strip: tier.strip, metrics: tier.metrics, products: tier.products } } }] }); };
@@ -5392,8 +5463,13 @@ function journeyVals(out, s, set, est) {
   // L7) and to the cloud's route tables.
   const hostedWay = !!(tier && tier.way && W.wayHosted(tier.way));
   const rulesOf = (d) => { if (hostedWay) return [{ key: 'vsrx', verb: 'Inspect', cls: 'manip', label: 'vSRX, L3 to L7', dir: '', dirWord: '', title: `${d.req}: compiled to the vSRX in AT&T's hub, L3 to L7` }, { key: 'rt', verb: 'Route', cls: 'adv', label: 'Route tables', dir: '', dirWord: '', title: `${d.req}: compiled to your route tables` }];
-    const rt = routeRulesOf(mkPol(d)); return ROUTE_RULES.filter(r => { const v = rt[`${r.section}:${r.id}`]; return v && (v.o2p || v.p2o); }).map(r => { const v = rt[`${r.section}:${r.id}`], both = v.o2p && v.p2o;
-    return { key: `${r.section}:${r.id}`, verb: VERB[r.section][0], cls: VERB[r.section][1], label: RULE_SHORT[r.id] || r.label, dir: both ? '⇄' : v.o2p ? '→' : '←', dirWord: both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem', title: `${VERB[r.section][0]} ${r.label.toLowerCase()}, ${both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem'}` }; }); };
+    const rt = routeRulesOf(mkPol(d)); const nb = ROUTE_RULES.filter(r => { const v = rt[`${r.section}:${r.id}`]; return v && (v.o2p || v.p2o); }).map(r => { const v = rt[`${r.section}:${r.id}`], both = v.o2p && v.p2o;
+    return { key: `${r.section}:${r.id}`, verb: VERB[r.section][0], cls: VERB[r.section][1], label: RULE_SHORT[r.id] || r.label, dir: both ? '⇄' : v.o2p ? '→' : '←', dirWord: both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem', title: `${VERB[r.section][0]} ${r.label.toLowerCase()}, ${both ? 'both ways' : v.o2p ? 'on prem to partner' : 'partner to on prem'}` }; });
+    if (nb.length) return nb;
+    // An intent NetBond carries no rule for (an SLO is a class of service, 2026-10-09) shows where it does compile.
+    const CV = { manip: ['Manipulate', 'manip'], allow: ['Allow', 'allow'], deny: ['Deny', 'deny'], adv: ['Advertise', 'adv'] };
+    return PC.compilePolicy(mkPol(d), ROUTE_RULES).filter(r => !['netbond', 'vsrx'].includes(r.pep)).slice(0, 2).map((r, i) => ({ key: `${r.pep}:${i}`, verb: (CV[r.verb] || ['Apply', ''])[0], cls: (CV[r.verb] || ['', ''])[1], label: r.text,
+      dir: r.dir === 'both' ? '⇄' : r.dir === 'o2p' ? '→' : '←', dirWord: r.dir === 'both' ? 'both ways' : r.dir === 'o2p' ? 'on prem to partner' : 'partner to on prem', title: `${(CV[r.verb] || ['Apply'])[0]} ${r.text.toLowerCase()}, on the ${(PC.PEPS[r.pep] || {}).word || r.pep}` })); };
   const deck = deck0.map(d => { const on = mine.some(p => p.tag === d.tag), vc = verdictOf(d, toRegion), vi = verdictOf(d, 'the Internet');
     return { key: d.tag, ...d, on, off: !on, n: String(d.apps.length), wlF: String(d.wl), appsWord: d.apps.join(', '), hover: s.jPolHover === d.tag, rules: rulesOf(d),
       // The intent card wears the Intent beat's mark and its parts in short; a tag card, the tag and its requirement.

@@ -117,9 +117,10 @@ test('the intent shapes the policy deck: one intent card leads, a real policy th
   assert.equal(card.req, 'Two paths, diverse metros and Latency SLO 20 ms and Inline security inspection');
   assert.equal(card.short, 'Two paths · 20 ms SLO · Inspected');
   assert.equal(card.match, 'region eastus,westeurope');
-  // NetBond Advanced's sheet for it: prepend ASNs for the second path and the SLO, CV tagging to steer inspection.
+  // NetBond Advanced's sheet for it (corrected 2026-10-09): the second path prefers by community and inspection tags CVs
+  // for a symmetric return; the SLO is a class of service, so nothing is prepended.
   const rt = routeRulesOf({ req: card.req });
-  assert.ok(rt['manip:prepend-advertisements'] && rt['manip:selective-cv-tagging']);
+  assert.ok(rt['manip:selective-cv-tagging'] && rt['manip:community-value-tag'] && !rt['manip:prepend-advertisements']);
   // The comma list matches both regions in the engine, and nothing else.
   const est = { ...D.ESTATES.lastmile, regionsList: [{ cloud: 'Azure', region: 'eastus' }, { cloud: 'Azure', region: 'westeurope' }] };
   const pol = { name: 'x', match: card.match, scope: 'any cloud', req: card.req, state: 'enforced' };
@@ -135,7 +136,8 @@ test('the intent shapes the policy deck: one intent card leads, a real policy th
   // A workload not tagged yet reads its suggested tags, so every tag the cloud's workloads carry has its card.
   assert.deepEqual(v.jDeck.map(d => d.tag), ['Intent', 'PCI', 'Finance', 'Internet-facing', 'Prod']);
   assert.deepEqual([v.jDeck[0].headIcon, v.jDeck[0].reqWord], ['target', '20 ms SLO']);
-  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'Prepend ASNs', '⇄']]);
+  // An SLO pushes no NetBond row: the card shows where it compiles, the site's DSCP and the core's class of service.
+  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'DSCP, app-aware path', '→'], ['Manipulate', 'SLA class', '⇄']]);
   v.jDeck[0].enter(); v = vals(c);
   assert.equal(v.jLine, 'Intent is held to 20 ms.');
   assert.ok(v.jRegions.flatMap(r => r.apps).every(a => a.hl === 'on'), 'the intent covers every workload on the cloud');

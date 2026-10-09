@@ -27,7 +27,12 @@ test('a violation shows at the layer where it breaks', () => {
   const v = vals(gov());
   const prod = v.polRows.find(p => p.name === 'Prod no direct internet');
   const broken = prod.layers.filter(l => l.broken);
-  assert.deepEqual(broken.map(l => l.label), ['AT&T core']);
+  // Broken where the engine finds it violated on real flows (2026-10-09): Prod rides the internet to us-west-2 and
+  // ap-southeast-1, so its core is not on the path and its cloud exits in public.
+  assert.deepEqual(broken.map(l => l.label), ['AT&T core', 'Cloud & workload']);
+  const pv = vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'govern' }));
+  const pci = pv.polRows.find(p => p.name === 'PCI private path');
+  assert.deepEqual(pci.layers.filter(l => l.broken).map(l => l.label), ['Cloud & workload'], 'PCI holds at the core; its six exposed workloads break it in the cloud');
   assert.equal(broken[0].ink, 'var(--error)');
   assert.ok(v.polRows.filter(p => !p.viol).every(p => !p.layers.some(l => l.broken)));
 });

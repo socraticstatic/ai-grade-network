@@ -25,7 +25,13 @@ test('the engine orders by precedence, compiles per connection, and finds a conf
     { name: 'Pair B', match: pc, scope: `${reg.cloud} ${reg.region}`, req: '', path: [], route: { 'allow:matching-routes': { o2p: true, p2o: false } }, state: 'simulated' },
   ];
   const e = evalPolicies(est, pols);
-  assert.deepEqual(e.ordered.map(p => p.name), ['Pair A', 'Pair B', 'Any PCI']);
+  // One sort since slice 2 (2026-10-09): tier, then priority (ten apart in the order written), then a deny first, then the
+  // order written. Specificity no longer sorts, so the tag policy written first stays first...
+  assert.deepEqual(e.ordered.map(p => p.name), ['Any PCI', 'Pair A', 'Pair B']);
+  // ...until a priority says otherwise; at an equal priority the deny goes first.
+  const prio = evalPolicies(est, [pols[0], { ...pols[2], priority: 5 }, { ...pols[1], priority: 5 }]);
+  assert.deepEqual(prio.ordered.map(p => p.name), ['Pair A', 'Pair B', 'Any PCI']);
+  assert.deepEqual(prio.ordered.map(p => p.priority), [5, 5, 10]);
   const conn = e.connections.find(c => c.region === reg.region);
   assert.ok(conn.rules.some(r => /Deny matching routes \(on premise → partner\)/.test(r.text)));
   assert.equal(e.conflicts.length, 1);

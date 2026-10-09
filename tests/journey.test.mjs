@@ -230,18 +230,22 @@ test('beat 8: a deck of policies from the tags, each a real intent with the engi
   assert.deepEqual(v.jDeck.map(d => [d.tag, d.req, d.cloudV, d.netV]), [['PCI', 'Private path required', 'Allowed', 'Denied'], ['Finance', 'Private path required', 'Allowed', 'Denied'], ['Internet-facing', 'Inline security inspection', 'Allowed', 'Allowed'], ['Prod', 'No direct internet path', 'Allowed', 'Denied']]);
   assert.deepEqual(v.jDeck.map(d => d.apps), [['payments-api'], ['payments-api', 'fin-ledger'], ['customer-portal'], ['dispatch-svc', 'customer-portal', 'payments-api', 'fin-ledger']]);
   assert.equal(v.jLine, '4 policies from your tags. Enforce them.'); assert.equal(v.jAct, 'Enforce them all'); assert.equal(v.jVerdict, 'none');
-  // Each card is NetBond's sheet for its intent: the verb, the rule, the direction (2026-10-08).
-  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Deny', 'Default routes', '→'], ['Allow', 'Matching routes', '⇄']]);
+  // Each card is NetBond's sheet for its intent: the verb, the rule, the direction (2026-10-08). A private path allows the
+  // matching routes both ways; blocking the default route is NetBond's own baseline, not the card's (2026-10-09).
+  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Allow', 'Matching routes', '⇄']]);
   assert.deepEqual(v.jDeck[2].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'CV tagging', '→'], ['Manipulate', 'Tag by CV', '←']]);
-  assert.equal(v.jDeck[0].rules[0].dirWord, 'on prem to partner');
+  assert.equal(v.jDeck[0].rules[0].dirWord, 'both ways');
   // Short on the card, NetBond's whole name in the title (2026-10-08: "making text more concise").
-  assert.match(v.jDeck[0].rules[0].title, /^Deny block default routes, on prem to partner$/);
+  assert.match(v.jDeck[0].rules[0].title, /^Allow matching routes, both ways$/);
   // Short on the deck, the whole of it in the title (2026-10-08: "lots of words still").
   assert.equal(v.jDeckWhere, 'NetBond Advanced route policy'); assert.match(v.jDeckWhereTitle, /^Enforced as route policy on NetBond Advanced/); assert.equal(v.jDeckNba, true);
   assert.deepEqual(v.jDeck.map(d => d.reqWord), ['Private', 'Private', 'Inspected', 'No internet']);
   // A hosted pick enforces on the vSRX in AT&T's hub and the cloud's route tables (the deck, slide 5), not as BGP route rules.
   const h = journey({ jStep: B.connect, jPick: 2, addedSources: AZURE }); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo();
   const hv = vals(h);
+  // On a NetBond way, no card lists a vSRX: a card NetBond carries no rule for shows the site and the cloud (2026-10-09).
+  assert.ok(v.jDeck.every(d => d.rules.every(r => !/vSRX/i.test(r.title))), 'no hosted hub is invented under the NetBond header');
+  assert.deepEqual(v.jDeck.find(d => d.tag === 'Prod').rules.map(r => [r.verb, r.label]), [['Deny', 'Local breakout'], ['Allow', '0/0 via AT&T']]);
   assert.equal(hv.jDeckHosted, true); assert.equal(hv.jDeckWhere, 'vSRX and your route tables'); assert.match(hv.jDeckWhereTitle, /^Enforced on the vSRX in AT&T's hub/);
   assert.deepEqual(hv.jDeck[0].rules.map(r => [r.verb, r.label]), [['Inspect', 'vSRX, L3 to L7'], ['Route', 'Route tables']]);
   assert.match(HTML, /<span class="js-rule" title="\{\{ rr\.title \}\}"><span class="fw-badge \{\{ rr\.cls \}\}">\{\{ rr\.verb \}\}<\/span>/);

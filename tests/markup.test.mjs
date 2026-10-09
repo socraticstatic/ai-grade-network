@@ -533,19 +533,23 @@ test('every container the markup opens, it closes', () => {
   // toggle beside Start from a template (div +1, span +2, sc-if +1, button +1); each station wears its stamp and its reason
   // code (span +1, sc-if +2); the verdict row carries the compliance chip and a What-if note (span +4, sc-if +1):
   // div 1323 -> 1324, span 1481 -> 1488, sc-if 666 -> 670, button 524 -> 525.
-    ['div', /<div\b/g, /<\/div>/g, 1324],
+  // Govern > Layers (2026-10-09, slice 2 of the policy engine): the panel and its head (chips, the lit bar, the direction
+  // switch), four columns each with a head, a body of tier bands and rows, a pinned default row, and a pager
+  // (div +12, span +28, sc-if +8, sc-for +6, button +6): div 1324 -> 1336, span 1488 -> 1516, sc-if 670 -> 678,
+  // sc-for 394 -> 400, button 525 -> 531.
+    ['div', /<div\b/g, /<\/div>/g, 1336],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
   // sc-if +0, button -1): span 1484 -> 1482, button 525 -> 524.
   // and an enforced row's state is its toggle (span -1, sc-if +1): span 1482 -> 1481, sc-if 665 -> 666.
-    ['span', /<span\b/g, /<\/span>/g, 1488],
+    ['span', /<span\b/g, /<\/span>/g, 1516],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 670],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 394],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 678],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 400],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 525],
+    ['button', /<button\b/g, /<\/button>/g, 531],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

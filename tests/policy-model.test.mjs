@@ -4,7 +4,8 @@ import * as D from '../naas-data.js';
 import * as A from '../naas-addendum.js';
 import * as GV from '../naas-govern.js';
 import * as PM from '../naas-policy-model.js';
-import { evalPolicies, layerOfReq } from '../naas-policy-layers.js';
+import { evalPolicies } from '../naas-policy-layers.js';
+import { otherLayer } from '../naas-policy-compile.js';
 
 // The honest engine (Micah, 2026-10-09: "The Policy Engine needs real help - do best-practices research on it - we need
 // a robust policy engine per layer. right now, it's a bit too simple yet convoluted."). Slice 1 of the research plan:
@@ -49,7 +50,7 @@ test('every phrase in use resolves to a typed intent; an unknown one keeps its w
   assert.deepEqual([slo.key, slo.param, slo.layers], ['slo', 15, ['core']]);
   assert.ok(PM.intentOf('Private path required').forbids && PM.intentOf('No direct internet path').forbids && !PM.intentOf('Inline security inspection').forbids);
   const odd = PM.intentOf('Cost-aware routing');
-  assert.equal(odd.key, 'other:cost-aware routing'); assert.deepEqual(odd.layers, [layerOfReq('Cost-aware routing')]);
+  assert.equal(odd.key, 'other:cost-aware routing'); assert.deepEqual(odd.layers, [otherLayer('Cost-aware routing')]);
   // A policy's phrases come from its rule, its path picks and its layers, each intent once.
   const n = PM.normalizePolicy({ name: 'x', match: 'tag PCI', req: 'Private path required', path: ['Via the AT&T network', 'NGFW inline'] });
   assert.deepEqual(n.intents.map(i => i.key), ['private', 'inspect']);
@@ -86,7 +87,8 @@ test('a later policy that asks the same thing Agrees, never Overridden; a staged
   const pols = [{ name: 'A', match: 'tag PCI', scope: 'any cloud', req: 'Private path required', state: 'enforced' }, { name: 'B', match: 'tag PCI', scope: 'any cloud', req: 'Inline security inspection', state: 'enforced' }, { name: 'C', match: 'tag PCI', scope: 'any cloud', req: 'Private path required', state: 'enforced' }];
   const d = PM.decide(est, pols, { from: pc, to: 'AWS us-east-1', tag: 'PCI' }, { inv: A.inventory(est) });
   assert.deepEqual(d.rungs.map(g => g.state), ['decides', 'adds', 'agrees']);
-  assert.equal(layer(d, 'edge').stamp, 'undetermined', 'whether the way puts a firewall in path is not in the data yet');
+  // us-east-1 rides NetBond (its stated ramp): NetBond tags CVs and cannot inspect, so inspection there is Unenforceable.
+  assert.deepEqual([layer(d, 'edge').stamp, layer(d, 'edge').code, layer(d, 'edge').text], ['unenforceable', 'EDGE_NO_FW', 'NetBond only']);
   assert.deepEqual(PM.redundantPolicies(est, pols, { inv: A.inventory(est) }).map(x => `${x.name}~${x.with}`), ['C~A']);
 });
 
@@ -140,7 +142,9 @@ test('one sort: the engine reads policies in the order Govern numbers them, prio
     { name: 'first', match: 'tag PCI', scope: 'any cloud', req: 'Inline security inspection', state: 'enforced', priority: 1 },
     { name: 'deny', match: pc, scope: 'AWS us-east-1', route: { 'deny:matching-routes': { o2p: true } }, state: 'enforced' },
     { name: 'allow', match: pc, scope: 'AWS us-east-1', path: ['Via the AT&T network'], state: 'enforced' }];
-  const want = ['first', 'deny', 'allow', 'late'];
+  // One sort (2026-10-09, slice 2): priority, written order (ten apart), a deny before an allow at equal priority.
+  // Specificity no longer sorts, so the asset pairs follow the tag rule written before them.
+  const want = ['first', 'late', 'deny', 'allow'];
   assert.deepEqual(evalPolicies(est, P).ordered.map(p => p.name), want);
   assert.deepEqual(PM.decide(est, P, { from: pc, to: 'AWS us-east-1', tag: 'PCI' }).rungs.map(g => g.name), want);
 });

@@ -43,7 +43,8 @@ test('route policy sits in two columns, Deny with Allow and Manipulations with A
   assert.deepEqual(v.aRouteCols.map(col => col.secs.map(s => s.key)), [['deny', 'allow'], ['manip', 'advanced']]);
   for (const col of v.aRouteCols) for (const s of col.secs) assert.ok(onDisk(s.icon), s.key);
   const rule = v.aRouteCols[0].secs[0].rules.find(r => r.id === 'block-default-routes');
-  assert.equal(rule.o2pOn, false); assert.equal(rule.p2oOff, true, 'NetBond Advanced has no partner-to-on-premise for blocking default routes');
+  // NetBond offers Block Default Routes both ways (att-netbond-sdci: only hideOnPremiseToPartner hides a direction; 2026-10-09).
+  assert.equal(rule.o2pOn, false); assert.equal(rule.p2oOff, false, 'NetBond Advanced offers partner-to-on-premise for blocking default routes');
   rule.o2pGo();
   assert.equal(vals(c).aRouteCols[0].secs[0].rules.find(r => r.id === 'block-default-routes').o2pOn, true);
 });

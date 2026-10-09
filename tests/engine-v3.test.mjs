@@ -56,6 +56,9 @@ test('the engine opens on a real flow that breaks: the decider lit, three layers
     const cloud = v.engStations[3];
     assert.equal(cloud.hasCode, false, 'EXPOSED only repeats "6 exposed": it stays in the tooltip'); assert.equal(cloud.stamp, 'close-circle');
     assert.match(cloud.title, /Cloud & workload: Violated \(CLOUD_EXPOSED\)\. 6 exposed, asked by PCI private path/);
+    // Each station names the row that decided its layer (slice 2): the edge by the policy's NetBond row, the cloud by its default.
+    assert.match(v.engStations[1].title, /Decided by PCI private path, Estate 10: allow matching routes\.$/);
+    assert.match(cloud.title, /Decided by its default: deny ingress, unless allowed, in Audit\.$/);
   }
 });
 
@@ -81,10 +84,10 @@ test('a private-path or no-internet intent denies a flow to the Internet; inspec
   assert.equal(decide(est, all, { from, to: 'AWS eu-west-1', tag: 'PCI' }, { inv }).verdict, 'Allowed');
   assert.equal(decide(est, all, { from, to: 'the Internet', tag: '' }, { inv }).decidedBy, '', 'no policy: the default path');
   assert.ok(forbidsInternet({ req: 'No direct internet path' }) && forbidsInternet({ req: 'Private path required' }) && !forbidsInternet({ req: 'Inline security inspection' }));
-  // A denied flow to the Internet pushes its deny alone; the private path's allow is not for it.
+  // A flow to the Internet crosses no NetBond connection, so NetBond pushes nothing for it (it shows no Internet rules).
   const sheet = flowSheet(est, all, { from, to: 'the Internet', tag: 'PCI' });
   const on = sheet.flatMap(s => s.rules.filter(r => r.o2p.on || r.p2o.on).map(r => `${s.key}:${r.id}`));
-  assert.deepEqual(on, ['deny:block-default-routes']);
+  assert.deepEqual(on, []);
 });
 
 test('the result: the verdict, the decider as a door, four stations, and only the pushed rules until you ask for all', () => {
@@ -116,7 +119,8 @@ test('the result: the verdict, the decider as a door, four stations, and only th
   vals(c).engExamples.find(x => x.key === 'free').go();
   v = vals(c);
   assert.equal(v.engDecidedIsDefault, true); assert.equal(v.engDecided, 'Default path');
-  assert.equal(v.engSheetN, 0); assert.equal(v.noEngPushed, true);
+  // No policy pushes anything; NetBond's own baseline row is all the connection carries.
+  assert.deepEqual(v.engPushed.map(r => `${r.cls}:${r.label}:${r.by}`), ['deny:Block default routes:NetBond default sheet']);
   assert.ok(v.engLadder.every(x => x.state === 'skip'));
   assert.ok(v.engLadder.every(x => /^(Not this tag|Not from here|Not to here|No match)$/.test(x.word)), 'a miss names the side that missed');
   assert.equal(v.engCompWord, 'Nothing asked');

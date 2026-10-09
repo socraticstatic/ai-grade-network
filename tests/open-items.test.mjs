@@ -28,13 +28,22 @@ test('Advanced Settings splits the requirements into Routing and Security and li
   assert.equal(v.cfKey, 'advanced');
   assert.deepEqual(v.cfPolicyRouting.map(p => p.key), ['Private path required', 'No direct internet path', 'Latency SLO', 'Cost-aware routing']);
   assert.deepEqual(v.cfPolicySecurity.map(p => p.key), ['Inline inspection', 'Segment by tag']);
-  // A private path blocks the default route out and allows the matching routes, both ways (NetBond Advanced's sheet).
-  assert.deepEqual(v.cfRouteRules.map(r => [r.verb, r.label, r.o2p, r.p2o]), [['Deny', 'Block default routes', true, false], ['Allow', 'Matching routes', true, true]]);
+  // A private path allows the matching routes, both ways; the default-route block is NetBond's baseline row (2026-10-09).
+  assert.deepEqual(v.cfRouteRules.map(r => [r.verb, r.label, r.o2p, r.p2o]), [['Allow', 'Matching routes', true, true]]);
   v.cfPolicySecurity.find(p => p.key === 'Inline inspection').pick();
   v = vals(c);
   assert.ok(v.cfRouteRules.some(r => r.label === 'Selective CV tagging' && r.cls === 'manip'), 'inspection steers by community tags');
   assert.equal(v.cfSecuritySoon.length, 3);
   assert.equal(v.cfShowPolicy, false, 'the chips live in the two sections, not a second grid');
+  // A routing requirement NetBond carries no rule for says where it is enforced instead (2026-10-09), never "Pick one".
+  // One pick a render: each chip's pick reads the render it came from.
+  for (let on = [...v.cfPolicyRouting, ...v.cfPolicySecurity].find(p => p.on); on; on = [...v.cfPolicyRouting, ...v.cfPolicySecurity].find(p => p.on)) { on.pick(); v = vals(c); }
+  assert.equal(v.noCfRouteRules, true);
+  assert.match(v.cfRouteNoneText, /^Pick a routing requirement/);
+  v.cfPolicyRouting.find(p => p.key === 'No direct internet path').pick();
+  v = vals(c);
+  assert.equal(v.noCfRouteRules, true);
+  assert.equal(v.cfRouteNoneText, 'NetBond carries no route rule for this: the site and the core enforce it.');
 });
 
 // ---- the summary boxes ----
