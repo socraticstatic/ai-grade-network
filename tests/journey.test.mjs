@@ -231,11 +231,13 @@ test('beat 8: a deck of policies from the tags, each a real intent with the engi
   assert.equal(v.jDeck[0].rules[0].dirWord, 'on prem to partner');
   // Short on the card, NetBond's whole name in the title (2026-10-08: "making text more concise").
   assert.match(v.jDeck[0].rules[0].title, /^Deny block default routes, on prem to partner$/);
-  assert.equal(v.jDeckWhere, 'Enforced as route policy on NetBond Advanced'); assert.equal(v.jDeckNba, true);
+  // Short on the deck, the whole of it in the title (2026-10-08: "lots of words still").
+  assert.equal(v.jDeckWhere, 'NetBond Advanced route policy'); assert.match(v.jDeckWhereTitle, /^Enforced as route policy on NetBond Advanced/); assert.equal(v.jDeckNba, true);
+  assert.deepEqual(v.jDeck.map(d => d.reqWord), ['Private', 'Private', 'Inspected', 'No internet']);
   // A hosted pick enforces on the vSRX in AT&T's hub and the cloud's route tables (the deck, slide 5), not as BGP route rules.
   const h = journey({ jStep: B.connect, jPick: 2, addedSources: AZURE }); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo();
   const hv = vals(h);
-  assert.equal(hv.jDeckHosted, true); assert.match(hv.jDeckWhere, /^Enforced on the vSRX/);
+  assert.equal(hv.jDeckHosted, true); assert.equal(hv.jDeckWhere, 'vSRX and your route tables'); assert.match(hv.jDeckWhereTitle, /^Enforced on the vSRX in AT&T's hub/);
   assert.deepEqual(hv.jDeck[0].rules.map(r => [r.verb, r.label]), [['Inspect', 'vSRX, L3 to L7'], ['Route', 'Route tables']]);
   assert.match(HTML, /<span class="js-rule" title="\{\{ rr\.title \}\}"><span class="fw-badge \{\{ rr\.cls \}\}">\{\{ rr\.verb \}\}<\/span>/);
   assert.match(HTML, /<div class="js-deckkey"/);
@@ -320,4 +322,11 @@ test('beat 4 again (2026-10-08): any known tag from a palette, and your own; Rec
   assert.match(w.jDetail.youDo, /^Accept the connection/);
   assert.match(HTML, /<button class="js-more js-deeper" onClick="\{\{ toggleDetail \}\}" aria-expanded="\{\{ jDetailOpen \}\}">/);
   assert.match(HTML, /<sc-if value="\{\{ ap\.picking \}\}"[^>]*><div class="js-palette" role="group" aria-label="Tags for \{\{ ap\.name \}\}">/, 'the palette opens in the row it edits');
+});
+
+test('tags show where they do work: Tag, Intent and Protect; the beats between carry the intent glyphs alone (2026-10-08, "lots of words still")', () => {
+  const T = { 'eastus:dispatch-svc': ['Prod'], 'westeurope:payments-api': ['PCI', 'Prod'] };
+  const chipsAt = (k, extra = {}) => vals(journey({ jStep: B[k], addedSources: AZURE, jTags: T, ...extra })).jRegions.flatMap(r => r.apps).flatMap(a => a.chips.map(c => c.t));
+  assert.ok(chipsAt('tag').includes('PCI')); assert.ok(chipsAt('intent').includes('PCI'));
+  assert.deepEqual(chipsAt('recommend'), []); assert.deepEqual(chipsAt('connect', { jPick: 0 }), []);
 });

@@ -267,7 +267,8 @@ test('a finding\'s button is its drill\'s move, or opens the drill where the mov
       for (const k of Object.keys(c.state)) if (!(k in snap)) delete c.state[k]; Object.assign(c.state, snap);
       vals(c).govFigs.find(g => g.key === 'g-find-' + f.kind).go();
       const acts = vals(c).govDrillActs.map(a => a.label);
-      if (acts.length === 1) assert.equal(f.rec.name, acts[0], `${view} ${f.kind}: the row offers "${f.rec.name}", the drill "${acts[0]}"`);
+      // The row says the move in a few words (2026-10-08: "lots of words still"); its title is the drill's move, word for word.
+      if (acts.length === 1) { assert.equal(f.rec.title, acts[0], `${view} ${f.kind}: the row offers "${f.rec.title}", the drill "${acts[0]}"`); assert.match(f.rec.name, /^Hosted (VPC|VNet) in \S+, (enforced|inspected)$/); }
       else {
         assert.equal(f.rec.name, `Hosted VPC in ${acts.length} regions`, `${view} ${f.kind}`);
         for (const k of Object.keys(c.state)) if (!(k in snap)) delete c.state[k]; Object.assign(c.state, snap);

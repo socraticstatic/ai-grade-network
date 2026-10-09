@@ -13,6 +13,7 @@
 //     (nothing-boxed, 2026-09-29), except the allowlist below;
 //   - no button within 10px of its card's padding box;
 //   - no word the Signals panel clips with an ellipsis ("clipped", 2026-09-30),
+//   - no text over text ("overlap", 2026-10-08): two visible runs whose boxes cross, a cover excepted,
 //     on both of its pages, for every role its chips pick;
 //   - the words on screen (body innerText and SVG <text>) carry no em dash
 //     and no ramp code (ER, DX, EQX, GCI) where the product has a name
@@ -175,7 +176,43 @@ function measure({ allow, edge, width }) {
     if (!shown(el) || getComputedStyle(el).textOverflow !== 'ellipsis') continue;
     if (el.scrollWidth > el.clientWidth + 1) clipped.push(`"${(el.textContent || '').trim().slice(0, 48)}" ${el.clientWidth}/${el.scrollWidth}`);
   }
-  return { scrollHeight, scrollWidth, wide, words, boxed, edges, clipped };
+  // Text over text (Micah, 2026-10-08: "there is overlapping text in places"): any two visible text runs from different
+  // elements whose boxes cross, where neither sits on an opaque surface that covers the other (a popover or a panel over
+  // the stage is a cover, not a collision). Only what the viewport shows can be read off the stack.
+  const overlaps = [];
+  {
+    const runs = [];
+    const tw = document.createTreeWalker(document.querySelector('main') || document.body, NodeFilter.SHOW_TEXT);
+    while (tw.nextNode()) {
+      const n = tw.currentNode, t = n.textContent.replace(/\s+/g, ' ').trim(); if (!t) continue;
+      const el = n.parentElement; if (!el || !(el.checkVisibility ? el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) : shown(el))) continue;
+      const r = document.createRange(); r.selectNodeContents(n);
+      // A run is as tall as its line, not its font's whole box, so tight lines that never touch do not count.
+      const lh = parseFloat(getComputedStyle(el).lineHeight);
+      // Text an ancestor clips (an ellipsis, a line clamp) is hidden where it runs on; only the part on show counts.
+      const clips = []; for (let e = el; e && e !== document.body; e = e.parentElement) { const o = getComputedStyle(e); if (o.overflowX !== 'visible' || o.overflowY !== 'visible') clips.push(e.getBoundingClientRect()); }
+      for (const rc of r.getClientRects()) if (rc.width > 2 && rc.height > 4 && rc.bottom > 0 && rc.top < innerHeight) { const h = lh > 0 ? Math.min(rc.height, lh) : rc.height, mid = (rc.top + rc.bottom) / 2;
+        let x = rc.left, y = mid - h / 2, rr = rc.right, bb = mid + h / 2;
+        for (const c of clips) { x = Math.max(x, c.left); y = Math.max(y, c.top); rr = Math.min(rr, c.right); bb = Math.min(bb, c.bottom); }
+        if (rr - x > 2 && bb - y > 3) runs.push({ el, t: t.slice(0, 32), x, y, r: rr, b: bb }); }
+    }
+    const opaque = (el) => { const cs = getComputedStyle(el), m = cs.backgroundColor.match(/[\d.]+/g); return cs.backgroundImage !== 'none' || (!!m && (m.length < 4 || +m[3] > 0.9)); };
+    const seen = new Set();
+    for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) {
+      const a = runs[i], b = runs[j]; if (a.el === b.el) continue;
+      const ix = Math.min(a.r, b.r) - Math.max(a.x, b.x), iy = Math.min(a.b, b.b) - Math.max(a.y, b.y);
+      if (ix < 2 || iy < 3) continue;
+      const cx = Math.max(a.x, b.x) + ix / 2, cy = Math.max(a.y, b.y) + iy / 2, stack = document.elementsFromPoint(cx, cy);
+      const at = (el) => { const k = stack.findIndex(x => x === el || el.contains(x)); return k < 0 ? 1e9 : k; };
+      const [up, lo] = at(a.el) <= at(b.el) ? [a, b] : [b, a];
+      let cover = null; for (let e = up.el; e && e !== document.body; e = e.parentElement) if (opaque(e)) { cover = e; break; }
+      if (cover && !cover.contains(lo.el)) continue;
+      const top = stack[0]; if (!top || !(a.el.contains(top) || top.contains(a.el) || b.el.contains(top) || top.contains(b.el))) continue;
+      const k = `${a.t}|${b.t}`; if (seen.has(k)) continue; seen.add(k);
+      overlaps.push(`"${a.t}" on "${b.t}" ${Math.round(ix)}x${Math.round(iy)}`);
+    }
+  }
+  return { scrollHeight, scrollWidth, wide, words, boxed, edges, clipped, overlaps };
 }
 
 // Runs in the page: the rail, as [{ group, label }].
@@ -237,6 +274,7 @@ function report(estate, th, page, tab, m, errors) {
   if (m.boxed.length) bad.push(`boxed ${m.boxed.join(', ')}`);
   if (m.edges.length) bad.push(`edge ${m.edges.join(', ')}`);
   if (m.clipped.length) bad.push(`clipped ${m.clipped.slice(0, 4).join(', ')}${m.clipped.length > 4 ? ` (+${m.clipped.length - 4})` : ''}`);
+  if ((m.overlaps || []).length) bad.push(`overlap ${m.overlaps.slice(0, 4).join(', ')}${m.overlaps.length > 4 ? ` (+${m.overlaps.length - 4})` : ''}`);
   if (errors.length) bad.push(`console ${errors.slice(0, 2).join(' | ')}`);
   const key = `${estate} ${th} ${page} > ${tab}`;
   const base = BASELINE.includes(key);

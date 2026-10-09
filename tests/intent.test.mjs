@@ -94,7 +94,8 @@ test('the recommendation says why: reasons on each card, the deck\'s Why line an
   assert.deepEqual(v.jDetail.weights.map(w => w.key), ['cost', 'perf', 'sec', 'setup', 'scale']);
   assert.equal(v.jDetail.weights.reduce((a, w) => a + Number(w.w), 0), 100);
   assert.match(v.jDetail.weightsTitle, /^Weighed for what you said: cost \d+/);
-  assert.match(HTML, /<span>Why \{\{ jDetail\.label \}\}<\/span><\/button>/);
+  assert.match(HTML, /<span>Why<\/span><\/button>/, 'one word beside the pick it explains');
+  assert.deepEqual(v.jOptions.map(o => o.tierShort), ['Recommended', '', ''], 'only the pick is named; order says the rest');
   // Why as a story (2026-10-08, "make the 'why' more beautiful"): every answer joined to what it got; the weights as yours
   // over the deck's; the panel covers the stage exactly.
   assert.deepEqual(v.jDetail.pairs.map(p => [p.aLabel, p.kind]), [['Production', 'quiet'], ['Standard', 'quiet'], ['Per service', 'ok'], ['Your BGP', 'warn']]);

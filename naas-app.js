@@ -1487,7 +1487,9 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
   // A template's drill carries its own Start from this: the card that holds it hides while the drill is open.
   const MOVE = { pci: (cl, rg) => `Hosted ${cl === 'Azure' ? 'VNet' : 'VPC'} in ${rg} with the policy enforced`, uninspected: (cl, rg) => `Hosted ${cl === 'Azure' ? 'VNet' : 'VPC'} in ${rg} with the vSRX pair and AT&T egress` };
   const tplStart = drill && drill.kind === 'template' ? ((out.examplePolicies || []).find(e => e.key === drill.key) || {}).go : null;
-  const movesOf = (kind, list, f) => [...new Map(list.map(r => [r.region, r])).values()].map(r => { const label = MOVE[kind](r.cloud, r.region); return { key: r.region, label, go: () => orderMove(f, label, r.cloud) }; });
+  // A button says the move in a few words; the order and the title keep its whole name (2026-10-08: "lots of words still").
+  const MOVE_SHORT = { pci: (cl, rg) => `Hosted ${cl === 'Azure' ? 'VNet' : 'VPC'} in ${rg}, enforced`, uninspected: (cl, rg) => `Hosted ${cl === 'Azure' ? 'VNet' : 'VPC'} in ${rg}, inspected` };
+  const movesOf = (kind, list, f) => [...new Map(list.map(r => [r.region, r])).values()].map(r => { const label = MOVE[kind](r.cloud, r.region); return { key: r.region, label, short: MOVE_SHORT[kind](r.cloud, r.region), go: () => orderMove(f, label, r.cloud) }; });
   const drillActs = !dr ? [] : tplStart ? [{ key: 'start', label: 'Start from this', go: tplStart }]
     : actF && MOVE[actKind] && dr.list ? movesOf(actKind, dr.list, actF) : [];
   const crumbInk = (last) => ({ notLast: !last, weight: last ? 700 : 500, color: last ? 'var(--text-heading)' : 'var(--link)' });
@@ -1543,7 +1545,7 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
     const g = can ? fig(`g-find-${f.kind}`, n, 'drill', openDrill({ panel: 'policies', kind: 'finding', key: f.kind })) : null;
     // The row's button is the drill's move; a set over more regions opens the drill, where each region's move sits.
     const viol = MOVE[f.kind] && FINDING_RULE[f.kind] ? setsOf(FINDING_RULE[f.kind]).viol : null, mv = viol && viol.length ? movesOf(f.kind, viol, f) : [];
-    const rec = mv.length === 1 ? { name: mv[0].label, choose: mv[0].go } : mv.length > 1 ? { name: `Hosted VPC in ${mv.length} regions`, choose: openDrill({ panel: 'policies', kind: 'finding', key: f.kind }) } : f.rec;
+    const rec = mv.length === 1 ? { name: mv[0].short, title: mv[0].label, choose: mv[0].go } : mv.length > 1 ? { name: `Hosted VPC in ${mv.length} regions`, title: `Hosted VPC in ${mv.length} regions: ${mv.map(m => m.label).join('; ')}`, choose: openDrill({ panel: 'policies', kind: 'finding', key: f.kind }) } : f.rec ? { ...f.rec, title: f.rec.title || f.rec.name } : f.rec;
     return { ...f, rec, headParts: [{ key: 'h', text: f.head, isFig: !!g, isText: !g, go: g || (() => {}) }] };
   });
 
@@ -3404,9 +3406,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       return [`${n.toLocaleString('en-US')} ${n === 1 ? noun[0] : noun[1]}`, ...bad].join(' · '); };
     const segT = G.segmentTable(segCtx.est, segCtx);
     const segRows = segT.map(r => { const st = !r.counts.n ? 'none' : !r.measured ? 'nodata' : r.now.state, open = !!r.counts.n;
-      const nowText = !r.counts.n ? 'None on this estate' : !r.measured ? 'Not yet measured' : st === 'ok' || st === 'nodata' ? 'Healthy' : `${r.now.where} · ${r.now.why}`;
+      const nowFull = !r.counts.n ? 'None on this estate' : !r.measured ? 'Not yet measured' : st === 'ok' || st === 'nodata' ? 'Healthy' : `${r.now.where} · ${r.now.why}`;
+      // The cell says where and what in a few words; the title keeps the whole reading (2026-10-08: "lots of words still").
+      const nowText = st === 'ok' || st === 'nodata' || !r.counts.n || !r.measured ? nowFull : `${r.now.where} · ${String(r.now.why).replace(/^(\d+)% of .* purchased$/, '$1% used').replace(/^BGP flapping · .*$/, 'BGP flapping').replace(/^p95 (\d+) ms against (\d+) ms$/, '$1 ms, SLO $2')}`;
       return { key: r.key, label: r.label, ownerLabel: r.ownerLabel, show: r.show, source: r.source, limited: r.limited, measured: r.measured, state: st, ...dotOf(st, r.limited), nowText, nowSub: [countLine(r.counts, NOUN[r.key]), r.counts.n ? r.gap : ''].filter(Boolean).join(' · '), canOpen: open, cursor: open ? 'pointer' : 'default', caret: open ? '›' : '',
-        open: open ? () => set({ segOpen: r.key, segTrail: [], segPage: 0 }) : () => {} }; });
+        nowFull, open: open ? () => set({ segOpen: r.key, segTrail: [], segPage: 0 }) : () => {} }; });
     const segKey = healthView === 'segment' && segRows.some(r => r.key === s.segOpen && r.canOpen) ? s.segOpen : null;
     const segTrail = segKey && Array.isArray(s.segTrail) ? s.segTrail : [];
     const drill = segKey ? G.segmentDrill(segCtx.est, segCtx, segKey, segTrail) : null;
@@ -4462,9 +4466,9 @@ function wizardVals(s, est, set, c) {
       const layerText = (lk) => { const xs = SERVICE_GROUPS.flatMap(g => g.opts).filter(o => r.path.includes(o.label) && o.layer === lk).map(o => o.label); const rt = lk === 'edge' ? Object.keys(r.route).length : 0;
         return [...xs, ...(rt ? [`${rt} route ${rt === 1 ? 'rule' : 'rules'}`] : [])].join(' · ') || 'Any'; };
       // A card's glyph tile, its two sides with their glyphs, and its layers as a strip (2026-10-02).
-      return { key: t.key, t: t.name, icon: t.icon || 'check-shield', a: r.match, b: r.scope, aIcon: assetIcon(r.match), bIcon: assetIcon(r.scope), m: `${r.match} ↔ ${r.scope}`, why: t.why, r: r.path[0] || 'Route policy', layers: POLICY_LAYERS.map(l => { const text = layerText(l.key); return { key: l.key, label: l.label, text, icon: LAYER_ICON[l.key], state: text === 'Any' ? 'any' : 'set' }; }),
+      return { key: t.key, t: t.name, icon: t.icon || 'check-shield', a: r.match, b: r.scope, aIcon: assetIcon(r.match), bIcon: assetIcon(r.scope), m: `${r.match} ↔ ${r.scope}`, why: t.why, r: r.path[0] || 'Route policy', layers: POLICY_LAYERS.map(l => { const text = layerText(l.key); return { key: l.key, label: l.label, text, full: text, icon: LAYER_ICON[l.key], state: text === 'Any' ? 'any' : 'set' }; }),
         go: () => set({ govPanel: 'policies', authoring: { ...r, tab: 'outcome' } }) }; }) : MULTI_LAYER.map(t => ({ key: t.key, t: t.name, icon: t.icon || 'check-shield', a: t.match, b: 'any cloud', aIcon: assetIcon(t.match), bIcon: 'cloud', m: t.match, why: t.why, r: t.layers.core,
-      layers: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: t.layers[l.key], icon: LAYER_ICON[l.key], state: t.layers[l.key] ? 'set' : 'any' })),
+      layers: POLICY_LAYERS.map(l => ({ key: l.key, label: l.label, text: (t.short || {})[l.key] || t.layers[l.key], full: t.layers[l.key], icon: LAYER_ICON[l.key], state: t.layers[l.key] ? 'set' : 'any' })),
       go: () => set({ govPanel: 'policies', authoring: { match: t.match, scope: 'any cloud', req: [t.layers.core], layers: t.layers, templateName: t.name } }) })),
   };
 }
@@ -5228,6 +5232,7 @@ function journeyVals(out, s, set, est) {
   const KIND_ICON = { web: 'globe', db: 'database', app: 'apps' };
   // A tag keeps its slot in every row, so the same tag lines up down the card and adding one moves nothing.
   const TAG_SLOT = ['PCI', 'Finance', 'Internet-facing', 'Prod'];
+  const TAG_BEATS = new Set([JI.tag, JI.intent, JI.protect]);
   const putTags = (key, tags) => set({ jTags: { ...(s.jTags || {}), [key]: tags } });
   const tagAll = () => set({ jTags: Object.fromEntries(rows.map(r => [r.key, [...new Set([...r.applied, ...r.suggested])]])) });
   const tagsOn = rows.reduce((a, r) => a + r.applied.length, 0);
@@ -5304,6 +5309,8 @@ function journeyVals(out, s, set, est) {
   // deny, manipulate? Advertise?"): the route rules the intent pushes, each with its verb and its direction.
   // A rule in its short name on the card; NetBond's whole name stays in the row's title (2026-10-08: "work on text layout,
   // and on making text more concise").
+  // A card's requirement in a word or two (2026-10-08: "lots of words still"); the whole of it in the title.
+  const REQ_WORD = { 'Private path required': 'Private', 'Inline security inspection': 'Inspected', 'No direct internet path': 'No internet' };
   const RULE_SHORT = { 'block-default-routes': 'Default routes', 'matching-routes': 'Matching routes', 'community-value-filter-customer': 'Your BGP CVs', 'community-value-filter-att': 'AT&T BGP CVs',
     'prepend-advertisements': 'Prepend ASNs', 'selective-cv-tagging': 'CV tagging', 'community-value-tag': 'Tag by CV', 'advertise-static-routes': 'Static routes' };
   const VERB = { deny: ['Deny', 'deny'], manip: ['Manipulate', 'manip'], allow: ['Allow', 'allow'], advanced: ['Advertise', 'adv'] };
@@ -5317,7 +5324,7 @@ function journeyVals(out, s, set, est) {
   const deck = deck0.map(d => { const on = mine.some(p => p.tag === d.tag), vc = verdictOf(d, toRegion), vi = verdictOf(d, 'the Internet');
     return { key: d.tag, ...d, on, off: !on, n: String(d.apps.length), wlF: String(d.wl), appsWord: d.apps.join(', '), hover: s.jPolHover === d.tag, rules: rulesOf(d),
       // The intent card wears the Intent beat's mark and its parts in short; a tag card, the tag and its requirement.
-      headIcon: d.intent ? 'target' : 'tag', reqWord: d.intent ? d.short : d.req,
+      headIcon: d.intent ? 'target' : 'tag', reqWord: d.intent ? d.short : (REQ_WORD[d.req] || d.req),
       cloudV: vc, netV: vi, cloudCls: vc === 'Denied' ? 'deny' : 'allow', netCls: vi === 'Denied' ? 'deny' : 'allow', netIcon: vi === 'Denied' ? 'close-circle' : 'check-circle',
       stations: ['site', 'edge', 'core', 'cloud'].map(k => ({ key: k, icon: LAYER_ICON[k], state: k === d.layer ? 'set' : 'any', title: k === d.layer ? `${LAYER_SHORT[k]}: ${d.req}` : LAYER_SHORT[k] })),
       title: `${d.name}: ${d.req} for ${d.apps.join(', ')}. To the cloud: ${vc}. To the internet: ${vi}.${on ? ' Enforced.' : ' Click to enforce.'}`,
@@ -5398,7 +5405,9 @@ function journeyVals(out, s, set, est) {
         return { key: a.key, name: a.name, icon: KIND_ICON[a.kind] || 'apps', title: a.purpose, hasTags: step >= JI.tag || row.applied.length > 0, dotDelay: `${rows.findIndex(x => x.key === a.key) * 140}ms`,
           // The intent card covers every workload on the cloud; a tag card, the ones it tags.
           hl: step === JI.protect && s.jPolHover ? (s.jPolHover === 'Intent' || (row.applied.length ? row.applied : row.suggested).includes(s.jPolHover) ? 'on' : 'off') : '',
-          chips: [...new Set(step === JI.tag ? [...row.suggested, ...row.applied] : row.applied)].sort((x, y) => TAG_SLOT.indexOf(x) - TAG_SLOT.indexOf(y)).map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === JI.tag ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === JI.tag) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }),
+          // Tags show where they do work: on Tag, on Intent (they suggest the answers) and on Protect (cards light what they
+          // cover); elsewhere the card carries the intent glyphs alone (2026-10-08: "lots of words still").
+          chips: [...new Set(step === JI.tag ? [...row.suggested, ...row.applied] : TAG_BEATS.has(step) ? row.applied : [])].sort((x, y) => TAG_SLOT.indexOf(x) - TAG_SLOT.indexOf(y)).map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === JI.tag ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === JI.tag) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }),
           canAdd: step === JI.tag, picking: step === JI.tag && s.jTagPick === a.key, pick: () => set({ jTagPick: s.jTagPick === a.key ? null : a.key, jTagNew: '' }) }; }) })),
     jTagCount: String(tagsOn),
     // The Intent beat (2026-10-08): four questions, glyph answers; each answer re-ranks the ways at once (the wire's label
@@ -5426,7 +5435,7 @@ function journeyVals(out, s, set, est) {
       const why = t.why || [], chips = (i === 0 ? why.filter(x => x.ok) : [...why.filter(x => x.miss), ...why.filter(x => x.warn), ...why.filter(x => x.ok)]).slice(0, 2);
       // The score as a ring; a way a hard rule removes shows the rule's mark, not a score.
       const out = !!t.misses;
-      return { key: t.key || String(i), label: t.label, tier: t.tier, mark: t.mark, pts: t.pts || '', hasPts: !!t.hasPts && !out, price: t.priceShort, on: sel,
+      return { key: t.key || String(i), label: t.label, tier: t.tier, tierShort: i === 0 ? t.tier : '', mark: t.mark, pts: t.pts || '', hasPts: !!t.hasPts && !out, price: t.priceShort, on: sel,
         out, ptsPct: out || !t.hasPts ? '0%' : `${t.pts}%`, ptsShown: out ? '✕' : t.pts || '', ptsTitle: out ? `Removed by what you said: ${(t.why || []).filter(x => x.miss).map(x => x.words).join('; ')}` : t.ptsTitle || `Scores ${t.pts} of 100`,
         why: chips.map(x => ({ ...x, ink: x.miss ? 'var(--error)' : x.warn ? 'var(--text-light)' : 'var(--link)', title: `${x.short}: ${x.words}` })), hasWhy: chips.length > 0,
         delta: t.net > 0 ? `saves ${fmt(t.net)}` : t.net < 0 ? `adds ${fmt(-t.net)}` : '', deltaInk: t.net > 0 ? 'var(--success)' : 'var(--text-light)',
@@ -5437,7 +5446,7 @@ function journeyVals(out, s, set, est) {
     jDetail: tier ? { ...whyOf(tier), label: tier.label, tierWord: tier.tier, intro: tier.intro || '', fit: tier.fit || '', mark: tier.mark, strip: tier.strip || [], pts: tier.pts || '', hasPts: !!tier.hasPts, ptsTitle: tier.ptsTitle || '',
       metrics: (tier.metrics || []).map(m2 => ({ ...m2, words: String(m2.title || '').replace(/^[A-Za-z ]+: /, ''),
         v: m2.key === 'setup' ? (tier.setupTime || m2.v) : m2.key === 'perf' ? String(m2.v).replace(/ · .*$/, '') : m2.v,
-        label: m2.key === 'setup' ? `${tier.whoWord === 'You' ? 'You set' : 'AT&T sets'} it up` : ({ sec: 'Security', perf: 'Latency', cost: 'A month', you: 'You do' })[m2.key] || '' })),
+        label: m2.key === 'setup' ? `${tier.whoWord === 'You' ? 'You set' : 'AT&T sets'} it up` : m2.key === 'you' ? 'You do' : '', hasLabel: m2.key === 'setup' || m2.key === 'you' })),
       who: tier.whoWord || '', time: tier.setupTime || '', setupWords: tier.setupWords || '', youDo: tier.way && W.wayYouDo(tier.way) ? W.wayYouDo(tier.way).words : '',
       products: (tier.products || []).map(p => { const pp = W.productOf(p.id) || {}; return { key: p.id, name: pp.name || p.id, n: String(p.n), v: pp.price === null || pp.price === undefined ? 'At review' : `${fmt(pp.price)} each` }; }) } : null,
     jPicked: tier ? { label: tier.label, mark: tier.mark, pts: tier.pts || '', hasPts: !!tier.hasPts } : null, jHasPick: !!tier,
@@ -5446,7 +5455,7 @@ function journeyVals(out, s, set, est) {
     // Act three.
     jIsWatch: step === JI.watch, jIsProtect: step === JI.protect, jIsSave: step === JI.save, jLive: live, jNotLive: !live,
     jHealth: found.regions.flatMap(r => r.apps).map((a, i) => ({ key: a.key, d: `${i * 140}ms` })),
-    jDeck: deck, jHasDeck: deckN > 0, jDeckHosted: hostedWay, jDeckNba: !hostedWay, jDeckWhere: hostedWay ? `Enforced on the vSRX in AT&T's hub and your route tables` : `Enforced as route policy on NetBond Advanced`, jDeckRest: { has: step === JI.protect && enforcedN > 0 && enforcedN < deckN, go: enforceAll, n: String(deckN - enforcedN) },
+    jDeck: deck, jHasDeck: deckN > 0, jDeckHosted: hostedWay, jDeckNba: !hostedWay, jDeckWhere: hostedWay ? `vSRX and your route tables` : `NetBond Advanced route policy`, jDeckWhereTitle: hostedWay ? `Enforced on the vSRX in AT&T's hub, L3 to L7, and in your cloud's route tables` : `Enforced as route policy on NetBond Advanced, on AT&T's IPE`, jDeckRest: { has: step === JI.protect && enforcedN > 0 && enforcedN < deckN, go: enforceAll, n: String(deckN - enforcedN) },
     // The wires' stamps: the hovered card's verdicts as a preview, else what the enforced ones add up to.
     jVerdict: step >= JI.protect && shown ? (hov && !hov.on ? 'preview' : 'enforced') : 'none', jProtected: step >= JI.protect && !!shown,
     jStampCloud: shown ? (Array.isArray(shown) ? (shown.some(d => d.cloudV === 'Denied') ? 'Denied' : 'Allowed') : shown.cloudV) : '', jStampNet: shown ? (Array.isArray(shown) ? (shown.some(d => d.netV === 'Denied') ? 'Denied' : 'Allowed') : shown.netV) : '',

@@ -42,15 +42,20 @@ export function policyLayers(p) {
 /** Starting points that set a rule at every layer. */
 export const MULTI_LAYER = [
   { icon: 'padlock', key: 'pci', name: 'PCI, end to end', match: 'tag PCI', why: 'Card data never touches the internet, from the store to the subnet.',
-    layers: { site: 'AVPN or Switched Ethernet, no internet breakout', edge: 'Inspect at the AT&T edge', core: 'Private path required', cloud: 'PCI subnets only' } },
+    layers: { site: 'AVPN or Switched Ethernet, no internet breakout', edge: 'Inspect at the AT&T edge', core: 'Private path required', cloud: 'PCI subnets only' },
+    short: { site: 'AVPN or Ethernet', edge: 'Edge inspection', core: 'Private path', cloud: 'PCI subnets' } },
   { icon: 'large-building', key: 'remote', name: 'Remote sites to cloud', match: 'remote-site any', why: 'Remote sites reach the cloud through AT&T, not around it.',
-    layers: { site: 'SD-WAN or Third Party Access tunnels to the AT&T edge', edge: 'Terminate tunnels at the AT&T edge', core: 'No direct internet path', cloud: 'Private on-ramp into the region' } },
+    layers: { site: 'SD-WAN or Third Party Access tunnels to the AT&T edge', edge: 'Terminate tunnels at the AT&T edge', core: 'No direct internet path', cloud: 'Private on-ramp into the region' },
+    short: { site: 'Tunnels to AT&T', edge: 'Tunnels end at edge', core: 'No direct internet', cloud: 'Private on-ramp' } },
   { icon: 'ai', key: 'gpu', name: 'AI and GPU traffic', match: 'tag AI', why: 'Training data moves on capacity that is sized and measured for it.',
-    layers: { site: 'Data centers on 10G Switched Ethernet', edge: 'Dedicated 10G on-ramp port', core: 'Latency SLO 15 ms', cloud: 'GPU regions on a private path' } },
+    layers: { site: 'Data centers on 10G Switched Ethernet', edge: 'Dedicated 10G on-ramp port', core: 'Latency SLO 15 ms', cloud: 'GPU regions on a private path' },
+    short: { site: 'DCs on 10G', edge: 'Dedicated 10G port', core: '15 ms SLO', cloud: 'Private GPU regions' } },
   { icon: 'globe', key: 'inet', name: 'Internet-facing apps', match: 'tag Internet-facing', why: 'What faces the internet is inspected once, at the edge, for every cloud.',
-    layers: { site: 'No local internet breakout', edge: 'DDoS protection and inline inspection', core: 'Egress through AT&T, never direct', cloud: 'Public subnets behind the edge' } },
+    layers: { site: 'No local internet breakout', edge: 'DDoS protection and inline inspection', core: 'Egress through AT&T, never direct', cloud: 'Public subnets behind the edge' },
+    short: { site: 'No local breakout', edge: 'DDoS + inspection', core: 'Egress via AT&T', cloud: 'Behind the edge' } },
   { icon: 'bill', key: 'fin', name: 'Finance stays segmented', match: 'branch Finance', why: 'Finance traffic has its own lane at every hop.',
-    layers: { site: 'Finance sites in their own segment', edge: 'Segment-aware firewall', core: 'Segment intra-tag only', cloud: 'Finance VPCs only' } },
+    layers: { site: 'Finance sites in their own segment', edge: 'Segment-aware firewall', core: 'Segment intra-tag only', cloud: 'Finance VPCs only' },
+    short: { site: 'Own segment', edge: 'Segment firewall', core: 'Intra-tag only', cloud: 'Finance VPCs' } },
 ];
 
 // NetBond Advanced's route policy (Configure > Policies, RestrictedIPv4Policy.tsx), rule by rule and

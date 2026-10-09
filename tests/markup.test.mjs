@@ -527,8 +527,11 @@ test('every container the markup opens, it closes', () => {
   // Your sites as the sites themselves ("the 20 on the left - look at how much space is wasted"): the count and its cap in
   // one head, a grid of one glyph per site (div +1, span +2, sc-for +1): div 1304 -> 1305, span 1444 -> 1446, sc-for 380 -> 381.
     ['div', /<div\b/g, /<\/div>/g, 1305],
-    ['span', /<span\b/g, /<\/span>/g, 1446],
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 656],
+  // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
+    ['span', /<span\b/g, /<\/span>/g, 1447],
+  // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
+  // only where the value needs one (sc-if +1): sc-if 656 -> 657.
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 657],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 381],
     ['section', /<section\b/g, /<\/section>/g, 17],
     ['button', /<button\b/g, /<\/button>/g, 521],
