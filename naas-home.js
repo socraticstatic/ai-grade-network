@@ -111,14 +111,14 @@ export function takeAway(rk, f) {
     // workloads ride it"; an exposed workload has a public address, wherever
     // its region connects).
     const gv = f.govern || {}, e = String(f.exposed), vn = numOf(gv.value);
-    return out({ key: 'security', icon: 'check-shield', ink: numOf(e) ? 'var(--warning)' : 'var(--success)', door: 'violations', cta: 'Review violations',
+    return out({ key: 'security', icon: 'check-shield', ink: numOf(e) ? 'var(--warning)' : 'var(--link)', door: 'violations', cta: 'Review violations',
       head: numOf(e) ? `${e} ${e === '1' ? 'workload' : 'workloads'} exposed` : 'No workload exposed', headDoor: numOf(e) ? 'exposed' : '',
       parts: [vn ? { t: `${gv.value} policy ${vn === 1 ? 'violation' : 'violations'}`, door: 'violations' } : { t: 'No policy violations', door: '' }] });
   }
   if (rk === 'architect') {
     // The clouds are named, not counted: the public regions' own clouds (skeptic,
     // 2026-09-30: the estate's count read as if the problem spanned every cloud).
-    if (!pub) return out({ key: 'architect', icon: 'cloud', ink: 'var(--success)', door: 'connect', cta: cn.door || 'Connect',
+    if (!pub) return out({ key: 'architect', icon: 'cloud', ink: 'var(--link)', door: 'connect', cta: cn.door || 'Connect',
       head: cm ? 'Every region rides the AT&T network' : (cn.value || 'Nothing connected yet'), parts: [{ t: cn.sub || 'nothing on the public internet', door: '' }] });
     return out({ key: 'architect', icon: 'cloud', ink: 'var(--warning)', door: 'connect', cta: cn.door || 'Recommended',
       head: `${cn.value} still ${pub === 1 ? 'rides' : 'ride'} the public internet`,
@@ -199,7 +199,7 @@ export function sparkOf(past, asIs, moved) {
     { key: 'x90', t: '+90 days', left: pc(end[0], SPARK.w), tx: 'translateX(-100%)' }];
   const mEnd = M[M.length - 1], kOf = (v) => `$${(v / 1000).toFixed(1).replace(/\.0$/, '')}K`;
   const ends = asIs.length ? [{ key: 'asis', t: kOf(asIs[asIs.length - 1]), top: pc(end[1], SPARK.h), ink: 'var(--text-light)', title: 'In 90 days, as is' },
-    { key: 'act', t: kOf(moved[moved.length - 1]), top: pc(mEnd[1], SPARK.h), ink: 'var(--success)', title: 'In 90 days, if you act' }] : [];
+    { key: 'act', t: kOf(moved[moved.length - 1]), top: pc(mEnd[1], SPARK.h), ink: 'var(--text-heading)', title: 'In 90 days, if you act' }] : [];
   // Two end labels never sit on top of each other.
   if (ends.length === 2 && Math.abs(parseFloat(ends[0].top) - parseFloat(ends[1].top)) < 12) { const mid = (parseFloat(ends[0].top) + parseFloat(ends[1].top)) / 2; ends[0].top = `${mid - 6}%`; ends[1].top = `${mid + 6}%`; }
   return { past: d(P), asIs: d(A), act: d(M), yTicks, xTicks, ends, lo, hi,
@@ -278,7 +278,7 @@ export function snapshotCards(rk, f, doors) {
     // Spend's forecast columns carry as is and if you act as their own figures (Cost v2, 2026-09-30).
     spark: sparkOf(past, next.map(x => x.asIsN), next.map(x => x.movedN)),
     // Spend's own "In 90 days" tile, so it opens Spend (skeptic, 2026-09-30).
-    figs: [{ key: 'act', v: `${spend.ahead}/mo`, u: 'in 90 days, if you act', swatch: 'var(--success)', go: doors.spend(), off: !numOf(spend.ahead) }],
+    figs: [{ key: 'act', v: `${spend.ahead}/mo`, u: 'in 90 days, if you act', swatch: 'var(--text-heading)', go: doors.spend(), off: !numOf(spend.ahead) }],
   });
 
   // Exposed of all, as Discover's At a glance prints them both, in its word: a workload with a public address.
@@ -311,7 +311,7 @@ export function snapshotCards(rk, f, doors) {
   // The KPI face of each card (Dev's home, Micah 2026-10-01: "model this for all personas"): a label, a pill
   // that says if it needs you, the figure, one segmented bar, one footnote. The figures are the card's own.
   const pct = (n, of) => (of > 0 ? `${Math.max(0, Math.min(100, n / of * 100)).toFixed(1)}%` : '0%');
-  const PILL = { bad: ['var(--error)', 'color-mix(in srgb, var(--error) 12%, transparent)'], warn: ['var(--warning)', 'color-mix(in srgb, var(--warning) 14%, transparent)'], ok: ['var(--success)', 'color-mix(in srgb, var(--success) 12%, transparent)'] };
+  const PILL = { bad: ['var(--error)', 'color-mix(in srgb, var(--error) 12%, transparent)'], warn: ['var(--warning)', 'color-mix(in srgb, var(--warning) 14%, transparent)'], ok: ['var(--link)', 'color-mix(in srgb, var(--link) 12%, transparent)'] };
   const kp = (tone, t) => ({ pill: t, pillInk: PILL[tone][0], pillBg: PILL[tone][1], hasPill: !!t });
   const cnt = (st) => flows.filter(r => r.state === st).length;
   const appDoor = (st) => (doors.appState ? doors.appState(st) : doors.health());
@@ -332,7 +332,7 @@ export function snapshotCards(rk, f, doors) {
     exposed: { kLabel: 'Exposed workloads', big: enf(exN), of: `of ${enf(wlN)}`, ...(numOf(gv.value) ? kp('bad', `${gv.value} violations`) : kp('ok', 'No violations')),
       bar: [{ key: 'ex', w: pct(exN, wlN), ink: 'var(--error)' }], foot: `${wlN ? Math.round(exN / wlN * 100) : 0}% of workloads reachable from outside` },
     tags: { kLabel: 'Tags with no policy', big: enf(bare), of: `of ${enf(tagRows.length)}`, ...(bare ? kp('warn', `${enf(bare)} uncovered`) : kp('ok', 'All covered')),
-      bar: [{ key: 'cov', w: pct(tagRows.length - bare, tagRows.length), ink: 'var(--success)' }], foot: bare ? 'A tag with no policy can reach anything' : 'Every tag has a policy' },
+      bar: [{ key: 'cov', w: pct(tagRows.length - bare, tagRows.length), ink: 'var(--link)' }], foot: bare ? 'A tag with no policy can reach anything' : 'Every tag has a policy' },
   };
   const allSave = ow.mine + ow.eng || 1;
   Object.assign(KPI, {
