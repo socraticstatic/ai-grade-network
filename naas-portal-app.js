@@ -67,9 +67,9 @@ const DASH = '–';
 /** Mbps as the storefront says it: 1 Gbps, 500 Mbps. */
 export const bw = (mbps) => (mbps === undefined || mbps === null ? DASH : mbps >= 1000 ? `${Math.round(mbps / 100) / 10} Gbps` : `${n(mbps)} Mbps`);
 const HEALTH_WORD = { ok: 'OK', down: 'Down' };
-// Rows a page holds at 1440x900: header 64, page padding 16, head row 40 + 16, table header 42, pager 36, bottom 16;
-// a row is 42 (12px padding, 18px line). (900 - 230) / 42 = 15.
-export const PAGE_ROWS = 15;
+// Rows a page holds at 1440x900: header 64, page padding 16, head row 40 + 16, the picture band 96 + 12, table header
+// 42, pager 36, bottom 16; a row is 42 (12px padding, 18px line). (900 - 338) / 42 = 13.4, and the band breathes: 12.
+export const PAGE_ROWS = 12;
 const pageOf = (rows, page, size, set, key) => {
   const pages = Math.max(1, Math.ceil(rows.length / size)), p = Math.max(0, Math.min(pages - 1, page || 0)), from = p * size;
   return { rows: rows.slice(from, from + size), pageRows: size, page: p, pages, pager: rows.length ? `${from + 1}–${Math.min(rows.length, from + size)} of ${rows.length}` : 'None',
@@ -195,7 +195,7 @@ export function recommended(d, s, set) {
       request: () => set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: reg.csp, region: reg.region, option: r.key, answers: full, defaulted: Object.keys(answers).length === 0 }] }) }; });
   const cols = [{ key: 'label', label: 'Option', present: true, cls: 'dt-name', w: '30%' }, { key: 'monthly', label: 'Monthly', present: true, cls: 'num', w: '9%' }, { key: 'setup', label: 'Setup', present: true, w: '17%' }, { key: 'who', label: 'Who', present: true, w: '6%' }, { key: 'fit', label: 'Fit', present: true, w: '21%' }, { key: 'score', label: 'Score', present: true, cls: 'num', w: '6%' }, { key: 'act', label: '', present: true, cls: 'num', w: '11%' }];
   const text = (k, r) => k === 'act' ? '' : k === 'fit' && r.misses ? `${r.missWords}` : k === 'score' && r.misses ? DASH : String(r[k]);
-  const rows = options.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act', isOption: x.key === 'label', cls: x.key === 'act' ? `${x.cls} po-actc` : x.cls, ink: ['fit', 'score'].includes(x.key) && r.misses ? 'var(--text-light)' : x.ink })), click: false }));
+  const rows = options.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act', isOption: x.key === 'label', isScore: x.key === 'score', notScore: x.key !== 'score', ptsPct: `${r.score}%`, ptsShown: r.misses ? '✕' : r.score, out: r.misses > 0, title: r.misses ? r.missWords : `${r.score} of 100 for what you said`, cls: x.key === 'act' ? `${x.cls} po-actc` : x.key === 'score' ? `${x.cls} po-actc` : x.cls, ink: ['fit', 'score'].includes(x.key) && r.misses ? 'var(--text-light)' : x.ink })), click: false }));
   const wt = W.intentWeights(answers);
   return { hasRegion: true, noRegion: false, title, cloud, trail: [{ ...root, last: false }, { key: 'reg', label: title, go: () => {}, last: true }], hasTrail: true, pick, intent, options: rows, cols,
     weights: W.CRITERIA.map(c => ({ key: c.key, label: c.label, icon: c.icon, w: wt[c.key], text: `${wt[c.key]}%` })), rules: rulesOf(answers), hasRules: rulesOf(answers).length > 0,
@@ -268,12 +268,32 @@ export function journey(d, s, set) {
     act: { label: ACT.label, go: ACT.go, off: !!ACT.off, busy: !!ACT.busy }, hasBack: true, back, exit,
     requestedLine: requested ? `Requested ${W.wayLabel(requested.option, cloud)} for ${region ? region.label : ''}. Cloud discovery and Recommended carry it.` : '' };
 }
+/** The picture band (drop 2, "No visuals"): the path strip with this page's station lit and the counts under the
+ *  stations, and a legend of this page's counts as glyphs. Every figure is a count the portal confirmed. */
+export function pic(d, s) {
+  const dark = s.theme === 'dark', today = PJ.todayOf(d.circuits), join = P.attJoin(d.cloudLinks, d.discovery), js = [...join.values()];
+  const on = js.filter(j => j.on).length, cspOnly = js.filter(j => j.cspOnly).length, off = js.length - on - cspOnly;
+  const lit = { lastmile: ['sites', 'lastmile'], links: ['att', 'pop'], discovery: ['cloud'], recommended: ['att', 'cloud'] }[s.page] || [];
+  const strip = [
+    { key: 'sites', icon: 'router', label: 'Sites', small: `${n(today.sites)} sites` },
+    { key: 'lastmile', icon: 'cable', label: 'Last mile', small: `${n(today.circuits)} circuits` },
+    { key: 'att', icon: 'hub', label: 'AT&T', small: 'AT&T' },
+    { key: 'pop', icon: 'ethernet', label: 'POP', small: d.cloudLinks.length ? `${n(d.cloudLinks.length)} connections` : 'None yet' },
+    { key: 'cloud', icon: 'cloud', label: 'Cloud', small: `${n(d.discovery.length)} regions · ${n(on)} on AT&T` },
+  ].map(x => ({ ...x, state: lit.includes(x.key) ? 'set' : '', title: `${x.label}: ${x.small}` }));
+  const lg = (x) => ({ hasMark: !!x.mark, hasIcon: !!x.icon && !x.mark, ink: x.ink || 'var(--link)', title: x.title || `${x.label}: ${x.n}`, ...x });
+  const legend = s.page === 'lastmile' ? today.groups.map(g => lg({ key: g.key, icon: g.icon, ink: g.ink, n: g.nF, label: g.label, title: `${g.full}: ${g.nF} circuits` }))
+    : s.page === 'links' ? [...new Set(d.cloudLinks.map(l => P.cspOf(l.csp)))].sort().map(k => lg({ key: k, mark: W.markFor(k, dark ? 'dark' : 'light'), n: String(d.cloudLinks.filter(l => P.cspOf(l.csp) === k).length), label: W.CLOUD_NAME[k] || k }))
+    : s.page === 'discovery' ? [lg({ key: 'on', icon: 'hub', ink: 'var(--link)', n: String(on), label: 'On AT&T' }), lg({ key: 'csp', icon: 'hub', ink: 'var(--text-light)', n: String(cspOnly), label: 'AT&T at the cloud' }), lg({ key: 'off', icon: 'cloud', ink: 'var(--text-light)', n: String(off), label: 'Not on AT&T' })]
+    : (() => { const wt = W.intentWeights(s.answers || {}); return W.CRITERIA.map(c => lg({ key: c.key, icon: c.icon, ink: 'var(--link)', n: `${wt[c.key]}%`, label: c.label })); })();
+  return { strip, legend, hasLegend: legend.length > 0 };
+}
 export function vals(c) {
   const s = c.state, set = (p) => c.setState(p), f = fixtureOf(s), d = dataOf(s), dark = s.theme === 'dark';
   const iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
   const rail = [
     // The task flow at the top of the rail (drop 2): the existing customer's journey on this data.
-    { key: 'journey', label: 'Connect a cloud', cur: false, icon: `${iconDir}/cloud-transfer.svg`, bg: 'transparent', color: 'var(--sidebar-muted)', radius: '4px', go: journeyStart(s, set, (PJ.providersOf(d.discovery).find(p => p.live) || {}).key) },
+    { key: 'journey', label: 'Connect a cloud', cur: false, icon: `${iconDir}/plus.svg`, bg: 'transparent', color: 'var(--sidebar-muted)', radius: '4px', go: journeyStart(s, set, (PJ.providersOf(d.discovery).find(p => p.live) || {}).key) },
     ...PAGES.map(p => { const cur = s.page === p.key; return { key: p.key, label: p.label, cur, icon: `${cur ? iconLink : iconDir}/${p.icon}.svg`,
       bg: cur ? 'var(--sidebar-accent)' : 'transparent', color: cur ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: cur ? '8px' : '4px', go: () => set({ page: p.key, drawer: null, trail: [], lmPage: 0, dtrail: [], dPage: 0, rcPage: 0, region: null }) }; })];
   const nets = P.networksOf(d.circuits);
@@ -282,6 +302,7 @@ export function vals(c) {
   return {
     theme: s.theme, themeIsLight: !dark, themeIsDark: dark, themeTitle: dark ? 'Light mode' : 'Dark mode', toggleTheme: () => set({ theme: dark ? 'light' : 'dark' }),
     journeyOn: !!s.journey, journeyOff: !s.journey, showRail: !s.journey, shellCols: s.journey ? 'minmax(0,1fr)' : '240px minmax(0,1fr)', jr: journey(d, s, set),
+    pic: pic(d, s),
     iconDir, rail, pageTitle: page.label, pgLastmile: s.page === 'lastmile', pgLinks: s.page === 'links', pgDiscovery: s.page === 'discovery', pgRecommended: s.page === 'recommended',
     fixture: s.fixture, fixtureName: f.name, synthetic: !!f.synthetic, stateB: !!s.stateB, stateValue: s.stateB ? 'b' : 'a',
     dataNote: s.dataNote || '', hasDataNote: !!s.dataNote, dataError: s.dataError || '', hasDataError: !!s.dataError,

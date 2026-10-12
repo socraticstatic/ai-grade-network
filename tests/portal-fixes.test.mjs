@@ -31,10 +31,10 @@ test('an action cell is compact so a row with a button stays 42px, and the picke
   const c = mkC(); useData(c, { circuits: [], cloudLinks: [], discovery: regions(22) });
   c.state.page = 'discovery'; const d = vals(c).dv;
   assert.ok(d.rows[0].cells.find(x => x.key === 'act').cls.includes('po-actc'));
-  assert.equal(d.rows.length, 15); assert.equal(d.pager, '1–15 of 22');
+  assert.equal(d.rows.length, 12); assert.equal(d.pager, '1–12 of 22');
   c.state.page = 'recommended'; const r = vals(c).rc;
-  assert.equal(r.pick.rows.length, 14, 'one fewer: the lead line sits above the picker'); assert.equal(r.pick.pager, '1–14 of 22'); assert.equal(r.pick.hasNext, true);
-  r.pick.next(); assert.equal(vals(c).rc.pick.pager, '15–22 of 22');
+  assert.equal(r.pick.rows.length, 11, 'one fewer: the lead line sits above the picker'); assert.equal(r.pick.pager, '1–11 of 22'); assert.equal(r.pick.hasNext, true);
+  r.pick.next(); assert.equal(vals(c).rc.pick.pager, '12–22 of 22');
   c.state.region = { csp: 'Azure', region: 'region0' }; const o = vals(c).rc.options[0];
   assert.ok(o.cells.find(x => x.key === 'act').cls.includes('po-actc'));
   assert.ok(HTML.includes('{{ rc.pick.pager }}'));
