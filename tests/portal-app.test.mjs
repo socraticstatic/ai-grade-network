@@ -34,8 +34,11 @@ test('the page shares the storefront stylesheet; the storefront no longer inline
   assert.ok(css.includes('.dt{display:table') && css.includes('.hdr-cust{'));
 });
 
-test('the storefront rail foot links to the portal page', () => {
+test('the storefront rail foot links to the portal page; the portal header marks Portal MVP as the page you are on and NaaS as the way back', () => {
   assert.ok(STORE.includes('href="portal.dc.html"'));
+  const nav = HTML.slice(HTML.indexOf('aria-label="Products"'), HTML.indexOf('</nav>'));
+  assert.match(nav, /<span aria-current="page"[^>]*background:var\(--bg-accent\)[^>]*>Portal MVP<\/span>/);
+  assert.match(nav, /<a href="NaaS Storefront.dc.html"[^>]*background:transparent[^>]*>NaaS<\/a>/);
 });
 
 test('the portal logic class parses as the runtime evals it, and the markup binds the rail and the four pages', () => {

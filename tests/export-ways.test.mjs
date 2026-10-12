@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { waysExport } from '../scripts/export-ways.mjs';
 import * as W from '../naas-ways.js';
@@ -20,9 +22,10 @@ test('the export carries every way with a monthly per cloud, the four questions,
   assert.ok(x.ranking.length > 40, 'the ranking rule in words');
 });
 
-test('running the script writes docs/portal/ways.json and it parses to the same export', () => {
-  execFileSync('node', ['scripts/export-ways.mjs'], { cwd: new URL('..', import.meta.url).pathname });
-  const p = new URL('../docs/portal/ways.json', import.meta.url);
+test('running the script writes ways.json where it is told and it parses to the same export', () => {
+  const out = mkdtempSync(join(tmpdir(), 'ways-'));
+  execFileSync('node', ['scripts/export-ways.mjs', out], { cwd: new URL('..', import.meta.url).pathname });
+  const p = join(out, 'ways.json');
   assert.ok(existsSync(p));
   const j = JSON.parse(readFileSync(p, 'utf8'));
   assert.equal(j.ways.length, W.WAYS.length); assert.ok(j.generated);

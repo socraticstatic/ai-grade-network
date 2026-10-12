@@ -54,7 +54,12 @@ export const POP_REGIONS = [
 /** API names the discovery feed may use, by display name. The join compares display names. */
 export const REGION_ALIAS = { eastus: 'East US', eastus2: 'East US 2', westus: 'West US', westus2: 'West US 2', centralus: 'Central US', northcentralus: 'North Central US', southcentralus: 'South Central US', westeurope: 'West Europe', northeurope: 'North Europe' };
 export const regionName = (r) => REGION_ALIAS[String(r || '').toLowerCase()] || r;
-const cspKey = (csp) => (/google/i.test(csp) ? 'GCP' : csp);
+/** The cloud's canonical key whatever the feed calls it: azure, Microsoft Azure, aws, Amazon Web Services, google cloud, OCI. */
+export function cspOf(csp) {
+  const x = String(csp || '').toLowerCase();
+  return /azure/.test(x) ? 'Azure' : /aws|amazon/.test(x) ? 'AWS' : /gcp|google/.test(x) ? 'GCP' : /oracle|oci\b/.test(x) ? 'Oracle' : String(csp || '');
+}
+const cspKey = cspOf;
 const samePop = (row, pop) => pop && row.provider.toLowerCase() === String(pop.provider || '').toLowerCase() && row.facility.toLowerCase() === String(pop.facility || '').toLowerCase();
 /** The regions a cloud serves from a POP, or none when the POP is not in the table. */
 export function regionsOfPop(csp, pop) {

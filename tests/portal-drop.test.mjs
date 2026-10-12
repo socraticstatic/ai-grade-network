@@ -22,7 +22,6 @@ test('the deploy workflow carries the portal zip beside the storefront zip', () 
 });
 
 test('pop-regions.json is the lookup, and the README names the contract and the two files', () => {
-  execFileSync('node', ['scripts/export-ways.mjs'], { cwd: ROOT });
   const pr = JSON.parse(readFileSync(`${ROOT}docs/portal/pop-regions.json`, 'utf8'));
   assert.ok(pr.rows.find(r => r.csp === 'Azure' && r.facility === 'DC2' && r.regions.includes('East US 2')));
   assert.ok(pr.rows.some(r => r.verify === true), 'unverified rows say so');

@@ -18,7 +18,7 @@ export const PAGES = [
   { key: 'recommended', label: 'Recommended', icon: 'lightbulb' },
 ];
 export function defaults() {
-  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, pick: null, answers: {}, requests: [], region: null };
+  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, answers: {}, requests: [], region: null, dataNote: '', dataError: '' };
 }
 /** URL to state: ?fixture=calloway|scale, ?state=a|b, ?page=<key>, ?theme=light|dark. `search` is for tests. */
 export function init(c, search) {
@@ -31,13 +31,24 @@ export function init(c, search) {
   if (q.get('theme') === 'dark' || q.get('theme') === 'light') patch.theme = q.get('theme');
   c.setState(patch);
   // ?data=<url>: a JSON in the contract's shape, same origin or CORS-open, becomes the estate on screen.
-  if (q.get('data') && typeof fetch === 'function') fetch(q.get('data'), { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j) useData(c, j); }).catch(() => {});
+  const url = q.get('data');
+  if (url && typeof fetch === 'function') fetch(url, { cache: 'no-store' })
+    .then(r => (r.ok ? r.json().then(j => useData(c, j)) : c.setState({ dataError: `Could not load ${url} (${r.status}).` })))
+    .catch(e => c.setState({ dataError: `Could not load ${url} (${/JSON/i.test(String(e)) ? 'not JSON' : 'network'}).` }));
 }
 /** The team's own JSON, in the contract's shape, installed as the fixture the page reads (`?data=<url>`, or this). */
 export function useData(c, json, name) {
-  const f = { name: (json && json.name) || name || 'Your estate', synthetic: false, circuits: (json && json.circuits) || [], cloudLinks: (json && json.cloudLinks) || [], discovery: (json && json.discovery) || [] };
-  P.FIXTURES.remote = f;
-  c.setState({ fixture: 'remote', trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, region: null, pick: null });
+  const arr = (x) => (Array.isArray(x) ? x : []);
+  const obj = (x) => x && typeof x === 'object' && !Array.isArray(x);
+  const circuitsIn = arr(json && json.circuits), linksIn = arr(json && json.cloudLinks), discIn = arr(json && json.discovery);
+  // A row the page cannot draw is skipped and counted, never a crash: a circuit needs a site and a city and state; a link a cloud; a region a cloud and a name.
+  const circuits = circuitsIn.filter(x => obj(x) && x.siteId && obj(x.address) && x.address.city && x.address.state && typeof x.bandwidthMbps === 'number').map(x => ({ ...x, network: obj(x.network) && x.network.id ? x.network : null, service: String(x.service || '') }));
+  const cloudLinks = linksIn.filter(x => obj(x) && x.csp).map(x => ({ ...x, pop: obj(x.pop) ? x.pop : null, bandwidthMbps: typeof x.bandwidthMbps === 'number' ? x.bandwidthMbps : undefined }));
+  const discovery = discIn.filter(x => obj(x) && x.csp && x.region).map(x => ({ ...x, vpcs: arr(x.vpcs).filter(obj).map(v => ({ ...v, id: String(v.id || v.name || ''), name: String(v.name || v.id || ''), subnets: arr(v.subnets).filter(obj) })) }));
+  const nm = (json && typeof json.name === 'string' && json.name) || name || 'Your data';
+  P.FIXTURES.remote = { name: nm, synthetic: false, circuits, cloudLinks, discovery };
+  c.setState({ fixture: 'remote', trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, region: null, pick: null, dataError: '',
+    dataNote: `Loaded ${nm}: ${circuits.length} of ${circuitsIn.length} circuits, ${cloudLinks.length} of ${linksIn.length} connections, ${discovery.length} of ${discIn.length} regions read.` });
 }
 export const fixtureOf = (s) => P.FIXTURES[s.fixture] || P.FIXTURES.calloway;
 /** State B is the note's "maybe" fields; state A strips them so the page proves it stands without them. */
@@ -97,7 +108,7 @@ export function links(d, s, set) {
   const dark = s.theme === 'dark';
   const popWord = (pop) => pop ? [pop.provider, pop.facility].filter(Boolean).join(' ') + (pop.metro ? ` · ${pop.metro}` : '') : DASH;
   const rows = d.cloudLinks.map((l, i) => { const regions = l.region ? [P.regionName(l.region)] : P.regionsOfPop(l.csp, l.pop);
-    return { key: `${l.csp}-${i}`, csp: l.csp, cloud: W.CLOUD_NAME[l.csp] || l.csp, mark: W.markFor(l.csp, dark ? 'dark' : 'light'), pop: popWord(l.pop), regions, region: regions.length ? regions.join(', ') : 'Unmapped', unmapped: !regions.length,
+    const ck = P.cspOf(l.csp); return { key: `${l.csp}-${i}`, csp: ck, cloud: W.CLOUD_NAME[ck] || l.csp, mark: W.markFor(ck, dark ? 'dark' : 'light'), pop: popWord(l.pop), regions, region: regions.length ? regions.join(', ') : 'Unmapped', unmapped: !regions.length,
       bandwidthMbps: l.bandwidthMbps, service: l.service, network: l.network ? `${l.network.id} · ${l.network.name}` : undefined }; })
     .sort((a, b) => a.csp.localeCompare(b.csp) || a.pop.localeCompare(b.pop));
   const cols = P.columnsFor(rows, [['cloud', 'Cloud'], ['pop', 'POP'], ['region', 'Region'], ['bandwidthMbps', 'Bandwidth'], ['service', 'Service'], ['network', 'Network']])
@@ -118,12 +129,12 @@ const AFFINITY_WORD = (a, csp) => (a === 'att' ? 'AT&T' : a === 'csp' ? (W.CLOUD
 /** Cloud discovery: regions (level one, each saying how it reaches AT&T), a region's VPCs, a VPC's subnets. */
 export function discovery(d, s, set) {
   const dark = s.theme === 'dark', trail = s.dtrail || [], join = P.attJoin(d.cloudLinks, d.discovery);
-  const regionLabel = (r) => `${r.csp} · ${P.regionName(r.region)}`;
+  const regionLabel = (r) => `${P.cspOf(r.csp)} · ${P.regionName(r.region)}`;
   const root = { key: 'root', label: 'Cloud discovery', go: () => set({ dtrail: [], dPage: 0 }), last: trail.length === 0 };
-  const attWord = (j) => j.on ? `On AT&T · ${j.via.pop ? `${j.via.pop.provider} ${j.via.pop.facility}` : P.regionName(j.via.region)}` : j.cspOnly ? `AT&T · ${j.cspLink.csp} at ${j.cspLink.pop ? j.cspLink.pop.metro : 'a POP'}` : 'Not on AT&T';
+  const attWord = (j) => j.on ? `On AT&T · ${j.via.pop ? `${j.via.pop.provider} ${j.via.pop.facility}` : P.regionName(j.via.region)}` : j.cspOnly ? `AT&T · ${P.cspOf(j.cspLink.csp)} at ${j.cspLink.pop ? j.cspLink.pop.metro : 'a POP'}` : 'Not on AT&T';
   if (!trail.length) {
     const rows = d.discovery.map(r => { const j = join.get(`${r.csp}/${r.region}`), key = `${r.csp}/${r.region}`;
-      return { key, csp: r.csp, regionKey: r.region, cloud: W.CLOUD_NAME[r.csp] || r.csp, mark: W.markFor(r.csp, dark ? 'dark' : 'light'), region: P.regionName(r.region), vpcs: r.vpcs.length, subnets: r.vpcs.reduce((a, v) => a + v.subnets.length, 0),
+      const ck = P.cspOf(r.csp); return { key, csp: ck, regionKey: r.region, cloud: W.CLOUD_NAME[ck] || r.csp, mark: W.markFor(ck, dark ? 'dark' : 'light'), region: P.regionName(r.region), vpcs: r.vpcs.length, subnets: r.vpcs.reduce((a, v) => a + v.subnets.length, 0),
         att: attWord(j), on: j.on, canConnect: !j.on && !j.cspOnly, bytesIn: r.bytesIn, bytesOut: r.bytesOut,
         go: () => set({ dtrail: [key], dPage: 0 }), connect: () => set({ page: 'recommended', region: { csp: r.csp, region: r.region }, trail: [], dtrail: [] }) }; })
       .sort((a, b) => a.csp.localeCompare(b.csp) || a.region.localeCompare(b.region));
@@ -131,7 +142,7 @@ export function discovery(d, s, set) {
       .map(c => ({ ...c, cls: ['vpcs', 'subnets', 'bytesIn', 'bytesOut'].includes(c.key) ? 'num' : c.key === 'cloud' ? 'dt-name' : '', ink: c.key === 'att' ? (r) => (r.on ? '' : 'var(--text-light)') : null }));
     if (rows.some(r => r.canConnect)) cols.push({ key: 'act', label: '', present: true, cls: 'num' });
     const text = (k, r) => ['bytesIn', 'bytesOut'].includes(k) ? fmtBytes(r[k]) : ['vpcs', 'subnets'].includes(k) ? n(r[k]) : k === 'act' ? '' : String(r[k]);
-    const pg = pageOf(rows.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act' })), click: true })), s.dPage, PAGE_ROWS, set, 'dPage');
+    const pg = pageOf(rows.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act', cls: x.key === 'act' ? `${x.cls} po-actc` : x.cls })), click: true })), s.dPage, PAGE_ROWS, set, 'dPage');
     return { level: 'regions', trail: [root], hasTrail: false, cols, ...pg, counts: { regions: n(rows.length), onAtt: n(rows.filter(r => r.on).length), vpcs: n(rows.reduce((a, r) => a + r.vpcs, 0)), subnets: n(rows.reduce((a, r) => a + r.subnets, 0)) } };
   }
   const reg = d.discovery.find(r => `${r.csp}/${r.region}` === trail[0]) || { csp: '', region: '', vpcs: [] };
@@ -162,16 +173,17 @@ export function rulesOf(answers) {
 export function recommended(d, s, set) {
   const dark = s.theme === 'dark', iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
   const join = P.attJoin(d.cloudLinks, d.discovery), answers = s.answers || {};
-  const regionTitle = (r) => `${r.csp} · ${P.regionName(r.region)}`;
+  const regionTitle = (r) => `${P.cspOf(r.csp)} · ${P.regionName(r.region)}`;
   const root = { key: 'root', label: 'Recommended', go: () => set({ region: null }), last: !s.region };
   const pickRows = d.discovery.map(r => { const j = join.get(`${r.csp}/${r.region}`);
-      return { key: `${r.csp}/${r.region}`, csp: r.csp, cloud: W.CLOUD_NAME[r.csp] || r.csp, mark: W.markFor(r.csp, dark ? 'dark' : 'light'), region: P.regionName(r.region), on: j.on, att: j.on ? 'On AT&T' : j.cspOnly ? `AT&T · ${r.csp} at ${j.cspLink.pop ? j.cspLink.pop.metro : 'a POP'}` : 'Not on AT&T',
+      const ck = P.cspOf(r.csp); return { key: `${r.csp}/${r.region}`, csp: ck, cloud: W.CLOUD_NAME[ck] || r.csp, mark: W.markFor(ck, dark ? 'dark' : 'light'), region: P.regionName(r.region), on: j.on, att: j.on ? 'On AT&T' : j.cspOnly ? `AT&T · ${ck} at ${j.cspLink.pop ? j.cspLink.pop.metro : 'a POP'}` : 'Not on AT&T',
         go: () => set({ region: { csp: r.csp, region: r.region } }) }; })
     .sort((a, b) => (a.on - b.on) || a.csp.localeCompare(b.csp) || a.region.localeCompare(b.region));
   const pickCols = [{ key: 'cloud', label: 'Cloud', present: true, cls: 'dt-name' }, { key: 'region', label: 'Region', present: true }, { key: 'att', label: 'AT&T', present: true, ink: (r) => (r.on ? '' : 'var(--text-light)') }];
-  const pick = { rows: pickRows.map(r => ({ ...r, cells: cellsOf(r, pickCols, (k, x) => String(x[k])), click: true })), cols: pickCols };
+  // One row fewer than a plain table: the "Pick a region" line sits above it.
+  const pick = { ...pageOf(pickRows.map(r => ({ ...r, cells: cellsOf(r, pickCols, (k, x) => String(x[k])), click: true })), s.rcPage, PAGE_ROWS - 1, set, 'rcPage'), cols: pickCols };
   if (!s.region) return { hasRegion: false, noRegion: true, trail: [root], hasTrail: false, pick, intent: [], options: [], cols: [], weights: [], rules: [], requested: false, requestedLine: '', placeholder: true, placeholderLine: '' };
-  const reg = s.region, cloud = reg.csp, title = regionTitle(reg);
+  const reg = s.region, cloud = P.cspOf(reg.csp), title = regionTitle(reg);
   const intent = W.INTENT.map(q => ({ key: q.key, label: q.label, icon: q.icon, opts: q.opts.map(o => { const on = answers[q.key] === o.key;
     return { key: o.key, label: o.label, title: o.title, on, icon: o.icon, go: () => { const next = { ...answers }; if (on) delete next[q.key]; else next[q.key] = o.key; set({ answers: next }); } }; }) }));
   const full = { ...W.INTENT_DEFAULT, ...answers };
@@ -182,7 +194,7 @@ export function recommended(d, s, set) {
       request: () => set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: reg.csp, region: reg.region, option: r.key, answers: full, defaulted: Object.keys(answers).length === 0 }] }) }; });
   const cols = [{ key: 'label', label: 'Option', present: true, cls: 'dt-name', w: '30%' }, { key: 'monthly', label: 'Monthly', present: true, cls: 'num', w: '9%' }, { key: 'setup', label: 'Setup', present: true, w: '17%' }, { key: 'who', label: 'Who', present: true, w: '6%' }, { key: 'fit', label: 'Fit', present: true, w: '21%' }, { key: 'score', label: 'Score', present: true, cls: 'num', w: '6%' }, { key: 'act', label: '', present: true, cls: 'num', w: '11%' }];
   const text = (k, r) => k === 'act' ? '' : k === 'fit' && r.misses ? `${r.missWords}` : k === 'score' && r.misses ? DASH : String(r[k]);
-  const rows = options.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act', isOption: x.key === 'label', ink: ['fit', 'score'].includes(x.key) && r.misses ? 'var(--text-light)' : x.ink })), click: false }));
+  const rows = options.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act', isOption: x.key === 'label', cls: x.key === 'act' ? `${x.cls} po-actc` : x.cls, ink: ['fit', 'score'].includes(x.key) && r.misses ? 'var(--text-light)' : x.ink })), click: false }));
   const wt = W.intentWeights(answers);
   return { hasRegion: true, noRegion: false, title, cloud, trail: [{ ...root, last: false }, { key: 'reg', label: title, go: () => {}, last: true }], hasTrail: true, pick, intent, options: rows, cols,
     weights: W.CRITERIA.map(c => ({ key: c.key, label: c.label, icon: c.icon, w: wt[c.key], text: `${wt[c.key]}%` })), rules: rulesOf(answers), hasRules: rulesOf(answers).length > 0,
@@ -193,7 +205,7 @@ export function vals(c) {
   const s = c.state, set = (p) => c.setState(p), f = fixtureOf(s), d = dataOf(s), dark = s.theme === 'dark';
   const iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
   const rail = PAGES.map(p => { const cur = s.page === p.key; return { key: p.key, label: p.label, cur, icon: `${cur ? iconLink : iconDir}/${p.icon}.svg`,
-    bg: cur ? 'var(--sidebar-accent)' : 'transparent', color: cur ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: cur ? '8px' : '4px', go: () => set({ page: p.key, drawer: null, trail: [], lmPage: 0, dtrail: [], dPage: 0 }) }; });
+    bg: cur ? 'var(--sidebar-accent)' : 'transparent', color: cur ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: cur ? '8px' : '4px', go: () => set({ page: p.key, drawer: null, trail: [], lmPage: 0, dtrail: [], dPage: 0, rcPage: 0, region: null }) }; });
   const nets = P.networksOf(d.circuits);
   const join = P.attJoin(d.cloudLinks, d.discovery);
   const page = PAGES.find(p => p.key === s.page) || PAGES[0];
@@ -201,6 +213,7 @@ export function vals(c) {
     theme: s.theme, themeIsLight: !dark, themeIsDark: dark, themeTitle: dark ? 'Light mode' : 'Dark mode', toggleTheme: () => set({ theme: dark ? 'light' : 'dark' }),
     iconDir, rail, pageTitle: page.label, pgLastmile: s.page === 'lastmile', pgLinks: s.page === 'links', pgDiscovery: s.page === 'discovery', pgRecommended: s.page === 'recommended',
     fixture: s.fixture, fixtureName: f.name, synthetic: !!f.synthetic, stateB: !!s.stateB, stateValue: s.stateB ? 'b' : 'a',
+    dataNote: s.dataNote || '', hasDataNote: !!s.dataNote, dataError: s.dataError || '', hasDataError: !!s.dataError,
     setFixture: (e) => set({ fixture: P.FIXTURES[e.target.value] ? e.target.value : 'calloway', drawer: null, trail: [], lmPage: 0, dtrail: [], dPage: 0, region: null, pick: null }),
     setStateB: (e) => set({ stateB: e.target.value === 'b' }),
     counts: { circuits: n(d.circuits.length), networks: n(nets.filter(x => x.id).length), sites: n(new Set(d.circuits.map(x => x.siteId)).size), links: n(d.cloudLinks.length), regions: n(d.discovery.length),

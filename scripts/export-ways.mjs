@@ -33,9 +33,10 @@ export function popRegionsExport() {
     aliases: P.REGION_ALIAS };
 }
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'portal');
+  // An out dir as the first argument (tests write to a temp dir so a run never dirties the handoff files); docs/portal by default.
+  const out = process.argv[2] || join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'portal');
   mkdirSync(out, { recursive: true });
   writeFileSync(join(out, 'ways.json'), JSON.stringify(waysExport(), null, 2) + '\n');
   writeFileSync(join(out, 'pop-regions.json'), JSON.stringify(popRegionsExport(), null, 2) + '\n');
-  console.log('wrote docs/portal/ways.json and docs/portal/pop-regions.json');
+  console.log(`wrote ${join(out, 'ways.json')} and ${join(out, 'pop-regions.json')}`);
 }

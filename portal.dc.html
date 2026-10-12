@@ -40,6 +40,7 @@
 .po-pg{width:28px;height:28px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:16px;line-height:1;cursor:pointer}
 .po-pg:disabled{color:var(--text-disabled);cursor:default}
 .po-mark{display:inline-block;width:18px;height:18px;margin:-3px 8px -3px 0;vertical-align:middle;background:center / contain no-repeat}
+.dt-c.po-actc{padding-top:7px;padding-bottom:7px}
 .po-act{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}.po-act:hover{border-color:var(--border-active)}.po-act>i{font-style:normal}
 .po-lead{margin:0 0 10px;font-size:13px;line-height:18px;color:var(--text-body)}
 .po-placeholder{color:var(--text-light)}.po-requested{margin-top:10px;color:var(--text-heading);font-weight:600}
@@ -68,7 +69,8 @@
 <div data-theme="{{ theme }}" style="min-height:100vh;background:var(--bg-wash);color:var(--text-body);font-size:14px;line-height:20px">
 <header style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:32px;height:64px;padding:0 24px;background:var(--bg-base);border-bottom:1px solid var(--border-secondary)">
   <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1;white-space:nowrap"><span style="font-size:12px;line-height:16px;font-weight:700;letter-spacing:.02em;color:#009fdb">AT&amp;T</span><span style="font-size:22px;line-height:26px;letter-spacing:-.03em;color:var(--text-heading)"><span style="font-weight:500">AI-grade </span><span style="font-weight:700">network</span></span></div>
-  <nav aria-label="Products" style="display:flex;gap:4px;align-items:center;white-space:nowrap"><span style="height:36px;padding:0 12px;border-radius:8px;background:var(--bg-accent);color:var(--link);font-size:14px;font-weight:500;display:inline-flex;align-items:center">NaaS</span><span style="height:36px;padding:0 12px;color:var(--text-light);font-size:14px;display:inline-flex;align-items:center">Portal MVP</span></nav>
+  <!-- The product pills: the one you are on carries the fill (Micah, 2026-10-12: "when I click on MVP there's no selected element on the top bar"). NaaS is the door back to the full concept. -->
+  <nav aria-label="Products" style="display:flex;gap:4px;align-items:center;white-space:nowrap"><a href="NaaS Storefront.dc.html" aria-current="false" style="height:36px;padding:0 12px;border-radius:8px;background:transparent;color:var(--link);font-size:14px;font-weight:500;display:inline-flex;align-items:center;text-decoration:none">NaaS</a><span aria-current="page" style="height:36px;padding:0 12px;border-radius:8px;background:var(--bg-accent);color:var(--link);font-size:14px;font-weight:500;display:inline-flex;align-items:center">Portal MVP</span></nav>
   <div style="margin-left:auto;display:flex;align-items:center;gap:16px">
     <sc-if value="{{ synthetic }}" hint-placeholder-val="{{ false }}"><span class="po-synth" title="Generated to prove layout at scale, not a customer">Synthetic estate</span></sc-if>
     <span aria-label="Account" style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-heading);font-size:12px;font-weight:700">LG</span>
@@ -83,7 +85,7 @@
   </div>
   <!-- The presenter's controls: which fixture, which state (A = confirmed fields, B = the note's maybe fields), the theme, and the way back to the full concept. -->
   <div style="border-top:1px solid var(--border-secondary);padding-top:10px;margin-top:8px;display:grid;gap:8px">
-    <label title="Fixture" style="display:grid;font-size:12px;color:var(--text-light)"><select value="{{ fixture }}" onChange="{{ setFixture }}" aria-label="Fixture" style="height:28px;min-width:0;padding:0 6px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:12px"><option value="calloway">Calloway Freight</option><option value="scale">Bank scale (synthetic)</option></select></label>
+    <label title="Fixture" style="display:grid;font-size:12px;color:var(--text-light)"><select value="{{ fixture }}" onChange="{{ setFixture }}" aria-label="Fixture" style="height:28px;min-width:0;padding:0 6px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:12px"><option value="calloway">Calloway Freight</option><option value="scale">Bank scale (synthetic)</option><option value="remote">Your data</option></select></label>
     <label title="Data state" style="display:grid;font-size:12px;color:var(--text-light)"><select value="{{ stateValue }}" onChange="{{ setStateB }}" aria-label="Data state" style="height:28px;min-width:0;padding:0 6px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:12px"><option value="a">Set 1 · confirmed fields</option><option value="b">Set 2 · with health, utilization, affinity</option></select></label>
     <button onClick="{{ toggleTheme }}" aria-label="Toggle theme" title="{{ themeTitle }}" style="height:32px;border:1px solid var(--border-secondary);border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 8px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:12px;cursor:pointer">
       <sc-if value="{{ themeIsLight }}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></sc-if>
@@ -94,6 +96,9 @@
   </div>
 </aside>
 <main style="min-width:0;max-width:1392px;margin:0 auto;padding:16px 24px;width:100%;box-sizing:border-box">
+  <!-- ?data= says what it loaded, or why it could not; the page stays up either way. -->
+  <sc-if value="{{ hasDataError }}" hint-placeholder-val="{{ false }}"><p class="po-lead" role="alert" style="color:var(--error)">{{ dataError }}</p></sc-if>
+  <sc-if value="{{ hasDataNote }}" hint-placeholder-val="{{ false }}"><p class="po-lead po-placeholder">{{ dataNote }}</p></sc-if>
   <sc-if value="{{ pgLastmile }}" hint-placeholder-val="{{ true }}">
   <section aria-label="Last mile">
     <div class="po-head"><h1 class="po-title">Last mile</h1><span class="po-counts"><span><b>{{ counts.circuits }}</b> circuits</span><span><b>{{ counts.networks }}</b> networks</span><span><b>{{ counts.sites }}</b> sites</span></span></div>
@@ -139,6 +144,7 @@
       <div class="dt-h"><div class="dt-r"><sc-for list="{{ rc.pick.cols }}" as="col" hint-placeholder-count="3"><div class="dt-c dt-th {{ col.cls }}">{{ col.label }}</div></sc-for></div></div>
       <div class="dt-b"><sc-for list="{{ rc.pick.rows }}" as="row" hint-placeholder-count="4"><div class="dt-r" role="row" data-click="true" onClick="{{ row.go }}"><sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="3"><div class="dt-c {{ cell.cls }}" style="color:{{ cell.ink }}"><sc-if value="{{ cell.isCloud }}" hint-placeholder-val="{{ false }}"><span class="po-mark" style="background-image:url('{{ row.mark }}')"></span></sc-if>{{ cell.text }}</div></sc-for></div></sc-for></div>
     </div>
+    <div class="po-pager"><span>{{ rc.pick.pager }}</span><button onClick="{{ rc.pick.prev }}" disabled="{{ rc.pick.hasPrevOff }}" aria-label="Previous page" class="po-pg">‹</button><button onClick="{{ rc.pick.next }}" disabled="{{ rc.pick.hasNextOff }}" aria-label="Next page" class="po-pg">›</button></div>
     </sc-if>
     <sc-if value="{{ rc.hasRegion }}" hint-placeholder-val="{{ false }}">
     <nav aria-label="Where you are" class="po-trail"><sc-for list="{{ rc.trail }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.go }}" disabled="{{ t.last }}" class="po-crumb" aria-current="{{ t.last }}">{{ t.label }}</button></sc-for></nav>
@@ -161,7 +167,7 @@
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], pick: null, answers: {}, requests: [], region: null }; }
+  constructor(p) { super(p); this.state = { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, answers: {}, requests: [], region: null, dataNote: '', dataError: '' }; }
   componentDidMount() { import('./naas-portal-app.js').then(m => { this.app = m; m.init(this); this.forceUpdate(); }).catch(e => console.error(e)); }
   renderVals() {
     if (!this.app) return { theme: this.state.theme, rail: [], pgLastmile: true, counts: {}, fixture: 'calloway', stateValue: 'a', themeIsLight: true, themeTitle: 'Dark mode' };

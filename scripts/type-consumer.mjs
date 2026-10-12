@@ -38,17 +38,25 @@ export function transform(decl, sel) {
   return d;
 }
 
+/** A stylesheet's rules (the storefront's live in storefront.css since 2026-10-12). */
+export function runCss(css) {
+  return css.replace(/([^{}]+)\{([^{}]*)\}/g, (m, sel, body) => `${sel}{${transform(body, sel)}}`)
+    .replace('--text-light:#686e74', '--text-light:#50565d').replace('--text-light:#97a3b0', '--text-light:#b3bdc8');
+}
+/** A page: its style block, if it has one, and every inline style after it. */
 export function run(html) {
   const s0 = html.indexOf('<style'), s1 = html.indexOf('</style>');
-  let css = html.slice(s0, s1);
-  css = css.replace(/([^{}]+)\{([^{}]*)\}/g, (m, sel, body) => `${sel}{${transform(body, sel)}}`);
-  css = css.replace('--text-light:#686e74', '--text-light:#50565d').replace('--text-light:#97a3b0', '--text-light:#b3bdc8');
-  let rest = html.slice(s1);
-  rest = rest.replace(/style="([^"]*)"/g, (m, body) => `style="${transform(body, null)}"`);
+  if (s0 < 0 || s1 < 0) return html.replace(/style="([^"]*)"/g, (m, body) => `style="${transform(body, null)}"`);
+  const css = runCss(html.slice(s0, s1));
+  const rest = html.slice(s1).replace(/style="([^"]*)"/g, (m, body) => `style="${transform(body, null)}"`);
   return html.slice(0, s0) + css + rest;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  const CSS = new URL('../storefront.css', import.meta.url);
+  const cssWas = readFileSync(CSS, 'utf8'), cssNow = runCss(cssWas);
+  console.log(`storefront.css: 10px ${(cssWas.match(/font-size:10px/g) || []).length} -> ${(cssNow.match(/font-size:10px/g) || []).length}; changed ${cssNow !== cssWas}`);
+  if (!process.argv.includes('--dry') && cssNow !== cssWas) writeFileSync(CSS, cssNow);
   const was = readFileSync(FILE, 'utf8'), now = run(was);
   const n = (re, t) => (t.match(re) || []).length;
   console.log(`uppercase ${n(/text-transform:uppercase/g, was)} -> ${n(/text-transform:uppercase/g, now)}; 10px ${n(/font-size:10px/g, was)} -> ${n(/font-size:10px/g, now)}; 11px ${n(/font-size:11px/g, was)} -> ${n(/font-size:11px/g, now)}; changed ${was !== now}`);
