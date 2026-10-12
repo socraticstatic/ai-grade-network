@@ -71,12 +71,15 @@
   <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1;white-space:nowrap"><span style="font-size:12px;line-height:16px;font-weight:700;letter-spacing:.02em;color:#009fdb">AT&amp;T</span><span style="font-size:22px;line-height:26px;letter-spacing:-.03em;color:var(--text-heading)"><span style="font-weight:500">AI-grade </span><span style="font-weight:700">network</span></span></div>
   <!-- The product pills: the one you are on carries the fill (Micah, 2026-10-12: "when I click on MVP there's no selected element on the top bar"). NaaS is the door back to the full concept. -->
   <nav aria-label="Products" style="display:flex;gap:4px;align-items:center;white-space:nowrap"><a href="NaaS Storefront.dc.html" aria-current="false" style="height:36px;padding:0 12px;border-radius:8px;background:transparent;color:var(--link);font-size:14px;font-weight:500;display:inline-flex;align-items:center;text-decoration:none">NaaS</a><span aria-current="page" style="height:36px;padding:0 12px;border-radius:8px;background:var(--bg-accent);color:var(--link);font-size:14px;font-weight:500;display:inline-flex;align-items:center">Portal MVP</span></nav>
+  <!-- In the journey there is no rail, so one button leads back to the pages (the storefront's grammar). -->
+  <sc-if value="{{ journeyOn }}" hint-placeholder-val="{{ false }}"><button class="hdr-cust" onClick="{{ jr.exit }}"><span class="ic s16" style="--ic:url('brand/icons/home.svg')"></span>Pages</button></sc-if>
   <div style="margin-left:auto;display:flex;align-items:center;gap:16px">
     <sc-if value="{{ synthetic }}" hint-placeholder-val="{{ false }}"><span class="po-synth" title="Generated to prove layout at scale, not a customer">Synthetic estate</span></sc-if>
     <span aria-label="Account" style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-heading);font-size:12px;font-weight:700">LG</span>
   </div>
 </header>
-<div style="display:grid;grid-template-columns:240px minmax(0,1fr);background:var(--bg-wash)">
+<div style="display:grid;grid-template-columns:{{ shellCols }};background:var(--bg-wash)">
+<sc-if value="{{ showRail }}" hint-placeholder-val="{{ true }}">
 <aside aria-label="Portal sections" style="position:sticky;top:65px;align-self:start;height:calc(100vh - 65px);display:flex;flex-direction:column;padding:16px;border-right:1px solid var(--sidebar-border);background:var(--bg-base);box-sizing:border-box;font-size:14px">
   <div class="rail-scroll" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none">
     <sc-for list="{{ rail }}" as="r" hint-placeholder-count="4">
@@ -95,7 +98,53 @@
     <a href="NaaS Storefront.dc.html" style="font-size:12px;line-height:16px;color:var(--link);text-decoration:none;white-space:nowrap">Full concept ↗</a>
   </div>
 </aside>
+</sc-if>
 <main style="min-width:0;max-width:1392px;margin:0 auto;padding:16px 24px;width:100%;box-sizing:border-box">
+  <!-- The journey (drop 2): the storefront's stage on this data. One sentence, three nodes, two wires, one action a beat. -->
+  <sc-if value="{{ journeyOn }}" hint-placeholder-val="{{ false }}">
+  <section class="js" aria-label="Connect a cloud" data-beat="{{ jr.beat }}">
+    <ol class="js-steps" aria-label="Steps"><sc-for list="{{ jr.steps }}" as="st" hint-placeholder-count="6"><li data-state="{{ st.state }}"><button onClick="{{ st.go }}" disabled="{{ st.off }}" aria-current="{{ st.cur }}" title="{{ st.title }}"><i><sc-if value="{{ st.hasIcon }}" hint-placeholder-val="{{ false }}"><span class="ic s14" style="--ic:url('brand/icons/check-circle.svg')"></span></sc-if><sc-if value="{{ st.noIcon }}" hint-placeholder-val="{{ true }}">{{ st.n }}</sc-if></i><span>{{ st.label }}</span></button></li></sc-for></ol>
+    <div class="js-body">
+    <h1 class="js-line">{{ jr.line }}</h1>
+    <div class="js-stage" data-wide="{{ jr.wide }}" data-link="{{ jr.link }}" data-net="{{ jr.net }}" data-flow="{{ jr.flow }}">
+      <!-- The circuits AT&T carries: the count, one glyph per circuit (a sample of 20 at scale), the services under them in their inks. -->
+      <div class="js-node js-sites" aria-label="Your circuits">
+        <span class="js-sites-h"><span class="js-cap">Your circuits</span><b class="js-big">{{ jr.sites.n }}</b></span>
+        <div class="js-sitegrid" role="list" aria-label="{{ jr.sites.n }} circuits"><sc-for list="{{ jr.sites.cells }}" as="sc" hint-placeholder-count="20"><span role="listitem" class="ic s20" title="{{ sc.title }}" aria-label="{{ sc.title }}" style="--ic:url('brand/icons/{{ sc.icon }}.svg');color:{{ sc.ink }};animation-delay:{{ sc.d }}"></span></sc-for></div>
+        <div class="js-svc"><sc-for list="{{ jr.sites.groups }}" as="sg" hint-placeholder-count="4"><span title="{{ sg.full }}"><span class="ic s16" style="--ic:url('brand/icons/{{ sg.icon }}.svg');color:{{ sg.ink }}"></span><b>{{ sg.nF }}</b>{{ sg.label }}</span></sc-for></div>
+      </div>
+      <div class="js-wire" data-state="on" aria-hidden="true"><i></i><small>Last mile</small></div>
+      <div class="js-node js-att" aria-label="The AT&amp;T network"><b>AT&amp;T</b><span class="js-hub"><span class="ic" style="--ic:url('brand/icons/hub.svg')"></span></span><span class="js-cap">Network</span></div>
+      <div class="js-wire" data-state="{{ jr.link }}" aria-hidden="true"><i></i><small>{{ jr.linkWord }}</small></div>
+      <div class="js-node js-cloud" data-state="{{ jr.cloud.state }}" aria-label="Your cloud">
+        <sc-if value="{{ jr.cloud.unknown }}" hint-placeholder-val="{{ true }}"><span class="js-cap">Your cloud</span><span class="js-q"><span class="ic" style="--ic:url('brand/icons/cloud.svg')"></span><b>?</b></span><span class="js-soft">Unknown to AT&amp;T</span></sc-if>
+        <sc-if value="{{ jr.cloud.picking }}" hint-placeholder-val="{{ false }}"><div class="js-provs" role="radiogroup" aria-label="Cloud" style="grid-row:2"><sc-for list="{{ jr.providers }}" as="jp" hint-placeholder-count="4"><button role="radio" aria-checked="{{ jp.on }}" disabled="{{ jp.off }}" onClick="{{ jp.go }}" title="{{ jp.title }}"><span class="js-mark" style="background-image:url('{{ jp.mark }}')"></span></button></sc-for></div><span class="js-key" style="grid-row:3"><span class="ic s16" style="--ic:url('brand/icons/padlock.svg')"></span>{{ jr.cred }}</span></sc-if>
+        <sc-if value="{{ jr.cloud.scanning }}" hint-placeholder-val="{{ false }}"><span class="js-ring" style="--p:{{ jr.scanPct }};grid-row:2"><span class="js-mark" style="background-image:url('{{ jr.scanMark }}')"></span></span><ol class="js-scan" style="grid-row:3"><sc-for list="{{ jr.scanSteps }}" as="sc" hint-placeholder-count="4"><li data-state="{{ sc.state }}">{{ sc.word }}</li></sc-for></ol></sc-if>
+        <sc-if value="{{ jr.cloud.empty }}" hint-placeholder-val="{{ false }}"><span class="js-cap">{{ jr.cloud.name }}</span><span class="js-q"><span class="ic" style="--ic:url('brand/icons/cloud.svg')"></span></span><span class="js-soft">Nothing discovered yet</span></sc-if>
+        <sc-if value="{{ jr.cloud.found }}" hint-placeholder-val="{{ false }}">
+          <div class="js-cloudhead"><span class="js-mark sm" style="background-image:url('{{ jr.cloud.mark }}')"></span><b>{{ jr.cloud.name }}</b><span class="kchip" title="{{ jr.cloud.hosted }}s"><span class="ic s14" style="--ic:url('brand/icons/grid.svg')"></span><b>{{ jr.cloud.vpcs }}</b></span><span class="kchip" title="Subnets"><span class="ic s14" style="--ic:url('brand/icons/apis.svg')"></span><b>{{ jr.cloud.subnets }}</b></span></div>
+          <div class="js-regions"><sc-for list="{{ jr.regions }}" as="rg" hint-placeholder-count="2"><div class="js-region">
+            <div class="js-rhead"><b>{{ rg.label }}</b><span class="kchip" title="{{ jr.cloud.hosted }}s"><span class="ic s14" style="--ic:url('brand/icons/grid.svg')"></span>{{ rg.vpcsF }}</span><span class="kchip" title="Subnets"><span class="ic s14" style="--ic:url('brand/icons/apis.svg')"></span>{{ rg.subnetsF }}</span><button class="js-tag" aria-pressed="{{ rg.picked }}" onClick="{{ rg.go }}" title="Connect {{ rg.label }} with AT&amp;T">{{ rg.pickWord }}</button></div>
+            <div class="js-app" title="{{ rg.att }}"><span class="ic s16" style="--ic:url('brand/icons/hub.svg')"></span><span>{{ rg.att }}</span><sc-if value="{{ rg.hasBytes }}" hint-placeholder-val="{{ false }}"><span class="js-tags"><span class="kchip" title="Bytes out"><span class="ic s14" style="--ic:url('brand/icons/arrow-right.svg')"></span>{{ rg.bytesWord }}</span></span></sc-if></div>
+          </div></sc-for></div>
+        </sc-if>
+      </div>
+      <div class="js-net" data-state="{{ jr.net }}" aria-hidden="true"><i class="js-dots"></i><small>Public internet</small></div>
+    </div>
+    <sc-if value="{{ jr.isIntent }}" hint-placeholder-val="{{ false }}"><div class="js-intent" role="group" aria-label="What it needs"><sc-for list="{{ jr.intent }}" as="iq" hint-placeholder-count="4"><div class="js-iq" role="radiogroup" aria-label="{{ iq.label }}"><span class="js-cap"><span class="ic s14" style="--ic:url('brand/icons/{{ iq.icon }}.svg')"></span>{{ iq.label }}</span><div class="js-iopts"><sc-for list="{{ iq.opts }}" as="io" hint-placeholder-count="3"><button role="radio" class="js-io" aria-checked="{{ io.on }}" onClick="{{ io.go }}" title="{{ io.title }}"><i><span class="ic" style="--ic:url('brand/icons/{{ io.icon }}.svg')"></span></i><b>{{ io.label }}</b></button></sc-for></div></div></sc-for></div></sc-if>
+    <sc-if value="{{ jr.isRec }}" hint-placeholder-val="{{ false }}"><div class="js-opts" role="radiogroup" aria-label="Ways to connect"><sc-for list="{{ jr.options }}" as="op" hint-placeholder-count="3"><button role="radio" class="js-opt" aria-checked="{{ op.on }}" onClick="{{ op.go }}" title="{{ op.setupTitle }}">
+      <span class="ic-tile" style="--tile:var(--bg-accent);color:var(--link)"><span class="ic s20" style="--ic:url('brand/icons/{{ op.icon }}.svg')"></span></span>
+      <span class="js-opt-t"><small>{{ op.kicker }}</small><b>{{ op.label }}</b></span>
+      <span class="js-opt-n"><b>{{ op.price }}</b></span>
+      <span class="js-score" style="--p:{{ op.ptsPct }}" data-out="{{ op.out }}" title="{{ op.ptsTitle }}"><b>{{ op.ptsShown }}</b></span>
+      <span class="js-why" aria-label="Why"><sc-for list="{{ op.why }}" as="wy" hint-placeholder-count="2"><span class="js-wchip" title="{{ wy.title }}"><span class="ic s14" style="--ic:url('brand/icons/{{ wy.icon }}.svg');color:{{ wy.ink }}"></span>{{ wy.short }}</span></sc-for></span>
+    </button></sc-for></div></sc-if>
+    <sc-if value="{{ jr.isRequest }}" hint-placeholder-val="{{ false }}"><p class="po-lead po-requested" style="text-align:center">{{ jr.requestedLine }}</p></sc-if>
+    <div class="js-act"><sc-if value="{{ jr.hasBack }}" hint-placeholder-val="{{ true }}"><button class="js-back" onClick="{{ jr.back }}"><span class="ic s16" style="--ic:url('brand/icons/arrow-right.svg');transform:scaleX(-1)"></span>Back</button></sc-if><button class="js-go" onClick="{{ jr.act.go }}" disabled="{{ jr.act.off }}" aria-busy="{{ jr.act.busy }}">{{ jr.act.label }}<span class="ic s18" style="--ic:url('brand/icons/arrow-right.svg')"></span></button></div>
+    </div>
+  </section>
+  </sc-if>
+  <sc-if value="{{ journeyOff }}" hint-placeholder-val="{{ true }}">
   <!-- ?data= says what it loaded, or why it could not; the page stays up either way. -->
   <sc-if value="{{ hasDataError }}" hint-placeholder-val="{{ false }}"><p class="po-lead" role="alert" style="color:var(--error)">{{ dataError }}</p></sc-if>
   <sc-if value="{{ hasDataNote }}" hint-placeholder-val="{{ false }}"><p class="po-lead po-placeholder">{{ dataNote }}</p></sc-if>
@@ -160,6 +209,7 @@
     </sc-if>
   </section>
   </sc-if>
+  </sc-if>
 </main>
 </div>
 </div>
@@ -167,10 +217,10 @@
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, answers: {}, requests: [], region: null, dataNote: '', dataError: '' }; }
+  constructor(p) { super(p); this.state = { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, answers: {}, requests: [], region: null, dataNote: '', dataError: '', journey: false, jStep: 0, jProv: null, jScan: null, jRegion: null, jPick: null, jFrom: null }; }
   componentDidMount() { import('./naas-portal-app.js').then(m => { this.app = m; m.init(this); this.forceUpdate(); }).catch(e => console.error(e)); }
   renderVals() {
-    if (!this.app) return { theme: this.state.theme, rail: [], pgLastmile: true, counts: {}, fixture: 'calloway', stateValue: 'a', themeIsLight: true, themeTitle: 'Dark mode' };
+    if (!this.app) return { theme: this.state.theme, rail: [], pgLastmile: true, counts: {}, fixture: 'calloway', stateValue: 'a', themeIsLight: true, themeTitle: 'Dark mode', journeyOn: false, journeyOff: true, showRail: true, shellCols: '240px minmax(0,1fr)', jr: { steps: [], sites: { cells: [], groups: [] }, providers: [], regions: [], intent: [], options: [], act: {}, cloud: {} }, lm: { cols: [], rows: [], trail: [] }, cl: { cols: [], rows: [], counts: {} }, dv: { cols: [], rows: [], trail: [], counts: {} }, rc: { pick: { rows: [], cols: [] }, intent: [], options: [], cols: [], weights: [], rules: [], trail: [] } };
     return this.app.vals(this);
   }
 }

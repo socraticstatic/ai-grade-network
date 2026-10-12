@@ -10,11 +10,11 @@ const HTML = readFileSync(new URL('../portal.dc.html', import.meta.url), 'utf8')
 const STORE = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
 const mkC = (extra = {}) => { const state = { ...defaults(), ...extra }; return { state, setState: (p) => Object.assign(state, typeof p === 'function' ? p(state) : p) }; };
 
-test('the rail is exactly the four pages, in order, and the first is home', () => {
+test('the rail is the journey then the four pages, in order, and Last mile is home', () => {
   const v = vals(mkC());
-  assert.deepEqual(v.rail.map(r => r.label), ['Last mile', 'Cloud connections', 'Cloud discovery', 'Recommended']);
-  assert.deepEqual(v.rail.map(r => r.cur), [true, false, false, false]);
-  const c = mkC(); vals(c).rail[2].go(); assert.equal(c.state.page, 'discovery'); assert.equal(vals(c).rail[2].cur, true);
+  assert.deepEqual(v.rail.map(r => r.label), ['Connect a cloud', 'Last mile', 'Cloud connections', 'Cloud discovery', 'Recommended']);
+  assert.deepEqual(v.rail.map(r => r.cur), [false, true, false, false, false]);
+  const c = mkC(); vals(c).rail[3].go(); assert.equal(c.state.page, 'discovery'); assert.equal(vals(c).rail[3].cur, true);
 });
 
 test('?fixture=scale&state=b loads the synthetic estate in state B; the default is Calloway in state A', () => {

@@ -25,12 +25,12 @@ test('the regions, by cloud, each saying how it reaches AT&T from the join', () 
   assert.ok(v.dv.rows.every(r => !r.canConnect), 'every scale region reaches AT&T somehow');
 });
 
-test('Calloway: two Azure regions, neither on AT&T; Connect with AT&T opens Recommended for that region', () => {
+test('Calloway: two Azure regions, neither on AT&T; Connect with AT&T opens the journey at Found for that region', () => {
   const c = at('calloway', false); const v = vals(c);
   assert.deepEqual([v.dv.counts.regions, v.dv.counts.onAtt], ['2', '0']);
   const e = row(v, 'Azure', 'eastus'); assert.equal(cell(e, 'att'), 'Not on AT&T'); assert.equal(e.canConnect, true);
   assert.deepEqual(labels(v.dv.cols), ['Cloud', 'Region', 'VPCs', 'Subnets', 'AT&T', '']);
-  e.connect(); assert.equal(c.state.page, 'recommended'); assert.deepEqual(c.state.region, { csp: 'Azure', region: 'eastus' });
+  e.connect(); assert.equal(c.state.journey, true); assert.equal(c.state.jRegion, 'Azure/eastus'); assert.deepEqual(c.state.region, { csp: 'Azure', region: 'eastus' });
 });
 
 test('a region opens its VPCs, a VPC its subnets, with a trail back; state B adds bytes and affinity', () => {

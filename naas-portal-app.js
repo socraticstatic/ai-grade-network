@@ -10,6 +10,7 @@
 // Spec: docs/superpowers/specs/2026-10-12-portal-mvp-design.md.
 import * as P from './naas-portal.js';
 import * as W from './naas-ways.js';
+import * as PJ from './naas-portal-journey.js';
 
 export const PAGES = [
   { key: 'lastmile', label: 'Last mile', icon: 'router' },
@@ -18,7 +19,7 @@ export const PAGES = [
   { key: 'recommended', label: 'Recommended', icon: 'lightbulb' },
 ];
 export function defaults() {
-  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, answers: {}, requests: [], region: null, dataNote: '', dataError: '' };
+  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, answers: {}, requests: [], region: null, dataNote: '', dataError: '', journey: false, jStep: 0, jProv: null, jScan: null, jRegion: null, jPick: null, jFrom: null };
 }
 /** URL to state: ?fixture=calloway|scale, ?state=a|b, ?page=<key>, ?theme=light|dark. `search` is for tests. */
 export function init(c, search) {
@@ -136,7 +137,7 @@ export function discovery(d, s, set) {
     const rows = d.discovery.map(r => { const j = join.get(`${r.csp}/${r.region}`), key = `${r.csp}/${r.region}`;
       const ck = P.cspOf(r.csp); return { key, csp: ck, regionKey: r.region, cloud: W.CLOUD_NAME[ck] || r.csp, mark: W.markFor(ck, dark ? 'dark' : 'light'), region: P.regionName(r.region), vpcs: r.vpcs.length, subnets: r.vpcs.reduce((a, v) => a + v.subnets.length, 0),
         att: attWord(j), on: j.on, canConnect: !j.on && !j.cspOnly, bytesIn: r.bytesIn, bytesOut: r.bytesOut,
-        go: () => set({ dtrail: [key], dPage: 0 }), connect: () => set({ page: 'recommended', region: { csp: r.csp, region: r.region }, trail: [], dtrail: [] }) }; })
+        go: () => set({ dtrail: [key], dPage: 0 }), connect: () => { clearInterval(scanTimer); set({ journey: true, jStep: JB.found, jProv: ck, jScan: 4, jRegion: key, jPick: null, jFrom: 'discovery', region: { csp: r.csp, region: r.region } }); } }; })
       .sort((a, b) => a.csp.localeCompare(b.csp) || a.region.localeCompare(b.region));
     const cols = P.columnsFor(rows, [['cloud', 'Cloud'], ['region', 'Region'], ['vpcs', 'VPCs'], ['subnets', 'Subnets'], ['att', 'AT&T'], ['bytesIn', 'Bytes in'], ['bytesOut', 'Bytes out']])
       .map(c => ({ ...c, cls: ['vpcs', 'subnets', 'bytesIn', 'bytesOut'].includes(c.key) ? 'num' : c.key === 'cloud' ? 'dt-name' : '', ink: c.key === 'att' ? (r) => (r.on ? '' : 'var(--text-light)') : null }));
@@ -201,16 +202,86 @@ export function recommended(d, s, set) {
     placeholder: true, placeholderLine: "AT&T's modeled ways stand in until the team's option list arrives.",
     requested: !!requested, notRequested: !requested, requestedLine: requested ? `Requested ${W.wayLabel(requested.option, cloud)} for ${title}${requested.defaulted ? ' with the default answers' : ''}.` : '' };
 }
+const JB = Object.fromEntries(PJ.BEATS.map((b, i) => [b.key, i]));
+const SCAN = ['Reading the account', 'Listing the regions', 'Finding the VPCs and subnets', 'Matching the AT&T connections'];
+let scanTimer = null;
+/** The journey's doors: a clean start from the rail, or straight into Found with a region from Connect with AT&T. */
+export function journeyStart(s, set, live) {
+  return () => { clearInterval(scanTimer); set({ journey: true, jStep: 0, jScan: null, jPick: null, jFrom: null, jRegion: null, jProv: live || s.jProv || 'Azure', region: null }); };
+}
+/** The journey as the stage draws it: one sentence, three nodes, two wires, one action a beat. */
+export function journey(d, s, set) {
+  const dark = s.theme === 'dark', theme = dark ? 'dark' : 'light';
+  const step = Math.max(0, Math.min(PJ.BEATS.length - 1, s.jStep || 0)), beat = PJ.BEATS[step];
+  const today = PJ.todayOf(d.circuits);
+  const providers = PJ.providersOf(d.discovery, theme);
+  const prov = s.jProv || (providers.find(p => p.live) || providers[0]).key;
+  const read = s.jScan === 4, scanning = s.jScan !== null && s.jScan !== undefined && s.jScan < 4;
+  const found = read ? PJ.foundOf(d, prov, theme) : { has: false, regions: [], key: prov, vpcs: 0, subnets: 0, notOn: 0 };
+  const regionKey = s.jRegion && found.regions.some(r => r.key === s.jRegion) ? s.jRegion : (found.regions.find(r => !r.on) || found.regions[0] || {}).key || null;
+  const region = found.regions.find(r => r.key === regionKey) || null;
+  const answers = s.answers || {}, cloud = P.cspOf(prov);
+  const ranked = region ? W.rankWays(cloud, answers, 3) : [];
+  const pickKey = s.jPick && ranked.some(r => r.key === s.jPick) ? s.jPick : (ranked[0] || {}).key || null;
+  const picked = ranked.find(r => r.key === pickKey) || null;
+  const requested = region ? (s.requests || []).find(r => r.csp === region.csp && r.region === region.region) : null;
+  const to = (i) => () => set({ jStep: i });
+  const exit = () => { clearInterval(scanTimer); set({ journey: false }); };
+  const exitTo = (page) => () => { clearInterval(scanTimer); set({ journey: false, page, trail: [], dtrail: [], dPage: 0, rcPage: 0 }); };
+  const startScan = () => { clearInterval(scanTimer); set({ jScan: 0, jRegion: null, jPick: null });
+    let k = 0; scanTimer = setInterval(() => { k += 1; if (k < 4) set({ jScan: k }); else { clearInterval(scanTimer); set({ jScan: 4, jStep: JB.found }); } }, 650);
+    if (scanTimer && typeof scanTimer.unref === 'function') scanTimer.unref(); };
+  const scanTick = () => (s.jScan === null || s.jScan === undefined ? { jScan: 0 } : s.jScan < 3 ? { jScan: s.jScan + 1 } : { jScan: 4, jStep: JB.found });
+  const request = () => { if (!region || !picked) return;
+    const full = { ...W.INTENT_DEFAULT, ...answers };
+    set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: region.csp, region: region.region, option: picked.key, answers: full, defaulted: Object.keys(answers).length === 0, journey: true }], jStep: JB.request, region: { csp: region.csp, region: region.region } }); };
+  const liveProv = providers.find(p => p.key === prov) || providers[0];
+  const ACT = {
+    today: { label: 'Find your clouds', go: to(JB.source), off: false },
+    source: { label: 'Read it', go: startScan, off: !liveProv.live, busy: scanning },
+    found: found.has ? { label: 'Say what it needs', go: to(JB.intent), off: !region } : { label: 'Read another cloud', go: to(JB.source), off: false },
+    intent: { label: 'Recommend', go: to(JB.recommend), off: !region },
+    recommend: { label: 'Request this', go: request, off: !picked },
+    request: { label: 'Open Cloud discovery', go: exitTo('discovery'), off: false },
+  }[beat.key];
+  const open = (i) => i <= JB.source || (read && found.has && (i <= JB.recommend || (i === JB.request && !!requested)));
+  const steps = PJ.BEATS.map((b, i) => { const done = i < step; return { key: b.key, n: String(i + 1), label: b.short, title: b.title, state: i === step ? 'cur' : done ? 'done' : 'next', cur: i === step, off: !open(i), hasIcon: done, noIcon: !done, go: () => { if (open(i)) set({ jStep: i }); } }; });
+  const link = (step >= JB.recommend && picked) ? 'proposed' : 'none';
+  const net = step >= JB.found && found.has && found.notOn > 0 ? 'public' : 'off';
+  const way = picked ? W.wayLabel(picked.key, cloud, picked.zone) : '';
+  const wayWord = requested ? W.wayLabel(requested.option, cloud) : way;
+  const intent = W.INTENT.map(q => ({ key: q.key, label: q.label, icon: q.icon, opts: q.opts.map(o => { const on = answers[q.key] === o.key;
+    return { key: o.key, label: o.label, title: o.title, icon: o.icon, on, go: () => { const next = { ...answers }; if (on) delete next[q.key]; else next[q.key] = o.key; set({ answers: next, jPick: null }); } }; }) }));
+  const options = ranked.map((r, i) => { const w = W.wayOf(r.key), oks = r.why.filter(x => x.ok).slice(0, 2), miss = r.why.find(x => x.miss);
+    return { key: r.key, label: W.wayLabel(r.key, cloud, r.zone), kicker: w.kicker, icon: w.icon, price: money(r.monthly), pts: r.pts, ptsPct: `${r.pts}%`, ptsShown: r.misses ? '✕' : String(r.pts), out: r.misses > 0, ptsTitle: r.misses ? `${miss.short}: ${miss.words}` : `${r.pts} of 100 for what you said`,
+      why: (r.misses ? [miss] : oks).map(x => ({ key: x.key, icon: x.icon, short: x.short, title: `${x.short}: ${x.words}`, ink: x.miss ? 'var(--error)' : 'var(--link)' })), on: r.key === pickKey, go: () => set({ jPick: r.key }), setupTitle: W.waySetup(r.key) }; });
+  const back = step === 0 ? exit : (s.jFrom && step === JB.found) ? exitTo(s.jFrom) : to(step - 1);
+  return { beat: beat.key, step, steps, line: PJ.lineOf(beat.key, { today, found, region, cloud: prov, way: wayWord }),
+    sites: { n: today.circuits.toLocaleString('en-US'), cells: today.cells, groups: today.groups },
+    providers: providers.map(p => ({ ...p, on: p.key === prov, off: !p.live, title: p.live ? `${p.name}: ${p.cred}` : `${p.name}: nothing discovered yet`, go: () => { if (p.live) set({ jProv: p.key, jScan: null, jRegion: null, jPick: null }); } })),
+    cred: liveProv.cred, scanMark: liveProv.mark, scanPct: `${Math.min(100, ((s.jScan || 0) + 1) * 25)}%`, scanSteps: SCAN.map((word, i) => ({ key: word, word, state: i === (s.jScan || 0) ? 'cur' : i < (s.jScan || 0) ? 'done' : 'next' })), scanTick,
+    cloud: { state: step === JB.today ? 'unknown' : scanning ? 'scanning' : read && found.has && step >= JB.found ? 'found' : read && step >= JB.found ? 'empty' : 'picking',
+      unknown: step === JB.today, picking: step === JB.source && !scanning, scanning, found: step >= JB.found && read && found.has, empty: step >= JB.found && read && !found.has, name: found.name || liveProv.name, mark: found.mark || liveProv.mark, subnets: found.subnets.toLocaleString('en-US'), vpcs: found.vpcs.toLocaleString('en-US'), hosted: found.hosted || W.hostedWord(cloud) },
+    regions: found.regions.map(r => ({ ...r, picked: r.key === regionKey, pickWord: r.key === regionKey ? 'Picked' : 'Pick', vpcsF: r.vpcs.toLocaleString('en-US'), subnetsF: r.subnets.toLocaleString('en-US'), bytesWord: typeof r.bytesOut === 'number' ? `${fmtBytes(r.bytesOut)} out` : '', hasBytes: typeof r.bytesOut === 'number', go: () => set({ jRegion: r.key, jPick: null }) })),
+    region, link, linkWord: link === 'proposed' ? way : '', net, flow: net === 'public' ? 'net' : 'none', wide: step >= JB.found && found.has,
+    isIntent: step === JB.intent, isRec: step === JB.recommend, isRequest: step === JB.request, intent, options,
+    act: { label: ACT.label, go: ACT.go, off: !!ACT.off, busy: !!ACT.busy }, hasBack: true, back, exit,
+    requestedLine: requested ? `Requested ${W.wayLabel(requested.option, cloud)} for ${region ? region.label : ''}. Cloud discovery and Recommended carry it.` : '' };
+}
 export function vals(c) {
   const s = c.state, set = (p) => c.setState(p), f = fixtureOf(s), d = dataOf(s), dark = s.theme === 'dark';
   const iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
-  const rail = PAGES.map(p => { const cur = s.page === p.key; return { key: p.key, label: p.label, cur, icon: `${cur ? iconLink : iconDir}/${p.icon}.svg`,
-    bg: cur ? 'var(--sidebar-accent)' : 'transparent', color: cur ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: cur ? '8px' : '4px', go: () => set({ page: p.key, drawer: null, trail: [], lmPage: 0, dtrail: [], dPage: 0, rcPage: 0, region: null }) }; });
+  const rail = [
+    // The task flow at the top of the rail (drop 2): the existing customer's journey on this data.
+    { key: 'journey', label: 'Connect a cloud', cur: false, icon: `${iconDir}/cloud-transfer.svg`, bg: 'transparent', color: 'var(--sidebar-muted)', radius: '4px', go: journeyStart(s, set, (PJ.providersOf(d.discovery).find(p => p.live) || {}).key) },
+    ...PAGES.map(p => { const cur = s.page === p.key; return { key: p.key, label: p.label, cur, icon: `${cur ? iconLink : iconDir}/${p.icon}.svg`,
+      bg: cur ? 'var(--sidebar-accent)' : 'transparent', color: cur ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: cur ? '8px' : '4px', go: () => set({ page: p.key, drawer: null, trail: [], lmPage: 0, dtrail: [], dPage: 0, rcPage: 0, region: null }) }; })];
   const nets = P.networksOf(d.circuits);
   const join = P.attJoin(d.cloudLinks, d.discovery);
   const page = PAGES.find(p => p.key === s.page) || PAGES[0];
   return {
     theme: s.theme, themeIsLight: !dark, themeIsDark: dark, themeTitle: dark ? 'Light mode' : 'Dark mode', toggleTheme: () => set({ theme: dark ? 'light' : 'dark' }),
+    journeyOn: !!s.journey, journeyOff: !s.journey, showRail: !s.journey, shellCols: s.journey ? 'minmax(0,1fr)' : '240px minmax(0,1fr)', jr: journey(d, s, set),
     iconDir, rail, pageTitle: page.label, pgLastmile: s.page === 'lastmile', pgLinks: s.page === 'links', pgDiscovery: s.page === 'discovery', pgRecommended: s.page === 'recommended',
     fixture: s.fixture, fixtureName: f.name, synthetic: !!f.synthetic, stateB: !!s.stateB, stateValue: s.stateB ? 'b' : 'a',
     dataNote: s.dataNote || '', hasDataNote: !!s.dataNote, dataError: s.dataError || '', hasDataError: !!s.dataError,

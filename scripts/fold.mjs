@@ -299,12 +299,22 @@ if (opt('--page', '') === 'portal') {
       await page.goto(`${ORIGIN}/portal.dc.html?fixture=${fixture}&state=${st}&theme=${th}`, { waitUntil: 'load' });
       await page.waitForSelector('aside button[data-page]', { timeout: 20000 });
       await settle(page);
-      for (const key of ['lastmile', 'links', 'discovery', 'recommended']) {
-        await page.locator(`aside button[data-page="${key}"]`).click(); await settle(page);
-        errors.length = 0;
+      const check = async (name, tab) => { errors.length = 0; await settle(page);
         const m = { ...(await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT })), ...(await page.evaluate(foldMarks)) };
-        report(`portal-${fixture}-${st}`, th, `portal/${key}`, '(landing)', m, errors);
-        if (shots) await page.screenshot({ path: join(shots, `portal-${fixture}-${st}-${th}-${key}.png`) });
+        report(`portal-${fixture}-${st}`, th, name, tab, m, errors);
+        if (shots) await page.screenshot({ path: join(shots, `portal-${fixture}-${st}-${th}-${name}-${tab}`.replace(/[^\w.-]+/g, '_') + '.png') }); };
+      for (const key of ['lastmile', 'links', 'discovery', 'recommended']) {
+        await page.locator(`aside button[data-page="${key}"]`).click();
+        await check(`portal/${key}`, '(landing)');
+      }
+      // The journey (drop 2): every beat, through the real doors; the scan takes four ticks of 650ms.
+      await page.locator('aside button[aria-label="Connect a cloud"]').click(); await check('portal/journey', 'today');
+      await page.locator('.js-go').click(); await check('portal/journey', 'source');
+      if (!(await page.locator('.js-go').isDisabled())) {
+        await page.locator('.js-go').click(); await page.waitForTimeout(3200); await check('portal/journey', 'found');
+        await page.locator('.js-go').click(); await check('portal/journey', 'intent');
+        await page.locator('.js-go').click(); await check('portal/journey', 'recommend');
+        await page.locator('.js-go').click(); await check('portal/journey', 'request');
       }
       await ctx.close();
     }
