@@ -67,8 +67,8 @@ const DASH = '–';
 /** Mbps as the storefront says it: 1 Gbps, 500 Mbps. */
 export const bw = (mbps) => (mbps === undefined || mbps === null ? DASH : mbps >= 1000 ? `${Math.round(mbps / 100) / 10} Gbps` : `${n(mbps)} Mbps`);
 const HEALTH_WORD = { ok: 'OK', down: 'Down' };
-// Rows a page holds at 1440x900: header 64, page padding 16, head row 40 + 16, the picture band 96 + 12, table header
-// 42, pager 36, bottom 16; a row is 42 (12px padding, 18px line). (900 - 338) / 42 = 13.4, and the band breathes: 12.
+// Rows a page holds at 1440x900: header 64, page padding 16, the picture band 106 + 12, head row 40 + 16, table header
+// 42, pager 36, bottom 16; a row is 42 (12px padding, 18px line). (900 - 348) / 42 = 13.1, and the band breathes: 12.
 export const PAGE_ROWS = 12;
 const pageOf = (rows, page, size, set, key) => {
   const pages = Math.max(1, Math.ceil(rows.length / size)), p = Math.max(0, Math.min(pages - 1, page || 0)), from = p * size;
@@ -133,10 +133,11 @@ export function discovery(d, s, set) {
   const regionLabel = (r) => `${P.cspOf(r.csp)} · ${P.regionName(r.region)}`;
   const root = { key: 'root', label: 'Cloud discovery', go: () => set({ dtrail: [], dPage: 0 }), last: trail.length === 0 };
   const attWord = (j) => j.on ? `On AT&T · ${j.via.pop ? `${j.via.pop.provider} ${j.via.pop.facility}` : P.regionName(j.via.region)}` : j.cspOnly ? `AT&T · ${P.cspOf(j.cspLink.csp)} at ${j.cspLink.pop ? j.cspLink.pop.metro : 'a POP'}` : 'Not on AT&T';
+  const requestOf = (r) => (s.requests || []).find(q => q.csp === r.csp && q.region === r.region) || null;
   if (!trail.length) {
-    const rows = d.discovery.map(r => { const j = join.get(`${r.csp}/${r.region}`), key = `${r.csp}/${r.region}`;
+    const rows = d.discovery.map(r => { const j = join.get(`${r.csp}/${r.region}`), key = `${r.csp}/${r.region}`, rq = requestOf(r);
       const ck = P.cspOf(r.csp); return { key, csp: ck, regionKey: r.region, cloud: W.CLOUD_NAME[ck] || r.csp, mark: W.markFor(ck, dark ? 'dark' : 'light'), region: P.regionName(r.region), vpcs: r.vpcs.length, subnets: r.vpcs.reduce((a, v) => a + v.subnets.length, 0),
-        att: attWord(j), on: j.on, canConnect: !j.on && !j.cspOnly, bytesIn: r.bytesIn, bytesOut: r.bytesOut,
+        att: rq && !j.on ? `Requested · ${W.wayLabel(rq.option, ck)}` : attWord(j), on: j.on, canConnect: !j.on && !j.cspOnly && !rq, bytesIn: r.bytesIn, bytesOut: r.bytesOut,
         go: () => set({ dtrail: [key], dPage: 0 }), connect: () => { clearInterval(scanTimer); set({ journey: true, jStep: JB.found, jProv: ck, jScan: 4, jRegion: key, jPick: null, jFrom: 'discovery', region: { csp: r.csp, region: r.region } }); } }; })
       .sort((a, b) => a.csp.localeCompare(b.csp) || a.region.localeCompare(b.region));
     const cols = P.columnsFor(rows, [['cloud', 'Cloud'], ['region', 'Region'], ['vpcs', 'VPCs'], ['subnets', 'Subnets'], ['att', 'AT&T'], ['bytesIn', 'Bytes in'], ['bytesOut', 'Bytes out']])
@@ -176,8 +177,8 @@ export function recommended(d, s, set) {
   const join = P.attJoin(d.cloudLinks, d.discovery), answers = s.answers || {};
   const regionTitle = (r) => `${P.cspOf(r.csp)} · ${P.regionName(r.region)}`;
   const root = { key: 'root', label: 'Recommended', go: () => set({ region: null }), last: !s.region };
-  const pickRows = d.discovery.map(r => { const j = join.get(`${r.csp}/${r.region}`);
-      const ck = P.cspOf(r.csp); return { key: `${r.csp}/${r.region}`, csp: ck, cloud: W.CLOUD_NAME[ck] || r.csp, mark: W.markFor(ck, dark ? 'dark' : 'light'), region: P.regionName(r.region), on: j.on, att: j.on ? 'On AT&T' : j.cspOnly ? `AT&T · ${ck} at ${j.cspLink.pop ? j.cspLink.pop.metro : 'a POP'}` : 'Not on AT&T',
+  const pickRows = d.discovery.map(r => { const j = join.get(`${r.csp}/${r.region}`), rq = (s.requests || []).find(q => q.csp === r.csp && q.region === r.region) || null;
+      const ck = P.cspOf(r.csp); return { key: `${r.csp}/${r.region}`, csp: ck, cloud: W.CLOUD_NAME[ck] || r.csp, mark: W.markFor(ck, dark ? 'dark' : 'light'), region: P.regionName(r.region), on: j.on, att: rq && !j.on ? `Requested · ${W.wayLabel(rq.option, ck)}` : j.on ? 'On AT&T' : j.cspOnly ? `AT&T · ${ck} at ${j.cspLink.pop ? j.cspLink.pop.metro : 'a POP'}` : 'Not on AT&T',
         go: () => set({ region: { csp: r.csp, region: r.region } }) }; })
     .sort((a, b) => (a.on - b.on) || a.csp.localeCompare(b.csp) || a.region.localeCompare(b.region));
   const pickCols = [{ key: 'cloud', label: 'Cloud', present: true, cls: 'dt-name' }, { key: 'region', label: 'Region', present: true }, { key: 'att', label: 'AT&T', present: true, ink: (r) => (r.on ? '' : 'var(--text-light)') }];
@@ -207,7 +208,7 @@ const SCAN = ['Reading the account', 'Listing the regions', 'Finding the VPCs an
 let scanTimer = null;
 /** The journey's doors: a clean start from the rail, or straight into Found with a region from Connect with AT&T. */
 export function journeyStart(s, set, live) {
-  return () => { clearInterval(scanTimer); set({ journey: true, jStep: 0, jScan: null, jPick: null, jFrom: null, jRegion: null, jProv: live || s.jProv || 'Azure', region: null }); };
+  return () => { clearInterval(scanTimer); set({ journey: true, jStep: 0, jScan: null, jPick: null, jFrom: null, jRegion: null, jProv: live || s.jProv || 'Azure' }); };
 }
 /** The journey as the stage draws it: one sentence, three nodes, two wires, one action a beat. */
 export function journey(d, s, set) {
@@ -225,27 +226,29 @@ export function journey(d, s, set) {
   const pickKey = s.jPick && ranked.some(r => r.key === s.jPick) ? s.jPick : (ranked[0] || {}).key || null;
   const picked = ranked.find(r => r.key === pickKey) || null;
   const requested = region ? (s.requests || []).find(r => r.csp === region.csp && r.region === region.region) : null;
-  const to = (i) => () => set({ jStep: i });
+  // Every move stops a running scan, so a tick never lands on a beat the user has left; a move to Source forgets jFrom.
+  const to = (i) => () => { clearInterval(scanTimer); set({ jStep: i, ...(i === JB.source ? { jFrom: null } : {}), ...(scanning ? { jScan: null } : {}) }); };
   const exit = () => { clearInterval(scanTimer); set({ journey: false }); };
   const exitTo = (page) => () => { clearInterval(scanTimer); set({ journey: false, page, trail: [], dtrail: [], dPage: 0, rcPage: 0 }); };
-  const startScan = () => { clearInterval(scanTimer); set({ jScan: 0, jRegion: null, jPick: null });
+  const startScan = () => { clearInterval(scanTimer); set({ jScan: 0, jRegion: null, jPick: null, jFrom: null });
     let k = 0; scanTimer = setInterval(() => { k += 1; if (k < 4) set({ jScan: k }); else { clearInterval(scanTimer); set({ jScan: 4, jStep: JB.found }); } }, 650);
     if (scanTimer && typeof scanTimer.unref === 'function') scanTimer.unref(); };
   const scanTick = () => (s.jScan === null || s.jScan === undefined ? { jScan: 0 } : s.jScan < 3 ? { jScan: s.jScan + 1 } : { jScan: 4, jStep: JB.found });
   const request = () => { if (!region || !picked) return;
+    if (requested) { set({ jStep: JB.request }); return; }
     const full = { ...W.INTENT_DEFAULT, ...answers };
-    set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: region.csp, region: region.region, option: picked.key, answers: full, defaulted: Object.keys(answers).length === 0, journey: true }], jStep: JB.request, region: { csp: region.csp, region: region.region } }); };
+    set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: region.csp, region: region.region, option: picked.key, answers: full, defaulted: Object.keys(answers).length === 0 }], jStep: JB.request, region: { csp: region.csp, region: region.region } }); };
   const liveProv = providers.find(p => p.key === prov) || providers[0];
   const ACT = {
     today: { label: 'Find your clouds', go: to(JB.source), off: false },
-    source: { label: 'Read it', go: startScan, off: !liveProv.live, busy: scanning },
+    source: { label: 'Read it', go: startScan, off: scanning, busy: scanning },
     found: found.has ? { label: 'Say what it needs', go: to(JB.intent), off: !region } : { label: 'Read another cloud', go: to(JB.source), off: false },
     intent: { label: 'Recommend', go: to(JB.recommend), off: !region },
-    recommend: { label: 'Request this', go: request, off: !picked },
+    recommend: requested ? { label: 'See the request', go: to(JB.request), off: false } : { label: 'Request this', go: request, off: !picked },
     request: { label: 'Open Cloud discovery', go: exitTo('discovery'), off: false },
   }[beat.key];
   const open = (i) => i <= JB.source || (read && found.has && (i <= JB.recommend || (i === JB.request && !!requested)));
-  const steps = PJ.BEATS.map((b, i) => { const done = i < step; return { key: b.key, n: String(i + 1), label: b.short, title: b.title, state: i === step ? 'cur' : done ? 'done' : 'next', cur: i === step, off: !open(i), hasIcon: done, noIcon: !done, go: () => { if (open(i)) set({ jStep: i }); } }; });
+  const steps = PJ.BEATS.map((b, i) => { const done = i < step; return { key: b.key, n: String(i + 1), label: b.short, title: b.title, state: i === step ? 'cur' : done ? 'done' : 'next', cur: i === step, off: !open(i), hasIcon: done, noIcon: !done, go: () => { if (open(i)) to(i)(); } }; });
   const link = (step >= JB.recommend && picked) ? 'proposed' : 'none';
   const net = step >= JB.found && found.has && found.notOn > 0 ? 'public' : 'off';
   const way = picked ? W.wayLabel(picked.key, cloud, picked.zone) : '';
@@ -258,7 +261,7 @@ export function journey(d, s, set) {
   const back = step === 0 ? exit : (s.jFrom && step === JB.found) ? exitTo(s.jFrom) : to(step - 1);
   return { beat: beat.key, step, steps, line: PJ.lineOf(beat.key, { today, found, region, cloud: prov, way: wayWord }),
     sites: { n: today.circuits.toLocaleString('en-US'), cells: today.cells, groups: today.groups },
-    providers: providers.map(p => ({ ...p, on: p.key === prov, off: !p.live, title: p.live ? `${p.name}: ${p.cred}` : `${p.name}: nothing discovered yet`, go: () => { if (p.live) set({ jProv: p.key, jScan: null, jRegion: null, jPick: null }); } })),
+    providers: providers.map(p => ({ ...p, on: p.key === prov, off: false, title: p.live ? `${p.name}: ${p.cred}` : `${p.name}: ${p.cred}; nothing discovered there yet`, go: () => { clearInterval(scanTimer); set({ jProv: p.key, jScan: null, jRegion: null, jPick: null }); } })),
     cred: liveProv.cred, scanMark: liveProv.mark, scanPct: `${Math.min(100, ((s.jScan || 0) + 1) * 25)}%`, scanSteps: SCAN.map((word, i) => ({ key: word, word, state: i === (s.jScan || 0) ? 'cur' : i < (s.jScan || 0) ? 'done' : 'next' })), scanTick,
     cloud: { state: step === JB.today ? 'unknown' : scanning ? 'scanning' : read && found.has && step >= JB.found ? 'found' : read && step >= JB.found ? 'empty' : 'picking',
       unknown: step === JB.today, picking: step === JB.source && !scanning, scanning, found: step >= JB.found && read && found.has, empty: step >= JB.found && read && !found.has, name: found.name || liveProv.name, mark: found.mark || liveProv.mark, subnets: found.subnets.toLocaleString('en-US'), vpcs: found.vpcs.toLocaleString('en-US'), hosted: found.hosted || W.hostedWord(cloud) },

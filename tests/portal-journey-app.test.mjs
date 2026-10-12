@@ -29,9 +29,9 @@ test('Connect a cloud sits at the top of the rail and opens the journey clean on
 
 test('Source: pick a live cloud, read it; the scan ticks four steps and lands on Found with the regions', () => {
   const c = at({ journey: true, jStep: B.source }); let v = vals(c);
-  assert.equal(v.jr.cloud.picking, true); assert.deepEqual(v.jr.providers.map(p => [p.key, p.on, p.off]), [['Azure', true, false], ['AWS', false, true], ['GCP', false, true], ['Oracle', false, true]]);
+  assert.equal(v.jr.cloud.picking, true); assert.deepEqual(v.jr.providers.map(p => [p.key, p.on, p.live]), [['Azure', true, true], ['AWS', false, false], ['GCP', false, false], ['Oracle', false, false]]); assert.ok(v.jr.providers.every(p => !p.off), 'every cloud can be read');
   assert.equal(v.jr.act.label, 'Read it'); assert.equal(v.jr.act.off, false);
-  v.jr.act.go(); assert.equal(c.state.jScan, 0); v = vals(c); assert.equal(v.jr.cloud.scanning, true); assert.equal(v.jr.act.busy, true);
+  v.jr.act.go(); assert.equal(c.state.jScan, 0); v = vals(c); assert.equal(v.jr.cloud.scanning, true); assert.equal(v.jr.act.busy, true); assert.equal(v.jr.act.off, true);
   for (let i = 1; i <= 4; i++) c.setState(vals(c).jr.scanTick());
   assert.equal(c.state.jStep, B.found); assert.equal(c.state.jScan, 4);
   v = vals(c); assert.equal(v.jr.cloud.found, true); assert.equal(v.jr.line, 'Azure: 2 regions, 5 VNets, 12 subnets.');

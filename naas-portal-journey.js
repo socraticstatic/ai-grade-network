@@ -27,8 +27,11 @@ const GLYPHS = 20;
 /** What AT&T carries today: circuits by service, with a sample of glyphs (largest remainder, so 20 add up) and the exact count. */
 export function todayOf(circuits = []) {
   const order = Object.keys(SERVICE_KEY);
+  // A code the contract does not name (a feed's "ASE", say) groups as Other, so the count never sits over an empty grid.
+  const other = circuits.filter(c => !order.includes(c.service)).length, tpa = S.SERVICE.tpa;
   const groups = order.map(key => { const v = S.SERVICE[SERVICE_KEY[key]], n = circuits.filter(c => c.service === key).length;
-    return { key, label: v.short, full: v.name, icon: v.icon, ink: v.ink, n, nF: n.toLocaleString('en-US') }; }).filter(g => g.n > 0);
+    return { key, label: v.short, full: v.name, icon: v.icon, ink: v.ink, n, nF: n.toLocaleString('en-US') }; })
+    .concat(other ? [{ key: 'Other', label: 'Other', full: 'A service the portal did not name', icon: tpa.icon, ink: tpa.ink, n: other, nF: other.toLocaleString('en-US') }] : []).filter(g => g.n > 0);
   const total = circuits.length || 1, want = Math.min(GLYPHS, circuits.length);
   const raw = groups.map(g => ({ g, exact: want * g.n / total }));
   const base = raw.map(x => ({ ...x, k: Math.floor(x.exact), rem: x.exact - Math.floor(x.exact) }));
