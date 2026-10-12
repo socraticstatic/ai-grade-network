@@ -18,7 +18,7 @@ export const PAGES = [
   { key: 'recommended', label: 'Recommended', icon: 'lightbulb' },
 ];
 export function defaults() {
-  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, pick: null, answers: {}, requests: [], region: null };
+  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, pick: null, answers: {}, requests: [], region: null };
 }
 /** URL to state: ?fixture=calloway|scale, ?state=a|b, ?page=<key>, ?theme=light|dark. `search` is for tests. */
 export function init(c, search) {
@@ -99,11 +99,56 @@ export function links(d, s, set) {
   const pg = pageOf(rows.map(r => ({ ...r, cells: cellsOf(r, cols, text), click: false })), s.clPage, PAGE_ROWS, set, 'clPage');
   return { counts: { links: n(rows.length), clouds: n(new Set(rows.map(r => r.csp)).size), regions: n(reached.size) }, cols, ...pg, empty: !rows.length, hasRows: rows.length > 0, emptyLine: 'No AT&T cloud connection yet.' };
 }
+/** Bytes in the unit that fits: 500 MB, 7.5 GB, 3.2 TB. */
+export function fmtBytes(b) {
+  if (b === undefined || b === null) return DASH;
+  const u = [['TB', 1e12], ['GB', 1e9], ['MB', 1e6], ['KB', 1e3]].find(([, k]) => b >= k);
+  if (!u) return `${n(b)} B`;
+  const v = b / u[1]; return `${v >= 100 ? Math.round(v) : Math.round(v * 10) / 10} ${u[0]}`;
+}
+const AFFINITY_WORD = (a, csp) => (a === 'att' ? 'AT&T' : a === 'csp' ? (W.CLOUD_NAME[csp] || csp).replace('Microsoft ', '') : a === 'other' ? 'Other telco' : DASH);
+/** Cloud discovery: regions (level one, each saying how it reaches AT&T), a region's VPCs, a VPC's subnets. */
+export function discovery(d, s, set) {
+  const dark = s.theme === 'dark', trail = s.dtrail || [], join = P.attJoin(d.cloudLinks, d.discovery);
+  const regionLabel = (r) => `${r.csp} · ${P.regionName(r.region)}`;
+  const root = { key: 'root', label: 'Cloud discovery', go: () => set({ dtrail: [], dPage: 0 }), last: trail.length === 0 };
+  const attWord = (j) => j.on ? `On AT&T · ${j.via.pop ? `${j.via.pop.provider} ${j.via.pop.facility}` : P.regionName(j.via.region)}` : j.cspOnly ? `AT&T · ${j.cspLink.csp} at ${j.cspLink.pop ? j.cspLink.pop.metro : 'a POP'}` : 'Not on AT&T';
+  if (!trail.length) {
+    const rows = d.discovery.map(r => { const j = join.get(`${r.csp}/${r.region}`), key = `${r.csp}/${r.region}`;
+      return { key, csp: r.csp, regionKey: r.region, cloud: W.CLOUD_NAME[r.csp] || r.csp, mark: W.markFor(r.csp, dark ? 'dark' : 'light'), region: P.regionName(r.region), vpcs: r.vpcs.length, subnets: r.vpcs.reduce((a, v) => a + v.subnets.length, 0),
+        att: attWord(j), on: j.on, canConnect: !j.on && !j.cspOnly, bytesIn: r.bytesIn, bytesOut: r.bytesOut,
+        go: () => set({ dtrail: [key], dPage: 0 }), connect: () => set({ page: 'recommended', region: { csp: r.csp, region: r.region }, trail: [], dtrail: [] }) }; })
+      .sort((a, b) => a.csp.localeCompare(b.csp) || a.region.localeCompare(b.region));
+    const cols = P.columnsFor(rows, [['cloud', 'Cloud'], ['region', 'Region'], ['vpcs', 'VPCs'], ['subnets', 'Subnets'], ['att', 'AT&T'], ['bytesIn', 'Bytes in'], ['bytesOut', 'Bytes out']])
+      .map(c => ({ ...c, cls: ['vpcs', 'subnets', 'bytesIn', 'bytesOut'].includes(c.key) ? 'num' : c.key === 'cloud' ? 'dt-name' : '', ink: c.key === 'att' ? (r) => (r.on ? '' : 'var(--text-light)') : null }));
+    if (rows.some(r => r.canConnect)) cols.push({ key: 'act', label: '', present: true, cls: 'num' });
+    const text = (k, r) => ['bytesIn', 'bytesOut'].includes(k) ? fmtBytes(r[k]) : ['vpcs', 'subnets'].includes(k) ? n(r[k]) : k === 'act' ? '' : String(r[k]);
+    const pg = pageOf(rows.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act' })), click: true })), s.dPage, PAGE_ROWS, set, 'dPage');
+    return { level: 'regions', trail: [root], hasTrail: false, cols, ...pg, counts: { regions: n(rows.length), onAtt: n(rows.filter(r => r.on).length), vpcs: n(rows.reduce((a, r) => a + r.vpcs, 0)), subnets: n(rows.reduce((a, r) => a + r.subnets, 0)) } };
+  }
+  const reg = d.discovery.find(r => `${r.csp}/${r.region}` === trail[0]) || { csp: '', region: '', vpcs: [] };
+  const regCrumb = { key: 'reg', label: regionLabel(reg), go: () => set({ dtrail: [trail[0]], dPage: 0 }), last: trail.length === 1 };
+  if (trail.length === 1) {
+    const rows = reg.vpcs.map(v => ({ key: v.id, id: v.id, name: v.name, subnets: v.subnets.length, bytesIn: v.subnets.some(x => x.bytesIn !== undefined) ? v.subnets.reduce((a, x) => a + (x.bytesIn || 0), 0) : undefined,
+      bytesOut: v.subnets.some(x => x.bytesOut !== undefined) ? v.subnets.reduce((a, x) => a + (x.bytesOut || 0), 0) : undefined, go: () => set({ dtrail: [trail[0], v.id], dPage: 0 }) }));
+    const cols = P.columnsFor(rows, [['id', 'VPC'], ['name', 'Name'], ['subnets', 'Subnets'], ['bytesIn', 'Bytes in'], ['bytesOut', 'Bytes out']]).map(c => ({ ...c, cls: ['subnets', 'bytesIn', 'bytesOut'].includes(c.key) ? 'num' : c.key === 'id' ? 'mono' : c.key === 'name' ? 'dt-name' : '' }));
+    const text = (k, r) => ['bytesIn', 'bytesOut'].includes(k) ? fmtBytes(r[k]) : k === 'subnets' ? n(r[k]) : String(r[k]);
+    const pg = pageOf(rows.map(r => ({ ...r, cells: cellsOf(r, cols, text), click: true })), s.dPage, PAGE_ROWS, set, 'dPage');
+    return { level: 'vpcs', trail: [{ ...root, last: false }, regCrumb], hasTrail: true, cols, ...pg, counts: { regions: n(d.discovery.length), onAtt: n([...join.values()].filter(j => j.on).length), vpcs: n(reg.vpcs.length), subnets: n(rows.reduce((a, r) => a + r.subnets, 0)) } };
+  }
+  const vpc = reg.vpcs.find(v => v.id === trail[1]) || { id: trail[1], name: '', subnets: [] };
+  const rows = vpc.subnets.map(x => ({ key: x.id, id: x.id, cidr: x.cidr, affinity: x.affinity === undefined ? undefined : AFFINITY_WORD(x.affinity, reg.csp), bytesIn: x.bytesIn, bytesOut: x.bytesOut }));
+  const cols = P.columnsFor(rows, [['id', 'Subnet'], ['cidr', 'CIDR'], ['affinity', 'Reaches'], ['bytesIn', 'Bytes in'], ['bytesOut', 'Bytes out']]).map(c => ({ ...c, cls: ['bytesIn', 'bytesOut'].includes(c.key) ? 'num' : ['id', 'cidr'].includes(c.key) ? 'mono' : '' }));
+  const text = (k, r) => ['bytesIn', 'bytesOut'].includes(k) ? fmtBytes(r[k]) : (r[k] === undefined ? DASH : String(r[k]));
+  const pg = pageOf(rows.map(r => ({ ...r, cells: cellsOf(r, cols, text), click: false })), s.dPage, PAGE_ROWS, set, 'dPage');
+  return { level: 'subnets', trail: [{ ...root, last: false }, { ...regCrumb, last: false }, { key: 'vpc', label: vpc.name || vpc.id, go: () => {}, last: true }], hasTrail: true, cols, ...pg,
+    counts: { regions: n(d.discovery.length), onAtt: n([...join.values()].filter(j => j.on).length), vpcs: n(reg.vpcs.length), subnets: n(rows.length) } };
+}
 export function vals(c) {
   const s = c.state, set = (p) => c.setState(p), f = fixtureOf(s), d = dataOf(s), dark = s.theme === 'dark';
   const iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
   const rail = PAGES.map(p => { const cur = s.page === p.key; return { key: p.key, label: p.label, cur, icon: `${cur ? iconLink : iconDir}/${p.icon}.svg`,
-    bg: cur ? 'var(--sidebar-accent)' : 'transparent', color: cur ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: cur ? '8px' : '4px', go: () => set({ page: p.key, drawer: null, trail: [], lmPage: 0 }) }; });
+    bg: cur ? 'var(--sidebar-accent)' : 'transparent', color: cur ? 'var(--sidebar-fg)' : 'var(--sidebar-muted)', radius: cur ? '8px' : '4px', go: () => set({ page: p.key, drawer: null, trail: [], lmPage: 0, dtrail: [], dPage: 0 }) }; });
   const nets = P.networksOf(d.circuits);
   const join = P.attJoin(d.cloudLinks, d.discovery);
   const page = PAGES.find(p => p.key === s.page) || PAGES[0];
@@ -111,12 +156,13 @@ export function vals(c) {
     theme: s.theme, themeIsLight: !dark, themeIsDark: dark, themeTitle: dark ? 'Light mode' : 'Dark mode', toggleTheme: () => set({ theme: dark ? 'light' : 'dark' }),
     iconDir, rail, pageTitle: page.label, pgLastmile: s.page === 'lastmile', pgLinks: s.page === 'links', pgDiscovery: s.page === 'discovery', pgRecommended: s.page === 'recommended',
     fixture: s.fixture, fixtureName: f.name, synthetic: !!f.synthetic, stateB: !!s.stateB, stateValue: s.stateB ? 'b' : 'a',
-    setFixture: (e) => set({ fixture: P.FIXTURES[e.target.value] ? e.target.value : 'calloway', drawer: null, trail: [], lmPage: 0, region: null, pick: null }),
+    setFixture: (e) => set({ fixture: P.FIXTURES[e.target.value] ? e.target.value : 'calloway', drawer: null, trail: [], lmPage: 0, dtrail: [], dPage: 0, region: null, pick: null }),
     setStateB: (e) => set({ stateB: e.target.value === 'b' }),
     counts: { circuits: n(d.circuits.length), networks: n(nets.filter(x => x.id).length), sites: n(new Set(d.circuits.map(x => x.siteId)).size), links: n(d.cloudLinks.length), regions: n(d.discovery.length),
       onAtt: n([...join.values()].filter(j => j.on).length) },
     data: d, nets, join,
     lm: lastmile(d, s, set),
     cl: links(d, s, set),
+    dv: discovery(d, s, set),
   };
 }

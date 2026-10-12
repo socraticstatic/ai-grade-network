@@ -40,6 +40,7 @@
 .po-pg{width:28px;height:28px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:16px;line-height:1;cursor:pointer}
 .po-pg:disabled{color:var(--text-disabled);cursor:default}
 .po-mark{display:inline-block;width:18px;height:18px;margin:-3px 8px -3px 0;vertical-align:middle;background:center / contain no-repeat}
+.po-act{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}.po-act:hover{border-color:var(--border-active)}.po-act>i{font-style:normal}
 .dt-r[data-click="true"]{cursor:pointer}.dt-r[data-click="true"]:hover{background:var(--bg-wash)}
 </style>
 </head>
@@ -105,8 +106,13 @@
   </sc-if>
   <sc-if value="{{ pgDiscovery }}" hint-placeholder-val="{{ false }}">
   <section aria-label="Cloud discovery">
-    <div class="po-head"><h1 class="po-title">Cloud discovery</h1><span class="po-counts"><span><b>{{ counts.regions }}</b> regions</span><span><b>{{ counts.onAtt }}</b> on AT&amp;T</span></span></div>
-    <div class="po-empty">CSP, region, VPC, subnet. Task 5.</div>
+    <div class="po-head"><h1 class="po-title">Cloud discovery</h1><span class="po-counts"><span><b>{{ dv.counts.regions }}</b> regions</span><span><b>{{ dv.counts.onAtt }}</b> on AT&amp;T</span><span><b>{{ dv.counts.vpcs }}</b> VPCs</span><span><b>{{ dv.counts.subnets }}</b> subnets</span></span></div>
+    <sc-if value="{{ dv.hasTrail }}" hint-placeholder-val="{{ false }}"><nav aria-label="Where you are" class="po-trail"><sc-for list="{{ dv.trail }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.go }}" disabled="{{ t.last }}" class="po-crumb" aria-current="{{ t.last }}">{{ t.label }}</button></sc-for></nav></sc-if>
+    <div class="dt" role="table" aria-label="Discovered cloud">
+      <div class="dt-h"><div class="dt-r"><sc-for list="{{ dv.cols }}" as="col" hint-placeholder-count="5"><sc-if value="{{ col.present }}" hint-placeholder-val="{{ true }}"><div class="dt-c dt-th {{ col.cls }}">{{ col.label }}</div></sc-if></sc-for></div></div>
+      <div class="dt-b"><sc-for list="{{ dv.rows }}" as="row" hint-placeholder-count="6"><div class="dt-r" role="row" data-click="{{ row.click }}" onClick="{{ row.go }}"><sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="5"><div class="dt-c {{ cell.cls }}" style="color:{{ cell.ink }}"><sc-if value="{{ cell.isCloud }}" hint-placeholder-val="{{ false }}"><span class="po-mark" style="background-image:url('{{ row.mark }}')"></span></sc-if><sc-if value="{{ cell.isAct }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ row.canConnect }}" hint-placeholder-val="{{ false }}"><button onClick="{{ row.connect }}" class="po-act">Connect with AT&amp;T<i aria-hidden="true">→</i></button></sc-if></sc-if>{{ cell.text }}</div></sc-for></div></sc-for></div>
+    </div>
+    <div class="po-pager"><span>{{ dv.pager }}</span><button onClick="{{ dv.prev }}" disabled="{{ dv.hasPrevOff }}" aria-label="Previous page" class="po-pg">‹</button><button onClick="{{ dv.next }}" disabled="{{ dv.hasNextOff }}" aria-label="Next page" class="po-pg">›</button></div>
   </section>
   </sc-if>
   <sc-if value="{{ pgRecommended }}" hint-placeholder-val="{{ false }}">
