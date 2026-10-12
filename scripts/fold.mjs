@@ -285,6 +285,34 @@ function report(estate, th, page, tab, m, errors) {
   if (!quiet || status !== 'PASS') console.log(line);
 }
 
+// The portal MVP page (2026-10-12): --page portal walks portal.dc.html instead, every fixture x state x theme,
+// each rail page, with the same checks. Its rail is four buttons with data-page.
+if (opt('--page', '') === 'portal') {
+  try {
+    for (const fixture of ['calloway', 'scale']) for (const st of ['a', 'b']) for (const th of themes) {
+      const ctx = await browser.newContext({ viewport: { width: W, height: H } });
+      await ctx.route('**/*', serve);
+      const page = await ctx.newPage();
+      const errors = [];
+      page.on('pageerror', (e) => errors.push(e.message));
+      page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+      await page.goto(`${ORIGIN}/portal.dc.html?fixture=${fixture}&state=${st}&theme=${th}`, { waitUntil: 'load' });
+      await page.waitForSelector('aside button[data-page]', { timeout: 20000 });
+      await settle(page);
+      for (const key of ['lastmile', 'links', 'discovery', 'recommended']) {
+        await page.locator(`aside button[data-page="${key}"]`).click(); await settle(page);
+        errors.length = 0;
+        const m = { ...(await page.evaluate(measure, { allow: ALLOW, edge: EDGE, width: WLIMIT })), ...(await page.evaluate(foldMarks)) };
+        report(`portal-${fixture}-${st}`, th, `portal/${key}`, '(landing)', m, errors);
+        if (shots) await page.screenshot({ path: join(shots, `portal-${fixture}-${st}-${th}-${key}.png`) });
+      }
+      await ctx.close();
+    }
+  } finally { await browser.close(); }
+  console.log(`${lines.length} checked · ${fails} FAIL · 0 baseline`);
+  process.exit(fails ? 1 : 0);
+}
+
 try {
   for (const estate of estates) {
     for (const th of themes) {

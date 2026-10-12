@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
+const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8').replace('<link rel="stylesheet" href="./storefront.css">', () => '<style>\n' + readFileSync(new URL('../storefront.css', import.meta.url), 'utf8') + '</style>') /* the stylesheet moved to storefront.css (2026-10-12); this test reads its rules */;
 
 const theme = (name) => {
   const head = `[data-theme="${name}"]{`;

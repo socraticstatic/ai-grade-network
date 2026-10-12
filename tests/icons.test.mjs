@@ -6,7 +6,7 @@ import { ICON_NAMES, LAYER_ICON, assetIcon, verbBadges } from '../naas-policy-la
 // The AT&T icon system (2026-10-02, "more icon and flywheel beauty"): one glyph per file in
 // brand/icons, drawn as a CSS mask tinted by currentColor. Every name the page or the app binds
 // has to be on disk, or the mask paints nothing and nobody sees the gap.
-const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
+const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8').replace('<link rel="stylesheet" href="./storefront.css">', () => '<style>\n' + readFileSync(new URL('../storefront.css', import.meta.url), 'utf8') + '</style>') /* the stylesheet moved to storefront.css (2026-10-12); this test reads its rules */;
 const APP = readFileSync(new URL('../naas-app.js', import.meta.url), 'utf8');
 const onDisk = (n) => existsSync(new URL(`../brand/icons/${n}.svg`, import.meta.url));
 

@@ -17,7 +17,7 @@ import { mkC } from './harness.mjs';
 // Attach door and its arithmetic are back.
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
-const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
+const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8').replace('<link rel="stylesheet" href="./storefront.css">', () => '<style>\n' + readFileSync(new URL('../storefront.css', import.meta.url), 'utf8') + '</style>') /* the stylesheet moved to storefront.css (2026-10-12); this test reads its rules */;
 const cost = (view, patch = {}) => mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'cost', ...patch });
 const money = (s) => +String(s).replace(/[^0-9.]/g, '');
 const near = (a, b, eps = 0.01) => Math.abs(a - b) < eps;

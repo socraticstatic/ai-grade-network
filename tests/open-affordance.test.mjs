@@ -9,7 +9,7 @@ import { mkC } from './harness.mjs';
 // on hover; the folded stacks carry a +; a first visit gets one hint, once.
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
-const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
+const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8').replace('<link rel="stylesheet" href="./storefront.css">', () => '<style>\n' + readFileSync(new URL('../storefront.css', import.meta.url), 'utf8') + '</style>') /* the stylesheet moved to storefront.css (2026-10-12); this test reads its rules */;
 const at = (patch = {}) => mkC({ view: 'partial', screen: 's3', tab: 'connect', estateParam: null, ...patch });
 
 test('a region card that opens carries a pill with how many sites it holds', () => {

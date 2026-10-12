@@ -6,7 +6,7 @@ import { mkC } from './harness.mjs';
 
 // Observe's Health and Paths rows as the seven-station strip (2026-10-02): the same picture Govern draws, in the health inks,
 // each station with its glyph; on Paths the milliseconds sit under the node and loss shows only where there is any.
-const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
+const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8').replace('<link rel="stylesheet" href="./storefront.css">', () => '<style>\n' + readFileSync(new URL('../storefront.css', import.meta.url), 'utf8') + '</style>') /* the stylesheet moved to storefront.css (2026-10-12); this test reads its rules */;
 const onDisk = (n) => existsSync(new URL(`../brand/icons/${n}.svg`, import.meta.url));
 const at = (view, extra = {}) => vals(mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', ...extra }));
 

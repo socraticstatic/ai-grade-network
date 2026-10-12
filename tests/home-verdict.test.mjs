@@ -201,7 +201,8 @@ test('V7: nothing waiting reads plainly, never as an all-clear under a warning',
   const i = HTML.indexOf('{{ noHomeWaiting }}');
   const none = HTML.slice(i, HTML.indexOf('</sc-if>', i));
   assert.ok(!/✓|--success/.test(none), 'the empty state wears a green check');
-  const css = HTML.slice(HTML.indexOf('.hm-none{'), HTML.indexOf('.hm-open{'));
+  const SHEET = readFileSync(new URL('../storefront.css', import.meta.url), 'utf8');
+  const css = SHEET.slice(SHEET.indexOf('.hm-none{'), SHEET.indexOf('.hm-open{'));
   assert.ok(!/--success/.test(css), 'the empty state is styled as success');
 });
 

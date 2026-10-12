@@ -537,7 +537,7 @@ test('every container the markup opens, it closes', () => {
   // switch), four columns each with a head, a body of tier bands and rows, a pinned default row, and a pager
   // (div +12, span +28, sc-if +8, sc-for +6, button +6): div 1324 -> 1336, span 1488 -> 1516, sc-if 670 -> 678,
   // sc-for 394 -> 400, button 525 -> 531.
-    ['div', /<div\b/g, /<\/div>/g, 1338],
+    ['div', /<div\b/g, /<\/div>/g, 1339],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -553,6 +553,7 @@ test('every container the markup opens, it closes', () => {
   // go (label 32 -> 31), a Dashboard exit under journeyOn and the hero's second button under hasAlt (sc-if +2, button +2),
   // both hero buttons in one flex row (div +1), and Persona and Estate on one row in the rail foot so Spend ends inside
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
+  // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 679],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 400],
     ['section', /<section\b/g, /<\/section>/g, 17],
@@ -829,7 +830,8 @@ test('a private wire animates traffic in both directions', () => {
 // cards, 94 of them - applied only inside containers under 560px wide, and the
 // panel tabs fell back to square browser buttons. Nothing parsed the CSS.
 test('every stylesheet in the page balances its braces, so no rule swallows the rest', () => {
-  for (const [, css] of HTML.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) {
+  const sheets = [...[...HTML.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(x => x[1]), readFileSync(new URL('../storefront.css', import.meta.url), 'utf8')];
+  for (const css of sheets) {
     let depth = 0, line = 1;
     for (const ch of css.replace(/\/\*[\s\S]*?\*\//g, '')) {
       if (ch === '\n') line++;
