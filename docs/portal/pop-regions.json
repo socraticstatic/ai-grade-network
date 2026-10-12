@@ -1,0 +1,236 @@
+{
+  "generated": "2026-10-12T17:11:00.595Z",
+  "note": "Each cloud publishes which regions a peering location serves (Microsoft: ExpressRoute locations; AWS: Direct Connect locations; Google: Interconnect facilities; Oracle: FastConnect locations). A row marked verify has not been checked against the current list.",
+  "confirmed": "Azure Washington DC = Equinix DC2, DC6 -> East US, East US 2 (Microsoft ExpressRoute locations table, read 2026-10-12; AT&T NetBond is a listed provider there).",
+  "rows": [
+    {
+      "csp": "Azure",
+      "provider": "Equinix",
+      "facility": "DC2",
+      "metro": "Ashburn",
+      "location": "Washington DC",
+      "regions": [
+        "East US",
+        "East US 2"
+      ],
+      "verify": false
+    },
+    {
+      "csp": "Azure",
+      "provider": "Equinix",
+      "facility": "DC6",
+      "metro": "Ashburn",
+      "location": "Washington DC",
+      "regions": [
+        "East US",
+        "East US 2"
+      ],
+      "verify": false
+    },
+    {
+      "csp": "Azure",
+      "provider": "Coresite",
+      "facility": "VA2",
+      "metro": "Reston",
+      "location": "Washington DC2",
+      "regions": [
+        "East US",
+        "East US 2"
+      ],
+      "verify": false
+    },
+    {
+      "csp": "Azure",
+      "provider": "Equinix",
+      "facility": "CH1",
+      "metro": "Chicago",
+      "location": "Chicago",
+      "regions": [
+        "North Central US",
+        "Central US"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "Azure",
+      "provider": "Equinix",
+      "facility": "DA3",
+      "metro": "Dallas",
+      "location": "Dallas",
+      "regions": [
+        "South Central US",
+        "Central US"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "Azure",
+      "provider": "Equinix",
+      "facility": "SV1",
+      "metro": "San Jose",
+      "location": "Silicon Valley",
+      "regions": [
+        "West US",
+        "West US 2"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "Azure",
+      "provider": "Equinix",
+      "facility": "SE2",
+      "metro": "Seattle",
+      "location": "Seattle",
+      "regions": [
+        "West US 2"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "Azure",
+      "provider": "Equinix",
+      "facility": "NY5",
+      "metro": "New York",
+      "location": "New York",
+      "regions": [
+        "East US",
+        "East US 2"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "Azure",
+      "provider": "Equinix",
+      "facility": "AT1",
+      "metro": "Atlanta",
+      "location": "Atlanta",
+      "regions": [
+        "East US 2",
+        "East US"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "AWS",
+      "provider": "Equinix",
+      "facility": "DC2",
+      "metro": "Ashburn",
+      "location": "Ashburn",
+      "regions": [
+        "us-east-1"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "AWS",
+      "provider": "CoreSite",
+      "facility": "VA1",
+      "metro": "Reston",
+      "location": "Reston",
+      "regions": [
+        "us-east-1"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "AWS",
+      "provider": "Equinix",
+      "facility": "SE2",
+      "metro": "Seattle",
+      "location": "Seattle",
+      "regions": [
+        "us-west-2"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "AWS",
+      "provider": "Equinix",
+      "facility": "SV5",
+      "metro": "San Jose",
+      "location": "San Jose",
+      "regions": [
+        "us-west-1"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "AWS",
+      "provider": "Equinix",
+      "facility": "CH2",
+      "metro": "Chicago",
+      "location": "Chicago",
+      "regions": [
+        "us-east-2"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "AWS",
+      "provider": "Equinix",
+      "facility": "DA2",
+      "metro": "Dallas",
+      "location": "Dallas",
+      "regions": [
+        "us-east-1"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "GCP",
+      "provider": "Equinix",
+      "facility": "DC2",
+      "metro": "Ashburn",
+      "location": "Ashburn",
+      "regions": [
+        "us-east4"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "GCP",
+      "provider": "Equinix",
+      "facility": "CH1",
+      "metro": "Chicago",
+      "location": "Chicago",
+      "regions": [
+        "us-central1"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "GCP",
+      "provider": "Equinix",
+      "facility": "SV1",
+      "metro": "San Jose",
+      "location": "San Jose",
+      "regions": [
+        "us-west1",
+        "us-west2"
+      ],
+      "verify": true
+    },
+    {
+      "csp": "Oracle",
+      "provider": "Equinix",
+      "facility": "DC2",
+      "metro": "Ashburn",
+      "location": "Ashburn",
+      "regions": [
+        "us-ashburn-1"
+      ],
+      "verify": true
+    }
+  ],
+  "aliases": {
+    "eastus": "East US",
+    "eastus2": "East US 2",
+    "westus": "West US",
+    "westus2": "West US 2",
+    "centralus": "Central US",
+    "northcentralus": "North Central US",
+    "southcentralus": "South Central US",
+    "westeurope": "West Europe",
+    "northeurope": "North Europe"
+  }
+}

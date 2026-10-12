@@ -27,18 +27,33 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
+# --portal builds the portal MVP package instead (2026-10-12): the portal page, the modules it imports, the shared
+# chrome, brand assets, the vendored runtime, NOTICE, fonts/README.txt and docs/portal; never the concept pages,
+# tests or scripts. --list prints the staged file list and exits, for the test that pins it.
+mode=storefront; list=no
+for a in "$@"; do case "$a" in --portal) mode=portal ;; --list) list=yes ;; esac; done
+
 stamp="$(date +%Y%m%d-%H%M)"
-name="storefront-${stamp}.zip"
+name="${mode}-${stamp}.zip"
 sha="$(git rev-parse --short HEAD)"
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
 
-git ls-files -z |
-  grep -zEv '^(\.github/|\.thumbnail$|storefront-.*\.zip$)' |
-  grep -zEv '^fonts/.*\.(woff2|ttf)$' |
+files() {
+  if [ "$mode" = portal ]; then
+    git ls-files -z |
+      grep -zE '^(portal\.dc\.html|naas-portal\.js|naas-portal-app\.js|naas-ways\.js|naas-data\.js|naas-sites\.js|naas-logic\.js|naas-things\.js|storefront\.css|support\.js|NOTICE|fonts/README\.txt|vendor/.*|brand/.*|docs/portal/.*)$'
+  else
+    git ls-files -z |
+      grep -zEv '^(\.github/|\.thumbnail$|(storefront|portal)-.*\.zip$)' |
+      grep -zEv '^fonts/.*\.(woff2|ttf)$'
+  fi
+}
+if [ "$list" = yes ]; then files | tr '\0' '\n'; exit 0; fi
+files |
   while IFS= read -r -d '' f; do
-    mkdir -p "$stage/storefront/$(dirname "$f")"
-    cp "$f" "$stage/storefront/$f"
+    mkdir -p "$stage/$mode/$(dirname "$f")"
+    cp "$f" "$stage/$mode/$f"
   done
 
 # Every page fetches ./version.js on load to notice a stale cached build. The
@@ -48,7 +63,7 @@ git ls-files -z |
 # is, which is the first thing anyone asks of a zip.
 iso="$(git log -1 --format=%cI)"
 day="$(TZ=America/Chicago git log -1 --format=%cd --date=format-local:%Y-%m-%d)"
-cat > "$stage/storefront/version.js" <<VERSION
+cat > "$stage/$mode/version.js" <<VERSION
 // Stamped by scripts/make-drop.sh when this package was built.
 (function () {
   var v = { build: $(git rev-list --count HEAD), sha: "${sha}", date: "${day}", iso: "${iso}" };
@@ -69,15 +84,15 @@ cat > "$stage/storefront/version.js" <<VERSION
 VERSION
 
 # The licence notice claims the fonts are absent. Prove it before shipping.
-if find "$stage/storefront/fonts" -name '*.woff2' -o -name '*.ttf' | grep -q .; then
+if [ -d "$stage/$mode/fonts" ] && find "$stage/$mode/fonts" -name '*.woff2' -o -name '*.ttf' | grep -q .; then
   echo "refusing to build: licensed font binaries are in the package" >&2
   exit 1
 fi
-[ -f "$stage/storefront/fonts/README.txt" ] || { echo "fonts/README.txt is missing" >&2; exit 1; }
-[ -f "$stage/storefront/NOTICE" ] || { echo "NOTICE is missing" >&2; exit 1; }
+[ -f "$stage/$mode/fonts/README.txt" ] || { echo "fonts/README.txt is missing" >&2; exit 1; }
+[ -f "$stage/$mode/NOTICE" ] || { echo "NOTICE is missing" >&2; exit 1; }
 
-rm -f storefront-*.zip
-( cd "$stage" && zip -rq "$root/$name" storefront -x '*.DS_Store' )
+rm -f "${mode}"-*.zip
+( cd "$stage" && zip -rq "$root/$name" "$mode" -x '*.DS_Store' )
 zip -zq "$root/$name" <<<"built from ai-grade-network ${sha} on ${stamp}"
 
 echo "$name  $(unzip -l "$name" | tail -1 | awk '{print $2}') files  $(du -h "$name" | cut -f1)  @ ${sha}"

@@ -6,6 +6,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import * as W from '../naas-ways.js';
+import * as P from '../naas-portal.js';
 
 const PREFER_WORDS = { bgp: 'a way where you run BGP yourself', transitive: 'the transit gateway' };
 export function waysExport() {
@@ -23,9 +24,18 @@ export function waysExport() {
     ranking: 'Each answer adds or removes weight on the five criteria (never below 5, scaled to 100). A way scores each criterion 1 to 5; the weighted sum out of 100, plus 5 for each soft preference it meets, is its score. A hard rule a way breaks counts as a miss. Ways sort by fewest misses, then score, then the cheaper monthly.',
   };
 }
+/** The POP-to-region lookup the join reads. Rows marked verify are from memory of the AWS, Google and Azure lists and
+ *  must be checked against them before the team relies on them. */
+export function popRegionsExport() {
+  return { generated: new Date().toISOString(), note: 'Each cloud publishes which regions a peering location serves (Microsoft: ExpressRoute locations; AWS: Direct Connect locations; Google: Interconnect facilities; Oracle: FastConnect locations). A row marked verify has not been checked against the current list.',
+    confirmed: 'Azure Washington DC = Equinix DC2, DC6 -> East US, East US 2 (Microsoft ExpressRoute locations table, read 2026-10-12; AT&T NetBond is a listed provider there).',
+    rows: P.POP_REGIONS.map(r => ({ csp: r.csp, provider: r.provider, facility: r.facility, metro: r.metro, location: r.location, regions: r.regions, verify: !!r.verify })),
+    aliases: P.REGION_ALIAS };
+}
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'portal');
   mkdirSync(out, { recursive: true });
   writeFileSync(join(out, 'ways.json'), JSON.stringify(waysExport(), null, 2) + '\n');
-  console.log('wrote docs/portal/ways.json');
+  writeFileSync(join(out, 'pop-regions.json'), JSON.stringify(popRegionsExport(), null, 2) + '\n');
+  console.log('wrote docs/portal/ways.json and docs/portal/pop-regions.json');
 }

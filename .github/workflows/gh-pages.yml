@@ -37,6 +37,8 @@ jobs:
           # A stable URL as well as the dated one, so the link we hand people
           # keeps working across drops.
           cp storefront-*.zip _site/storefront-latest.zip
+          # The portal MVP package (2026-10-12), the same way.
+          if ls portal-*.zip >/dev/null 2>&1; then cp portal-*.zip _site/ && cp portal-*.zip _site/portal-latest.zip; fi
 
 
       - name: Upload artifact

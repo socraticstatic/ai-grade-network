@@ -30,6 +30,14 @@ export function init(c, search) {
   if (q.get('page') && PAGES.some(p => p.key === q.get('page'))) patch.page = q.get('page');
   if (q.get('theme') === 'dark' || q.get('theme') === 'light') patch.theme = q.get('theme');
   c.setState(patch);
+  // ?data=<url>: a JSON in the contract's shape, same origin or CORS-open, becomes the estate on screen.
+  if (q.get('data') && typeof fetch === 'function') fetch(q.get('data'), { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j) useData(c, j); }).catch(() => {});
+}
+/** The team's own JSON, in the contract's shape, installed as the fixture the page reads (`?data=<url>`, or this). */
+export function useData(c, json, name) {
+  const f = { name: (json && json.name) || name || 'Your estate', synthetic: false, circuits: (json && json.circuits) || [], cloudLinks: (json && json.cloudLinks) || [], discovery: (json && json.discovery) || [] };
+  P.FIXTURES.remote = f;
+  c.setState({ fixture: 'remote', trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, region: null, pick: null });
 }
 export const fixtureOf = (s) => P.FIXTURES[s.fixture] || P.FIXTURES.calloway;
 /** State B is the note's "maybe" fields; state A strips them so the page proves it stands without them. */
