@@ -32,6 +32,14 @@
 .po-counts b{color:var(--text-heading)}
 .po-synth{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;background:var(--bg-neutral);font-size:12px;font-weight:500;color:var(--text-light);white-space:nowrap}
 .po-empty{padding:24px;border:1px dashed var(--border-secondary);border-radius:12px;color:var(--text-light);font-size:13px}
+.po-trail{display:flex;align-items:center;gap:4px;margin:0 0 8px;font-size:13px;line-height:18px}
+.po-crumb{border:0;background:transparent;padding:2px 4px;font:inherit;font-size:13px;color:var(--link);cursor:pointer;border-radius:4px}
+.po-crumb:hover:not(:disabled){background:var(--bg-wash)}.po-crumb:disabled{color:var(--text-heading);font-weight:700;cursor:default}
+.po-trail .po-crumb+.po-crumb::before{content:"›";margin-right:6px;color:var(--text-disabled);font-weight:400}
+.po-pager{display:flex;align-items:center;justify-content:flex-end;gap:6px;height:36px;font-size:12px;color:var(--text-light)}
+.po-pg{width:28px;height:28px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:16px;line-height:1;cursor:pointer}
+.po-pg:disabled{color:var(--text-disabled);cursor:default}
+.dt-r[data-click="true"]{cursor:pointer}.dt-r[data-click="true"]:hover{background:var(--bg-wash)}
 </style>
 </head>
 <body data-version-pill="off">
@@ -72,7 +80,13 @@
   <sc-if value="{{ pgLastmile }}" hint-placeholder-val="{{ true }}">
   <section aria-label="Last mile">
     <div class="po-head"><h1 class="po-title">Last mile</h1><span class="po-counts"><span><b>{{ counts.circuits }}</b> circuits</span><span><b>{{ counts.networks }}</b> networks</span><span><b>{{ counts.sites }}</b> sites</span></span></div>
-    <div class="po-empty">The circuit list, by network then state. Task 3.</div>
+    <!-- The trail (site-side grammar: Last mile › a network), then one CSS table: columns are the contract's present fields, rows a page that fits the fold. -->
+    <sc-if value="{{ lm.hasTrail }}" hint-placeholder-val="{{ false }}"><nav aria-label="Where you are" class="po-trail"><sc-for list="{{ lm.trail }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.go }}" disabled="{{ t.last }}" class="po-crumb" aria-current="{{ t.last }}">{{ t.label }}</button></sc-for></nav></sc-if>
+    <div class="dt" role="table" aria-label="Circuits">
+      <div class="dt-h"><div class="dt-r"><sc-for list="{{ lm.cols }}" as="col" hint-placeholder-count="6"><sc-if value="{{ col.present }}" hint-placeholder-val="{{ true }}"><div class="dt-c dt-th {{ col.cls }}">{{ col.label }}</div></sc-if></sc-for></div></div>
+      <div class="dt-b"><sc-for list="{{ lm.rows }}" as="row" hint-placeholder-count="8"><div class="dt-r" role="row" data-click="{{ row.click }}" onClick="{{ row.go }}"><sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="6"><div class="dt-c {{ cell.cls }}" style="color:{{ cell.ink }}">{{ cell.text }}</div></sc-for></div></sc-for></div>
+    </div>
+    <div class="po-pager"><span>{{ lm.pager }}</span><button onClick="{{ lm.prev }}" disabled="{{ lm.hasPrevOff }}" aria-label="Previous page" class="po-pg">‹</button><button onClick="{{ lm.next }}" disabled="{{ lm.hasNextOff }}" aria-label="Next page" class="po-pg">›</button></div>
   </section>
   </sc-if>
   <sc-if value="{{ pgLinks }}" hint-placeholder-val="{{ false }}">
