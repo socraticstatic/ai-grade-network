@@ -17,7 +17,7 @@ export const BEATS = [
   { key: 'today', label: 'Today', short: 'Today', icon: 'home', title: 'Your network on AT&T' },
   { key: 'source', label: 'Add a source', short: 'Source', icon: 'plus', title: 'Read a cloud account' },
   { key: 'found', label: 'What it found', short: 'Found', icon: 'search', title: 'What it found' },
-  { key: 'intent', label: 'Intent', short: 'Intent', icon: 'target', title: 'What it needs' },
+  { key: 'intent', label: 'Needs', short: 'Needs', icon: 'target', title: 'What this region needs' },
   { key: 'recommend', label: 'Recommendation', short: 'Recommend', icon: 'lightbulb', title: 'How to connect' },
   { key: 'request', label: 'Request', short: 'Request', icon: 'shopping-bag', title: 'The request' },
 ];
@@ -66,7 +66,7 @@ export function lineOf(beat, ctx = {}) {
     case 'today': return `AT&T already carries your ${n(ctx.today ? ctx.today.circuits : 0)} circuits.`;
     case 'source': return 'Read a cloud account. Read only.';
     case 'found': return f && f.has ? `${f.key}: ${n(f.regions.length)} ${f.regions.length === 1 ? 'region' : 'regions'}, ${n(f.vpcs)} ${f.hosted}s, ${n(f.subnets)} subnets.` : `Nothing found on ${ctx.cloud || (f && f.key) || 'that cloud'} yet.`;
-    case 'intent': return r ? `What ${r.label} needs.` : 'What it needs.';
+    case 'intent': return r ? `What does ${r.label} need?` : 'What does it need?';
     case 'recommend': return r ? `How to connect ${r.label}.` : 'How to connect it.';
     case 'request': return r && ctx.way ? `Requested ${ctx.way} for ${r.label}.` : 'Request it.';
     default: return '';

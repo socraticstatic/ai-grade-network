@@ -299,6 +299,14 @@ export const INTENT = [
     ['transitive', 'Transitive', 'merge', 'Many VPCs reach each other through one hub'] ] },
 ].map(q => ({ ...q, opts: q.opts.map(([key, label, icon, title]) => ({ key, label, icon, title })) }));
 export const INTENT_DEFAULT = { purpose: 'prod', traffic: 'standard', security: 'private', routing: 'bgp' };
+/** The same four questions as sentences (Micah, 2026-10-12: "better, simpler selection language"): a stem per question,
+ *  a verb per answer, so a click reads "This region is · critical", "Its path · must be private". */
+export const INTENT_SENTENCE = {
+  purpose: { stem: 'This region is', verbs: { critical: 'critical', prod: 'production', lab: 'a lab' } },
+  traffic: { stem: 'Its traffic', verbs: { priority: 'needs priority', standard: 'is standard' } },
+  security: { stem: 'Its path', verbs: { private: 'must be private', inspected: 'is inspected', service: 'per service' } },
+  routing: { stem: 'Routing', verbs: { bgp: 'your BGP', hub: "AT&T's hub", transitive: 'transitive' } },
+};
 /** The answers your tags suggest: a Dev or Lab tag reads as a lab, a GPU or AI tag as priority traffic. */
 export function intentFromTags(tags = []) {
   const t = new Set(tags.map(x => String(x).toLowerCase()));

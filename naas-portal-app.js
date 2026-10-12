@@ -19,7 +19,7 @@ export const PAGES = [
   { key: 'recommended', label: 'Recommended', icon: 'lightbulb' },
 ];
 export function defaults() {
-  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, answers: {}, requests: [], region: null, dataNote: '', dataError: '', journey: false, jStep: 0, jProv: null, jScan: null, jRegion: null, jPick: null, jFrom: null };
+  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, intents: {}, jCopy: true, rtags: {}, jTagPick: null, requests: [], region: null, dataNote: '', dataError: '', journey: false, jStep: 0, jProv: null, jScan: null, jRegion: null, jPick: null, jFrom: null };
 }
 /** URL to state: ?fixture=calloway|scale, ?state=a|b, ?page=<key>, ?theme=light|dark. `search` is for tests. */
 export function init(c, search) {
@@ -174,7 +174,8 @@ export function rulesOf(answers) {
 /** Recommended: pick a region, answer the four questions, read the ranked options and request one. */
 export function recommended(d, s, set) {
   const dark = s.theme === 'dark', iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
-  const join = P.attJoin(d.cloudLinks, d.discovery), answers = s.answers || {};
+  const join = P.attJoin(d.cloudLinks, d.discovery), intents = s.intents || {};
+  const regionKey = s.region ? `${s.region.csp}/${s.region.region}` : null, answers = (regionKey && intents[regionKey]) || {};
   const regionTitle = (r) => `${P.cspOf(r.csp)} · ${P.regionName(r.region)}`;
   const root = { key: 'root', label: 'Recommended', go: () => set({ region: null }), last: !s.region };
   const pickRows = d.discovery.map(r => { const j = join.get(`${r.csp}/${r.region}`), rq = (s.requests || []).find(q => q.csp === r.csp && q.region === r.region) || null;
@@ -187,7 +188,7 @@ export function recommended(d, s, set) {
   if (!s.region) return { hasRegion: false, noRegion: true, trail: [root], hasTrail: false, pick, intent: [], options: [], cols: [], weights: [], rules: [], requested: false, requestedLine: '', placeholder: true, placeholderLine: '' };
   const reg = s.region, cloud = P.cspOf(reg.csp), title = regionTitle(reg);
   const intent = W.INTENT.map(q => ({ key: q.key, label: q.label, icon: q.icon, opts: q.opts.map(o => { const on = answers[q.key] === o.key;
-    return { key: o.key, label: o.label, title: o.title, on, icon: o.icon, go: () => { const next = { ...answers }; if (on) delete next[q.key]; else next[q.key] = o.key; set({ answers: next }); } }; }) }));
+    return { key: o.key, label: o.label, title: o.title, on, icon: o.icon, go: () => { const next = { ...answers }; if (on) delete next[q.key]; else next[q.key] = o.key; set({ intents: { ...intents, [regionKey]: next } }); } }; }) }));
   const full = { ...W.INTENT_DEFAULT, ...answers };
   const requested = (s.requests || []).find(r => r.csp === reg.csp && r.region === reg.region) || null;
   const options = W.rankWays(cloud, answers, 99).map((r, i) => { const w = W.wayOf(r.key), who = W.wayWho(r.key) || { who: '', level: '', time: '' }, oks = r.why.filter(x => x.ok).map(x => x.short);
@@ -205,6 +206,8 @@ export function recommended(d, s, set) {
 }
 const JB = Object.fromEntries(PJ.BEATS.map((b, i) => [b.key, i]));
 const SCAN = ['Reading the account', 'Listing the regions', 'Finding the VPCs and subnets', 'Matching the AT&T connections'];
+/** Tags a customer can put on a region: the policy tags and the two that shape intent. */
+export const TAGS = ['PCI', 'Finance', 'Prod', 'Internet-facing', 'Dev/Lab', 'GPU/AI'];
 let scanTimer = null;
 /** The journey's doors: a clean start from the rail, or straight into Found with a region from Connect with AT&T. */
 export function journeyStart(s, set, live) {
@@ -221,7 +224,10 @@ export function journey(d, s, set) {
   const found = read ? PJ.foundOf(d, prov, theme) : { has: false, regions: [], key: prov, vpcs: 0, subnets: 0, notOn: 0 };
   const regionKey = s.jRegion && found.regions.some(r => r.key === s.jRegion) ? s.jRegion : (found.regions.find(r => !r.on) || found.regions[0] || {}).key || null;
   const region = found.regions.find(r => r.key === regionKey) || null;
-  const answers = s.answers || {}, cloud = P.cspOf(prov);
+  // A region's tags are facts the customer adds that the portal does not have; they pre-fill the answers (W.intentFromTags).
+  const rtags = s.rtags || {}, tagsOf = (k) => rtags[k] || [];
+  const intents = s.intents || {}, answers = (regionKey && intents[regionKey]) || {}, fromTags = W.intentFromTags(tagsOf(regionKey).flatMap(t => t.split('/'))), effective = { ...fromTags, ...answers }, cloud = P.cspOf(prov);
+  const tagged = Object.keys(fromTags).some(k => fromTags[k] !== W.INTENT_DEFAULT[k]);
   const ranked = region ? W.rankWays(cloud, answers, 3) : [];
   const pickKey = s.jPick && ranked.some(r => r.key === s.jPick) ? s.jPick : (ranked[0] || {}).key || null;
   const picked = ranked.find(r => r.key === pickKey) || null;
@@ -236,16 +242,23 @@ export function journey(d, s, set) {
   const scanTick = () => (s.jScan === null || s.jScan === undefined ? { jScan: 0 } : s.jScan < 3 ? { jScan: s.jScan + 1 } : { jScan: 4, jStep: JB.found });
   const request = () => { if (!region || !picked) return;
     if (requested) { set({ jStep: JB.request }); return; }
-    const full = { ...W.INTENT_DEFAULT, ...answers };
-    set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: region.csp, region: region.region, option: picked.key, answers: full, defaulted: Object.keys(answers).length === 0 }], jStep: JB.request, region: { csp: region.csp, region: region.region } }); };
+    set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: region.csp, region: region.region, option: picked.key, answers: effective, defaulted: Object.keys(answers).length === 0 }], jStep: JB.request, region: { csp: region.csp, region: region.region } }); };
+  // The other regions of this cloud: the copy toggle names them, and Request loops to the next one not yet requested.
+  const others = found.regions.filter(r => r.key !== regionKey);
+  const unanswered = others.filter(r => !Object.keys(intents[r.key] || {}).length);
+  const copyOn = s.jCopy !== false;
+  const toRecommend = () => { clearInterval(scanTimer);
+    const next = { ...intents }; if (copyOn && Object.keys(answers).length) for (const r of unanswered) next[r.key] = { ...answers };
+    set({ jStep: JB.recommend, intents: next }); };
+  const nextRegion = found.regions.find(r => r.key !== regionKey && !(s.requests || []).some(q => q.csp === r.csp && q.region === r.region)) || null;
   const liveProv = providers.find(p => p.key === prov) || providers[0];
   const ACT = {
     today: { label: 'Find your clouds', go: to(JB.source), off: false },
     source: { label: 'Read it', go: startScan, off: scanning, busy: scanning },
     found: found.has ? { label: 'Say what it needs', go: to(JB.intent), off: !region } : { label: 'Read another cloud', go: to(JB.source), off: false },
-    intent: { label: 'Recommend', go: to(JB.recommend), off: !region },
+    intent: { label: 'Recommend', go: toRecommend, off: !region },
     recommend: requested ? { label: 'See the request', go: to(JB.request), off: false } : { label: 'Request this', go: request, off: !picked },
-    request: { label: 'Open Cloud discovery', go: exitTo('discovery'), off: false },
+    request: nextRegion ? { label: `Next: ${nextRegion.label}`, go: () => { clearInterval(scanTimer); set({ jRegion: nextRegion.key, jPick: null, jStep: JB.intent }); }, off: false } : { label: 'Open Cloud discovery', go: exitTo('discovery'), off: false },
   }[beat.key];
   const open = (i) => i <= JB.source || (read && found.has && (i <= JB.recommend || (i === JB.request && !!requested)));
   const steps = PJ.BEATS.map((b, i) => { const done = i < step; return { key: b.key, n: String(i + 1), label: b.short, title: b.title, state: i === step ? 'cur' : done ? 'done' : 'next', cur: i === step, off: !open(i), hasIcon: done, noIcon: !done, go: () => { if (open(i)) to(i)(); } }; });
@@ -253,8 +266,11 @@ export function journey(d, s, set) {
   const net = step >= JB.found && found.has && found.notOn > 0 ? 'public' : 'off';
   const way = picked ? W.wayLabel(picked.key, cloud, picked.zone) : '';
   const wayWord = requested ? W.wayLabel(requested.option, cloud) : way;
-  const intent = W.INTENT.map(q => ({ key: q.key, label: q.label, icon: q.icon, opts: q.opts.map(o => { const on = answers[q.key] === o.key;
-    return { key: o.key, label: o.label, title: o.title, icon: o.icon, on, go: () => { const next = { ...answers }; if (on) delete next[q.key]; else next[q.key] = o.key; set({ answers: next, jPick: null }); } }; }) }));
+  // The questions as sentences under the picked region: the deck's default reads as chosen until changed; a click sets, never toggles off.
+  const needs = { region: region ? region.label : '', defaulted: !Object.keys(answers).length, hint: Object.keys(answers).length ? 'Your answers' : tagged ? 'Defaults from your tags; change what differs' : 'Defaults; change what differs',
+    questions: W.INTENT.map(q => ({ key: q.key, stem: W.INTENT_SENTENCE[q.key].stem, icon: q.icon, opts: q.opts.map(o => ({ key: o.key, verb: W.INTENT_SENTENCE[q.key].verbs[o.key], title: o.title, icon: o.icon, on: effective[q.key] === o.key,
+      go: () => { if (!regionKey) return; set({ intents: { ...intents, [regionKey]: { ...answers, [q.key]: o.key } }, jPick: null }); } })) })),
+    copy: { has: others.length > 0, on: copyOn, other: others.map(r => r.label).join(' and '), toggle: () => set({ jCopy: !copyOn }) } };
   const options = ranked.map((r, i) => { const w = W.wayOf(r.key), oks = r.why.filter(x => x.ok).slice(0, 2), miss = r.why.find(x => x.miss);
     return { key: r.key, label: W.wayLabel(r.key, cloud, r.zone), kicker: w.kicker, icon: w.icon, price: money(r.monthly), pts: r.pts, ptsPct: `${r.pts}%`, ptsShown: r.misses ? '✕' : String(r.pts), out: r.misses > 0, ptsTitle: r.misses ? `${miss.short}: ${miss.words}` : `${r.pts} of 100 for what you said`,
       why: (r.misses ? [miss] : oks).map(x => ({ key: x.key, icon: x.icon, short: x.short, title: `${x.short}: ${x.words}`, ink: x.miss ? 'var(--error)' : 'var(--link)' })), on: r.key === pickKey, go: () => set({ jPick: r.key }), setupTitle: W.waySetup(r.key) }; });
@@ -265,9 +281,13 @@ export function journey(d, s, set) {
     cred: liveProv.cred, scanMark: liveProv.mark, scanPct: `${Math.min(100, ((s.jScan || 0) + 1) * 25)}%`, scanSteps: SCAN.map((word, i) => ({ key: word, word, state: i === (s.jScan || 0) ? 'cur' : i < (s.jScan || 0) ? 'done' : 'next' })), scanTick,
     cloud: { state: step === JB.today ? 'unknown' : scanning ? 'scanning' : read && found.has && step >= JB.found ? 'found' : read && step >= JB.found ? 'empty' : 'picking',
       unknown: step === JB.today, picking: step === JB.source && !scanning, scanning, found: step >= JB.found && read && found.has, empty: step >= JB.found && read && !found.has, name: found.name || liveProv.name, mark: found.mark || liveProv.mark, subnets: found.subnets.toLocaleString('en-US'), vpcs: found.vpcs.toLocaleString('en-US'), hosted: found.hosted || W.hostedWord(cloud) },
-    regions: found.regions.map(r => ({ ...r, picked: r.key === regionKey, pickWord: r.key === regionKey ? 'Picked' : 'Pick', vpcsF: r.vpcs.toLocaleString('en-US'), subnetsF: r.subnets.toLocaleString('en-US'), bytesWord: typeof r.bytesOut === 'number' ? `${fmtBytes(r.bytesOut)} out` : '', hasBytes: typeof r.bytesOut === 'number', go: () => set({ jRegion: r.key, jPick: null }) })),
-    region, link, linkWord: link === 'proposed' ? way : '', net, flow: net === 'public' ? 'net' : 'none', wide: step >= JB.found && found.has,
-    isIntent: step === JB.intent, isRec: step === JB.recommend, isRequest: step === JB.request, intent, options,
+    regions: found.regions.map(r => { const mine = tagsOf(r.key), picking = s.jTagPick === r.key;
+      return { ...r, picked: r.key === regionKey, needs: r.key === regionKey && step === JB.intent, show: step !== JB.intent || r.key === regionKey, showTags: step <= JB.intent || mine.length > 0, pickWord: r.key === regionKey ? 'Picked' : 'Pick',
+      tags: mine.map(t => ({ key: t, t, title: `Remove ${t} from ${r.label}`, go: () => set({ rtags: { ...rtags, [r.key]: mine.filter(x => x !== t) } }) })),
+      canTag: step <= JB.intent, picking, pick: () => set({ jTagPick: picking ? null : r.key }),
+      palette: TAGS.filter(t => !mine.includes(t)).map(t => ({ key: t, t, title: `Tag ${r.label} ${t}`, go: () => set({ rtags: { ...rtags, [r.key]: [...mine, t] }, jTagPick: null }) })), vpcsF: r.vpcs.toLocaleString('en-US'), subnetsF: r.subnets.toLocaleString('en-US'), bytesWord: typeof r.bytesOut === 'number' ? `${fmtBytes(r.bytesOut)} out` : '', hasBytes: typeof r.bytesOut === 'number', go: () => set({ jRegion: r.key, jPick: null }) }; }),
+    region, link, linkWord: link === 'proposed' ? way : '', net, netWord: 'Outside the AT&T network', flow: net === 'public' ? 'net' : 'none', wide: step >= JB.found && found.has,
+    isIntent: step === JB.intent, isRec: step === JB.recommend, isRequest: step === JB.request, needs, options,
     act: { label: ACT.label, go: ACT.go, off: !!ACT.off, busy: !!ACT.busy }, hasBack: true, back, exit,
     requestedLine: requested ? `Requested ${W.wayLabel(requested.option, cloud)} for ${region ? region.label : ''}. Cloud discovery and Recommended carry it.` : '' };
 }
@@ -284,12 +304,19 @@ export function pic(d, s) {
     { key: 'pop', icon: 'ethernet', label: 'POP', small: d.cloudLinks.length ? `${n(d.cloudLinks.length)} connections` : 'None yet' },
     { key: 'cloud', icon: 'cloud', label: 'Cloud', small: `${n(d.discovery.length)} regions · ${n(on)} on AT&T` },
   ].map(x => ({ ...x, state: lit.includes(x.key) ? 'set' : '', title: `${x.label}: ${x.small}` }));
-  const lg = (x) => ({ hasMark: !!x.mark, hasIcon: !!x.icon && !x.mark, ink: x.ink || 'var(--link)', title: x.title || `${x.label}: ${x.n}`, ...x });
-  const legend = s.page === 'lastmile' ? today.groups.map(g => lg({ key: g.key, icon: g.icon, ink: g.ink, n: g.nF, label: g.label, title: `${g.full}: ${g.nF} circuits` }))
-    : s.page === 'links' ? [...new Set(d.cloudLinks.map(l => P.cspOf(l.csp)))].sort().map(k => lg({ key: k, mark: W.markFor(k, dark ? 'dark' : 'light'), n: String(d.cloudLinks.filter(l => P.cspOf(l.csp) === k).length), label: W.CLOUD_NAME[k] || k }))
-    : s.page === 'discovery' ? [lg({ key: 'on', icon: 'hub', ink: 'var(--link)', n: String(on), label: 'On AT&T' }), lg({ key: 'csp', icon: 'hub', ink: 'var(--text-light)', n: String(cspOnly), label: 'AT&T at the cloud' }), lg({ key: 'off', icon: 'cloud', ink: 'var(--text-light)', n: String(off), label: 'Not on AT&T' })]
-    : (() => { const wt = W.intentWeights(s.answers || {}); return W.CRITERIA.map(c => lg({ key: c.key, icon: c.icon, ink: 'var(--link)', n: `${wt[c.key]}%`, label: c.label })); })();
-  return { strip, legend, hasLegend: legend.length > 0 };
+  // The rollups (Micah, 2026-10-12: "basic widget rounded rectangle rollups"): four tiles, this page's counts, one glyph and one word each.
+  const tile = (key, icon, n, label, ink) => ({ key, icon, n: typeof n === 'number' ? n.toLocaleString('en-US') : String(n), label, ink: ink || '' });
+  const down = d.circuits.filter(c => c.health === 'down').length, anyHealth = d.circuits.some(c => c.health !== undefined);
+  const reached = new Set(d.cloudLinks.flatMap(l => (l.region ? [P.regionName(l.region)] : P.regionsOfPop(l.csp, l.pop)))).size;
+  const unmapped = d.cloudLinks.filter(l => !l.region && !P.regionsOfPop(l.csp, l.pop).length).length;
+  const vpcs = d.discovery.reduce((a, r) => a + r.vpcs.length, 0), subnets = d.discovery.reduce((a, r) => a + r.vpcs.reduce((x, v) => x + v.subnets.length, 0), 0);
+  const requestedN = d.discovery.filter(r => (s.requests || []).some(q => q.csp === r.csp && q.region === r.region)).length;
+  const tiles = s.page === 'lastmile' ? [tile('circuits', 'cable', today.circuits, 'Circuits'), tile('networks', 'hub', today.networks, 'Networks'), tile('sites', 'router', today.sites, 'Sites'),
+      anyHealth ? tile('down', 'not-available', down, 'Down', down ? 'var(--error)' : '') : tile('states', 'map', new Set(d.circuits.map(c => c.address.state)).size, 'States')]
+    : s.page === 'links' ? [tile('links', 'ethernet', d.cloudLinks.length, 'Connections'), tile('clouds', 'cloud', new Set(d.cloudLinks.map(l => P.cspOf(l.csp))).size, 'Clouds'), tile('reached', 'hub', reached, 'Regions reached'), tile('unmapped', 'question-circle', unmapped, 'Unmapped')]
+    : s.page === 'discovery' ? [tile('regions', 'cloud', d.discovery.length, 'Regions'), tile('on', 'hub', on, 'On AT&T'), tile('vpcs', 'grid', vpcs, 'VPCs'), tile('subnets', 'apis', subnets, 'Subnets')]
+    : [tile('regions', 'cloud', d.discovery.length, 'Regions'), tile('off', 'cloud', off, 'Not on AT&T'), tile('requested', 'shopping-bag', requestedN, 'Requested'), tile('ways', 'cable', W.WAYS.filter(w => !w.soon).length, 'Ways')];
+  return { strip, tiles };
 }
 export function vals(c) {
   const s = c.state, set = (p) => c.setState(p), f = fixtureOf(s), d = dataOf(s), dark = s.theme === 'dark';

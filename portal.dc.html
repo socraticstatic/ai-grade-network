@@ -41,11 +41,20 @@
 .po-pg:disabled{color:var(--text-disabled);cursor:default}
 .po-mark{display:inline-block;width:18px;height:18px;margin:-3px 8px -3px 0;vertical-align:middle;background:center / contain no-repeat}
 .dt-c.po-actc{padding-top:7px;padding-bottom:7px}
-.po-band{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:24px;align-items:center;min-height:96px;padding:12px 20px;margin-bottom:12px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-base);box-sizing:border-box}
+.po-band{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:center;min-height:96px;padding:12px 20px;margin-bottom:12px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-base);box-sizing:border-box}
 .po-band .ps.big{max-width:620px}
-.po-legend{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:flex-end;font-size:13px;line-height:18px;color:var(--text-body)}
-.po-lg{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.po-lg b{color:var(--text-heading);font-variant-numeric:tabular-nums}.po-lg .po-mark{margin:0}
+.po-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.po-tile{display:grid;gap:4px;padding:10px 12px;border:1px solid var(--border-secondary);border-radius:10px;background:var(--bg-wash);min-width:0}
+.po-tl{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.po-tile b{font-size:22px;line-height:26px;font-weight:700;letter-spacing:-.02em;color:var(--text-heading);font-variant-numeric:tabular-nums}
 .dt-c .js-score.md{display:grid}
+.po-needs{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding-top:8px;border-top:1px dashed var(--border-secondary)}.po-needs .po-hint,.po-needs .po-copy{grid-column:1 / -1}
+.po-nq{display:grid;gap:4px}.po-ns{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;font-weight:700;color:var(--text-heading)}
+.po-needs .po-opts{padding:2px;gap:2px;flex-wrap:wrap}.po-needs .po-opt{height:24px;padding:0 8px;font-size:12px}
+.po-copy{justify-self:start;display:inline-flex;align-items:center;gap:6px;height:26px;margin-top:2px}
+.po-hint{font-size:12px;line-height:16px;color:var(--text-light)}
+.po-rtags{position:relative}.po-rtags .js-tags{flex-wrap:wrap}
+.po-palette{position:absolute;left:24px;top:100%;z-index:8;display:flex;flex-wrap:wrap;gap:6px;max-width:380px;padding:8px;border:1px solid var(--border-secondary);border-radius:10px;background:var(--bg-base);box-shadow:0 8px 24px rgba(0,0,0,.1)}
 .po-act{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}.po-act:hover{border-color:var(--border-active)}.po-act>i{font-style:normal}
 .po-lead{margin:0 0 10px;font-size:13px;line-height:18px;color:var(--text-body)}
 .po-placeholder{color:var(--text-light)}.po-requested{margin-top:10px;color:var(--text-heading);font-weight:600}
@@ -128,15 +137,18 @@
         <sc-if value="{{ jr.cloud.empty }}" hint-placeholder-val="{{ false }}"><span class="js-cap">{{ jr.cloud.name }}</span><span class="js-q"><span class="ic" style="--ic:url('brand/icons/cloud.svg')"></span></span><span class="js-soft">Nothing discovered yet</span></sc-if>
         <sc-if value="{{ jr.cloud.found }}" hint-placeholder-val="{{ false }}">
           <div class="js-cloudhead"><span class="js-mark sm" style="background-image:url('{{ jr.cloud.mark }}')"></span><b>{{ jr.cloud.name }}</b><span class="kchip" title="{{ jr.cloud.hosted }}s"><span class="ic s14" style="--ic:url('brand/icons/grid.svg')"></span><b>{{ jr.cloud.vpcs }}</b></span><span class="kchip" title="Subnets"><span class="ic s14" style="--ic:url('brand/icons/apis.svg')"></span><b>{{ jr.cloud.subnets }}</b></span></div>
-          <div class="js-regions"><sc-for list="{{ jr.regions }}" as="rg" hint-placeholder-count="2"><div class="js-region">
+          <div class="js-regions"><sc-for list="{{ jr.regions }}" as="rg" hint-placeholder-count="2"><sc-if value="{{ rg.show }}" hint-placeholder-val="{{ true }}"><div class="js-region">
             <div class="js-rhead"><b>{{ rg.label }}</b><span class="kchip" title="{{ jr.cloud.hosted }}s"><span class="ic s14" style="--ic:url('brand/icons/grid.svg')"></span>{{ rg.vpcsF }}</span><span class="kchip" title="Subnets"><span class="ic s14" style="--ic:url('brand/icons/apis.svg')"></span>{{ rg.subnetsF }}</span><button class="js-tag" aria-pressed="{{ rg.picked }}" onClick="{{ rg.go }}" title="Connect {{ rg.label }} with AT&amp;T">{{ rg.pickWord }}</button></div>
+            <!-- The customer's tags on the region (2026-10-12, "the customer may want to add a tag"): facts the portal does not have; they pre-fill the answers. A chip removes itself; + opens the palette. -->
+            <sc-if value="{{ rg.showTags }}" hint-placeholder-val="{{ true }}"><div class="js-app po-rtags"><span class="ic s16" style="--ic:url('brand/icons/tag.svg')"></span><span class="js-tags" style="margin-left:0"><sc-for list="{{ rg.tags }}" as="tg" hint-placeholder-count="2"><button class="js-tag" aria-pressed="true" onClick="{{ tg.go }}" title="{{ tg.title }}">{{ tg.t }}</button></sc-for><sc-if value="{{ rg.canTag }}" hint-placeholder-val="{{ true }}"><button class="js-tag js-tag-add" aria-expanded="{{ rg.picking }}" onClick="{{ rg.pick }}" title="Tag {{ rg.label }}"><span class="ic s14" style="--ic:url('brand/icons/plus.svg')"></span></button></sc-if></span><sc-if value="{{ rg.picking }}" hint-placeholder-val="{{ false }}"><div class="js-palette po-palette" role="group" aria-label="Tags for {{ rg.label }}"><sc-for list="{{ rg.palette }}" as="pt" hint-placeholder-count="6"><button class="js-tag" onClick="{{ pt.go }}" title="{{ pt.title }}">{{ pt.t }}</button></sc-for></div></sc-if></div></sc-if>
             <div class="js-app" title="{{ rg.att }}"><span class="ic s16" style="--ic:url('brand/icons/hub.svg')"></span><span>{{ rg.att }}</span><sc-if value="{{ rg.hasBytes }}" hint-placeholder-val="{{ false }}"><span class="js-tags"><span class="kchip" title="Bytes out"><span class="ic s14" style="--ic:url('brand/icons/arrow-right.svg')"></span>{{ rg.bytesWord }}</span></span></sc-if></div>
-          </div></sc-for></div>
+            <!-- The one choice, under the region it changes (2026-10-12): four sentences, the deck's default read as chosen, and one toggle for the other region. -->
+            <sc-if value="{{ rg.needs }}" hint-placeholder-val="{{ false }}"><div class="po-needs" role="group" aria-label="What {{ rg.label }} needs"><span class="po-hint">{{ jr.needs.hint }}</span><sc-for list="{{ jr.needs.questions }}" as="q" hint-placeholder-count="4"><div class="po-nq" role="radiogroup" aria-label="{{ q.stem }}"><span class="po-ns"><span class="ic s14" style="--ic:url('brand/icons/{{ q.icon }}.svg')"></span>{{ q.stem }}</span><div class="po-opts"><sc-for list="{{ q.opts }}" as="o" hint-placeholder-count="3"><button role="radio" class="po-opt" aria-checked="{{ o.on }}" aria-pressed="{{ o.on }}" onClick="{{ o.go }}" title="{{ o.title }}">{{ o.verb }}</button></sc-for></div></div></sc-for><sc-if value="{{ jr.needs.copy.has }}" hint-placeholder-val="{{ false }}"><button class="js-tag po-copy" aria-pressed="{{ jr.needs.copy.on }}" onClick="{{ jr.needs.copy.toggle }}" title="Copy these answers to {{ jr.needs.copy.other }}; change them there if they differ"><span class="ic s14" style="--ic:url('brand/icons/check-circle.svg')"></span>Apply the same to {{ jr.needs.copy.other }}</button></sc-if></div></sc-if>
+          </div></sc-if></sc-for></div>
         </sc-if>
       </div>
-      <div class="js-net" data-state="{{ jr.net }}" aria-hidden="true"><i class="js-dots"></i><small>Public internet</small></div>
+      <div class="js-net" data-state="{{ jr.net }}" aria-hidden="true"><i class="js-dots"></i><small>{{ jr.netWord }}</small></div>
     </div>
-    <sc-if value="{{ jr.isIntent }}" hint-placeholder-val="{{ false }}"><div class="js-intent" role="group" aria-label="What it needs"><sc-for list="{{ jr.intent }}" as="iq" hint-placeholder-count="4"><div class="js-iq" role="radiogroup" aria-label="{{ iq.label }}"><span class="js-cap"><span class="ic s14" style="--ic:url('brand/icons/{{ iq.icon }}.svg')"></span>{{ iq.label }}</span><div class="js-iopts"><sc-for list="{{ iq.opts }}" as="io" hint-placeholder-count="3"><button role="radio" class="js-io" aria-checked="{{ io.on }}" onClick="{{ io.go }}" title="{{ io.title }}"><i><span class="ic" style="--ic:url('brand/icons/{{ io.icon }}.svg')"></span></i><b>{{ io.label }}</b></button></sc-for></div></div></sc-for></div></sc-if>
     <sc-if value="{{ jr.isRec }}" hint-placeholder-val="{{ false }}"><div class="js-opts" role="radiogroup" aria-label="Ways to connect"><sc-for list="{{ jr.options }}" as="op" hint-placeholder-count="3"><button role="radio" class="js-opt" aria-checked="{{ op.on }}" onClick="{{ op.go }}" title="{{ op.setupTitle }}">
       <span class="ic-tile" style="--tile:var(--bg-accent);color:var(--link)"><span class="ic s20" style="--ic:url('brand/icons/{{ op.icon }}.svg')"></span></span>
       <span class="js-opt-t"><small>{{ op.kicker }}</small><b>{{ op.label }}</b></span>
@@ -156,11 +168,11 @@
   <!-- The picture band (drop 2): where this page sits on the path, sites to cloud, with the counts under the stations, and this page's counts as glyphs. -->
   <div class="po-band" aria-label="Where this page sits on the path">
     <div class="ps big five" aria-label="The path"><sc-for list="{{ pic.strip }}" as="ps" hint-placeholder-count="5"><span data-state="{{ ps.state }}" title="{{ ps.title }}"><i><span class="ic s20" style="--ic:url('brand/icons/{{ ps.icon }}.svg')"></span></i><b>{{ ps.label }}</b><small>{{ ps.small }}</small></span></sc-for></div>
-    <sc-if value="{{ pic.hasLegend }}" hint-placeholder-val="{{ true }}"><div class="po-legend"><sc-for list="{{ pic.legend }}" as="lg" hint-placeholder-count="4"><span class="po-lg" title="{{ lg.title }}"><sc-if value="{{ lg.hasMark }}" hint-placeholder-val="{{ false }}"><span class="po-mark" style="background-image:url('{{ lg.mark }}')"></span></sc-if><sc-if value="{{ lg.hasIcon }}" hint-placeholder-val="{{ true }}"><span class="ic s16" style="--ic:url('brand/icons/{{ lg.icon }}.svg');color:{{ lg.ink }}"></span></sc-if><b>{{ lg.n }}</b>{{ lg.label }}</span></sc-for></div></sc-if>
+    <div class="po-tiles" aria-label="Rollups"><sc-for list="{{ pic.tiles }}" as="tl" hint-placeholder-count="4"><div class="po-tile" title="{{ tl.label }}: {{ tl.n }}"><span class="po-tl"><span class="ic s14" style="--ic:url('brand/icons/{{ tl.icon }}.svg')"></span>{{ tl.label }}</span><b style="color:{{ tl.ink }}">{{ tl.n }}</b></div></sc-for></div>
   </div>
   <sc-if value="{{ pgLastmile }}" hint-placeholder-val="{{ true }}">
   <section aria-label="Last mile">
-    <div class="po-head"><h1 class="po-title">Last mile</h1><span class="po-counts"><span><b>{{ counts.circuits }}</b> circuits</span><span><b>{{ counts.networks }}</b> networks</span><span><b>{{ counts.sites }}</b> sites</span></span></div>
+    <div class="po-head"><h1 class="po-title">Last mile</h1></div>
     <!-- The trail (site-side grammar: Last mile › a network), then one CSS table: columns are the contract's present fields, rows a page that fits the fold. -->
     <sc-if value="{{ lm.hasTrail }}" hint-placeholder-val="{{ false }}"><nav aria-label="Where you are" class="po-trail"><sc-for list="{{ lm.trail }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.go }}" disabled="{{ t.last }}" class="po-crumb" aria-current="{{ t.last }}">{{ t.label }}</button></sc-for></nav></sc-if>
     <div class="dt" role="table" aria-label="Circuits">
@@ -172,7 +184,7 @@
   </sc-if>
   <sc-if value="{{ pgLinks }}" hint-placeholder-val="{{ false }}">
   <section aria-label="Cloud connections">
-    <div class="po-head"><h1 class="po-title">Cloud connections</h1><span class="po-counts"><span><b>{{ cl.counts.links }}</b> connections</span><span><b>{{ cl.counts.clouds }}</b> clouds</span><span><b>{{ cl.counts.regions }}</b> regions reached</span></span></div>
+    <div class="po-head"><h1 class="po-title">Cloud connections</h1></div>
     <sc-if value="{{ cl.empty }}" hint-placeholder-val="{{ false }}"><div class="po-empty">{{ cl.emptyLine }}</div></sc-if>
     <sc-if value="{{ cl.hasRows }}" hint-placeholder-val="{{ true }}">
     <div class="dt" role="table" aria-label="AT&amp;T cloud connections">
@@ -185,7 +197,7 @@
   </sc-if>
   <sc-if value="{{ pgDiscovery }}" hint-placeholder-val="{{ false }}">
   <section aria-label="Cloud discovery">
-    <div class="po-head"><h1 class="po-title">Cloud discovery</h1><span class="po-counts"><span><b>{{ dv.counts.regions }}</b> regions</span><span><b>{{ dv.counts.onAtt }}</b> on AT&amp;T</span><span><b>{{ dv.counts.vpcs }}</b> VPCs</span><span><b>{{ dv.counts.subnets }}</b> subnets</span></span></div>
+    <div class="po-head"><h1 class="po-title">Cloud discovery</h1></div>
     <sc-if value="{{ dv.hasTrail }}" hint-placeholder-val="{{ false }}"><nav aria-label="Where you are" class="po-trail"><sc-for list="{{ dv.trail }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.go }}" disabled="{{ t.last }}" class="po-crumb" aria-current="{{ t.last }}">{{ t.label }}</button></sc-for></nav></sc-if>
     <div class="dt" role="table" aria-label="Discovered cloud">
       <div class="dt-h"><div class="dt-r"><sc-for list="{{ dv.cols }}" as="col" hint-placeholder-count="5"><sc-if value="{{ col.present }}" hint-placeholder-val="{{ true }}"><div class="dt-c dt-th {{ col.cls }}">{{ col.label }}</div></sc-if></sc-for></div></div>
@@ -227,10 +239,10 @@
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, answers: {}, requests: [], region: null, dataNote: '', dataError: '', journey: false, jStep: 0, jProv: null, jScan: null, jRegion: null, jPick: null, jFrom: null }; }
+  constructor(p) { super(p); this.state = { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, answers: {}, intents: {}, jCopy: true, requests: [], region: null, dataNote: '', dataError: '', journey: false, jStep: 0, jProv: null, jScan: null, jRegion: null, jPick: null, jFrom: null }; }
   componentDidMount() { import('./naas-portal-app.js').then(m => { this.app = m; m.init(this); this.forceUpdate(); }).catch(e => console.error(e)); }
   renderVals() {
-    if (!this.app) return { theme: this.state.theme, rail: [], pgLastmile: true, counts: {}, fixture: 'calloway', stateValue: 'a', themeIsLight: true, themeTitle: 'Dark mode', journeyOn: false, journeyOff: true, showRail: true, shellCols: '240px minmax(0,1fr)', jr: { steps: [], sites: { cells: [], groups: [] }, providers: [], regions: [], intent: [], options: [], act: {}, cloud: {} }, pic: { strip: [], legend: [], hasLegend: false }, lm: { cols: [], rows: [], trail: [] }, cl: { cols: [], rows: [], counts: {} }, dv: { cols: [], rows: [], trail: [], counts: {} }, rc: { pick: { rows: [], cols: [] }, intent: [], options: [], cols: [], weights: [], rules: [], trail: [] } };
+    if (!this.app) return { theme: this.state.theme, rail: [], pgLastmile: true, counts: {}, fixture: 'calloway', stateValue: 'a', themeIsLight: true, themeTitle: 'Dark mode', journeyOn: false, journeyOff: true, showRail: true, shellCols: '240px minmax(0,1fr)', jr: { steps: [], sites: { cells: [], groups: [] }, providers: [], regions: [], needs: { questions: [], copy: {} }, options: [], act: {}, cloud: {} }, pic: { strip: [], tiles: [] }, lm: { cols: [], rows: [], trail: [] }, cl: { cols: [], rows: [], counts: {} }, dv: { cols: [], rows: [], trail: [], counts: {} }, rc: { pick: { rows: [], cols: [] }, intent: [], options: [], cols: [], weights: [], rules: [], trail: [] } };
     return this.app.vals(this);
   }
 }

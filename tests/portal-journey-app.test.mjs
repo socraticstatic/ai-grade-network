@@ -19,7 +19,7 @@ test('Connect a cloud sits at the top of the rail and opens the journey clean on
   assert.equal(v.rail[0].label, 'Connect a cloud'); assert.deepEqual(v.rail.slice(1).map(r => r.label), ['Last mile', 'Cloud connections', 'Cloud discovery', 'Recommended']);
   v.rail[0].go(); assert.equal(c.state.journey, true); assert.equal(c.state.jStep, 0);
   const w = vals(c); assert.equal(w.journeyOn, true); assert.equal(w.showRail, false);
-  assert.deepEqual(w.jr.steps.map(s => s.label), ['Today', 'Source', 'Found', 'Intent', 'Recommend', 'Request']);
+  assert.deepEqual(w.jr.steps.map(s => s.label), ['Today', 'Source', 'Found', 'Needs', 'Recommend', 'Request']);
   assert.deepEqual(w.jr.steps.map(s => s.state), ['cur', 'next', 'next', 'next', 'next', 'next']);
   assert.deepEqual(w.jr.steps.map(s => s.off), [false, false, true, true, true, true], 'Found and after open once a cloud is read');
   assert.equal(w.jr.line, 'AT&T already carries your 20 circuits.'); assert.equal(w.jr.sites.n, '20'); assert.equal(w.jr.sites.cells.length, 20);
@@ -45,10 +45,10 @@ test('a cloud with nothing discovered ends the scan on Nothing found and offers 
   assert.equal(v.jr.act.label, 'Read another cloud'); v.jr.act.go(); assert.equal(c.state.jStep, B.source);
 });
 
-test('Intent shares the answers with Recommended; Recommend shows the top three with rings and a pick; Request writes one record', () => {
+test('Needs writes the region\'s answers; Recommend shows the top three with rings and a pick; Request writes one record', () => {
   const c = at({ journey: true, jStep: B.intent, jProv: 'Azure', jScan: 4, jRegion: 'Azure/eastus' }); let v = vals(c);
-  assert.equal(v.jr.line, 'What East US needs.'); assert.equal(v.jr.intent.length, 4);
-  v.jr.intent[2].opts.find(o => o.key === 'inspected').go(); assert.equal(c.state.answers.security, 'inspected');
+  assert.equal(v.jr.line, 'What does East US need?'); assert.equal(v.jr.needs.questions.length, 4);
+  v.jr.needs.questions[2].opts.find(o => o.key === 'inspected').go(); assert.equal(c.state.intents['Azure/eastus'].security, 'inspected');
   v = vals(c); v.jr.act.go(); assert.equal(c.state.jStep, B.recommend); v = vals(c);
   assert.equal(v.jr.options.length, 3); assert.deepEqual(v.jr.options.map(o => o.key), W.rankWays('Azure', { security: 'inspected' }, 3).map(r => r.key));
   assert.equal(v.jr.options[0].on, true, 'the top pick is picked'); assert.ok(v.jr.options.every(o => /%$/.test(o.ptsPct) && o.label && o.price));
@@ -57,8 +57,8 @@ test('Intent shares the answers with Recommended; Recommend shows the top three 
   v = vals(c); assert.equal(v.jr.act.label, 'Request this'); v.jr.act.go();
   assert.equal(c.state.requests.length, 1); assert.deepEqual([c.state.requests[0].csp, c.state.requests[0].region, c.state.requests[0].option], ['Azure', 'eastus', v.jr.options[1].key]);
   assert.equal(c.state.jStep, B.request); v = vals(c);
-  assert.match(v.jr.line, /^Requested .+ for East US\.$/); assert.equal(v.jr.link, 'proposed'); assert.equal(v.jr.act.label, 'Open Cloud discovery');
-  v.jr.act.go(); assert.equal(c.state.journey, false); assert.equal(c.state.page, 'discovery');
+  assert.match(v.jr.line, /^Requested .+ for East US\.$/); assert.equal(v.jr.link, 'proposed'); assert.equal(v.jr.act.label, 'Next: West Europe', 'the loop offers the other region');
+  v.jr.exit(); assert.equal(c.state.journey, false);
   const rc = vals(mkC({ fixture: 'calloway', page: 'recommended', region: { csp: 'Azure', region: 'eastus' }, requests: c.state.requests })).rc;
   assert.equal(rc.requested, true, 'Recommended reads the same record');
 });
@@ -75,7 +75,7 @@ test('the markup: the stepper, the stage of three nodes and two wires, the inter
   const a = HTML.indexOf('<section class="js"'), blk = HTML.slice(a, HTML.indexOf('</section>', a));
   assert.match(blk, /<ol class="js-steps"[^>]*><sc-for list="\{\{ jr\.steps \}\}"/);
   assert.equal((blk.match(/class="js-node /g) || []).length, 3); assert.equal((blk.match(/class="js-wire"/g) || []).length, 2);
-  for (const k of ['{{ jr.line }}', '{{ jr.net }}', '{{ jr.sites.cells }}', '{{ jr.providers }}', '{{ jr.regions }}', '{{ jr.intent }}', '{{ jr.options }}', '{{ jr.act.go }}', '{{ jr.back }}']) assert.ok(blk.includes(k), k);
+  for (const k of ['{{ jr.line }}', '{{ jr.net }}', '{{ jr.sites.cells }}', '{{ jr.providers }}', '{{ jr.regions }}', '{{ jr.needs.questions }}', '{{ jr.options }}', '{{ jr.act.go }}', '{{ jr.back }}']) assert.ok(blk.includes(k), k);
   assert.ok(!/workload/i.test(blk));
   const hdr = HTML.slice(HTML.indexOf('<header'), HTML.indexOf('</header>'));
   assert.match(hdr, /<sc-if value="\{\{ journeyOn \}\}"[^>]*><button class="hdr-cust" onClick="\{\{ jr\.exit \}\}"/);
