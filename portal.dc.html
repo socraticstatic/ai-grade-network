@@ -39,6 +39,7 @@
 .po-pager{display:flex;align-items:center;justify-content:flex-end;gap:6px;height:36px;font-size:12px;color:var(--text-light)}
 .po-pg{width:28px;height:28px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:16px;line-height:1;cursor:pointer}
 .po-pg:disabled{color:var(--text-disabled);cursor:default}
+.po-mark{display:inline-block;width:18px;height:18px;margin:-3px 8px -3px 0;vertical-align:middle;background:center / contain no-repeat}
 .dt-r[data-click="true"]{cursor:pointer}.dt-r[data-click="true"]:hover{background:var(--bg-wash)}
 </style>
 </head>
@@ -91,8 +92,15 @@
   </sc-if>
   <sc-if value="{{ pgLinks }}" hint-placeholder-val="{{ false }}">
   <section aria-label="Cloud connections">
-    <div class="po-head"><h1 class="po-title">Cloud connections</h1><span class="po-counts"><span><b>{{ counts.links }}</b> connections</span></span></div>
-    <div class="po-empty">One row per AT&amp;T cloud connection. Task 4.</div>
+    <div class="po-head"><h1 class="po-title">Cloud connections</h1><span class="po-counts"><span><b>{{ cl.counts.links }}</b> connections</span><span><b>{{ cl.counts.clouds }}</b> clouds</span><span><b>{{ cl.counts.regions }}</b> regions reached</span></span></div>
+    <sc-if value="{{ cl.empty }}" hint-placeholder-val="{{ false }}"><div class="po-empty">{{ cl.emptyLine }}</div></sc-if>
+    <sc-if value="{{ cl.hasRows }}" hint-placeholder-val="{{ true }}">
+    <div class="dt" role="table" aria-label="AT&amp;T cloud connections">
+      <div class="dt-h"><div class="dt-r"><sc-for list="{{ cl.cols }}" as="col" hint-placeholder-count="4"><sc-if value="{{ col.present }}" hint-placeholder-val="{{ true }}"><div class="dt-c dt-th {{ col.cls }}">{{ col.label }}</div></sc-if></sc-for></div></div>
+      <div class="dt-b"><sc-for list="{{ cl.rows }}" as="row" hint-placeholder-count="6"><div class="dt-r" role="row"><sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="4"><div class="dt-c {{ cell.cls }}" style="color:{{ cell.ink }}"><sc-if value="{{ cell.isCloud }}" hint-placeholder-val="{{ false }}"><span class="po-mark" style="background-image:url('{{ row.mark }}')"></span></sc-if>{{ cell.text }}</div></sc-for></div></sc-for></div>
+    </div>
+    <div class="po-pager"><span>{{ cl.pager }}</span><button onClick="{{ cl.prev }}" disabled="{{ cl.hasPrevOff }}" aria-label="Previous page" class="po-pg">‹</button><button onClick="{{ cl.next }}" disabled="{{ cl.hasNextOff }}" aria-label="Next page" class="po-pg">›</button></div>
+    </sc-if>
   </section>
   </sc-if>
   <sc-if value="{{ pgDiscovery }}" hint-placeholder-val="{{ false }}">

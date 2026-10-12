@@ -9,6 +9,7 @@
 // storefront, for four pages on the data the portal has (naas-portal.js). Nothing here reads the concept app.
 // Spec: docs/superpowers/specs/2026-10-12-portal-mvp-design.md.
 import * as P from './naas-portal.js';
+import * as W from './naas-ways.js';
 
 export const PAGES = [
   { key: 'lastmile', label: 'Last mile', icon: 'router' },
@@ -17,7 +18,7 @@ export const PAGES = [
   { key: 'recommended', label: 'Recommended', icon: 'lightbulb' },
 ];
 export function defaults() {
-  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, pick: null, answers: {}, requests: [], region: null };
+  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, pick: null, answers: {}, requests: [], region: null };
 }
 /** URL to state: ?fixture=calloway|scale, ?state=a|b, ?page=<key>, ?theme=light|dark. `search` is for tests. */
 export function init(c, search) {
@@ -54,7 +55,7 @@ const pageOf = (rows, page, size, set, key) => {
   return { rows: rows.slice(from, from + size), pageRows: size, page: p, pages, pager: rows.length ? `${from + 1}–${Math.min(rows.length, from + size)} of ${rows.length}` : 'None',
     hasPrev: p > 0, hasNext: p < pages - 1, hasPrevOff: !(p > 0), hasNextOff: !(p < pages - 1), prev: () => set({ [key]: Math.max(0, p - 1) }), next: () => set({ [key]: Math.min(pages - 1, p + 1) }) };
 };
-const cellsOf = (row, cols, text) => cols.filter(c => c.present).map(c => ({ key: c.key, text: text(c.key, row), cls: c.cls || '', ink: c.ink ? c.ink(row) : '' }));
+const cellsOf = (row, cols, text) => cols.filter(c => c.present).map(c => ({ key: c.key, text: text(c.key, row), cls: c.cls || '', ink: c.ink ? c.ink(row) : '', isCloud: c.key === 'cloud' }));
 /** Last mile: the networks (level one), or one network's circuits grouped by state (level two). Pure: data in, view out. */
 export function lastmile(d, s, set) {
   const nets = P.networksOf(d.circuits);
@@ -83,6 +84,21 @@ export function lastmile(d, s, set) {
   if (pg.rows.length && !pg.rows[0].stateText) { pg.rows[0] = { ...pg.rows[0], cells: pg.rows[0].cells.map(x => (x.key === 'state' ? { ...x, text: pg.rows[0].state } : x)) }; }
   return { level: 'circuits', trail: [{ key: 'root', label: 'Last mile', go: back, last: false }, { key: 'net', label: net.name, go: () => {}, last: true }], hasTrail: true, cols, ...pg };
 }
+/** Cloud connections: one row per AT&T cloud connection. Region comes from the lookup (or the link's own), else Unmapped. */
+export function links(d, s, set) {
+  const dark = s.theme === 'dark';
+  const popWord = (pop) => pop ? [pop.provider, pop.facility].filter(Boolean).join(' ') + (pop.metro ? ` · ${pop.metro}` : '') : DASH;
+  const rows = d.cloudLinks.map((l, i) => { const regions = l.region ? [P.regionName(l.region)] : P.regionsOfPop(l.csp, l.pop);
+    return { key: `${l.csp}-${i}`, csp: l.csp, cloud: W.CLOUD_NAME[l.csp] || l.csp, mark: W.markFor(l.csp, dark ? 'dark' : 'light'), pop: popWord(l.pop), regions, region: regions.length ? regions.join(', ') : 'Unmapped', unmapped: !regions.length,
+      bandwidthMbps: l.bandwidthMbps, service: l.service, network: l.network ? `${l.network.id} · ${l.network.name}` : undefined }; })
+    .sort((a, b) => a.csp.localeCompare(b.csp) || a.pop.localeCompare(b.pop));
+  const cols = P.columnsFor(rows, [['cloud', 'Cloud'], ['pop', 'POP'], ['region', 'Region'], ['bandwidthMbps', 'Bandwidth'], ['service', 'Service'], ['network', 'Network']])
+    .map(c => ({ ...c, cls: c.key === 'bandwidthMbps' ? 'num' : c.key === 'cloud' ? 'dt-name' : '', ink: c.key === 'region' ? (r) => (r.unmapped ? 'var(--text-light)' : '') : null }));
+  const text = (k, r) => k === 'bandwidthMbps' ? bw(r.bandwidthMbps) : (r[k] === undefined || r[k] === null ? DASH : String(r[k]));
+  const reached = new Set(rows.flatMap(r => r.regions));
+  const pg = pageOf(rows.map(r => ({ ...r, cells: cellsOf(r, cols, text), click: false })), s.clPage, PAGE_ROWS, set, 'clPage');
+  return { counts: { links: n(rows.length), clouds: n(new Set(rows.map(r => r.csp)).size), regions: n(reached.size) }, cols, ...pg, empty: !rows.length, hasRows: rows.length > 0, emptyLine: 'No AT&T cloud connection yet.' };
+}
 export function vals(c) {
   const s = c.state, set = (p) => c.setState(p), f = fixtureOf(s), d = dataOf(s), dark = s.theme === 'dark';
   const iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
@@ -101,5 +117,6 @@ export function vals(c) {
       onAtt: n([...join.values()].filter(j => j.on).length) },
     data: d, nets, join,
     lm: lastmile(d, s, set),
+    cl: links(d, s, set),
   };
 }
