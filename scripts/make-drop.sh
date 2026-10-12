@@ -42,7 +42,7 @@ trap 'rm -rf "$stage"' EXIT
 files() {
   if [ "$mode" = portal ]; then
     git ls-files -z |
-      grep -zE '^(portal\.dc\.html|naas-portal\.js|naas-portal-app\.js|naas-ways\.js|naas-data\.js|naas-sites\.js|naas-logic\.js|naas-things\.js|storefront\.css|support\.js|NOTICE|fonts/README\.txt|vendor/.*|brand/.*|docs/portal/.*)$'
+      grep -zE '^(portal\.dc\.html|naas-portal\.js|naas-portal-app\.js|naas-portal-journey\.js|naas-ways\.js|naas-data\.js|naas-sites\.js|naas-logic\.js|naas-things\.js|storefront\.css|support\.js|NOTICE|fonts/README\.txt|vendor/.*|brand/.*|docs/portal/.*)$'
   else
     git ls-files -z |
       grep -zEv '^(\.github/|\.thumbnail$|(storefront|portal)-.*\.zip$)' |

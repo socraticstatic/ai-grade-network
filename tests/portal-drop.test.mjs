@@ -11,7 +11,7 @@ if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: ()
 
 test('the portal drop stages the page, its modules, the shared chrome and docs/portal, and nothing of the concept app', () => {
   const list = execFileSync('bash', ['scripts/make-drop.sh', '--portal', '--list'], { cwd: ROOT }).toString().trim().split('\n');
-  for (const f of ['portal.dc.html', 'naas-portal.js', 'naas-portal-app.js', 'naas-ways.js', 'naas-data.js', 'naas-sites.js', 'naas-logic.js', 'naas-things.js', 'storefront.css', 'support.js', 'vendor/react.production.min.js', 'brand/icons/cloud.svg', 'brand/providers/azure.svg', 'fonts/README.txt', 'NOTICE', 'docs/portal/README.md', 'docs/portal/ways.json', 'docs/portal/pop-regions.json']) assert.ok(list.includes(f), f);
+  for (const f of ['portal.dc.html', 'naas-portal.js', 'naas-portal-app.js', 'naas-portal-journey.js', 'naas-ways.js', 'naas-data.js', 'naas-sites.js', 'naas-logic.js', 'naas-things.js', 'storefront.css', 'support.js', 'vendor/react.production.min.js', 'brand/icons/cloud.svg', 'brand/providers/azure.svg', 'fonts/README.txt', 'NOTICE', 'docs/portal/README.md', 'docs/portal/ways.json', 'docs/portal/pop-regions.json']) assert.ok(list.includes(f), f);
   for (const f of ['NaaS Storefront.dc.html', 'naas-app.js', 'personas.html', 'index.html']) assert.ok(!list.includes(f), `${f} rode along`);
   assert.ok(!list.some(f => f.startsWith('tests/') || f.startsWith('scripts/') || f.startsWith('.github/') || /\.(woff2|ttf)$/.test(f)));
 });
