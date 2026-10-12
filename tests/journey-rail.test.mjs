@@ -32,7 +32,7 @@ test('from any estate it starts the journey clean, on its first beat', () => {
 test('left mid-way, the rail item carries the step and resumes there', () => {
   const c = home('lastmile', { jStep: 3 });
   const it = railItem(vals(c), T);
-  assert.equal(it.sub, 'Step 4 of 10 · Tag');
+  assert.equal(it.sub, 'Step 4 of 9 · Needs');
   it.go();
   assert.equal(c.state.journey, 'existing'); assert.equal(c.state.screen, 'sj'); assert.equal(c.state.jStep, 3, 'resumes, never resets');
 });

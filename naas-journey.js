@@ -18,11 +18,10 @@ export const BEATS = [
   { key: 'today', label: 'Today', short: 'Today', icon: 'home', title: 'Your network on AT&T' },
   { key: 'source', label: 'Add a source', short: 'Source', icon: 'plus', title: 'Add a cloud source' },
   { key: 'found', label: 'What it found', short: 'Found', icon: 'search', title: 'What it found' },
-  { key: 'tag', label: 'Tag', short: 'Tag', icon: 'checklist', title: 'Tag your workloads' },
-  // Intent before the recommendation (2026-10-08, Micah: "Before recommendations we need some kind of intent screen, and
-  // need to impact choices, and policy options"): purpose, traffic, security, routing; the answers rank the ways
-  // (W.rankWays) and shape the policy deck (intentCard).
-  { key: 'intent', label: 'Intent', short: 'Intent', icon: 'target', title: 'What it needs' },
+  // The Tag beat left on 2026-10-12 (Micah: "the tags and the security options are separate, but should they be
+  // together?"): tags are facts the scan found, shown on Found where a customer may still add one; the one choice is
+  // what the connection needs, asked as sentences inside the cloud node (2026-10-08's intent screen, moved).
+  { key: 'intent', label: 'Needs', short: 'Needs', icon: 'target', title: 'What the connection needs' },
   { key: 'recommend', label: 'Recommendation', short: 'Recommend', icon: 'lightbulb', title: 'What to connect' },
   { key: 'connect', label: 'Connect', short: 'Connect', icon: 'cable', title: 'Connect' },
   // Act three (2026-10-08, Micah: "after the journey, 'see the dashboard' kind of leaves you hanging ... what if i want

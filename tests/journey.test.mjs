@@ -37,18 +37,18 @@ test('the Customer switch opens the journey on its first beat, clean; the steppe
   assert.equal(v.showRail, false, 'no rail in the journey');
   assert.equal(v.showPageTitle, false);
   // Nine beats since act three (2026-10-08): live, protected, saved; ten since Intent, before the recommendation.
-  assert.deepEqual(v.jSteps.map(s => s.label), ['Today', 'Source', 'Found', 'Tag', 'Intent', 'Recommend', 'Connect', 'Live', 'Protect', 'Save']);
-  assert.deepEqual(v.jSteps.map(s => s.state), ['cur', 'next', 'next', 'next', 'next', 'next', 'next', 'next', 'next', 'next']);
-  assert.deepEqual(v.jSteps.map(s => s.off), [false, false, true, true, true, true, true, true, true, true], 'a beat opens once the source is in; act three once the order is');
+  assert.deepEqual(v.jSteps.map(s => s.label), ['Today', 'Source', 'Found', 'Needs', 'Recommend', 'Connect', 'Live', 'Protect', 'Save']);
+  assert.deepEqual(v.jSteps.map(s => s.state), ['cur', 'next', 'next', 'next', 'next', 'next', 'next', 'next', 'next']);
+  assert.deepEqual(v.jSteps.map(s => s.off), [false, false, true, true, true, true, true, true, true], 'a beat opens once the source is in; act three once the order is');
   v.setJourney({ target: { value: '' } });
   assert.equal(c.state.journey, null); assert.equal(c.state.screen, 's0');
   assert.equal(vals(c).showRail, true);
 });
 
 test('one sentence a beat tells the story', () => {
-  const lines = [0, 1, 2, 3, 4, 5, 6].map(i => vals(journey({ jStep: i, addedSources: i >= 2 ? AZURE : [] })).jLine);
-  assert.deepEqual(lines, ['AT&T already carries your 20 sites.', 'Connect a cloud account. Read only.', 'Azure runs 68 workloads on the public internet.',
-    'Tag what matters.', 'What does Azure need?', 'Move Azure onto AT&T. Save $3,600 a month.', 'Connect Azure with Your ExpressRoute.']);
+  const lines = [0, 1, 2, 3, 4, 5].map(i => vals(journey({ jStep: i, addedSources: i >= 2 ? AZURE : [] })).jLine);
+  assert.deepEqual(lines, ['AT&T already carries your 20 sites.', 'Connect a cloud account. Read only.', 'Azure runs 68 workloads outside the AT&T network.',
+    'What does your Azure connection need?', 'Move Azure onto AT&T. Save $3,600 a month.', 'Connect Azure with Your ExpressRoute.']);
   for (const l of lines) assert.ok(l.split(' ').length <= 9, l);
 });
 
@@ -88,23 +88,22 @@ test('beat 3: the cloud node becomes Azure, its regions and apps; the public int
   assert.deepEqual(v.jRegions.map(r => [r.region, r.wlF, r.msF]), [['eastus', '40', '64 ms'], ['westeurope', '28', '102 ms']]);
   assert.deepEqual(v.jRegions[1].apps.map(a => a.name), ['payments-api', 'fin-ledger']);
   // The latency is a figure of its own on the path (2026-10-08), not part of the word.
-  assert.equal(v.jNet, 'public'); assert.equal(v.jNetWord, 'Public internet');
+  assert.equal(v.jNet, 'public'); assert.equal(v.jNetWord, 'Outside the AT&T network');
   // The public path is named, never timed: nobody measures it (2026-10-09).
   assert.equal(v.jNetMs, undefined); assert.doesNotMatch(HTML, /jNetMs|jNetHasMs/);
 });
 
-test('beat 4: tags suggested by what a workload is; Tag them all, then the tags join the estate and stay with their own', () => {
-  const c = journey({ jStep: 3, addedSources: AZURE });
+test('Found: tags suggested by what a workload is, there to confirm or add, never a beat (2026-10-12); Tag them all is the side door; the tags join the estate', () => {
+  const c = journey({ jStep: 2, addedSources: AZURE });
   let v = vals(c);
   const chips = (name) => v.jRegions.flatMap(r => r.apps).find(a => a.name === name).chips.map(x => x.t);
   assert.deepEqual(chips('payments-api'), ['PCI', 'Finance', 'Prod'], 'a tag keeps its slot: PCI, Finance, Internet-facing, then Prod beside the +');
   assert.deepEqual(chips('customer-portal'), ['Internet-facing', 'Prod']);
   assert.deepEqual(chips('dispatch-svc'), ['Prod']);
-  assert.equal(v.jAct, 'Tag them all');
-  v.jActGo();
+  assert.equal(v.jAct, 'Say what it needs', 'the primary moves on; tagging is optional');
+  assert.equal(v.jTagRest.has, true); v.jTagRest.go();
   v = vals(c);
-  assert.equal(v.jLine, '4 of 4 workloads tagged.');
-  assert.equal(v.jAct, 'Say what it needs');
+  assert.equal(v.jTagRest.has, false, 'every suggestion is on'); assert.equal(v.jAct, 'Say what it needs');
   assert.deepEqual(chips('dispatch-svc'), ['Prod'], 'the portal\'s Internet-facing stays the portal\'s');
   const est = estateFor({ view: 'lastmile', estateParam: null, addedSources: AZURE, jTags: c.state.jTags });
   assert.ok(est.regionsList.find(r => r.region === 'westeurope').tags.includes('PCI'));
@@ -178,7 +177,7 @@ test('the markup: one stage of three nodes and two wires, the internet path, a s
   assert.doesNotMatch(blk, /<(table|select)\b/);
   assert.match(HTML, /<sc-if value="\{\{ journeyOn \}\}"[^>]*><button class="hdr-theme" onClick="\{\{ toggleTheme \}\}"/);
   assert.match(HTML, /@media \(prefers-reduced-motion: reduce\)\{\.js-wire\[data-state="proposed"\] i/);
-  assert.deepEqual(J.BEATS.map(b2 => b2.key), ['today', 'source', 'found', 'tag', 'intent', 'recommend', 'connect', 'watch', 'protect', 'save']);
+  assert.deepEqual(J.BEATS.map(b2 => b2.key), ['today', 'source', 'found', 'intent', 'recommend', 'connect', 'watch', 'protect', 'save']);
 });
 
 test('the picture carries the figures (2026-10-08): latency on each wire, the monthly before and after, the traffic on the path it rides', () => {
@@ -291,7 +290,7 @@ test('beat 9: the saving a month and a year; Attach AWS loops to the source with
   assert.equal(v.jAct, 'Scan AWS'); assert.equal(v.jCloud.state, 'picking'); assert.equal(v.jHasDone, true);
   v.jActGo(); await new Promise(r => setTimeout(r, 2900));
   v = vals(c);
-  assert.equal(v.jLine, 'AWS runs 54 workloads on the public internet.');
+  assert.equal(v.jLine, 'AWS runs 54 workloads outside the AT&T network.');
   assert.equal(v.jCloud.name, 'AWS');
   assert.deepEqual(c.state.addedSources.map(a => a.provider).sort(), ['AWS', 'Azure'], 'Azure stays discovered');
   assert.equal(v.jVerdict, 'none', 'the earlier policy\'s stamps do not sit on a wire that is not there yet');
@@ -302,8 +301,8 @@ test('beat 9: the saving a month and a year; Attach AWS loops to the source with
   assert.equal(d.state.journey, null); assert.equal(d.state.screen, 's0');
 });
 
-test('beat 4 again (2026-10-08): any known tag from a palette, and your own; Recommend: the picked option in full, in place', () => {
-  const c = journey({ jStep: 3, addedSources: AZURE });
+test('Found again (2026-10-08, moved 2026-10-12): any known tag from a palette, and your own; Recommend: the picked option in full, in place', () => {
+  const c = journey({ jStep: 2, addedSources: AZURE });
   let v = vals(c);
   const row = v.jRegions[0].apps[0];
   assert.equal(row.canAdd, true); assert.equal(v.jTagPalette.open, false);
@@ -335,10 +334,10 @@ test('beat 4 again (2026-10-08): any known tag from a palette, and your own; Rec
   assert.match(HTML, /<sc-if value="\{\{ ap\.picking \}\}"[^>]*><div class="js-palette" role="group" aria-label="Tags for \{\{ ap\.name \}\}">/, 'the palette opens in the row it edits');
 });
 
-test('tags show where they do work: Tag, Intent and Protect; the beats between carry the intent glyphs alone (2026-10-08, "lots of words still")', () => {
+test('tags show where they do work: Found, Needs and Protect; the beats between carry the intent glyphs alone (2026-10-08, "lots of words still")', () => {
   const T = { 'eastus:dispatch-svc': ['Prod'], 'westeurope:payments-api': ['PCI', 'Prod'] };
   const chipsAt = (k, extra = {}) => vals(journey({ jStep: B[k], addedSources: AZURE, jTags: T, ...extra })).jRegions.flatMap(r => r.apps).flatMap(a => a.chips.map(c => c.t));
-  assert.ok(chipsAt('tag').includes('PCI')); assert.ok(chipsAt('intent').includes('PCI'));
+  assert.ok(chipsAt('found').includes('PCI')); assert.ok(chipsAt('intent').includes('PCI'));
   assert.deepEqual(chipsAt('recommend'), []); assert.deepEqual(chipsAt('connect', { jPick: 0 }), []);
 });
 

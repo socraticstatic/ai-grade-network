@@ -66,7 +66,7 @@ test('every way says why, in the deck\'s words: what fits, what to watch, what i
 test('the Intent beat sits before the recommendation; an answer re-ranks at once and the wire proposes the new pick', () => {
   const c = journey({ jStep: B.intent });
   let v = vals(c);
-  assert.equal(v.jIsIntent, true); assert.equal(v.jLine, 'What does Azure need?'); assert.equal(v.jAct, 'See the recommendation');
+  assert.equal(v.jIsIntent, true); assert.equal(v.jLine, 'What does your Azure connection need?'); assert.equal(v.jAct, 'See the recommendation');
   assert.deepEqual(v.jIntentQs.map(q => q.opts.filter(o => o.on).map(o => o.key)[0]), ['prod', 'standard', 'private', 'bgp']);
   assert.equal(v.jLink, 'proposed'); assert.equal(v.jLinkWord, 'Your ExpressRoute');
   v.jIntentQs.find(q => q.key === 'security').opts.find(o => o.key === 'inspected').go();
@@ -104,7 +104,7 @@ test('the recommendation says why: reasons on each card, the deck\'s Why line an
   assert.deepEqual(v.jDetail.wtYou.map(w => w.key), ['cost', 'perf', 'sec', 'setup', 'scale']);
   assert.equal(v.jDetail.wtYou.reduce((a, w) => a + Number(w.w), 0), 100); assert.equal(v.jDetail.wtDeck.reduce((a, w) => a + Number(w.w), 0), 100);
   assert.match(HTML, /<sc-if value="\{\{ jDetailOpen \}\}"[^>]*><div class="js-whyp" role="dialog" aria-label="Why \{\{ jDetail\.label \}\}"/);
-  const st = HTML.indexOf('<div class="js-stage"'), wp = HTML.indexOf('<div class="js-whyp"'), sEnd = HTML.indexOf('<sc-if value="{{ jIsIntent }}"');
+  const st = HTML.indexOf('<div class="js-stage"'), wp = HTML.indexOf('<div class="js-whyp"'), sEnd = HTML.indexOf('<sc-if value="{{ jIsRec }}"');
   assert.ok(st < wp && wp < sEnd, 'the Why lives inside the stage');
   assert.match(HTML, /\.js-whyp\{position:absolute;inset:0;/);
   assert.match(HTML, /<span class="js-score" style="--p:\{\{ op\.ptsPct \}\}"/);
@@ -162,9 +162,12 @@ test('once ordered, the answers stand; the dashboard ranks by the same model', (
 });
 
 test('the markup: four question groups of glyph answers, the AT&T node a rounded rectangle', () => {
-  const a = HTML.indexOf('<sc-if value="{{ jIsIntent }}"'), blk = HTML.slice(a, HTML.indexOf('</sc-if>', HTML.indexOf('</sc-for></div></div></sc-for>', a)));
-  assert.match(blk, /<div class="js-intent" role="group" aria-label="What it needs"><sc-for list="\{\{ jIntentQs \}\}" as="iq"/);
-  assert.match(blk, /<button role="radio" class="js-io" aria-checked="\{\{ io\.on \}\}" disabled="\{\{ io\.off \}\}" onClick="\{\{ io\.go \}\}" title="\{\{ io\.title \}\}">/);
+  // The questions moved into the cloud node as sentences (2026-10-12): the block sits inside .js-cloud, chips are verbs.
+  const cloud = HTML.slice(HTML.indexOf('class="js-node js-cloud"'), HTML.indexOf('class="js-net"'));
+  const a = cloud.indexOf('<sc-if value="{{ jIsIntent }}"'), blk = cloud.slice(a, cloud.indexOf('</sc-if>', cloud.indexOf('</sc-for></div></div></sc-for>', a)));
+  assert.match(blk, /<div class="js-needs" role="group" aria-label="What it needs"><span class="js-needs-h">\{\{ jNeeds\.hint \}\}<\/span><sc-for list="\{\{ jIntentQs \}\}" as="iq"/);
+  assert.match(blk, /<button role="radio" class="js-no" aria-checked="\{\{ io\.on \}\}" disabled="\{\{ io\.off \}\}" onClick="\{\{ io\.go \}\}" title="\{\{ io\.title \}\}">\{\{ io\.verb \}\}<\/button>/);
+  assert.equal((HTML.match(/<sc-if value="\{\{ jIsIntent \}\}"/g) || []).length, 1, 'one question block, inside the cloud node');
   assert.match(HTML, /\.js-att\{[^}]*border-radius:20px/, 'a rounded rectangle, not a pill (Micah, 2026-10-08)');
   assert.doesNotMatch(HTML.match(/\.js-att\{[^}]*\}/)[0], /9999px/);
 });
