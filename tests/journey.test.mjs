@@ -165,8 +165,8 @@ test('before a cloud is discovered, the map lands its cloud traffic on Clouds no
 });
 
 test('the markup: one stage of three nodes and two wires, the internet path, a stepper, one action; the header switch and theme', () => {
-  assert.match(HTML, /<select value="\{\{ journeyValue \}\}" onChange="\{\{ setJourney \}\}" aria-label="Customer"/);
-  assert.match(HTML, /<option value="new" disabled="true">New customer · next<\/option>/);
+  // The Customer select left the header for the rail (2026-10-12, tests/journey-rail.test.mjs); the journey keeps its exit there.
+  assert.equal(HTML.includes('aria-label="Customer"'), false);
   const a = HTML.indexOf('<section class="js"'), b = HTML.indexOf('</section>', a);
   const blk = HTML.slice(a, b);
   assert.match(blk, /<ol class="js-steps"[^>]*><sc-for list="\{\{ jSteps \}\}"/);

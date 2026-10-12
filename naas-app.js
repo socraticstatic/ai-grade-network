@@ -1367,7 +1367,8 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est =
     // The first screen is held only when the map follows it: the map's title then clears the fold rather than straddling it
     // on a home whose rows end short (the journey's estate, 2026-10-09). An empty estate has no map below.
     homeMinH: isEmpty ? '0' : 'calc(100vh - 116px)',
-    homeTake: journeyTake || take && { key: take.key, head: take.head, sub: take.sub, cta: take.cta, ink: take.ink,
+    // A second door on every hero that is not the journey already (2026-10-12, "also 2"): the story starts clean.
+    homeTake: journeyTake ? { ...journeyTake, hasAlt: false } : take && { key: take.key, head: take.head, sub: take.sub, cta: take.cta, ink: take.ink, hasAlt: true, alt: { label: 'Connect a cloud', go: journeyDoor(s, set).start },
       tint: `color-mix(in srgb, ${take.ink} 14%, transparent)`, wash: `color-mix(in srgb, ${take.ink} 7%, var(--bg-base))`,
       icon: `brand/icons-light/${take.icon}.svg`, go: doorOf(take.door), headGo: doorOf(take.headDoor) || (() => {}), headOff: !doorOf(take.headDoor),
       parts: take.parts.map((p, i) => { const g = doorOf(p.door, p.arg); return { key: 'p' + i, t: p.t, sep: i > 0, off: !g, go: g || (() => {}) }; }) },
@@ -5026,7 +5027,8 @@ function shellVals(s, set, go, est, c, sched) {
   const pillBg = (on) => on ? 'var(--bg-accent)' : 'transparent';
   const pills = [
     // NaaS is the home on every estate (2026-09-30), the rail item and this pill alike.
-    { key: 'net', label: 'NaaS', current: true, off: false, go: goTab('s0', { layer: 'cloud' }) },
+    // In the journey the pill is a dashboard door too (2026-10-12): the story keeps its step, the rail comes back.
+    { key: 'net', label: 'NaaS', current: true, off: false, go: () => { goTab('s0', { layer: 'cloud' })(); if (s.journey) set({ journey: null }); } },
   ].map(p => ({ ...p, bg: pillBg(p.current), op: p.off ? 0.4 : 1, cursor: p.off ? 'default' : 'pointer', hover: p.off ? 'transparent' : 'var(--bg-wash)', dis: p.off ? 'true' : 'false' }));
   const obTabNow = s.obTab || 'flow';
   const logsTab = (typeof OBTABS !== 'undefined' && OBTABS.includes('records')) ? 'records' : 'control';
@@ -5099,6 +5101,9 @@ function shellVals(s, set, go, est, c, sched) {
           { key: 'home', hasTitle: false, title: '', items: [
             // The NaaS home: the whole network at a glance, by persona (2026-09-30). Connect keeps its map.
             item('NaaS', 'home', go('s0'), s.screen === 's0'),
+            // The existing customer's journey, from every estate (2026-10-12, "move it into the rail"): the step under
+            // it once started, and it resumes there. The cloud icon is the hero's on the journey's own estate.
+            item('Connect a cloud', 'cloud', journeyDoor(s, set).go, false, false, journeyDoor(s, set).sub),
           ] },
           // Discover, Observe, Govern and Cost are the same kind of thing - the
           // four categories. They get one treatment, always, and the one you
@@ -5388,6 +5393,18 @@ const journeyProgress = (s) => J.progressOf({ sourceAdded: (s.addedSources || []
   tagsApplied: Object.keys(s.jTags || {}).length > 0, picked: s.jPick, placed: (s.orders || []).some(o => o.journey), live: !!s.jLive, protectedBy: (s.customPolicies || []).some(p => p.journey) });
 // NB: placed/protectedBy here gate the stepper only; journeyVals re-reads them for the cloud this pass is about.
 let journeyTimer = null;
+// The journey's doors (Micah, 2026-10-12: "The drop down on the top is a temporary solution. I need it fully
+// integrated and obvious in the site" ... "move it into the rail"). Start begins the story clean from any estate,
+// dropping a rehearsal's source, order, policies and landings; resume returns to the beat it was left on. The rail
+// item and the home hero read `go` and `sub`; the step survives an exit, so the rail says where you are.
+export function journeyDoor(s, set) {
+  const step = Math.max(0, Math.min(J.BEATS.length - 1, s.jStep || 0)), started = s.journey !== 'existing' && step > 0;
+  const start = () => set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jIntent: null,
+    landed: W.landedEntries(s).filter(e => typeof e === 'object' && e.est && e.est !== J.JOURNEY_ESTATE),
+    addedSources: (s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE), orders: (s.orders || []).filter(o => !o.journey && !o.journeyDone), customPolicies: (s.customPolicies || []).filter(p => !p.journey), andiOpen: false });
+  const resume = () => set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', andiOpen: false });
+  return { start, resume, started, go: started ? resume : start, sub: started ? `Step ${step + 1} of ${J.BEATS.length} · ${J.BEATS[step].short}` : '' };
+}
 /** A beat's place in the journey, by name: a beat added in the middle (Intent, 2026-10-08) moves no other code. */
 const JI = Object.fromEntries(J.BEATS.map((b, i) => [b.key, i]));
 /** What the cloud is for: the answers your tags suggest, then the ones you gave on the Intent beat. */
@@ -5447,12 +5464,8 @@ export function whyPanelOf(t, answers) {
 function journeyVals(out, s, set, est) {
   const on = s.journey === 'existing';
   const base = { journeyOn: on, journeyOff: !on, journeyValue: s.journey || '',
-    // The Customer switch (2026-10-08: "It needs its own drop down, maybe existing new customer?"): the dashboard, or the
-    // existing customer's journey from its first beat; New is next.
-    setJourney: (e) => { const v = e.target.value;
-      if (v === 'existing') set({ journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0, jTags: {}, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jIntent: null, landed: W.landedEntries(s).filter(e => typeof e === 'object' && e.est && e.est !== J.JOURNEY_ESTATE),
-        addedSources: (s.addedSources || []).filter(a => a.estId !== J.JOURNEY_ESTATE), orders: (s.orders || []).filter(o => !o.journey && !o.journeyDone), customPolicies: (s.customPolicies || []).filter(p => !p.journey), andiOpen: false });
-      else set({ journey: null, screen: 's0' }); } };
+    // The Customer switch of 2026-10-08 moved into the rail (2026-10-12, journeyDoor); this stays for deep links and tests.
+    setJourney: (e) => { if (e.target.value === 'existing') journeyDoor(s, set).start(); else set({ journey: null, screen: 's0' }); } };
   if (!on) return base;
   const step = Math.max(0, Math.min(J.BEATS.length - 1, s.jStep || 0)), beat = J.BEATS[step], pr = journeyProgress(s);
   const to = (i) => () => set({ jStep: i, jScan: null });
