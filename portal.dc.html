@@ -41,6 +41,21 @@
 .po-pg:disabled{color:var(--text-disabled);cursor:default}
 .po-mark{display:inline-block;width:18px;height:18px;margin:-3px 8px -3px 0;vertical-align:middle;background:center / contain no-repeat}
 .po-act{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}.po-act:hover{border-color:var(--border-active)}.po-act>i{font-style:normal}
+.po-lead{margin:0 0 10px;font-size:13px;line-height:18px;color:var(--text-body)}
+.po-placeholder{color:var(--text-light)}.po-requested{margin-top:10px;color:var(--text-heading);font-weight:600}
+.po-intent{display:flex;flex-wrap:wrap;gap:8px 24px;margin:0 0 12px}
+.po-q{display:flex;align-items:center;gap:10px}
+.po-ql{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-heading);white-space:nowrap}
+.po-opts{display:inline-flex;gap:4px;padding:2px;border-radius:8px;background:var(--bg-neutral)}
+.po-opt{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--text-body);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.po-opt[aria-pressed="true"]{background:var(--bg-base);color:var(--link);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.po-rank{display:inline-grid;place-items:center;width:22px;height:22px;margin-right:8px;border-radius:50%;background:var(--bg-neutral);font-size:12px;font-weight:700;color:var(--text-body)}
+.po-kicker{display:block;padding-left:30px;font-size:12px;line-height:16px;font-weight:400;color:var(--text-light)}
+.po-rec{margin-left:8px;padding:2px 6px;border-radius:4px;background:var(--bg-accent);font-size:12px;font-weight:600;color:var(--link);white-space:nowrap}
+.dt-r[data-rec="true"] .dt-c{background:color-mix(in srgb, var(--link) 4%, transparent)}
+.po-done{font-size:12px;font-weight:600;color:var(--text-light)}
+.po-rules{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:12px;font-size:12px;line-height:16px;color:var(--text-body)}
+.po-rl{font-weight:700;color:var(--text-heading)}.po-w{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}.po-rule{color:var(--text-light)}
 .dt-r[data-click="true"]{cursor:pointer}.dt-r[data-click="true"]:hover{background:var(--bg-wash)}
 </style>
 </head>
@@ -117,8 +132,26 @@
   </sc-if>
   <sc-if value="{{ pgRecommended }}" hint-placeholder-val="{{ false }}">
   <section aria-label="Recommended">
-    <div class="po-head"><h1 class="po-title">Recommended</h1></div>
-    <div class="po-empty">The ranked options for a region. Task 6.</div>
+    <div class="po-head"><h1 class="po-title">Recommended</h1><sc-if value="{{ rc.hasRegion }}" hint-placeholder-val="{{ false }}"><span class="po-counts"><span>for <b>{{ rc.title }}</b></span></span></sc-if></div>
+    <sc-if value="{{ rc.noRegion }}" hint-placeholder-val="{{ true }}">
+    <p class="po-lead">Pick a region.</p>
+    <div class="dt" role="table" aria-label="Regions to connect">
+      <div class="dt-h"><div class="dt-r"><sc-for list="{{ rc.pick.cols }}" as="col" hint-placeholder-count="3"><div class="dt-c dt-th {{ col.cls }}">{{ col.label }}</div></sc-for></div></div>
+      <div class="dt-b"><sc-for list="{{ rc.pick.rows }}" as="row" hint-placeholder-count="4"><div class="dt-r" role="row" data-click="true" onClick="{{ row.go }}"><sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="3"><div class="dt-c {{ cell.cls }}" style="color:{{ cell.ink }}"><sc-if value="{{ cell.isCloud }}" hint-placeholder-val="{{ false }}"><span class="po-mark" style="background-image:url('{{ row.mark }}')"></span></sc-if>{{ cell.text }}</div></sc-for></div></sc-for></div>
+    </div>
+    </sc-if>
+    <sc-if value="{{ rc.hasRegion }}" hint-placeholder-val="{{ false }}">
+    <nav aria-label="Where you are" class="po-trail"><sc-for list="{{ rc.trail }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.go }}" disabled="{{ t.last }}" class="po-crumb" aria-current="{{ t.last }}">{{ t.label }}</button></sc-for></nav>
+    <!-- The four questions as glyph answers (the storefront's Intent beat), each a toggle; the answers re-weight and re-rank below. -->
+    <div class="po-intent" aria-label="What it needs"><sc-for list="{{ rc.intent }}" as="q" hint-placeholder-count="4"><div class="po-q"><span class="po-ql"><span aria-hidden="true" class="ic s14" style="--ic:url('brand/icons/{{ q.icon }}.svg')"></span>{{ q.label }}</span><div class="po-opts"><sc-for list="{{ q.opts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.go }}" aria-pressed="{{ o.on }}" title="{{ o.title }}" class="po-opt"><span aria-hidden="true" class="ic s14" style="--ic:url('brand/icons/{{ o.icon }}.svg')"></span>{{ o.label }}</button></sc-for></div></div></sc-for></div>
+    <p class="po-lead po-placeholder">{{ rc.placeholderLine }}</p>
+    <div class="dt" role="table" aria-label="Ways to connect, ranked">
+      <div class="dt-h"><div class="dt-r"><sc-for list="{{ rc.cols }}" as="col" hint-placeholder-count="7"><div class="dt-c dt-th {{ col.cls }}" style="width:{{ col.w }}">{{ col.label }}</div></sc-for></div></div>
+      <div class="dt-b"><sc-for list="{{ rc.options }}" as="row" hint-placeholder-count="6"><div class="dt-r" role="row" data-rec="{{ row.recommended }}"><sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="7"><div class="dt-c {{ cell.cls }}" style="color:{{ cell.ink }}"><sc-if value="{{ cell.isOption }}" hint-placeholder-val="{{ false }}"><span class="po-rank">{{ row.rank }}</span></sc-if>{{ cell.text }}<sc-if value="{{ cell.isOption }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ row.recommended }}" hint-placeholder-val="{{ false }}"><span class="po-rec">Recommended</span></sc-if><span class="po-kicker">{{ row.kicker }}</span></sc-if><sc-if value="{{ cell.isAct }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ row.isRequested }}" hint-placeholder-val="{{ false }}"><span class="po-done">Requested</span></sc-if><sc-if value="{{ rc.notRequested }}" hint-placeholder-val="{{ true }}"><button onClick="{{ row.request }}" class="po-act">Request this<i aria-hidden="true">→</i></button></sc-if></sc-if></div></sc-for></div></sc-for></div>
+    </div>
+    <div class="po-rules"><span class="po-rl">Weighed</span><sc-for list="{{ rc.weights }}" as="w" hint-placeholder-count="5"><span class="po-w" title="{{ w.label }}"><span aria-hidden="true" class="ic s14" style="--ic:url('brand/icons/{{ w.icon }}.svg')"></span>{{ w.text }}</span></sc-for><sc-if value="{{ rc.hasRules }}" hint-placeholder-val="{{ false }}"><span class="po-rl">Rules</span><sc-for list="{{ rc.rules }}" as="r" hint-placeholder-count="1"><span class="po-rule">{{ r.text }}</span></sc-for></sc-if></div>
+    <sc-if value="{{ rc.requested }}" hint-placeholder-val="{{ false }}"><p class="po-lead po-requested">{{ rc.requestedLine }}</p></sc-if>
+    </sc-if>
   </section>
   </sc-if>
 </main>

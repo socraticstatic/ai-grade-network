@@ -144,6 +144,43 @@ export function discovery(d, s, set) {
   return { level: 'subnets', trail: [{ ...root, last: false }, { ...regCrumb, last: false }, { key: 'vpc', label: vpc.name || vpc.id, go: () => {}, last: true }], hasTrail: true, cols, ...pg,
     counts: { regions: n(d.discovery.length), onAtt: n([...join.values()].filter(j => j.on).length), vpcs: n(reg.vpcs.length), subnets: n(rows.length) } };
 }
+const money = (v) => (v === null || v === undefined ? 'At review' : `$${n(v)}/mo`);
+/** The hard rules the answers apply, in words; nothing for the defaults. */
+export function rulesOf(answers) {
+  return Object.entries(answers || {}).map(([q, a]) => { const r = W.RULE[a], opt = (W.INTENT.find(x => x.key === q) || { opts: [] }).opts.find(o => o.key === a);
+    return r && r.miss && opt ? { key: a, text: `${opt.label} removes any way that reads "${r.miss[0]}"` } : null; }).filter(Boolean);
+}
+/** Recommended: pick a region, answer the four questions, read the ranked options and request one. */
+export function recommended(d, s, set) {
+  const dark = s.theme === 'dark', iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
+  const join = P.attJoin(d.cloudLinks, d.discovery), answers = s.answers || {};
+  const regionTitle = (r) => `${r.csp} · ${P.regionName(r.region)}`;
+  const root = { key: 'root', label: 'Recommended', go: () => set({ region: null }), last: !s.region };
+  const pickRows = d.discovery.map(r => { const j = join.get(`${r.csp}/${r.region}`);
+      return { key: `${r.csp}/${r.region}`, csp: r.csp, cloud: W.CLOUD_NAME[r.csp] || r.csp, mark: W.markFor(r.csp, dark ? 'dark' : 'light'), region: P.regionName(r.region), on: j.on, att: j.on ? 'On AT&T' : j.cspOnly ? `AT&T · ${r.csp} at ${j.cspLink.pop ? j.cspLink.pop.metro : 'a POP'}` : 'Not on AT&T',
+        go: () => set({ region: { csp: r.csp, region: r.region } }) }; })
+    .sort((a, b) => (a.on - b.on) || a.csp.localeCompare(b.csp) || a.region.localeCompare(b.region));
+  const pickCols = [{ key: 'cloud', label: 'Cloud', present: true, cls: 'dt-name' }, { key: 'region', label: 'Region', present: true }, { key: 'att', label: 'AT&T', present: true, ink: (r) => (r.on ? '' : 'var(--text-light)') }];
+  const pick = { rows: pickRows.map(r => ({ ...r, cells: cellsOf(r, pickCols, (k, x) => String(x[k])), click: true })), cols: pickCols };
+  if (!s.region) return { hasRegion: false, noRegion: true, trail: [root], hasTrail: false, pick, intent: [], options: [], cols: [], weights: [], rules: [], requested: false, requestedLine: '', placeholder: true, placeholderLine: '' };
+  const reg = s.region, cloud = reg.csp, title = regionTitle(reg);
+  const intent = W.INTENT.map(q => ({ key: q.key, label: q.label, icon: q.icon, opts: q.opts.map(o => { const on = answers[q.key] === o.key;
+    return { key: o.key, label: o.label, title: o.title, on, icon: o.icon, go: () => { const next = { ...answers }; if (on) delete next[q.key]; else next[q.key] = o.key; set({ answers: next }); } }; }) }));
+  const full = { ...W.INTENT_DEFAULT, ...answers };
+  const requested = (s.requests || []).find(r => r.csp === reg.csp && r.region === reg.region) || null;
+  const options = W.rankWays(cloud, answers, 99).map((r, i) => { const w = W.wayOf(r.key), who = W.wayWho(r.key) || { who: '', level: '', time: '' }, oks = r.why.filter(x => x.ok).map(x => x.short);
+    return { key: r.key, rank: String(i + 1), label: W.wayLabel(r.key, cloud, r.zone), kicker: w.kicker, monthly: money(r.monthly), setup: `${who.level} · ${who.time}`, who: who.who, fit: oks.slice(0, 2).join(' · '),
+      misses: r.misses, missWords: r.why.filter(x => x.miss).map(x => x.short).join('; '), score: String(r.pts), recommended: i === 0 && r.misses === 0, isRequested: !!requested && requested.option === r.key,
+      request: () => set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: reg.csp, region: reg.region, option: r.key, answers: full, defaulted: Object.keys(answers).length === 0 }] }) }; });
+  const cols = [{ key: 'label', label: 'Option', present: true, cls: 'dt-name', w: '30%' }, { key: 'monthly', label: 'Monthly', present: true, cls: 'num', w: '9%' }, { key: 'setup', label: 'Setup', present: true, w: '17%' }, { key: 'who', label: 'Who', present: true, w: '6%' }, { key: 'fit', label: 'Fit', present: true, w: '21%' }, { key: 'score', label: 'Score', present: true, cls: 'num', w: '6%' }, { key: 'act', label: '', present: true, cls: 'num', w: '11%' }];
+  const text = (k, r) => k === 'act' ? '' : k === 'fit' && r.misses ? `${r.missWords}` : k === 'score' && r.misses ? DASH : String(r[k]);
+  const rows = options.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act', isOption: x.key === 'label', ink: ['fit', 'score'].includes(x.key) && r.misses ? 'var(--text-light)' : x.ink })), click: false }));
+  const wt = W.intentWeights(answers);
+  return { hasRegion: true, noRegion: false, title, cloud, trail: [{ ...root, last: false }, { key: 'reg', label: title, go: () => {}, last: true }], hasTrail: true, pick, intent, options: rows, cols,
+    weights: W.CRITERIA.map(c => ({ key: c.key, label: c.label, icon: c.icon, w: wt[c.key], text: `${wt[c.key]}%` })), rules: rulesOf(answers), hasRules: rulesOf(answers).length > 0,
+    placeholder: true, placeholderLine: "AT&T's modeled ways stand in until the team's option list arrives.",
+    requested: !!requested, notRequested: !requested, requestedLine: requested ? `Requested ${W.wayLabel(requested.option, cloud)} for ${title}${requested.defaulted ? ' with the default answers' : ''}.` : '' };
+}
 export function vals(c) {
   const s = c.state, set = (p) => c.setState(p), f = fixtureOf(s), d = dataOf(s), dark = s.theme === 'dark';
   const iconDir = dark ? 'brand/icons-dark' : 'brand/icons-light', iconLink = dark ? 'brand/icons-linkdark' : 'brand/icons-link';
@@ -164,5 +201,6 @@ export function vals(c) {
     lm: lastmile(d, s, set),
     cl: links(d, s, set),
     dv: discovery(d, s, set),
+    rc: recommended(d, s, set),
   };
 }

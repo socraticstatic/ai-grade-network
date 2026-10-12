@@ -305,7 +305,8 @@ export function intentFromTags(tags = []) {
   return { ...INTENT_DEFAULT, ...(t.has('dev') || t.has('lab') ? { purpose: 'lab' } : {}), ...(t.has('gpu') || t.has('ai') ? { traffic: 'priority' } : {}) };
 }
 /** Each answer as the deck's rules: weight deltas on the five criteria, a hard rule with its miss, a soft preference. */
-const RULE = {
+/** The answers' rules (exported 2026-10-12 so the portal export can write them in words). */
+export const RULE = {
   critical: { w: { perf: 10, sec: 5, cost: -10, scale: 5 }, must: (w, z) => z !== 'intra', miss: ['One zone only', 'an outage takes it down'] },
   lab: { w: { cost: 20, setup: 10, perf: -10, sec: -10, scale: -10 } },
   priority: { w: { perf: 15, cost: -5, setup: -5 } },

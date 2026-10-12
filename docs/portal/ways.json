@@ -1,0 +1,478 @@
+{
+  "generated": "2026-10-12T17:00:28.180Z",
+  "source": "naas-ways.js",
+  "placeholder": true,
+  "note": "AT&T's modeled ways and ranking, exported from the storefront prototype. Treat as a starting point for the team's option list, not a source.",
+  "ways": [
+    {
+      "key": "byo",
+      "title": "Bring your own port",
+      "kicker": "NetBond Advanced",
+      "line": "Your Direct Connect, ExpressRoute or Interconnect, carried on the AT&T network. NetBond Advanced as it runs today.",
+      "clouds": [
+        "AWS",
+        "Azure",
+        "GCP",
+        "Oracle"
+      ],
+      "soon": false,
+      "hosted": false,
+      "inspect": false,
+      "monthly": {
+        "AWS": 1900,
+        "Azure": 1900,
+        "GCP": 1900,
+        "Oracle": 1900
+      },
+      "setup": "Guided reconfig",
+      "setupWords": "Guided reconfig · <15 min on AT&T's side; the first time needs your cloud gateway",
+      "time": "<15 min",
+      "proven": true,
+      "who": "You",
+      "youDo": {
+        "short": "Accept + gateway",
+        "words": "Accept the connection, attach your cloud gateway, confirm BGP"
+      },
+      "products": [
+        "netbond"
+      ],
+      "scores": {
+        "perf": {
+          "score": 5,
+          "words": "99.99% SLA"
+        },
+        "sec": {
+          "score": 5,
+          "words": "Never internet"
+        },
+        "setup": {
+          "score": 4,
+          "words": "Guided · <15 min"
+        },
+        "scale": {
+          "score": 5,
+          "words": "By tier"
+        }
+      }
+    },
+    {
+      "key": "att",
+      "title": "AT&T provides the port",
+      "kicker": "NetBond Advanced",
+      "line": "AT&T orders the cloud's Direct Connect or ExpressRoute and holds it. One order, one bill.",
+      "clouds": [
+        "AWS",
+        "Azure"
+      ],
+      "soon": false,
+      "hosted": false,
+      "inspect": false,
+      "monthly": {
+        "AWS": 2200,
+        "Azure": 2200
+      },
+      "setup": "Guided reconfig",
+      "setupWords": "Guided reconfig · <15 min on AT&T's side",
+      "time": "<15 min",
+      "proven": true,
+      "who": "AT&T",
+      "youDo": {
+        "short": "Accept + gateway",
+        "words": "Accept the hosted connection, attach your cloud gateway, confirm BGP"
+      },
+      "products": [
+        "netbond",
+        "port-att"
+      ],
+      "scores": {
+        "perf": {
+          "score": 5,
+          "words": "99.99% SLA"
+        },
+        "sec": {
+          "score": 5,
+          "words": "Never internet"
+        },
+        "setup": {
+          "score": 4,
+          "words": "Guided · <15 min"
+        },
+        "scale": {
+          "score": 5,
+          "words": "By tier"
+        }
+      }
+    },
+    {
+      "key": "peer",
+      "title": "Hosted peering",
+      "kicker": "AT&T-hosted",
+      "line": "AT&T's hub VPC or VNet, with the vSRX in path, peered to yours. L3 to L7 policy in AT&T's hub.",
+      "clouds": [
+        "AWS",
+        "Azure"
+      ],
+      "soon": false,
+      "hosted": true,
+      "inspect": true,
+      "monthly": {
+        "AWS": 4161,
+        "Azure": 4161
+      },
+      "setup": "Click + approve",
+      "setupWords": "Click + approve · 15-30 min, a proof-of-concept target",
+      "time": "15-30 min",
+      "proven": false,
+      "who": "AT&T",
+      "youDo": {
+        "short": "Accept + route",
+        "words": "Accept the peering and add one route"
+      },
+      "products": [],
+      "scores": {
+        "perf": {
+          "score": 4,
+          "words": "Zone-redundant"
+        },
+        "sec": {
+          "score": 5,
+          "words": "Inspected"
+        },
+        "setup": {
+          "score": 4,
+          "words": "Approve · 15-30 min"
+        },
+        "scale": {
+          "score": 2,
+          "words": "Per VPC"
+        }
+      }
+    },
+    {
+      "key": "transit",
+      "title": "Transit gateway",
+      "kicker": "AT&T-hosted",
+      "line": "AT&T runs a transit gateway in its hub and shares it; your VPCs attach. Transitive routing, central inspection.",
+      "clouds": [
+        "AWS",
+        "Azure"
+      ],
+      "soon": false,
+      "hosted": true,
+      "inspect": true,
+      "monthly": {
+        "AWS": 4234,
+        "Azure": 4234
+      },
+      "setup": "Click + approve",
+      "setupWords": "Click + approve · 30-60 min, a proof-of-concept target",
+      "time": "30-60 min",
+      "proven": false,
+      "who": "AT&T",
+      "youDo": {
+        "short": "Attach + routes",
+        "words": "Accept the share, attach your VPC and update its route table"
+      },
+      "products": [],
+      "scores": {
+        "perf": {
+          "score": 4,
+          "words": "Transitive"
+        },
+        "sec": {
+          "score": 5,
+          "words": "Inspected"
+        },
+        "setup": {
+          "score": 4,
+          "words": "Approve · 30-60 min"
+        },
+        "scale": {
+          "score": 5,
+          "words": "Many VPCs"
+        }
+      }
+    },
+    {
+      "key": "cloudwan",
+      "title": "Cloud WAN",
+      "kicker": "AT&T-hosted",
+      "line": "AT&T runs the core network across regions; your VPC attaches to its edge and joins a segment.",
+      "clouds": [
+        "AWS",
+        "Azure"
+      ],
+      "soon": false,
+      "hosted": true,
+      "inspect": true,
+      "monthly": {
+        "AWS": 4599,
+        "Azure": 4599
+      },
+      "setup": "Guided reconfig",
+      "setupWords": "Guided reconfig · 1-2 hrs, a proof-of-concept target",
+      "time": "1-2 hrs",
+      "proven": false,
+      "who": "AT&T",
+      "youDo": {
+        "short": "Attach + segment",
+        "words": "Attach your VPC to the edge and join a segment"
+      },
+      "products": [],
+      "scores": {
+        "perf": {
+          "score": 5,
+          "words": "Multi-region"
+        },
+        "sec": {
+          "score": 5,
+          "words": "Segments"
+        },
+        "setup": {
+          "score": 3,
+          "words": "Guided · 1-2 hrs"
+        },
+        "scale": {
+          "score": 5,
+          "words": "Multi-region"
+        }
+      }
+    },
+    {
+      "key": "privatelink",
+      "title": "PrivateLink",
+      "kicker": "AT&T-hosted",
+      "line": "AT&T publishes each service; you create one private endpoint per service. Overlapping CIDRs are fine.",
+      "clouds": [
+        "AWS",
+        "Azure",
+        "GCP"
+      ],
+      "soon": false,
+      "hosted": true,
+      "inspect": true,
+      "monthly": {
+        "AWS": 4708,
+        "Azure": 4708,
+        "GCP": 4708
+      },
+      "setup": "Click + approve",
+      "setupWords": "Click + approve · 15-30 min each, a proof-of-concept target",
+      "time": "15-30 min each",
+      "proven": false,
+      "who": "AT&T",
+      "youDo": {
+        "short": "Endpoint + DNS",
+        "words": "Create an endpoint per service, approve it, set up DNS"
+      },
+      "products": [],
+      "scores": {
+        "perf": {
+          "score": 4,
+          "words": "10 Gbps per AZ"
+        },
+        "sec": {
+          "score": 5,
+          "words": "Per service"
+        },
+        "setup": {
+          "score": 3,
+          "words": "Approve · per service"
+        },
+        "scale": {
+          "score": 2,
+          "words": "Per service"
+        }
+      }
+    }
+  ],
+  "intent": [
+    {
+      "key": "purpose",
+      "label": "Purpose",
+      "options": [
+        {
+          "key": "critical",
+          "label": "Critical",
+          "words": "Business critical: zone-redundant, SLA-backed, two paths"
+        },
+        {
+          "key": "prod",
+          "label": "Production",
+          "words": "Production: the deck's weights as they stand"
+        },
+        {
+          "key": "lab",
+          "label": "Lab",
+          "words": "A lab: cost and speed first; one zone is fine"
+        }
+      ]
+    },
+    {
+      "key": "traffic",
+      "label": "Traffic",
+      "options": [
+        {
+          "key": "priority",
+          "label": "Priority",
+          "words": "Priority traffic: deterministic latency, held to an SLO"
+        },
+        {
+          "key": "standard",
+          "label": "Standard",
+          "words": "Standard traffic: best path, no SLO of its own"
+        }
+      ]
+    },
+    {
+      "key": "security",
+      "label": "Security",
+      "options": [
+        {
+          "key": "private",
+          "label": "Private",
+          "words": "A private path: never the public internet, route policy at L3"
+        },
+        {
+          "key": "inspected",
+          "label": "Inspected",
+          "words": "Inspected in path: L3 to L7 on the vSRX in AT&T's hub"
+        },
+        {
+          "key": "service",
+          "label": "Per service",
+          "words": "Per service: expose named services only, no routed reach"
+        }
+      ]
+    },
+    {
+      "key": "routing",
+      "label": "Routing · L3",
+      "options": [
+        {
+          "key": "bgp",
+          "label": "Your BGP",
+          "words": "You peer BGP with AT&T, as your sites already do: routed both ways"
+        },
+        {
+          "key": "hub",
+          "label": "AT&T's hub",
+          "words": "AT&T runs the routing in its hub; no gateway in your VPC"
+        },
+        {
+          "key": "transitive",
+          "label": "Transitive",
+          "words": "Many VPCs reach each other through one hub"
+        }
+      ]
+    }
+  ],
+  "defaults": {
+    "purpose": "prod",
+    "traffic": "standard",
+    "security": "private",
+    "routing": "bgp"
+  },
+  "criteria": [
+    {
+      "key": "cost",
+      "label": "Cost",
+      "weight": 30
+    },
+    {
+      "key": "perf",
+      "label": "Performance",
+      "weight": 20
+    },
+    {
+      "key": "sec",
+      "label": "Security",
+      "weight": 20
+    },
+    {
+      "key": "setup",
+      "label": "Effort and time",
+      "weight": 15
+    },
+    {
+      "key": "scale",
+      "label": "Scale",
+      "weight": 15
+    }
+  ],
+  "rules": [
+    {
+      "answer": "critical",
+      "weights": {
+        "perf": 10,
+        "sec": 5,
+        "cost": -10,
+        "scale": 5
+      },
+      "removes": "One zone only: an outage takes it down",
+      "prefers": null
+    },
+    {
+      "answer": "lab",
+      "weights": {
+        "cost": 20,
+        "setup": 10,
+        "perf": -10,
+        "sec": -10,
+        "scale": -10
+      },
+      "removes": null,
+      "prefers": null
+    },
+    {
+      "answer": "priority",
+      "weights": {
+        "perf": 15,
+        "cost": -5,
+        "setup": -5
+      },
+      "removes": null,
+      "prefers": null
+    },
+    {
+      "answer": "inspected",
+      "weights": {
+        "sec": 10,
+        "cost": -5
+      },
+      "removes": "No inspection in path: L3 route policy only",
+      "prefers": null
+    },
+    {
+      "answer": "service",
+      "weights": {
+        "sec": 10
+      },
+      "removes": "Routed, not per service: reaches the whole VPC",
+      "prefers": null
+    },
+    {
+      "answer": "bgp",
+      "weights": {},
+      "removes": null,
+      "prefers": "a way where you run BGP yourself"
+    },
+    {
+      "answer": "hub",
+      "weights": {
+        "setup": 5
+      },
+      "removes": "You run the gateway: and BGP, in your VPC",
+      "prefers": null
+    },
+    {
+      "answer": "transitive",
+      "weights": {
+        "scale": 10
+      },
+      "removes": "Not transitive: one peering per VPC",
+      "prefers": "the transit gateway"
+    }
+  ],
+  "ranking": "Each answer adds or removes weight on the five criteria (never below 5, scaled to 100). A way scores each criterion 1 to 5; the weighted sum out of 100, plus 5 for each soft preference it meets, is its score. A hard rule a way breaks counts as a miss. Ways sort by fewest misses, then score, then the cheaper monthly."
+}
