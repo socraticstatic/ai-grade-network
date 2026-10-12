@@ -114,7 +114,7 @@ export const ORDER_STAGE = 'Submitted for approval';
 export const MODELLED = 'Modelled · list price';
 export const PRICE_NOTE = 'Priced by AT&T after review';
 // One price rule for the bandwidth a catalog price covers (skeptic, 2026-09-30): a product's
-// "Up to N Gbps" line (NetBond for Cloud: Up to 10 Gbps, a connection or a port). Past it, AT&T
+// "Up to N Gbps" line (NetBond Advanced: Up to 10 Gbps, a connection or a port). Past it, AT&T
 // prices it after review, here and in Modify bandwidth (naas-bandwidth.js PORT_CEIL_MBPS).
 const UNIT_MBPS = { M: 1, G: 1000 };
 /** '100 Gbps' is 100000; '500 Mbps' is 500; anything else is 0. */

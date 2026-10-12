@@ -72,7 +72,7 @@ export const burstNoteFor = (cloud) => burstFor(cloud).note;
 /** AT&T sells the bandwidth where it holds the on-ramp: NetBond, never a cloud provider's or Equinix's port. The one rule (naas-logic.js attHolds). */
 export const sells = (row) => !!row && attHolds({ priv: true, ramp: row.ramp });
 
-// The catalog's NetBond for Cloud: "Up to 10 Gbps" is the size its one price covers, a port.
+// The catalog's NetBond Advanced: "Up to 10 Gbps" is the size its one price covers, a port.
 // The connect flow reads the same line for a new connection (naas-connect-flow.js ceilMbpsOf).
 const NB = CATALOG.find(p => p.id === 'netbond') || { included: [] };
 export const PORT_CEIL_MBPS = isFinite(ceilMbpsOf(NB)) ? ceilMbpsOf(NB) : 10000;
