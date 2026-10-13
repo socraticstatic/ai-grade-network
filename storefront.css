@@ -136,7 +136,7 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js-whyp-x{position:absolute;top:14px;right:14px;display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:50%;background:transparent;color:var(--text-light);cursor:pointer}.js-whyp-x:hover{background:var(--bg-neutral);color:var(--text-heading)}
 .js-bigring{--p:0%;justify-self:start;display:grid;place-items:center;width:104px;height:104px;border-radius:50%;background:conic-gradient(var(--cta) var(--p),var(--bg-neutral) 0);animation:js-pop .5s cubic-bezier(.22,1,.36,1) both}
 .js-bigring>span{display:grid;place-items:center;align-content:center;width:84px;height:84px;border-radius:50%;background:var(--bg-base)}.js-bigring b{font-size:32px;line-height:36px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading);font-variant-numeric:tabular-nums}.js-bigring small{font-size:12px;line-height:16px;font-weight:600;color:var(--text-light)}
-.js-whyp-name{display:grid;gap:2px}.js-whyp-name small{font-size:12px;line-height:16px;font-weight:700;color:var(--link)}.js-whyp-name b{font-size:22px;line-height:28px;letter-spacing:-.02em;color:var(--text-heading)}.js-whyp-name>span{display:flex;align-items:baseline;gap:8px;font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading)}.js-whyp-name em{font-style:normal;font-size:13px;font-weight:600}
+.js-whyp-name{display:grid;gap:2px}.js-whyp-name small{font-size:13px;line-height:17px;font-weight:700;color:var(--link)}.js-whyp-name b{font-size:22px;line-height:28px;letter-spacing:-.02em;color:var(--text-heading)}.js-whyp-name>span{display:flex;align-items:baseline;gap:8px;font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading)}.js-whyp-name em{font-style:normal;font-size:13px;font-weight:600}
 .js-wbars{display:grid;gap:6px;margin-top:6px}
 .js-wbar{display:flex;gap:2px;height:30px;border-radius:9px;overflow:hidden}
 .js-wbar>i{display:grid;place-items:center;min-width:0;background:color-mix(in srgb,var(--cta) var(--s),var(--bg-base));color:var(--wi);transform-origin:left;animation:js-grow-x .6s cubic-bezier(.22,1,.36,1) both}
@@ -144,19 +144,22 @@ a{color:#0057b8}a:hover{color:#00388f}
 @keyframes js-grow-x{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .js-wbar.deck{height:6px;border-radius:3px;opacity:.45}.js-wbar.deck>i{animation:none}
 .js-wleg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin-top:2px}
-.js-wleg>span{display:grid;justify-items:center;gap:2px;font-size:12px;line-height:16px;color:var(--text-light)}.js-wleg b{font-size:15px;line-height:19px;color:var(--text-heading);font-variant-numeric:tabular-nums}.js-wleg em{font-style:normal;font-size:12px;font-weight:700}
+.js-wleg>span{display:grid;justify-items:center;gap:2px;font-size:13px;line-height:17px;color:var(--text-body)}.js-wleg b{font-size:16px;line-height:20px;color:var(--text-heading);font-variant-numeric:tabular-nums}.js-wleg em{font-style:normal;font-size:13px;font-weight:700}
 /* Because you said: the answer, a line, what it got. The line takes the reason's ink: kept, a caution, missed, or quiet. */
-.js-pairs{display:grid;gap:10px}
-.js-pair{display:grid;grid-template-columns:132px 40px minmax(0,1fr);align-items:center;animation:js-in .4s cubic-bezier(.22,1,.36,1) both}
+/* The middle column distributes (Micah, 2026-10-12: "the middle part has no distribution"): head at the top, the pairs spread through the height, And at the bottom; a pair balances on the column's centre line. */
+.js-whyp>.js-whyp-b{align-content:stretch;grid-template-rows:auto minmax(0,1fr) auto}
+.js-pairs{display:grid;gap:14px;align-content:space-evenly}
+.js-pair{display:grid;grid-template-columns:minmax(0,1fr) 56px minmax(0,1fr);align-items:center;animation:js-in .4s cubic-bezier(.22,1,.36,1) both}
+.js-pair>.js-said{justify-self:end}.js-pair>.js-gets{justify-self:start;min-width:220px}
 .js-pair:nth-child(2){animation-delay:70ms}.js-pair:nth-child(3){animation-delay:140ms}.js-pair:nth-child(4){animation-delay:210ms}
-.js-said{display:inline-flex;align-items:center;gap:8px;min-width:0;font-size:13px;line-height:17px;font-weight:700;color:var(--text-heading);white-space:nowrap}
+.js-said{display:inline-flex;align-items:center;gap:10px;min-width:0;font-size:14px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap}
 .js-said>i{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--cta);color:#fff}
 .js-pair>u{position:relative;height:2px;margin:0 6px;background:var(--cta);opacity:.55}.js-pair>u::after{content:"";position:absolute;right:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:inherit}
 .js-pair[data-kind="warn"]>u{background:var(--border-primary);opacity:1}.js-pair[data-kind="miss"]>u{background:var(--error);opacity:.7}.js-pair[data-kind="quiet"]>u{background:repeating-linear-gradient(90deg,var(--border-primary) 0 4px,transparent 4px 8px);opacity:1}.js-pair[data-kind="quiet"]>u::after{background:var(--border-primary)}
 .js-pair[data-kind="quiet"] .js-said>i{background:var(--bg-neutral);color:var(--text-light)}
 .js-gets{display:grid;gap:6px;min-width:0}
 .js-reason{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;align-items:center;min-width:0;padding:8px 12px;border-radius:12px;background:var(--bg-wash)}
-.js-reason>.ic{grid-row:1 / 3;color:var(--link)}.js-reason b{font-size:14px;line-height:18px;color:var(--text-heading)}.js-reason em{font-style:normal;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.js-reason>.ic{grid-row:1 / 3;color:var(--link)}.js-reason b{font-size:14px;line-height:18px;color:var(--text-heading)}.js-reason em{font-style:normal;font-size:13px;line-height:17px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .js-reason[data-kind="warn"]>.ic{color:var(--text-light)}.js-reason[data-kind="miss"]{background:color-mix(in srgb,var(--error) 8%,var(--bg-base))}.js-reason[data-kind="miss"]>.ic,.js-reason[data-kind="miss"] b{color:var(--error)}
 .js-reason[data-kind="quiet"]{background:transparent}.js-reason[data-kind="quiet"]>.ic{color:var(--text-disabled)}.js-reason[data-kind="quiet"] b{color:var(--text-light);font-weight:600}
 .js-also{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding-top:12px;border-top:1px solid var(--border-secondary)}.js-also>.js-cap{margin-right:6px}.js-also .js-wchip{background:var(--bg-accent);color:var(--text-heading)}
@@ -883,9 +886,9 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* The Needs beat inside the cloud node (2026-10-12): four sentences two by two, chips as verbs, the default read as chosen. */
 .js-needs{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;padding-top:6px;border-top:1px dashed var(--border-secondary)}
-.js-needs-h{grid-column:1 / -1;font-size:12px;line-height:16px;color:var(--text-light)}
-.js-nq{display:grid;gap:2px}.js-ns{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;font-weight:700;color:var(--text-heading)}
+.js-needs-h{grid-column:1 / -1;font-size:13px;line-height:18px;color:var(--text-body)}
+.js-nq{display:grid;gap:2px}.js-ns{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading)}
 .js-nopts{display:inline-flex;flex-wrap:wrap;gap:2px;padding:2px;border-radius:8px;background:var(--bg-neutral);justify-self:start}
-.js-no{height:24px;padding:0 8px;border:0;border-radius:6px;background:transparent;font:inherit;font-size:12px;color:var(--text-body);cursor:pointer;white-space:nowrap}
+.js-no{height:26px;padding:0 9px;border:0;border-radius:6px;background:transparent;font:inherit;font-size:13px;color:var(--text-body);cursor:pointer;white-space:nowrap}
 .js-no[aria-checked="true"]{background:var(--bg-base);color:var(--link);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}.js-no:disabled{cursor:default}
 

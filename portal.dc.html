@@ -30,47 +30,47 @@
 .po-title{margin:0;font-size:22px;line-height:28px;font-weight:700;letter-spacing:-.03em;color:var(--text-heading)}
 .po-counts{display:flex;align-items:center;gap:14px;font-size:13px;line-height:18px;color:var(--text-body);white-space:nowrap}
 .po-counts b{color:var(--text-heading)}
-.po-synth{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;background:var(--bg-neutral);font-size:12px;font-weight:500;color:var(--text-light);white-space:nowrap}
-.po-empty{padding:24px;border:1px dashed var(--border-secondary);border-radius:12px;color:var(--text-light);font-size:13px}
+.po-synth{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;background:var(--bg-neutral);font-size:13px;font-weight:500;color:var(--text-body);white-space:nowrap}
+.po-empty{padding:24px;border:1px dashed var(--border-secondary);border-radius:12px;color:var(--text-body);font-size:14px}
 .po-trail{display:flex;align-items:center;gap:4px;margin:0 0 8px;font-size:13px;line-height:18px}
 .po-crumb{border:0;background:transparent;padding:2px 4px;font:inherit;font-size:13px;color:var(--link);cursor:pointer;border-radius:4px}
 .po-crumb:hover:not(:disabled){background:var(--bg-wash)}.po-crumb:disabled{color:var(--text-heading);font-weight:700;cursor:default}
 .po-trail .po-crumb+.po-crumb::before{content:"›";margin-right:6px;color:var(--text-disabled);font-weight:400}
-.po-pager{display:flex;align-items:center;justify-content:flex-end;gap:6px;height:36px;font-size:12px;color:var(--text-light)}
+.po-pager{display:flex;align-items:center;justify-content:flex-end;gap:6px;height:36px;font-size:13px;color:var(--text-body)}
 .po-pg{width:28px;height:28px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:16px;line-height:1;cursor:pointer}
-.po-pg:disabled{color:var(--text-disabled);cursor:default}
+.po-pg:disabled{color:var(--text-body);opacity:.5;cursor:default}
 .po-mark{display:inline-block;width:18px;height:18px;margin:-3px 8px -3px 0;vertical-align:middle;background:center / contain no-repeat}
 .dt-c.po-actc{padding-top:7px;padding-bottom:7px}
 .po-band{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:center;min-height:96px;padding:12px 20px;margin-bottom:12px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-base);box-sizing:border-box}
-.po-band .ps.big{max-width:620px}
+.po-band .ps.big{max-width:620px}.po-band .ps.big small{font-size:13px;line-height:18px;color:var(--text-body)}.po-band .ps.big b{font-size:13px}
 .po-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .po-tile{display:grid;gap:4px;padding:10px 12px;border:1px solid var(--border-secondary);border-radius:10px;background:var(--bg-wash);min-width:0}
-.po-tl{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.po-tile b{font-size:22px;line-height:26px;font-weight:700;letter-spacing:-.02em;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.po-tl{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.po-tile b{font-size:24px;line-height:28px;font-weight:700;letter-spacing:-.02em;color:var(--text-heading);font-variant-numeric:tabular-nums}
 .dt-c .js-score.md{display:grid}
 .po-needs{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding-top:8px;border-top:1px dashed var(--border-secondary)}.po-needs .po-hint,.po-needs .po-copy{grid-column:1 / -1}
-.po-nq{display:grid;gap:4px}.po-ns{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;font-weight:700;color:var(--text-heading)}
-.po-needs .po-opts{padding:2px;gap:2px;flex-wrap:wrap}.po-needs .po-opt{height:24px;padding:0 8px;font-size:12px}
+.po-nq{display:grid;gap:4px}.po-ns{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading)}
+.po-needs .po-opts{padding:2px;gap:2px;flex-wrap:wrap}.po-needs .po-opt{height:26px;padding:0 9px;font-size:13px}
 .po-copy{justify-self:start;display:inline-flex;align-items:center;gap:6px;height:26px;margin-top:2px}
-.po-hint{font-size:12px;line-height:16px;color:var(--text-light)}
+.po-hint{font-size:13px;line-height:18px;color:var(--text-body)}
 .po-rtags{position:relative}.po-rtags .js-tags{flex-wrap:wrap}
 .po-palette{position:absolute;left:24px;top:100%;z-index:8;display:flex;flex-wrap:wrap;gap:6px;max-width:380px;padding:8px;border:1px solid var(--border-secondary);border-radius:10px;background:var(--bg-base);box-shadow:0 8px 24px rgba(0,0,0,.1)}
-.po-act{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}.po-act:hover{border-color:var(--border-active)}.po-act>i{font-style:normal}
-.po-lead{margin:0 0 10px;font-size:13px;line-height:18px;color:var(--text-body)}
-.po-placeholder{color:var(--text-light)}.po-requested{margin-top:10px;color:var(--text-heading);font-weight:600}
+.po-act{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--link);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}.po-act:hover{border-color:var(--border-active)}.po-act>i{font-style:normal}
+.po-lead{margin:0 0 10px;font-size:14px;line-height:20px;color:var(--text-body)}
+.po-placeholder{color:var(--text-body)}.po-requested{margin-top:10px;color:var(--text-heading);font-weight:600}
 .po-intent{display:flex;flex-wrap:wrap;gap:8px 24px;margin:0 0 12px}
 .po-q{display:flex;align-items:center;gap:10px}
 .po-ql{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-heading);white-space:nowrap}
 .po-opts{display:inline-flex;gap:4px;padding:2px;border-radius:8px;background:var(--bg-neutral)}
-.po-opt{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--text-body);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.po-opt{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--text-body);font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
 .po-opt[aria-pressed="true"]{background:var(--bg-base);color:var(--link);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.po-rank{display:inline-grid;place-items:center;width:22px;height:22px;margin-right:8px;border-radius:50%;background:var(--bg-neutral);font-size:12px;font-weight:700;color:var(--text-body)}
-.po-kicker{display:block;padding-left:30px;font-size:12px;line-height:16px;font-weight:400;color:var(--text-light)}
-.po-rec{margin-left:8px;padding:2px 6px;border-radius:4px;background:var(--bg-accent);font-size:12px;font-weight:600;color:var(--link);white-space:nowrap}
+.po-rank{display:inline-grid;place-items:center;width:24px;height:24px;margin-right:8px;border-radius:50%;background:var(--bg-neutral);font-size:13px;font-weight:700;color:var(--text-heading)}
+.po-kicker{display:block;padding-left:30px;font-size:13px;line-height:18px;font-weight:400;color:var(--text-body)}
+.po-rec{margin-left:8px;padding:2px 6px;border-radius:4px;background:var(--bg-accent);font-size:13px;font-weight:600;color:var(--link);white-space:nowrap}
 .dt-r[data-rec="true"] .dt-c{background:color-mix(in srgb, var(--link) 4%, transparent)}
-.po-done{font-size:12px;font-weight:600;color:var(--text-light)}
-.po-rules{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:12px;font-size:12px;line-height:16px;color:var(--text-body)}
-.po-rl{font-weight:700;color:var(--text-heading)}.po-w{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}.po-rule{color:var(--text-light)}
+.po-done{font-size:13px;font-weight:600;color:var(--text-heading)}
+.po-rules{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:12px;font-size:13px;line-height:18px;color:var(--text-body)}
+.po-rl{font-weight:700;color:var(--text-heading)}.po-w{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}.po-rule{color:var(--text-body)}
 .dt-r[data-click="true"]{cursor:pointer}.dt-r[data-click="true"]:hover{background:var(--bg-wash)}
 </style>
 </head>
@@ -78,11 +78,11 @@
 <x-dc><template>
 <helmet>
 <meta name="robots" content="noindex, nofollow, noarchive">
-<title>AT&amp;T AI-grade network · Portal MVP</title>
+<title>AT&amp;T AI-Grade Network · Portal MVP</title>
 </helmet>
 <div data-theme="{{ theme }}" style="min-height:100vh;background:var(--bg-wash);color:var(--text-body);font-size:14px;line-height:20px">
 <header style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:32px;height:64px;padding:0 24px;background:var(--bg-base);border-bottom:1px solid var(--border-secondary)">
-  <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1;white-space:nowrap"><span style="font-size:12px;line-height:16px;font-weight:700;letter-spacing:.02em;color:#009fdb">AT&amp;T</span><span style="font-size:22px;line-height:26px;letter-spacing:-.03em;color:var(--text-heading)"><span style="font-weight:500">AI-grade </span><span style="font-weight:700">network</span></span></div>
+  <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1;white-space:nowrap"><span style="font-size:12px;line-height:16px;font-weight:700;letter-spacing:.02em;color:#009fdb">AT&amp;T</span><span style="font-size:22px;line-height:26px;letter-spacing:-.03em;color:var(--text-heading)"><span style="font-weight:500">AI-Grade </span><span style="font-weight:700">Network</span></span></div>
   <!-- The product pills: the one you are on carries the fill (Micah, 2026-10-12: "when I click on MVP there's no selected element on the top bar"). NaaS is the door back to the full concept. -->
   <nav aria-label="Products" style="display:flex;gap:4px;align-items:center;white-space:nowrap"><a href="NaaS Storefront.dc.html" aria-current="false" style="height:36px;padding:0 12px;border-radius:8px;background:transparent;color:var(--link);font-size:14px;font-weight:500;display:inline-flex;align-items:center;text-decoration:none">NaaS</a><span aria-current="page" style="height:36px;padding:0 12px;border-radius:8px;background:var(--bg-accent);color:var(--link);font-size:14px;font-weight:500;display:inline-flex;align-items:center">Portal MVP</span></nav>
   <!-- In the journey there is no rail, so one button leads back to the pages (the storefront's grammar). -->
@@ -102,14 +102,14 @@
   </div>
   <!-- The presenter's controls: which fixture, which state (A = confirmed fields, B = the note's maybe fields), the theme, and the way back to the full concept. -->
   <div style="border-top:1px solid var(--border-secondary);padding-top:10px;margin-top:8px;display:grid;gap:8px">
-    <label title="Fixture" style="display:grid;font-size:12px;color:var(--text-light)"><select value="{{ fixture }}" onChange="{{ setFixture }}" aria-label="Fixture" style="height:28px;min-width:0;padding:0 6px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:12px"><option value="calloway">Calloway Freight</option><option value="scale">Bank scale (synthetic)</option><option value="remote">Your data</option></select></label>
-    <label title="Data state" style="display:grid;font-size:12px;color:var(--text-light)"><select value="{{ stateValue }}" onChange="{{ setStateB }}" aria-label="Data state" style="height:28px;min-width:0;padding:0 6px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:12px"><option value="a">Set 1 · confirmed fields</option><option value="b">Set 2 · with health, utilization, affinity</option></select></label>
-    <button onClick="{{ toggleTheme }}" aria-label="Toggle theme" title="{{ themeTitle }}" style="height:32px;border:1px solid var(--border-secondary);border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 8px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:12px;cursor:pointer">
+    <label title="Fixture" style="display:grid;font-size:13px;color:var(--text-body)"><select value="{{ fixture }}" onChange="{{ setFixture }}" aria-label="Fixture" style="height:30px;min-width:0;padding:0 6px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:13px"><option value="calloway">Calloway Freight</option><option value="scale">Bank scale (synthetic)</option><option value="remote">Your data</option></select></label>
+    <label title="Data state" style="display:grid;font-size:13px;color:var(--text-body)"><select value="{{ stateValue }}" onChange="{{ setStateB }}" aria-label="Data state" style="height:30px;min-width:0;padding:0 6px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:13px"><option value="a">Set 1 · confirmed fields</option><option value="b">Set 2 · with health, utilization, affinity</option></select></label>
+    <button onClick="{{ toggleTheme }}" aria-label="Toggle theme" title="{{ themeTitle }}" style="height:32px;border:1px solid var(--border-secondary);border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 8px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:13px;cursor:pointer">
       <sc-if value="{{ themeIsLight }}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></sc-if>
       <sc-if value="{{ themeIsDark }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></sc-if>
       <span>{{ themeTitle }}</span>
     </button>
-    <a href="NaaS Storefront.dc.html" style="font-size:12px;line-height:16px;color:var(--link);text-decoration:none;white-space:nowrap">Full concept ↗</a>
+    <a href="NaaS Storefront.dc.html" style="font-size:13px;line-height:18px;color:var(--link);text-decoration:none;white-space:nowrap">Full concept ↗</a>
   </div>
 </aside>
 </sc-if>

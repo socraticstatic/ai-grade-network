@@ -113,7 +113,7 @@ export function links(d, s, set) {
       bandwidthMbps: l.bandwidthMbps, service: l.service, network: l.network ? `${l.network.id} · ${l.network.name}` : undefined }; })
     .sort((a, b) => a.csp.localeCompare(b.csp) || a.pop.localeCompare(b.pop));
   const cols = P.columnsFor(rows, [['cloud', 'Cloud'], ['pop', 'POP'], ['region', 'Region'], ['bandwidthMbps', 'Bandwidth'], ['service', 'Service'], ['network', 'Network']])
-    .map(c => ({ ...c, cls: c.key === 'bandwidthMbps' ? 'num' : c.key === 'cloud' ? 'dt-name' : '', ink: c.key === 'region' ? (r) => (r.unmapped ? 'var(--text-light)' : '') : null }));
+    .map(c => ({ ...c, cls: c.key === 'bandwidthMbps' ? 'num' : c.key === 'cloud' ? 'dt-name' : '', ink: c.key === 'region' ? (r) => (r.unmapped ? 'var(--text-body)' : '') : null }));
   const text = (k, r) => k === 'bandwidthMbps' ? bw(r.bandwidthMbps) : (r[k] === undefined || r[k] === null ? DASH : String(r[k]));
   const reached = new Set(rows.flatMap(r => r.regions));
   const pg = pageOf(rows.map(r => ({ ...r, cells: cellsOf(r, cols, text), click: false })), s.clPage, PAGE_ROWS, set, 'clPage');
@@ -141,7 +141,7 @@ export function discovery(d, s, set) {
         go: () => set({ dtrail: [key], dPage: 0 }), connect: () => { clearInterval(scanTimer); set({ journey: true, jStep: JB.found, jProv: ck, jScan: 4, jRegion: key, jPick: null, jFrom: 'discovery', region: { csp: r.csp, region: r.region } }); } }; })
       .sort((a, b) => a.csp.localeCompare(b.csp) || a.region.localeCompare(b.region));
     const cols = P.columnsFor(rows, [['cloud', 'Cloud'], ['region', 'Region'], ['vpcs', 'VPCs'], ['subnets', 'Subnets'], ['att', 'AT&T'], ['bytesIn', 'Bytes in'], ['bytesOut', 'Bytes out']])
-      .map(c => ({ ...c, cls: ['vpcs', 'subnets', 'bytesIn', 'bytesOut'].includes(c.key) ? 'num' : c.key === 'cloud' ? 'dt-name' : '', ink: c.key === 'att' ? (r) => (r.on ? '' : 'var(--text-light)') : null }));
+      .map(c => ({ ...c, cls: ['vpcs', 'subnets', 'bytesIn', 'bytesOut'].includes(c.key) ? 'num' : c.key === 'cloud' ? 'dt-name' : '', ink: c.key === 'att' ? (r) => (r.on ? '' : 'var(--text-body)') : null }));
     if (rows.some(r => r.canConnect)) cols.push({ key: 'act', label: '', present: true, cls: 'num' });
     const text = (k, r) => ['bytesIn', 'bytesOut'].includes(k) ? fmtBytes(r[k]) : ['vpcs', 'subnets'].includes(k) ? n(r[k]) : k === 'act' ? '' : String(r[k]);
     const pg = pageOf(rows.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act', cls: x.key === 'act' ? `${x.cls} po-actc` : x.cls })), click: true })), s.dPage, PAGE_ROWS, set, 'dPage');
@@ -182,7 +182,7 @@ export function recommended(d, s, set) {
       const ck = P.cspOf(r.csp); return { key: `${r.csp}/${r.region}`, csp: ck, cloud: W.CLOUD_NAME[ck] || r.csp, mark: W.markFor(ck, dark ? 'dark' : 'light'), region: P.regionName(r.region), on: j.on, att: rq && !j.on ? `Requested · ${W.wayLabel(rq.option, ck)}` : j.on ? 'On AT&T' : j.cspOnly ? `AT&T · ${ck} at ${j.cspLink.pop ? j.cspLink.pop.metro : 'a POP'}` : 'Not on AT&T',
         go: () => set({ region: { csp: r.csp, region: r.region } }) }; })
     .sort((a, b) => (a.on - b.on) || a.csp.localeCompare(b.csp) || a.region.localeCompare(b.region));
-  const pickCols = [{ key: 'cloud', label: 'Cloud', present: true, cls: 'dt-name' }, { key: 'region', label: 'Region', present: true }, { key: 'att', label: 'AT&T', present: true, ink: (r) => (r.on ? '' : 'var(--text-light)') }];
+  const pickCols = [{ key: 'cloud', label: 'Cloud', present: true, cls: 'dt-name' }, { key: 'region', label: 'Region', present: true }, { key: 'att', label: 'AT&T', present: true, ink: (r) => (r.on ? '' : 'var(--text-body)') }];
   // One row fewer than a plain table: the "Pick a region" line sits above it.
   const pick = { ...pageOf(pickRows.map(r => ({ ...r, cells: cellsOf(r, pickCols, (k, x) => String(x[k])), click: true })), s.rcPage, PAGE_ROWS - 1, set, 'rcPage'), cols: pickCols };
   if (!s.region) return { hasRegion: false, noRegion: true, trail: [root], hasTrail: false, pick, intent: [], options: [], cols: [], weights: [], rules: [], requested: false, requestedLine: '', placeholder: true, placeholderLine: '' };
@@ -197,7 +197,7 @@ export function recommended(d, s, set) {
       request: () => set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: reg.csp, region: reg.region, option: r.key, answers: full, defaulted: Object.keys(answers).length === 0 }] }) }; });
   const cols = [{ key: 'label', label: 'Option', present: true, cls: 'dt-name', w: '30%' }, { key: 'monthly', label: 'Monthly', present: true, cls: 'num', w: '9%' }, { key: 'setup', label: 'Setup', present: true, w: '17%' }, { key: 'who', label: 'Who', present: true, w: '6%' }, { key: 'fit', label: 'Fit', present: true, w: '21%' }, { key: 'score', label: 'Score', present: true, cls: 'num', w: '6%' }, { key: 'act', label: '', present: true, cls: 'num', w: '11%' }];
   const text = (k, r) => k === 'act' ? '' : k === 'fit' && r.misses ? `${r.missWords}` : k === 'score' && r.misses ? DASH : String(r[k]);
-  const rows = options.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act', isOption: x.key === 'label', isScore: x.key === 'score', notScore: x.key !== 'score', ptsPct: `${r.score}%`, ptsShown: r.misses ? '✕' : r.score, out: r.misses > 0, title: r.misses ? r.missWords : `${r.score} of 100 for what you said`, cls: x.key === 'act' ? `${x.cls} po-actc` : x.key === 'score' ? `${x.cls} po-actc` : x.cls, ink: ['fit', 'score'].includes(x.key) && r.misses ? 'var(--text-light)' : x.ink })), click: false }));
+  const rows = options.map(r => ({ ...r, cells: cellsOf(r, cols, text).map(x => ({ ...x, isAct: x.key === 'act', isOption: x.key === 'label', isScore: x.key === 'score', notScore: x.key !== 'score', ptsPct: `${r.score}%`, ptsShown: r.misses ? '✕' : r.score, out: r.misses > 0, title: r.misses ? r.missWords : `${r.score} of 100 for what you said`, cls: x.key === 'act' ? `${x.cls} po-actc` : x.key === 'score' ? `${x.cls} po-actc` : x.cls, ink: ['fit', 'score'].includes(x.key) && r.misses ? 'var(--text-body)' : x.ink })), click: false }));
   const wt = W.intentWeights(answers);
   return { hasRegion: true, noRegion: false, title, cloud, trail: [{ ...root, last: false }, { key: 'reg', label: title, go: () => {}, last: true }], hasTrail: true, pick, intent, options: rows, cols,
     weights: W.CRITERIA.map(c => ({ key: c.key, label: c.label, icon: c.icon, w: wt[c.key], text: `${wt[c.key]}%` })), rules: rulesOf(answers), hasRules: rulesOf(answers).length > 0,
