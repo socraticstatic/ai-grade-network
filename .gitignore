@@ -4,3 +4,5 @@ node_modules/
 .superpowers/
 .worktrees/
 # Frozen boards (scripts/figma-handoff/freeze.mjs) are tracked so the live site serves them to html.to.design by URL.
+docs/figma-handoff/import/
+*.local.json
