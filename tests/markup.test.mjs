@@ -543,7 +543,12 @@ test('every container the markup opens, it closes', () => {
   // Like products, the same day ("still too busy - space out if needed, like products"): a section per family with its
   // head, the name and the clouds on their own lines, the kicker span gone from each card (div +4, span -2, sc-for +1):
   // div 1339 -> 1343, span 1516 -> 1514, sc-for 400 -> 401.
-    ['div', /<div\b/g, /<\/div>/g, 1343],
+  // Cost > Optimize as a moves board (2026-10-13, "make optimize incredibly beautiful, use motion, make it extremely
+  // enterprise-centric gestalt"): the four rows became four cards on one grid, each a head, a lead (figure, unit, why), its
+  // marks (a money finding's bar; Resiliency's strip and the second path it lacks; Capacity's rings) with the parts a risk
+  // move counts, and a foot with its state and action; the h3 row carries the bars' key (div +12, span +17, sc-if +9,
+  // sc-for +3, button +5): div 1343 -> 1355, span 1517 -> 1534, sc-if 683 -> 692, sc-for 401 -> 404, button 537 -> 542.
+    ['div', /<div\b/g, /<\/div>/g, 1355],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -554,7 +559,7 @@ test('every container the markup opens, it closes', () => {
   // Jump on the picture (2026-10-13, "immediately go to an asset deep down"): the flow map's button and search box in the
   // filter row, its glyph, the match it names and the count (span +3, sc-if +3, button +1, label +1):
   // span 1514 -> 1517, sc-if 680 -> 683, button 536 -> 537, label 31 -> 32.
-    ['span', /<span\b/g, /<\/span>/g, 1517],
+    ['span', /<span\b/g, /<\/span>/g, 1534],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
@@ -563,10 +568,10 @@ test('every container the markup opens, it closes', () => {
   // both hero buttons in one flex row (div +1), and Persona and Estate on one row in the rail foot so Spend ends inside
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 683],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 401],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 692],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 404],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 537],
+    ['button', /<button\b/g, /<\/button>/g, 542],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

@@ -540,7 +540,14 @@ export function optimizeRows(est, { open = [], capacity = [], apps = [] } = {}) 
   // Each line's own share of the row's figure (w2-govern, 2026-09-30): the figure opens its row to
   // these, and they add up to it. A finding saves its own; a region holds its workloads; a resize
   // frees one port (resizeTo is ports - 1); a port near full is one of the count.
-  const saves = (fs) => fs.map(f => ({ n: f.save || 0, f: `save ${money(f.save || 0)}/mo`, finding: f.key || f.kind }));
+  // A priced finding's buckets say what it costs today and what the AT&T network would carry it for (2026-10-13, the
+  // moves board draws both): today less the saving is its on-AT&T price, so the bar keeps the saving the finding prices.
+  // A finding with no bucket of its own draws its saving alone (today 0).
+  const OPT_NAME = { avoidable: 'Internet egress', crosscloud: 'Cloud to cloud', ipsecegress: 'IPsec branches', ipsec: 'IPsec branches' };
+  const flowOf = (f) => { const bs = (est.buckets || []).filter(b => b.finding === f.kind), today = bs.reduce((a, b) => a + (b.today || 0), 0);
+    return { today: today >= (f.save || 0) ? today : 0, names: bs.map(b => b.name) }; };
+  const saves = (fs) => fs.map(f => { const w = flowOf(f);
+    return { n: f.save || 0, f: `save ${money(f.save || 0)}/mo`, finding: f.key || f.kind, name: OPT_NAME[f.kind] || (w.names.length === 1 ? w.names[0] : f.kind), today: w.today, after: w.today ? w.today - (f.save || 0) : 0 }; });
   return [
     { key: 'spend', label: 'Spend', cta: 'Update connection type', figure: sum(spendF), figureF: sum(spendF) ? `Save ${money(sum(spendF))}/mo` : '', lines: spendF.map(f => f.head), parts: saves(spendF), state: chip(spendF),
       head: spendF.length ? 'Egress through the cloud provider costs more than it would on AT&T' : 'Every connection already takes the cheaper path', empty: !spendF.length },

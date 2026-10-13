@@ -5968,12 +5968,65 @@ function costVals(s, set, est, invAll, ob, go, c) {
     : pt.region ? go('s1', { discoverView: 'estate', estPanel: 'clouds', cloudTrailE: ['cloud:' + pt.cloud, 'region:' + pt.region], cloudPage: 0, scanStep: 4, scanBusy: false }) : () => {};
   // A mark per move (2026-10-02): Spend, Routing, Resiliency, Capacity.
   const OPT_ICON = { spend: 'bill', routing: 'router', resiliency: 'sync', capacity: 'high-meter' };
-  const optRows = optBase.map(r => { const shown = s.optShow === r.key, parts = r.parts || [];
+  // The moves board (2026-10-13, Micah: "make optimize incredibly beautiful, use motion, make it extremely enterprise-centric
+  // gestalt"). Spend and Routing draw each finding's buckets as one bar, today's length on one scale for the page, the blue
+  // what the AT&T network would carry it for and the stripes the saving; Resiliency draws its one path over the second it
+  // lacks; Capacity its port as rings, today's peak and the resized one. Every figure counts up to what it prints (cu, the
+  // CSS counters' last frame), and green is the saving alone.
+  const OPT_MONEY = ['spend', 'routing'];
+  const optScale = Math.max(1, ...optBase.filter(r => OPT_MONEY.includes(r.key)).flatMap(r => (r.parts || []).map(p => Math.max(p.today || 0, p.n || 0))));
+  const optW = (v) => `${(v / optScale * 100).toFixed(2)}%`;
+  const optWlMax = Math.max(1, ...((optBase.find(r => r.key === 'resiliency') || {}).parts || []).map(p => p.n || 0));
+  // What a figure prints and what it counts: the number, then its unit in words (the count's glyph stands for its noun).
+  const optFig = (r) => {
+    const f = r.figureF || '', m = OPT_MONEY.includes(r.key);
+    const v = m ? f.replace(/^Save /, '') : r.key === 'capacity' && r.resize ? f.replace(/ to spare$/, '') : (f.match(/^[\d,]+/) || [''])[0];
+    const u = m ? 'to save' : r.key === 'resiliency' ? 'on one path' : r.resize ? 'to spare' : 'near full';
+    const n = +String(v).replace(/[^\d]/g, ''), big = n >= 1000 && n < 1e6;
+    // A count is a glyph and a number (2026-10-05): workloads wear apps, ports near full the meter.
+    const icon = r.key === 'resiliency' ? 'apps' : r.key === 'capacity' && !r.resize ? 'high-meter' : '';
+    // Why, in a few words under the figure; the sentence stays in the title (glyph-first, 2026-10-07).
+    const k = (r.lines || []).length, why = r.empty ? r.head : ({ spend: 'Egress costs more than on AT&T', routing: 'Cross-cloud traffic rides the internet',
+      resiliency: `${k} critical ${k === 1 ? 'path has' : 'paths have'} no backup`,
+      // Near full, the figure already counts them; the why says when the first one fills.
+      capacity: r.resize ? `${k} ${k === 1 ? 'connection' : 'connections'} bought bigger than used` : r.target && r.target.fullIn ? `Full ${r.target.fullIn} at this growth` : r.head })[r.key] || r.head;
+    return { figV: v, figU: u, figIcon: icon, hasFigIcon: !!icon, figInk: m ? 'var(--success)' : 'var(--text-heading)', why,
+      cu: (() => { const pre = m ? '$' : '', suf = m ? '/mo' : / Gbps$/.test(v) ? ' Gbps' : '';
+        return { k: big ? Math.floor(n / 1000) : 0, r: big ? n % 1000 : n, kOn: big, pre, suf, preCss: `'${pre}'`, sufCss: `'${suf}'` }; })() };
+  };
+  const optCapOf = (id) => optCap.find(c => c.id === id) || {};
+  const optLineRow = (r, i, parts, shown) => (t) => {
+    // A lone part is the headline already (cut what repeats): its own figure and bar show only beside a second part.
+    const many = (r.lines || []).length > 1;
+    const pt = parts[i] || {}, base = { key: r.key + i, text: t, partN: pt.n || 0, partF: shown && parts[i] ? pt.f : '', hasPart: shown && !!parts[i], partGo: parts[i] ? partGo(pt) : () => {}, d: (i * 0.12).toFixed(2), showV: many };
+    if (OPT_MONEY.includes(r.key)) return { ...base, name: pt.name, v: `${fmt(Math.round((pt.n || 0) / 100) * 100)}/mo`, vInk: 'var(--success)', today: pt.today || 0, after: pt.after || 0, scale: optScale,
+      todayV: fmt(pt.today || 0), hasToday: (pt.today || 0) > 0, wAfter: optW(pt.after || 0), wSave: optW(pt.n || 0), wToday: optW(pt.today || pt.n || 0), todayGo: () => set({ costPanel: 'bucket' }),
+      title: pt.today ? `${t}. ${fmt(pt.today)}/mo today, ${fmt(pt.after)}/mo on AT&T: ${pt.f}` : `${t}: ${pt.f}` };
+    const cp = r.key === 'capacity' ? optCapOf(pt.conn) : {}, cloud = pt.cloud || cp.cloud || '';
+    return { ...base, name: `${cloud} ${pt.region || ''}`.trim(), mark: W.markFor(cloud, s.theme), hasMark: !!W.MARK[cloud], vInk: 'var(--text-heading)', title: t,
+      // A region's workloads against the most any one region puts on one path; a port's rings already draw its use.
+      ...(r.key === 'resiliency' ? { v: (pt.n || 0).toLocaleString('en-US'), icon: 'apps', hasBar: many, w: `${((pt.n || 0) / optWlMax * 100).toFixed(2)}%` }
+        : { v: r.resize ? `${pt.n} Gbps` : `${cp.peakPct}%`, icon: 'high-meter', hasBar: false, w: '0%' }) };
+  };
+  // Resiliency's one path, as Govern's strip draws it; the cloud station wears its provider's mark.
+  const optLane = (t) => (t ? M.stripOf(R.regionPath(t)).map(n => ({ ...n, short: n.key === 'cloud' ? t.cloud : n.short, title: n.key === 'cloud' ? `${t.cloud} ${t.region}` : n.title,
+    mark: n.key === 'cloud' ? W.markFor(t.cloud, s.theme) : '', hasMark: n.key === 'cloud' && !!W.MARK[t.cloud], noMark: !(n.key === 'cloud' && !!W.MARK[t.cloud]) })) : []);
+  // Capacity's port: today's peak, and the resized port's peak (the line's own figures); near full, today's ring and when it fills.
+  const optRing = (key, p, sub, title, go) => ({ key, p, pF: `${p}%`, sub, ink: p >= 80 ? 'var(--warning)' : 'var(--viz-1)', title, go, hasArrow: key === 'after' });
+  const optRings = (r, go) => { const t = r.target; if (!t || r.key !== 'capacity') return [];
+    const now = optRing('now', t.peakPct, `${t.ports} × ${t.portG}G`, `Today: ${t.ports} × ${t.portG} Gbps, peak ${t.peakPct}%, ${t.avg6mPct}% on average over 6 months`, go);
+    return r.resize ? [now, optRing('after', t.resizePct, `${t.resizeTo} × ${t.portG}G`, `Resized: ${t.resizeTo} × ${t.portG} Gbps holds the peak at ${t.resizePct}%`, go)] : [now]; };
+  const optRows = optBase.map((r, oi) => { const shown = s.optShow === r.key, parts = r.parts || [];
+    const ringGo = parts[0] ? partGo(parts[0]) : () => {};
     return { ...r, icon: OPT_ICON[r.key] || 'target', state: optState(r), cta: r.key === 'capacity' && optState(r) === 'In progress' ? 'In progress' : r.cta, go: r.empty ? () => {} : r.key === 'resiliency' ? () => optGo.resiliency(r.target) : r.key === 'capacity' ? () => optGo.capacity(optFirst(r), r.resize) : optGo[r.key],
       hasCta: !r.empty, hasStart: !!optTop && optTop.key === r.key, hasState: !!optState(r), op: r.empty ? 0.6 : 1,
       hasFigGo: !r.empty && !!r.figureF, noFigGo: r.empty || !r.figureF, figGo: () => set({ optShow: shown ? null : r.key }), figOpen: shown,
-      moreLines: !shown && r.lines.length > 2 ? `+${r.lines.length - 2} more` : '', hasMoreLines: !shown && r.lines.length > 2,
-      lineRows: (shown ? r.lines : r.lines.slice(0, 2)).map((t, i) => ({ key: r.key + i, text: t, partN: (parts[i] || {}).n || 0, partF: shown && parts[i] ? parts[i].f : '', hasPart: shown && !!parts[i], partGo: parts[i] ? partGo(parts[i]) : () => {} })) }; });
+      // A card shows three parts beside its figure (the board, 2026-10-13); past three, the figure opens the rest.
+      moreLines: !shown && r.lines.length > 3 ? `+${r.lines.length - 3} more` : '', hasMoreLines: !shown && r.lines.length > 3,
+      lineRows: (shown ? r.lines : r.lines.slice(0, 3)).map((t, i) => optLineRow(r, i, parts, shown)(t)),
+      i: oi, notEmpty: !r.empty, isMoney: !r.empty && OPT_MONEY.includes(r.key), isResil: !r.empty && r.key === 'resiliency', isCap: !r.empty && r.key === 'capacity', hasRows: !r.empty && !OPT_MONEY.includes(r.key),
+      ...optFig(r), lane: r.key === 'resiliency' && !r.empty ? optLane(r.target) : [], laneTitle: r.target && r.key === 'resiliency' ? `${r.target.cloud} ${r.target.region}: one path, no second` : '',
+      rings: r.empty ? [] : optRings(r, ringGo) }; });
   const optSave = optBase[0].figure + optBase[1].figure;
   // The line names only the moves it prices (the skeptic, 2026-09-30: Small business read "across Spend and Routing"
   // where Routing prices nothing), the same moves the Could save tile names.

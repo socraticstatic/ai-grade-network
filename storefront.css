@@ -379,6 +379,103 @@ a{color:#0057b8}a:hover{color:#00388f}
 .way-start{flex:1;justify-content:center;height:36px;padding:0 16px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 .way-start[data-primary="true"]{background:var(--cta);color:#fff}
 .way-start:hover{background:var(--cta-hover);border-color:var(--cta-hover);color:#fff}
+/* Cost > Optimize, the moves board (2026-10-13, Micah: "make optimize incredibly beautiful, use motion, make it extremely
+   enterprise-centric gestalt"): four cards on a 2 x 2 grid, each a head, a lead (figure, unit, why) beside its marks, and a
+   foot with its action. The motion is entrance only (the cards rise, each bar draws today's length then shows what stays and
+   what is saved, the rings fill, the figures count up) plus the one path's flow. Every op- keyframe names only its first
+   frames, so animation:none and reduced motion rest on the last one. */
+@property --op-k{syntax:'<integer>';inherits:true;initial-value:0}
+@property --op-r{syntax:'<integer>';inherits:true;initial-value:0}
+@property --op-p{syntax:'<number>';inherits:true;initial-value:0}
+@counter-style op-pad3{system:extends decimal;pad:3 "0"}
+.op-board{display:grid;gap:14px;min-width:0;--op-stripes:repeating-linear-gradient(-45deg,var(--viz-2) 0 2.5px,color-mix(in srgb,var(--viz-2) 24%,transparent) 2.5px 5.5px)}
+.op-top{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:24px}
+.op-top h3{margin:0;font-size:18px;line-height:24px;font-weight:700;color:var(--text-heading)}
+.op-key{display:flex;align-items:center;gap:20px;font-size:13px;line-height:18px;color:var(--text-body)}
+.op-key span{display:inline-flex;align-items:center;gap:8px}.op-key i{display:block;width:20px;height:10px;border-radius:5px}
+.op-k-after{background:var(--viz-1)}.op-k-save{background:var(--op-stripes)}
+.op-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;gap:16px}
+.op-board .op-card{position:relative;grid-template-rows:auto minmax(0,1fr) auto;gap:14px;padding:18px 24px;transition:transform .25s,box-shadow .25s,border-color .25s;animation:op-in .6s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(var(--op-i,0) * 90ms)}
+.op-board .op-card:hover{transform:translateY(-3px);border-color:var(--border-active);box-shadow:0 16px 36px -18px rgba(15,23,42,.35)}
+.op-board .op-card[data-top="true"]{border-color:var(--cta);box-shadow:inset 0 0 0 1px var(--cta)}
+.op-board .op-card[data-top="true"]:hover{box-shadow:inset 0 0 0 1px var(--cta),0 16px 36px -18px rgba(15,23,42,.35)}
+@keyframes op-in{from{opacity:0;transform:translateY(8px)}}
+.op-head{display:flex;align-items:center;gap:12px;min-width:0}
+.op-head>.ic-tile{width:36px;height:36px}.op-head>b{font-size:16px;line-height:22px;font-weight:700;color:var(--text-heading)}
+.op-start{margin-left:auto;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:9999px;background:var(--bg-accent);color:var(--link);font-size:13px;line-height:18px;font-weight:600;white-space:nowrap}
+.op-body{display:grid;grid-template-columns:176px minmax(0,1fr);gap:28px;align-items:start;height:156px;min-height:0}
+/* The figure opens its parts: they are already beside it, so the open card lights them. */
+.op-viz{transition:background .25s,box-shadow .25s;border-radius:6px}.op-board .op-card[data-open="true"] .op-viz{background:var(--bg-accent);box-shadow:0 0 0 8px var(--bg-accent)}
+.op-lead{display:grid;gap:2px;align-content:start;justify-items:start;min-width:0}
+.op-board .op-fig{display:inline-flex;align-items:center;gap:8px;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.015em;font-variant-numeric:tabular-nums;text-underline-offset:6px}
+.op-unit{font-size:14px;line-height:20px;color:var(--text-body)}
+.op-why{margin:10px 0 0;font-size:14px;line-height:20px;color:var(--text-body);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty}
+.op-viz{display:grid;gap:12px;align-content:start;min-width:0}
+/* The count: the real figure stays in the DOM (read, measured, titled); while it counts, CSS counters draw over it. */
+.op-cu{position:relative;display:inline-block;animation:op-count 1.2s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.2s + var(--op-i,0) * 90ms)}
+.op-cu::after{content:var(--op-pre) counter(op-r) var(--op-suf);counter-reset:op-r var(--op-r);position:absolute;left:0;top:0;white-space:nowrap;-webkit-text-fill-color:currentColor;opacity:0;pointer-events:none;animation:op-count-over 1.2s linear backwards;animation-delay:inherit}
+.op-cu[data-k="true"]::after{content:var(--op-pre) counter(op-k) "," counter(op-r,op-pad3) var(--op-suf);counter-reset:op-k var(--op-k) op-r var(--op-r)}
+@keyframes op-count{from{--op-k:0;--op-r:0;-webkit-text-fill-color:transparent}92%{-webkit-text-fill-color:transparent}}
+@keyframes op-count-over{from{opacity:1}92%{opacity:1}}
+/* Money: each finding is one bar on the page's one scale, today's length; the blue stays (on AT&T), the stripes are saved. */
+.op-bars{display:grid;gap:12px}
+.op-bar{display:grid;gap:4px;min-width:0}
+.op-bar-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-width:0}
+.op-board .op-bar-n{min-width:0;font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);overflow:hidden;text-overflow:ellipsis}
+.op-board .op-save{font-size:14px;line-height:20px;font-weight:700;color:var(--success);font-variant-numeric:tabular-nums}
+.op-bar-t{display:grid;grid-template-columns:minmax(0,1fr) 72px;align-items:center;gap:12px}
+.op-track{position:relative;display:flex;height:14px;border-radius:7px;background:var(--bg-neutral);overflow:hidden}
+.op-track>i{display:block;flex:none;height:100%}
+/* Today draws first, in grey, to its full length; under it the blue and the stripes come up, then the grey lifts off them. */
+.op-after,.op-saved{animation:op-reveal 1.8s linear backwards;animation-delay:calc(.25s + var(--op-i,0) * 90ms + var(--op-d,0) * 1s)}
+@keyframes op-reveal{from{opacity:0}40%{opacity:0}}
+.op-after{background:var(--viz-1)}.op-saved{background:var(--op-stripes);border-radius:0 7px 7px 0}
+.op-was{position:absolute;left:0;top:0;bottom:0;background:var(--viz-6);opacity:0;transform-origin:0 50%;pointer-events:none;animation:op-was 1.8s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.25s + var(--op-i,0) * 90ms + var(--op-d,0) * 1s)}
+@keyframes op-was{from{opacity:1;transform:scaleX(0)}40%{opacity:1;transform:scaleX(1)}62%{opacity:1}}
+.op-board .op-today{justify-self:end;font-size:13px;line-height:18px;color:var(--text-body);font-variant-numeric:tabular-nums}
+/* Resiliency: the one path, Govern's strip, its links flowing; under it the second path it lacks. */
+.op-path{display:grid;gap:4px}
+.op-board .op-lane>span::before{height:4px;top:calc(var(--n) / 2 - 2px);background:radial-gradient(circle,var(--cta) 1.4px,transparent 1.9px) 0 50% / 10px 4px repeat-x,color-mix(in srgb,var(--cta) 26%,transparent);animation:op-flow 1.1s linear infinite}
+@keyframes op-flow{from{background-position:-10px 50%,0 0}}
+.op-board .op-lane small{font-size:13px;line-height:18px}
+.op-lane .op-mark{width:18px;height:18px}
+.op-ghost{position:relative;display:grid;place-items:center;height:20px}
+.op-ghost::before{content:"";position:absolute;left:12.5%;right:12.5%;top:50%;border-top:1.5px dashed var(--border-primary)}
+.op-ghost-i{position:relative;display:grid;place-items:center;width:20px;height:20px;box-sizing:border-box;border-radius:50%;border:1.5px dashed var(--border-primary);background:var(--bg-base);color:var(--text-disabled)}
+.op-ghost-i>.ic{width:12px;height:12px}
+/* Capacity: the port as rings, today's peak and the resized one; at 80% of the port and over, the ring wears Connections' slate. */
+.op-rings{display:flex;align-items:center;gap:14px}
+.op-ring-b{display:grid;justify-items:center;gap:6px;padding:0;border:0;background:transparent;font:inherit;color:inherit;cursor:pointer}
+.op-ring{position:relative;display:grid;place-items:center;width:76px;height:76px;border-radius:50%;background:conic-gradient(var(--op-ink) calc(var(--op-p) * 1%),var(--bg-neutral) 0);transition:box-shadow .2s;animation:op-ring 1.3s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.3s + var(--op-i,0) * 90ms)}
+.op-ring::before{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--bg-base)}
+.op-ring>b{position:relative;font-size:18px;line-height:22px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.op-ring-b>small{font-size:13px;line-height:18px;color:var(--text-body);font-variant-numeric:tabular-nums}
+.op-ring-b:hover .op-ring{box-shadow:0 0 0 4px var(--bg-accent)}
+@keyframes op-ring{from{--op-p:0}}
+.op-arrow{color:var(--text-disabled);margin-bottom:24px}
+/* The parts a risk move counts: a region's mark, its name, its workloads on one path (a bar against the most), or a port.
+   A part's own figure and bar show only where there are two or more: a lone part is the headline already. */
+.op-rows{display:grid;gap:4px}
+.op-row{display:grid;grid-template-columns:20px minmax(0,1fr) 64px auto;align-items:center;gap:10px;min-height:20px;min-width:0}
+.op-row[data-bar="false"]{grid-template-columns:20px minmax(0,1fr) auto}.op-row[data-bar="false"]>.op-row-bar{display:none}
+.op-board .op-row-n{justify-self:start;max-width:100%;font-size:14px;line-height:20px;color:var(--text-heading);overflow:hidden;text-overflow:ellipsis}
+.op-row-bar{display:block;height:8px;border-radius:4px;background:var(--bg-neutral);overflow:hidden}
+.op-row-bar>i{display:block;height:100%;border-radius:4px;background:var(--viz-1);transform-origin:0 50%;animation:op-grow .9s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.35s + var(--op-i,0) * 90ms + var(--op-d,0) * 1s)}
+@keyframes op-grow{from{transform:scaleX(0)}}
+.op-board .op-row-v{display:inline-flex;align-items:center;gap:6px;justify-self:end;font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+/* The foot: the move's state or its hidden parts on the left, its action on the right; one filled, on Start here. */
+.op-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:36px}
+.op-meta{display:flex;align-items:center;gap:12px;min-width:0}
+.op-state{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:9999px;background:var(--bg-neutral);color:var(--text-body);font-size:13px;line-height:18px;font-weight:600;white-space:nowrap}
+.op-board .op-more{font-size:13px;line-height:18px;font-weight:600;color:var(--link)}
+.op-go{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:224px;height:36px;padding:0 18px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .2s,color .2s,border-color .2s}
+.op-go[data-primary="true"]{background:var(--cta);color:#fff}
+.op-go:hover{background:var(--cta-hover);border-color:var(--cta-hover);color:#fff}
+.op-go .ic{transition:transform .2s}.op-go:hover .ic{transform:translateX(3px)}
+.op-calm{display:grid;justify-items:center;align-content:center;gap:12px;text-align:center}
+.op-calm-i{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--bg-neutral);color:var(--link)}
+.op-calm>p{margin:0;max-width:300px;font-size:14px;line-height:20px;color:var(--text-body);text-wrap:balance}
+@media (prefers-reduced-motion: reduce){.op-board .op-card,.op-cu,.op-cu::after,.op-was,.op-after,.op-saved,.op-ring,.op-row-bar>i,.op-board .op-lane>span::before{animation:none}.op-board .op-card,.op-go,.op-go .ic,.op-ring{transition:none}}
 /* Recommended's summary boxes (2026-10-06): the estate by how it connects today, each a door to its set. */
 .tab-ic{vertical-align:-3px;margin-right:7px;opacity:.85}
 .note-i{display:inline-flex;align-items:center;gap:6px;justify-self:start;font-size:12px;line-height:16px;color:var(--text-light);cursor:help}
