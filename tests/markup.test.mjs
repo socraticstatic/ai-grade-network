@@ -538,7 +538,9 @@ test('every container the markup opens, it closes', () => {
   // (div +12, span +28, sc-if +8, sc-for +6, button +6): div 1324 -> 1336, span 1488 -> 1516, sc-if 670 -> 678,
   // sc-for 394 -> 400, button 525 -> 531.
     // The region picker in the cloud node (2026-10-13): div 1339 -> 1340, sc-if 679 -> 680, sc-for 400 -> 401, button 535 -> 536.
-    ['div', /<div\b/g, /<\/div>/g, 1340],
+  // Ways to connect uncrowded (2026-10-13, "way too crowded and shoved in"): each card's path strip goes (div -1, span -2,
+  // sc-for -1) and its meta row becomes the foot with the clouds, zones and Start: div 1340 -> 1339, span 1518 -> 1516, sc-for 401 -> 400.
+    ['div', /<div\b/g, /<\/div>/g, 1339],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -546,7 +548,7 @@ test('every container the markup opens, it closes', () => {
   // and an enforced row's state is its toggle (span -1, sc-if +1): span 1482 -> 1481, sc-if 665 -> 666.
   // Into the policy engine from the flows (2026-10-09): a link in the wizard's Advanced Settings and one in the journey's
   // Protect deck key, each a button and its glyph (span +2, button +2): span 1516 -> 1518, button 531 -> 533.
-    ['span', /<span\b/g, /<\/span>/g, 1518],
+    ['span', /<span\b/g, /<\/span>/g, 1516],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
@@ -556,7 +558,7 @@ test('every container the markup opens, it closes', () => {
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 680],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 401],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 400],
     ['section', /<section\b/g, /<\/section>/g, 17],
     ['button', /<button\b/g, /<\/button>/g, 536],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],

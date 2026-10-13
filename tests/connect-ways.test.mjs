@@ -32,6 +32,19 @@ test('Ways to connect draws the six ways, each scored on the five criteria, with
   assert.ok(v.wayFoot.includes('Decision Matrix'), 'and where the figures come from');
 });
 
+// Micah, 2026-10-13: "ways to connect is way too crowded and shoved in!" One filled Start on the page, on the best way
+// still standing; the rest are outlined, as Recommended draws its options. A way a rule removes is never the pick.
+test('only the best way left standing wears the filled Start', () => {
+  const v = vals(ways());
+  assert.deepEqual(v.wayCards.filter(w => w.top).map(w => w.key), ['byo']);
+  const best = Math.max(...v.wayCards.filter(w => !w.out).map(w => Number(w.pts)));
+  assert.equal(Number(v.wayCards.find(w => w.top).pts), best);
+  // Per service removes every routed way: PrivateLink is the only one left, so it is the pick.
+  const ps = vals(ways('partial', { intents: { partial: { security: 'service' } } }));
+  assert.deepEqual(ps.wayCards.filter(w => !w.out).map(w => w.key), ['privatelink']);
+  assert.deepEqual(ps.wayCards.filter(w => w.top).map(w => w.key), ['privatelink']);
+});
+
 test('peering\'s zone chips switch its scores between one zone and across zones', () => {
   const c = ways();
   const peer = () => vals(c).wayCards.find(w => w.key === 'peer');
@@ -131,6 +144,11 @@ test('the markup binds the six ways, their meters and marks, and loops inside no
   const blk = HTML.slice(a, b);
   for (const k of ['<sc-for list="{{ wayCards }}"', '<sc-for list="{{ wc.rows }}"', '<sc-for list="{{ cr.segs }}"', '<sc-for list="{{ wc.logos }}"', '{{ wc.start }}', '{{ wayFoot }}', '{{ goRecommended }}']) assert.ok(blk.includes(k), k);
   assert.doesNotMatch(blk, /<(svg|table|select)\b/);
+  // Uncrowded (2026-10-13): Sites, Edge and Core were the same three stations on all six cards; the tile is the way's
+  // mark, so the strip goes. The ring sits by the name at a size that holds 100; clouds, zones and Start share a foot.
+  assert.ok(!blk.includes('wc.strip'), 'the six identical path strips are back');
+  assert.match(blk, /class="way-head"[\s\S]*?class="js-score md"/, 'the ring is not beside the name at md');
+  assert.match(blk, /class="way-foot"[\s\S]*?wc\.logos[\s\S]*?wc\.zoneChips[\s\S]*?data-primary="\{\{ wc\.top \}\}"/, 'the foot does not carry clouds, zones and Start in that order');
   for (const w of W.WAYS) for (const ic of [w.icon]) assert.ok(readFileSync(new URL(`../brand/icons/${ic}.svg`, import.meta.url)), ic);
   assert.ok(HTML.includes('{{ cfBackLabel }}') && HTML.includes('{{ cfWay.title }}') && HTML.includes('{{ cg.cantWord }}'));
 });

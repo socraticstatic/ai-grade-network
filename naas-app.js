@@ -4746,6 +4746,10 @@ function flowVals(s, set, est, c) {
     pts: w.points === null ? '' : String(w.points), hasPts: w.points !== null, out: !!w.misses, ptsPct: w.points === null || w.misses ? '0%' : `${w.points}%`, ptsShown: w.misses ? '✕' : w.points === null ? '' : String(w.points),
     ptsTitle: w.misses ? `Removed by what you said: ${w.missWords}` : `Scores ${w.points} of 100 for this estate's answers: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${W.intentWeights(w.answers)[c.key]}`).join(', ')}`,
     rows: w.rows.map(r => ({ ...r, segs: r.segs.map(g => ({ ...g, bg: g.on ? 'var(--link)' : 'var(--bg-neutral)' })), valueInk: r.score === null ? 'var(--text-disabled)' : 'var(--text-heading)' })) }));
+  // One filled Start on the page (2026-10-13, "way too crowded and shoved in"): the best way still standing, as
+  // Recommended fills only its pick. Six filled buttons were six things shouting at once.
+  const wayTop = wayCards.filter(w => !w.soon && !w.out && w.hasPts).reduce((a, w) => (!a || w.points > a.points ? w : a), null);
+  for (const w of wayCards) w.top = w === wayTop;
   const cfTypes = CF.ALL_TYPES.map(t => ({ ...tile(t), pick: pickType(t) }));
   // The set a count opens: exactly what it counted, as a list on the page, paged.
   const setT = CF.ALL_TYPES.find(t => t.key === s.waySet) || null;
