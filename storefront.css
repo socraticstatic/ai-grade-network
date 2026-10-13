@@ -678,6 +678,115 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 .fx-fig:disabled{cursor:default;text-decoration:none}
 /* A run of words where some are doors: each part keeps its own spaces. */
 .fx-fig.pt{white-space:pre}
+/* Discover > Estate, the beauty pass (2026-10-13, "make the estate page extremely beautiful, extremely enterprise ready").
+   One grammar on every tab: a mark leads each card and row, a count is its glyph and its number, figures sit on tabular
+   numerals, every list line is a hairline row whose hover reaches past its text, and green is the saving's alone.
+   Tokens only, so the dark theme is the same page. */
+.est-stats{display:inline-flex;align-items:stretch;height:32px;box-sizing:border-box;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);overflow:hidden}
+.est-stat{display:inline-flex;align-items:center;gap:6px;padding:0 11px;border:0;border-left:1px solid var(--border-secondary);background:transparent;font:inherit;font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap;cursor:pointer}
+.est-stat:first-child{border-left:0}.est-stat:hover{background:var(--bg-wash)}.est-stat:disabled{cursor:default;color:var(--text-light)}.est-stat:disabled:hover{background:transparent}
+.est-stat:focus-visible,.est-new:focus-visible,.est-kpi-h:focus-visible,.est-leg-r:focus-visible,.est-tile:focus-visible,.est-unit:focus-visible{outline:2px solid var(--border-active);outline-offset:-2px}
+.est-new{display:inline-flex;align-items:center;gap:6px;height:32px;box-sizing:border-box;padding:0 12px;border:1px solid transparent;border-radius:8px;background:var(--bg-accent);font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--link);white-space:nowrap;cursor:pointer}
+.est-new:hover{border-color:var(--border-active)}.est-new[aria-pressed="true"]{background:var(--cta);color:#fff}
+/* At a glance: five cards on one row, each its mark and name, its number, its picture, its parts. */
+.est-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;container-type:inline-size}
+.fx-card.est-kpi{padding:14px;gap:10px;border-radius:12px;grid-template-rows:auto auto 1fr}
+.est-kpi-h{display:flex;align-items:center;gap:10px;width:100%;min-width:0;border:0;background:transparent;padding:0;font:inherit;font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);text-align:left;cursor:pointer;border-radius:8px}
+.est-kpi-h>.go{margin-left:auto;color:var(--text-light);transition:transform .15s ease,color .15s ease}
+.est-kpi-h:hover>.go{color:var(--link);transform:translateX(2px)}
+.est-kpi-m{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:8px;min-height:54px}
+.est-kpi-m.sp{grid-template-columns:minmax(0,1fr);align-content:start;row-gap:12px}
+.est-fig{display:grid;gap:2px;min-width:0;justify-items:start}
+.est-big{font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.02em;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:left}
+.est-big small{margin-left:4px;font-size:13px;line-height:18px;font-weight:500;letter-spacing:-.01em;color:var(--text-body)}
+.est-sub{font-size:13px;line-height:18px;font-weight:600;color:var(--text-body);white-space:nowrap;text-align:left}
+.est-kpi .fx-ring{width:50px;height:50px;border:0;padding:0;font:inherit;cursor:pointer;transition:box-shadow .15s ease}
+.est-kpi .fx-ring i{inset:10px}
+.est-kpi .fx-ring:hover{box-shadow:0 0 0 3px var(--bg-accent)}.est-kpi .fx-ring:focus-visible{outline:2px solid var(--border-active);outline-offset:2px}
+/* Narrower than the 1440 page (Andi beside it): the number and its ring keep a row, the line under them takes the card's width. */
+@container (max-width:1100px){.est-kpi-m:not(.sp){grid-template-areas:"big ring" "sub sub";row-gap:2px}.est-kpi-m:not(.sp)>.est-fig{display:contents}.est-kpi-m:not(.sp) .est-big{grid-area:big}.est-kpi-m .est-big{font-size:22px;line-height:28px}.est-kpi-m .est-sub{grid-area:sub;font-size:12px;line-height:16px}.est-kpi-m>.fx-ring{grid-area:ring;width:40px;height:40px}.est-kpi-m>.fx-ring i{inset:8px}}
+.est-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--bg-neutral)}
+.est-bar>span,.est-bar>button{display:block;flex:none;height:100%;box-sizing:border-box;border:0;padding:0;margin:0}.est-bar>button{cursor:pointer}.est-bar>button:disabled{cursor:default}
+.est-bar>span:not(:last-child),.est-bar>button:not(:last-child){box-shadow:inset -2px 0 0 var(--bg-base)}
+.est-leg{display:grid;align-content:start;padding-top:10px;border-top:1px solid var(--border-secondary)}
+.est-leg-r{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;min-height:20px;border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:16px;color:var(--text-body);text-align:left;cursor:pointer;border-radius:4px}
+.est-leg-r>span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.est-leg-r>b{font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap}
+.est-leg-r:hover>span{color:var(--text-heading);text-decoration:underline;text-decoration-color:var(--link);text-underline-offset:2px}
+.est-sw{justify-self:center;width:8px;height:8px;border-radius:2px}
+/* A section head over a list: its mark, its name, its pager at the right. */
+.est-sec-h{display:flex;align-items:center;gap:10px;min-height:32px}
+.est-sec-h>b{font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading)}
+.est-pager{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-light);font-variant-numeric:tabular-nums}
+.est-pager .fx-btn{width:28px;height:28px;padding:0;justify-content:center;font-size:15px}
+/* The apps table: one grid for the head and every row, numbers right and tabular. */
+.est-ag{display:grid;grid-template-columns:minmax(0,1.4fr) 128px minmax(0,1.25fr) 120px 64px 84px 76px 12px;column-gap:20px;align-items:center}
+.est-th{padding:0 0 8px;border-bottom:1px solid var(--border-secondary);font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)}
+.est-th>.r,.est-tr .r{text-align:right;justify-self:end}
+.est-tr{min-height:48px;box-sizing:border-box;padding:6px 0;border-bottom:1px solid var(--border-secondary);cursor:pointer;transition:background .12s ease,box-shadow .12s ease}
+.est-tr:hover,.est-row[data-go="true"]:hover{background:var(--bg-wash);box-shadow:-12px 0 0 var(--bg-wash),12px 0 0 var(--bg-wash)}
+.est-app{display:flex;align-items:center;gap:10px;min-width:0}
+.est-app>button{display:grid;gap:1px;min-width:0;text-align:left}
+.est-nm{font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.est-sm{font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.est-meter{display:grid;gap:4px;width:100%;text-align:left}
+.est-meter>b{font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.est-meter>span{display:block;height:6px;border-radius:9999px;overflow:hidden}.est-meter>span>span{display:block;height:100%;border-radius:9999px}
+.est-runs{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap;font-size:13px;line-height:18px;color:var(--text-body);text-align:left}
+.est-runs>span{display:inline-flex;align-items:center;gap:6px;min-width:0}.est-runs>span+span{margin-left:6px}
+.est-runs i{flex:none;width:22px;height:16px;background:center / contain no-repeat}
+.est-runs em{font-style:normal;font-size:12px;color:var(--text-light)}
+.est-num{font-size:13px;line-height:18px;color:var(--text-body);font-variant-numeric:tabular-nums;white-space:nowrap}
+.est-p95{display:inline-flex;align-items:center;gap:6px;color:var(--text-heading)}
+.est-p95>i{width:8px;height:8px;box-sizing:border-box;border-radius:50%;border:2px solid}
+.est-caret{color:var(--text-light)}
+/* What you don't have: a card a gap, its mark, its line, its move. */
+.est-acts{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:12px}
+.est-act{display:grid;grid-template-columns:28px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:12px;row-gap:6px;align-items:center;min-width:0;padding:12px 12px 12px 14px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-base)}
+.est-act>.ic-tile{grid-row:1 / 3;align-self:start}
+.est-act:only-child{grid-template-columns:28px max-content minmax(0,1fr) auto;grid-template-rows:auto;column-gap:16px}.est-act:only-child>.ic-tile{grid-row:auto;align-self:center}.est-act:only-child .est-act-t{grid-column:auto}
+.est-act-t{grid-column:2 / 4;min-width:0;font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.est-act-s{display:flex;align-items:center;gap:14px;min-width:0;overflow:hidden}.est-act-s .kchip{display:inline-flex;align-items:center;gap:5px;font-size:12px;line-height:16px}.est-act-s .kchip b{font-weight:600;font-variant-numeric:tabular-nums}
+.est-act .fx-btn{height:32px;font-size:13px}
+/* Your clouds and Your sites: the tiles, the bar of where you are, and the rows. */
+.est-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,2.1fr);gap:12px}
+.est-tile{display:grid;grid-template-columns:32px minmax(0,1fr);grid-template-rows:auto auto;column-gap:12px;align-items:center;min-width:0;padding:12px 14px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-base);font:inherit;text-align:left;cursor:pointer;transition:border-color .12s ease}
+.est-tile:hover{border-color:var(--border-active)}.est-tile:disabled{cursor:default}.est-tile:disabled:hover{border-color:var(--border-secondary)}
+.est-tile>.ic-tile{grid-row:1 / 3}
+.est-tile>span{font-size:12px;line-height:16px;font-weight:600;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.est-tile>b{font-size:22px;line-height:28px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap}
+.est-mix{display:grid;gap:8px;align-content:center;min-width:0;padding:12px 14px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-base)}
+.est-mix-h{display:flex;align-items:center;gap:8px;min-width:0;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body);white-space:nowrap;overflow:hidden}
+.est-mix-k{display:flex;gap:14px;font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap;overflow:hidden}
+.est-tool{display:flex;align-items:center;gap:12px;min-height:32px}
+.est-tool nav{display:flex;align-items:center;gap:6px;font-size:14px;line-height:20px;min-width:0}
+.est-line{font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;font-variant-numeric:tabular-nums}
+.est-acts-r{margin-left:auto;display:flex;gap:8px;flex:none}.est-acts-r .fx-btn{height:32px;font-size:13px}
+.est-rows{border-top:1px solid var(--border-secondary)}
+.est-row{display:grid;align-items:center;column-gap:16px;min-height:56px;box-sizing:border-box;padding:8px 0;border-bottom:1px solid var(--border-secondary);color:var(--text-heading);transition:background .12s ease,box-shadow .12s ease}
+.est-row[data-go="true"]{cursor:pointer}.est-row>span:last-child{display:grid;place-items:center}
+.est-row.cl{grid-template-columns:32px minmax(0,1fr) 160px 180px 16px}
+.est-bw{text-align:right;white-space:normal}
+.est-row.pl{grid-template-columns:32px minmax(0,1.3fr) minmax(0,1.4fr) 80px 160px 16px}
+.est-mark{position:relative;display:grid;place-items:center;width:32px;height:32px;box-sizing:border-box;border-radius:8px;background:var(--bg-wash);border:1px solid var(--border-secondary);color:var(--text-body)}
+.est-mark>i{display:block;width:22px;height:22px;background:center / contain no-repeat}
+.est-st{position:absolute;right:-7px;bottom:-7px;display:grid;place-items:center;width:20px;height:20px;box-sizing:border-box;border-radius:50%;background:var(--bg-base);border:1px solid var(--border-secondary)}
+.est-st>.ic{width:12px;height:12px}
+.est-cost{font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap}
+.est-cost small{font-size:12px;font-weight:500;color:var(--text-light)}
+.est-chips{display:flex;align-items:center;gap:14px;min-width:0;overflow:hidden;white-space:nowrap;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body);font-variant-numeric:tabular-nums}
+.est-chips>button{display:inline-flex;align-items:center;gap:5px;flex:none}.est-chips .ic{color:var(--text-light)}
+/* Business units: the units on the left, the sites on the right. */
+.est-bu{display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start}
+.est-units{display:grid;gap:8px;align-content:start}
+.est-unit{display:grid;grid-template-columns:28px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;row-gap:6px;align-items:center;padding:10px 12px;box-sizing:border-box;border:1px solid;border-radius:10px;cursor:pointer;text-align:left;color:var(--text-heading);transition:border-color .12s ease,background .12s ease}
+.est-unit>.ic-tile{grid-row:1 / 3}
+.est-unit>i{grid-column:2 / 4;display:block;height:4px;border-radius:9999px;background:var(--bg-neutral);overflow:hidden}.est-unit>i>i{display:block;height:100%;background:var(--cta);border-radius:9999px}
+.est-burow{display:grid;grid-template-columns:32px minmax(0,1fr) 160px;column-gap:16px;align-items:center;min-height:52px;box-sizing:border-box;padding:6px 0;border-bottom:1px solid var(--border-secondary)}
+.est-rows[data-active="true"] .est-burow{grid-template-columns:32px minmax(0,1fr) 160px 180px}
+.est-chip{justify-self:end;display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;background:var(--bg-wash);border:1px solid var(--border-secondary);font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap}
+.est-in{justify-self:end;display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap}
+@media (prefers-reduced-motion: reduce){.est-kpi-h>.go,.est-kpi .fx-ring,.est-tr,.est-row,.est-tile,.est-unit{transition:none}.est-kpi-h:hover>.go{transform:none}}
 .dt .dt-select{box-sizing:border-box;max-width:100%;height:28px;padding:0 8px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:12px;line-height:26px;cursor:pointer}
 .dt .dt-select:hover{border-color:var(--border-primary)}
 .dt .dt-select:focus{outline:2px solid var(--border-active);outline-offset:1px}

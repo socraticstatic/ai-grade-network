@@ -2163,6 +2163,12 @@ const num0 = (v) => +String(v).replace(/[^0-9]/g, '') || 0;
 const partsOf = (xs) => xs.filter(x => x != null && x !== '').map((x, i) => (typeof x === 'string'
   ? { key: 'p' + i, t: x, can: false, cant: true, go: () => {} }
   : { key: x.key || 'p' + i, t: x.t, can: !!x.go, cant: !x.go, go: x.go || (() => {}) }));
+/** The same run as chips (Estate's beauty pass, 2026-10-13): a counted part is its glyph and its figure, its words the
+ *  title; the separators go; a part with no glyph keeps its words. `icons` maps a part's key to its glyph. */
+const chipsOf = (parts, icons) => parts.filter(p => p.t.trim() && p.t.trim() !== '·').map(p => {
+  const icon = icons[p.key] || '', fig = icon && /\d/.test(p.t) ? (String(p.t).match(/[\d,.]+(?: ?[GM]bps)?/) || [p.t])[0] : p.t.trim();
+  return { ...p, icon, hasIcon: !!icon, noIcon: !icon, t: fig, title: p.t };
+});
 /**
  * The connect flow with a Discover set in it (Micah, 2026-09-30: "on all of the at a
  * glance drills, what's the point? actions may help"): Attach for the set's public
@@ -2474,7 +2480,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const pick = (e) => { const el = e && e.currentTarget; if (!el || !el.getBoundingClientRect || !e.detail || !segs.length) return dr.centre(e);
       const b = el.getBoundingClientRect(); const i = DR.ringHit(segs, e.clientX - (b.left + b.width / 2), e.clientY - (b.top + b.height / 2), b.width / 2, b.width / 2 - 15);
       return i < 0 ? dr.centre(e) : segs[i].go(e); };
-    return { key, title, ring: d.ring, centre, centreSub, head, cta, go: go2, segs, pick, centreGo: dr.centre, headCan: !!dr.head, headCant: !dr.head, headGo: dr.head || (() => {}),
+    // The number beside the ring says its unit only where the card's title does not (the beauty pass, 2026-10-13): Clouds counts regions.
+    const unit = String(centreSub).toLowerCase().replace(/s$/, '') === String(title).toLowerCase().replace(/s$/, '') ? '' : centreSub;
+    return { key, title, ring: d.ring, centre, centreSub, unit, hasUnit: !!unit, head, cta, go: go2, segs, pick, centreGo: dr.centre, headCan: !!dr.head, headCant: !dr.head, headGo: dr.head || (() => {}),
       ringLabel: `${title}: ${centre} ${centreSub}. ${segs.map(sg => sg.title).join('; ')}`,
       // A row that has a glyph shows it in its ink (the access model, 2026-10-09), else the ring's square.
       legend: segs.map(sg => { const ic = (rows.find(r => (r.key || r.label) === sg.key) || {}).icon || ''; return { key: sg.key, color: sg.color, icon: ic, hasIcon: !!ic, noIcon: !ic, label: LEGEND_WORD[sg.label] || sg.label, n: enf(sg.n), can: true, go: sg.go, title: `Open ${sg.title}` }; }) }; };
@@ -2501,10 +2509,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     for (const st of est.sites || []) { const v = (costIx.site[st.name] || {}).v || 0; if (!v) continue; const k = S.buOf(st, tags); by[k] = (by[k] || 0) + v; }
     return Object.entries(by).sort((x, y) => y[1] - x[1]).map(([k, v]) => ({ key: k, label: k, v })); })();
   const glanceSpend = (() => { const ks = ['access', 'connect', 'cloud'], tot = Math.round(costL.total || 0), legR = CV.roundTo(ks.map(k => (costL[k] || {}).total || 0), tot);
-    const segs = CV.inkSegs(ks.flatMap(k => (costL[k] || {}).rows || [])), segT = segs.reduce((a, x) => a + x.v, 0) || 1;
     return { has: tot > 0, totalF: fmt(tot), totalGo: dd.cost({ costPanel: 'legs' }), title: `${fmt(tot)} a month, end to end, from Cost`,
-      legs: ks.map((k, i) => ({ key: k, label: { access: 'Site access', connect: 'Connectivity', cloud: 'Cloud provider' }[k], vF: fmt(legR[i]), go: dd.cost({ costPanel: 'legs' }), title: `${costL[k].label}: ${fmt(legR[i])}/mo · ${CV.legCovers(costL[k])}` })),
-      segs: segs.map(x => ({ key: x.key, w: (x.v / segT * 100).toFixed(2) + '%', bg: CV.fillOf(x.ink, x.modelled), title: `${CV.COST_INK[x.ink].word}${x.modelled ? ', modelled' : ''}: ${fmt(Math.round(x.v))}/mo` })) }; })();
+      // The bar is the legs the legend lists, each its share of the month in the ring's blues (the beauty pass, 2026-10-13).
+      legs: ks.map((k, i) => ({ key: k, label: { access: 'Site access', connect: 'Connectivity', cloud: 'Cloud provider' }[k], vF: fmt(legR[i]), go: dd.cost({ costPanel: 'legs' }), title: `${costL[k].label}: ${fmt(legR[i])}/mo · ${CV.legCovers(costL[k])}`,
+        w: (tot ? legR[i] / tot * 100 : 0).toFixed(2) + '%', color: `var(--viz-${[1, 2, 4][i]})` })) }; })();
   const wlMax = Math.max(1, ...apps.map(x => x.wl));
   const appDoors = (x) => { const onAttN = Math.round(x.onAtt * x.wl);
     return { wlGo: toTag(x.tag, 'wl'), hasExposedGo: x.exposed > 0, noExposedGo: !x.exposed, exposedGo: x.exposed ? toTag(x.tag, 'exposed') : () => {},
@@ -2512,6 +2520,14 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const H_INK = F.HEALTH_INK; // one ink per state; Over SLO is not Down's red (review, 2026-09-30)
   const appAll = apps.map(x => ({ key: x.tag, name: x.tag, sub: x.topApps.join(', '), wl: x.wl, exposed: x.exposed, wlF: enf(x.wl), wlW: Math.max(3, Math.round(x.wl / wlMax * 100)) + '%',
     runsIn: x.regions.slice(0, 2).join(', ') + (x.regions.length > 2 ? ` +${x.regions.length - 2}` : ''), runsTitle: x.regions.join(', '),
+    // Where it runs as its clouds' marks and their regions (the beauty pass, 2026-10-13): the same two regions runsIn
+    // read, each cloud's word gone for its mark, the regions past them counted.
+    ...(() => { const by = []; for (const rg of x.regions.slice(0, 2)) { const i = rg.indexOf(' '), cl = rg.slice(0, i), rn = rg.slice(i + 1); const g = by.find(y => y.cloud === cl); if (g) g.regs.push(rn); else by.push({ cloud: cl, regs: [rn] }); }
+      const rest = Math.max(0, x.regions.length - 2);
+      return { runs: by.map(g => { const mk = W.markFor(g.cloud, dark ? 'dark' : 'light'); return { key: g.cloud, cloud: g.cloud, mark: mk, hasMark: !!mk, noMark: !mk, t: g.regs.join(', '), title: `${g.cloud} ${g.regs.join(', ')}` }; }),
+        runsMore: rest ? `+${rest}` : '', hasRunsMore: rest > 0 }; })(),
+    // p95's dot: a healthy path is a hollow ring, a problem fills with its ink. Green is the saving's alone (2026-10-05).
+    p95Fill: x.health === 'ok' ? 'transparent' : H_INK[x.health], p95Ring: x.health === 'ok' ? 'var(--border-primary)' : H_INK[x.health],
     onAttF: Math.round(x.onAtt * 100) + '%', onAttW: Math.round(x.onAtt * 100) + '%', exposedF: x.exposed ? enf(x.exposed) : 'None', exposedInk: x.exposed ? 'var(--error)' : 'var(--text-light)',
     gbpsF: x.gbps >= 1 ? x.gbps.toFixed(1) + ' Gbps' : Math.round(x.gbps * 1000) + ' Mbps', p95F: `${x.p95} ms`, healthInk: H_INK[x.health], healthTitle: `p95 ${x.p95} ms against a ${x.slo} ms SLO`,
     // Every cell opens its own set (2026-09-30). The app is its group, the workloads that carry its
@@ -3953,7 +3969,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       ['w', stats.workloads, 'workload', 'workloads', dd.clouds({ unit: 'workload' })], ['a', stats.attached, 'attached', 'attached', dd.clouds({ unit: 'vpc', state: 'attached' })],
       ['e', stats.exposed, 'exposed workload', 'exposed workloads', dd.clouds({ unit: 'workload', state: 'exposed' })]]
       .map(([key, n, one, many, door]) => ({ key, v: key === 'c' || key === 'r' || key === 'a' ? n : n.toLocaleString('en-US'), l: n === 1 ? one : many, can: n > 0, cant: !n, go: n ? door : () => {},
-        title: n ? `Open the ${n.toLocaleString('en-US')} ${key === 'a' ? (n === 1 ? 'attached VPC' : 'attached VPCs and VNets') : n === 1 ? one : many}` : '' })),
+        // Glyph and number (the beauty pass, 2026-10-13): the words are the count's label; exposed is the one problem, in its ink.
+        icon: { s: 'large-building', c: 'cloud', r: 'map', w: 'apps', a: 'cable', e: 'personal-security' }[key], ink: key === 'e' && n ? 'var(--error)' : 'var(--text-light)',
+        aria: `${key === 'c' || key === 'r' || key === 'a' ? n : n.toLocaleString('en-US')} ${n === 1 ? one : many}`,
+        title: n ? `Open the ${n.toLocaleString('en-US')} ${key === 'a' ? (n === 1 ? 'attached VPC' : 'attached VPCs and VNets') : n === 1 ? one : many}` : `0 ${many}` })),
     expandAll: () => set({ inv: { ...openMap, ...Object.fromEntries(openKeys.map(k => [k, true])) } }), collapseAll: () => set({ inv: {} }), collapsedLabel: Object.values(openMap).some(Boolean) ? 'Expanded view' : 'Collapsed view',
     // No invented split (2026-09-29 audit): nothing in the data says which of these are on AT&T.
     overflowRow: est.regionsExtra ? `${est.regionsExtra.toLocaleString('en-US')} smaller regions rolled up · no traffic data yet` : '', hasOverflow: !!est.regionsExtra, overflowW: est.regionsExtra ? '60%' : '0%',
@@ -4005,7 +4024,15 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         else { set({ jumpHit: `Jumped to ${hit.label}`, tagView: false, treeOrMap: 'tree', inv: { ...(s.inv || {}), [hit.cloudId]: true, [hit.regionId]: true, [hit.vpcId]: true } }); after('vpc:' + hit.vpcId); }
       };
       return { jumpQ: s.jumpQ || '', setJumpQ: (e) => set({ jumpQ: e.target.value, jumpHit: '' }), jumpKey: (e) => { if (e.key === 'Enter') jumpTo(); }, jumpGo: jumpTo, jumpHit: s.jumpHit || '', hasJumpHit: !!s.jumpHit,
-        newStrip, newPill30, newOnly, haveCards, glanceRings, glanceSpend, finBu, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go, titleParts: l.titleParts, soParts: l.soParts })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
+        newStrip, newPill30, newOnly, haveCards, glanceRings, glanceSpend, finBu, appAll, appRows: appAll, glanceGaps: lackCards.map(l => ({ key: l.title, title: l.title, soWhat: l.soWhat, cta: l.cta, go: l.go, titleParts: l.titleParts,
+          // Each gap leads with its glyph; its figures stay on the line, a line of words with no door goes to the title, and
+          // only the money to save is green (the beauty pass, 2026-10-13).
+          icon: /backup/i.test(l.title) ? 'shuffle' : /region/i.test(l.title) ? 'cable' : /site/i.test(l.title) ? 'hub' : 'bullseye',
+          soParts: l.soParts.map(p => ({ ...p, ink: /to save/.test(p.t) ? 'var(--success)' : 'inherit' })), hasSo: l.soParts.some(p => p.can),
+          // Its figures as chips, the house's glyph-and-figure grammar: the part's words go to the chip's title.
+          chips: l.soParts.filter(p => p.can).map(p => ({ key: p.key, go: p.go, cant: p.cant, title: p.t, t: (String(p.t).match(/[+-]?\$?[\d,.]+(?:\/mo)?/) || [p.t])[0],
+            icon: /to save/.test(p.t) ? 'trending-down' : /egress|\$/.test(p.t) ? 'bill' : /exposed/.test(p.t) ? 'personal-security' : /internet|outside/i.test(p.t) ? 'globe' : 'smart-meter',
+            ink: /to save/.test(p.t) ? 'var(--success)' : 'var(--text-body)' })) })), lackCards: lackCards.map(cap4), hasLackCards: lackCards.length > 0,
         // Three tabs, one panel at a time (2026-09-28, no scrolling).
         // Group the picture's sites (notes, 2026-09-29): by region, or by how they attach.
         siteGroupValue: ['access', 'bu'].includes(s.siteGroup) ? s.siteGroup : 'region', setSiteGroup: (e) => set({ siteGroup: e.target.value, drill: [] }),
@@ -4045,7 +4072,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
                 { key: 'pub', t: `${pub} on the internet`, go: pub ? at({ cloudTrailE: ['cloud:' + cl], cloudFilter: { unit: 'region', state: 'pub' } }) : null }],
               bw: joinPlus(pr.map(connLink).filter(Boolean)) }; };
           const regionRowOf = (r) => { const u = utilOf(r), to = ['cloud:' + r.cloud, 'region:' + r.region];
-            return { key: 'region:' + r.region, name: `${r.cloud} ${r.region}`, priv: !!r.priv, into: ir(r.region) ? to : null, next: 'VPCs', ...costOf(costIx.region[r.region], r.cloud, `${r.cloud} ${r.region}`),
+            return { key: 'region:' + r.region, name: `${r.cloud} ${r.region}`, cloud: r.cloud, priv: !!r.priv, into: ir(r.region) ? to : null, next: 'VPCs', ...costOf(costIx.region[r.region], r.cloud, `${r.cloud} ${r.region}`),
               parts: r.priv ? [F.RAMP_NAME[r.ramp] || 'NetBond', ' · ', wlLink(r.wl, to), ...(u ? [' · ', { key: 'gbps', t: `${u.gbps} Gbps now`, go: dd.logsFor(r.region) }] : [])]
                 : ['public internet', ' · ', wlLink(r.wl, to)],
               bw: r.priv ? [connLink(r)].filter(Boolean) : ['Internet'] }; };
@@ -4083,7 +4110,13 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           const cloudRows = rows.map(r => { const parts = partsOf(r.parts), bwParts = partsOf(r.bw || []);
             const open = r.into ? () => set({ cloudTrailE: r.into, cloudFilter: null, newOnly: false, cloudPage: 0 })
               : r.filter ? () => set({ cloudFilter: r.filter, newOnly: false, cloudPage: 0 }) : null;
-            return { ...r, parts, bwParts, sub: parts.map(p => p.t).join(''), hasBw: bwParts.length > 0, dot: r.priv ? 'var(--success)' : 'var(--warning)', level: open ? r.next : '', caret: open ? '›' : '', cursor: open ? 'pointer' : 'default', canGo: !!open, noGo: !open,
+            // A row leads with its mark: the cloud's own on a cloud or a region, else its kind's glyph; private or on the
+            // internet is a glyph on the mark, never a green dot (the beauty pass, 2026-10-13).
+            const k0 = String(r.key).split(':')[0], cl0 = k0 === 'cloud' ? r.name : k0 === 'region' ? r.cloud : null, mk = cl0 ? W.markFor(cl0, dark ? 'dark' : 'light') : '';
+            return { ...r, parts, bwParts, sub: parts.map(p => p.t).join(''), hasBw: bwParts.length > 0,
+              chips: chipsOf(parts, { regs: 'map', priv: 'padlock', pub: 'globe', wl: 'apps', gbps: 'cloud-transfer', tag: 'tag', exp: 'personal-security' }), dot: r.priv ? 'var(--success)' : 'var(--warning)', level: open ? r.next : '', caret: open ? '›' : '', cursor: open ? 'pointer' : 'default', canGo: !!open, noGo: !open,
+              mark: mk, hasMark: !!mk, noMark: !mk, icon: { cloud: 'cloud', region: 'map', vpc: 'network-folder', sn: 'pinpoint-area', wl: 'apps' }[k0] || 'tag',
+              stateIcon: r.priv ? 'padlock' : 'globe', stateInk: r.priv ? 'var(--link)' : 'var(--text-light)', stateTitle: r.priv ? 'Private, on AT&T' : 'On the public internet',
               go: open ? (e) => { dd.stop(e); open(); } : () => {} }; });
           const labelOf = (k) => { const id = String(k).replace(/^(cloud|region|vpc|sn):/, ''); const reg2 = trail[1] ? ir(String(trail[1]).slice(7)) : null;
             if (String(k).startsWith('vpc:') && reg2) return (reg2.vpcs.find(v => v.id === id) || {}).name || id;
@@ -4101,7 +4134,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           const ofCf = (f) => (cf ? { ...f, of: cf } : f);
           const cloudTiles = sc.tiles.map(t => { const n = num0(t.v), f = unitOf(t.l), can = !!n && (t.l === natural || !!f);
             const to = cf ? (f && !(f.unit === 'app' && cf.unit === 'app') ? ofCf(f) : cf) : t.l === natural ? null : f;
-            return { ...t, tone: 'var(--text-heading)', can, cant: !can, go: !can ? () => {} : at({ cloudFilter: to }), title: !can ? '' : cf && to ? `Open the ${t.v}: ${DR.cloudFilterLabel(to)}` : `Open the ${t.v} ${t.l.toLowerCase()}` }; });
+            // Each tile wears its glyph (the beauty pass, 2026-10-13).
+            const icon = { Clouds: 'cloud', Regions: 'map', Subnets: 'pinpoint-area', Apps: 'grid', Workloads: 'apps', Exposed: 'personal-security', Zone: 'pinpoint' }[t.l] || (t.l === sc.noun ? 'network-folder' : 'more-ellipse');
+            return { ...t, icon, tone: 'var(--text-heading)', can, cant: !can, go: !can ? () => {} : at({ cloudFilter: to }), title: !can ? '' : cf && to ? `Open the ${t.v}: ${DR.cloudFilterLabel(to)}` : `Open the ${t.v} ${t.l.toLowerCase()}` }; });
           const cloudMix = sc.mix.map(m => ({ ...m, w: m.pct + '%', op: m.n ? 1 : 0.4, can: m.n > 0, cant: !m.n, go: m.n ? at({ cloudFilter: ofCf({ unit: 'vpc', state: 'mode:' + m.mode }) }) : () => {} }));
           const siteModeN = (m) => (est.sites || []).filter(x => siteModeOf(x) === m).reduce((a, x) => a + S.countOf(x.name), 0), ipN = siteModeN('ipsec'), sdN = siteModeN('sdwan');
           const cloudMixParts = partsOf(['How they connect · ', { key: 'ipsec', t: `${nf(ipN)} IPsec ${ipN === 1 ? 'site' : 'sites'}`, go: ipN ? dd.sites('mode:ipsec') : null }, ' · ', { key: 'sdwan', t: `${nf(sdN)} SD-WAN ${sdN === 1 ? 'site' : 'sites'}`, go: sdN ? dd.sites('mode:sdwan') : null }]);
@@ -4226,8 +4261,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
             const counted = typeof r.count === 'number' && typeof r.att === 'number' && !r.more && access === `${nfP(r.count)} ${r.count === 1 ? 'site' : 'sites'} · ${nfP(r.att)} AT&T · ${nfP(r.count - r.att)} non-AT&T`;
             const cost = costCell(level === 'service' ? svcCost(r) : String(r.key || '').startsWith('site:') && !r.more ? siteCost(r, into) : level === 'region' || level === 'state' ? placeCost(r) : null);
             const open = !can ? null : r.moreTo ? () => set({ placeTrail: r.moreTo, placePage: 0 }) : () => set({ placeTrail: into, placePage: 0 });
-            return { icon,  key: r.key || r.name, name: r.name, access, parts: partsOf(counted ? countParts(r, into) : [access]), svcLine: r.svcLine || '', bwF: r.bwF || '', ...cost,
+            const pParts = partsOf(counted ? countParts(r, into) : [access]);
+            return { icon,  key: r.key || r.name, name: r.name, access, parts: pParts, chips: chipsOf(pParts, { n: 'large-building', att: 'hub', out: 'globe' }), svcLine: r.svcLine || '', bwF: r.bwF || '', ...cost,
               dot: r.more ? 'transparent' : r.priv ? 'var(--success)' : 'var(--warning)', level: can && !r.moreTo ? nextOf(r) : '', caret: can ? '›' : '', cursor: can ? 'pointer' : 'default', canGo: can, noGo: !can,
+              // On AT&T or not is a glyph on the row's mark, never a green dot (the beauty pass, 2026-10-13).
+              hasState: !r.more, stateIcon: r.priv ? 'hub' : 'globe', stateInk: r.priv ? 'var(--link)' : 'var(--text-light)', stateTitle: r.priv ? 'On the AT&T network' : 'Not on AT&T',
               go: open ? (e) => { dd.stop(e); open(); } : () => {} }; });
           const crumbs = [{ key: 'root', label: 'All regions', to: [] }, ...trail.map((k, i) => ({ key: k, label: S.labelOfKey(est, k), to: trail.slice(0, i + 1) }))]
             .map((c, i, a) => ({ ...c, notLast: i < a.length - 1, weight: i === a.length - 1 ? 700 : 500, color: i === a.length - 1 ? 'var(--text-heading)' : 'var(--link)', go: () => set({ placeTrail: c.to, placePage: 0 }) }));
@@ -4292,11 +4330,15 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
           const active = known.includes(s.buActive) ? s.buActive : null;
           const maxN = Math.max(1, ...groups.map(g => g.count));
           const buList = known.map(b => { const g = groups.find(x => x.name === b); const n = g ? g.count : 0; const on = active === b;
-            return { key: b, name: b, n, nF: n.toLocaleString('en-US'), w: Math.round(n / maxN * 100) + '%', on, all: false, go: (e) => { dd.stop(e); set({ buActive: on ? null : b }); }, bg: on ? 'var(--bg-accent)' : 'transparent', border: on ? 'var(--border-active)' : 'var(--border-secondary)',
+            // Each unit leads with its own mark (the beauty pass, 2026-10-13); a unit the customer adds wears the group's.
+            const icon = { HQ: 'midsized-building', 'Data center': 'database', 'Remote office': 'retail-store', 'Manufacturing plant': 'wrench', Retail: 'shopping-bag' }[b] || 'person-group';
+            return { key: b, name: b, icon, n, nF: n.toLocaleString('en-US'), w: Math.round(n / maxN * 100) + '%', on, all: false, go: (e) => { dd.stop(e); set({ buActive: on ? null : b }); }, bg: on ? 'var(--bg-accent)' : 'transparent', border: on ? 'var(--border-active)' : 'var(--border-secondary)',
               // The count opens the unit's sites, by place (2026-09-30); the name still picks the unit to move sites into.
               countCan: n > 0, countCant: !n, countGo: n ? dd.sites('bu:' + b) : () => {}, countTitle: n ? `Open the ${n.toLocaleString('en-US')} ${n === 1 ? 'site' : 'sites'} in ${b}` : '' }; });
           const buSites = (est.sites || []).map(x => { const bu = S.buOf(x, tags); const target = active && bu !== active ? active : null;
             return { key: x.name, name: x.name, icon: SITE_ICON(x), metro: x.metro || 'various', access: x.access || '', count: S.countOf(x.name).toLocaleString('en-US'), bu, moveLabel: target ? `Move to ${target}` : active ? `In ${active}` : 'Pick a unit', canMove: !!target, noMove: !target,
+              // With no unit picked a row says nothing (the hint is the units' title); with one picked, a site already in it says so (2026-10-13).
+              idle: !active, inUnit: !!active && !target,
               move: () => { if (!target) return; save({ ...(s.siteTags || {}), [est.id]: { ...tags, [x.name]: target } }, s.buCustom || {}); } }; });
           const addBu = () => { const nm = String(s.buNew || '').trim(); if (!nm) return; if (!known.includes(nm)) save(s.siteTags || {}, { ...(s.buCustom || {}), [est.id]: [...custom, nm] }); set({ buNew: '', buActive: nm }); };
           return { buList, buSites, buActiveName: active || '', hasBuActive: !!active, buHint: active ? `Moving sites into ${active}` : 'Pick a business unit, then move sites into it', buNew: s.buNew || '', setBuNew: (e) => set({ buNew: e.target.value }), addBu };
