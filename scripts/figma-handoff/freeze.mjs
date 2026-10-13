@@ -113,6 +113,29 @@ try {
     }
     await p.close();
   }
+  // The rest of the site (Micah, 2026-10-13: "Take the rest of the site, and do the same"): Home, every rail
+  // destination, and the personas page, on the estate the storefront opens on. Not part of the default run.
+  if (only === 'site') {
+    const SITE = [['Home', 'Home', 'home'], ['Estate', 'Discover Estate', 'discover-estate'], ['Sources', 'Discover Sources', 'discover-sources'],
+      ['Connections', 'Connect Connections', 'connect-connections'], ['Recommended', 'Connect Recommended', 'connect-recommended'], ['Ways to connect', 'Connect Ways', 'connect-ways'], ['Orders', 'Connect Orders', 'connect-orders'],
+      ['Traffic', 'Observe Traffic', 'observe-traffic'], ['Insights', 'Observe Insights', 'observe-insights'], ['Logs', 'Observe Logs', 'observe-logs'],
+      ['Violations', 'Govern Violations', 'govern-violations'], ['Templates', 'Govern Templates', 'govern-templates'],
+      ['Optimize', 'Cost Optimize', 'cost-optimize'], ['Spend', 'Cost Spend', 'cost-spend']];
+    const p = await page();
+    await p.goto(`${ORIGIN}/NaaS%20Storefront.dc.html?view=mature&theme=${theme}`, { waitUntil: 'networkidle' }); await settle(p, 1200);
+    await freeze(p, `site-home${T}`, `Home${TT}`);   // the landing is Home; its rail entry is a group title, not a labeled item
+    for (const [label, title, key] of SITE.slice(1)) {
+      const b = p.locator(`aside[aria-label$="sections"] button[aria-label="${label}"]`).first();
+      if (!(await b.count())) { console.log('no rail item', label); continue; }
+      await b.click(); await settle(p, 1000);
+      await freeze(p, `site-${key}${T}`, `${title}${TT}`);
+    }
+    await p.close();
+    const q = await page();
+    await q.goto(`${ORIGIN}/personas.html?theme=${theme}`, { waitUntil: 'networkidle' }); await settle(q, 1000);
+    await freeze(q, `site-personas${T}`, `Personas${TT}`);
+    await q.close();
+  }
   if (!only || only === 'pages') {
     for (const [fixture, st, tag] of [['calloway', 'a', 'calloway'], ['scale', 'b', 'scale']]) {
       const p = await page();

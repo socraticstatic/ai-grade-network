@@ -1,0 +1,186 @@
+{
+  "frozen": "2026-10-13T06:17:07.031Z",
+  "live": "https://socraticstatic.github.io/ai-grade-network/",
+  "boards": [
+    {
+      "slug": "site-home",
+      "title": "Home",
+      "html": "site-home.html",
+      "png": "site-home.png"
+    },
+    {
+      "slug": "site-discover-estate",
+      "title": "Discover Estate",
+      "html": "site-discover-estate.html",
+      "png": "site-discover-estate.png"
+    },
+    {
+      "slug": "site-discover-sources",
+      "title": "Discover Sources",
+      "html": "site-discover-sources.html",
+      "png": "site-discover-sources.png"
+    },
+    {
+      "slug": "site-connect-connections",
+      "title": "Connect Connections",
+      "html": "site-connect-connections.html",
+      "png": "site-connect-connections.png"
+    },
+    {
+      "slug": "site-connect-recommended",
+      "title": "Connect Recommended",
+      "html": "site-connect-recommended.html",
+      "png": "site-connect-recommended.png"
+    },
+    {
+      "slug": "site-connect-ways",
+      "title": "Connect Ways",
+      "html": "site-connect-ways.html",
+      "png": "site-connect-ways.png"
+    },
+    {
+      "slug": "site-connect-orders",
+      "title": "Connect Orders",
+      "html": "site-connect-orders.html",
+      "png": "site-connect-orders.png"
+    },
+    {
+      "slug": "site-observe-traffic",
+      "title": "Observe Traffic",
+      "html": "site-observe-traffic.html",
+      "png": "site-observe-traffic.png"
+    },
+    {
+      "slug": "site-observe-insights",
+      "title": "Observe Insights",
+      "html": "site-observe-insights.html",
+      "png": "site-observe-insights.png"
+    },
+    {
+      "slug": "site-observe-logs",
+      "title": "Observe Logs",
+      "html": "site-observe-logs.html",
+      "png": "site-observe-logs.png"
+    },
+    {
+      "slug": "site-govern-violations",
+      "title": "Govern Violations",
+      "html": "site-govern-violations.html",
+      "png": "site-govern-violations.png"
+    },
+    {
+      "slug": "site-govern-templates",
+      "title": "Govern Templates",
+      "html": "site-govern-templates.html",
+      "png": "site-govern-templates.png"
+    },
+    {
+      "slug": "site-cost-optimize",
+      "title": "Cost Optimize",
+      "html": "site-cost-optimize.html",
+      "png": "site-cost-optimize.png"
+    },
+    {
+      "slug": "site-cost-spend",
+      "title": "Cost Spend",
+      "html": "site-cost-spend.html",
+      "png": "site-cost-spend.png"
+    },
+    {
+      "slug": "site-personas",
+      "title": "Personas",
+      "html": "site-personas.html",
+      "png": "site-personas.png"
+    },
+    {
+      "slug": "site-home-dark",
+      "title": "Home Dark",
+      "html": "site-home-dark.html",
+      "png": "site-home-dark.png"
+    },
+    {
+      "slug": "site-discover-estate-dark",
+      "title": "Discover Estate Dark",
+      "html": "site-discover-estate-dark.html",
+      "png": "site-discover-estate-dark.png"
+    },
+    {
+      "slug": "site-discover-sources-dark",
+      "title": "Discover Sources Dark",
+      "html": "site-discover-sources-dark.html",
+      "png": "site-discover-sources-dark.png"
+    },
+    {
+      "slug": "site-connect-connections-dark",
+      "title": "Connect Connections Dark",
+      "html": "site-connect-connections-dark.html",
+      "png": "site-connect-connections-dark.png"
+    },
+    {
+      "slug": "site-connect-recommended-dark",
+      "title": "Connect Recommended Dark",
+      "html": "site-connect-recommended-dark.html",
+      "png": "site-connect-recommended-dark.png"
+    },
+    {
+      "slug": "site-connect-ways-dark",
+      "title": "Connect Ways Dark",
+      "html": "site-connect-ways-dark.html",
+      "png": "site-connect-ways-dark.png"
+    },
+    {
+      "slug": "site-connect-orders-dark",
+      "title": "Connect Orders Dark",
+      "html": "site-connect-orders-dark.html",
+      "png": "site-connect-orders-dark.png"
+    },
+    {
+      "slug": "site-observe-traffic-dark",
+      "title": "Observe Traffic Dark",
+      "html": "site-observe-traffic-dark.html",
+      "png": "site-observe-traffic-dark.png"
+    },
+    {
+      "slug": "site-observe-insights-dark",
+      "title": "Observe Insights Dark",
+      "html": "site-observe-insights-dark.html",
+      "png": "site-observe-insights-dark.png"
+    },
+    {
+      "slug": "site-observe-logs-dark",
+      "title": "Observe Logs Dark",
+      "html": "site-observe-logs-dark.html",
+      "png": "site-observe-logs-dark.png"
+    },
+    {
+      "slug": "site-govern-violations-dark",
+      "title": "Govern Violations Dark",
+      "html": "site-govern-violations-dark.html",
+      "png": "site-govern-violations-dark.png"
+    },
+    {
+      "slug": "site-govern-templates-dark",
+      "title": "Govern Templates Dark",
+      "html": "site-govern-templates-dark.html",
+      "png": "site-govern-templates-dark.png"
+    },
+    {
+      "slug": "site-cost-optimize-dark",
+      "title": "Cost Optimize Dark",
+      "html": "site-cost-optimize-dark.html",
+      "png": "site-cost-optimize-dark.png"
+    },
+    {
+      "slug": "site-cost-spend-dark",
+      "title": "Cost Spend Dark",
+      "html": "site-cost-spend-dark.html",
+      "png": "site-cost-spend-dark.png"
+    },
+    {
+      "slug": "site-personas-dark",
+      "title": "Personas Dark",
+      "html": "site-personas-dark.html",
+      "png": "site-personas-dark.png"
+    }
+  ]
+}
