@@ -61,6 +61,8 @@ async function freeze(p, slug, title) {
     // A select's chosen option lives in state, not in markup: stamp it so the frozen board shows what the live page showed.
     for (const sel of document.querySelectorAll('select')) { for (const o of sel.options) { if (o.selected) o.setAttribute('selected', ''); else o.removeAttribute('selected'); } }
     const doc = document.documentElement.cloneNode(true);
+    // One title, in the head, whatever the runtime did with helmet: the frame takes its name from it.
+    doc.querySelectorAll('title, helmet').forEach(e => e.remove()); const tt = document.createElement('title'); tt.textContent = title; doc.querySelector('head').prepend(tt);
     doc.querySelectorAll('script, x-dc > template, link[rel="stylesheet"], [data-version-pill]').forEach(e => e.tagName === 'BODY' ? e.removeAttribute('data-version-pill') : e.remove());
     // The font by the name Figma knows it (the TTF's family name), not the stylesheet's short alias.
     const style = document.createElement('style'); style.textContent = css.replace(/font-family:'Aleck'/g, "font-family:'ATT Aleck Sans'").replace(/url\((['"]?)(?!https?:|data:)\.?\/?/g, `url($1${live}`) + '\n*,*::before,*::after{animation:none!important;transition:none!important}';
