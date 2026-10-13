@@ -51,6 +51,12 @@ const expect = async (...needles) => {
   for (const n of needles) if (!(n instanceof RegExp ? new RegExp(n.source, n.flags.includes('i') ? n.flags : n.flags + 'i').test(t) : t.toLowerCase().includes(n.toLowerCase()))) throw new Error(`missing ${n}`);
 };
 
+// A count that became a glyph and a number keeps its words in its title (2026-10-07, the words pass); this reads them.
+const expectTitle = async (...needles) => {
+  const t = await page.evaluate(() => [...(document.querySelector('main') || document.body).querySelectorAll('[title], [aria-label]')].map(e => `${e.getAttribute('title') || ''} ${e.getAttribute('aria-label') || ''}`).join('\n'));
+  for (const n of needles) if (!(n instanceof RegExp ? n.test(t) : t.toLowerCase().includes(n.toLowerCase()))) throw new Error(`missing in titles ${n}`);
+};
+
 const results = [];
 let n = 0;
 async function beat(name, fn) {
@@ -125,7 +131,9 @@ await beat('1 Discover: add Oracle, see what it found', async () => {
 
 await beat('2 Your sites and Your clouds', async () => {
   await tab('Your sites');
-  await expect('All regions', /\d+ sites · \d+ AT&T/);
+  // Re-pinned 2026-10-13: the Estate beauty pass draws a region's counts as glyph chips; the words are its title.
+  await expect('All regions');
+  await expectTitle(/\d+ sites · \d+ AT&T/);
   await tab('Your clouds');
   await expect('How they connect');
   // Each cloud carries its egress a month, Cost's own figure (2026-09-30: "integrate costs").
