@@ -1234,7 +1234,7 @@ export function vals(c) {
     allRegions: est.regionsList, scanSteps, scanLine: s.scanStep < 4 ? `${scanSteps[Math.min(3, s.scanStep)].label} · ${Math.min(4, s.scanStep + 1)} of 4` : '', scanDone: s.scanStep >= 4, scanning: s.scanStep < 4, intakeCadence, setIntakeCadence, intakeCadenceLabel, intakeCadenceLower, cadenceAsk, cadenceAskText, confirmCadence, discoverVerdict, discoverKpis, estateChips, treeOrMap: s.treeOrMap, isTree: s.treeOrMap === 'tree', isMap: s.treeOrMap === 'map', treeBg: s.treeOrMap === 'tree' ? 'var(--bg-accent)' : 'transparent', treeColor: s.treeOrMap === 'tree' ? 'var(--link)' : 'var(--text-body)', mapBg: s.treeOrMap === 'map' ? 'var(--bg-accent)' : 'transparent', mapColor: s.treeOrMap === 'map' ? 'var(--link)' : 'var(--text-body)', showTree: () => set({ treeOrMap: 'tree' }), showMap: () => set({ treeOrMap: 'map' }), tree, mapRows, mapSites, mapH, mapVB: `0 0 1000 ${mapH}`, bigEstate, sitesCountLabel: est.sitesCount ? `${est.sitesCount.toLocaleString('en-US')} sites, grouped` : plural(est.sites.length, 'site', 'sites'), chain, chainPolicies, hasChain: !!ow, chainRegion: ow ? `${ow.cloud} ${ow.region}` : '', closeChain: () => set({ openWorkload: null }),
     ...addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0, sched, probRows, obAll, probs, segCtx, incChanges),
   };
-  Object.assign(out, briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }));
+  Object.assign(out, briefVals(out, s, set, { go, est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }));
   Object.assign(out, homeVals(out, s, set, { go, isEmpty, openSave, openF, est }));
   // After the home, which reads Govern's whole lists: Govern's filters narrow only its own page.
   Object.assign(out, governVals(out, s, set, { go, est, invAll: A.inventory(est0),
@@ -1261,7 +1261,7 @@ export function mailDomain(est) {
 
 // Your actions' visuals and Andi's monthly briefing (notes, 2026-09-30, C2, C3):
 // read from what the page already rendered, so the words and the cards agree.
-function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }) {
+function briefVals(out, s, set, { go, est, est0, obAll, conns, life, lifeNow, findList, openF, openSave }) {
   const rk = roleKeyOf(s), role = ROLE_OF[rk], iw = out.iw || {};
   const bars = (key, title, sub, rows) => ({ key, title, sub, rows: rows.slice(0, 4).map((r, i) => ({ key: r.key || String(i), label: r.label || r.name, sub: r.sub || '', v: r.v, w: r.w, fill: r.fill })) });
   const weeks = (R.egressWeeks(obAll) || []).slice(-4), wMax = Math.max(1e-9, ...weeks.map(w => w.pub));
@@ -1283,7 +1283,12 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
     growth: () => bars('growth', 'Public egress', 'the last four weeks', weeks.map((w, i) => ({ key: 'w' + i, label: WEEK[i + 4 - weeks.length], sub: `AT&T ${w.fab.toFixed(1)} Gbps`, v: `${w.pub.toFixed(1)} Gbps`, w: `${(w.pub / wMax * 100).toFixed(1)}%`, fill: 'var(--viz-6)' }))),
     idle: () => bars('idle', 'Idle capacity', 'ports bought and not used', idle.map(r => ({ key: r.region, label: `${r.cloud} ${r.region}`, sub: `${r.ports} ports bought; ${r.resizeTo} hold the peak`, v: `${r.peakPct}% peak`, w: `${r.peakPct}%`, fill: 'var(--viz-2)' }))),
   };
-  const roleVisuals = role.visuals.map(k => V[k]()).filter(v => v.rows.length > 0);
+  // Each picture is its Signals card's (2026-10-13): the title and every bar open the card's list in place, and its verb is the card's.
+  const SIGK = { talkers: 'talkers', newdest: 'newdest', shadow: 'shadow', multi: 'multi', slo: 'slo', problems: 'health', growth: 'growth', idle: 'capacity' };
+  const cardOf = (k) => (out.sigAll || []).find(x => x.key === SIGK[k]) || null;
+  const doorOf = (k) => { const cd = cardOf(k); return () => { set({ insPanel: 'signals' }); if (cd) cd.open(); }; };
+  const roleVisuals = role.visuals.map(k => V[k]()).filter(v => v.rows.length > 0).map((v, i) => { const cd = cardOf(v.key), go = doorOf(v.key);
+    return { ...v, i, go, cta: cd ? cd.cta : { label: 'Open', go, aria: `Open: ${v.title}` }, rows: v.rows.map(r => ({ ...r, go })) }; });
   // The briefing's facts, once, from the figures on the page.
   const ym = new Date(+lifeNow).toISOString().slice(0, 7);
   const lives = findList.filter(f => !f.event).map(f => LC.lifeOf(f, life, lifeNow));
@@ -1295,11 +1300,29 @@ function briefVals(out, s, set, { est, est0, obAll, conns, life, lifeNow, findLi
     availMet: av.filter(r => r.met).length, availN: av.length, top: (out.roleActAll || []).filter(a => a.waiting).map(a => a.head), moving: (out.roleActAll || []).filter(a => a.underWay).length, nextMaint: next ? `${next.touched}, ${next.whenF.replace(/, planned$/, '')}` : '' });
   const domain = mailDomain(est0);
   const briefWho = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk;
-    return { key: k, role: ROLE_OF[k].name, mail: `${ROLE_OF[k].mailbox}@${domain}`, on, bg: on ? 'var(--bg-accent)' : 'transparent', go: () => set({ persona: k }) }; });
+    return { key: k, role: ROLE_OF[k].name, mail: `${ROLE_OF[k].mailbox}@${domain}`, icon: ROLE_ICON[k] || 'person', on, bg: on ? 'var(--bg-accent)' : 'transparent', go: () => set({ persona: k }) }; });
+  // The month as tiles (2026-10-13, "less words, and more visualizations"): each a figure the briefing says, its words in its
+  // title, and a door to where it is counted. The sentence itself is the postcard's title and Andi's sub.
+  const metN = av.filter(r => r.met).length, nextM = next ? next.whenF.replace(/, planned$/, '') : '';
+  const toIns = (patch) => () => set({ insFocus: null, ...patch });
+  const briefTiles = [
+    { key: 'open', icon: 'exclamation-circle', v: String(openF.length), label: 'open', on: true, title: `${openF.length} ${openF.length === 1 ? 'finding' : 'findings'} open; this month AT&T found ${found || 'none'} and resolved ${resolved || 'none'}`, go: toIns({ insPanel: 'findings', findFilter: 'open', findPage: 0 }) },
+    { key: 'table', icon: 'trending-down', v: openSave ? fmt(openSave) : '$0', label: 'a month to save', on: !!openSave, save: !!openSave, title: openSave ? `${fmt(openSave)}/mo of potential savings on the table` : 'Nothing priced on the table', go: go('s3', { layer: 'cloud', tab: 'cost', costPanel: 'optimize', sub: null }) },
+    { key: 'banked', icon: 'check-circle', v: fmt(bankedLast), label: 'banked', on: bankedLast > 0, save: bankedLast > 0, title: bankedLast > 0 ? `Acting banked ${fmt(bankedLast)} last month` : 'Nothing was banked last month', go: go('s3', { layer: 'cloud', tab: 'cost', costPanel: 'spend', sub: null }) },
+    { key: 'sev1', icon: 'exclamation-triangle', v: String(of.sev1), label: 'Sev 1 open', on: true, bad: of.sev1 > 0, title: of.sev1 ? `${of.sev1} Sev 1 open now` : 'No Sev 1 is open now', go: toIns({ insPanel: 'ops', opsPanel: 'tickets' }) },
+    { key: 'tickets', icon: 'checklist', v: String(of.openN), label: 'tickets open', on: true, title: `${of.openN} ${of.openN === 1 ? 'ticket' : 'tickets'} open`, go: toIns({ insPanel: 'ops', opsPanel: 'tickets' }) },
+    { key: 'fix', icon: 'clock', v: of.mttrF || 'None', label: 'to fix', on: !!of.mttrF, title: of.mttrF ? `Fixes took ${of.mttrF} on average` : 'Nothing was fixed', go: toIns({ insPanel: 'ops', opsPanel: 'overview' }) },
+    { key: 'avail', icon: 'verified', v: av.length ? `${metN} of ${av.length}` : 'None', label: 'met target', on: av.length > 0, title: av.length ? `${metN} of ${av.length} connections met their availability target` : 'No connections to measure yet', go: toIns({ insPanel: 'ops', opsPanel: 'avail' }) },
+    { key: 'maint', icon: 'wrench', v: nextM || 'None', label: next ? next.touched || 'maintenance' : 'maintenance', on: !!next, title: next ? `Next AT&T maintenance: ${next.text}, ${next.whenF}` : 'No maintenance planned', go: toIns({ insPanel: 'ops', opsPanel: 'changes' }) },
+  ];
+  // What waits on the role, as the briefing lists it: the moves still open, each a door to Your actions.
+  const briefWaits = (out.roleActAll || []).filter(a => a.waiting).slice(0, 3).map(a => ({ key: a.key, icon: a.outIcon || 'checklist', head: pareHead(firstSentence(a.head)), title: a.head,
+    fig: a.hasSaveFig ? a.saveFig : '', hasFig: !!a.hasSaveFig, go: () => set({ insPanel: 'role' }) }));
+  const briefCta = { label: 'Read with Andi', go: () => set({ andiOpen: true }), aria: "Read with Andi: the briefing in Andi's words" };
   const cfg = s.briefCfg || { cadence: 'monthly' }, cadence = cfg.cadence === 'off' ? 'off' : 'monthly';
   const monthly = SCH.BRIEF_CHOICES[0].schedule, nowMs = SCH.nowOf(s);
   const at = (t) => `${new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}, ${SCH.clockLabel(t)}`;
-  return { comingSoon: true, roleVisuals, roleNoVisuals: !roleVisuals.length, briefText, briefTitle: `Andi's monthly briefing for ${role.short}`, briefWho, briefCadence: cadence,
+  return { comingSoon: true, roleVisuals, roleNoVisuals: !roleVisuals.length, briefText, briefRole: role.short, briefTiles, briefWaits, hasBriefWaits: briefWaits.length > 0, noBriefWaits: !briefWaits.length, briefCta, briefTitle: `Andi's monthly briefing for ${role.short}`, briefWho, briefCadence: cadence,
     setBriefCadence: (e) => set({ briefCfg: { ...cfg, cadence: e.target.value === 'off' ? 'off' : 'monthly' } }),
     briefLast: at(SCH.prevRunAt(monthly, nowMs)), briefNext: cadence === 'off' ? 'Off' : at(SCH.nextRunAt(monthly, nowMs)) };
 }
@@ -1731,7 +1754,7 @@ export function pageRows(rows, size, page, setPage) {
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
 const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], govDrillRows: ['govDrillPage', 8, 'govDrillPager', 'govDrillPageSize'], drawerTags: ['tagPage', 10, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
-  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 4, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 4, 'savePager', 'savePageSize'], bankRows: ['bankPage', 4, 'bankPager', 'bankPageSize'], regionSaveRows: ['regSavePage', 6, 'regSavePager', 'regSavePageSize'], mileRows: ['milePage', 7, 'milePager', 'milePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'],
+  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 3, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 4, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 4, 'savePager', 'savePageSize'], bankRows: ['bankPage', 4, 'bankPager', 'bankPageSize'], regionSaveRows: ['regSavePage', 6, 'regSavePager', 'regSavePageSize'], mileRows: ['milePage', 7, 'milePager', 'milePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'],
   // Sources under its four cards (2026-10-13): six rows of 68px end inside 900; the found alert takes two, Andi one.
   sources: ['srcPage', 6, 'srcPager', 'srcPageSize'] };
 // What an added source found sits over Discover's Estate (2026-09-30): its lists give up the rows
@@ -1750,6 +1773,14 @@ const TAB_ICON = { 'Recommended': 'bullseye', 'Ways to connect': 'cable', 'Order
 const TAB_LISTS = ['cnPanels', 'estPanels', 'govPanels', 'insPanels', 'obPanels', 'costPanels', 'logTabs', 'opsPanels'];
 const ROLE_ICON = { architect: 'hybrid-cloud', neteng: 'router', security: 'personal-security', finops: 'bill', exec: 'pie-chart' };
 const HOME_CARD_ICON = { apps: 'apps', onatt: 'padlock', egress: 'bill', exposed: 'personal-security', glance: 'pie-chart', health: 'verified', spend: 'bill', govern: 'check-shield', tags: 'tag', workloads: 'apps' };
+// Who holds the SLA, as a glyph (2026-10-13): AT&T's network, the cloud provider, the public internet, a third party.
+// A finding's kind as a glyph (2026-10-13): the line leads with it, the words are its title.
+const KIND_ICON = { ipsec: 'lock-off', tunnel: 'shuffle', blindspots: 'eye-off', degraded: 'clock', avoidable: 'bill', crosscloud: 'arrows-horizontal', pci: 'personal-security', uninspected: 'firewall',
+  unsegmented: 'grid', single: 'merge', onecloud: 'cloud', nothub: 'hub', month: 'time-money', unmonitored: 'eye-off', aiuntracked: 'ai', ipsecegress: 'bill' };
+const kindIconOf = (f) => (f && f.event ? 'exclamation-triangle' : KIND_ICON[f && f.kind] || (/^newcloud-/.test((f && f.kind) || '') ? 'cloud' : 'exclamation-circle'));
+const holderIcon = (o) => (/AT&T/.test(o || '') ? 'hub' : /cloud/i.test(o || '') ? 'cloud' : /internet/i.test(o || '') ? 'internet' : 'person-group');
+// A move card's face (2026-10-13): the saving as its figure, else the outcome in words beside its glyph; the recommendation by name.
+const moveFace = (saveLine, outcome, rec) => ({ saveFig: saveLine.replace(/^Save /, ''), hasSaveFig: !!saveLine, noSaveFig: !saveLine, outWords: outcome, recName: String(rec).replace(/^Recommended: /, ''), outIcon: outIcon(outcome) });
 // What an action gets you, as one glyph; the words are its title.
 const outIcon = (t) => { const x = String(t || '').toLowerCase(); return /cannot see|unseen|blind|telemetry/.test(x) ? 'eye' : /latency|slo/.test(x) ? 'high-meter' : /off the internet|private/.test(x) ? 'hub' : /security|risk|expos/.test(x) ? 'check-shield' : /sav|\$|cost|fee|confirm|send/.test(x) ? 'bill' : /alert/.test(x) ? 'bell' : 'bullseye'; };
 // A finding's head, pared for a list line (2026-10-07, "pare words down along the way"): the same figures in fewer words.
@@ -1785,13 +1816,22 @@ export function headChips(head) {
     return { icon: (HEAD_ICON.find(([re]) => re.test(part)) || [0, 'smart-meter'])[1], t, title: part, ink: /^save/i.test(part) ? 'var(--success)' : 'var(--text-body)' };
   });
 }
+// A move's glyph (2026-10-07; the Insights story, 2026-10-13, adds the rest of Signals' verbs).
+const ACT_ICON = { Trace: 'target', Attach: 'cable', Steer: 'shuffle', Resize: 'plus-circle', 'Ask Andi': 'ai', Optimize: 'trending-down', Review: 'checklist', Isolate: 'stop-sign', Inspect: 'firewall',
+  'Set policy': 'check-shield', Policies: 'list', 'Add a port': 'plus-circle', 'By bucket': 'bill', 'In progress': 'clock', 'Open Health': 'verified', Connections: 'router', 'Open Traffic': 'global-network' };
 function glyphPass(out) {
   if (Array.isArray(out.homeCards)) out.homeCards = out.homeCards.map(h => ({ ...h, icon: HOME_CARD_ICON[h.key] || 'pie-chart' }));
   // Insights' cards lead with their mark; a row's action wears its glyph.
   const SIG_ICON = [[/health/i, 'verified'], [/latency/i, 'clock'], [/capacity/i, 'high-meter'], [/talker/i, 'trending-up'], [/cloud-to-cloud|cloud to cloud/i, 'arrows-horizontal'], [/egress|spend|cost/i, 'bill'], [/ai /i, 'ai'], [/expos|reachable/i, 'personal-security'], [/destination/i, 'globe'], [/shadow|unseen|blind/i, 'eye-off'], [/policy|violation/i, 'check-shield'], [/change/i, 'history']];
-  const ACT_ICON = { Trace: 'target', Attach: 'cable', Steer: 'shuffle', Resize: 'plus-circle', 'Ask Andi': 'ai', Optimize: 'trending-down', Review: 'checklist', Isolate: 'stop-sign', Inspect: 'firewall' };
-  if (Array.isArray(out.sigCards)) out.sigCards = out.sigCards.map(g => ({ ...g, icon: (SIG_ICON.find(([re]) => re.test(g.title || '')) || [0, 'smart-meter'])[1], headChips: headChips(g.head),
+  const sigIcon = (t) => (SIG_ICON.find(([re]) => re.test(t || '')) || [0, 'smart-meter'])[1];
+  // A card's line under its figure is the head's other parts as chips (2026-10-13): the figure itself is the hero.
+  if (Array.isArray(out.sigCards)) out.sigCards = out.sigCards.map(g => ({ ...g, icon: sigIcon(g.title), headChips: headChips(g.head), chips: headChips((g.hero ? g.hero.rest : []).join(' · ')),
+    cta: g.cta ? { ...g.cta, icon: ACT_ICON[g.cta.label] || 'arrow-right' } : g.cta,
     rows: Array.isArray(g.rows) ? g.rows.map(r => ({ ...r, actIcon: ACT_ICON[r.act] || 'arrow-right' })) : g.rows }));
+  if (Array.isArray(out.sigIndex)) out.sigIndex = out.sigIndex.map(x => ({ ...x, icon: sigIcon(x.title) }));
+  if (out.sigFinCta) out.sigFinCta = { ...out.sigFinCta, icon: ACT_ICON[out.sigFinCta.label] || 'arrow-right' };
+  if (Array.isArray(out.roleVisuals)) out.roleVisuals = out.roleVisuals.map(v => ({ ...v, icon: sigIcon(v.title), cta: v.cta ? { ...v.cta, icon: ACT_ICON[v.cta.label] || 'arrow-right' } : v.cta }));
+  if (out.sigFocus) out.sigFocus = { ...out.sigFocus, icon: sigIcon(out.sigFocus.title) };
   const RING_ICON = { Sites: 'large-building', Clouds: 'cloud', Workloads: 'apps', Apps: 'grid' };
   if (Array.isArray(out.glanceRings)) out.glanceRings = out.glanceRings.map(g => ({ ...g, icon: RING_ICON[String(g.title || '').replace(/^\w/, ch => ch.toUpperCase())] || RING_ICON[g.title] || 'pie-chart' }));
   for (const k of ['homeDo', 'finActs']) if (Array.isArray(out[k])) out[k] = out[k].map(d => ({ ...d, headAll: d.head, head: pareHead(firstSentence(d.head)), outIcon: outIcon(d.outcome) }));
@@ -3469,14 +3509,15 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // The table's cells (Micah, 2026-09-29: "a beautiful table underneath (evidence, actions, etc)").
     ...(() => { const ev = evidenceOf(f), top = ev[0], acts = actsOf(f, l);
       const bytes = top ? (typeof top.bytes === 'number' ? top.bytes.toFixed(1) + ' GB' : String(top.bytes)) : '';
-      return { evLine: ev.length ? `${ev.length} flow ${ev.length === 1 ? 'record' : 'records'}` : 'No flow records', evTop: top ? `${top.srcName} → ${top.dstName} · ${bytes}` : 'nothing on the wire yet', evInk: top && top.path === 'public' ? 'var(--warning)' : 'var(--success)', hasEvTop: !!top,
+      return { evTitle: `${ev.length ? `${ev.length} flow ${ev.length === 1 ? 'record' : 'records'}` : 'No flow records'} · ${top ? `${top.srcName} → ${top.dstName}` : 'nothing on the wire yet'}`, evLine: ev.length ? `${ev.length} flow ${ev.length === 1 ? 'record' : 'records'}` : 'No flow records', evTop: top ? `${top.srcName} → ${top.dstName} · ${bytes}` : 'nothing on the wire yet', evInk: top && top.path === 'public' ? 'var(--warning)' : 'var(--success)', hasEvTop: !!top,
         impW: f.priced && f.save ? Math.max(4, Math.round(f.save / maxSave * 100)) + '%' : '0%', impWord: f.priced && f.save ? '' : (f.event ? 'Event' : 'Risk'),
         actLabel: acts.length ? acts[0][0] : 'Open', actGo: acts.length ? acts[0][1] : () => set({ fdKey: f.key }) }; })(),
     kind: f.event ? 'Event' : (D.KINDS[f.kind] || f.pillar || 'Finding'), when: f.event ? f.a.when : '', head: f.head,
     // The kind as a badge in the verb inks (an event orange, a priced saving green, a risk neutral) and the strip (2026-10-02).
     badgeCls: f.event ? 'manip' : f.priced && f.save ? 'allow' : '', strip: findStrip(f),
-    stateLabel: l.label, stateTone: TONE[l.state], owner: l.owner, age: `${l.ageDays}d`,
-    saveLine: f.priced && f.save ? `${fmt(f.save)}/mo` : '', hasSave: !!(f.priced && f.save),
+    stateLabel: l.label, stateTone: l.state === 'resolved' ? 'var(--viz-4)' : TONE[l.state], owner: l.owner, age: `${l.ageDays}d`, kindIcon: kindIconOf(f), ownerTitle: `Owner: ${l.owner} · ${l.ageDays}d open`,
+    impIcon: f.event ? 'exclamation-triangle' : 'check-shield', impTitle: f.priced && f.save ? `Save ${fmt(f.save)}/mo` : f.event ? 'An event AT&T saw' : 'A risk, not priced',
+    saveLine: f.priced && f.save ? `${fmt(f.save)}/mo` : '', hasSave: !!(f.priced && f.save), noSave: !(f.priced && f.save),
     tone: f.event ? 'var(--warning)' : 'var(--link)', toneBg: 'var(--bg-base)',
     cta: f.priced && !f.history ? 'Preview the change' : 'See the evidence',
     open: () => set({ fdKey: f.key }),
@@ -3494,11 +3535,11 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // destinations read "1 finding" while Your actions said nothing waits; the one was an event).
   const findsFor = (k, label) => { const hit = cardFinds(k), open = lifeRows.filter(x => hit(x.f.key) && bucket(x.l.state) === 'open'), n = open.length;
     const ev = open.filter(x => x.f.event).length, fi = n - ev, word = (m, a, b) => (m ? `${m} ${m === 1 ? a : b}` : '');
-    return { n, none: !n, label: n ? `${[word(fi, 'finding', 'findings'), word(ev, 'event', 'events')].filter(Boolean).join(', ')} ›` : 'No findings', title: `The open findings and events behind ${label}`,
+    return { n, none: !n, some: n > 0, label: n ? `${[word(fi, 'finding', 'findings'), word(ev, 'event', 'events')].filter(Boolean).join(', ')} ›` : 'No findings', title: `The open findings and events behind ${label}`,
       go: () => set({ insFocus: k, findFilter: 'open', findPage: 0, insPanel: 'findings' }) }; };
   const personaSort = (rows) => rows.slice().sort((a, b) => ((b.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0) - ((a.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect')) ? 1 : 0));
   const insightRowsShown = personaSort(every.filter(x => findFilter === 'all' || bucket(x.l.state) === findFilter).filter(x => !insFocus || cardFinds(insFocus)(x.f.key)).map(toRow))
-    .map(r => ({ ...r, pFor: 'For ' + ({ 'Cloud & Platform Architect': 'Architect', 'Network Engineering': 'Network Eng', 'Security & Compliance': 'Security', 'FinOps & SRE': 'FinOps & SRE', 'Executive': 'Executive' }[r.persona] || r.persona), pInk: r.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect') ? 'var(--link)' : 'var(--text-disabled)' }));
+    .map((r, i) => ({ ...r, primary: i === 0, pFor: 'For ' + ({ 'Cloud & Platform Architect': 'Architect', 'Network Engineering': 'Network Eng', 'Security & Compliance': 'Security', 'FinOps & SRE': 'FinOps & SRE', 'Executive': 'Executive' }[r.persona] || r.persona), pInk: r.persona === (PERSONA_NAME[s.persona] || 'Cloud & Platform Architect') ? 'var(--link)' : 'var(--text-disabled)' }));
   // The finding drawer: what AT&T saw, a preview of the change, the evidence, the timeline, the moves.
   const fdPick = every.find(x => x.f.key === s.fdKey) || null;
   const fd = (() => {
@@ -3544,21 +3585,36 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const openX = every.filter(x => bucket(x.l.state) === 'open');
     const priced = openX.filter(x => x.f.priced && x.f.save).sort((a, b) => b.f.save - a.f.save);
     const tot = priced.reduce((a, x) => a + x.f.save, 0);
-    const PAL = ['var(--viz-1)', 'var(--viz-2)', 'var(--viz-3)', 'var(--viz-4)', 'var(--viz-5)', 'var(--viz-6)'];
+    // One saving, one ink (2026-10-13, green only on the saving): each priced finding a step of --success, largest first.
+    const PAL = [100, 74, 56, 42, 32, 24].map(p => (p === 100 ? 'var(--success)' : `color-mix(in srgb,var(--success) ${p}%,var(--bg-base))`));
     const kindOf = (f) => (f.event ? 'Event' : (D.KINDS[f.kind] || f.pillar || 'Finding'));
     const savSegs = priced.map((x, i) => ({ key: x.f.key, n: x.f.save, w: (x.f.save / (tot || 1) * 100).toFixed(2) + '%', color: PAL[i % PAL.length], title: `${x.f.head} · ${fmt(x.f.save)}/mo`, go: () => set({ fdKey: x.f.key }) }));
     const ORDER = [['open', 'Open'], ['ack', 'Acknowledged'], ['progress', 'In progress'], ['snoozed', 'Snoozed'], ['resolved', 'Resolved'], ['dismissed', 'Dismissed']];
-    const lifeSegs = ORDER.map(([k, lbl]) => { const n = every.filter(x => x.l.state === k).length; return { key: k, n, w: (n / (every.length || 1) * 100).toFixed(2) + '%', color: TONE[k], title: `${lbl} · ${n}`, label: lbl, go: () => set({ findFilter: bucket(k), findPage: 0 }) }; }).filter(x => x.n > 0);
+    // The life bar in the life inks, never green: resolved is history, not a saving.
+    const LIFE_INK = { open: 'var(--warning)', ack: 'var(--viz-2)', progress: 'var(--viz-1)', snoozed: 'var(--border-primary)', resolved: 'var(--viz-4)', dismissed: 'var(--text-disabled)' };
+    const lifeSegs = ORDER.map(([k, lbl]) => { const n = every.filter(x => x.l.state === k).length; return { key: k, n, w: (n / (every.length || 1) * 100).toFixed(2) + '%', color: LIFE_INK[k], title: `${lbl} · ${n}`, label: lbl,
+      // A segment of one, or one the list already shows (Open, under the Open filter), opens its longest-waiting finding; any other shows its set.
+      go: n === 1 || (bucket(k) === findFilter && !insFocus) ? () => set({ fdKey: every.filter(x => x.l.state === k).sort((p, q) => q.l.ageDays - p.l.ageDays)[0].f.key }) : () => set({ findFilter: bucket(k), findPage: 0, insFocus: null }) }; }).filter(x => x.n > 0);
     const AGES = [[0, 7, 'Under a week'], [8, 14, '1 to 2 weeks'], [15, 30, '2 to 4 weeks'], [31, Infinity, 'Over a month']];
-    const ageCols = AGES.map(([a, b, lbl]) => ({ key: lbl, label: lbl, n: openX.filter(x => x.l.ageDays >= a && x.l.ageDays <= b).length }));
+    const oldestIn = (xs) => xs.slice().sort((p, q) => q.l.ageDays - p.l.ageDays)[0] || null;
+    const ageCols = AGES.map(([a, b, lbl]) => { const xs = openX.filter(x => x.l.ageDays >= a && x.l.ageDays <= b), o = oldestIn(xs);
+      return { key: lbl, label: lbl, n: xs.length, none: !xs.length, go: o ? () => set({ fdKey: o.f.key }) : () => {} }; });
+    const oldX = oldestIn(openX), optimizeGo = go('s3', { layer: 'cloud', tab: 'cost', costPanel: 'optimize', sub: null });
+    const cuOf = (n, pre, suf) => { const big = n >= 1000 && n < 1e6; return { on: true, k: big ? Math.floor(n / 1000) : 0, r: big ? n % 1000 : n, kOn: big, preCss: `'${pre}'`, sufCss: `'${suf}'` }; };
     const amax = Math.max(1, ...ageCols.map(c => c.n));
     const oldest = openX.reduce((m, x) => Math.max(m, x.l.ageDays), 0);
     return [
-      { key: 'savings', title: 'On the table', big: `${fmt(tot)}/mo`, total: fmt(tot), isBar: true, isAge: false, segs: savSegs, cols: [],
+      { key: 'savings', i: 0, figV: `${fmt(tot)}/mo`, title: 'On the table', icon: 'bill', save: true, cu: cuOf(tot, '$', '/mo'), unit: 'to save', big: `${fmt(tot)}/mo`, total: fmt(tot), isBar: true, isAge: false, segs: savSegs, cols: [],
+        go: priced.length ? () => set({ fdKey: priced[0].f.key }) : optimizeGo, goTitle: priced.length ? `The largest: ${priced[0].f.head}` : 'Nothing priced yet',
+        cta: { label: 'Optimize', go: optimizeGo, aria: `Optimize: ${fmt(tot)}/mo on the table`, icon: 'trending-down' },
         legend: priced.slice(0, 3).map((x, i) => ({ key: x.f.key, color: PAL[i], label: kindOf(x.f), v: fmt(x.f.save) })) },
-      { key: 'life', title: 'Where they are', big: `${openX.length} open`, isBar: true, isAge: false, segs: lifeSegs, cols: [],
+      { key: 'life', i: 1, figV: String(every.length), title: 'Where they are', icon: 'pie-chart', save: false, cu: cuOf(every.length, '', ''), unit: 'tracked', big: `${openX.length} open`, isBar: true, isAge: false, segs: lifeSegs, cols: [],
+        go: () => set({ findFilter: 'all', findPage: 0, insFocus: null }), goTitle: `${every.length} tracked, ${openX.length} open: list every one`,
+        cta: { label: 'Your actions', go: () => set({ insPanel: 'role' }), aria: 'Your actions: the moves for your role', icon: 'checklist' },
         legend: lifeSegs.map(sg => ({ key: sg.key, color: sg.color, label: sg.label, v: String(sg.n) })) },
-      { key: 'age', title: 'How long they have waited', big: openX.length ? `${oldest}d oldest` : 'None open', isBar: false, isAge: true, segs: [], legend: [],
+      { key: 'age', i: 2, figV: openX.length ? `${oldest}d` : 'None', title: 'How long they have waited', icon: 'clock', save: false, cu: { ...cuOf(oldest, '', 'd'), on: openX.length > 0 }, unit: openX.length ? 'oldest' : '', big: openX.length ? `${oldest}d oldest` : 'None open', isBar: false, isAge: true, segs: [], legend: [],
+        go: oldX ? () => set({ fdKey: oldX.f.key }) : () => set({ findFilter: 'all', findPage: 0 }), goTitle: oldX ? `The oldest: ${oldX.f.head}` : 'None open',
+        cta: oldX ? { label: 'Open the oldest', go: () => set({ fdKey: oldX.f.key }), aria: `Open the oldest: ${oldX.f.head}`, icon: 'arrow-right' } : { label: 'All findings', go: () => set({ findFilter: 'all', findPage: 0 }), aria: 'All findings: every one, open or not', icon: 'list' },
         cols: ageCols.map(c => ({ ...c, h: (c.n / amax * 100).toFixed(1) + '%', title: `${c.label} · ${c.n} open` })) },
     ];
   })();
@@ -3755,13 +3811,13 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const T = OD.ticketStats(est0, { probs, tickets, now: nowMs, days });
     const AV = OD.availability(est0, { probs, now: nowMs, days });
     // Every open incident lists here; the counts are only the rows that carry a ticket (ticketOf, above).
-    const ticketAll = T.open.map(t => ({ key: t.key, sevF: `Sev ${t.sev}`, sevTone: t.sev === 1 ? 'var(--error)' : 'var(--warning)', what: t.what, where: t.thing ? `${t.where} · ${t.thing}` : t.where, owner: t.owner,
+    const ticketAll = T.open.map(t => ({ key: t.key, sevF: `Sev ${t.sev}`, sevN: t.sev, sevTone: t.sev === 1 ? 'var(--error)' : 'var(--warning)', what: t.what, whatShort: String(t.what || '').split(' · ')[0], where: t.thing ? `${t.where} · ${t.thing}` : t.where, owner: t.owner, ownerIcon: holderIcon(t.owner),
       openedF: t.openedAt ? `${SCH.hhmm(t.openedAt)} · ${SCH.agoOf(t.openedAt, nowMs)}` : '', ...ticketOf(t.key, t.kind === 'problem'),
       ticket: moveF({ key: t.key }, 'progress', { note: `Ticket ${tid(t.key)} opened, routed to ${t.owner}` }) }));
     const ticketN = ticketAll.filter(r => r.ticketed).length, bareN = ticketAll.length - ticketN;
     const opsPanel = ['overview', 'tickets', 'avail', 'changes'].includes(s.opsPanel) ? s.opsPanel : 'overview';
     const opsPanels = [['overview', 'Overview'], ['tickets', `Tickets · ${ticketN}`], ['avail', 'Availability'], ['changes', 'Maintenance & Changes']].map(([k, l]) => { const on = opsPanel === k;
-      return { key: k, label: l, on, go: () => set({ opsPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; });
+      return { key: k, label: l, on, go: () => set({ opsPanel: k }), line: on ? 'var(--cta)' : 'transparent', ...seg(on) }; });
     const none = !T.openN && !T.hasHistory;
     const bareF = bareN ? `, ${bareN} ${bareN === 1 ? 'incident' : 'incidents'} without one` : '';
     // None open reads as words, never "0 Sev 1 open now" (sweep, 2026-09-30).
@@ -3773,13 +3829,39 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       { key: 'fixed', l: 'Fixed', v: String(T.fixedN), u: `in ${winL}`, tone: 'var(--text-heading)' },
       { key: 'mttr', l: 'Time to fix', v: T.fixedN ? T.mttrF : 'None yet', u: T.fixedN ? 'on average' : '', tone: 'var(--text-heading)' },
     ];
-    const fixAll = T.closed.map(x => ({ key: x.key, whenF: dayF(x.closedAt), sevF: `Sev ${x.sev}`, what: x.what, where: x.where, owner: x.owner, tookF: OD.durF(x.fixMin) }));
+    const fixMax = Math.max(1, ...T.closed.map(x => x.fixMin || 0));
+    const fixAll = T.closed.map(x => ({ key: x.key, whenF: dayF(x.closedAt), sevF: `Sev ${x.sev}`, sevN: x.sev, what: x.what, where: x.where, owner: x.owner, ownerIcon: holderIcon(x.owner), tookF: OD.durF(x.fixMin),
+      tookW: `${Math.max(2, Math.round((x.fixMin || 0) / fixMax * 1000) / 10)}%` }));
     const pctF = (u) => (u >= 1 ? '100%' : `${(Math.floor(u * 10000) / 100).toFixed(2)}%`);
-    const availRows = AV.map(r => ({ key: r.key, where: r.where, owner: r.owner, targetF: `${r.target}%`, uptimeF: pctF(r.uptime), outageF: r.outageMin ? OD.durF(r.outageMin) : 'None', metF: r.met ? 'Met' : 'Missed', metTone: r.met ? 'var(--success)' : 'var(--error)' }));
+    const meterW = (pct) => `${Math.max(0, Math.min(100, Math.round((pct - 98) / 2 * 1000) / 10))}%`;
+    const availRows = AV.map(r => ({ key: r.key, where: r.where, owner: r.owner, ownerIcon: holderIcon(r.owner), targetF: `${r.target}%`, uptimeF: pctF(r.uptime), outageF: r.outageMin ? OD.durF(r.outageMin) : 'None', met: !!r.met, metF: r.met ? 'Met' : 'Missed',
+      // Met is the quiet ink; only a miss is red (green is for money, 2026-10-05).
+      metTone: r.met ? 'var(--text-heading)' : 'var(--error)', metIcon: r.met ? 'check-circle' : 'close-circle', upW: meterW(r.uptime * 100), tickW: meterW(r.target), upInk: r.met ? 'var(--viz-1)' : 'var(--error)',
+      title: `${r.where} · ${r.owner} · target ${r.target}% · uptime ${pctF(r.uptime)} · ${r.met ? 'met' : 'missed'}` }));
     const chg = healthVals.changeAll || [];
     const maintAll = chg.filter(x => x.kind === 'Maintenance');
     const comingUp = maintAll.filter(x => x.upcoming && x.at > nowMs);
-    return { opsFacts: { sev1: T.sev1Open, openN: ticketN, fixedN: T.fixedN, mttrF: T.fixedN ? T.mttrF : '' }, opsPanels, opsPanelOverview: opsPanel === 'overview', opsPanelTickets: opsPanel === 'tickets', opsPanelAvail: opsPanel === 'avail', opsPanelChanges: opsPanel === 'changes',
+    // Operations as four cards (2026-10-13, "calls to action on all widgets"): what is open now, how long fixes take,
+    // availability against each holder's target, and what changed; each head a door to its view, each with one verb.
+    const toPanel = (k) => () => set({ opsPanel: k });
+    const toObs = (obPanel) => go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel, sub: null });
+    const bare = ticketAll.find(r => r.canTicket);
+    const opsNow = { n: ticketN, unit: ticketN === 1 ? 'ticket open' : 'tickets open', rows: ticketAll.slice(0, 3), title: `${ticketN} ${ticketN === 1 ? 'ticket' : 'tickets'} open${bareF}`, sev1: T.sev1Open, hasSev1: T.sev1Open > 0, sev1Title: sev1F.replace(/\.$/, ''), go: toPanel('tickets'),
+      dots: ticketAll.map(t => ({ key: t.key, title: `${t.sevF} · ${t.what} · ${t.where} · ${t.ticketF}`, ink: t.sev === 1 ? 'var(--error)' : 'var(--warning)', hollow: !t.ticketed })),
+      cta: bare ? { label: 'Open ticket', go: bare.ticket, aria: `Open ticket: ${bare.what}`, icon: 'plus-circle' } : { label: 'Tickets', go: toPanel('tickets'), aria: `Tickets: ${ticketN} open`, icon: 'checklist' } };
+    const fixCols = T.closed.slice().sort((a, b) => (a.closedAt || 0) - (b.closedAt || 0)).map(x => ({ key: x.key, h: `${Math.max(4, Math.round((x.fixMin || 0) / fixMax * 1000) / 10)}%`, title: `${x.what} · ${x.where} · took ${OD.durF(x.fixMin)}`, ink: x.owner === 'AT&T' ? 'var(--viz-1)' : 'var(--viz-6)' }));
+    const opsFix = { v: T.fixedN ? T.mttrF : 'None yet', has: !!T.fixedN, unit: T.fixedN ? 'on average' : '', n: T.fixedN, nTitle: `${T.fixedN} fixed in ${lastL}`, title: T.fixedN ? `Fixes took ${T.mttrF} on average over ${lastL}` : `Nothing was fixed in ${lastL}`, cols: fixCols, go: toPanel('tickets'),
+      cta: { label: andiOn ? 'Andi tickets on' : 'Andi tickets off', go: () => set({ andiTickets: !andiOn }), aria: `${andiOn ? 'Andi tickets on' : 'Andi tickets off'}: Andi opens a ticket for each new incident`, icon: 'ai', pressed: andiOn } };
+    const metN = AV.filter(r => r.met).length;
+    const opsAvail = { met: metN, n: AV.length, p: AV.length ? Math.round(metN / AV.length * 100) : 0, pF: AV.length ? `${metN} of ${AV.length}` : 'None', missN: AV.length - metN, hasMiss: AV.length > metN,
+      title: AV.length ? `${metN} of ${AV.length} connections met their target over ${lastL}` : 'No connections to measure yet', go: toPanel('avail'),
+      miss: availRows.filter(r => !r.met).slice(0, 3), allMet: AV.length > 0 && metN === AV.length, unit: AV.length ? 'met target' : '',
+      cta: { label: 'Open Health', go: toObs('health'), aria: `Open Health: ${AV.length - metN} missed ${AV.length - metN === 1 ? 'its target' : 'their targets'}`, icon: 'verified' } };
+    const done = chg.filter(x => !x.upcoming), next = comingUp[0] || null;
+    const opsChg = { n: done.length, unit: `in ${lastL}`, nextWhere: next ? next.touched || next.text : '', title: `${done.length} ${done.length === 1 ? 'change' : 'changes'} in ${lastL}`, hasNext: !!next, nextF: next ? next.whenF.replace(/, planned$/, '') : '', nextTitle: next ? `Next: ${next.text}, ${next.whenF}` : '',
+      kinds: ['Maintenance', 'Config', 'Route'].map(k => ({ key: k, icon: { Maintenance: 'wrench', Config: 'gear', Route: 'router' }[k], n: done.filter(x => x.kind === k).length, title: `${done.filter(x => x.kind === k).length} ${k.toLowerCase()}` })),
+      go: toPanel('changes'), cta: { label: 'Open Changes', go: toObs('changes'), aria: `Open Changes: ${done.length} in ${lastL}`, icon: 'history' } };
+    return { opsNow, opsFix, opsAvail, opsChg, opsFacts: { sev1: T.sev1Open, openN: ticketN, fixedN: T.fixedN, mttrF: T.fixedN ? T.mttrF : '' }, opsPanels, opsPanelOverview: opsPanel === 'overview', opsPanelTickets: opsPanel === 'tickets', opsPanelAvail: opsPanel === 'avail', opsPanelChanges: opsPanel === 'changes',
       opsLine, opsTiles,
       ticketAll, ticketRows: ticketAll, hasTickets: ticketAll.length > 0, noTickets: !ticketAll.length,
       andiTicketsLabel: `Andi opens a ticket for each new incident: ${andiOn ? 'On' : 'Off'}`, andiTicketsOn: andiOn, toggleAndiTickets: () => set({ andiTickets: !andiOn }),
@@ -3807,6 +3889,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       const outcome = f.priced ? `Save ${fmt(f.save)}/mo` : /single|backup|onecloud/.test(f.kind) ? 'Removes outage risk' : /degraded|slo|latency/.test(f.kind) ? 'Brings latency under SLO' : /ipsec|sdwan|nothub/.test(f.kind) ? 'Takes traffic off the internet'
         : f.pillar === 'Policy control' ? 'Closes a security risk' : f.pillar === 'Observability' ? 'Shows the traffic you cannot see' : f.pillar === 'Private reach' ? 'Takes traffic off the internet' : 'Closes an open finding';
       return { key: f.kind, head: f.head, strip: findStrip(f), saveLine: f.priced ? `Save ${fmt(f.save)}/mo` : '', hasSave: !!f.priced, outcome, outInk: f.priced ? 'var(--success)' : 'var(--text-heading)', rec: `Recommended: ${rec}`, stateLabel: l.label,
+        ...moveFace(f.priced ? `Save ${fmt(f.save)}/mo` : '', outcome, rec),
         canAccept: st === 'open' || st === 'snoozed', accept: moveF(k, 'ack', { note: `Accepted: ${rec}` }),
         canDefer: st === 'open', defer: moveF(k, 'snoozed', { snoozeDays: deferDays, note: deferWhen ? `Deferred to the ${deferWhen} briefing` : 'Deferred' }),
         canStart: st === 'ack', start: moveF(k, 'progress'), canSnooze: st === 'ack', snooze: moveF(k, 'snoozed', { snoozeDays: deferDays }), hasDoor: false, doorLabel: '', door: () => {},
@@ -3821,15 +3904,28 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const ports = rk === 'architect' ? OD.capacity(conns, s.obWindow || '30d').filter(r => r.peakPct >= 80 && r.state !== 'down').map(r => {
       const busy = capMoveLabel(s, est0, r, '') === 'In progress';
       return { key: 'cap-' + r.region, head: `${r.cloud} ${r.region} peaks at ${r.peakPct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, strip: findStrip({ kind: 'port' }), saveLine: '', hasSave: false, rec: 'Recommended: Add a port', outcome: 'Adds headroom before it fills', outInk: 'var(--text-heading)', stateLabel: busy ? 'In progress' : 'Open', underWay: busy,
+        ...moveFace('', 'Adds headroom before it fills', 'Add a port'),
         canAccept: false, canDefer: false, canStart: false, canSnooze: false, hasDoor: true, doorLabel: capMoveLabel(s, est0, r, 'Add a port'), door: capMove(go, set, s, est0, r), accept: () => {}, defer: () => {}, start: () => {}, snooze: () => {}, waiting: !busy,
         open: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn' }) }; }) : [];
-    const all = [...acts, ...ports];
+    const all = [...acts, ...ports].map((a, i) => ({ ...a, i: i % 3, primary: i === 0, stateIcon: a.underWay ? 'clock' : a.waiting ? 'exclamation-circle' : 'pause',
+      // A move with nothing left to press (in progress) still has a verb: its evidence.
+      quiet: !a.canAccept && !a.canStart && !a.hasDoor }));
+    // The verdict over the moves (2026-10-13): how many, how many wait on you, how many are under way, and what the priced
+    // ones save between them, each as glyph and number with its words in the title.
+    const waitingN = all.filter(a => a.waiting).length, underWayN = all.filter(a => a.underWay).length;
+    const saveN = acts.filter(a => a.hasSave).reduce((t, a) => t + (+(a.saveLine.match(/\$([\d,]+)/) || [0, '0'])[1].replace(/,/g, '')), 0);
+    const roleVerdict = { n: all.length, nTitle: `${all.length || 'No'} ${all.length === 1 ? 'move' : 'moves'} for ${role.short}`, waitingN, waitingTitle: `${waitingN || 'None'} waiting on you`,
+      underWayN, underWayTitle: `${underWayN || 'None'} under way`, hasSave: saveN > 0, saveF: `${fmt(saveN)}/mo`, saveTitle: `${fmt(saveN)}/mo to save across the priced moves` };
     const roleEmpty = all.length ? '' : rk === 'exec' ? 'Nothing priced on the table.' : 'Nothing to act on yet. What AT&T finds for this role lands here.';
     const roleChips = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk; return { key: k, label: ROLE_OF[k].short, on, ...seg(on), go: () => set({ persona: k, rolePage: 0 }) }; });
     // How many it lists, beside the title: the home's "3 moves" and "All 3 in Your actions" land on their number (2026-09-30).
     const countNoun = rk === 'exec' ? ['move', 'moves'] : ['action', 'actions'];
-    return { roleChips, roleQuestion: `For ${role.short}: ${role.q}`, roleTitle: `Actions for ${role.short}`, roleCountLine: all.length ? `${all.length} ${all.length === 1 ? countNoun[0] : countNoun[1]}` : '', roleHead: plNow.line, roleCta: plNow.cta, roleGo: plNow.go, roleActAll: all, roleActRows: all, hasRoleActs: all.length > 0,
-      roleEmpty, hasRoleEmpty: !all.length, hasRoleEmptyGo: !all.length && rk === 'exec', roleEmptyGo: () => set({ insPanel: 'ops', opsPanel: 'overview' }) };
+    // Fewer than three moves on a page: the slots left hold one card for everything else open, a door to Findings (2026-10-13).
+    const pages = Math.max(1, Math.ceil(all.length / 3)), onPage = Math.min(Math.max(0, s.rolePage || 0), pages - 1), shownN = Math.max(0, Math.min(3, all.length - onPage * 3));
+    const roleMore = { n: openN, title: `${openN || 'No'} open ${openN === 1 ? 'finding' : 'findings'} across every role`, go: () => set({ insPanel: 'findings', findFilter: 'open', findPage: 0, insFocus: null }),
+      show: shownN < 3, span: all.length ? 3 - shownN : 1 };
+    return { roleChips, roleVerdict, roleMore, roleQuestion: `For ${role.short}: ${role.q}`, roleTitle: `Actions for ${role.short}`, roleCountLine: all.length ? `${all.length} ${all.length === 1 ? countNoun[0] : countNoun[1]}` : '', roleHead: plNow.line, roleCta: plNow.cta, roleGo: plNow.go, roleActAll: all, roleActRows: all, hasRoleActs: all.length > 0,
+      roleEmpty, roleEmptyShort: roleEmpty.split('. ')[0].replace(/\.$/, ''), hasRoleEmpty: !all.length, hasRoleEmptyGo: !all.length && rk === 'exec', roleEmptyGo: () => set({ insPanel: 'ops', opsPanel: 'overview' }) };
   })();
   // Insights > Signals (Micah, 2026-09-30: "Observe insights is light"; "all need to
   // be useful and action oriented"; "make sure mock data matches persona"; he chose
@@ -3842,7 +3938,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // Nothing discovered yet: the first step, the one the home offers.
     const sigEmptyGo = () => go('s1', { discoverView: 'sources' })();
     const noPager = { label: '', many: false, prevOp: 0.4, nextOp: 0.4, prev: () => {}, next: () => {} };
-    if (!iwRaw) return { sigChips, sigHas: false, sigEmpty: true, sigEmptyGo, sigAll: [], sigCards: [], sigGrid: false, sigPager: noPager, sigFocusOn: false, sigFocus: null, insFocusLabel: '' };
+    if (!iwRaw) return { sigChips, sigHas: false, sigEmpty: true, sigEmptyGo, sigAll: [], sigCards: [], sigIndex: [], sigHotN: 0, sigTall: false, sigFinCta: { label: '', go: () => {}, aria: '' }, sigGrid: false, sigPager: noPager, sigFocusOn: false, sigFocus: null, insFocusLabel: '' };
     const reg = (id) => est0.regionsList.find(x => x.region === id) || { region: id, cloud: '', wl: 0 };
     const toObserve = (extra) => go('s3', { layer: 'cloud', tab: 'observe', sub: null, ...extra });
     const toCost = (costPanel) => go('s3', { layer: 'cloud', tab: 'cost', costPanel, sub: null });
@@ -3900,7 +3996,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         : { cut: `Records from ${r.sub.split(' · ')[0]} ${/object storage/.test(r.label) ? 'to object storage across regions' : 'to the internet'}, ${on ? 'on AT&T' : 'outside AT&T'}.`, src: r.region, pattern: /object storage/.test(r.label) ? 'regions' : 'internet', path: on ? 'private' : 'public' }); },
       'map-state': (r) => recsOf(r, pairCut(r, !/public/.test(r.sub))),
       logs: (r) => explainNav(c, { label: r.label, value: r.v, sub: `${r.sub}. Sample data: no record names it yet, so these are the records on the path it takes.`, cut: 'Records to the internet, outside AT&T.', pattern: 'internet', path: 'public', parts: [] }),
-      finding: (r) => () => set({ fdKey: r.key }),
+      finding: (r) => (every.some(x => x.f.key === r.key) ? () => set({ fdKey: r.key }) : traceGo(r.probKey || r.key)),
       conn: (r) => toObserve({ obPage: 'perf', obPanel: 'conn', mapSel: r.key, mapRegion: r.region }),
       bucket: () => toCost('bucket'),
       week: (r) => openWeek(r.key),
@@ -3927,18 +4023,30 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     // A card with nothing to show offers the first step where there is one: Capacity with nothing attached offers Attach.
     const firstPub = est0.regionsList.filter(r => !r.priv).sort((a, b) => (b.wl || 0) - (a.wl || 0))[0] || null;
     const EMPTY = { attach: firstPub ? attachGo(firstPub.region) : null };
+    // An empty card with no first step of its own opens the page that would show it (2026-10-13).
+    const EMPTY_CTA = { health: { label: 'Open Health', go: toObserve({ obPage: 'perf', obPanel: 'health' }) }, slo: { label: 'Open Health', go: toObserve({ obPage: 'perf', obPanel: 'health' }) },
+      capacity: { label: 'Connections', go: toObserve({ obPage: 'perf', obPanel: 'conn' }) }, newdest: { label: 'Policies', go: MOVE.policies() }, shadow: { label: 'Policies', go: MOVE.policies() },
+      talkers: { label: 'Open Traffic', go: toObserve({ obPage: 'perf', obPanel: 'map' }) }, multi: { label: 'Open Traffic', go: toObserve({ obPage: 'perf', obPanel: 'map' }) }, spend: { label: 'By bucket', go: toCost('bucket') } };
     const weekOn = s.sigOpen === 'growth' ? s.sigWeek : null;
     const bind = (k) => {
       const m = model[k];
-      const all = (m.rows || []).map(r => (r.actKind === 'port' || r.actKind === 'resize' ? { ...r, act: capMoveLabel(s, est0, capOfRow(r), r.act) } : r)).map(r => ({ ...r, v2: r.v2 || '', title: `${r.label}${r.ramp ? ` · ${r.ramp}` : ''} · ${r.sub} · ${r.v}${r.v2 ? ` · ${r.v2}` : ''}`, figGo: FIG[r.fig](r), actGo: MOVE[r.actKind](r), actAria: `${r.act}: ${r.label}`,
+      const all = (m.rows || []).map(r => (r.actKind === 'port' || r.actKind === 'resize' ? { ...r, act: capMoveLabel(s, est0, capOfRow(r), r.act) } : r)).map(r => ({ ...r, v2: r.v2 || '', actIcon: ACT_ICON[r.act] || 'arrow-right', title: `${r.label}${r.ramp ? ` · ${r.ramp}` : ''} · ${r.sub} · ${r.v}${r.v2 ? ` · ${r.v2}` : ''}`, figGo: FIG[r.fig](r), actGo: MOVE[r.actKind](r), actAria: `${r.act}: ${r.label}`,
         on: k === 'growth' && r.key === weekOn, bg: k === 'growth' && r.key === weekOn ? 'var(--bg-accent)' : 'transparent',
         trackBg: r.track ? 'var(--bg-neutral)' : 'transparent', segs: r.segs.map(x => ({ ...x, rad: x.rad || '2px' })) }));
       const noRows = !m.isCols && !all.length;
-      return { key: k, title: m.title, head: m.head, open: LIST.has(k) ? () => set({ sigOpen: k, sigListPage: 0, sigWeek: null }) : OPEN[k], openAria: `${m.title}: ${m.head}`,
+      // The card's one verb (2026-10-13, "calls to action on all widgets"): its first row's move, the weeks' Optimize, an
+      // empty card's first step, or else the page that would show it. Each lands where its row's or its title's does.
+      const cta = m.isCols ? { label: m.act, go: MOVE[m.actKind]({}), aria: `${m.act}: ${m.title}` }
+        : all.length ? { label: all[0].act, go: all[0].actGo, aria: `${all[0].act}: ${all[0].label}` }
+          : noRows && EMPTY[m.emptyKind] ? { label: m.emptyAct, go: EMPTY[m.emptyKind], aria: `${m.emptyAct}: ${m.title}` }
+            : { ...(EMPTY_CTA[k] || EMPTY_CTA.health), aria: `${(EMPTY_CTA[k] || EMPTY_CTA.health).label}: ${m.title}` };
+      const hero = SG.heroOf(m.head);
+      return { key: k, title: m.title, head: m.head, hero: { ...hero, hasFig: !hero.calm }, cta, calmIcon: noRows && EMPTY[m.emptyKind] ? 'cable' : 'check-circle', open: LIST.has(k) ? () => set({ sigOpen: k, sigListPage: 0, sigWeek: null }) : OPEN[k], openAria: `${m.title}: ${m.head}`,
         // No bars, no key to them.
         // A key for each ink a row draws, and no other (w2, 2026-09-30: FinOps' egress card keyed On AT&T, which nothing on it drew).
-        finds: findsFor(k, m.title), legend: noRows ? [] : m.legend.filter(l => m.isCols || all.some(r => r.segs.some(x => x.fill === l.ink))).map(l => ({ ...l, rad: l.rad || '2px' })),
-        all, rows: m.isCols ? [] : all.slice(0, 4), hasRows: !m.isCols && all.length > 0, noRows, empty: m.empty, isCols: !!m.isCols, isRows: !m.isCols,
+        // A key reads its first words; the rest of it (Over SLO's thresholds) is its title (2026-10-13).
+        finds: findsFor(k, m.title), legend: noRows ? [] : m.legend.filter(l => m.isCols || all.some(r => r.segs.some(x => x.fill === l.ink))).map(l => ({ ...l, rad: l.rad || '2px', short: l.label.split(' · ')[0] })),
+        all, rows: m.isCols ? [] : all.slice(0, 3), hasRows: !m.isCols && all.length > 0, noRows, empty: m.empty, isCols: !!m.isCols, isRows: !m.isCols,
         hasEmptyAct: noRows && !!EMPTY[m.emptyKind], emptyAct: m.emptyAct || '', emptyGo: EMPTY[m.emptyKind] || (() => {}),
         cols: (m.cols || []).map(w => ({ ...w, go: openWeek(w.key) })), thenLabel: m.thenLabel || '', nowLabel: m.nowLabel || '',
         thenGo: m.thenKey ? openWeek(m.thenKey) : () => {}, nowGo: m.nowKey ? openWeek(m.nowKey) : () => {},
@@ -3951,7 +4059,17 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const fc = LIST.has(s.sigOpen) ? sigAll.find(x => x.key === s.sigOpen) : null;
     const fpg = fc ? pageRows(fc.all, listN(fc.key), s.sigListPage, (n) => set({ sigListPage: n })) : null;
     const sigFocus = fc ? { key: fc.key, title: fc.title, head: fc.head, total: fc.all.length, all: fc.all, rows: fpg.rows, pager: fpg.pager, legend: fc.legend, finds: fc.finds, back: () => set({ sigOpen: null, sigListPage: 0, sigWeek: null }) } : null;
-    return { sigChips, sigHas: true, sigEmpty: false, sigEmptyGo, sigAll, sigCards: fc ? [] : pg.rows, sigGrid: !fc && roleKeyOf(s) !== 'finops', sigFin: !fc && roleKeyOf(s) === 'finops', sigPager: pg.pager, sigFocusOn: !!fc, sigFocus,
+    // Great space (2026-10-13): a full page of six shows three rows a card; a page of one row (the last three) gives each
+    // card the height of two and the rows to fill it, so no page ends in a dead half. The persona's lead card carries the
+    // one filled button, on page one.
+    const sigTall = pg.rows.length <= 3;
+    const sigCards = fc ? [] : pg.rows.map((x, i) => ({ ...x, i, rows: x.isCols ? [] : x.all.slice(0, sigTall ? 8 : 3), primary: i === 0 && (s.sigPage || 0) === 0, tall: sigTall }));
+    // The verdict over the cards: the nine as an index, the ones with open findings marked, each a door to its list.
+    const sigIndex = sigAll.map(x => ({ key: x.key, title: `${x.title} · ${x.finds.n ? x.finds.label.replace(/ ›$/, '') : 'no open findings'}`, hot: x.finds.n > 0, n: x.finds.n, on: sigCards.some(y => y.key === x.key), go: x.open }));
+    const sigHotN = sigIndex.filter(x => x.hot).length;
+    // FinOps' spend-to-optimized picture carries Spend by bucket's verb (2026-10-13, a verb on every widget).
+    const sigFinCta = (sigAll.find(x => x.key === 'spend') || {}).cta || { label: 'Optimize', go: toCost('optimize'), aria: 'Optimize: the egress you can save' };
+    return { sigFinCta, sigChips, sigHas: true, sigEmpty: false, sigEmptyGo, sigAll, sigCards, sigTall, sigIndex, sigHotN, sigHotTitle: `${sigHotN} of ${sigIndex.length} signals have open findings or events`, sigHotNone: !sigHotN, sigGrid: !fc && roleKeyOf(s) !== 'finops', sigFin: !fc && roleKeyOf(s) === 'finops', sigPager: pg.pager, sigFocusOn: !!fc, sigFocus,
       insFocusLabel: insFocus ? ((sigAll.find(x => x.key === insFocus) || {}).title || '') : '' };
   })();
   const dash = { ...mixVals, ...insightVals, ...healthVals, ...opsVals, ...roleVals, ...sigVals, dashTiles, capRows, queueRows, hasQueue: queueRows.length > 0, queueCount: String(queueRows.length), queueOpen: queueRows.length > 0 && !!s.queueOpen, queueClosed: !(queueRows.length > 0 && !!s.queueOpen), openQueue: () => set({ obPanel: 'health', queueOpen: false }), closeQueue: () => set({ queueOpen: false }), plKicker: 'For ' + personaNow, plLine: plNow.line, plCta: plNow.cta, plGo: plNow.go,
@@ -4623,6 +4741,7 @@ const ROUTE_ICON = { deny: 'not-available', manip: 'pencil', allow: 'check-circl
 // AT&T edge and a core at risk; a blind spot is a station AT&T cannot yet see; a cadence or a missing cloud is the cloud
 // not yet seen; one path or a port near full is a core at risk; a segmentation gap is the edge at risk.
 const STRIP_WORD = { site: 'Sites', edge: 'AT&T edge', core: 'AT&T core', cloud: 'Cloud' };
+const STRIP_SHORT = { site: 'Sites', edge: 'Edge', core: 'Core', cloud: 'Cloud' };
 // A site's glyph by its class (2026-10-02): a data center, a campus or plant, a branch or office.
 const SITE_ICON = (x) => { const c = String((x && x.cls) || ''); return /data ?cent|DC\b|colo/i.test(c + ' ' + ((x && x.name) || '')) ? 'large-building' : /HQ|campus|plant|manufact|hospital|school/i.test(c) ? 'midsized-building' : 'retail-store'; };
 // A place's glyph by its level on the site side (2026-10-02).
@@ -4633,7 +4752,7 @@ function findStrip(f) {
   const st = { site: 'set', edge: pub ? 'none' : blind ? 'nodata' : /unsegmented/.test(k) ? 'risk' : 'set',
     core: pub ? 'risk' : blind ? 'nodata' : /degraded|slo/.test(k) ? 'slo' : /single|port/.test(k) || event ? 'risk' : 'set', cloud: unseen ? 'nodata' : 'set' };
   const why = { none: 'not on this path', risk: 'at risk', nodata: 'not yet seen', slo: 'over SLO', set: 'on the AT&T network' };
-  return [['site', 'large-building'], ['edge', 'firewall'], ['core', 'hub'], ['cloud', 'cloud']].map(([key, icon]) => ({ key, icon, state: st[key], title: `${STRIP_WORD[key]}: ${key === 'site' || key === 'cloud' ? (st[key] === 'nodata' ? 'not yet seen' : 'yours') : why[st[key]]}` }));
+  return [['site', 'large-building'], ['edge', 'firewall'], ['core', 'hub'], ['cloud', 'cloud']].map(([key, icon]) => ({ key, icon, short: STRIP_SHORT[key], state: st[key], title: `${STRIP_WORD[key]}: ${key === 'site' || key === 'cloud' ? (st[key] === 'nodata' ? 'not yet seen' : 'yours') : why[st[key]]}` }));
 }
 const REGION_OF_METRO = (m) => Object.keys(D.COMPOSE_CHIPS.regions).find(r => D.COMPOSE_CHIPS.regions[r].includes(m)) || 'US East';
 const REGION_GEO = CF.REGION_GEO;

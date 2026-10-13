@@ -60,7 +60,10 @@ test('a row of cards acts with outline buttons; filled blue is for the one main 
   // The row holds the strip's own loop since 2026-10-02, so the block runs through the row's action.
   const a = HTML.indexOf('<sc-for list="{{ insightRows }}"');
   const f = HTML.slice(a, HTML.indexOf('</sc-for>', HTML.indexOf('{{ ins.actLabel }}', a)));
-  assert.match(f, /<button class="fx-btn" onClick="\{\{ ins\.open \}\}"/);
+  // The Insights story (2026-10-13): the evidence is an outline glyph button (its words in its title), and the row's verb
+  // fills only on the first line of page one (data-primary), as Optimize fills only its lead card's.
+  assert.match(f, /<button class="ins-ev" onClick="\{\{ ins\.open \}\}"/);
+  assert.match(f, /<button class="ins-go" data-primary="\{\{ ins\.primary \}\}" onClick="\{\{ ins\.actGo \}\}"/);
 });
 
 test('the AT&T network is never "fabric", and rates name whose rate they are', () => {

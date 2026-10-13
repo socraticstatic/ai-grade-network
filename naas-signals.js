@@ -93,6 +93,26 @@ export function findsOf(card, lens = 'share', ctx = {}) {
   return (k) => l.includes(k);
 }
 
+// The card's headline figure (2026-10-13, "tell the story with less words, and more visualizations"): the first part of
+// its head that carries a figure, split into the figure and the words under it; the other parts ride as chips. A saving
+// reads "$X to save" with the whole it comes out of as a chip. A head with no figure is calm: its words and no number.
+// cu is what counts up (Optimize's op-cu): a whole number with its prefix and suffix; a decimal, a ratio and None hold still.
+const HERO_FIG = /None of [\d,]+|[+-]?\$[\d,.]+(?:\/mo)?|[+-]?[\d,.]*\d(?: of [\d,]+)?(?: Gbps|%| GB\/day)?/;
+export function heroOf(head) {
+  const parts = String(head || '').split(' · ').map(p => p.trim()).filter(Boolean);
+  const at = parts.findIndex(p => /^(AWS|Azure|GCP|Oracle|OCI|CoreWeave)\b/.test(p) ? false : HERO_FIG.test(p));
+  const still = { on: false, k: 0, r: 0, kOn: false, preCss: "''", sufCss: "''" };
+  if (at < 0) return { v: '', unit: parts[0] || '', rest: parts.slice(1), calm: true, save: false, cu: still };
+  const p = parts[at], m = p.match(HERO_FIG), before = p.slice(0, m.index).trim(), after = p.slice(m.index + m[0].length).trim().replace(/^,\s*/, '');
+  const save = /^Save$/i.test(before);
+  const tail = save && /^of /.test(after) ? [after.replace(/^of /, '')] : [];
+  const rest = [...parts.slice(0, at), ...tail, ...parts.slice(at + 1)];
+  const v = m[0], whole = /^([+-]?\$?)([\d,]+)(\/mo|%)?$/.exec(v);
+  const n = whole ? +whole[2].replace(/,/g, '') : 0, big = n >= 1000 && n < 1e6;
+  const cu = whole ? { on: true, k: big ? Math.floor(n / 1000) : 0, r: big ? n % 1000 : n, kOn: big, preCss: `'${whole[1]}'`, sufCss: `'${whole[3] || ''}'` } : still;
+  return { v, unit: save ? 'to save' : after || before, rest, calm: false, save, cu };
+}
+
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
 const pctW = (v, max) => `${Math.max(0, Math.min(100, max > 0 ? v / max * 100 : 0)).toFixed(1)}%`;
 const gb = (g) => `${(+g || 0).toFixed(1)} Gbps`;

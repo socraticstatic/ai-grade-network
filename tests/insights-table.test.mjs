@@ -51,6 +51,10 @@ test('the markup: pictures, then a table with its columns; no card per finding',
   const panel = HTML.slice(a, b > 0 ? b : a + 12000);
   assert.match(panel, /aria-label="Findings at a glance"/);
   assert.match(panel, /aria-label="Findings table"/);
-  for (const h of ['Finding', 'Evidence', 'Impact', 'Owner', 'State', 'Next step']) assert.ok(panel.includes(`>${h}<`), h);
+  // The Insights story (2026-10-13, "less words, more visualizations"): the table is Govern's grammar. Its head is the
+  // title, the station words over the strips, Impact and State; the kind is the line's glyph, the owner and the evidence
+  // are glyphs with their words in their titles, and the next step is the line's verb, so those heads went.
+  for (const h of ['Findings', 'Sites', 'Edge', 'Core', 'Cloud', 'Impact', 'State']) assert.ok(panel.includes(`>${h}<`), h);
+  for (const t of ['{{ ins.ownerTitle }}', '{{ ins.evTitle }}', '{{ ins.actLabel }}', '{{ ins.kind }}']) assert.ok(panel.includes(t), t);
   assert.ok(!/border-left:3px solid \{\{ ins\.tone \}\}/.test(panel), 'the text cards are gone');
 });

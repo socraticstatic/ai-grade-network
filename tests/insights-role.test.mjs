@@ -45,10 +45,11 @@ test('every role has a visual and an action on Growing and Bank scale; empty say
   assert.match(e.roleEmpty, /Nothing to act on yet/);
 });
 
-test('actions are findings, never events, paged at four', () => {
+// Paged at three since the Insights story (2026-10-13): the moves are three cards of one grammar on a row.
+test('actions are findings, never events, paged at three', () => {
   const v = vals(ins('trust', { persona: 'neteng' }));
   assert.ok(v.roleActAll.every(a => !/^an-/.test(a.key)), v.roleActAll.map(a => a.key).join(', '));
-  assert.ok(v.roleActRows.length <= 4 && v.rolePageSize === 4);
+  assert.ok(v.roleActRows.length <= 3 && v.rolePageSize === 3);
 });
 
 test('Accept acknowledges an open finding; Accept is gone once acknowledged or in progress', () => {
@@ -83,7 +84,8 @@ test('Defer snoozes to the next briefing: one fewer open, and the priced head mo
 
 test('Do it is there, disabled, and says Coming soon; Executive with nothing priced says so', () => {
   const a = HTML.indexOf('aria-label="Your actions"');
-  const panel = HTML.slice(a, HTML.indexOf('{{ rolePager.many }}', a));
+  // The pager sits in the moves' head since the Insights story (2026-10-13), before the cards: the panel runs to the briefing.
+  const panel = HTML.slice(a, HTML.indexOf('<!-- Monthly briefing', a));
   assert.ok(a > 0 && panel.length > 0);
   // The runtime drops a bare disabled attribute; it must be bound (2026-09-30, headless: 0 disabled buttons).
   assert.match(panel, /<button[^>]*disabled="\{\{ comingSoon \}\}"[^>]*>Do it<\/button>/);

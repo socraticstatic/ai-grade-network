@@ -88,7 +88,12 @@ test('a card with nothing to show says so, and an estate with no traffic gets a 
   const cs = ins('small'); card(vals(cs), 'capacity').emptyGo();
   assert.equal(cs.state.screen, 's4');
   assert.deepEqual(CF.flowOf(cs.state.compose, ESTATES.small).regions, ['AWS us-east-1']);
-  assert.match(HTML, /<sc-if value="\{\{ sg\.hasEmptyAct \}\}"[^>]*><button class="sig-act" onClick="\{\{ sg\.emptyGo \}\}">\{\{ sg\.emptyAct \}\}<\/button>/);
+  // The Insights story (2026-10-13): an empty card's first step is its verb, the foot's one button (sg.cta), so Capacity
+  // with nothing attached still offers Attach and it lands where emptyGo does.
+  assert.equal(sm.cta.label, sm.emptyAct);
+  const cs2 = ins('small'); card(vals(cs2), 'capacity').cta.go();
+  assert.equal(cs2.state.screen, 's4');
+  assert.match(HTML, /<button class="ins-go" data-primary="\{\{ sg\.primary \}\}" onClick="\{\{ sg\.cta\.go \}\}"[^>]*>[\s\S]*?\{\{ sg\.cta\.label \}\}<\/button>/);
   const e = vals(ins('empty'));
   assert.equal(e.sigHas, false);
   assert.equal(e.sigEmpty, true);
@@ -169,7 +174,8 @@ test('every figure is a button: title, headline, count, bar, value and week', ()
   assert.doesNotMatch(p, /role="button"/, 'a div poses as a button');
   assert.doesNotMatch(p, /class="fx-row door"/, 'yesterday\'s clickable div rows are back');
   const onClicks = [...p.matchAll(/onClick="\{\{ ([^}]+) \}\}"/g)].map(m => ({ b: m[1].trim(), at: m.index }));
-  for (const need of ['sg.open', 'sg.finds.go', 'r.figGo', 'r.actGo', 'w.go', 'sg.actGo', 'fr.figGo', 'fr.actGo', 'sigFocus.back', 'sigFocus.finds.go']) {
+  // The weeks' Optimize is the card's verb since the Insights story (2026-10-13): sg.cta.go, the foot's button.
+  for (const need of ['sg.open', 'sg.finds.go', 'r.figGo', 'r.actGo', 'w.go', 'sg.cta.go', 'fr.figGo', 'fr.actGo', 'sigFocus.back', 'sigFocus.finds.go']) {
     const hit = onClicks.find(o => o.b === need);
     assert.ok(hit, `${need} is never bound`);
     const tagStart = p.lastIndexOf('<', hit.at);
