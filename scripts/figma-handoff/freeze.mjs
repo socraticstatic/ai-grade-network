@@ -13,6 +13,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..'), ORIGIN =
 const LIVE = 'https://socraticstatic.github.io/ai-grade-network/';
 const args = process.argv.slice(2), opt = (f, d) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : d; };
 const OUT = join(ROOT, opt('--out', 'docs/figma-handoff/captures')), only = opt('--only', '');
+// Both themes (Micah, 2026-10-12: "as well as dark mode"): a dark board carries -dark in its slug.
+const THEMES = (opt('--theme', 'both') === 'both' ? ['light', 'dark'] : [opt('--theme', 'light')]);
 await mkdir(OUT, { recursive: true });
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.json': 'application/json' };
 const css = await readFile(join(ROOT, 'storefront.css'), 'utf8');
@@ -45,16 +47,19 @@ async function freeze(p, slug, title) {
 }
 const settle = (p, ms = 500) => p.waitForTimeout(ms);
 try {
+  for (const theme of THEMES) {
+  const T = theme === 'dark' ? '-dark' : '', TT = theme === 'dark' ? ' · dark' : '';
   if (!only || only === 'storefront') {
     const p = await page();
-    await p.goto(`${ORIGIN}/NaaS%20Storefront.dc.html?journey=existing`, { waitUntil: 'networkidle' }); await settle(p, 1000);
+    await p.goto(`${ORIGIN}/NaaS%20Storefront.dc.html?journey=existing&theme=${theme}`, { waitUntil: 'networkidle' }); await settle(p, 1000);
     const beats = ['today', 'source', 'found', 'intent', 'recommend', 'connect', 'watch', 'protect', 'save'];
     let n = 0;
     for (let i = 0; i < 16; i++) {
       const beat = await p.locator('section.js').getAttribute('data-beat');
-      const seen = index.some(x => x.slug === `storefront-journey-${String(beats.indexOf(beat) + 1).padStart(2, '0')}-${beat}`);
-      if (!seen) { n += 1; await freeze(p, `storefront-journey-${String(beats.indexOf(beat) + 1).padStart(2, '0')}-${beat}`, `Journey · ${beat}`);
-        if (beat === 'recommend') { await p.locator('.js-deeper').click(); await settle(p, 700); await freeze(p, 'storefront-journey-05b-recommend-why', 'Journey · recommend · Why'); await p.locator('.js-whyp-x, .js-deeper').first().click(); await settle(p); } }
+      const slug = `storefront-journey-${String(beats.indexOf(beat) + 1).padStart(2, '0')}-${beat}${T}`;
+      const seen = index.some(x => x.slug === slug);
+      if (!seen) { n += 1; await freeze(p, slug, `Journey · ${beat}${TT}`);
+        if (beat === 'recommend') { await p.locator('.js-deeper').click(); await settle(p, 700); await freeze(p, `storefront-journey-05b-recommend-why${T}`, `Journey · recommend · Why${TT}`); await p.locator('.js-whyp-x, .js-deeper').first().click(); await settle(p); } }
       if (beat === 'save') break;
       const go = p.locator('.js-go'); if (await go.isDisabled()) break;
       await go.click(); await settle(p, beat === 'source' ? 3600 : 700);
@@ -63,13 +68,13 @@ try {
   }
   if (!only || only === 'portal') {
     const p = await page();
-    await p.goto(`${ORIGIN}/portal.dc.html?fixture=calloway&state=a`, { waitUntil: 'networkidle' }); await settle(p, 900);
+    await p.goto(`${ORIGIN}/portal.dc.html?fixture=calloway&state=a&theme=${theme}`, { waitUntil: 'networkidle' }); await settle(p, 900);
     await p.locator('aside button[aria-label="Connect a cloud"]').click(); await settle(p, 600);
     const beats = ['today', 'source', 'found', 'intent', 'recommend', 'request'];
     for (let i = 0; i < 10; i++) {
       const beat = await p.locator('section.js').getAttribute('data-beat');
-      const slug = `portal-journey-${String(beats.indexOf(beat) + 1).padStart(2, '0')}-${beat}`;
-      if (!index.some(x => x.slug === slug)) await freeze(p, slug, `Portal journey · ${beat}`);
+      const slug = `portal-journey-${String(beats.indexOf(beat) + 1).padStart(2, '0')}-${beat}${T}`;
+      if (!index.some(x => x.slug === slug)) await freeze(p, slug, `Portal journey · ${beat}${TT}`);
       if (beat === 'request') break;
       await p.locator('.js-go').click(); await settle(p, beat === 'source' ? 3600 : 700);
     }
@@ -79,11 +84,12 @@ try {
     for (const [fixture, st, tag] of [['calloway', 'a', 'calloway'], ['scale', 'b', 'scale']]) {
       const p = await page();
       for (const key of ['lastmile', 'links', 'discovery', 'recommended']) {
-        await p.goto(`${ORIGIN}/portal.dc.html?fixture=${fixture}&state=${st}&page=${key}`, { waitUntil: 'networkidle' }); await settle(p, 900);
-        await freeze(p, `portal-page-${key}-${tag}`, `Portal · ${key} · ${tag}`);
+        await p.goto(`${ORIGIN}/portal.dc.html?fixture=${fixture}&state=${st}&page=${key}&theme=${theme}`, { waitUntil: 'networkidle' }); await settle(p, 900);
+        await freeze(p, `portal-page-${key}-${tag}${T}`, `Portal · ${key} · ${tag}${TT}`);
       }
       await p.close();
     }
+  }
   }
 } finally { await browser.close(); }
 await writeFile(join(OUT, 'index.json'), JSON.stringify({ frozen: new Date().toISOString(), live: LIVE, boards: index }, null, 2) + '\n');

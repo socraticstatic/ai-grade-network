@@ -1,7 +1,103 @@
 {
-  "frozen": "2026-10-13T00:26:57.019Z",
+  "frozen": "2026-10-13T00:37:11.922Z",
   "live": "https://socraticstatic.github.io/ai-grade-network/",
   "boards": [
+    {
+      "slug": "storefront-journey-01-today",
+      "title": "Journey · today",
+      "html": "storefront-journey-01-today.html",
+      "png": "storefront-journey-01-today.png"
+    },
+    {
+      "slug": "storefront-journey-02-source",
+      "title": "Journey · source",
+      "html": "storefront-journey-02-source.html",
+      "png": "storefront-journey-02-source.png"
+    },
+    {
+      "slug": "storefront-journey-03-found",
+      "title": "Journey · found",
+      "html": "storefront-journey-03-found.html",
+      "png": "storefront-journey-03-found.png"
+    },
+    {
+      "slug": "storefront-journey-04-intent",
+      "title": "Journey · intent",
+      "html": "storefront-journey-04-intent.html",
+      "png": "storefront-journey-04-intent.png"
+    },
+    {
+      "slug": "storefront-journey-05-recommend",
+      "title": "Journey · recommend",
+      "html": "storefront-journey-05-recommend.html",
+      "png": "storefront-journey-05-recommend.png"
+    },
+    {
+      "slug": "storefront-journey-05b-recommend-why",
+      "title": "Journey · recommend · Why",
+      "html": "storefront-journey-05b-recommend-why.html",
+      "png": "storefront-journey-05b-recommend-why.png"
+    },
+    {
+      "slug": "storefront-journey-06-connect",
+      "title": "Journey · connect",
+      "html": "storefront-journey-06-connect.html",
+      "png": "storefront-journey-06-connect.png"
+    },
+    {
+      "slug": "storefront-journey-07-watch",
+      "title": "Journey · watch",
+      "html": "storefront-journey-07-watch.html",
+      "png": "storefront-journey-07-watch.png"
+    },
+    {
+      "slug": "storefront-journey-08-protect",
+      "title": "Journey · protect",
+      "html": "storefront-journey-08-protect.html",
+      "png": "storefront-journey-08-protect.png"
+    },
+    {
+      "slug": "storefront-journey-09-save",
+      "title": "Journey · save",
+      "html": "storefront-journey-09-save.html",
+      "png": "storefront-journey-09-save.png"
+    },
+    {
+      "slug": "portal-journey-01-today",
+      "title": "Portal journey · today",
+      "html": "portal-journey-01-today.html",
+      "png": "portal-journey-01-today.png"
+    },
+    {
+      "slug": "portal-journey-02-source",
+      "title": "Portal journey · source",
+      "html": "portal-journey-02-source.html",
+      "png": "portal-journey-02-source.png"
+    },
+    {
+      "slug": "portal-journey-03-found",
+      "title": "Portal journey · found",
+      "html": "portal-journey-03-found.html",
+      "png": "portal-journey-03-found.png"
+    },
+    {
+      "slug": "portal-journey-04-intent",
+      "title": "Portal journey · intent",
+      "html": "portal-journey-04-intent.html",
+      "png": "portal-journey-04-intent.png"
+    },
+    {
+      "slug": "portal-journey-05-recommend",
+      "title": "Portal journey · recommend",
+      "html": "portal-journey-05-recommend.html",
+      "png": "portal-journey-05-recommend.png"
+    },
+    {
+      "slug": "portal-journey-06-request",
+      "title": "Portal journey · request",
+      "html": "portal-journey-06-request.html",
+      "png": "portal-journey-06-request.png"
+    },
     {
       "slug": "portal-page-lastmile-calloway",
       "title": "Portal · lastmile · calloway",
@@ -49,6 +145,150 @@
       "title": "Portal · recommended · scale",
       "html": "portal-page-recommended-scale.html",
       "png": "portal-page-recommended-scale.png"
+    },
+    {
+      "slug": "storefront-journey-01-today-dark",
+      "title": "Journey · today · dark",
+      "html": "storefront-journey-01-today-dark.html",
+      "png": "storefront-journey-01-today-dark.png"
+    },
+    {
+      "slug": "storefront-journey-02-source-dark",
+      "title": "Journey · source · dark",
+      "html": "storefront-journey-02-source-dark.html",
+      "png": "storefront-journey-02-source-dark.png"
+    },
+    {
+      "slug": "storefront-journey-03-found-dark",
+      "title": "Journey · found · dark",
+      "html": "storefront-journey-03-found-dark.html",
+      "png": "storefront-journey-03-found-dark.png"
+    },
+    {
+      "slug": "storefront-journey-04-intent-dark",
+      "title": "Journey · intent · dark",
+      "html": "storefront-journey-04-intent-dark.html",
+      "png": "storefront-journey-04-intent-dark.png"
+    },
+    {
+      "slug": "storefront-journey-05-recommend-dark",
+      "title": "Journey · recommend · dark",
+      "html": "storefront-journey-05-recommend-dark.html",
+      "png": "storefront-journey-05-recommend-dark.png"
+    },
+    {
+      "slug": "storefront-journey-05b-recommend-why-dark",
+      "title": "Journey · recommend · Why · dark",
+      "html": "storefront-journey-05b-recommend-why-dark.html",
+      "png": "storefront-journey-05b-recommend-why-dark.png"
+    },
+    {
+      "slug": "storefront-journey-06-connect-dark",
+      "title": "Journey · connect · dark",
+      "html": "storefront-journey-06-connect-dark.html",
+      "png": "storefront-journey-06-connect-dark.png"
+    },
+    {
+      "slug": "storefront-journey-07-watch-dark",
+      "title": "Journey · watch · dark",
+      "html": "storefront-journey-07-watch-dark.html",
+      "png": "storefront-journey-07-watch-dark.png"
+    },
+    {
+      "slug": "storefront-journey-08-protect-dark",
+      "title": "Journey · protect · dark",
+      "html": "storefront-journey-08-protect-dark.html",
+      "png": "storefront-journey-08-protect-dark.png"
+    },
+    {
+      "slug": "storefront-journey-09-save-dark",
+      "title": "Journey · save · dark",
+      "html": "storefront-journey-09-save-dark.html",
+      "png": "storefront-journey-09-save-dark.png"
+    },
+    {
+      "slug": "portal-journey-01-today-dark",
+      "title": "Portal journey · today · dark",
+      "html": "portal-journey-01-today-dark.html",
+      "png": "portal-journey-01-today-dark.png"
+    },
+    {
+      "slug": "portal-journey-02-source-dark",
+      "title": "Portal journey · source · dark",
+      "html": "portal-journey-02-source-dark.html",
+      "png": "portal-journey-02-source-dark.png"
+    },
+    {
+      "slug": "portal-journey-03-found-dark",
+      "title": "Portal journey · found · dark",
+      "html": "portal-journey-03-found-dark.html",
+      "png": "portal-journey-03-found-dark.png"
+    },
+    {
+      "slug": "portal-journey-04-intent-dark",
+      "title": "Portal journey · intent · dark",
+      "html": "portal-journey-04-intent-dark.html",
+      "png": "portal-journey-04-intent-dark.png"
+    },
+    {
+      "slug": "portal-journey-05-recommend-dark",
+      "title": "Portal journey · recommend · dark",
+      "html": "portal-journey-05-recommend-dark.html",
+      "png": "portal-journey-05-recommend-dark.png"
+    },
+    {
+      "slug": "portal-journey-06-request-dark",
+      "title": "Portal journey · request · dark",
+      "html": "portal-journey-06-request-dark.html",
+      "png": "portal-journey-06-request-dark.png"
+    },
+    {
+      "slug": "portal-page-lastmile-calloway-dark",
+      "title": "Portal · lastmile · calloway · dark",
+      "html": "portal-page-lastmile-calloway-dark.html",
+      "png": "portal-page-lastmile-calloway-dark.png"
+    },
+    {
+      "slug": "portal-page-links-calloway-dark",
+      "title": "Portal · links · calloway · dark",
+      "html": "portal-page-links-calloway-dark.html",
+      "png": "portal-page-links-calloway-dark.png"
+    },
+    {
+      "slug": "portal-page-discovery-calloway-dark",
+      "title": "Portal · discovery · calloway · dark",
+      "html": "portal-page-discovery-calloway-dark.html",
+      "png": "portal-page-discovery-calloway-dark.png"
+    },
+    {
+      "slug": "portal-page-recommended-calloway-dark",
+      "title": "Portal · recommended · calloway · dark",
+      "html": "portal-page-recommended-calloway-dark.html",
+      "png": "portal-page-recommended-calloway-dark.png"
+    },
+    {
+      "slug": "portal-page-lastmile-scale-dark",
+      "title": "Portal · lastmile · scale · dark",
+      "html": "portal-page-lastmile-scale-dark.html",
+      "png": "portal-page-lastmile-scale-dark.png"
+    },
+    {
+      "slug": "portal-page-links-scale-dark",
+      "title": "Portal · links · scale · dark",
+      "html": "portal-page-links-scale-dark.html",
+      "png": "portal-page-links-scale-dark.png"
+    },
+    {
+      "slug": "portal-page-discovery-scale-dark",
+      "title": "Portal · discovery · scale · dark",
+      "html": "portal-page-discovery-scale-dark.html",
+      "png": "portal-page-discovery-scale-dark.png"
+    },
+    {
+      "slug": "portal-page-recommended-scale-dark",
+      "title": "Portal · recommended · scale · dark",
+      "html": "portal-page-recommended-scale-dark.html",
+      "png": "portal-page-recommended-scale-dark.png"
     }
   ]
 }
