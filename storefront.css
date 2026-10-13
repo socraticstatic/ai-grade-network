@@ -435,70 +435,87 @@ button.rec-metric{cursor:pointer}button.rec-metric:hover>span:nth-child(2){text-
 .ah-step button{display:grid;place-items:center;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:var(--bg-wash);color:var(--link);font:inherit;font-size:14px;font-weight:700;cursor:pointer}.ah-step button:disabled{color:var(--text-disabled);cursor:default}.cs-box:disabled{cursor:default}.cs-box:disabled:hover{border-color:var(--border-secondary)}
 /* Flywheel primitives, as NetBond Advanced draws them (Configure > Policies, the connection's Policies tab). Theme tokens only. */
 /* The policy engine (2026-10-07): flow, policies in precedence order, result, left to right. */
-.eng{display:grid;gap:16px;position:relative}
+.eng{display:grid;gap:20px;position:relative}
 .eng-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .eng-top-r{display:flex;align-items:center;gap:12px}
 .eng-stg{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;box-sizing:border-box;border:1px solid var(--border-secondary);border-radius:16px;background:var(--bg-base);font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--text-body);cursor:pointer;white-space:nowrap}
 .eng-stg:hover{border-color:var(--border-active)}.eng-stg[aria-pressed="true"]{border-color:var(--cta);color:var(--link)}.eng-stg b{font-variant-numeric:tabular-nums;color:var(--text-heading)}
 .eng-chips{display:flex;align-items:center;gap:8px}
-.eng-grid{display:grid;grid-template-columns:268px 24px minmax(0,1fr) 24px minmax(0,1.3fr);gap:0 14px;align-items:start}
-.eng-col{display:grid;gap:10px;align-content:start;min-width:0}
-.eng-h{margin:0 0 2px;display:flex;align-items:center;gap:10px;height:28px;font-size:13px;line-height:17px;font-weight:700;color:var(--text-body)}
-.eng-n{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;background:var(--bg-accent);color:var(--link);font-size:12px;letter-spacing:0}
-.eng-hn{margin-left:auto;font-weight:600;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;color:var(--text-body)}
-.eng-arrow{display:grid;place-items:center;height:200px;color:var(--text-disabled)}
-.eng-picks{display:grid;gap:12px}
+/* Roomy (2026-10-13, Micah: "policy engine is all crunched up - make it extremely beautiful"): three columns under heads on one
+   baseline, arrows on that line, equal tops and equal bottoms; the result is the hero. */
+.eng-grid{display:grid;grid-template-columns:288px 28px minmax(0,1fr) 28px minmax(0,1.32fr);gap:0 16px;align-items:stretch;min-height:596px}
+.eng-col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.eng-h{margin:0;display:flex;align-items:center;gap:10px;height:40px;padding-bottom:10px;box-sizing:border-box;border-bottom:1px solid var(--border-secondary);font-size:16px;line-height:22px;font-weight:700;color:var(--text-heading)}
+.eng-n{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;background:var(--bg-accent);color:var(--link);font-size:13px;letter-spacing:0}
+.eng-hn{margin-left:auto;font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;color:var(--text-body);cursor:help}
+.eng-arrow{display:grid;place-items:center;align-self:start;height:30px;color:var(--text-light)}
+.eng-picks{display:grid;gap:18px}
 .eng-pick{position:relative}
-.eng-pick+.eng-pick::before{content:"";position:absolute;left:31px;top:-12px;width:2px;height:12px;background:var(--border-secondary)}
-.eng-pk{width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px;box-sizing:border-box;border:1px solid var(--border-secondary);border-radius:14px;background:var(--bg-base);font:inherit;text-align:left;cursor:pointer;color:var(--text-heading)}
+.eng-pick+.eng-pick::before{content:"";position:absolute;left:35px;top:-18px;width:2px;height:18px;background:var(--border-secondary)}
+.eng-pk{width:100%;min-height:68px;display:flex;align-items:center;gap:14px;padding:12px 14px;box-sizing:border-box;border:1px solid var(--border-secondary);border-radius:14px;background:var(--bg-base);font:inherit;text-align:left;cursor:pointer;color:var(--text-heading)}
 .eng-pk:hover,.eng-pk[aria-expanded="true"]{border-color:var(--cta)}
 .eng-pk-t{display:grid;gap:1px;flex:1;min-width:0}
 .eng-pk-t small{font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)}
-.eng-pk-t b{font-size:15px;line-height:20px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eng-pk-t b{font-size:16px;line-height:22px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eng-menu{position:absolute;z-index:30;top:calc(100% + 6px);left:0;width:100%;min-width:288px;box-sizing:border-box;display:grid;gap:2px;padding:6px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-base);box-shadow:0 12px 32px rgba(0,0,0,.18)}
 .eng-menu button{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border:0;border-radius:8px;background:transparent;font:inherit;font-size:13px;color:var(--text-body);text-align:left;cursor:pointer;white-space:nowrap;min-width:0}
 .eng-menu button:hover{background:var(--bg-wash)}.eng-menu button[aria-selected="true"]{background:var(--bg-accent);color:var(--link);font-weight:600}
 .eng-scrim{position:fixed;inset:0;z-index:25;border:0;padding:0;background:transparent;cursor:default}
-.eng-ex{display:flex;flex-wrap:wrap;gap:8px;padding-top:14px;margin-top:4px;border-top:1px solid var(--border-secondary)}
-.eng-ex-h{flex:1 0 100%;font-size:12px;line-height:16px;font-weight:700;color:var(--text-body)}
-.eng-tile{flex:1 1 0;min-width:0;display:grid;justify-items:center;gap:6px;padding:10px 2px;border:1px solid var(--border-secondary);border-radius:12px;background:var(--bg-base);font:inherit;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body);cursor:pointer;white-space:nowrap}
+.eng-ex{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto;padding-top:16px;border-top:1px solid var(--border-secondary)}
+.eng-ex-h{flex:1 0 100%;font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)}
+.eng-tile{flex:1 1 0;min-width:0;display:grid;justify-items:center;gap:8px;padding:16px 4px 14px;border:1px solid var(--border-secondary);border-radius:14px;background:var(--bg-base);font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--text-body);cursor:pointer;white-space:nowrap}
 .eng-tile .ic{color:var(--text-light)}.eng-tile:hover{border-color:var(--border-active)}
 .eng-tile[aria-pressed="true"]{border-color:var(--cta);background:var(--bg-accent);color:var(--link)}.eng-tile[aria-pressed="true"] .ic{color:var(--link)}
-.eng-ladder{display:grid;gap:4px}
-.eng-rung{display:grid;grid-template-columns:28px 16px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:44px;padding:6px 12px;box-sizing:border-box;border:1px solid transparent;border-radius:12px;background:transparent;font:inherit;text-align:left;cursor:pointer;color:var(--text-heading)}
+.eng-ladder{display:grid;gap:6px}
+.eng-rung{display:grid;grid-template-columns:32px 18px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:52px;padding:8px 14px;box-sizing:border-box;border:1px solid transparent;border-radius:12px;background:transparent;font:inherit;text-align:left;cursor:pointer;color:var(--text-heading)}
 .eng-rung:hover{border-color:var(--border-active)}
 .eng-rung[data-state="decides"],.eng-rung[data-state="adds"],.eng-rung[data-state="agrees"]{background:var(--bg-wash)}
 .eng-rung[data-state="staged"]{border:1px dashed var(--border-secondary)}.eng-rung[data-state="staged"] b,.eng-rung[data-state="agrees"] b{font-weight:500;color:var(--text-body)}
 .eng-rung[data-lit="true"]{background:var(--bg-accent);border-color:var(--cta)}
-.eng-rung b{font-size:13px;line-height:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eng-rung .fw-prio.sm{width:32px;height:32px;border-radius:8px;font-size:13px}
+.eng-rung b{font-size:14px;line-height:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eng-rung[data-state="skip"] b{font-weight:400;color:var(--text-light)}
-.eng-res{display:inline-flex;align-items:center;gap:5px;font-size:12px;line-height:16px;font-weight:600;white-space:nowrap}
-.eng-out{padding:14px 18px 18px;border-radius:16px;background:var(--bg-wash)}
-.eng-verdict{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:32px}
-.eng-verdict .fw-badge.big{height:32px;padding:0 12px;font-size:14px}
-.eng-by{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:0;font:inherit;font-size:14px;line-height:20px;font-weight:600;color:var(--link);cursor:pointer;min-width:0}
+.eng-res{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:700;white-space:nowrap}
+.eng-rung[data-state="skip"] .eng-res{color:var(--text-light) !important}.eng-rung[data-state="skip"] .fw-prio{color:var(--text-light)}
+.eng-out{flex:1;display:flex;flex-direction:column;gap:20px;padding:22px 24px 24px;box-sizing:border-box;border-radius:18px;background:var(--bg-wash);box-shadow:inset 0 0 0 1px var(--border-secondary)}
+.eng-verdict{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"v c" "d d";align-items:center;gap:12px 14px;min-height:44px}
+.eng-verdict>.fw-badge{grid-area:v;justify-self:start}.eng-verdict>.eng-by{grid-area:d;justify-self:start}.eng-verdict>.eng-comp{grid-area:c;justify-self:end}
+.eng-verdict .fw-badge.big{height:44px;padding:0 18px;gap:8px;border-radius:12px;font-size:17px;letter-spacing:.05em}.eng-verdict .fw-badge.big .ic{width:22px;height:22px}
+.eng-by{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;font:inherit;font-size:16px;line-height:22px;font-weight:600;color:var(--link);cursor:pointer;min-width:0}
 .eng-by:hover{text-decoration:underline}.eng-by.off{color:var(--text-light);cursor:default}.eng-by.off:hover{text-decoration:none}
-.eng-ps{padding:8px 0 2px}
-.eng-comp{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:700;white-space:nowrap;cursor:help}
+.eng-ps{padding:6px 0 4px}
+.eng-out .ps.big{--n:48px}.eng-out .ps.big b{font-size:13px;line-height:18px}.eng-out .ps.big small{font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)}
+.eng-comp{display:inline-flex;align-items:center;gap:6px;font-size:14px;line-height:20px;font-weight:700;white-space:nowrap;cursor:help}
 .eng-whatif{display:flex;align-items:flex-start;gap:8px;padding:0 4px;font-size:12px;line-height:16px;color:var(--text-light);text-wrap:pretty;cursor:help}.eng-whatif .ic{flex:none}
 .ps .ps-stamp{position:absolute;right:-7px;bottom:-5px;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--bg-base);box-shadow:0 0 0 2px var(--bg-wash);font-style:normal;color:var(--text-light)}
 .ps [data-state="set"] .ps-stamp{color:var(--link)}.ps [data-state="broken"] .ps-stamp,.ps [data-state="down"] .ps-stamp{color:var(--error)}.ps [data-state="risk"] .ps-stamp{color:var(--warning)}.ps [data-state="none"] .ps-stamp{color:var(--text-disabled)}
 .eng-ps [data-state="none"] small,.ps.big.eng-ps [data-state="none"] b{color:var(--text-disabled);font-weight:400}
 .ps.big.eng-ps [data-state="down"] b{color:var(--error)}.ps.big.eng-ps [data-state="risk"] b{color:var(--warning)}
-.eng-code{font:600 10px/13px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0;color:var(--text-light);text-align:center;overflow-wrap:anywhere;max-width:100%}
+.eng-code{font:600 12px/16px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0;color:var(--text-light);text-align:center;overflow-wrap:anywhere;max-width:100%}
 .ps [data-state="broken"] .eng-code,.ps [data-state="down"] .eng-code{color:var(--error)}.ps [data-state="risk"] .eng-code{color:var(--warning)}
-.eng-push-h{display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--border-secondary);font-size:13px;line-height:17px;font-weight:700;color:var(--text-body)}
-.eng-push-h b{font-size:13px;color:var(--text-heading);letter-spacing:0}
+.eng-push-h{display:flex;align-items:center;gap:10px;padding-top:18px;border-top:1px solid var(--border-secondary);font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading)}
+.eng-push-h b{display:grid;place-items:center;min-width:24px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:9999px;background:var(--bg-base);font-size:13px;color:var(--text-heading);letter-spacing:0;font-variant-numeric:tabular-nums}
 .eng-push-h .rec-link{text-transform:none;letter-spacing:0}
-.eng-pushed{display:grid;gap:6px}
-.fw-row.eng-rule{display:grid;gap:8px;padding:10px 14px;background:var(--bg-base)}
+.eng-pushed{display:grid;gap:10px;margin-top:-6px}
+.fw-row.eng-rule{display:grid;gap:12px;padding:14px 18px;background:var(--bg-base)}
 .eng-rule-h{display:flex;align-items:center;gap:8px;min-width:0}
-.eng-rule-h b{flex:1;min-width:0;font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eng-rule-h b{flex:1;min-width:0;font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eng-rule-by{flex:none;max-width:45%;border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:16px;color:var(--text-light);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.eng-rule-by:hover{color:var(--link);text-decoration:underline}
-.eng-dirs{display:flex;align-items:center;gap:20px;padding-left:2px}
-.eng-dir{display:inline-flex;align-items:center;gap:8px;font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap}
-.eng-none{display:flex;align-items:center;gap:8px;font-size:13px;line-height:18px;color:var(--text-light)}
-.eng-sheet{display:grid;gap:6px}
+.eng-dirs{display:flex;align-items:center;gap:28px;padding-left:2px}
+.eng-dir{display:inline-flex;align-items:center;gap:10px;font-size:13px;line-height:18px;color:var(--text-body);white-space:nowrap}
+.eng-none{display:flex;align-items:center;gap:8px;margin-top:-6px;font-size:14px;line-height:20px;color:var(--text-light)}
+.eng-sheet{display:grid;gap:8px;margin-top:-8px}
+/* All of NetBond's sheet is a reference: the panel tightens around it so eleven rules and four heads still end above the fold. */
+.eng-out[data-all="true"]{gap:12px;padding:16px 20px 16px}.eng-out[data-all="true"] .eng-verdict{gap:8px 12px;min-height:36px}.eng-out[data-all="true"] .eng-verdict .fw-badge.big{height:36px;font-size:15px}
+.eng-out[data-all="true"] .eng-push-h{padding-top:12px}.eng-out[data-all="true"] .eng-sheet{gap:6px;margin-top:-4px}.eng-out[data-all="true"] .eng-srow{min-height:22px;padding:0 10px}.eng-out[data-all="true"] .eng-sec-h{padding-bottom:0}
+/* They settle in when the flow changes (2026-10-13): a verdict badge restarts on its own keyframes per verdict, a rung when it
+   lights. The resting state is the final frame, so animation:none and reduced motion lose nothing. */
+@keyframes engSettleA{from{opacity:.25;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes engSettleD{from{opacity:.25;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes engLit{from{box-shadow:0 0 0 4px color-mix(in srgb,var(--cta) 30%,transparent)}to{box-shadow:0 0 0 0 transparent}}
+.eng-verdict .fw-badge.big.allow{animation:engSettleA .38s cubic-bezier(.2,.7,.2,1)}.eng-verdict .fw-badge.big.deny{animation:engSettleD .38s cubic-bezier(.2,.7,.2,1)}
+.eng-rung[data-lit="true"]{animation:engLit .6s ease-out}
+@media (prefers-reduced-motion: reduce){.eng-verdict .fw-badge.big,.eng-rung[data-lit="true"]{animation:none}}
 .eng-sec{display:grid;gap:2px}
 .eng-sec-h,.eng-srow{display:grid;grid-template-columns:auto minmax(0,1fr) 44px 44px;align-items:center;gap:8px}
 .eng-sec-h{grid-template-columns:auto minmax(0,1fr) 44px 44px;padding:0 10px 2px}
@@ -625,6 +642,90 @@ button.rec-metric{cursor:pointer}button.rec-metric:hover>span:nth-child(2){text-
 .gv-fig:hover{color:var(--link);text-decoration-color:currentColor}.gv-fig:focus-visible{outline:2px solid var(--border-active);outline-offset:2px;border-radius:3px}
 .gv-row{display:grid;grid-template-columns:10px minmax(0,1.3fr) minmax(0,1.1fr) minmax(0,1.2fr) 16px;gap:14px;align-items:center;width:100%;min-height:44px;padding:6px 0;border:0;border-bottom:1px solid var(--border-secondary);background:transparent;font:inherit;text-align:left;cursor:pointer;color:var(--text-heading)}
 .gv-row:hover{background:var(--bg-wash)}.gv-row:focus-visible{outline:2px solid var(--border-active);outline-offset:-2px}
+/* Govern, visual (2026-10-13, Micah: "Govern is extremely verbose - make it more visual, more beautiful, more amazing").
+   One grid for the findings and the policies (toggle, square, what, the strip, the end), so every strip stacks in one
+   column under one set of station words. A finding leads with its tile and its count; a policy row is NetBond's: one
+   ink but its verb badges. Rows sit on the page between hairlines, never in a box. */
+.gvv{display:grid;min-width:0}
+.gvv-pol{display:grid;min-width:0}
+.gvv-h{display:grid;grid-template-columns:minmax(0,1fr) 300px 240px;gap:12px;align-items:center;min-height:36px;padding:2px 0 6px;border-bottom:1px solid var(--border-secondary)}
+.gvv-h .ps-heads{align-self:end;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)}
+.gvv-ht{display:flex;align-items:center;gap:10px;min-width:0}
+.gvv-ht>b{font-size:15px;line-height:22px;font-weight:700;color:var(--text-heading)}
+.gvv-ht>h3{margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)}
+.gvv-tot .ic{color:var(--error)}.gvv-tot.q.bad .ic{color:var(--error)}.gvv-tot.q{cursor:default}.gvv-tot.q .ic{color:var(--text-light)}
+.gvv-acts{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
+.gvv-r{display:grid;grid-template-columns:36px 36px minmax(0,1fr) 300px 240px;gap:12px;align-items:center;min-height:52px;padding:6px 0;box-sizing:border-box;border-bottom:1px solid var(--border-secondary)}
+/* A finding: the tile spans the toggle and square columns, the count is the door, the fix and Andi sit at the end. */
+.gvf-tile{grid-column:1 / 3;display:flex;align-items:center;justify-content:center;gap:8px;width:84px;height:40px;box-sizing:border-box;padding:0 10px;border:0;border-radius:10px;background:color-mix(in srgb,var(--error) 10%,var(--bg-base));color:var(--error);font:inherit;font-size:20px;line-height:24px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+button.gvf-tile{cursor:pointer}button.gvf-tile:hover{box-shadow:inset 0 0 0 1.5px var(--error)}button.gvf-tile:focus-visible{outline:2px solid var(--border-active);outline-offset:2px}
+.gvf-t{display:grid;gap:0;min-width:0}
+.gvf-t>b{min-width:0;font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gvf-w{display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap;overflow:hidden}
+.gvf-w .ic{color:var(--text-light)}
+.gvf-act{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
+.gvf-fix{min-width:0;width:196px;height:32px;padding:0 12px;gap:6px;font-size:13px;font-weight:600;color:var(--link)}
+.gvf-fix>.gvf-fix-t{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gvf-andi{display:grid;place-items:center;flex:none;width:32px;height:32px;padding:0;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);cursor:pointer}
+.gvf-andi:hover{border-color:var(--border-active)}.gvf-andi>span{display:block;width:18px;height:18px;background:center / contain no-repeat}
+/* A policy row: the square in the row's one ink, the name opens its words, the match and its count as glyph and number. */
+.gvp-prio{color:var(--text-heading)}
+.gvp-t{display:grid;gap:4px;min-width:0}
+.gvp-n{display:flex;align-items:center;gap:8px;min-width:0}
+.gvp-name{min-width:0;border:0;background:transparent;padding:0;font:inherit;font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gvp-name:hover{text-decoration:underline;text-underline-offset:3px}
+.gvp-s{display:flex;align-items:center;gap:14px;min-width:0}
+.gvp-k{display:inline-flex;align-items:center;gap:5px;min-width:0;border:0;background:transparent;padding:0;font:inherit;font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap}
+.gvp-k .ic{color:var(--text-light)}.gvp-k b{font-weight:600;color:var(--text-heading);font-variant-numeric:tabular-nums}
+button.gvp-k{cursor:pointer}button.gvp-k b{text-decoration:underline dotted var(--text-disabled);text-underline-offset:3px}button.gvp-k:hover b{text-decoration-color:currentColor}
+.gvp-st{display:flex;align-items:center;justify-content:flex-end;gap:12px;min-width:0}
+.gvp-v{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:0;font:inherit;font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap}
+button.gvp-v{cursor:pointer}button.gvp-v b{text-decoration:underline dotted var(--text-disabled);text-underline-offset:3px}button.gvp-v:hover b{text-decoration-color:currentColor}
+.gvp-v.q{color:var(--text-light)}
+/* The open row: the rule in a few words, and what each station enforces right under its node. */
+.gvp-open{min-height:0;padding:6px 0 10px;align-items:start;background:var(--bg-wash)}
+.gvp-o{grid-column:1 / 4;display:flex;align-items:center;gap:6px;padding-left:96px;min-width:0;font-size:12px;line-height:16px;font-weight:600;color:var(--text-heading)}
+.gvp-o .ic{color:var(--text-light)}
+.gvp-words{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;text-align:center}
+.gvp-words>span{font-size:12px;line-height:16px;color:var(--text-heading);text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gvp-words>[data-state="any"]{color:var(--text-disabled)}.gvp-words>[data-state="broken"]{font-weight:700}
+/* The one-ink strip (a policy row's): set is a ring, any is dashed, where it breaks is the solid node; never a colour. */
+.ps.mono [data-state="set"] i{border-color:var(--text-light);color:var(--text-heading);background:var(--bg-base)}
+.ps.mono [data-state="any"] i{border-style:dashed;border-color:var(--border-primary);color:var(--text-disabled);background:var(--bg-base)}
+.ps.mono [data-state="broken"] i{border-color:var(--text-heading);color:var(--bg-base);background:var(--text-heading)}
+/* Tags (2026-10-13, Govern visual): one ink per tag, glyph and number counts in fixed columns, one action at the end. */
+.gvt-top{grid-template-columns:minmax(0,1fr);border-bottom:0;padding-bottom:4px}
+.gvt-top .gvv-ht{gap:8px}
+.gvt-r{display:grid;grid-template-columns:220px minmax(0,1fr) 200px minmax(0,260px) 132px;gap:16px;align-items:center;min-height:52px;padding:6px 0;box-sizing:border-box;border-bottom:1px solid var(--border-secondary)}
+.gvt-heads{min-height:32px;padding:4px 0 8px;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)}
+.gvt-tag{display:flex;align-items:center;gap:8px;min-width:0;color:var(--text-light)}
+.gvt-tag>b{min-width:0;font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gvt-set{display:flex;align-items:center;gap:10px;min-width:0}
+.gvt-set .gvp-k{min-width:58px;font-size:14px;line-height:20px;gap:6px}.gvt-set .gvp-k b{font-weight:700}
+.gvt-pol{display:flex;align-items:center;gap:8px;min-width:0;color:var(--text-light)}
+.gvt-pol>b{min-width:0;font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gvt-none{color:var(--text-disabled)}
+.gvt-door{justify-self:end;height:32px;padding:0 12px;gap:6px;font-size:13px;font-weight:600;color:var(--link)}
+.gvt-empty{display:flex;align-items:center;gap:8px;padding:12px 0;font-size:13px;line-height:18px;color:var(--text-body)}
+/* Templates (2026-10-13, Govern visual): three cards a row, each its tile, name and sides, the strip with one short
+   requirement under each node, the match and Start at its foot. */
+.gpl{gap:16px}
+.gpl-top{grid-template-columns:minmax(0,1fr) auto;border-bottom:0;padding:0}
+.gpl-kinds{display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg-neutral)}
+.gpl-kinds button{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:0;border-radius:6px;font:inherit;font-size:13px;color:var(--text-heading);cursor:pointer;white-space:nowrap}
+.gpl-kinds button .ic{color:var(--text-light)}.gpl-kinds button[aria-selected="true"] .ic{color:var(--link)}
+.gpl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.gpl-card{display:grid;gap:16px;align-content:start;min-width:0;padding:18px 20px 16px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px}
+.gpl-h{display:flex;align-items:center;gap:12px;min-width:0}
+.gpl-ht{display:grid;gap:4px;min-width:0}
+.gpl-ht>b{font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gpl-sides{display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;line-height:16px;color:var(--text-body)}
+.gpl-sides .ic{color:var(--text-light)}.gpl-sides .gpl-x{color:var(--text-disabled)}
+.gpl-side{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gpl-card .ps.mid b{-webkit-line-clamp:2}
+.gpl-more{display:inline-block;margin-left:4px;padding:0 5px;border-radius:9999px;background:var(--bg-neutral);font-style:normal;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)}
+.gpl-f{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding-top:12px;border-top:1px solid var(--border-secondary)}
+.gpl-go{height:32px;padding:0 12px;gap:6px;font-size:13px;font-weight:600;color:var(--link)}
 .hm-lg{display:inline-flex;align-items:center;gap:5px;font-size:12px;line-height:20px;color:var(--text-light)}
 .hm-lg>i{flex:none;width:8px;height:8px}
 .hm-chip{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;min-width:0;height:84px;box-sizing:border-box;padding:12px 14px 12px 16px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:12px}

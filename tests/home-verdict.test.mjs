@@ -352,7 +352,8 @@ test('the Tags card counts Govern\'s tags with no policy, one mark a tag, each o
     x.dots.forEach((d, i) => {
       const c = home(view, { persona: 'security' });
       card(vals(c), 'tags').dots[i].go();
-      assert.deepEqual([c.state.screen, c.state.tab, c.state.govPanel, c.state.tagPage], ['s3', 'govern', 'tags', Math.floor(i / 7)], `${view} ${d.key}`);
+      // Re-pinned 2026-10-13 (Govern visual): a tag row is one line now, so Tags pages ten to the fold, not seven.
+      assert.deepEqual([c.state.screen, c.state.tab, c.state.govPanel, c.state.tagPage], ['s3', 'govern', 'tags', Math.floor(i / 10)], `${view} ${d.key}`);
     });
     const c = home(view, { persona: 'security' });
     card(vals(c), 'tags').valueGo();
