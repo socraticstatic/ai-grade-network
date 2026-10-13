@@ -354,24 +354,29 @@ a{color:#0057b8}a:hover{color:#00388f}
 .ic-tile.s32{width:32px;height:32px;border-radius:8px}.ic-tile.s28{width:28px;height:28px;border-radius:7px}
 /* Ways to connect (2026-10-06): NetBond Advanced's choice cards (ConnectionTypeGrid.tsx) in theme tokens; a meter is five segments lit to the score. */
 .ps.five{grid-template-columns:repeat(5,minmax(0,1fr))}
-.way-card{display:grid;grid-template-rows:auto 1fr auto;gap:18px;min-width:0;box-sizing:border-box;padding:18px 20px;border:1px solid var(--border-secondary);border-radius:16px;background:var(--bg-base);transition:transform .25s,box-shadow .25s,border-color .25s}
+.way-card{display:flex;flex-direction:column;gap:12px;min-width:0;box-sizing:border-box;padding:20px;border:1px solid var(--border-secondary);border-radius:16px;background:var(--bg-base);transition:transform .25s,box-shadow .25s,border-color .25s}
 .way-card:hover{transform:translateY(-3px);border-color:var(--border-active);box-shadow:0 16px 36px -18px rgba(15,23,42,.35)}
 .way-kicker{font-size:12px;line-height:16px;font-weight:700;color:var(--text-body)}
-.way-title{font-size:15px;line-height:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.way-title{font-size:15px;line-height:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-heading);text-wrap:pretty}
 .way-line{font-size:12px;line-height:17px;color:var(--text-body);text-wrap:pretty;min-height:34px}
-.way-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
-.way-head{display:flex;align-items:center;gap:12px;min-width:0}.way-head>.js-score{flex:none}
-.way-foot{display:flex;align-items:center;gap:8px;min-height:36px;min-width:0}
+/* Like products (2026-10-13): the Marketplace's shelf, a section per family under a hairline, four cards to a row. */
+.way-sec{display:grid;gap:16px;padding-top:32px;border-top:1px solid var(--border-secondary);min-width:0}
+.way-sec-head{display:flex;align-items:baseline;gap:16px}.way-sec-kicker{font-size:12px;line-height:16px;font-weight:500;color:var(--text-body)}.way-sec-title{margin:0;font-size:18px;line-height:26px;font-weight:700;color:var(--text-heading)}
+.way-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+.way-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;margin-bottom:4px}.way-head>.ic-tile{width:36px;height:36px;border-radius:12px}.way-head>.js-score{flex:none}
+.way-marks{display:flex;align-items:center;gap:8px;min-height:26px;min-width:0}
+.way-foot{display:flex;margin-top:auto;padding-top:8px}
+.way-soon{flex:1;text-align:center;padding:9px 10px;border-radius:9999px;background:var(--bg-neutral);color:var(--text-light);font-size:12px;line-height:16px;font-weight:700;white-space:nowrap}
 .way-logo{width:20px;height:20px;flex:none;background:center / contain no-repeat}
 /* Oracle ships only its wordmark (231x30): a square box drew it 2.6px tall, so it gets a box at its own aspect. */
 .way-logo[style*="oracle.svg"]{width:60px}
-.way-zones{display:inline-flex;margin-left:4px;padding:2px;border:1px solid var(--border-secondary);border-radius:9999px}
+.way-zones{display:inline-flex;margin-left:6px;padding:2px;border:1px solid var(--border-secondary);border-radius:9999px}
 .way-zones button{height:20px;padding:0 9px;border:0;border-radius:9999px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
-.way-rows{display:grid;gap:7px;align-content:start;padding-top:16px;border-top:1px solid var(--border-secondary)}
-.way-row{display:grid;grid-template-columns:18px 84px minmax(0,1fr);align-items:center;gap:10px;min-width:0;color:var(--text-body)}
+.way-rows{display:grid;gap:8px;align-content:start;padding-top:14px;border-top:1px solid var(--border-secondary)}
+.way-row{display:grid;grid-template-columns:16px 56px minmax(0,1fr);align-items:center;gap:10px;min-width:0;color:var(--text-body)}
 .way-meter{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}.way-meter i{display:block;height:6px;border-radius:3px}
 .way-val{font-size:12px;line-height:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.way-start{margin-left:auto;flex:none;height:36px;padding:0 16px;border:1px solid var(--cta);border-radius:10px;background:transparent;color:var(--link);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.way-start{flex:1;justify-content:center;height:36px;padding:0 16px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 .way-start[data-primary="true"]{background:var(--cta);color:#fff}
 .way-start:hover{background:var(--cta-hover);border-color:var(--cta-hover);color:#fff}
 /* Recommended's summary boxes (2026-10-06): the estate by how it connects today, each a door to its set. */

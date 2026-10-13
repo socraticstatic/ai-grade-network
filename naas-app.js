@@ -4750,6 +4750,10 @@ function flowVals(s, set, est, c) {
   // Recommended fills only its pick. Six filled buttons were six things shouting at once.
   const wayTop = wayCards.filter(w => !w.soon && !w.out && w.hasPts).reduce((a, w) => (!a || w.points > a.points ? w : a), null);
   for (const w of wayCards) w.top = w === wayTop;
+  // Like products (2026-10-13, "still too busy - space out if needed, like products"): a section per family, as the
+  // Marketplace shelves its products, in the deck's order; the family names the section, so a card no longer repeats it.
+  const wayGroups = [...new Set(wayCards.map(w => w.kicker))].map(k => { const cards = wayCards.filter(w => w.kicker === k);
+    return { key: k, title: k, kicker: `${cards.length} way${cards.length === 1 ? '' : 's'}`, cards }; });
   const cfTypes = CF.ALL_TYPES.map(t => ({ ...tile(t), pick: pickType(t) }));
   // The set a count opens: exactly what it counted, as a list on the page, paged.
   const setT = CF.ALL_TYPES.find(t => t.key === s.waySet) || null;
@@ -4912,7 +4916,7 @@ function flowVals(s, set, est, c) {
   const opg = pageRows(shown.slice().reverse().map(ordRow), 6, s.ordersPage, (n) => set({ ordersPage: n }));
   const note = f.note;
   return {
-    wayTypes, wayCards, cfTypes, waySet, wayFoot: 'From the Cloud Connectivity Decision Matrix (October 2026). Each criterion scored 1 to 5, the most favourable 5, and weighted to a score out of 100: cost 30, performance 20, security 20, effort and time 15, scale 15. Cost is one region at 1 Gbps a month on us-east-1 list rates; a hosted way is cloud pass-through, and its hub (vSRX, compute, AT&T margin) is priced at review. Only NetBond Advanced\'s setup time is proven in market; the rest are proof-of-concept targets. Start a way, then pick what it connects.',
+    wayTypes, wayCards, wayGroups, cfTypes, waySet, wayFoot: 'From the Cloud Connectivity Decision Matrix (October 2026). Each criterion scored 1 to 5, the most favourable 5, and weighted to a score out of 100: cost 30, performance 20, security 20, effort and time 15, scale 15. Cost is one region at 1 Gbps a month on us-east-1 list rates; a hosted way is cloud pass-through, and its hub (vSRX, compute, AT&T margin) is priced at review. Only NetBond Advanced\'s setup time is proven in market; the rest are proof-of-concept targets. Start a way, then pick what it connects.',
     wayCriteria: W.CRITERIA.map(c => ({ key: c.key, label: c.label, icon: c.icon })),
     goRecommended: () => set({ cnPage: 'options' }),
     cfKey: key, cfSteps, cfTitle: (STEP_HEAD[key] || [])[0] || '', cfDesc: (STEP_HEAD[key] || [])[1] || '',
@@ -4945,7 +4949,8 @@ function flowVals(s, set, est, c) {
     // The way this order rides, above the step: its mark, its name for this cloud, and the door back to where it was chosen.
     cfWay: (() => { const w = f.way ? W.wayOf(f.way) : null; const cl = CF.cloudsOf(f)[0]; const z = w && w.zones && f.zone ? w.zones[f.zone] : null;
       return { has: !!w, none: !w, icon: w ? w.icon : 'cable', title: w ? (cl ? W.wayLabel(w.key, cl) : w.title) : '', kicker: w ? w.kicker : '', zone: z ? z.label : '', hasZone: !!z,
-        setup: w ? W.waySetup(w.key) : '', canChange: !!origin, change: origin ? () => { c.setState({ screen: 's3', layer: 'cloud', tab: 'connect', cnPage: origin }); scrollTop(); syncHash('s3', 'cloud', 'connect'); } : () => {}, changeLabel: origin === 'options' ? 'Change on Recommended' : 'Change' }; })(),
+        // The setup reads short beside the name, its whole sentence in the title (2026-10-13: the name was cut to fit it).
+        setup: w ? (() => { const wh = W.wayWho(w.key); return wh ? `${wh.level} · ${wh.time}` : W.waySetup(w.key); })() : '', setupTitle: w ? W.waySetup(w.key) : '', canChange: !!origin, change: origin ? () => { c.setState({ screen: 's3', layer: 'cloud', tab: 'connect', cnPage: origin }); scrollTop(); syncHash('s3', 'cloud', 'connect'); } : () => {}, changeLabel: origin === 'options' ? 'Change on Recommended' : 'Change' }; })(),
     cfNextLabel: isLast ? 'Place order' : `Next: ${CF.STEP_META[keys[ki + 1]].title}`, cfNextDisabled: !!block, cfNextBg: block ? 'var(--bg-neutral)' : 'var(--cta)', cfNextInk: block ? 'var(--text-disabled)' : '#fff',
     cfPlace: place, cfCanPlace: isLast && !block,
     cfName: f.name, cfNamePlaceholder: CF.defaultName(f), cfNameHelp: `Leave it blank and it is named ${CF.defaultName(f)}.`, cfSetName: (e) => put({ name: e.target.value }),
@@ -5072,11 +5077,14 @@ function shellVals(s, set, go, est, c, sched) {
         const TABS = STOPS.map(st => [st.key, st.label]);
         const row = (tab, id, label, ic, sub) => {
           // Connect's four places (2026-09-30): each lands on its own cnPage and lights
-          // there; the compose screens light Orders, where an order in progress lives.
+          // there; the compose screens light Orders, where an order in progress lives,
+          // unless the order started on Recommended or Ways to connect (2026-10-13: the
+          // flow's Back reads "Back to Ways to connect" while the rail lit Orders).
           const cnView = tab === 'connect' ? CN_VIEW[id] : null;
           if (cnView) {
             const here = onS3('cloud', 'connect') && cnPageOf(s) === cnView;
-            const cur = cnView === 'orders' ? here || composeCur : here;
+            const from = composeCur && s.compose && ['options', 'ways'].includes(s.compose.origin) ? s.compose.origin : null;
+            const cur = here || (composeCur && (from ? cnView === from : cnView === 'orders'));
             return { ...item(label, ic, go('s3', { layer: 'cloud', tab: 'connect', cnPage: cnView }), cur, false, sub, true), pad: railCollapsed ? '4px 0' : '4px 8px 4px 24px' };
           }
           // Three kinds of sub-task: a view on the inventory, a section of the

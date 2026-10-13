@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { heightProblems, HOME_PAGE, TAIL } from '../scripts/fold-rule.mjs';
+import { heightProblems, HOME_PAGE, TAIL, SCROLLS } from '../scripts/fold-rule.mjs';
 
 // The fold rule, pinned (2026-09-30). Every page fits 900 with no page scroll
 // (dashboard-fits-the-fold, 2026-09-28). The one exception Micah approved: the
@@ -34,4 +34,13 @@ test('fold.mjs and demo-walk.mjs both read the rule', () => {
     assert.match(src, /from '\.\/fold-rule\.mjs'/, `${f} does not import the fold rule`);
     assert.match(src, /heightProblems\(/, `${f} does not apply it`);
   }
+});
+
+// Micah, 2026-10-13: "still too busy - space out if needed, like products". Ways to connect spaces its cards out as the
+// Marketplace does, so it may scroll; its root carries data-fold="scrolls" and only a listed id earns the allowance.
+test('a page Micah let scroll may run past 900, and only a listed one', () => {
+  assert.deepEqual(SCROLLS, ['sec-paths']);
+  assert.deepEqual(heightProblems({ page: 'connect/Ways to connect', scrollHeight: 1300, limit: H, scrolls: 'sec-paths' }), []);
+  assert.deepEqual(heightProblems({ page: 'connect/Orders', scrollHeight: 1300, limit: H, scrolls: 'sec-orders' }), ['a scroll marker on #sec-orders']);
+  assert.deepEqual(heightProblems({ page: 'connect/Orders', scrollHeight: 1300, limit: H }), ['scroll 1300']);
 });

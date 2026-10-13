@@ -27,7 +27,15 @@ export const TAIL = 40;
  * US East): the diagram starts at the fold or below it, and a title above the
  * fold sits whole above it.
  */
-export function heightProblems({ page, scrollHeight, limit, below = null, aboveBottom = 0 }) {
+/**
+ * Pages Micah let scroll (2026-10-13, "still too busy - space out if needed, like products"): Ways to connect spaces its
+ * cards out as the Marketplace does. The page's root carries data-fold="scrolls"; only an id listed here earns it, so the
+ * allowance cannot spread. Width is still held on every page (fold.mjs).
+ */
+export const SCROLLS = ['sec-paths'];
+
+export function heightProblems({ page, scrollHeight, limit, below = null, aboveBottom = 0, scrolls = null }) {
+  if (scrolls) return SCROLLS.includes(scrolls) ? [] : [`a scroll marker on #${scrolls}`];
   if (!below) return scrollHeight > limit ? [`scroll ${scrollHeight}`] : [];
   if (page !== HOME_PAGE) return [...(scrollHeight > limit ? [`scroll ${scrollHeight}`] : []), 'a map below the fold off the home'];
   const out = [];
@@ -48,8 +56,10 @@ export function heightProblems({ page, scrollHeight, limit, below = null, aboveB
  * layers (drawers, Andi's dock) are not the page and are skipped.
  */
 export function foldMarks() {
+  const sc = document.querySelector('[data-fold="scrolls"]');
+  const scrolls = sc ? sc.id || '(no id)' : null;
   const mark = document.querySelector('[data-fold="below"]');
-  if (!mark) return { below: null, aboveBottom: 0 };
+  if (!mark) return { below: null, aboveBottom: 0, scrolls };
   const y = window.scrollY || 0;
   const r = mark.getBoundingClientRect();
   const diagram = mark.querySelector('[data-map-diagram]');
@@ -66,5 +76,5 @@ export function foldMarks() {
     if (!b.width || !b.height || fixed(el)) continue;
     aboveBottom = Math.max(aboveBottom, b.bottom + y);
   }
-  return { below: { top: Math.floor(r.top + y), bottom: Math.ceil(r.bottom + y), ...extra }, aboveBottom: Math.ceil(aboveBottom) };
+  return { below: { top: Math.floor(r.top + y), bottom: Math.ceil(r.bottom + y), ...extra }, aboveBottom: Math.ceil(aboveBottom), scrolls };
 }

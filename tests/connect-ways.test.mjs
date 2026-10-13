@@ -45,6 +45,45 @@ test('only the best way left standing wears the filled Start', () => {
   assert.deepEqual(ps.wayCards.filter(w => w.top).map(w => w.key), ['privatelink']);
 });
 
+// Micah, 2026-10-13, second pass: "still too busy - space out if needed, like products". The ways sit as the Marketplace
+// sits its products: a section per family under a kicker and a title, four to a row, and the page may scroll.
+test('the ways sit in two sections, NetBond Advanced and AT&T-hosted, in the deck\'s order', () => {
+  const v = vals(ways());
+  assert.deepEqual(v.wayGroups.map(g => [g.kicker, g.title, g.cards.map(w => w.key)]),
+    [['2 ways', 'NetBond Advanced', ['byo', 'att']], ['4 ways', 'AT&T-hosted', ['peer', 'transit', 'cloudwan', 'privatelink']]]);
+  assert.equal(v.wayGroups.flatMap(g => g.cards).filter(w => w.top).length, 1, 'still one filled Start across both sections');
+});
+
+// "and fix" (2026-10-13): in the flow the rail lit Orders, though Back reads "Back to Ways to connect". The page an order
+// started on lights while you compose it; an order resumed from Orders still lights Orders.
+test('composing a way lights the page it started on in the rail', () => {
+  const lit = (c) => vals(c).railGroups.flatMap(g => g.items).filter(i => i.cur).map(i => i.label);
+  const c = ways();
+  vals(c).wayCards.find(w => w.key === 'byo').start();
+  assert.equal(c.state.screen, 's4');
+  assert.deepEqual(lit(c), ['Ways to connect']);
+  const r = recommended();
+  vals(r).moves[0].tiers.find(t => t.isOption).connect();
+  assert.equal(r.state.compose.origin, 'options');
+  assert.deepEqual(lit(r), ['Recommended']);
+  c.setState({ compose: { ...c.state.compose, origin: null } });
+  assert.deepEqual(lit(c), ['Orders']);
+});
+
+// The banner over the flow cut the way's own name ("Bring your ow...") to fit a setup sentence. The name never shrinks;
+// the setup reads short, its whole sentence in the title.
+test('the flow\'s way banner keeps the name whole and the setup short', () => {
+  const c = ways();
+  vals(c).wayCards.find(w => w.key === 'byo').start();
+  const v = vals(c);
+  assert.equal(v.cfWay.setup, 'Guided reconfig · <15 min');
+  assert.match(v.cfWay.setupTitle, /first time needs your cloud gateway/);
+  const i = HTML.indexOf('aria-label="Way to connect"');
+  const banner = HTML.slice(i, HTML.indexOf('{{ cfWay.changeLabel }}', i));
+  assert.match(banner, /<b style="flex:none;[^"]*">\{\{ cfWay\.title \}\}<\/b>/, 'the name can still shrink');
+  assert.ok(banner.includes('title="{{ cfWay.setupTitle }}"'), 'the setup sentence is not in the title');
+});
+
 test('peering\'s zone chips switch its scores between one zone and across zones', () => {
   const c = ways();
   const peer = () => vals(c).wayCards.find(w => w.key === 'peer');
@@ -142,13 +181,17 @@ test('the markup binds the six ways, their meters and marks, and loops inside no
   const a = HTML.indexOf('<sc-if value="{{ cnIsWays }}"'), b = HTML.indexOf('<!-- Orders (2026-09-30', a);
   assert.ok(a > 0 && b > a);
   const blk = HTML.slice(a, b);
-  for (const k of ['<sc-for list="{{ wayCards }}"', '<sc-for list="{{ wc.rows }}"', '<sc-for list="{{ cr.segs }}"', '<sc-for list="{{ wc.logos }}"', '{{ wc.start }}', '{{ wayFoot }}', '{{ goRecommended }}']) assert.ok(blk.includes(k), k);
+  for (const k of ['<sc-for list="{{ wg.cards }}"', '<sc-for list="{{ wc.rows }}"', '<sc-for list="{{ cr.segs }}"', '<sc-for list="{{ wc.logos }}"', '{{ wc.start }}', '{{ wayFoot }}', '{{ goRecommended }}']) assert.ok(blk.includes(k), k);
   assert.doesNotMatch(blk, /<(svg|table|select)\b/);
   // Uncrowded (2026-10-13): Sites, Edge and Core were the same three stations on all six cards; the tile is the way's
   // mark, so the strip goes. The ring sits by the name at a size that holds 100; clouds, zones and Start share a foot.
   assert.ok(!blk.includes('wc.strip'), 'the six identical path strips are back');
   assert.match(blk, /class="way-head"[\s\S]*?class="js-score md"/, 'the ring is not beside the name at md');
-  assert.match(blk, /class="way-foot"[\s\S]*?wc\.logos[\s\S]*?wc\.zoneChips[\s\S]*?data-primary="\{\{ wc\.top \}\}"/, 'the foot does not carry clouds, zones and Start in that order');
+  // Like products (2026-10-13): a section per family, four cards to a row, the root marked as a page that may scroll.
+  assert.match(blk, /<sc-for list="\{\{ wayGroups \}\}" as="wg"[\s\S]*?\{\{ wg\.kicker \}\}[\s\S]*?\{\{ wg\.title \}\}[\s\S]*?<sc-for list="\{\{ wg\.cards \}\}" as="wc"/, 'the sections are gone');
+  assert.match(blk, /id="sec-paths"[^>]*data-fold="scrolls"/, 'the page is not marked as one that may scroll');
+  assert.match(blk, /class="way-marks"[\s\S]*?wc\.logos[\s\S]*?wc\.zoneChips/, 'the clouds and zones do not sit under the name');
+  assert.match(blk, /class="way-start" data-primary="\{\{ wc\.top \}\}"/, 'Start lost its one-primary binding');
   for (const w of W.WAYS) for (const ic of [w.icon]) assert.ok(readFileSync(new URL(`../brand/icons/${ic}.svg`, import.meta.url)), ic);
   assert.ok(HTML.includes('{{ cfBackLabel }}') && HTML.includes('{{ cfWay.title }}') && HTML.includes('{{ cg.cantWord }}'));
 });

@@ -267,7 +267,7 @@ let fails = 0;
 
 function report(estate, th, page, tab, m, errors) {
   const bad = [];
-  bad.push(...heightProblems({ page, scrollHeight: m.scrollHeight, limit: LIMIT, below: m.below, aboveBottom: m.aboveBottom }));
+  bad.push(...heightProblems({ page, scrollHeight: m.scrollHeight, limit: LIMIT, below: m.below, aboveBottom: m.aboveBottom, scrolls: m.scrolls }));
   if (m.scrollWidth > WLIMIT) bad.push(`wide ${m.scrollWidth}`);
   if (m.wide.length) bad.push(`past edge ${m.wide.slice(0, 4).join(', ')}${m.wide.length > 4 ? ` (+${m.wide.length - 4})` : ''}`);
   if (m.words.length) bad.push(`words ${m.words.slice(0, 4).join(', ')}${m.words.length > 4 ? ` (+${m.words.length - 4})` : ''}`);
