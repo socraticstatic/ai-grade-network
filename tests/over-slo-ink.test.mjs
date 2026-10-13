@@ -52,7 +52,8 @@ test('Insights: the Latency over SLO bars are the Over SLO ink, on Signals and o
 // The nine Signals cards share one legend loop (2026-09-30): the swatch binds its
 // card's own ink, and Latency over SLO's is the Over SLO ink.
 test('Signals: the Latency over SLO legend swatch is the Over SLO ink, never Down\'s red', () => {
-  const i = HTML.indexOf('{{ lg.label }}', HTML.indexOf('<sc-for list="{{ sg.legend }}"'));
+  // The key reads its first words since the Insights story (2026-10-13); the whole label is the item's title.
+  const i = HTML.indexOf('{{ lg.short }}', HTML.indexOf('<sc-for list="{{ sg.legend }}"'));
   const swatch = HTML.slice(HTML.lastIndexOf('<i ', i), i);
   assert.ok(!swatch.includes('var(--error)'), swatch);
   const bound = (swatch.match(/background:\{\{ ([\w.]+) \}\}/) || [])[1];

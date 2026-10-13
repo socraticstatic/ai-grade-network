@@ -32,7 +32,9 @@ test('every action for a role carries the strip', () => {
 });
 
 test('the markup draws the badge and the strip on both', () => {
-  assert.match(HTML, /<span class="fw-badge \{\{ ins\.badgeCls \}\}"/);
+  // The badge became the line's kind tile in the Insights story (2026-10-13): its glyph leads the line, the kind its title,
+  // and an event's tile still reads its class.
+  assert.match(HTML, /<span class="ic-tile ins-kt" data-event="\{\{ ins\.badgeCls \}\}"[^>]*title="\{\{ ins\.kind \}\}"/);
   assert.match(HTML, /<sc-for list="\{\{ ins\.strip \}\}" as="fs"/);
   assert.match(HTML, /<sc-for list="\{\{ ra\.strip \}\}" as="rs"/);
 });

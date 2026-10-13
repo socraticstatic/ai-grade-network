@@ -190,9 +190,11 @@ await beat('7 Insights: Signals, Your actions and Operations', async () => {
   await rail('Insights');
   // westeurope is not on AT&T, so its flows offer Attach; Steer stays on us-east-1 to eastus (third round, 2026-09-30).
   // Health lists westeurope's latency over SLO too, as the home's chip and this card's list do (w2 second pass, 2026-09-30).
-  await expect('Health', 'Latency over SLO', 'Capacity', 'Trace', 'Attach', 'Steer', 'Resize');
-  // The line under each card's title is glyph chips since 2026-10-07; the sentence rides in the title.
-  if (!(await page.locator('.sig-head .h[title="3 problems · 2 apps affected"]').count())) throw new Error('Health lost its 3 problems · 2 apps affected line');
+  // The Insights story (2026-10-13): each card's verb is its foot's button in words; a row's move is its glyph, the
+  // verb in its title. The head is the card's figure, counting up, and its sentence rides in the figure's title.
+  await expect('Health', 'Latency over SLO', 'Capacity', 'Trace', 'Steer');
+  await expectTitle('Attach', 'Resize');
+  if (!(await page.locator('.sig-card .ins-fig[title="3 problems · 2 apps affected"]').count())) throw new Error('Health lost its 3 problems · 2 apps affected figure');
   const lead = await page.locator('[aria-label="Signal cards"] .sig-head .t').allInnerTexts();
   if (!/^Health/.test(lead[0] || '') || !/^Latency over SLO/.test(lead[1] || '') || !/^Capacity/.test(lead[2] || '')) throw new Error(`Network Eng leads with ${lead.slice(0, 3).join(', ')}`);
   await tab('Your actions', '[aria-label="Insights views"]');
@@ -201,8 +203,9 @@ await beat('7 Insights: Signals, Your actions and Operations', async () => {
   await tab('Operations', '[aria-label="Insights views"]');
   // The line is the note's title now (2026-10-07); the tiles carry the figures.
   if (!(await page.locator('[role="note"][title*="Sev 1 open now"]').count())) throw new Error('the Operations note lost its Sev 1 line');
-  await expect('sample history');
+  // The fixes' sample history moved to Tickets with the open ones (2026-10-13); Overview is the four cards.
   await tab('Tickets', '[aria-label="Operations views"]');
+  await expect('sample history');
   if (!eastusTicket) throw new Error('beat 4 never read the eastus ticket');
   await expect(`${eastusTicket} · opened by Andi`);
 });
