@@ -5408,7 +5408,10 @@ export function journeyDoor(s, set) {
 /** A beat's place in the journey, by name: a beat added in the middle (Intent, 2026-10-08) moves no other code. */
 const JI = Object.fromEntries(J.BEATS.map((b, i) => [b.key, i]));
 /** What the cloud is for: the answers your tags suggest, then the ones you gave on the Intent beat. */
-const journeyIntent = (s) => ({ ...W.intentFromTags(Object.values(s.jTags || {}).flat()), ...(s.jIntent || {}) });
+// Answers live per region (Micah, 2026-10-13: "the ability to select which region you're doing things to"): jIntents[region],
+// the picked region in jRegion (the first region when unset); jIntent survives as the fallback for older state.
+const jRegionKeyOf = (s) => s.jRegion || Object.keys(s.jIntents || {})[0] || null;
+const journeyIntent = (s, region = jRegionKeyOf(s)) => ({ ...W.intentFromTags(Object.values(s.jTags || {}).flat()), ...(s.jIntent || {}), ...(((s.jIntents || {})[region]) || {}) });
 // One intent store for the site (2026-10-09, "integrate into the rest of the site"): the journey's estate keeps its answers
 // in jIntent, so its Intent beat and the dashboard edit one object; any other estate keeps its own in intents[est.id]. The
 // answers are partial: a question left open is answered by the move's own region tags (W.intentFromTags), then the defaults.
@@ -5531,7 +5534,8 @@ function journeyVals(out, s, set, est) {
   // The policy deck: one card per tag, each a real intent; the engine says what it does to a flow to the cloud and to
   // the internet before you enforce it. Enforced ones are real policies Govern lists and the engine's ladder reads.
   const mine = (s.customPolicies || []).filter(p => p.journey && p.cloud === found.cloud);
-  const intent = journeyIntent(s), iCard = J.intentCard(intent, found, rows);
+  const regionKey = found.has && found.regions.length ? (found.regions.some(r => r.region === s.jRegion) ? s.jRegion : found.regions[0].region) : null;
+  const intent = journeyIntent(s, regionKey), iCard = J.intentCard(intent, found, rows);
   const deck0 = [...(iCard ? [iCard] : []), ...J.policyDeck(rows, intent)], fromSite = `Private cloud · Equinix DC2, Ashburn`, toRegion = found.regions[0] ? `${found.cloud} ${found.regions[0].region}` : '';
   const mkPol = (d) => ({ name: d.name, match: d.match, scope: 'any cloud', req: d.req, path: [], state: 'enforced', custom: true, journey: true, cloud: found.cloud, tag: d.tag });
   const verdictOf = (d, to) => (toRegion ? PM.decide(est, [mkPol(d)], { from: fromSite, to, tag: d.tag }).verdict : 'Allowed');
@@ -5584,7 +5588,7 @@ function journeyVals(out, s, set, est) {
     today: `AT&T already carries your ${today.sites} sites.`,
     source: scanning ? `Reading your ${prov.name} subscription.` : 'Connect a cloud account. Read only.',
     found: `${cloudName} runs ${found.wl} workloads outside the AT&T network.`,
-    intent: `What does your ${cloudName} connection need?`,
+    intent: `What does ${regionKey || ('your ' + cloudName + ' connection')} need?`,
     recommend: saving ? `Move ${cloudName} onto AT&T. Save ${saving} a month.` : `Move ${cloudName} onto AT&T.`,
     connect: placed ? 'Ordered. AT&T is provisioning it.' : `Connect ${cloudName} with ${tier ? tier.label : 'AT&T'}.`,
     watch: live ? `${cloudName} is live on AT&T.` : 'Provisioning.',
@@ -5618,7 +5622,7 @@ function journeyVals(out, s, set, est) {
     // The stage.
     jWide: step >= JI.found && found.has, jLink: link, jLinkWord: link === 'connected' ? 'AT&T private path' : link === 'proposed' ? (tier ? tier.label : '') : '',
     // The public path is drawn and named, never timed (Micah, 2026-10-09: "remove the 102 ms as we won't know that").
-    jNet: net, jNetWord: 'Outside the AT&T network',
+    jNet: net, jNetWord: 'Not on AT&T network',
     // The AT&T wire's latency once a way is proposed, and the drop beside it.
     jLinkMs: tierMs ? `${tierMs} ms` : '', jLinkHasMs: !!tierMs && link !== 'none', jLinkDrop: tierMs && todayMs && todayMs > tierMs ? `−${todayMs - tierMs} ms` : '', jLinkHasDrop: !!(tierMs && todayMs && todayMs > tierMs && link !== 'none'),
     // Before and after, as a pair of figures: today's monthly in grey, the way's in green; shown from the recommendation on.
@@ -5651,9 +5655,12 @@ function journeyVals(out, s, set, est) {
     // The Intent beat (2026-10-08): four questions, glyph answers; each answer re-ranks the ways at once (the wire's label
     // and the money pair move with it). Your tags suggest the first answers. Once ordered, the answers stand.
     // One connection serves the cloud's regions, so the questions are about the connection and the hint names every region it carries.
-    jNeeds: { scope: found.regions.map(r => r.region).join(' and '), hint: placed ? 'Ordered; the answers stand.' : `${s.jIntent && Object.keys(s.jIntent).length ? 'Your answers' : tagsOn ? 'Defaults from your tags' : 'Defaults'}; applies to ${found.regions.map(r => r.region).join(' and ')}.` },
+    // The region you are doing things to (2026-10-13): a picker in the cloud node from Needs on; answers and the ranking follow it.
+    jRegionPick: found.regions.map(r => ({ key: r.region, label: r.region, on: r.region === regionKey, go: () => set({ jRegion: r.region, jPick: null, jDetail: false, jFlip: (s.jFlip || 0) + 1 }) })),
+    jHasRegionPick: step >= JI.intent && found.has && found.regions.length > 1,
+    jNeeds: { scope: regionKey || '', hint: placed ? 'Ordered; the answers stand.' : `${(s.jIntents || {})[regionKey] && Object.keys(s.jIntents[regionKey]).length ? 'Your answers' : tagsOn ? 'Defaults from your tags' : 'Defaults'}; applies to ${regionKey}.` },
     jIntentQs: W.INTENT.map(q => ({ key: q.key, label: q.label, stem: q.key === 'purpose' ? 'This connection is' : W.INTENT_SENTENCE[q.key].stem, icon: q.icon, opts: q.opts.map(o => ({ ...o, verb: W.INTENT_SENTENCE[q.key].verbs[o.key], on: intent[q.key] === o.key, off: !!placed,
-      go: () => { if (!placed) set({ jIntent: { ...(s.jIntent || {}), [q.key]: o.key }, jPick: null, jDetail: false, jFlip: (s.jFlip || 0) + 1 }); } })) })),
+      go: () => { if (!placed) set({ jRegion: regionKey, jIntents: { ...(s.jIntents || {}), [regionKey]: { ...((s.jIntents || {})[regionKey] || {}), [q.key]: o.key } }, jPick: null, jDetail: false, jFlip: (s.jFlip || 0) + 1 }); } })) })),
     jIntentChips: W.INTENT.map(q => { const o = q.opts.find(x => x.key === intent[q.key]) || q.opts[0]; return { key: q.key, icon: o.icon, title: `${q.label}: ${o.label}` }; }),
     jHasIntentChips: step > JI.intent && found.has,
     // The proposed way as a badge on the AT&T wire, its own glyph; an answer replays its arrival.
@@ -5763,7 +5770,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   // An answer on the dashboard writes the one store (2026-10-09): the journey's own for its estate, so its Intent beat and
   // Recommended edit one object; this estate's otherwise. Picks were indices into the old ranking, so they clear.
   const setIntentFor = (q, o) => (est.id === J.JOURNEY_ESTATE
-    ? set({ jIntent: { ...(s.jIntent || {}), [q]: o }, jPick: null, jFlip: (s.jFlip || 0) + 1, moveTier: keep('moveTier', {}), recWhy: keep('recWhy', null) })
+    ? set({ jIntents: { ...(s.jIntents || {}), [jRegionKeyOf(s) || '*']: { ...((s.jIntents || {})[jRegionKeyOf(s) || '*'] || {}), [q]: o } }, jPick: null, jFlip: (s.jFlip || 0) + 1, moveTier: keep('moveTier', {}), recWhy: keep('recWhy', null) })
     : set({ intents: { ...(s.intents || {}), [est.id]: { ...((s.intents || {})[est.id] || {}), [q]: o } }, moveTier: keep('moveTier', {}), recWhy: keep('recWhy', null) }));
   // A move preselects its recommendation: the session's first way on a cloud region, a ladder's middle rung elsewhere.
   const tierOfMove = (m) => (Number.isInteger(tierPick[m.key]) ? tierPick[m.key] : Number.isInteger(m.recI) ? m.recI : 1);

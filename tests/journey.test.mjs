@@ -88,7 +88,7 @@ test('beat 3: the cloud node becomes Azure, its regions and apps; the public int
   assert.deepEqual(v.jRegions.map(r => [r.region, r.wlF, r.msF]), [['eastus', '40', '64 ms'], ['westeurope', '28', '102 ms']]);
   assert.deepEqual(v.jRegions[1].apps.map(a => a.name), ['payments-api', 'fin-ledger']);
   // The latency is a figure of its own on the path (2026-10-08), not part of the word.
-  assert.equal(v.jNet, 'public'); assert.equal(v.jNetWord, 'Outside the AT&T network');
+  assert.equal(v.jNet, 'public'); assert.equal(v.jNetWord, 'Not on AT&T network');
   // The public path is named, never timed: nobody measures it (2026-10-09).
   assert.equal(v.jNetMs, undefined); assert.doesNotMatch(HTML, /jNetMs|jNetHasMs/);
 });

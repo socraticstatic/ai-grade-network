@@ -82,7 +82,7 @@ test('a customer can add a tag to a region on Found; the tag pre-fills the answe
   assert.equal(v.jr.needs.questions[0].opts.find(o => o.key === 'lab').on, true, 'Dev/Lab reads as a lab'); assert.equal(v.jr.needs.defaulted, true); assert.match(v.jr.needs.hint, /from your tags/);
   v.jr.regions.find(r => r.key === EAST).tags[0].go(); assert.deepEqual(c.state.rtags[EAST], [], 'a tag chip removes itself');
   assert.ok(HTML.includes('<small>{{ jr.netWord }}</small>') && !HTML.includes('Public internet'), 'the path is named by what it is not');
-  assert.equal(vals(c).jr.netWord, 'Outside the AT&T network');
+  assert.equal(vals(c).jr.netWord, 'Not on AT&T network');
 });
 
 test('at Needs only the picked region shows, in a two-by-two of questions; tags show on Found and Needs or when set', () => {

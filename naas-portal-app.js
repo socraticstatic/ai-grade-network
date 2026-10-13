@@ -286,7 +286,7 @@ export function journey(d, s, set) {
       tags: mine.map(t => ({ key: t, t, title: `Remove ${t} from ${r.label}`, go: () => set({ rtags: { ...rtags, [r.key]: mine.filter(x => x !== t) } }) })),
       canTag: step <= JB.intent, picking, pick: () => set({ jTagPick: picking ? null : r.key }),
       palette: TAGS.filter(t => !mine.includes(t)).map(t => ({ key: t, t, title: `Tag ${r.label} ${t}`, go: () => set({ rtags: { ...rtags, [r.key]: [...mine, t] }, jTagPick: null }) })), vpcsF: r.vpcs.toLocaleString('en-US'), subnetsF: r.subnets.toLocaleString('en-US'), bytesWord: typeof r.bytesOut === 'number' ? `${fmtBytes(r.bytesOut)} out` : '', hasBytes: typeof r.bytesOut === 'number', go: () => set({ jRegion: r.key, jPick: null }) }; }),
-    region, link, linkWord: link === 'proposed' ? way : '', net, netWord: 'Outside the AT&T network', flow: net === 'public' ? 'net' : 'none', wide: step >= JB.found && found.has,
+    region, link, linkWord: link === 'proposed' ? way : '', net, netWord: 'Not on AT&T network', flow: net === 'public' ? 'net' : 'none', wide: step >= JB.found && found.has,
     isIntent: step === JB.intent, isRec: step === JB.recommend, isRequest: step === JB.request, needs, options,
     act: { label: ACT.label, go: ACT.go, off: !!ACT.off, busy: !!ACT.busy }, hasBack: true, back, exit,
     requestedLine: requested ? `Requested ${W.wayLabel(requested.option, cloud)} for ${region ? region.label : ''}. Cloud discovery and Recommended carry it.` : '' };
