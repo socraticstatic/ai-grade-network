@@ -135,7 +135,9 @@ test('another estate is untouched, and Remove puts the counts back', () => {
   c.setState({ view: 'partial' });
   vals(c).sources.find(r => r.name === 'Oracle account').remove();
   assert.equal(pill(vals(c), 'c'), '3');
-  assert.ok(require_html().includes('onClick="{{ sr.remove }}">Remove<'), 'Remove is on the page');
+  // Re-pinned 2026-10-13: the Sources story draws Remove as a glyph button beside Re-scan and Edit access, its word in
+  // aria-label and title.
+  assert.ok(require_html().includes('onClick="{{ sr.remove }}" title="Remove this source" aria-label="Remove">'), 'Remove is on the page');
 });
 
 test('the found account never backdates itself or its runs', () => {

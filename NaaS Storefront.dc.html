@@ -683,34 +683,35 @@
   </div>
   </sc-if>
   <sc-if value="{{ showSourcesBody }}" hint-placeholder-val="{{ false }}">
-    <div id="sec-accounts" aria-label="Sources" style="display:grid;gap:10px;animation:fadeIn .3s">
-      <div class="fx-card-head"><div><h3 class="fx-card-title">Connected accounts</h3><div class="fx-card-sub">{{ sourcesSub }}</div></div></div>
-      <div class="dt">
-        <div class="dt-h"><div class="dt-r">
-          <div class="dt-c dt-th" style="width:19%">Account</div>
-          <div class="dt-c dt-th" style="width:13%">Credential</div>
-          <div class="dt-c dt-th" style="width:14%">Scope</div>
-          <div class="dt-c dt-th" style="width:8%">Last scan</div>
-          <div class="dt-c dt-th" style="width:12%">Next scan</div>
-          <div class="dt-c dt-th" style="width:14%">Cadence</div>
-          <div class="dt-c dt-th" style="width:20%">Manage</div>
-        </div></div>
-        <div class="dt-b"><sc-for list="{{ sources }}" as="sr" hint-placeholder-count="4">
-          <div class="dt-r">
-            <div data-th="Account" class="dt-c"><span style="display:flex;align-items:center;gap:8px;min-width:0"><i style="width:8px;height:8px;border-radius:9999px;background:{{ sr.dot }};flex:none"></i><sc-if value="{{ sr.hasMark }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" style="width:16px;height:16px;flex:none;background:url('{{ sr.mark }}') center / contain no-repeat"></span></sc-if><sc-if value="{{ sr.isAtt }}" hint-placeholder-val="{{ false }}"><span class="ic s16" style="--ic:url('brand/icons/hub.svg');color:var(--link);flex:none"></span></sc-if><span class="dt-name" style="overflow-wrap:anywhere">{{ sr.name }}</span></span></div>
-            <div data-th="Credential" class="dt-c" style="overflow-wrap:anywhere">{{ sr.cred }}</div>
-            <div data-th="Scope" class="dt-c" style="color:var(--text-light);overflow-wrap:anywhere"><button class="fx-fig" onClick="{{ sr.scopeGo }}" disabled="{{ sr.scopeCant }}" title="Open what this source covers" style="text-align:left">{{ sr.scope }}</button></div>
-            <div data-th="Last scan" class="dt-c" style="color:var(--text-light);white-space:nowrap">{{ sr.seen }}</div>
-            <div data-th="Next scan" class="dt-c" style="color:var(--text-light);white-space:nowrap">{{ sr.nextSeen }}</div>
-            <div data-th="Cadence" class="dt-c">
-              <sc-if value="{{ sr.canSchedule }}" hint-placeholder-val="{{ true }}"><select class="dt-select" value="{{ sr.cadenceValue }}" onChange="{{ sr.setCadence }}" aria-label="Cadence"><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></sc-if>
-              <sc-if value="{{ sr.noSchedule }}" hint-placeholder-val="{{ false }}"><span style="color:var(--text-light)">{{ sr.cadenceLabel }}</span></sc-if>
-            </div>
-            <div data-th="Manage" class="dt-c"><span style="display:flex;flex-wrap:wrap;gap:2px 12px"><button class="dt-link" onClick="{{ sr.rescan }}">Re-scan</button><button class="dt-link" onClick="{{ sr.edit }}">Edit access</button><sc-if value="{{ sr.canRemove }}" hint-placeholder-val="{{ false }}"><button class="dt-link" onClick="{{ sr.remove }}">Remove</button></sc-if></span></div>
-          </div>
-        </sc-for></div>
+    <!-- Sources as a story (2026-10-13, Micah: "Each page should be its own gorgeous, extremely beautiful story, with calls to
+         action on each"): the verdict (are we seeing everything?) as four cards of the Estate's grammar, each a head that opens
+         its set, a figure, a ring, a legend of doors and a foot with its move; then the evidence, every source a row that leads
+         with its mark and its scan state, its scope a glyph and a number, its scans on the one axis every row shares. -->
+    <div id="sec-accounts" aria-label="Sources" class="src-page">
+      <div class="src-kpis" role="group" aria-label="Are we seeing everything"><sc-for list="{{ srcCards }}" as="sc" hint-placeholder-count="4"><div class="fx-card est-kpi src-kpi" aria-label="{{ sc.title }}" style="--i:{{ sc.i }}">
+        <button class="est-kpi-h" onClick="{{ sc.headGo }}" title="{{ sc.headTitle }}"><span class="ic-tile s28"><span class="ic s16" style="--ic:url('brand/icons/{{ sc.icon }}.svg')"></span></span>{{ sc.title }}<span class="ic s16 go" style="--ic:url('brand/icons/chevron-right.svg')"></span></button>
+        <div class="est-kpi-m">
+          <div class="est-fig"><button class="fx-fig est-big" onClick="{{ sc.headGo }}" title="{{ sc.headTitle }}">{{ sc.big }}<sc-if value="{{ sc.hasUnit }}" hint-placeholder-val="{{ false }}"><small>{{ sc.unit }}</small></sc-if></button><sc-if value="{{ sc.hasSub }}" hint-placeholder-val="{{ true }}"><button class="fx-fig est-sub" onClick="{{ sc.subGo }}" disabled="{{ sc.subCant }}">{{ sc.sub }}</button></sc-if></div>
+          <button class="fx-ring" onClick="{{ sc.headGo }}" aria-label="{{ sc.ringLabel }}" title="{{ sc.ringLabel }}" style="background:{{ sc.ring }}"><i></i></button>
+        </div>
+        <div class="est-leg src-leg"><sc-for list="{{ sc.legend }}" as="lg" hint-placeholder-count="2"><button class="est-leg-r" onClick="{{ lg.go }}" title="{{ lg.title }}"><sc-if value="{{ lg.hasMark }}" hint-placeholder-val="{{ false }}"><i class="src-lm" data-wordmark="{{ lg.wordmark }}" style="background-image:url('{{ lg.mark }}')"></i></sc-if><sc-if value="{{ lg.hasIcon }}" hint-placeholder-val="{{ true }}"><span class="ic s14" style="--ic:url('brand/icons/{{ lg.icon }}.svg');color:{{ lg.color }}"></span></sc-if><span>{{ lg.label }}</span><b>{{ lg.n }}</b></button></sc-for></div>
+        <div class="src-foot">
+          <sc-if value="{{ sc.hasAct }}" hint-placeholder-val="{{ true }}"><button class="src-go" onClick="{{ sc.act.go }}" title="{{ sc.act.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ sc.act.icon }}.svg')"></span>{{ sc.act.label }}</button></sc-if>
+          <sc-if value="{{ sc.hasMarks }}" hint-placeholder-val="{{ false }}"><span class="src-adds"><sc-for list="{{ sc.marks }}" as="am" hint-placeholder-count="2"><button class="src-add" onClick="{{ am.go }}" title="{{ am.label }}" aria-label="{{ am.label }}"><sc-if value="{{ am.hasMark }}" hint-placeholder-val="{{ true }}"><i data-wordmark="{{ am.wordmark }}" style="background-image:url('{{ am.mark }}')"></i></sc-if><sc-if value="{{ am.noMark }}" hint-placeholder-val="{{ false }}"><b aria-hidden="true">{{ am.initials }}</b></sc-if></button></sc-for></span></sc-if>
+          <sc-if value="{{ sc.isSelect }}" hint-placeholder-val="{{ false }}"><label class="src-cad" title="The cadence for every account"><span class="ic s16" style="--ic:url('brand/icons/clock.svg')"></span><select value="{{ sc.cadValue }}" onChange="{{ sc.setCad }}" aria-label="Cadence for every account"><option value="">Mixed</option><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></label></sc-if>
+        </div>
+      </div></sc-for></div>
+      <div class="src-list" aria-label="Connected accounts" title="{{ sourcesSub }}">
+        <div class="src-row src-th"><span></span><span>Source</span><span>Scope</span><span class="src-axis" aria-hidden="true"><sc-for list="{{ srcAxis }}" as="ax" hint-placeholder-count="4"><em data-now="{{ ax.now }}" style="left:{{ ax.x }}">{{ ax.label }}</em></sc-for></span><span>Cadence</span><span class="src-pg"><sc-if value="{{ srcPager.many }}" hint-placeholder-val="{{ false }}"><span class="est-pager"><span>{{ srcPager.label }}</span><button class="fx-btn" onClick="{{ srcPager.prev }}" aria-label="Previous page" style="opacity:{{ srcPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ srcPager.next }}" aria-label="Next page" style="opacity:{{ srcPager.nextOp }}">›</button></span></sc-if></span></div>
+        <sc-for list="{{ sources }}" as="sr" hint-placeholder-count="5"><div class="src-row" data-scan="{{ sr.scan }}">
+          <span class="est-mark src-mark" title="{{ sr.name }}"><sc-if value="{{ sr.hasMark }}" hint-placeholder-val="{{ true }}"><i data-wordmark="{{ sr.wordmark }}" style="background-image:url('{{ sr.mark }}')"></i></sc-if><sc-if value="{{ sr.isAtt }}" hint-placeholder-val="{{ false }}"><span class="ic s18" style="--ic:url('brand/icons/hub.svg');color:var(--link)"></span></sc-if><sc-if value="{{ sr.noMark }}" hint-placeholder-val="{{ false }}"><b aria-hidden="true">{{ sr.initials }}</b></sc-if><span class="est-st" role="img" aria-label="{{ sr.scanTitle }}" title="{{ sr.scanTitle }}"><span class="ic" style="--ic:url('brand/icons/{{ sr.scanIcon }}.svg');color:{{ sr.scanInk }}"></span></span></span>
+          <span class="src-nm"><b>{{ sr.name }}</b><sc-if value="{{ sr.canSchedule }}" hint-placeholder-val="{{ true }}"><small>{{ sr.cred }}</small></sc-if></span>
+          <button class="fx-fig kchip src-scope" onClick="{{ sr.scopeGo }}" disabled="{{ sr.scopeCant }}" title="{{ sr.scopeTitle }}" aria-label="{{ sr.scopeTitle }}"><span class="ic s14" style="--ic:url('brand/icons/{{ sr.scopeIcon }}.svg')"></span><b>{{ sr.scopeN }}</b></button>
+          <span class="src-beat" data-live="{{ sr.beat.live }}" role="img" aria-label="{{ sr.scanTitle }}" title="{{ sr.scanTitle }}"><i class="src-now" style="left:{{ sr.beat.nowX }}"></i><sc-for list="{{ sr.beat.past }}" as="bp" hint-placeholder-count="2"><i class="src-dot" data-last="{{ bp.last }}" data-manual="{{ bp.manual }}" style="left:{{ bp.x }};--d:{{ bp.d }}" title="{{ bp.title }}"></i></sc-for><sc-for list="{{ sr.beat.next }}" as="bn" hint-placeholder-count="1"><i class="src-dot nx" style="left:{{ bn.x }};--d:{{ bn.d }}" title="{{ bn.title }}"></i></sc-for><sc-if value="{{ sr.beat.hasBefore }}" hint-placeholder-val="{{ false }}"><i class="src-off" data-end="l" title="{{ sr.beat.beforeTitle }}"></i></sc-if><sc-if value="{{ sr.beat.hasAfter }}" hint-placeholder-val="{{ false }}"><i class="src-off" data-end="r" title="{{ sr.beat.afterTitle }}"></i></sc-if></span>
+          <span class="src-cc"><sc-if value="{{ sr.canSchedule }}" hint-placeholder-val="{{ true }}"><select class="src-sel" value="{{ sr.cadenceValue }}" onChange="{{ sr.setCadence }}" aria-label="Cadence"><option value="h6">Every 6 hours</option><option value="h12">Every 12 hours</option><option value="nightly">Nightly at 02:00</option><option value="weekly">Sundays at 03:00</option><option value="manual">Manual only</option></select></sc-if><sc-if value="{{ sr.noSchedule }}" hint-placeholder-val="{{ false }}"><span class="kchip src-live" title="{{ sr.scanTitle }}"><span class="ic s14" style="--ic:url('brand/icons/sync.svg')"></span><b>Live</b></span></sc-if></span>
+          <span class="src-acts"><button class="src-act" onClick="{{ sr.rescan }}" title="Re-scan {{ sr.name }} now"><span class="ic s16" style="--ic:url('brand/icons/sync.svg')"></span>Re-scan</button><button class="src-ib" onClick="{{ sr.edit }}" title="Edit access: credential, scope and schedule" aria-label="Edit access"><span class="ic s16" style="--ic:url('brand/icons/pencil.svg')"></span></button><sc-if value="{{ sr.canRemove }}" hint-placeholder-val="{{ false }}"><button class="src-ib" onClick="{{ sr.remove }}" title="Remove this source" aria-label="Remove"><span class="ic s16" style="--ic:url('brand/icons/minus-circle.svg')"></span></button></sc-if></span>
+        </div></sc-for>
       </div>
-      <sc-if value="{{ srcPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ srcPager.label }}</span><button class="fx-btn" onClick="{{ srcPager.prev }}" aria-label="Previous page" style="opacity:{{ srcPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ srcPager.next }}" aria-label="Next page" style="opacity:{{ srcPager.nextOp }}">›</button></div></sc-if>
     </div>
   </sc-if>
   <sc-if value="{{ showEstateBody }}" hint-placeholder-val="{{ true }}">
@@ -1465,75 +1466,84 @@
   <div style="display:grid;gap:16px">
 <div role="tablist" aria-label="Log kind" style="display:flex;align-items:center;border-bottom:1px solid var(--border-secondary)"><sc-for list="{{ logTabs }}" as="lt" hint-placeholder-count="2"><button role="tab" aria-selected="{{ lt.on }}" onClick="{{ lt.go }}" style="border:0;border-bottom:2px solid {{ lt.line }};background:transparent;padding:6px 2px;margin-right:18px;font:inherit;font-size:15px;line-height:22px;font-weight:{{ lt.weight }};color:{{ lt.color }};cursor:pointer;white-space:nowrap"><span class="ic s16 tab-ic" style="--ic:url('brand/icons/{{ lt.icon }}.svg')"></span>{{ lt.label }}</button></sc-for></div>
 <div id="sec-logs" style="display:grid;gap:12px">
-  <div class="fx-card-head" style="align-items:center"><div style="min-width:0"><sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}"><div class="fx-card-sub">{{ logCount }} · {{ logNote }}</div></sc-if><sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}"><div class="fx-card-sub" style="display:flex;align-items:center;gap:6px">{{ actCount }}<span class="ic s14" role="img" aria-label="{{ actNote }}" title="{{ actNote }}" style="--ic:url('brand/icons/information-circle.svg');cursor:help"></span></div></sc-if></div><sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ logHasFilters }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ clearLogs }}" style="flex:none;height:28px;padding:0 12px;font-size:12px">Clear filters</button></sc-if></sc-if></div><sc-if value="{{ explainOn }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:10px;padding:14px 16px;border:1px solid var(--border-secondary);border-left:3px solid var(--cta);border-radius:12px;background:var(--bg-wash)"><div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-width:0"><span style="font-size:12px;font-weight:700;color:var(--link);white-space:nowrap">Explaining</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ explainLabel }}</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap">{{ explainValue }}</span><button onClick="{{ clearExplain }}" style="margin-left:auto;flex:none;height:26px;padding:0 12px;border:1px solid var(--border-primary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Show every record</button></div><div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty">{{ explainSub }} {{ explainCut }} <b style="font-weight:600;color:var(--text-body)">{{ explainCount }}</b></div><sc-if value="{{ hasExplainParts }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px"><span style="font-size:12px;font-weight:600;color:var(--text-body)">Made of</span><sc-for list="{{ explainParts }}" as="ep" hint-placeholder-count="4"><button onClick="{{ ep.go }}" title="{{ ep.label }} · {{ ep.value }} · show its records" style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);font:inherit;font-size:12px;color:var(--text-body);cursor:pointer;white-space:nowrap"><span style="font-weight:600;color:var(--text-heading)">{{ ep.label }}</span><span style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--link)">{{ ep.share }}</span></button></sc-for></div></sc-if></div></sc-if>
+  <!-- Logs as a story (2026-10-13, Micah: "Each page should be its own gorgeous, extremely beautiful story, with calls to action
+       on each"; "less words, and more visualizations, animations and icons"). The verdict first: what the traffic did, each
+       figure a door through the one filter grammar (it lights the chip it names) and its move beside it; the record stream,
+       every record a dot on its pattern's lane in time; then the evidence, rows that lead with their path as a glyph and
+       their action as a verb badge, each opening its path on the map. User activity tells the same story of who changed it. -->
+  <sc-if value="{{ explainOn }}" hint-placeholder-val="{{ false }}"><div style="display:grid;gap:10px;padding:14px 16px;border:1px solid var(--border-secondary);border-left:3px solid var(--cta);border-radius:12px;background:var(--bg-wash)"><div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-width:0"><span style="font-size:12px;font-weight:700;color:var(--link);white-space:nowrap">Explaining</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);text-wrap:pretty">{{ explainLabel }}</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap">{{ explainValue }}</span><button onClick="{{ clearExplain }}" style="margin-left:auto;flex:none;height:26px;padding:0 12px;border:1px solid var(--border-primary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Show every record</button></div><div style="font-size:12px;line-height:17px;color:var(--text-light);text-wrap:pretty">{{ explainSub }} {{ explainCut }} <b style="font-weight:600;color:var(--text-body)">{{ explainCount }}</b></div><sc-if value="{{ hasExplainParts }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px"><span style="font-size:12px;font-weight:600;color:var(--text-body)">Made of</span><sc-for list="{{ explainParts }}" as="ep" hint-placeholder-count="4"><button onClick="{{ ep.go }}" title="{{ ep.label }} · {{ ep.value }} · show its records" style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);font:inherit;font-size:12px;color:var(--text-body);cursor:pointer;white-space:nowrap"><span style="font-weight:600;color:var(--text-heading)">{{ ep.label }}</span><span style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--link)">{{ ep.share }}</span></button></sc-for></div></sc-if></div></sc-if>
   <sc-if value="{{ onFlowTab }}" hint-placeholder-val="{{ true }}">
-  <button onClick="{{ toggleLogFilters }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 0;border:0;border-top:1px solid var(--border-secondary);background:transparent;font:inherit;text-align:left;cursor:pointer"><span style="font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)">Filters</span><span style="font-size:12px;color:var(--text-light)">{{ logFilterCount }}</span><span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--link)">{{ logFilterToggleWord }}</span></button>
+  <sc-if value="{{ logHero }}" hint-placeholder-val="{{ true }}">
+  <div class="fx-card log-hero" aria-label="What the traffic did">
+    <div class="log-verdict" role="group" aria-label="Verdict"><sc-for list="{{ logBand }}" as="lb" hint-placeholder-count="4"><div class="log-v" data-tone="{{ lb.tone }}" style="--i:{{ lb.i }}">
+      <button class="log-v-door" onClick="{{ lb.go }}" disabled="{{ lb.cant }}" aria-pressed="{{ lb.on }}" title="{{ lb.title }}"><span class="ic-tile s32"><span class="ic s18" style="--ic:url('brand/icons/{{ lb.icon }}.svg')"></span></span><b class="log-v-n">{{ lb.n }}</b><span class="log-v-l"><span>{{ lb.label }}</span><i class="log-meter"><i style="width:{{ lb.w }}"></i></i></span></button>
+      <button class="log-go" onClick="{{ lb.act.go }}" title="{{ lb.act.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ lb.act.icon }}.svg')"></span>{{ lb.act.label }}</button>
+    </div></sc-for></div>
+    <div class="log-stream" role="group" aria-label="Record stream">
+      <sc-for list="{{ logStream.lanes }}" as="ln" hint-placeholder-count="5"><div class="log-lane">
+        <button class="log-lane-h" data-glyph="true" onClick="{{ ln.go }}" disabled="{{ ln.cant }}" aria-pressed="{{ ln.on }}" title="{{ ln.title }}" aria-label="{{ ln.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ ln.icon }}.svg')"></span><b>{{ ln.n }}</b></button>
+        <span class="log-track"><sc-for list="{{ ln.dots }}" as="dt" hint-placeholder-count="4"><button class="log-dot" data-path="{{ dt.path }}" data-deny="{{ dt.deny }}" data-on="{{ dt.on }}" aria-pressed="{{ dt.sel }}" onClick="{{ dt.go }}" title="{{ dt.title }}" aria-label="{{ dt.title }}" style="left:{{ dt.x }};--s:{{ dt.size }};--d:{{ dt.d }}"></button></sc-for></span>
+      </div></sc-for>
+      <div class="log-axis" aria-hidden="true"><span class="log-key"><sc-for list="{{ logStream.key }}" as="k" hint-placeholder-count="2"><span><i data-path="{{ k.path }}"></i>{{ k.label }}</span></sc-for></span><span class="log-ticks"><sc-for list="{{ logStream.axis }}" as="ax" hint-placeholder-count="5"><em style="left:{{ ax.x }}">{{ ax.label }}</em></sc-for></span></div>
+    </div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ logCalm }}" hint-placeholder-val="{{ false }}"><div class="fx-card op-calm log-calm"><span class="op-calm-i"><span class="ic s24" style="--ic:url('brand/icons/list.svg')"></span></span><p>No flow records yet. They start with the first source.</p><button class="src-go" onClick="{{ logCalmGo }}"><span class="ic s16" style="--ic:url('brand/icons/plus.svg')"></span>Add a source</button></div></sc-if>
+  <div class="log-bar"><button class="log-ftog" onClick="{{ toggleLogFilters }}"><span class="ic s16" style="--ic:url('brand/icons/filter.svg')"></span><b>Filters</b><span>{{ logFilterCount }}</span><em>{{ logFilterToggleWord }}</em></button><sc-if value="{{ logHasFilters }}" hint-placeholder-val="{{ false }}"><button class="fx-btn log-clear" onClick="{{ clearLogs }}">Clear filters</button></sc-if><sc-if value="{{ logPager.many }}" hint-placeholder-val="{{ false }}"><span class="est-pager"><span>{{ logPager.label }}</span><button class="fx-btn" onClick="{{ logPager.prev }}" aria-label="Previous page" style="opacity:{{ logPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ logPager.next }}" aria-label="Next page" style="opacity:{{ logPager.nextOp }}">›</button></span></sc-if></div>
   <sc-if value="{{ logFiltersOpen }}" hint-placeholder-val="{{ true }}">
-  <div style="display:grid;grid-template-columns:58px minmax(0,1fr);gap:8px 12px;align-items:center;padding:2px 0 10px;border-bottom:1px solid var(--border-secondary)">
-    <span style="font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)">Find</span>
-    <label class="fx-search" style="width:100%"><span aria-hidden="true"></span><input value="{{ logQ }}" onChange="{{ setLogQ }}" placeholder="Resource name, address, protocol" aria-label="Search the records"></input></label>
-    <span style="font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)">Pattern</span>
-    <div class="fx-chips" style="gap:6px"><sc-for list="{{ logChips }}" as="lc" hint-placeholder-count="6"><button class="fx-chip" aria-pressed="{{ lc.on }}" onClick="{{ lc.go }}" style="cursor:pointer;background:{{ lc.bg }};color:{{ lc.color }};border-color:{{ lc.border }}">{{ lc.label }}</button></sc-for></div>
-    <span style="font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)">Path</span>
-    <div class="fx-chips" style="gap:6px"><sc-for list="{{ logPathChips }}" as="lp" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ lp.on }}" onClick="{{ lp.go }}" style="cursor:pointer;background:{{ lp.bg }};color:{{ lp.color }};border-color:{{ lp.border }}">{{ lp.label }}</button></sc-for><span style="width:10px"></span><sc-for list="{{ logActChips }}" as="la" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ la.on }}" onClick="{{ la.go }}" style="cursor:pointer;background:{{ la.bg }};color:{{ la.color }};border-color:{{ la.border }}">{{ la.label }}</button></sc-for></div>
+  <div class="log-filters" aria-label="Filters">
+    <div class="log-frow"><label class="fx-search log-find"><span aria-hidden="true"></span><input value="{{ logQ }}" onChange="{{ setLogQ }}" placeholder="Resource name, address, protocol" aria-label="Search the records"></input></label><span class="ic s16 log-fl" role="img" aria-label="Pattern" title="Pattern" style="--ic:url('brand/icons/shuffle.svg')"></span><div class="fx-chips log-chips"><sc-for list="{{ logChips }}" as="lc" hint-placeholder-count="6"><button class="fx-chip" aria-pressed="{{ lc.on }}" onClick="{{ lc.go }}" style="cursor:pointer;background:{{ lc.bg }};color:{{ lc.color }};border-color:{{ lc.border }}"><sc-if value="{{ lc.hasIcon }}" hint-placeholder-val="{{ true }}"><span class="ic s14" style="--ic:url('brand/icons/{{ lc.icon }}.svg')"></span></sc-if>{{ lc.label }}</button></sc-for></div></div>
+    <div class="log-frow"><span class="ic s16 log-fl" role="img" aria-label="Path" title="Path" style="--ic:url('brand/icons/cable.svg')"></span><div class="fx-chips log-chips"><sc-for list="{{ logPathChips }}" as="lp" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ lp.on }}" onClick="{{ lp.go }}" style="cursor:pointer;background:{{ lp.bg }};color:{{ lp.color }};border-color:{{ lp.border }}">{{ lp.label }}</button></sc-for></div><span class="ic s16 log-fl" role="img" aria-label="Action" title="Action" style="--ic:url('brand/icons/check-shield.svg')"></span><div class="fx-chips log-chips"><sc-for list="{{ logActChips }}" as="la" hint-placeholder-count="3"><button class="fx-chip" aria-pressed="{{ la.on }}" onClick="{{ la.go }}" style="cursor:pointer;background:{{ la.bg }};color:{{ la.color }};border-color:{{ la.border }}">{{ la.label }}</button></sc-for></div></div>
   </div></sc-if>
   <sc-if value="{{ hasLogs }}" hint-placeholder-val="{{ true }}">
-  <div>
-    <div class="dt">
-      <div class="dt-h"><div class="dt-r">
-        <div class="dt-c dt-th" style="width:9%">Time</div>
-        <div class="dt-c dt-th" style="width:24%">Source</div>
-        <div class="dt-c dt-th" style="width:24%">Destination</div>
-        <div class="dt-c dt-th" style="width:12%">Proto</div>
-        <div class="dt-c dt-th num" style="width:10%">Bytes</div>
-        <div class="dt-c dt-th" style="width:10%">Path</div>
-        <div class="dt-c dt-th" style="width:11%">Action</div>
-      </div></div>
-      <div class="dt-b"><sc-for list="{{ flowRecords }}" as="lr" hint-placeholder-count="10">
-        <div class="dt-r">
-          <div data-th="Time" class="dt-c mono" style="vertical-align:top;color:var(--text-light);white-space:nowrap">{{ lr.time }}</div>
-          <div data-th="Source" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ lr.srcName }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ lr.srcSub }}</div></div>
-          <div data-th="Destination" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ lr.dstName }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ lr.dstSub }}</div></div>
-          <div data-th="Proto" class="dt-c mono" style="vertical-align:top;white-space:nowrap">{{ lr.proto }}</div>
-          <div data-th="Bytes" class="dt-c num" style="vertical-align:top;color:var(--text-heading);white-space:nowrap">{{ lr.bytes }}</div>
-          <div data-th="Path" class="dt-c" style="vertical-align:top"><span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:{{ lr.pathInk }};white-space:nowrap"><i style="width:6px;height:6px;border-radius:9999px;background:{{ lr.pathInk }}"></i>{{ lr.pathWord }}</span></div>
-          <div data-th="Action" class="dt-c" style="vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ lr.actBg }};color:{{ lr.actColor }};font-size:11px;font-weight:700;white-space:nowrap">{{ lr.action }}</span></div>
-        </div>
-      </sc-for></div>
-    </div>
+  <div class="log-rows" aria-label="Flow records">
+    <div class="log-row log-th"><span></span><span>Time</span><span>Source</span><span></span><span>Destination</span><span>Proto</span><span class="r">Bytes</span><span>Action</span><span></span></div>
+    <sc-for list="{{ flowRecords }}" as="lr" hint-placeholder-count="6"><div class="log-row" aria-selected="{{ lr.sel }}" onClick="{{ lr.go }}" title="{{ lr.goTitle }}">
+      <span class="ic-tile s28 log-path" data-on="{{ lr.pathOn }}" role="img" aria-label="{{ lr.pathTitle }}" title="{{ lr.pathTitle }}"><span class="ic s16" style="--ic:url('brand/icons/{{ lr.pathIcon }}.svg')"></span></span>
+      <span class="log-t">{{ lr.time }}</span>
+      <span class="log-end"><b>{{ lr.srcName }}</b><small>{{ lr.srcSub }}</small></span>
+      <span class="ic s16 log-pat" role="img" aria-label="{{ lr.patTitle }}" title="{{ lr.patTitle }}" style="--ic:url('brand/icons/{{ lr.patIcon }}.svg')"></span>
+      <span class="log-end"><b>{{ lr.dstName }}</b><small>{{ lr.dstSub }}</small></span>
+      <span class="log-mono">{{ lr.proto }}</span>
+      <span class="log-gb">{{ lr.bytes }}</span>
+      <span class="fw-badge {{ lr.badgeCls }}">{{ lr.badgeWord }}</span>
+      <span class="ic s14 est-caret" aria-hidden="true" style="--ic:url('brand/icons/chevron-right.svg')"></span>
+    </div></sc-for>
   </div>
-  <sc-if value="{{ logPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ logPager.label }}</span><button class="fx-btn" onClick="{{ logPager.prev }}" aria-label="Previous page" style="opacity:{{ logPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ logPager.next }}" aria-label="Next page" style="opacity:{{ logPager.nextOp }}">›</button></div></sc-if>
   </sc-if>
-  <sc-if value="{{ noLogs }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px">{{ logEmptyLine }}</div></sc-if>
+  <sc-if value="{{ logNoneHere }}" hint-placeholder-val="{{ false }}"><div class="log-none"><span class="ic s16" style="--ic:url('brand/icons/filter.svg')"></span>{{ logEmptyLine }}</div></sc-if>
   </sc-if>
   <sc-if value="{{ onUserTab }}" hint-placeholder-val="{{ false }}">
-  <label class="fx-search" style="width:100%"><span aria-hidden="true"></span><input value="{{ actQ }}" onChange="{{ setActQ }}" placeholder="Person, action, region, policy" aria-label="Search user activity"></input></label>
-  <sc-if value="{{ hasAct }}" hint-placeholder-val="{{ true }}">
-  <div>
-    <div class="dt">
-      <div class="dt-h"><div class="dt-r">
-        <div class="dt-c dt-th" style="width:9%">When</div>
-        <div class="dt-c dt-th" style="width:15%">Who</div>
-        <div class="dt-c dt-th" style="width:21%">Change</div>
-        <div class="dt-c dt-th" style="width:28%">What it touched</div>
-        <div class="dt-c dt-th" style="width:16%">From</div>
-        <div class="dt-c dt-th" style="width:11%">Result</div>
-      </div></div>
-      <div class="dt-b"><sc-for list="{{ actRows }}" as="ua" hint-placeholder-count="10">
-        <div class="dt-r">
-          <div data-th="When" class="dt-c mono" style="vertical-align:top;color:var(--text-light);white-space:nowrap">{{ ua.when }}</div>
-          <div data-th="Who" class="dt-c" style="vertical-align:top;font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ ua.who }}</div>
-          <div data-th="Change" class="dt-c" style="vertical-align:top;overflow-wrap:anywhere">{{ ua.verb }}</div>
-          <div data-th="What it touched" class="dt-c" style="vertical-align:top"><div class="dt-name" style="overflow-wrap:anywhere">{{ ua.target }}</div><div class="dt-sub" style="overflow-wrap:anywhere">{{ ua.detail }}</div></div>
-          <div data-th="From" class="dt-c mono" style="vertical-align:top;color:var(--text-light);overflow-wrap:anywhere">{{ ua.from }}</div>
-          <div data-th="Result" class="dt-c" style="vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:9999px;background:{{ ua.resBg }};color:{{ ua.resInk }};font-size:11px;font-weight:700;white-space:nowrap">{{ ua.result }}</span></div>
-        </div>
-      </sc-for></div>
+  <div class="fx-card log-hero" aria-label="Who changed the network">
+    <div class="log-verdict" role="group" aria-label="Verdict"><sc-for list="{{ actBand }}" as="ab" hint-placeholder-count="4"><div class="log-v" data-tone="{{ ab.tone }}" style="--i:{{ ab.i }}">
+      <button class="log-v-door" onClick="{{ ab.go }}" disabled="{{ ab.cant }}" aria-pressed="{{ ab.on }}" title="{{ ab.title }}"><span class="ic-tile s32"><span class="ic s18" style="--ic:url('brand/icons/{{ ab.icon }}.svg')"></span></span><b class="log-v-n">{{ ab.n }}</b><span class="log-v-l"><span>{{ ab.label }}</span><i class="log-meter"><i style="width:{{ ab.w }}"></i></i></span></button>
+      <button class="log-go" onClick="{{ ab.act.go }}" title="{{ ab.act.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ ab.act.icon }}.svg')"></span>{{ ab.act.label }}</button>
+    </div></sc-for></div>
+    <div class="log-stream" role="group" aria-label="Who changed it">
+      <sc-for list="{{ actStream.lanes }}" as="an" hint-placeholder-count="5"><div class="log-lane">
+        <button class="log-lane-h" onClick="{{ an.go }}" disabled="{{ an.cant }}" aria-pressed="{{ an.on }}" title="{{ an.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ an.icon }}.svg')"></span><span>{{ an.label }}</span><b>{{ an.n }}</b></button>
+        <span class="log-track"><sc-for list="{{ an.dots }}" as="ad" hint-placeholder-count="4"><button class="log-dot" data-path="{{ ad.path }}" data-deny="{{ ad.deny }}" data-on="{{ ad.on }}" aria-pressed="{{ ad.sel }}" onClick="{{ ad.go }}" title="{{ ad.title }}" aria-label="{{ ad.title }}" style="left:{{ ad.x }};--s:{{ ad.size }};--d:{{ ad.d }}"></button></sc-for></span>
+      </div></sc-for>
+      <div class="log-axis" aria-hidden="true"><span class="log-key"><sc-for list="{{ actStream.key }}" as="ak" hint-placeholder-count="2"><span><i data-path="{{ ak.path }}"></i>{{ ak.label }}</span></sc-for></span><span class="log-ticks"><sc-for list="{{ actStream.axis }}" as="aa" hint-placeholder-count="5"><em style="left:{{ aa.x }}">{{ aa.label }}</em></sc-for></span></div>
     </div>
   </div>
-  <sc-if value="{{ actPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ actPager.label }}</span><button class="fx-btn" onClick="{{ actPager.prev }}" aria-label="Previous page" style="opacity:{{ actPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ actPager.next }}" aria-label="Next page" style="opacity:{{ actPager.nextOp }}">›</button></div></sc-if>
+  <div class="log-bar"><label class="fx-search log-find" title="{{ actNote }}"><span aria-hidden="true"></span><input value="{{ actQ }}" onChange="{{ setActQ }}" placeholder="Person, action, region, policy" aria-label="Search user activity"></input></label><sc-if value="{{ actPager.many }}" hint-placeholder-val="{{ false }}"><span class="est-pager"><span>{{ actPager.label }}</span><button class="fx-btn" onClick="{{ actPager.prev }}" aria-label="Previous page" style="opacity:{{ actPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ actPager.next }}" aria-label="Next page" style="opacity:{{ actPager.nextOp }}">›</button></span></sc-if></div>
+  <sc-if value="{{ hasAct }}" hint-placeholder-val="{{ true }}">
+  <div class="log-rows" aria-label="User activity">
+    <div class="log-row log-ua log-th"><span></span><span>When</span><span>Who</span><span>Change</span><span>What it touched</span><span></span><span>Result</span><span></span></div>
+    <sc-for list="{{ actRows }}" as="ua" hint-placeholder-count="7"><div class="log-row log-ua" data-can="{{ ua.can }}" onClick="{{ ua.go }}" title="{{ ua.goTitle }}">
+      <span class="ic-tile s28"><span class="ic s16" style="--ic:url('brand/icons/{{ ua.icon }}.svg')"></span></span>
+      <span class="log-t">{{ ua.when }}</span>
+      <span class="log-who"><span class="ic s14" style="--ic:url('brand/icons/{{ ua.whoIcon }}.svg')"></span><b>{{ ua.who }}</b></span>
+      <span class="log-verb">{{ ua.verb }}</span>
+      <span class="log-end"><b>{{ ua.target }}</b><small>{{ ua.detail }}</small></span>
+      <span class="ic s16 log-pat" role="img" aria-label="{{ ua.fromTitle }}" title="{{ ua.fromTitle }}" style="--ic:url('brand/icons/{{ ua.fromIcon }}.svg')"></span>
+      <span class="fw-badge {{ ua.badgeCls }}">{{ ua.result }}</span>
+      <span class="ic s14 est-caret" aria-hidden="true" style="--ic:url('brand/icons/chevron-right.svg')"></span>
+    </div></sc-for>
+  </div>
   </sc-if>
-  <sc-if value="{{ noAct }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px">No changes match that search.</div></sc-if>
+  <sc-if value="{{ noAct }}" hint-placeholder-val="{{ false }}"><div class="log-none"><span class="ic s16" style="--ic:url('brand/icons/search.svg')"></span>No changes match that search.</div></sc-if>
   </sc-if>
 </div>
   </div>
@@ -2133,7 +2143,8 @@
     <sc-if value="{{ subIsAdd }}" hint-placeholder-val="{{ false }}">
     <div aria-label="{{ subTitle }}" style="display:grid;gap:16px">
       <sc-if value="{{ srcEditing }}" hint-placeholder-val="{{ false }}"><div><div style="font-size:16px;line-height:22px;font-weight:700;color:var(--text-heading)">{{ srcEditName }}</div><div style="font-size:12px;color:var(--text-light)">{{ srcEditKind }}</div></div></sc-if>
-      <div style="color:var(--text-light)">Read-only. Nothing changes in your routing.</div>
+      <!-- The promise as two glyph chips (2026-10-13, "less words"); the sentence is their title. -->
+      <div class="src-dnote" title="Read-only. Nothing changes in your routing."><span class="kchip"><span class="ic s14" style="--ic:url('brand/icons/eye.svg')"></span><b>Read-only</b></span><span class="kchip"><span class="ic s14" style="--ic:url('brand/icons/hub.svg')"></span><b>Routing untouched</b></span></div>
       <sc-if value="{{ srcAdding }}" hint-placeholder-val="{{ true }}">
       <div role="radiogroup" aria-label="Source" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
         <sc-for list="{{ sourceTiles }}" as="at" hint-placeholder-count="6">

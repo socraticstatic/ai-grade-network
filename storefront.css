@@ -1199,6 +1199,171 @@ main button[style*="border-radius:9999px"],main button[style*="border-radius: 99
 .est-chip{justify-self:end;display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;background:var(--bg-wash);border:1px solid var(--border-secondary);font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap}
 .est-in{justify-self:end;display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap}
 @media (prefers-reduced-motion: reduce){.est-kpi-h>.go,.est-kpi .fx-ring,.est-tr,.est-row,.est-tile,.est-unit{transition:none}.est-kpi-h:hover>.go{transform:none}}
+/* Discover > Sources as a story (2026-10-13, Micah: "Each page should be its own gorgeous, extremely beautiful story, with
+   calls to action on each"). The verdict as four cards of the Estate's grammar (head, figure, ring, legend), each with its
+   move in a foot; then every source a row on one grid that leads with its mark and its scan state, its scans on the axis
+   every row shares: two days back, the now line, a day ahead. Motion rests on its last frame. Theme tokens only. */
+.src-page{display:grid;gap:22px;min-width:0}
+.src-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.fx-card.src-kpi{grid-template-rows:auto auto 1fr auto;padding:16px 18px;gap:12px;border-radius:14px;transition:border-color .2s ease,box-shadow .2s ease;animation:src-in .5s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(var(--i,0) * 70ms)}
+.fx-card.src-kpi:hover{border-color:var(--border-active);box-shadow:0 12px 28px -20px rgba(15,23,42,.45)}
+@keyframes src-in{from{opacity:0}}
+.src-kpi .est-kpi-m{min-height:60px}
+.src-kpi .fx-ring{width:56px;height:56px}.src-kpi .fx-ring i{inset:11px}
+.src-leg{min-height:64px}
+.src-lm{justify-self:start;width:22px;height:16px;background:left center / contain no-repeat}.src-lm[data-wordmark="true"]{width:44px}
+.src-leg .est-leg-r:has(.src-lm){grid-template-columns:auto minmax(0,1fr) auto}
+.src-foot{display:flex;align-items:center;gap:8px;min-width:0}
+.src-go{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:0;height:34px;box-sizing:border-box;padding:0 14px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font:inherit;font-size:13px;line-height:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:background .15s ease}
+.src-go:hover{background:var(--bg-accent)}
+.src-go .ic{transition:transform .2s ease}.src-go:hover .ic{transform:scale(1.12)}
+.src-adds{display:flex;gap:6px;flex:none}
+.src-add{display:grid;place-items:center;width:34px;height:34px;box-sizing:border-box;padding:0;border:1px dashed var(--border-primary);border-radius:9999px;background:var(--bg-base);cursor:pointer;transition:border-color .15s ease,background .15s ease}
+.src-add:hover{border-style:solid;border-color:var(--border-active);background:var(--bg-accent)}
+.src-add i{display:block;width:18px;height:18px;background:center / contain no-repeat}.src-add:has(i[data-wordmark="true"]){width:64px}.src-add i[data-wordmark="true"]{width:46px}
+.src-add b{font-size:12px;line-height:16px;font-weight:700;color:var(--text-body)}
+.src-cad{position:relative;flex:1;display:flex;align-items:center;gap:8px;min-width:0;height:34px;box-sizing:border-box;padding:0 6px 0 12px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--link);cursor:pointer;transition:border-color .15s ease}
+.src-cad:hover{border-color:var(--border-active)}
+.src-cad select{flex:1;min-width:0;height:100%;border:0;background:transparent;color:var(--text-heading);font:inherit;font-size:13px;font-weight:600;cursor:pointer;outline:none}
+.src-cad:focus-within{outline:2px solid var(--border-active);outline-offset:1px}
+/* The rows: mark, name, scope, scans, cadence, actions. */
+.src-list{display:grid;min-width:0}
+.src-row{display:grid;grid-template-columns:40px minmax(0,1.15fr) 64px minmax(0,2fr) 172px 172px;column-gap:20px;align-items:center;min-height:68px;box-sizing:border-box;padding:8px 0;border-bottom:1px solid var(--border-secondary);transition:background .12s ease,box-shadow .12s ease}
+.src-row.src-th{min-height:0;padding:0 0 8px;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)}
+.src-row:not(.src-th):hover{background:var(--bg-wash);box-shadow:-12px 0 0 var(--bg-wash),12px 0 0 var(--bg-wash)}
+.src-pg{display:flex;justify-content:flex-end;min-height:16px}.src-pg .est-pager{margin:-6px 0}
+.est-mark.src-mark{width:40px;height:40px;border-radius:10px;background:var(--bg-base)}
+.src-mark>i{width:24px;height:24px}.src-mark>i[data-wordmark="true"]{width:34px}
+.src-mark>b{font-size:12px;line-height:16px;font-weight:700;color:var(--text-body)}
+.src-mark .est-st{right:-6px;bottom:-6px}
+.src-nm{display:grid;gap:1px;min-width:0}
+.src-nm b{font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-nm small{font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kchip.src-scope{justify-self:start;gap:6px;font-size:14px;line-height:20px}.kchip.src-scope b{font-size:14px;line-height:20px;color:var(--text-heading)}
+.kchip.src-live{font-size:13px;line-height:18px}.kchip.src-live .ic{color:var(--link)}
+.src-axis{position:relative;display:block;height:16px;margin:0 2px}
+.src-axis em{position:absolute;top:0;transform:translateX(-50%);font-style:normal;white-space:nowrap;color:var(--text-light)}
+.src-axis em:first-child{transform:none}.src-axis em:last-child{transform:translateX(-100%)}
+.src-axis em[data-now="true"]{color:var(--link)}
+/* The track: solid behind now, dashed ahead of it; a tick a day. */
+.src-beat{position:relative;display:block;height:30px;margin:0 2px}
+.src-beat::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;margin-top:-1px;border-radius:1px;background:linear-gradient(90deg,var(--border-primary) 0 66.67%,transparent 66.67%),repeating-linear-gradient(90deg,var(--border-primary) 0 4px,transparent 4px 8px)}
+.src-beat::after{content:"";position:absolute;left:0;right:-1px;top:50%;height:10px;margin-top:-5px;background:linear-gradient(90deg,var(--border-secondary) 1px,transparent 1px) 0 0 / 33.333% 100% repeat-x;pointer-events:none}
+.src-beat[data-live="true"]::before{height:6px;margin-top:-3px;border-radius:3px;background:var(--viz-2);transform-origin:0 50%;animation:src-draw .9s cubic-bezier(.22,1,.36,1) backwards .15s}
+@keyframes src-draw{from{transform:scaleX(0)}}
+.src-now{position:absolute;top:2px;bottom:2px;z-index:1;width:2px;margin-left:-1px;border-radius:1px;background:var(--link)}
+.src-dot{position:absolute;top:50%;z-index:2;width:8px;height:8px;margin:-4px 0 0 -4px;box-sizing:border-box;border-radius:50%;background:var(--viz-1);box-shadow:0 0 0 2px var(--bg-base);animation:src-pop .3s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.1s + var(--d,0s))}
+.src-dot[data-last="true"]{width:12px;height:12px;margin:-6px 0 0 -6px;box-shadow:0 0 0 2px var(--bg-base),0 0 0 5px var(--bg-accent)}
+.src-dot[data-manual="true"]{background:var(--bg-base);border:2px solid var(--viz-1)}
+.src-dot.nx{width:12px;height:12px;margin:-6px 0 0 -6px;background:var(--bg-base);border:2px dashed var(--viz-1)}
+.src-row[data-scan="stale"] .src-dot:not(.nx){background:var(--warning)}
+.src-row[data-scan="stale"] .src-dot[data-manual="true"]{background:var(--bg-base);border-color:var(--warning)}
+@keyframes src-pop{from{opacity:0;transform:scale(.2)}}
+.src-off{position:absolute;top:50%;z-index:2;width:0;height:0;margin-top:-6px;border:6px solid transparent}
+.src-off[data-end="l"]{left:-8px;border-right-color:var(--viz-1)}.src-row[data-scan="stale"] .src-off[data-end="l"]{border-right-color:var(--warning)}.src-off[data-end="r"]{right:-8px;border-left-color:var(--viz-1)}
+.src-cc{min-width:0}
+.src-sel{box-sizing:border-box;width:100%;height:32px;padding:0 8px;border:1px solid var(--border-secondary);border-radius:8px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:13px;line-height:30px;cursor:pointer}
+.src-sel:hover{border-color:var(--border-primary)}.src-sel:focus{outline:2px solid var(--border-active);outline-offset:1px}
+.src-acts{display:flex;align-items:center;justify-content:flex-start;gap:6px;min-width:0}
+.src-act{display:inline-flex;align-items:center;gap:6px;height:32px;box-sizing:border-box;padding:0 12px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:13px;line-height:18px;font-weight:600;white-space:nowrap;cursor:pointer;transition:border-color .15s ease,background .15s ease}
+.src-act:hover{border-color:var(--border-active);background:var(--bg-accent)}
+.src-ib{display:grid;place-items:center;flex:none;width:32px;height:32px;box-sizing:border-box;padding:0;border:1px solid var(--border-secondary);border-radius:50%;background:var(--bg-base);color:var(--text-body);cursor:pointer;transition:border-color .15s ease,color .15s ease}
+.src-ib:hover{border-color:var(--border-active);color:var(--link)}
+.src-dnote{display:flex;align-items:center;gap:16px}.src-dnote .kchip{font-size:13px;line-height:18px}.src-dnote .kchip .ic{color:var(--link)}
+.src-act:focus-visible,.src-ib:focus-visible,.src-go:focus-visible,.src-add:focus-visible{outline:2px solid var(--border-active);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){.fx-card.src-kpi,.src-dot,.src-beat[data-live="true"]::before{animation:none}.src-row,.src-go,.src-go .ic,.src-act,.src-ib,.src-add{transition:none}}
+/* Observe > Logs as a story (2026-10-13, Micah: "tell the story with less words, and more visualizations, animations and
+   icons"). One card over the rows: the verdict on the left, what the traffic did, each figure a door that lights the chip it
+   names and its move beside it; the record stream on the right, every record a dot on its pattern's lane in time (blue on
+   AT&T, grey outside it, a red ring denied), a filter dimming what it leaves out. Then the filters, folded onto two lines,
+   and the rows: the path as a glyph, the pattern as a glyph, the action as a verb badge. Motion rests on its last frame. */
+.fx-card.log-hero{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:24px;padding:12px 20px;border-radius:14px;align-items:stretch}
+.log-verdict{display:grid;grid-auto-rows:1fr;gap:4px;min-width:0;padding-right:24px;border-right:1px solid var(--border-secondary)}
+.log-v{display:grid;grid-template-columns:minmax(0,1fr) 132px;align-items:center;gap:10px;min-width:0;animation:log-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(var(--i,0) * 60ms)}
+/* A fade, never a slide: a row that moves while it lands sits off its slot for the walk that measures it. */
+@keyframes log-in{from{opacity:0}}
+.log-v-door{display:grid;grid-template-columns:32px 52px minmax(0,1fr);align-items:center;gap:12px;min-width:0;height:36px;padding:0 10px 0 0;border:0;border-radius:10px;background:transparent;font:inherit;text-align:left;cursor:pointer;transition:background .15s ease}
+.log-v-door:hover{background:var(--bg-wash)}
+.log-v-door[aria-pressed="true"]{background:var(--bg-accent)}
+.log-v-door:disabled{cursor:default}.log-v-door:disabled:hover{background:transparent}
+.log-v-n{font-size:22px;line-height:28px;font-weight:700;letter-spacing:-.01em;color:var(--text-heading);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.log-v-l{display:grid;gap:5px;min-width:0}
+.log-v-l>span{font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-meter{display:block;height:4px;border-radius:2px;background:var(--bg-neutral);overflow:hidden}
+.log-meter>i{display:block;height:100%;border-radius:2px;background:var(--viz-1);transform-origin:0 50%;animation:log-grow .8s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.15s + var(--i,0) * 60ms)}
+@keyframes log-grow{from{transform:scaleX(0)}}
+.log-v[data-tone="bad"] .log-v-n{color:var(--error)}
+.log-v[data-tone="bad"] .ic-tile{background:color-mix(in srgb,var(--error) 12%,transparent);color:var(--error)}
+.log-v[data-tone="bad"] .log-meter>i{background:var(--error)}
+.log-go{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;min-width:0;height:30px;box-sizing:border-box;padding:0 12px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font:inherit;font-size:12px;line-height:16px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .15s ease}
+.log-go:hover{background:var(--bg-accent)}
+.log-stream{display:grid;grid-auto-rows:minmax(24px,1fr);align-content:stretch;min-width:0}
+.log-lane,.log-axis{display:grid;grid-template-columns:184px minmax(0,1fr);align-items:center;gap:12px;min-width:0}
+/* Flow records' lanes are glyph and count, the chips below name them; its key takes the room the names left. */
+.log-hero[aria-label="What the traffic did"] .log-lane,.log-hero[aria-label="What the traffic did"] .log-axis{grid-template-columns:150px minmax(0,1fr)}
+.log-lane-h[data-glyph="true"]{grid-template-columns:16px auto;justify-content:start}
+.log-chips .fx-chip .ic{margin-left:-2px}
+.log-lane-h{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:center;gap:8px;min-width:0;height:24px;padding:0 8px;border:0;border-radius:6px;background:transparent;font:inherit;font-size:12px;line-height:16px;color:var(--text-body);text-align:left;cursor:pointer;transition:background .15s ease}
+.log-lane-h>span:nth-child(2){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-lane-h>b{font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.log-lane-h .ic{color:var(--text-light)}
+.log-lane-h:hover{background:var(--bg-wash)}.log-lane-h:disabled{cursor:default}.log-lane-h:disabled:hover{background:transparent}
+.log-lane-h[aria-pressed="true"]{background:var(--bg-accent);color:var(--link)}.log-lane-h[aria-pressed="true"] .ic,.log-lane-h[aria-pressed="true"]>b{color:var(--link)}
+.log-track{position:relative;display:block;height:24px;margin:0 9px}
+.log-track::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed var(--border-secondary)}
+.log-dot{position:absolute;top:50%;width:var(--s,10px);height:var(--s,10px);margin:calc(var(--s,10px) / -2) 0 0 calc(var(--s,10px) / -2);padding:0;box-sizing:border-box;border:0;border-radius:50%;background:var(--viz-1);box-shadow:0 0 0 1.5px var(--bg-base);cursor:pointer;transition:opacity .2s ease,transform .15s ease;animation:log-pop .4s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.2s + var(--d,0s))}
+@keyframes log-pop{from{opacity:0;transform:scale(.2)}}
+.log-dot[data-path="out"]{background:var(--viz-6)}
+.log-dot[data-deny="true"]{background:var(--bg-base);border:2.5px solid var(--error)}
+.log-dot[data-on="false"]{opacity:.22}
+.log-dot:hover{transform:scale(1.25);z-index:2}
+.log-dot[aria-pressed="true"]{box-shadow:0 0 0 2px var(--bg-base),0 0 0 4px var(--cta);z-index:3}
+.log-dot:focus-visible{outline:2px solid var(--border-active);outline-offset:2px}
+.log-axis{height:16px}
+.log-key{display:flex;align-items:center;gap:12px;padding-left:8px;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap}
+.log-key>span{display:inline-flex;align-items:center;gap:5px}.log-key i{width:8px;height:8px;border-radius:50%;background:var(--viz-1)}.log-key i[data-path="out"]{background:var(--viz-6)}
+.log-ticks{position:relative;display:block;height:16px;margin:0 9px}
+.log-ticks em{position:absolute;top:0;transform:translateX(-50%);font-style:normal;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;font-variant-numeric:tabular-nums}
+.log-ticks em:first-child{transform:none}.log-ticks em:last-child{transform:translateX(-100%)}
+/* The filters: the toggle, the count and the pager on one line; the Find box and the chips on two. */
+.log-bar{display:flex;align-items:center;gap:12px;min-width:0;min-height:30px;padding-top:10px;border-top:1px solid var(--border-secondary)}
+.log-ftog{flex:1;display:flex;align-items:center;gap:8px;min-width:0;height:30px;padding:0;border:0;background:transparent;font:inherit;font-size:12px;line-height:16px;color:var(--text-light);text-align:left;cursor:pointer}
+.log-ftog .ic{color:var(--text-body)}.log-ftog b{font-weight:600;color:var(--text-body)}
+.log-ftog em{margin-left:auto;font-style:normal;font-weight:700;color:var(--link)}
+.fx-btn.log-clear{height:28px;padding:0 12px;font-size:12px}
+.log-bar .est-pager{margin-left:0;flex:none}
+.log-bar>.fx-search.log-find{flex:1;width:auto}
+.log-count{font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;cursor:help}
+.log-filters{display:grid;gap:8px;padding:0 0 10px;border-bottom:1px solid var(--border-secondary)}
+.log-frow{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
+.log-frow>.fx-search.log-find{flex:1 1 240px;max-width:360px;width:auto}.log-frow>.log-chips{flex:none}
+.log-fl{color:var(--text-light)}.log-frow>.log-fl:not(:first-child){margin-left:6px}
+.log-chips .fx-chip{height:26px;padding:0 10px;font-size:12px;line-height:24px}
+/* The rows. */
+.log-rows{display:grid;min-width:0}
+.log-row{display:grid;grid-template-columns:28px 62px minmax(0,1.3fr) 16px minmax(0,1.3fr) 72px 60px 60px 14px;column-gap:16px;align-items:center;min-height:46px;box-sizing:border-box;padding:5px 0;border-bottom:1px solid var(--border-secondary);cursor:pointer;transition:background .12s ease,box-shadow .12s ease}
+.log-row.log-ua{grid-template-columns:28px 62px 150px minmax(0,1fr) minmax(0,1.5fr) 16px 96px 14px}
+.log-row.log-th{min-height:0;padding:0 0 8px;cursor:default;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)}
+.log-th>.r{text-align:right;justify-self:end}
+.log-row:not(.log-th):hover{background:var(--bg-wash);box-shadow:-12px 0 0 var(--bg-wash),12px 0 0 var(--bg-wash)}
+.log-row[aria-selected="true"],.log-row[aria-selected="true"]:hover{background:var(--bg-accent);box-shadow:-12px 0 0 var(--bg-accent),12px 0 0 var(--bg-accent)}
+.log-row.log-ua[data-can="false"]{cursor:default}.log-row.log-ua[data-can="false"] .est-caret{visibility:hidden}
+.log-path[data-on="false"]{background:var(--bg-neutral);color:var(--text-body)}
+.log-t,.log-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap}
+.log-mono{color:var(--text-body)}
+.log-end{display:grid;gap:1px;min-width:0}
+.log-end b{font-size:14px;line-height:18px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-end small{font-size:12px;line-height:16px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-pat{color:var(--text-light)}
+.log-gb{justify-self:end;font-size:13px;line-height:18px;font-weight:600;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap}
+.log-row .fw-badge{justify-self:start;font-size:12px}
+.log-who{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;line-height:18px}.log-who .ic{color:var(--text-light)}
+.log-who b{font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-verb{font-size:13px;line-height:18px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-none{display:flex;align-items:center;justify-content:center;gap:8px;padding:20px;font-size:13px;line-height:18px;color:var(--text-light)}
+.fx-card.log-calm{min-height:280px;padding:32px}
+.log-calm .src-go{flex:none;min-width:200px}
+@media (prefers-reduced-motion: reduce){.log-v,.log-meter>i,.log-dot{animation:none}.log-v-door,.log-lane-h,.log-dot,.log-go,.log-row{transition:none}}
 .dt .dt-select{box-sizing:border-box;max-width:100%;height:28px;padding:0 8px;border:1px solid var(--border-secondary);border-radius:6px;background:var(--bg-base);color:var(--text-heading);font:inherit;font-size:12px;line-height:26px;cursor:pointer}
 .dt .dt-select:hover{border-color:var(--border-primary)}
 .dt .dt-select:focus{outline:2px solid var(--border-active);outline-offset:1px}
