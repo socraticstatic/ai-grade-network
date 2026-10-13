@@ -337,6 +337,70 @@ export function siteDrillRows(est, trail, opts = {}) {
   return site ? pathsOf({ ...site, cls: cls.cls, clsLabel: cls.label, access: site.access || second.access }) : null;
 }
 
+/**
+ * Every place the picture can open, by name (Micah, 2026-10-13: "an elegant consistent way to immediately go to an asset
+ * deep down like a pci", "want to find something specific", "don't invent a new UI for filtering/searching"). The
+ * picture's Jump reads it, the flow map's own button and search box: Enter lands on the match with the drill trails and
+ * the drawer the picture already has. Sites by place (region, state, metro, site), clouds by hop (cloud, region, VPC,
+ * subnet), workloads by name or address, and an app tag at each VPC it runs in. `land` is the state that opens it.
+ */
+export function jumpIndex(est, inv) {
+  const out = [];
+  const add = (e) => out.push({ count: 0, ...e, hay: (e.hay || e.name).toLowerCase() });
+  for (const r of regionRows(est)) {
+    const p1 = ['region:' + r.name];
+    add({ kind: 'Region', side: 'sites', name: r.name, trail: [r.name], land: { drill: p1 } });
+    const a = siteDrillRows(est, p1, { full: true }); if (!a) continue;
+    for (const st of a.rows.filter(x => String(x.key).startsWith('state:'))) {
+      const p2 = [...p1, st.key];
+      add({ kind: 'State', side: 'sites', name: st.name, trail: [r.name, st.name], land: { drill: p2 } });
+      const b = siteDrillRows(est, p2, { full: true }); if (!b) continue;
+      for (const m of b.rows.filter(x => String(x.key).startsWith('metro:'))) {
+        const p3 = [...p2, m.key];
+        add({ kind: 'Metro', side: 'sites', name: m.name, trail: [r.name, st.name, m.name], land: { drill: p3 } });
+        const c = siteDrillRows(est, p3, { full: true }); if (!c) continue;
+        for (const x of c.rows.filter(y => String(y.key).startsWith('site:'))) add({ kind: 'Site', side: 'sites', name: x.name, hay: `${x.name} ${x.access || ''}`, trail: [r.name, st.name, m.name, x.name], land: { drill: [...p3, x.key] } });
+      }
+    }
+  }
+  const clouds = new Set();
+  const drawer = (vol, extra) => ({ vol, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [], volSlide: 0, ...extra });
+  for (const reg of (inv || []).flatMap(c => c.regions)) {
+    const top = (est.regionsList || []).find(x => x.region === reg.region); if (!top) continue;
+    const cl = top.cloud, pick = { cloudPick: cl };
+    if (!clouds.has(cl)) { clouds.add(cl); add({ kind: 'Cloud', side: 'clouds', name: cl, trail: [cl], land: { ...pick, cloudDrill: [] } }); }
+    add({ kind: 'Cloud region', side: 'clouds', name: top.region, hay: `${top.region} ${cl}`, trail: [cl, top.region], land: { ...pick, cloudDrill: [top.region] } });
+    for (const v of reg.vpcs || []) {
+      const tv = [cl, top.region, v.name];
+      add({ kind: 'VPC', side: 'clouds', name: v.name, hay: `${v.name} ${v.purpose || ''}`, trail: tv, land: { ...pick, cloudDrill: [top.region, v.id] } });
+      const tags = {};
+      for (const sn of v.subnets || []) {
+        add({ kind: 'Subnet', side: 'clouds', name: sn.name, hay: `${sn.name} ${sn.cidr || ''}`, trail: [...tv, sn.name], land: { ...pick, cloudDrill: [top.region, v.id, sn.id] } });
+        for (const w of sn.workloads || []) {
+          const t = w.tag || 'untagged'; tags[t] = (tags[t] || 0) + 1;
+          add({ kind: 'Workload', side: 'clouds', name: w.name, hay: `${w.name} ${w.ip || ''}`, trail: [...tv, sn.name, w.name],
+            land: { ...pick, cloudDrill: [top.region, v.id, sn.id], ...drawer({ kind: 'workloads', region: top.region, vpcId: v.id, snId: sn.id }, { volQ: w.name }) } });
+        }
+      }
+      // A tag is a filter across a VPC's workloads, never a level beneath one (naas-volume.js), so it lands on the VPC
+      // with every workload in the drawer and the tag's chip on.
+      for (const [t, n] of Object.entries(tags)) if (t !== 'untagged') add({ kind: 'Tag', side: 'clouds', name: t, count: n, trail: tv,
+        land: { ...pick, cloudDrill: [top.region, v.id], ...drawer({ kind: 'workloads', region: top.region, vpcId: v.id, snId: null, flat: true }, { volPath: t }) } });
+    }
+  }
+  return out;
+}
+const JUMP_KIND = ['Tag', 'Cloud', 'Cloud region', 'Region', 'State', 'Metro', 'Site', 'VPC', 'Subnet', 'Workload'];
+/** The index's matches for what was typed, best first: the exact name, a prefix, a word, then anywhere; a tag by its size. */
+export function jumpFind(index, q) {
+  const needle = String(q || '').trim().toLowerCase(); if (!needle) return [];
+  const word = new RegExp(`(^|[\\s·/_.-])${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+  const rank = (e) => { const nm = e.name.toLowerCase(); return nm === needle ? 0 : nm.startsWith(needle) ? 1 : word.test(nm) ? 2 : nm.includes(needle) ? 3 : e.hay.includes(needle) ? 4 : 9; };
+  return index.map(e => ({ e, r: rank(e) })).filter(x => x.r < 9)
+    .sort((a, b) => a.r - b.r || JUMP_KIND.indexOf(a.e.kind) - JUMP_KIND.indexOf(b.e.kind) || b.e.count - a.e.count || a.e.name.localeCompare(b.e.name))
+    .map(x => x.e);
+}
+
 /** Right column of the hero for a cloud drill: [region] → its VPCs; [region, vpc] → subnets; [region, vpc, subnet] → workloads. Other regions fold into one row. */
 export function regionDrillRows(est, inv, trail) {
   if (!trail || !trail.length) return null;

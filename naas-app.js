@@ -636,6 +636,29 @@ export function vals(c) {
   // The AT&T network trail carries its own root ('fab'); the other two do not, so
   // crumb i cuts one deeper on the band.
   const crumbCut = (col, i) => colTrail(col).slice(0, col === 'fabric' ? i + 1 : i);
+  // Jump on the picture (Micah, 2026-10-13: "an elegant consistent way to immediately go to an asset deep down like a
+  // pci", "want to find something specific", "don't invent a new UI for filtering/searching"): the flow map's own Jump
+  // button and search box. The index is every place the picture drills (X.jumpIndex); Enter lands on the match the box
+  // names, arrows walk the others, Esc closes. A site jump clears the filters and the grouping that could hide it.
+  const jumpQ = s.picJumpQ || '';
+  const jumpHits = s.picJumpOpen && jumpQ.trim() ? X.jumpFind(X.jumpIndex(est, inv), jumpQ) : [];
+  const jumpI = jumpHits.length ? ((s.picJumpI || 0) % jumpHits.length + jumpHits.length) % jumpHits.length : 0;
+  const jumpHit = jumpHits[jumpI] || null;
+  const jumpLand = (e) => set({ ...(e.side === 'sites' ? { siteFilter: {}, siteGroup: 'region', svcMenu: false, locMenu: false } : {}), vol: null, drawerOpen: false, ...e.land, picJumpOpen: false, picJumpQ: '', picJumpI: 0 });
+  const jumpVals = {
+    picJumpOpen: !!s.picJumpOpen, picJumpQ: jumpQ,
+    openPicJump: () => set({ picJumpOpen: !s.picJumpOpen, picJumpQ: '', picJumpI: 0 }),
+    setPicJumpQ: (e) => set({ picJumpQ: e.target.value, picJumpI: 0 }),
+    picJumpKey: (e) => { const k = e.key;
+      if (k === 'Enter') { if (jumpHit) jumpLand(jumpHit); }
+      else if (k === 'Escape') set({ picJumpOpen: false, picJumpQ: '', picJumpI: 0 });
+      else if ((k === 'ArrowDown' || k === 'ArrowUp') && jumpHits.length > 1) { if (e.preventDefault) e.preventDefault(); set({ picJumpI: jumpI + (k === 'ArrowDown' ? 1 : -1) }); } },
+    picKey: (e) => { if (e.key === '/' && !s.picJumpOpen) { if (e.preventDefault) e.preventDefault(); set({ picJumpOpen: true, picJumpQ: '', picJumpI: 0 }); } },
+    hasPicJumpHint: !!jumpQ.trim(),
+    picJumpHint: !jumpQ.trim() ? '' : jumpHit ? `${jumpHit.kind} · ${jumpHit.trail.join(' › ')}${jumpHit.count ? ` · ${jumpHit.count}` : ''}` : 'No match',
+    picJumpCount: jumpHits.length > 1 ? `${jumpI + 1} of ${jumpHits.length}` : '', hasPicJumpCount: jumpHits.length > 1,
+    picJumpTitle: jumpHit ? `Enter opens ${jumpHit.kind.toLowerCase()} ${jumpHit.name}${jumpHits.length > 1 ? '; arrows walk the other matches' : ''}` : '',
+  };
   const openLevel = (col) => set({ vol: { kind: 'level', col }, volFlat: false, drawerOpen: true, andiOpen: false, volQ: '', volPath: 'all', volState: 'all', volPage: 1, volSel: [], volSlide: (s.volSlide || 0) + 1 });
   // A level scope holds no ids of its own - the column trail IS the scope. The
   // row handlers below still need cls/metro/region/vpcId, so resolve them once
@@ -1175,6 +1198,7 @@ export function vals(c) {
         helpIcon: iconDir + '/question-circle.svg', helpSoonBg: s.theme === 'dark' ? 'rgba(209,143,224,.16)' : 'rgba(175,41,187,.12)', helpSoonInk: s.theme === 'dark' ? '#e2a6ee' : '#8f2199' };
     })(),
     ...filterVals, showOpenHint: !s.openHintSeen && !s.drill.length && !cloudPick && !isEmpty, dismissOpenHint: () => { set({ openHintSeen: true }); try { localStorage.setItem('naas.openHint', 'seen'); } catch (e) {} },
+    ...jumpVals,
     crumbs, verbTabs, cloudCrumbs, siteTrail, cloudTrail, sitesDrilled: s.drill.length > 0, cloudsDrilled: !!cloudPick, hasCloudCrumbs: cloudCrumbs.length > 0, showCrumbs: s.drill.length > 0 || cloudDrill.length > 0, drillLabel: [drillLabel, regionDrill ? `${regionDrill.label} · ${regionDrill.level}s` : ''].filter(Boolean).join(' · '), hasDrill: s.drill.length > 0 || cloudDrill.length > 0, drillUp: () => set({ drill: s.drill.slice(0, -1), cloudDrill: cloudDrill.slice(0, -1), cloudPick: cloudDrill.length ? cloudPick : null }), sitesHead: s.drill.length ? '‹ ' + S.labelOfKey(est, s.drill[s.drill.length - 1]) : 'Sites', sitesUp: () => set({ drill: s.drill.slice(0, -1) }), sitesHeadColor: s.drill.length ? 'var(--link)' : 'var(--text-light)', cloudsHead: regionDrill ? '‹ ' + (regionDrill.crumb || [cloudDrill[0]]).slice(-1)[0] : 'Clouds', cloudsUp: cloudsUpNow, cloudsHeadColor: regionDrill ? 'var(--link)' : 'var(--text-light)', cloudsHeadW, showWorkloadsHead: false, tConnect: s.tab === 'connect', tGovern: s.tab === 'govern', tObserve: s.tab === 'observe', tCost: s.tab === 'cost',
     // Scope lives on Traffic; Connect, Govern and Cost read the whole estate (2026-09-29 audit).
     ...connectVals(s, set, est, go, ob),

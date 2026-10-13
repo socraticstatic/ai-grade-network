@@ -224,6 +224,10 @@ function railLinks() {
   for (const b of rail.querySelectorAll('button')) {
     const lab = b.getAttribute('aria-label');
     if (!lab) { group = (b.textContent || '').trim().toLowerCase(); continue; }
+    // The journey's door (2026-10-12, "Connect a cloud" under NaaS) leaves the dashboard for story mode, which hides the
+    // rail, so every rail click after it found nothing and the walk measured the home alone (found 2026-10-13). The
+    // journey has its own walk; the rail walk skips its door.
+    if (lab === 'Connect a cloud') continue;
     out.push({ group, label: lab });
   }
   return out;

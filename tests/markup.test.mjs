@@ -551,7 +551,10 @@ test('every container the markup opens, it closes', () => {
   // and an enforced row's state is its toggle (span -1, sc-if +1): span 1482 -> 1481, sc-if 665 -> 666.
   // Into the policy engine from the flows (2026-10-09): a link in the wizard's Advanced Settings and one in the journey's
   // Protect deck key, each a button and its glyph (span +2, button +2): span 1516 -> 1518, button 531 -> 533.
-    ['span', /<span\b/g, /<\/span>/g, 1514],
+  // Jump on the picture (2026-10-13, "immediately go to an asset deep down"): the flow map's button and search box in the
+  // filter row, its glyph, the match it names and the count (span +3, sc-if +3, button +1, label +1):
+  // span 1514 -> 1517, sc-if 680 -> 683, button 536 -> 537, label 31 -> 32.
+    ['span', /<span\b/g, /<\/span>/g, 1517],
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
@@ -560,12 +563,12 @@ test('every container the markup opens, it closes', () => {
   // both hero buttons in one flex row (div +1), and Persona and Estate on one row in the rail foot so Spend ends inside
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 680],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 683],
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 401],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 536],
+    ['button', /<button\b/g, /<\/button>/g, 537],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
-    ['label', /<label\b/g, /<\/label>/g, 31],
+    ['label', /<label\b/g, /<\/label>/g, 32],
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);
