@@ -39,7 +39,7 @@ async function freeze(p, slug, title) {
     const iconOf = (e) => { const m = /brand\/icons[^/]*\/([a-z0-9-]+)\.svg/.exec(e.getAttribute('style') || ''); return m ? m[1] : ''; };
     const RULES = [
       ['header', () => 'Header'], ['nav[aria-label="Products"]', () => 'Products'], ['aside', () => 'Rail'], ['main', () => 'Page'],
-      ['section.js', () => 'Journey stage'], ['ol.js-steps', () => 'Stepper'], ['.js-steps li', (e) => `Step ${txt(e)}`], ['h1.js-line', (e) => `Headline: ${txt(e)}`], ['h1', (e) => `Title: ${txt(e)}`],
+      ['section.js', () => 'Journey stage'], ['ol.js-steps', () => 'Stepper'], ['.js-steps li', (e) => `Step ${txt(e.querySelector('i'))} ${txt(e.querySelector('button > span'))}`], ['h1.js-line', (e) => `Headline: ${txt(e)}`], ['h1', (e) => `Title: ${txt(e)}`],
       ['.js-body', () => 'Stage body'], ['.js-stage', () => 'Stage'], ['.js-node.js-sites', (e) => `${txt(e.querySelector('.js-cap')) || 'Your sites'}`], ['.js-node.js-att', () => 'AT&T network'], ['.js-node.js-cloud', () => 'Your cloud'],
       ['.js-wire', (e) => `Wire: ${txt(e.querySelector('small')) || 'proposed'}`], ['.js-net', (e) => txt(e.querySelector('small')) || 'Outside the AT&T network'], ['.js-sitegrid', () => 'Site glyphs'], ['.js-svc', () => 'Services'],
       ['.js-provs', () => 'Clouds'], ['.js-scan', () => 'Scan steps'], ['.js-cloudhead', () => 'Cloud head'], ['.js-regions', () => 'Regions'], ['.js-region', (e) => `Region: ${txt(e.querySelector('b'))}`], ['.js-rhead', () => 'Region head'],
@@ -53,11 +53,13 @@ async function freeze(p, slug, title) {
       ['.po-head', () => 'Page head'], ['.po-trail, .po-crumb', (e) => (e.classList.contains('po-trail') ? 'Trail' : `Crumb: ${txt(e)}`)], ['.dt', (e) => e.getAttribute('aria-label') || 'Table'], ['.dt-h', () => 'Header row'], ['.dt-b', () => 'Rows'],
       ['.dt-r', (e) => `Row: ${txt(e.querySelector('.dt-c'))}`], ['.dt-th', (e) => `Column: ${txt(e)}`], ['.dt-c', (e) => `Cell: ${txt(e)}`], ['.po-pager', () => 'Pager'], ['.po-act', (e) => `Button: ${txt(e)}`], ['.po-mark, .js-mark', () => 'Provider mark'],
       ['.kchip', (e) => `Chip: ${txt(e)}`], ['.js-tag', (e) => `Tag: ${txt(e)}`], ['.rail-scroll', () => 'Rail items'], ['aside button[data-page]', (e) => `Rail: ${txt(e)}`], ['.hdr-cust', (e) => `Button: ${txt(e)}`], ['.po-synth', (e) => txt(e)],
-      ['select', (e) => `Select: ${e.getAttribute('aria-label') || txt(e.selectedOptions[0])}`], ['label', (e) => e.getAttribute('title') || txt(e)], ['.ic', (e) => `Icon: ${iconOf(e) || 'glyph'}`], ['button', (e) => `Button: ${txt(e) || e.getAttribute('aria-label') || ''}`],
+      ['select', (e) => `Select: ${e.getAttribute('aria-label') || txt(e.selectedOptions[0])}`], ['label', (e) => e.getAttribute('title') || txt(e)], ['.ic', (e) => `Icon: ${iconOf(e) || 'glyph'}`], ['.js-steps button', (e) => `Step ${txt(e.querySelector('i'))} ${txt(e.querySelector(':scope > span'))}`], ['button', (e) => `Button: ${txt(e) || e.getAttribute('aria-label') || ''}`],
     ];
     const seen = new Set();
-    for (const [sel, fn] of RULES) for (const e of document.querySelectorAll(sel)) { if (seen.has(e)) continue; seen.add(e); if (e.getAttribute('aria-label') && !/^(Steps|Where you are)$/.test(e.getAttribute('aria-label'))) continue; const n = fn(e); if (n && n.trim()) e.setAttribute('aria-label', n.trim()); }
-    for (const e of document.querySelectorAll('div, span, b, small, p, i, em, strong, a')) { if (seen.has(e) || e.getAttribute('aria-label') || e.children.length) continue; const t = txt(e); if (t) e.setAttribute('aria-label', t); }
+    // A name this pass set on an earlier beat is ours to rewrite (data-fn); a name the app gave stays.
+    const ours = (e) => e.hasAttribute('data-fn'), put = (e, n) => { if (n && n.trim()) { e.setAttribute('aria-label', n.trim()); e.setAttribute('data-fn', '1'); } };
+    for (const [sel, fn] of RULES) for (const e of document.querySelectorAll(sel)) { if (seen.has(e)) continue; seen.add(e); if (e.getAttribute('aria-label') && !ours(e) && !/^(Steps|Where you are)$/.test(e.getAttribute('aria-label'))) continue; put(e, fn(e)); }
+    for (const e of document.querySelectorAll('div, span, b, small, p, i, em, strong, a')) { if (seen.has(e) || (e.getAttribute('aria-label') && !ours(e)) || e.children.length) continue; put(e, txt(e)); }
     // A select's chosen option lives in state, not in markup: stamp it so the frozen board shows what the live page showed.
     for (const sel of document.querySelectorAll('select')) { for (const o of sel.options) { if (o.selected) o.setAttribute('selected', ''); else o.removeAttribute('selected'); } }
     const doc = document.documentElement.cloneNode(true);
