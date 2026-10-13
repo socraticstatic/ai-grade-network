@@ -1210,6 +1210,7 @@ export function vals(c) {
     ...costVals(s, set, est, A.inventory(est), obAll, go, c),
     ...bwVals(s, set, est0, conns, go),
     costVerdict, buckets, steerRecs: steerable, costFindings: deptFindings('cost'), hasBuckets: buckets.length > 0, bTotalF: fmt(bTotal), bFabF: fmt(bFab), bSaveF: fmt(bTotal - bFab),
+    ...bucketStory(s, set, est, buckets, bTotal, bFab),
     // compose: Govern's authoring grammar, then the connect flow (Ways to connect, s4, Orders).
     ...wizardVals(s, est, set, c),
     ...flowVals(s, set, est, c),
@@ -1730,7 +1731,7 @@ export function pageRows(rows, size, page, setPage) {
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
 const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], govDrillRows: ['govDrillPage', 8, 'govDrillPager', 'govDrillPageSize'], drawerTags: ['tagPage', 10, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
-  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 4, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], bankRows: ['bankPage', 5, 'bankPager', 'bankPageSize'], regionSaveRows: ['regSavePage', 6, 'regSavePager', 'regSavePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
+  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 4, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 4, 'savePager', 'savePageSize'], bankRows: ['bankPage', 4, 'bankPager', 'bankPageSize'], regionSaveRows: ['regSavePage', 6, 'regSavePager', 'regSavePageSize'], mileRows: ['milePage', 7, 'milePager', 'milePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 // What an added source found sits over Discover's Estate (2026-09-30): its lists give up the rows
 // the alert takes, so the page keeps the fold (At a glance read 905 with it, a filtered Your clouds 973).
 const FOUND_SHRINK = { appRows: 1, cloudRows: 2, placeRows: 2 };
@@ -6013,6 +6014,54 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
 // Cost lands on Optimize (2026-09-30); the panels that folded into Spend still land there.
 const costPanelOf = (k) => (['optimize', 'spend', 'legs', 'money', 'dest', 'mile', 'bucket', 'charges'].includes(k) ? k : ['banked', 'forecast', 'savings'].includes(k) ? 'spend' : 'optimize');
 const COST_DOOR = { 'sec-optimize': 'optimize', 'sec-spend': 'spend' };
+/**
+ * A figure's count-up (Cost's story tabs, 2026-10-13, after Optimize's op-cu): read from the text it prints, so the last
+ * frame is the figure itself. Pre is the sign and the dollar, suf a percent; a million counts in three groups.
+ * Anything that is not a whole number with its commas (a rate, a Gbps) does not count.
+ */
+function cstCu(v) {
+  const m = /^([+−-]?\$?)(\d{1,3}(?:,\d{3})*)(%?)$/.exec(String(v == null ? '' : v));
+  if (!m) return { kOn: 'off', m: 0, k: 0, r: 0, pre: '', suf: '', preCss: "''", sufCss: "''" };
+  const n = +m[2].replace(/,/g, ''), pre = m[1], suf = m[3], kOn = n >= 1e6 ? 'm' : n >= 1000 ? 'k' : 'r';
+  return { kOn, m: Math.floor(n / 1e6), k: kOn === 'm' ? Math.floor(n / 1000) % 1000 : Math.floor(n / 1000), r: kOn === 'r' ? n : n % 1000, pre, suf, preCss: `'${pre}'`, sufCss: `'${suf}'` };
+}
+/**
+ * By bucket as the finding buckets (2026-10-13): what steering saves first, then today, on AT&T and how many can move;
+ * each bucket a bar on one scale, today's length with the AT&T part blue and the saving striped, as Optimize draws its
+ * findings, its own Steer beside it. The bucket with the most to save carries the one filled button.
+ */
+function bucketStory(s, set, est, buckets, bTotal, bFab) {
+  const I = CV.COST_INK, max = Math.max(1, ...buckets.map(b => b.today)), w = (v) => (Math.max(0, v) / max * 100).toFixed(2) + '%';
+  const steer = buckets.filter(b => b.canSteer), top = steer.slice().sort((a, b) => b.saved - a.saved)[0];
+  const toMoves = () => set({ costPanel: 'optimize' }), toSpend = () => set({ costPanel: 'spend', spendList: 'savings' }), toCharges = () => set({ costPanel: 'charges' });
+  const onAttN = buckets.filter(b => CV.bucketInk(est, b) === 'att').length;
+  const clouds = [...new Set(steer.map(b => b.cloud))];
+  const bucketRows = buckets.map((b, i) => ({ key: b.key, d: i, name: b.name, cloud: b.cloud, mark: W.MARK[b.cloud] ? W.markFor(b.cloud, s.theme) : '', hasMark: !!W.MARK[b.cloud], noMark: !W.MARK[b.cloud],
+    todayF: b.todayF, fabricF: b.fabricF, savedF: b.savedF, saveN: Math.max(0, b.saved), canSteer: b.canSteer, noSteer: !b.canSteer, steer: b.steer, explainGo: b.explainGo, primary: !!top && b === top,
+    state: b.action, saveInk: b.canSteer ? 'saved' : '', onAtt: CV.bucketInk(est, b) === 'att', wToday: w(b.today), wAfter: w(Math.min(b.today, b.fabric)), wSave: w(b.today - b.fabric), title: `${b.name}: ${b.arb}` }));
+  const bucketTiles = [
+    { key: 'save', l: 'Could save', icon: 'trending-down', v: fmt(bTotal - bFab), u: '/mo', tone: 'var(--success)', go: toMoves, title: 'Steering every bucket worth it onto AT&T, the moves on Optimize',
+      hasRing: bTotal > 0, ring: cstRing([{ v: bTotal - bFab, c: I.saved.color }], bTotal), ringLabel: `${fmt(bTotal - bFab)} of ${fmt(bTotal)} a month`,
+      chips: top ? [{ key: 'top', icon: 'target', t: top.savedF, title: `The most to save: ${top.name}, ${top.savedF}/mo`, go: top.steer }] : [] },
+    { key: 'today', l: 'Today', icon: 'bill', v: fmt(bTotal), u: '/mo', go: toSpend, title: 'Every bucket, today on the hyperscaler: this month’s spend',
+      hasRing: bTotal > 0, ring: cstRing(['att', 'public'].map(k => ({ v: buckets.filter(b => CV.bucketInk(est, b) === k).reduce((a, b) => a + b.today, 0), c: I[k].color })), bTotal),
+      ringLabel: ['att', 'public'].map(k => `${I[k].word} ${fmt(buckets.filter(b => CV.bucketInk(est, b) === k).reduce((a, b) => a + b.today, 0))}`).join(' · '),
+      chips: [{ key: 'n', icon: 'database', t: String(buckets.length), title: `${buckets.length} egress ${buckets.length === 1 ? 'bucket' : 'buckets'}`, go: toSpend }] },
+    { key: 'onatt', l: 'On AT&T', icon: 'check-shield', v: fmt(bFab), u: '/mo', go: toCharges, title: 'What the AT&T network would carry every bucket for',
+      hasRing: bTotal > 0, ring: cstRing([{ v: bFab, c: I.att.color }], bTotal), ringLabel: `${fmt(bFab)} of ${fmt(bTotal)} a month`,
+      chips: [{ key: 'att', icon: 'check-circle', t: String(onAttN), title: `${onAttN} ${onAttN === 1 ? 'bucket' : 'buckets'} already at your AT&T rate`, go: toCharges }] },
+    { key: 'steer', l: 'To steer', icon: 'shuffle', v: String(steer.length), u: steer.length === 1 ? 'bucket' : 'buckets', go: top ? top.steer : toMoves, title: 'Buckets that cost less on AT&T, each with its Steer',
+      chips: clouds.map(cl => ({ key: cl, icon: 'cloud', t: `${cl} ${steer.filter(b => b.cloud === cl).length}`, title: `${steer.filter(b => b.cloud === cl).length} in ${cl}`, go: (steer.find(b => b.cloud === cl) || {}).steer })) },
+  ].map(cstTile);
+  return { bucketTiles, bucketRows, hasBucketRows: bucketRows.length > 0, bucketTopGo: top ? top.steer : toMoves, bucketMovesGo: toMoves,
+    bucketNote: `Every bucket of egress: ${fmt(bTotal)}/mo today, ${fmt(bFab)}/mo on the AT&T network, and the ones worth steering` };
+}
+/** A ring's fill: each part's ink in turn, the rest of the circle bare. */
+const cstRing = (segs, whole) => { const t = whole != null ? whole : segs.reduce((a, x) => a + x.v, 0); if (!(t > 0)) return 'var(--bg-neutral)'; let acc = 0;
+  const parts = segs.filter(x => x.v > 0).map(x => { const a = acc / t * 100; acc += x.v; return `${x.c} ${a.toFixed(2)}% ${Math.min(100, acc / t * 100).toFixed(2)}%`; });
+  return `conic-gradient(${[...parts, `transparent ${Math.min(100, acc / t * 100).toFixed(2)}% 100%`].join(',')})`; };
+/** A story tile's shape (2026-10-13): one grammar for every Cost tab, the figure's count-up read from what it prints. */
+const cstTile = (t, i) => ({ tone: 'var(--text-heading)', u: '', chips: [], hasChips: (t.chips || []).length > 0, hasRing: false, ring: '', ringC: '', ringLabel: '', hasSpark: false, spark: [], hasFork: false, two: false, one: true, lead: i === 0, leg: false, ...t, i, cu: cstCu(t.v) });
 function egressBaseFor(est, ob) { const bucketToday = (est.buckets || []).reduce((a, b) => a + b.today, 0); return bucketToday || ob.egressMo || 0; }
 /** AT&T's own monthly charges for an estate: on-ramps, hosted VPCs, L3
  *  attaches. Cost › AT&T charges lists them; the Sankey's Cost view prices
@@ -6223,7 +6272,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
   void fabPart; void pubPart;
   // Nothing attached bills no cloud on-ramp; the panel says so and opens what AT&T does bill (w2, 2026-09-30:
   // Small business showed a blank panel while By leg read $1,500/mo of AT&T access circuits).
-  return { ...optVals, noAttCharges: !attCharges.length && est.stage !== 'empty', attEmpty: 'Nothing is attached yet, so AT&T bills no cloud on-ramp. What AT&T bills for your sites\' access is in By leg.', attEmptyGo: () => set({ costPanel: 'legs', costBy: 'all', costPick: null, legDrill: null }),
+  const out = { ...optVals, noAttCharges: !attCharges.length && est.stage !== 'empty', attEmpty: 'Nothing is attached yet, so AT&T bills no cloud on-ramp. What AT&T bills for your sites\' access is in By leg.', attEmptyGo: () => set({ costPanel: 'legs', costBy: 'all', costPick: null, legDrill: null }),
     attCharges, hasAttCharges: attCharges.length > 0, attTotalF: fmt(attTotal), attNetF: (attNet >= 0 ? '+' : '−') + fmt(Math.abs(attNet)), attNetLabel: attNet >= 0 ? 'Net saving after charges' : 'Net cost after savings', attNetColor: attNet >= 0 ? 'var(--success)' : 'var(--warning)', attNote: `${fmt(attTotal)}/mo · carries ${fmt(ob.savingsMo || 0)}/mo of savings`, goMarketplace: go('s7'),
     // Two moves, not a paragraph (2026-09-28): the biggest region to attach and
     // the sites still outside AT&T, each a figure and one button.
@@ -6268,20 +6317,35 @@ function costVals(s, set, est, invAll, ob, go, c) {
       const ends = (() => { if (!n3) return [0, 0]; let a = yOf(n3.asIs), b = yOf(n3.moved); const GAP = 9; if (b - a < GAP) { const mid = (a + b) / 2; a = mid - GAP / 2; b = mid + GAP / 2; } return [Math.max(0, a), Math.min(100 - 4, b)]; })();
       const openN = openMoves.length, bucketsN = bks.length;
       const I = CV.COST_INK;
+      // The story's tiles (2026-10-13, "less words, more visualizations, animations and icons"): each sub line keeps its
+      // words in the title, and draws as a ring, a spark or the forecast's fork, with its counts as glyph and number.
+      const OPT_MARK = { spend: 'bill', routing: 'router' };
+      const fork = (() => { if (!n3) return { a: '', b: '' }; const vs = [last.spend, ...st.next.map(n => n.asIs)], top = Math.max(1, ...vs) * 1.06;
+        const y = (v) => (40 - v / top * 38).toFixed(1), pts = (k) => `M 0 ${y(last.spend)} ` + st.next.map((n, j) => `L ${(j + 1) * 20} ${y(n[k])}`).join(' ');
+        return { a: pts('asIs'), b: pts('moved') }; })();
       return {
         spendTiles: [
-          { key: 'spend', l: 'Spend this month', v: fmt(last.spend), u: '/mo', sub: has ? `egress, ${bucketsN} ${bucketsN === 1 ? 'bucket' : 'buckets'} · ${fmt(outNow)} outside AT&T` : 'egress · none seen yet', tone: 'var(--text-heading)', one: true, go: toBuckets, title: 'This month’s egress, bucket by bucket' },
-          { key: 'banked', l: 'Banked to date', v: fmt(bankTo.cumulative), u: '', sub: `${fmt(last.saved)} this month, by acting`, tone: 'var(--success)', one: true, go: toBanked, title: 'What your connections on AT&T and each closed finding banked, source by source' },
-          { key: 'could', l: 'Could save', v: fmt(r100(couldSave)), u: '/mo', sub: pricedOpt.length ? `if you act on ${pricedOpt.map(r => r.label).join(' and ')}` : 'no open moves to act on', tone: 'var(--success)', one: true, go: toMoves, title: pricedOpt.length ? `${pricedOpt.map(r => `${r.label} ${r.figureF.replace(/^Save /, '')}`).join(' · ')}, on Optimize` : 'Nothing priced to move today' },
+          { key: 'spend', l: 'Spend this month', v: fmt(last.spend), u: '/mo', sub: has ? `egress, ${bucketsN} ${bucketsN === 1 ? 'bucket' : 'buckets'} · ${fmt(outNow)} outside AT&T` : 'egress · none seen yet', tone: 'var(--text-heading)', one: true, go: toBuckets, title: 'This month’s egress, bucket by bucket',
+            icon: 'bill', hasRing: has, ring: cstRing([{ v: attNow, c: I.att.color }, { v: outNow, c: I.public.color }], last.spend), ringLabel: `${fmt(attNow)} at your AT&T rate · ${fmt(outNow)} outside AT&T`,
+            chips: has ? [{ key: 'buckets', icon: 'database', t: String(bucketsN), title: `${bucketsN} egress ${bucketsN === 1 ? 'bucket' : 'buckets'}`, go: toBuckets },
+              { key: 'out', icon: 'globe', t: fmt(outNow), title: 'Outside AT&T, at the cloud provider’s public rates', go: () => set({ costPanel: 'legs', costBy: 'all', costPick: null, legDrill: { leg: 'cloud', row: 'egress' }, legAPage: 0, legCPage: 0, legPPage: 0 }) }] : [] },
+          { key: 'banked', l: 'Banked to date', v: fmt(bankTo.cumulative), u: '', sub: `${fmt(last.saved)} this month, by acting`, tone: 'var(--success)', one: true, go: toBanked, title: 'What your connections on AT&T and each closed finding banked, source by source',
+            icon: 'check-circle', hasSpark: bankSeries.length > 0, spark: bankSeries.map((b, i) => ({ key: b.month, h: (b.cumulative / bankMax * 100).toFixed(2) + '%', d: i, title: `${monthName(b.month)} · ${fmt(b.cumulative)} to date` })),
+            chips: [{ key: 'month', icon: 'clock', t: fmt(last.saved), title: `${fmt(last.saved)} this month, by acting`, go: toBanked }] },
+          { key: 'could', l: 'Could save', v: fmt(r100(couldSave)), u: '/mo', sub: pricedOpt.length ? `if you act on ${pricedOpt.map(r => r.label).join(' and ')}` : 'no open moves to act on', tone: 'var(--success)', one: true, go: toMoves, title: pricedOpt.length ? `${pricedOpt.map(r => `${r.label} ${r.figureF.replace(/^Save /, '')}`).join(' · ')}, on Optimize` : 'Nothing priced to move today',
+            icon: 'trending-down', hasRing: has, ring: cstRing([{ v: r100(couldSave), c: I.saved.color }], last.spend), ringLabel: `Could save, out of ${fmt(last.spend)} this month`,
+            chips: pricedOpt.map(r => ({ key: r.key, icon: OPT_MARK[r.key] || 'target', t: r.label, title: `${r.label}: ${r.figureF}, on Optimize`, go: toMoves })) },
           { key: 'ahead', l: 'In 90 days', v: fmt(r100(n3 ? n3.moved : last.spend)), u: '/mo', asIsV: fmt(r100(n3 ? n3.asIs : last.spend)), asIsWord: 'as is', actWord: 'if you act', tone: 'var(--text-heading)', two: true, one: false, go: toMoves, goAsIs: toBuckets,
-            title: `Both grow ${Math.round(R.SPEND_GROWTH * 100)}% a month. If you act takes the open moves off first, so the gap is Could save, grown with the bytes.` },
-        ],
+            title: `Both grow ${Math.round(R.SPEND_GROWTH * 100)}% a month. If you act takes the open moves off first, so the gap is Could save, grown with the bytes.`,
+            icon: 'trending-up', hasFork: !!n3 && has, forkAsIs: fork.a, forkAct: fork.b, forkAsIsInk: I.asis.color, forkActInk: I.act.color },
+        ].map(cstTile),
+        spendActGo: toMoves, spendChartGo: toBuckets,
         spendCols: [
           ...st.past.map((p, i) => { const attN = Math.round(p.spend * attShare), outN = p.spend - attN;
-            return { key: p.key, kind: 'past', label: colLabel(monthName(p.month), i), spendN: p.spend, attN, outN, topN: p.saved, baseN: p.spend,
+            return { key: p.key, d: i, kind: 'past', label: colLabel(monthName(p.month), i), spendN: p.spend, attN, outN, topN: p.saved, baseN: p.spend,
               attH: pct(attN), outH: pct(outN), topH: pct(p.saved), attFill: I.att.color, outFill: I.public.color, topFill: I.saved.color, bg: 'transparent', weight: i === st.past.length - 1 ? 700 : 500,
               go: toBuckets, title: `${monthName(p.month)} · spent ${fmt(p.spend)} · banked ${fmt(p.saved)} by acting` }; }),
-          ...st.next.map(n => ({ key: n.key, kind: 'next', label: colLabel(aheadName(n.m), -1), spendN: n.moved, asIsN: n.asIs, movedN: n.moved, topN: 0, baseN: 0,
+          ...st.next.map((n, j) => ({ key: n.key, d: st.past.length + j, kind: 'next', label: colLabel(aheadName(n.m), -1), spendN: n.moved, asIsN: n.asIs, movedN: n.moved, topN: 0, baseN: 0,
             attH: '0%', outH: '0%', topH: '0%', attFill: 'transparent', outFill: 'transparent', topFill: 'transparent', bg: 'var(--bg-wash)', weight: 500,
             go: toMoves, title: `${aheadName(n.m)} · ${fmt(n.asIs)} as is · ${fmt(n.moved)} if you act · ${fmt(n.asIs - n.moved)} to save` })),
         ],
@@ -6321,7 +6385,10 @@ function costVals(s, set, est, invAll, ob, go, c) {
       const toScope = (r) => () => set({ costPanel: 'spend', spendList: 'banked', bankScope: { dim, key: r.key, label: r.label }, bankSource: null, bankPage: 0 });
       const toSource = (x) => () => set({ costPanel: 'spend', spendList: 'banked', bankSource: x.key, bankScope: null, bankPage: 0 });
       const none = () => {};
-      const saveRows = rows.map(r => ({ key: r.key, label: r.label, bankedN: r.banked, openN: r.open, bankedF: fmt(r.banked), openF: fmt(r.open), bw: (r.banked / mx * 100).toFixed(1) + '%', ow: (r.open / mx * 100).toFixed(1) + '%',
+      // A row leads with its mark (2026-10-13): a cloud region or a cloud its provider's, a business unit its glyph.
+      const cloudOfRow = (r) => (dim === 'cloud' ? r.label : dim === 'region' ? String(r.label).split(' ')[0] : '');
+      const saveRows = rows.map((r, i) => ({ key: r.key, d: i % 4, mark: W.MARK[cloudOfRow(r)] ? W.markFor(cloudOfRow(r), s.theme) : '', hasMark: !!W.MARK[cloudOfRow(r)], noMark: !W.MARK[cloudOfRow(r)], icon: dim === 'bu' ? 'person-group' : 'cloud',
+        label: r.label, bankedN: r.banked, openN: r.open, bankedF: fmt(r.banked), openF: fmt(r.open), bw: (r.banked / mx * 100).toFixed(1) + '%', ow: (r.open / mx * 100).toFixed(1) + '%',
         ink: CV.COST_INK.saved.color, bankedOff: !(r.banked > 0), goBanked: r.banked > 0 ? toScope(r) : none, goOpen: toOpen, go: r.open > 0 ? toOpen : r.banked > 0 ? toScope(r) : none }));
       // What Banked counts, source by source: the network's own saving since the first attach and each closed finding.
       // Scoped to a place, each source's share there (LC.savingsBy's bySource, each source where it names), so a
@@ -6379,6 +6446,132 @@ function costVals(s, set, est, invAll, ob, go, c) {
     destClasses: R.destClasses(ob, base, targetSave).map((d, i) => ({ ...d, op: [1, 0.75, 0.5, 0.3][i] || 0.3, fill: CV.modelledFill(), explainGo: destGo(d) })), forecast: fc, fcVB: `0 0 ${fc.W} ${fc.H}`, commitments: R.commitments(est, base).map(cm => ({ ...cm, short: /^Commit/.test(cm.verdict) ? 'Commit' : 'Stay metered',
       explainGo: explainNav(c, { label: (cm.label || cm.region || 'On-ramp') + ' · metered volume', value: cm.gbF ? cm.gbF + ' GB/mo' : '',
         sub: 'The bytes the metered bill is charging for.', cut: 'The records this region carried.', parts: [] }) })), hasCommitments: R.commitments(est, base).length > 0 };
+  return { ...out, ...costStory(out) };
+  // ---------- The story tabs (2026-10-13) ----------
+  // Micah, after Estate, Optimize and Govern: "Do this for more pages! Great space, great layout, calls to action on all
+  // widgets"; "Each page should be its own gorgeous, extremely beautiful story, with calls to action on each"; "tell the
+  // story with less words, and more visualizations, animations and icons". Each tab's verdict tile and the three beside it,
+  // its hero's rows and its moves, drawn from the figures above: nothing here prices anything.
+  function costStory(o) {
+    const I = CV.COST_INK, num = (f) => +String(f).replace(/[^0-9.]/g, '') || 0, pctW = (v, m) => (m > 0 ? Math.max(0, v) / m * 100 : 0).toFixed(2) + '%';
+    const markOf = (cloud) => (W.MARK[cloud] ? W.markFor(cloud, s.theme) : '');
+    const toBuckets = () => set({ costPanel: 'bucket' }), toMoves = () => set({ costPanel: 'optimize' });
+    const toEgress = () => set({ costPanel: 'legs', costBy: 'all', costPick: null, legDrill: { leg: 'cloud', row: 'egress' }, legAPage: 0, legCPage: 0, legPPage: 0 });
+    const toBanked = () => set({ costPanel: 'spend', spendList: 'banked', bankScope: null, bankSource: null, bankPage: 0 });
+    const toSites = (filter) => go('s1', { discoverView: 'estate', estPanel: 'sites', newOnly: false, placeFilter: filter || null, placeTrail: [], placePage: 0 });
+    const bks = est.buckets || [];
+    const bChip = (key, n, word) => ({ key, icon: 'database', t: String(n), title: `${n} ${n === 1 ? 'bucket' : 'buckets'} ${word}`, go: toBuckets });
+
+    // By region: the whole, what is outside AT&T today, what the open moves save there, and the regions to move.
+    const bars = o.regionBars || [], byCloud = /cloud/.test(o.regionHead || '');
+    const barInk = (k) => bars.reduce((a, b) => a + b.segs.filter(x => x.ink === k).reduce((q, x) => q + x.v, 0), 0);
+    const regTotal = bars.reduce((a, b) => a + b.v, 0);
+    const nowSum = arb.reduce((a, r) => a + r.nowN, 0), saveSum = arb.reduce((a, r) => a + r.saveN, 0);
+    const rsr = (o.regionSaveRows || []).map((r, i) => ({ ...r, d: i % 6, mark: markOf(r.cloud), hasMark: !!W.MARK[r.cloud], noMark: !W.MARK[r.cloud], primary: i === 0 }));
+    const firstAct = (act) => (rsr.find(r => r.act === act) || {}).attach;
+    const attachN = rsr.filter(r => r.act === 'Attach').length, steerN = rsr.length - attachN;
+    const regionLead = cstTile({ key: 'total', l: byCloud ? 'Every cloud' : 'Every region', icon: 'map', v: o.regionTotalF, u: '/mo', go: o.regionTotalGo,
+      title: `${o.regionTotalF} ${o.regionHead || ''}, end to end. Open it by leg.`,
+      hasRing: regTotal > 0, ring: cstRing(['att', 'public', 'list', 'other'].map(k => ({ v: barInk(k), c: I[k].color })), regTotal), ringLabel: ['att', 'public', 'list'].map(k => `${I[k].word} ${fmt(Math.round(barInk(k)))}`).join(' · '),
+      chips: [{ key: 'places', icon: byCloud ? 'cloud' : 'pinpoint', t: String(bars.length), title: `${bars.length} ${byCloud ? 'clouds, and your sites' : 'places'}`, go: o.regionTotalGo }] }, 0);
+    const regionTiles = [
+      { key: 'out', l: 'Outside AT&T', icon: 'globe', v: fmt(nowSum), u: '/mo', go: toEgress, title: 'Egress outside AT&T today, in the regions that could move: each bucket in its own cloud’s regions, by workloads',
+        hasRing: regTotal > 0, ring: cstRing([{ v: nowSum, c: I.public.color }], regTotal), ringLabel: `${fmt(nowSum)} of ${o.regionTotalF} a month`,
+        chips: [{ key: 'regions', icon: 'cloud', t: String(arb.length), title: `${arb.length} ${arb.length === 1 ? 'cloud region' : 'cloud regions'} with egress outside AT&T`, go: toEgress }] },
+      { key: 'regionSave', l: 'Could save', icon: 'trending-down', v: o.regionSaveTotalF, u: '/mo', tone: 'var(--success)', go: toMoves, title: 'What the open moves save in those regions, on Optimize',
+        hasRing: nowSum > 0, ring: cstRing([{ v: saveSum, c: I.saved.color }], nowSum), ringLabel: `${o.regionSaveTotalF} of ${fmt(nowSum)} outside AT&T`,
+        chips: [{ key: 'moves', icon: 'bill', t: String(openMoves.length), title: `${openMoves.length} open ${openMoves.length === 1 ? 'move' : 'moves'} priced`, go: toMoves }] },
+      { key: 'move', l: 'Regions to move', icon: 'target', v: String(rsr.length), u: rsr.length === 1 ? 'region' : 'regions', go: rsr[0] ? rsr[0].attach : toMoves, title: 'Each region outside AT&T, its door Attach or Steer',
+        chips: [attachN ? { key: 'attach', icon: 'plus-circle', t: String(attachN), title: `${attachN} to attach, a new private connection`, go: firstAct('Attach') } : null,
+          steerN ? { key: 'steer', icon: 'shuffle', t: String(steerN), title: `${steerN} to steer, on the connection it has`, go: firstAct('Steer') } : null].filter(Boolean) },
+    ].map((t, i) => cstTile(t, i + 1));
+
+    // By destination: where the egress goes, as a stack that fans out to its four classes, and what of it can move.
+    const DEST_ICON = { ai: 'ai', obj: 'database', inet: 'internet', x: 'cloud-transfer' };
+    const moveRing = (o.costDonuts || []).find(d => d.key === 'move');
+    const pctOf = (label) => ((moveRing && moveRing.rows.find(r => r.label === label)) || {}).pctF || '0%';
+    const destTiles = [
+      { key: 'egress', l: 'Egress', icon: 'cloud-transfer', v: fmt(base || 0), u: '/mo', go: toBuckets, title: `${fmt(base || 0)} a month leaves your clouds, in four destination classes, modelled`,
+        chips: dcls.map(d => ({ key: d.key, icon: DEST_ICON[d.key] || 'target', t: d.w, title: `${d.label}: ${d.nowF}/mo, ${d.w} of egress`, go: destGo(d) })) },
+      { key: 'att', l: 'At AT&T rate', icon: 'check-circle', v: fmt(atRate), u: '/mo', go: toBuckets, title: 'Already at your AT&T rate: nothing to recover',
+        hasRing: base > 0, ring: cstRing([{ v: atRate, c: I.att.color }], base), ringC: pctOf('Already at AT&T rate'), ringLabel: `${pctOf('Already at AT&T rate')} of egress`,
+        chips: [bChip('att', bks.filter(b => CV.bucketInk(est, b) === 'att').length, 'at your AT&T rate')] },
+      { key: 'recover', l: 'Recoverable now', icon: 'trending-down', v: fmt(recover), u: '/mo', tone: 'var(--success)', go: toMoves, title: 'The premium over your AT&T rate, the moves on Optimize',
+        hasRing: base > 0, ring: cstRing([{ v: recover, c: I.saved.color }], base), ringC: pctOf('Recoverable now'), ringLabel: `${pctOf('Recoverable now')} of egress`,
+        chips: [bChip('steer', bks.filter(b => b.today > b.fabric).length, 'worth steering')] },
+      { key: 'after', l: 'After steering', icon: 'globe', v: fmt(residual), u: '/mo', go: toBuckets, title: 'Outside AT&T today: after steering, the bytes still cost something',
+        hasRing: base > 0, ring: cstRing([{ v: residual, c: I.public.color }], base), ringC: pctOf('Base after steering'), ringLabel: `${pctOf('Base after steering')} of egress`,
+        chips: [bChip('out', bks.filter(b => CV.bucketInk(est, b) === 'public').length, 'outside AT&T')] },
+    ].map(cstTile);
+    // The fan (rows 56px apart by 10px; the stack's segments 4px apart): each class's ribbon leaves its segment of the stack
+    // and lands on its row, drawn in the row's own frame so no loop runs inside an svg.
+    const FAN = { H: 56, G: 10, SG: 4, W: 120 }, fanH = dcls.length * FAN.H + Math.max(0, dcls.length - 1) * FAN.G, segSpace = fanH - Math.max(0, dcls.length - 1) * FAN.SG;
+    const nowMax = Math.max(1, ...dcls.map(d => num(d.nowF)));
+    let fanAt = 0;
+    const destFan = dcls.map((d, i) => { const h = segSpace * d.share, y0 = fanAt, top = i * (FAN.H + FAN.G); fanAt += h + FAN.SG;
+      const a0 = (y0 - top).toFixed(1), a1 = (y0 + h - top).toFixed(1), b0 = 14, b1 = FAN.H - 14, m = FAN.W / 2;
+      return { key: d.key, i, label: d.label, icon: DEST_ICON[d.key] || 'target', nowF: d.nowF, ifAllF: d.ifAllF, hyperF: d.hyperF, fabricF: d.fabricF, pctF: d.w, segH: h.toFixed(1) + 'px',
+        rib: `M 0 ${a0} C ${m} ${a0} ${m} ${b0} ${FAN.W} ${b0} L ${FAN.W} ${b1} C ${m} ${b1} ${m} ${a1} 0 ${a1} Z`,
+        wNow: pctW(num(d.nowF), nowMax), wAll: pctW(num(d.ifAllF), nowMax), go: destGo(d),
+        title: `${d.label}: ${d.nowF}/mo today, ${d.w} of egress · ${d.gbF} GB a month at ${d.hyperF}/GB on the cloud, ${d.fabricF}/GB on AT&T · ${d.ifAllF}/mo if all on AT&T` }; });
+
+    // By first mile: the access each site buys, how many of its sites are on AT&T, and the first miles still public to move.
+    const MILE_ICON = { avpn: 'hub', aseod: 'ethernet', tpa: 'internet', abf: 'cable', adi: 'globe', aiab: 'wireless-network', ipsec: 'lock', other: 'router' };
+    const sitesAll = siteCls.reduce((a, x) => a + x.count, 0), sitesOn = siteCls.reduce((a, x) => a + x.onFabric, 0);
+    const pubTot = siteRows.reduce((a, r) => a + r.pubPart, 0), mileMax = Math.max(1, ...siteRows.map(r => r.today));
+    const clsOf = (k) => siteCls.find(x => x.key === k) || { count: 0, onFabric: 0 };
+    const nfm = (n) => n.toLocaleString('en-US');
+    const MOD = 'var(--text-body)'; // a first mile is a model: its rings wear the Modelled ink, never a money colour
+    const mileRows = (o.bySite || []).map((r, i) => { const k = clsOf(r.key);
+      return { ...r, d: i, icon: MILE_ICON[r.key] || 'router', pub: r.pubPart > 0, wToday: pctW(r.today, mileMax), title: `${r.label}: ${r.todayF}/mo · ${r.sub}`,
+        chips: [{ key: 'sites', icon: 'large-building', t: nfm(k.count), title: `${nfm(k.count)} ${k.count === 1 ? 'site' : 'sites'}` }, { key: 'on', icon: 'check-shield', t: nfm(k.onFabric), title: `${nfm(k.onFabric)} on AT&T` }] }; });
+    const mileMoves = siteRows.filter(r => r.pubPart > 0).map(r => { const xs = (est.sites || []).filter(x => ((S.servicesOf(x)[0] || {}).key) === r.key && !onAtt(x)), n = xs.reduce((a, x) => a + S.countOf(x.name), 0);
+      return { key: r.key, label: r.label, icon: MILE_ICON[r.key] || 'router', sites: xs.map(x => x.name), sitesT: nfm(n), pubF: fmt(r.pubPart),
+        title: `${r.label}: ${nfm(n)} ${n === 1 ? 'site' : 'sites'} outside AT&T · ${fmt(r.pubPart)}/mo of egress starts on a public first mile`,
+        go: discoverOrder(go, est, { sites: xs.map(x => x.name), note: `Move the ${nfm(n)} ${r.label} ${n === 1 ? 'site' : 'sites'} outside AT&T onto the AT&T network.` }), sitesGo: toSites('outside') }; })
+      .filter(m => m.sites.length).map((m, i) => ({ ...m, d: i, primary: i === 0 }));
+    const topMile = (o.bySite || [])[0];
+    const mileTiles = [
+      { key: 'mile', l: 'By first mile', icon: 'ethernet', v: fmt(bySiteTotal), u: '/mo', go: toBuckets, title: 'This month’s egress, shared by the first mile each site buys: a model, not a bill',
+        chips: [{ key: 'kinds', icon: 'ethernet', t: String(siteRows.length), title: `${siteRows.length} kinds of access`, go: toSites() }, { key: 'sites', icon: 'large-building', t: nfm(sitesAll), title: `${nfm(sitesAll)} sites`, go: toSites() }] },
+      { key: 'public', l: 'Public first mile', icon: 'internet', v: fmt(pubTot), u: '/mo', go: toSites('outside'), title: o.bySiteNote,
+        hasRing: bySiteTotal > 0, ring: cstRing([{ v: pubTot, c: MOD }], bySiteTotal), ringLabel: `${fmt(pubTot)} of ${fmt(bySiteTotal)} a month`,
+        chips: [{ key: 'off', icon: 'large-building', t: nfm(sitesAll - sitesOn), title: `${nfm(sitesAll - sitesOn)} sites outside AT&T`, go: toSites('outside') }] },
+      { key: 'on', l: 'Sites on AT&T', icon: 'check-shield', v: nfm(sitesOn), u: `of ${nfm(sitesAll)}`, go: toSites(), title: `${nfm(sitesOn)} of ${nfm(sitesAll)} sites reach the cloud on an AT&T first mile`,
+        hasRing: sitesAll > 0, ring: cstRing([{ v: sitesOn, c: MOD }], sitesAll), ringLabel: `${nfm(sitesOn)} of ${nfm(sitesAll)} sites`,
+        chips: [{ key: 'kindsOn', icon: 'ethernet', t: String(siteCls.filter(x => x.onFabric > 0).length), title: 'kinds of access on AT&T', go: toSites() }] },
+      topMile ? { key: 'top', l: topMile.label, icon: MILE_ICON[topMile.key] || 'router', v: topMile.todayF, u: '/mo', go: topMile.go, title: `The largest first mile: ${topMile.label}, ${topMile.todayF}/mo · ${topMile.sub}`,
+        hasRing: bySiteTotal > 0, ring: cstRing([{ v: topMile.today, c: MOD }], bySiteTotal), ringLabel: `${topMile.todayF} of ${fmt(bySiteTotal)} a month`,
+        chips: [{ key: 'sites', icon: 'large-building', t: nfm(clsOf(topMile.key).count), title: `${nfm(clsOf(topMile.key).count)} sites`, go: topMile.go }, { key: 'on', icon: 'check-shield', t: nfm(clsOf(topMile.key).onFabric), title: `${nfm(clsOf(topMile.key).onFabric)} on AT&T`, go: topMile.go }] }
+        : { key: 'top', l: 'Largest first mile', icon: 'router', v: '$0', u: '/mo', go: toSites(), title: 'No first mile priced yet' },
+    ].map(cstTile);
+
+    // AT&T charges: the bill, what it carries, the net, and where committing beats the metered bill.
+    const CH_ICON = { nb: 'hub', hv: 'cloud', l3: 'network-folder' };
+    const chargeRows = (o.attCharges || []).map((r, i) => ({ ...r, d: i, icon: CH_ICON[r.key] || 'bill', n: (r.parts || []).reduce((a, p) => a + (p.n || 0), 0), title: `${r.label}: ${r.sub} = ${r.vF}/mo, at catalog price` }));
+    const cms = o.commitments || [], cmMax = Math.max(1, ...cms.map(cm => num(cm.metered)));
+    const firstCommit = cms.findIndex(cm => /^Commit/.test(cm.verdict));
+    const commitRows = cms.map((cm, i) => { const cloud = String(cm.region).split(' ')[0], met = num(cm.metered), com = num(cm.committed);
+      return { ...cm, d: i, name: cm.region, mark: markOf(cloud), hasMark: !!W.MARK[cloud], noMark: !W.MARK[cloud], commit: /^Commit/.test(cm.verdict), primary: i === firstCommit,
+        wMet: pctW(met, cmMax), wCom: pctW(Math.min(met, com), cmMax), wSave: pctW(met - com, cmMax), title: `${cm.region}: ${cm.gbF} GB a month · metered ${cm.metered} · committed ${cm.committed}. ${cm.verdict}` }; });
+    const commitN = cms.filter(cm => /^Commit/.test(cm.verdict)).length;
+    const chargeTiles = [
+      { key: 'bill', l: 'To AT&T', icon: 'bill', v: o.attTotalF, u: '/mo', go: o.goMarketplace, title: `${o.attTotalF}/mo to AT&T, at catalog price: the catalog's prices`,
+        chips: chargeRows.map(r => ({ key: r.key, icon: r.icon, t: String(r.n), title: `${r.label}: ${r.sub}`, go: o.goMarketplace })) },
+      { key: 'carries', l: 'Saved on AT&T', icon: 'check-circle', v: fmt(ob.savingsMo || 0), u: '/mo', tone: 'var(--success)', go: toBanked, title: `The egress savings your connections on AT&T carry: ${fmt(ob.savingsMo || 0)}/mo`,
+        hasRing: (ob.savingsMo || 0) + attTotal > 0, ring: cstRing([{ v: attTotal, c: I.att.color }, { v: ob.savingsMo || 0, c: I.saved.color }]), ringLabel: `${o.attTotalF} to AT&T carries ${fmt(ob.savingsMo || 0)} of savings` },
+      { key: 'net', l: 'Net', icon: 'time-money', v: o.attNetF, u: '/mo', tone: attNet >= 0 ? 'var(--success)' : 'var(--text-heading)', go: toBanked, title: `${o.attNetLabel}: egress savings minus these charges` },
+      { key: 'commit', l: 'Commit', icon: 'repeat', v: String(commitN), u: `of ${cms.length}`, go: commitRows[firstCommit] ? commitRows[firstCommit].explainGo : o.goMarketplace, title: 'Cloud connections where a commitment beats the metered bill at this volume',
+        hasRing: cms.length > 0, ring: cstRing([{ v: commitN, c: 'var(--text-body)' }], cms.length), ringLabel: `${commitN} of ${cms.length} would commit` },
+    ].map(cstTile);
+
+    return { regionLead, regionTiles, regionSaveRows: rsr, regionMovesGo: toMoves,
+      destNote: `${fmt(base || 0)} a month of egress, in four destination classes modelled from this month's bill: each at the cloud's rate and at AT&T's`,
+      mileOutGo: toSites('outside'),
+      destTiles, destFan, hasDestFan: destFan.length > 0 && base > 0, destFanH: fanH + 'px', destActGo: toMoves, destBucketsGo: toBuckets, destRecoverF: fmt(recover),
+      mileTiles, mileRows, mileMoves, hasMileMoves: mileMoves.length > 0, noMileMoves: !mileMoves.length, mileSitesGo: toSites(), mileTotalF: fmt(bySiteTotal),
+      chargeTiles, chargeRows, commitRows, chargeRet: (() => { const sv = ob.savingsMo || 0, mx = Math.max(1, attTotal, sv); return { wBill: pctW(attTotal, mx), wSaved: pctW(sv, mx), savedF: fmt(sv) }; })(), hasCommitRows: commitRows.length > 0, noCommitRows: !commitRows.length };
+  }
 }
 /**
  * Cost by leg, and the one filter bar that slices it (Micah, 2026-09-30: "cost by
@@ -6429,9 +6622,14 @@ function costLegVals(s, set, est, legs0, go, c) {
     return `${CV.placeOfSite((est.sites || []).find(x => x.name === p.site) || { name: p.site, metro: '' })} · ${n}${p.role === 'backup' ? ' · backup' : ''}`;
   };
   const partLabel = (p) => (p.kind === 'bucket' ? p.label : p.kind === 'region' ? [regionOfPart(p).cloud, p.region].filter(Boolean).join(' ') : p.site);
-  const rowOf = (leg) => (r) => ({ key: r.key, label: r.label, sub: CV.rowWords(r), title: r.title || CV.rowWords(r), vF: fmt(Math.round(r.v)), modelled: !!r.modelled, mark: r.modelled ? 'Modelled' : '', isPart: false,
+  const rowOf = (leg) => (r) => ({ key: r.key, label: r.label, sub: CV.rowWords(r), short: CV.shortWords(r), title: [r.title || CV.rowWords(r), r.title ? CV.rowWords(r) : ''].filter(Boolean).join(' · '), vF: fmt(Math.round(r.v)), modelled: !!r.modelled, mark: r.modelled ? 'Modelled' : '', isPart: false,
     swatch: swatchOf([r]), edge: edgeOf([r]), go: () => set({ legDrill: { leg, row: r.key }, [PAGE[leg]]: 0 }) });
-  const partOf = (row) => (p) => ({ key: row.key + '|' + p.kind + ':' + (p.key || p.site || p.region || p.bucket), label: partLabel(p), sub: partWords(row, p), title: partWords(row, p), vF: fmt(Math.round(p.v)), modelled: !!p.modelled, mark: p.modelled ? 'Modelled' : '', isPart: true,
+  // A part's short line (2026-10-13): who is paid, or where it is, in a few words; partWords stays its title.
+  const partShort = (row, p) => (p.kind === 'bucket' ? `${p.cloud} · ${p.ink === 'public' ? 'outside AT&T' : 'AT&T rate'}`
+    : p.kind === 'region' && p.egress ? `${p.ink === 'public' ? 'Outside AT&T' : 'AT&T price'} · ${p.wl.toLocaleString('en-US')} workloads`
+      : p.kind === 'region' ? [regionOfPart(p).cloud, `${Math.round(p.n).toLocaleString('en-US')} ${(row.nouns || ['item', 'items'])[Math.round(p.n) === 1 ? 0 : 1]}`].filter(Boolean).join(' · ')
+        : `${CV.placeOfSite((est.sites || []).find(x => x.name === p.site) || { name: p.site, metro: '' })} · ${Math.round(p.n).toLocaleString('en-US')}${p.role === 'backup' ? ' backup' : ''}`);
+  const partOf = (row) => (p) => ({ key: row.key + '|' + p.kind + ':' + (p.key || p.site || p.region || p.bucket), label: partLabel(p), sub: partWords(row, p), short: partShort(row, p), title: partWords(row, p), vF: fmt(Math.round(p.v)), modelled: !!p.modelled, mark: p.modelled ? 'Modelled' : '', isPart: true,
     swatch: row.carrier || p.ink === 'other' ? 'transparent' : CV.fillOf(p.ink, p.modelled), edge: row.carrier || p.ink === 'other' ? `1px solid ${I.other.color}` : '0', go: partGo(p) });
   // Sliced but not picked: each leg lists the members, and a member opens its own legs.
   // A member's rows in words short enough to read whole (the skeptic, 2026-09-30: the service list ran out of room).
@@ -6440,7 +6638,8 @@ function costLegVals(s, set, est, legs0, go, c) {
   // A member's row reads what its tile reads once picked (w2, 2026-09-30: US Central's IPsec row read $37, picked $36).
   const memberRowsOf = (leg) => members.map(m => { const all = CV.sliceLegs(est, legs0, by, m.key), sl = all[leg];
     const mR = m.vR != null ? CV.roundTo(['access', 'connect', 'cloud'].map(k => all[k].total), m.vR)[['access', 'connect', 'cloud'].indexOf(leg)] : Math.round(sl.total);
-    return { key: 'm:' + m.key, label: m.label, sub: listWords([...new Set(sl.rows.map(r => r.label.replace(/ · remote sites$/, '')))]), title: `${m.label}: ${fmt(mR)}/mo of ${legs0[leg].label.toLowerCase()}`, v: sl.total, vF: fmt(mR), modelled: false, mark: '', isPart: false,
+    const kinds = [...new Set(sl.rows.map(r => r.label.replace(/ · remote sites$/, '')))];
+    return { key: 'm:' + m.key, label: m.label, sub: listWords(kinds), short: listWords(kinds, 28), title: `${m.label}: ${fmt(mR)}/mo of ${legs0[leg].label.toLowerCase()} · ${kinds.join(', ')}`, v: sl.total, vF: fmt(mR), modelled: false, mark: '', isPart: false,
       swatch: swatchOf(sl.rows), edge: edgeOf(sl.rows), go: () => set({ costPick: m.key, ...reset }), n: sl.rows.length }; }).filter(r => r.n > 0).sort((a, b) => b.v - a.v);
   const rowsOf = (leg) => {
     if (by !== 'all' && !pick) return memberRowsOf(leg);
@@ -6467,13 +6666,47 @@ function costLegVals(s, set, est, legs0, go, c) {
   const legKs = ['access', 'connect', 'cloud'], legTotalR = pickM ? pickM.vR : Math.round(legs.total);
   const legR = CV.roundTo(legKs.map(k => legs[k].total), legTotalR);
   const legPct = legs.total > 0 ? CV.roundTo(legKs.map(k => legs[k].total / legs.total * 100), 100) : legKs.map(() => 0);
+  const LEG_ICON = { access: 'large-building', connect: 'hub', cloud: 'cloud' };
+  // Each leg's card carries its own move (2026-10-13): the sites' access opens the sites, the connectivity the ways to
+  // connect, and the cloud provider's bill, where the savings are, the moves; that one is the filled button.
+  const legCards = [
+    { key: 'access', label: legs.access.label, icon: LEG_ICON.access, cta: 'Open the sites', ctaGo: go('s1', { discoverView: 'estate', estPanel: 'sites', placeFilter: null, placeTrail: [], placePage: 0 }), primary: false },
+    { key: 'connect', label: legs.connect.label, icon: LEG_ICON.connect, cta: 'Ways to connect', ctaGo: go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'ways' }), primary: false },
+    { key: 'cloud', label: legs.cloud.label, icon: LEG_ICON.cloud, cta: 'Cut the egress', ctaGo: () => set({ costPanel: 'optimize' }), primary: true },
+  ].map((k, i) => ({ ...k, i, go: () => set({ legDrill: null, [PAGE[k.key]]: 0 }) }));
+  // The path as the story's tiles (2026-10-13, "By leg as the path"): the end-to-end figure leads, its chips each leg's
+  // share; each leg's ring is who is paid in it (the legend's inks), its share in the middle, its counts as glyph and number.
+  const legTiles = legKs.map((k, i) => { const l = legs[k], segs = CV.inkSegs(l.rows);
+    // A picked member's tiles are shares of that member, not of the estate (the skeptic, 2026-09-30).
+    return { key: l.key, l: l.label, icon: LEG_ICON[l.key] || 'target', v: fmt(legR[i]), u: '/mo', covers: CV.legCovers(l), sub: `${legPct[i]}% of ${pick ? pickLabel : 'the total'}`,
+      title: `${l.label}: ${fmt(legR[i])}/mo · ${CV.legCovers(l)} · ${segs.map(x => `${I[x.ink].word}${x.modelled ? ', modelled' : ''} ${fmt(Math.round(x.v))}`).join(' · ') || 'nothing priced'}`,
+      // Drilled into a row, the leg's tile comes back to its rows; otherwise it is the leg's own move (2026-10-13).
+      go: drill && drill.leg === k ? () => set({ legDrill: null, [PAGE[k]]: 0 }) : legCards[i].ctaGo,
+      hasRing: true, ring: cstRing(segs.map(x => ({ v: x.v, c: x.ink === 'other' ? 'var(--text-disabled)' : I[x.ink].color }))), ringC: `${legPct[i]}%`, ringLabel: `${legPct[i]}% of ${pick ? pickLabel : 'the total'} · ${segs.map(x => `${I[x.ink].word} ${fmt(Math.round(x.v))}`).join(' · ') || 'nothing priced'}`,
+      chips: CV.legCoverChips(l), leg: true }; }).map((t, i) => cstTile({ ...t, chips: t.chips.map(k => ({ ...k, go: t.go })) }, i + 1));
+  // Rows rise in turn, a page at a time.
+  const stag = (r, i) => ({ ...r, d: i % 6 });
+  // Who is paid, end to end (2026-10-13): the legend as the first column's card, each ink's part of the legs' own rows,
+  // in whole dollars that add to the lead tile, each a door to where that money is acted on.
+  const inkAll = CV.inkSegs([...legs.access.rows, ...legs.connect.rows, ...legs.cloud.rows]);
+  const inkR = inkAll.length ? CV.roundTo(inkAll.map(x => x.v), legTotalR) : [];
+  const inkMax = Math.max(1, ...inkAll.map(x => x.v));
+  const INK_GO = { att: () => set({ costPanel: 'charges' }), public: () => set({ costPanel: 'bucket' }), list: () => set({ costPanel: 'money', costBy: 'cloud', costPick: null, ...reset }),
+    other: go('s1', { discoverView: 'estate', estPanel: 'sites', placeFilter: 'outside', placeTrail: [], placePage: 0 }) };
+  const INK_SAYS = { att: 'What AT&T bills at catalog price, and egress already at your AT&T rate: AT&T charges', public: 'Egress at the cloud provider’s public rates: the buckets to steer', list: 'A cloud port, a VPN tunnel or a colo cross-connect at its public list price: by cloud', other: 'Counted, not priced: billed by another carrier' };
+  const carriers = [...legs.access.rows, ...legs.connect.rows, ...legs.cloud.rows].filter(r => r.carrier);
+  const legInks = [...inkAll.map((x, i) => ({ key: x.key, d: i, label: ({ 'att:m': 'AT&T, modelled', 'public:m': 'Outside, modelled' })[x.key] || I[x.ink].word, vF: fmt(inkR[i]), w: (x.v / inkMax * 100).toFixed(2) + '%',
+      bg: CV.fillOf(x.ink, x.modelled), edge: '0', title: `${I[x.ink].word}${x.modelled ? ', modelled' : ''}: ${fmt(inkR[i])}/mo. ${INK_SAYS[x.ink] || ''}`, go: INK_GO[x.ink] || (() => {}) })),
+    ...(carriers.length ? [{ key: 'other', d: inkAll.length, label: I.other.word, vF: '', w: '0%', bg: 'transparent', edge: `1px solid ${I.other.color}`, title: `${I.other.word}: ${carriers.map(r => CV.rowWords(r)).join(' · ')}`, go: INK_GO.other }] : [])];
   return {
-    legTiles: legKs.map((k, i) => { const l = legs[k], segs = CV.inkSegs(l.rows);
-      // A picked member's tiles are shares of that member, not of the estate (the skeptic, 2026-09-30).
-      return { key: l.key, l: l.label, icon: { access: 'large-building', connect: 'hub', cloud: 'cloud' }[l.key] || 'target', v: fmt(legR[i]), u: '/mo', covers: CV.legCovers(l), sub: `${legPct[i]}% of ${pick ? pickLabel : 'the total'}`,
-        title: `${l.label}: ${fmt(legR[i])}/mo · ${CV.legCovers(l)} · ${segs.map(x => `${I[x.ink].word}${x.modelled ? ', modelled' : ''} ${fmt(Math.round(x.v))}`).join(' · ') || 'nothing priced'}`,
-        go: () => set({ legDrill: null, [PAGE[k]]: 0 }) }; }),
-    legAccessRows: rowsOf('access'), legConnectRows: rowsOf('connect'), legCloudRows: rowsOf('cloud'),
+    legTiles,
+    legLead: cstTile({ key: 'total', l: pick ? pickLabel : by === 'region' ? 'Every region' : by === 'cloud' ? 'Every cloud' : 'End to end', icon: 'merge', v: fmt(legTotalR), u: '/mo',
+      title: `${whose}${fmt(legTotalR)} a month, end to end. ${'Each row is count × unit; open one to see what it counts.'}`, go: () => set({ costPanel: 'money', costBy: by === 'cloud' ? 'cloud' : 'region', costPick: null, ...reset }),
+      chips: legTiles.map((t, i) => ({ key: t.key, icon: t.icon, t: `${legPct[i]}%`, title: `${t.l}: ${t.sub}`, go: t.go })) }, 0),
+    // Each leg's card carries its own move (2026-10-13): the sites' access opens the sites, the connectivity the ways to
+    // connect, and the cloud provider's bill, where the savings are, the moves; that one is the filled button.
+    legCards, legCardA: legCards[0], legCardC: legCards[1], legCardP: legCards[2], legInks,
+    legAccessRows: rowsOf('access').map(stag), legConnectRows: rowsOf('connect').map(stag), legCloudRows: rowsOf('cloud').map(stag),
     legAHead: headOf('access'), legCHead: headOf('connect'), legPHead: headOf('cloud'),
     // Empty says No egress once, in the page's own line (the skeptic, 2026-09-30).
     hasLegs: legs0.total > 0, noLegs: !(legs0.total > 0) && est.stage !== 'empty', legEmpty: legs0.total > 0 ? '' : 'No egress seen yet.',
@@ -6488,7 +6721,11 @@ function costLegVals(s, set, est, legs0, go, c) {
     hasCostMembers: members.length > 0,
     // By region, the chart: one bar per region (or cloud), from the same slice.
     costChartChips: [['region', 'By region'], ['cloud', 'By cloud']].map(([k, l]) => { const on = cb === k; return { key: k, label: l, on, ...chipStyle(on), go: () => set({ costBy: k, costPick: null, ...reset }) }; }),
-    regionBars: bars.map(b => ({ key: b.key, label: b.label, v: b.v, egressV: b.egressV, vF: fmt(b.vR), sub: counts(b), w: (b.v / bmax * 100).toFixed(2) + '%', frac: (b.v / bmax).toFixed(4),
+    // A place leads with its mark, its counts as glyph and number (2026-10-13): a cloud its provider's, a place a pin.
+    regionBars: bars.map((b, bi) => ({ key: b.key, d: bi, label: b.label, v: b.v, egressV: b.egressV, vF: fmt(b.vR), sub: counts(b), w: (b.v / bmax * 100).toFixed(2) + '%', frac: (b.v / bmax).toFixed(4),
+      mark: cb === 'cloud' && W.MARK[b.key] ? W.markFor(b.key, s.theme) : '', hasMark: cb === 'cloud' && !!W.MARK[b.key], noMark: !(cb === 'cloud' && W.MARK[b.key]), icon: cb === 'cloud' ? (b.key === CV.SITES ? 'large-building' : 'cloud') : 'pinpoint',
+      chips: (() => { const k = CV.memberCounts(est, cb, b.key), ch = (key, icon, n, one, many) => (n ? { key, icon, t: n.toLocaleString('en-US'), title: `${n.toLocaleString('en-US')} ${n === 1 ? one : many}` } : null);
+        return [ch('sites', 'large-building', k.sites, 'site', 'sites'), ch('regions', 'cloud', k.regions, 'cloud region', 'cloud regions'), cb === 'cloud' ? ch('buckets', 'database', k.buckets, 'egress bucket', 'egress buckets') : null].filter(Boolean); })(),
       // A member that costs $0 here (CoreWeave's ports) is a not-priced-here outline, so it still shows.
       segs: b.v > 0.005 ? b.segs.map(x => ({ key: x.key, ink: x.ink, modelled: x.modelled, v: x.v, w: (x.v / b.v * 100).toFixed(2) + '%', color: I[x.ink].color, bg: CV.fillOf(x.ink, x.modelled), edge: '0', title: `${I[x.ink].word}${x.modelled ? ', modelled' : ''}: ${fmt(Math.round(x.v))}/mo` }))
         : [{ key: 'other', ink: 'other', modelled: false, v: 0, w: '100%', color: I.other.color, bg: 'transparent', edge: `1px solid ${I.other.color}`, title: `${I.other.word}: counted, on no public price list` }],

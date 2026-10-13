@@ -566,7 +566,14 @@ test('every container the markup opens, it closes', () => {
   // move counts, and a foot with its state and action; the h3 row carries the bars' key (div +12, span +17, sc-if +9,
   // sc-for +3, button +5): div 1343 -> 1355, span 1517 -> 1534, sc-if 683 -> 692, sc-for 401 -> 404, button 537 -> 542.
   // All three merged (2026-10-13): Estate, Govern and Optimize, recounted from the file: div 1357, span 1592, sc-if 710, sc-for 407, button 543.
-    ['div', /<div\b/g, /<\/div>/g, 1357],
+  // Cost's seven tabs as stories (2026-10-13, Micah: "Do this for more pages! Great space, great layout, calls to action on all
+  // widgets"; "Each page should be its own gorgeous, extremely beautiful story"): Spend, By leg, By region, By destination, By first
+  // mile, By bucket and AT&T charges each gain a top line (the question, its key or By control), four tiles (a head door with its
+  // glyph and chevron, a figure that counts up, a ring, spark or fork, glyph-and-number chips) and cards with a head, a body and a
+  // foot carrying the action; By leg adds Who is paid and loses its leg-card heads to the tiles above; By destination's fan draws
+  // one ribbon per class; the 11px house chips and the old tables' cells go. Recounted from the file:
+  // div 1357 -> 1381, span 1592 -> 1782, sc-if 710 -> 734, sc-for 407 -> 425, button 543 -> 608.
+    ['div', /<div\b/g, /<\/div>/g, 1381],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -577,7 +584,7 @@ test('every container the markup opens, it closes', () => {
   // Jump on the picture (2026-10-13, "immediately go to an asset deep down"): the flow map's button and search box in the
   // filter row, its glyph, the match it names and the count (span +3, sc-if +3, button +1, label +1):
   // span 1514 -> 1517, sc-if 680 -> 683, button 536 -> 537, label 31 -> 32.
-    ['span', /<span\b/g, /<\/span>/g, 1592], // Estate + Govern + Optimize (2026-10-13), told at the div pin
+    ['span', /<span\b/g, /<\/span>/g, 1782], // Estate + Govern + Optimize, then Cost's stories (2026-10-13), told at the div pin
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
@@ -586,10 +593,10 @@ test('every container the markup opens, it closes', () => {
   // both hero buttons in one flex row (div +1), and Persona and Estate on one row in the rail foot so Spend ends inside
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 710], // Estate + Govern + Optimize (2026-10-13), told at the div pin
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 407], // Estate + Govern + Optimize (2026-10-13), told at the div pin
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 734], // Estate + Govern + Optimize, then Cost's stories (2026-10-13), told at the div pin
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 425], // Estate + Govern + Optimize, then Cost's stories (2026-10-13), told at the div pin
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 543], // Estate + Govern + Optimize (2026-10-13), told at the div pin
+    ['button', /<button\b/g, /<\/button>/g, 608], // Estate + Govern + Optimize, then Cost's stories (2026-10-13), told at the div pin
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 32],
   ];

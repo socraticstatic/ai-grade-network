@@ -255,6 +255,42 @@ export function rowWords(row) {
   const vlan = row.perRegion ? ` + ${fmt(row.perRegion)} for ${noun(regions, 'region', 'regions')}` : '';
   return `${noun(n, one, many)} × ${each(row.unit)}${row.eachWord ? ' each' : ''}${vlan}${row.rateWords ? ', ' + row.rateWords : ''}${backup ? ` · ${nf(backup)} of them backup` : ''}`;
 }
+/**
+ * A row in a few words (Cost's story tabs, 2026-10-13: "tell the story with less words"): count × unit, or what is
+ * outside AT&T for egress. rowWords stays the row's title, so the arithmetic is one hover away.
+ */
+export function shortWords(row) {
+  const n = row.n, parts = row.parts || [];
+  if (row.key === 'egress') {
+    const out = parts.filter(p => p.ink === 'public').reduce((a, p) => a + p.v, 0), att = parts.filter(p => p.ink === 'att').reduce((a, p) => a + p.v, 0);
+    return out > 0.5 && att > 0.5 ? `${fmt(Math.round(out))} outside AT&T` : out > 0.5 ? 'All outside AT&T' : 'All at your AT&T rate';
+  }
+  const [one, many] = row.nouns || ['item', 'items'];
+  if (row.carrier) return `${noun(n, one, many)} · not priced`;
+  if (!row.unit) return `${noun(n, one, many)} · no list price`;
+  return `${noun(n, one, many)} × ${each(row.unit)}`;
+}
+/**
+ * What a leg covers as glyph and number (2026-10-13): the counts legCovers says in words, each with its mark, the
+ * sentence in its title. Nothing is recounted: the same rows, the same nouns.
+ */
+export function legCoverChips(leg) {
+  const rows = leg.rows || [], chip = (key, icon, n, one, many) => ({ key, icon, t: nf(n), title: noun(n, one, many) });
+  if (leg.key === 'access') {
+    const c = rows.reduce((a, r) => a + r.n, 0); if (!c) return [];
+    const nSites = [...new Set(rows.flatMap(r => (r.parts || []).map(p => p.site)))].reduce((a, nm) => a + S.countOf(nm), 0);
+    return [chip('circuits', 'ethernet', c, 'circuit', 'circuits'), chip('sites', 'large-building', nSites, 'site', 'sites')];
+  }
+  if (leg.key === 'connect') {
+    const W = { nb: ['hub', 'NetBond region', 'NetBond regions'], hv: ['cloud', 'hosted VPC', 'hosted VPCs'], l3: ['network-folder', 'L3 attach', 'L3 attaches'], sdwan: ['router', 'SD-WAN site', 'SD-WAN sites'], xc: ['cable', 'cross-connect', 'cross-connects'], ipsec: ['lock', 'IPsec tunnel', 'IPsec tunnels'] };
+    return rows.filter(r => W[r.key] && r.n).slice(0, 3).map(r => chip(r.key, ...W[r.key].slice(0, 1), r.n, ...W[r.key].slice(1)));
+  }
+  const ports = rows.filter(r => r.key !== 'egress'), eg = rows.find(r => r.key === 'egress');
+  const pN = ports.reduce((a, r) => a + r.n, 0), clouds = new Set(ports.map(r => r.cloud).filter(Boolean)).size;
+  const egRegion = !!eg && (eg.parts || []).some(p => p.kind === 'region');
+  return [pN ? chip('ports', 'ethernet', pN, 'port', 'ports') : null, clouds ? chip('clouds', 'cloud', clouds, 'cloud', 'clouds') : null,
+    eg && eg.n ? chip('egress', 'database', eg.n, egRegion ? 'cloud region of egress' : 'egress bucket', egRegion ? 'cloud regions of egress' : 'egress buckets') : null].filter(Boolean);
+}
 /** A leg in words: what its figure covers. */
 export function legCovers(leg) {
   const rows = leg.rows || [];

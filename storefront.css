@@ -476,6 +476,221 @@ a{color:#0057b8}a:hover{color:#00388f}
 .op-calm-i{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--bg-neutral);color:var(--link)}
 .op-calm>p{margin:0;max-width:300px;font-size:14px;line-height:20px;color:var(--text-body);text-wrap:balance}
 @media (prefers-reduced-motion: reduce){.op-board .op-card,.op-cu,.op-cu::after,.op-was,.op-after,.op-saved,.op-ring,.op-row-bar>i,.op-board .op-lane>span::before{animation:none}.op-board .op-card,.op-go,.op-go .ic,.op-ring{transition:none}}
+/* Cost's story tabs (2026-10-13, Micah, after Estate, Optimize and Govern: "Do this for more pages! Great space, great
+   layout, calls to action on all widgets"; "Each page should be its own gorgeous, extremely beautiful story"; "tell the
+   story with less words, and more visualizations, animations and icons"). Spend, By leg, By region, By destination, By
+   first mile, By bucket and AT&T charges in Optimize's language and one grammar: a top line (the question, the key), four
+   equal tiles (the verdict first; a head that is a door, a figure that counts up, a ring, a spark or the forecast's fork,
+   and glyph-and-number chips), then the evidence and the moves as cards with a head, a body and a foot that carries the
+   action. Motion is entrance only: tiles and cards rise, figures count up, rings sweep, bars grow, ribbons and lines draw.
+   Every cst- keyframe names only its first frames, so animation:none and reduced motion rest on the last one.
+   Inks keep Cost's vocabulary: AT&T price blue, outside AT&T the slate, a list price hatched, Modelled the hatched
+   neutral, and the saving green alone (banked solid, still open striped). */
+@property --cst-m{syntax:'<integer>';inherits:true;initial-value:0}
+@property --cst-p{syntax:'<number>';inherits:false;initial-value:100}
+.cst{display:grid;gap:14px;min-width:0;--cst-h:max(380px,calc(100vh - 432px));
+  --cst-save:repeating-linear-gradient(-45deg,var(--success) 0 2.5px,color-mix(in srgb,var(--success) 26%,transparent) 2.5px 5.5px);
+  --cst-mod:repeating-linear-gradient(135deg,var(--text-body) 0 3px,color-mix(in srgb,var(--text-body) 28%,transparent) 3px 6px);
+  --cst-list:repeating-linear-gradient(135deg,var(--viz-2) 0 3px,color-mix(in srgb,var(--viz-2) 28%,transparent) 3px 6px);
+  --cst-hatt:repeating-linear-gradient(135deg,var(--viz-1) 0 3px,color-mix(in srgb,var(--viz-1) 30%,transparent) 3px 6px)}
+.cst[data-sliced="true"]{--cst-h:max(340px,calc(100vh - 476px))}
+@keyframes cst-in{from{opacity:0;transform:translateY(8px)}}
+@keyframes cst-rise{from{transform:scaleY(0)}}
+@keyframes cst-grow{from{transform:scaleX(0)}}
+@keyframes cst-wipe{from{clip-path:inset(0 100% 0 0)}}
+@keyframes cst-fade{from{opacity:0}}
+@keyframes cst-sweep{from{--cst-p:0}}
+@keyframes cst-count{from{--cst-m:0;--op-k:0;--op-r:0;-webkit-text-fill-color:transparent}92%{-webkit-text-fill-color:transparent}}
+@keyframes cst-over{from{opacity:1}92%{opacity:1}}
+/* The top line: the tab's question, its controls, the key. */
+.cst-top{display:flex;align-items:center;gap:16px;min-height:28px;min-width:0}
+.cst-top>h3{margin:0;font-size:18px;line-height:24px;font-weight:700;color:var(--text-heading);white-space:nowrap}
+.cst-key{margin-left:auto;display:flex;align-items:center;gap:18px;min-width:0;font-size:13px;line-height:18px;color:var(--text-body);white-space:nowrap}
+.cst-key>span{display:inline-flex;align-items:center;gap:8px}
+.cst-key i{display:block;flex:none;width:18px;height:10px;border-radius:5px;box-sizing:border-box}
+.cst [data-k="att"],.cst [data-k="after"]{--cst-ink:var(--viz-1)}.cst [data-k="public"]{--cst-ink:var(--warning)}.cst [data-k="saved"],.cst [data-k="banked"]{--cst-ink:var(--success)}
+.cst-key i[data-k]{background:var(--cst-ink,var(--bg-neutral))}
+.cst-key i[data-k="open"]{background:var(--cst-save)}.cst-key i[data-k="list"]{background:var(--cst-list)}.cst-key i[data-k="modelled"]{background:var(--cst-mod)}.cst-key i[data-k="hatt"]{background:var(--cst-hatt)}
+.cst-key i[data-k="other"]{background:transparent;border:1px solid var(--text-disabled)}
+.cst-key i[data-k="asis"]{height:0;border-radius:0;background:transparent;border-top:2px dashed var(--text-light)}
+.cst-key i[data-k="act"]{height:0;border-radius:0;background:transparent;border-top:2.5px solid var(--text-heading)}
+.cst-seg{display:inline-flex;flex:none;gap:2px;padding:2px;border-radius:9px;background:var(--bg-neutral)}
+.cst-seg>button{height:28px;padding:0 12px;border:0;border-radius:7px;background:transparent;font:inherit;font-size:13px;line-height:18px;font-weight:500;color:var(--text-body);cursor:pointer;white-space:nowrap}
+.cst-seg>button[aria-pressed="true"]{background:var(--bg-base);color:var(--text-heading);font-weight:700;box-shadow:0 1px 2px rgba(15,23,42,.12)}
+.cst-seg>button:hover{color:var(--link)}
+.cst-mems{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}
+.cst-mem{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);font:inherit;font-size:13px;line-height:18px;color:var(--text-heading);cursor:pointer;white-space:nowrap}
+.cst-mem>b{font-weight:700;font-variant-numeric:tabular-nums}.cst-mem:hover{border-color:var(--border-active)}
+.cst-mem[aria-pressed="true"]{border-color:var(--cta);background:var(--bg-accent);color:var(--link)}
+/* The tiles: four equal cards, the verdict first (its tile filled), each a head that is a door, a figure that counts up,
+   its mark (a ring, a spark, the fork) and its counts as glyph and number. */
+.cst-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;min-width:0}
+.fx-card.cst-tile{position:relative;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:28px 34px 20px;align-content:space-between;gap:6px 12px;height:124px;box-sizing:border-box;padding:14px 16px;border-radius:14px;
+  transition:border-color .2s,box-shadow .2s,transform .2s;animation:cst-in .55s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(var(--cst-i,0) * 70ms)}
+.fx-card.cst-tile:hover{border-color:var(--border-active);transform:translateY(-2px);box-shadow:0 14px 30px -18px rgba(15,23,42,.35)}
+.cst-th{grid-column:1 / -1;display:flex;align-items:center;gap:10px;min-width:0;border:0;background:transparent;padding:0;font:inherit;font-size:14px;line-height:20px;color:var(--text-heading);text-align:left;cursor:pointer}
+.cst-th>.ic-tile,.cst-hb>.ic-tile{width:28px;height:28px;border-radius:8px}
+.cst-tile[data-lead="true"] .cst-th>.ic-tile{background:var(--cta);color:#fff}
+.cst-th>b,.cst-hb>b{min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s}
+.cst-chev{margin-left:auto;flex:none;color:var(--text-light);transition:transform .15s,color .15s}
+.cst-th:hover .cst-chev,.cst-hb:hover .cst-chev{color:var(--link);transform:translateX(2px)}.cst-th:hover>b,button.cst-hb:hover>b{color:var(--link)}
+.cst-fig{grid-column:1;display:flex;align-items:baseline;gap:6px;min-width:0;white-space:nowrap}
+.cst .cst-big{color:var(--text-heading);font-size:26px;line-height:34px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-underline-offset:5px}
+.cst-fig>small{font-size:13px;line-height:18px;font-weight:500;color:var(--text-body)}
+.cst-tf{grid-column:1;display:flex;align-items:center;gap:12px;min-width:0;overflow:hidden}
+.cst-tf .kchip{gap:4px}
+.cst .kchip.btn{margin:0;padding:0 2px}.cst .kchip.btn:disabled{cursor:default}
+.cst-ln{display:block;flex:none;width:14px;height:0;border-top:2px dashed var(--text-light)}.cst-ln[data-k="act"]{width:18px;align-self:center;border-top:2.5px solid var(--text-heading)}
+.cst-cu{position:relative;display:inline-block;animation:cst-count 1.2s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.15s + var(--cst-i,0) * 70ms)}
+.cst-cu::after{content:var(--op-pre) counter(cst-r) var(--op-suf);counter-reset:cst-r var(--op-r);position:absolute;left:0;top:0;white-space:nowrap;-webkit-text-fill-color:currentColor;opacity:0;pointer-events:none;animation:cst-over 1.2s linear backwards;animation-delay:inherit}
+.cst-cu[data-k="k"]::after{content:var(--op-pre) counter(cst-k) "," counter(cst-r,op-pad3) var(--op-suf);counter-reset:cst-k var(--op-k) cst-r var(--op-r)}
+.cst-cu[data-k="m"]::after{content:var(--op-pre) counter(cst-m) "," counter(cst-k,op-pad3) "," counter(cst-r,op-pad3) var(--op-suf);counter-reset:cst-m var(--cst-m) cst-k var(--op-k) cst-r var(--op-r)}
+.cst-cu[data-k="off"]{animation:none}.cst-cu[data-k="off"]::after{content:none}
+.cst-ring{grid-column:2;grid-row:2 / 4;align-self:center;position:relative;display:grid;place-items:center;width:54px;height:54px;padding:0;border:0;border-radius:50%;background:var(--bg-neutral);font:inherit;color:var(--text-heading);cursor:pointer;transition:box-shadow .2s}
+.cst-ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--cst-ring);-webkit-mask:conic-gradient(#000 calc(var(--cst-p) * 1%),transparent 0);mask:conic-gradient(#000 calc(var(--cst-p) * 1%),transparent 0);animation:cst-sweep 1.3s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.3s + var(--cst-i,0) * 70ms)}
+.cst-ring::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--bg-base)}
+.cst-ring>b{position:relative;z-index:1;font-size:13px;line-height:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.cst-ring:hover{box-shadow:0 0 0 4px var(--bg-accent)}
+.cst-spark{grid-column:2;grid-row:2 / 4;align-self:end;display:flex;align-items:flex-end;gap:2px;width:76px;height:46px;padding:0;border:0;background:transparent;cursor:pointer}
+.cst-spark>i{flex:1;min-width:0;border-radius:2px 2px 0 0;background:var(--success);transform-origin:50% 100%;animation:cst-rise .7s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.3s + var(--cst-d,0) * 40ms)}
+.cst-fork{grid-column:2;grid-row:2 / 4;align-self:center;width:56px;height:44px;padding:0;border:0;background:transparent;cursor:pointer}
+.cst-fork svg{display:block;width:100%;height:100%;overflow:visible;animation:cst-wipe 1s cubic-bezier(.22,1,.36,1) backwards;animation-delay:.5s}
+/* The cards: the evidence and the moves, each a head, a body and a foot with its action. */
+.cst-main{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;min-width:0}
+.cst-main>.cst-card{grid-column:span 2}.cst-main>.cst-card[data-span="1"]{grid-column:span 1}.cst-main>.cst-card[data-span="3"]{grid-column:span 3}.cst-main>.cst-card[data-span="4"],.cst-main>.cst-card:only-child{grid-column:1 / -1}
+.fx-card.cst-card[data-headless="true"]{grid-template-rows:minmax(0,1fr) auto}
+.cst-card[data-span="1"]{padding:16px}.cst-card[data-span="1"] .cst-foot>.cst-end{flex:1}.cst-card[data-span="1"] .cst-foot .op-go{flex:1;min-width:0}
+.fx-card.cst-card{grid-template-rows:auto minmax(0,1fr) auto;gap:14px;height:var(--cst-h);min-height:0;box-sizing:border-box;padding:18px 20px;border-radius:16px;animation:cst-in .6s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.25s + var(--cst-i,0) * 80ms)}
+.cst-h{display:flex;align-items:center;gap:12px;min-width:0;min-height:32px}
+.cst-hb{display:inline-flex;align-items:center;gap:10px;min-width:0;border:0;background:transparent;padding:0;font:inherit;font-size:15px;line-height:20px;color:var(--text-heading);text-align:left;cursor:pointer}
+span.cst-hb{cursor:default}
+.cst-h>.cst-sp{margin-left:auto}
+.cst-body{min-height:0;min-width:0;display:flex;flex-direction:column}
+.cst-foot{display:flex;align-items:center;gap:12px;min-height:36px;min-width:0}
+.cst-foot>.cst-end{margin-left:auto;display:flex;align-items:center;gap:10px}
+.cst-pgr{display:flex;justify-content:flex-end;padding-top:8px}
+.cst .op-go{min-width:184px}
+.cst-pager{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-body);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cst-pager .fx-btn{width:28px;height:28px;padding:0;justify-content:center;font-size:15px}
+.cst-do{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;min-width:76px;box-sizing:border-box;padding:0 14px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font:inherit;font-size:13px;line-height:18px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .2s,color .2s,border-color .2s}
+.cst-do[data-primary="true"]{background:var(--cta);color:#fff}
+.cst-do:hover{background:var(--cta-hover);border-color:var(--cta-hover);color:#fff}
+.cst-do .ic{transition:transform .2s}.cst-do:hover .ic{transform:translateX(2px)}
+.cst-mk{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:var(--bg-accent);color:var(--link)}
+.cst-nm{min-width:0;font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cst-sm{min-width:0;font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cst-v{font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cst-v[data-k="saved"]{color:var(--success)}
+.cst-calm{display:grid;justify-items:center;align-content:center;gap:12px;text-align:center}
+.cst-calm-i{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--bg-neutral);color:var(--link)}
+.cst-calm>p{margin:0;max-width:320px;font-size:14px;line-height:20px;color:var(--text-body);text-wrap:balance}
+.cst-colh{display:grid;align-items:center;gap:12px;padding-bottom:6px;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)}
+/* Spend: the months as bars that rise, the two forecasts that draw, and the savings rows, banked solid and still open striped. */
+.cst-chart{flex:1 1 auto;display:grid;grid-template-columns:44px minmax(0,1fr) 132px;grid-template-rows:minmax(0,1fr) 18px;column-gap:8px;row-gap:6px;min-height:0}
+.cst-plot{position:relative;min-width:0;min-height:0}
+.cst .cost-col{transform-origin:50% 100%;animation:cst-rise .8s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.3s + var(--cst-d,0) * 40ms)}
+.cst-lines{animation:cst-wipe 1.1s cubic-bezier(.22,1,.36,1) backwards;animation-delay:1s}
+.cst .cost-end{animation:cst-fade .5s ease backwards;animation-delay:1.7s}
+.cst .cost-yax span,.cst .cost-end{color:var(--text-body)}
+.cst-xax{grid-column:2;display:grid;min-width:0}.cst-xax>span{text-align:center;font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap}
+.cst-srow{display:grid;grid-template-columns:20px minmax(0,1fr) auto;grid-template-rows:20px 20px;column-gap:10px;row-gap:6px;align-items:center;padding:8px 0;border-top:1px solid var(--border-secondary);animation:cst-in .5s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.35s + var(--cst-d,0) * 60ms)}
+.cst-srow:first-child{border-top:0}
+.cst-srow>.way-logo,.cst-srow>.cst-mk{grid-column:1;grid-row:1;width:20px;height:20px}.cst-srow>.cst-nm{grid-column:2;grid-row:1}.cst-srow>.cst-vals{display:contents}.cst-srow .cost-num[data-k="banked"]{grid-column:3;grid-row:1;justify-self:end}.cst-srow>.cst-sbar{grid-column:1 / 3;grid-row:2}.cst-srow .cost-num[data-k="open"]{grid-column:3;grid-row:2;justify-self:end}
+.cst-vals{display:inline-flex;align-items:center;gap:14px;white-space:nowrap}
+.cst-vals .cost-num{align-items:center;gap:6px;font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)}
+.cst-vals .cost-num>i{display:block;width:10px;height:10px;border-radius:3px}
+.cst-vals .cost-num[data-k="banked"]{color:var(--success)}.cst-vals .cost-num[data-k="banked"]>i{background:var(--success)}.cst-vals .cost-num[data-k="open"]>i{background:var(--cst-save)}
+.cst-sbar{display:flex;height:8px;border-radius:4px;background:var(--bg-neutral);overflow:hidden}
+.cst-sbar>i{display:block;flex:none;height:100%;transform-origin:0 50%;animation:cst-grow .9s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.45s + var(--cst-d,0) * 60ms)}
+.cst-sbar>i.b{background:var(--success)}.cst-sbar>i.o{background:var(--cst-save)}
+.cst .cost-back{padding:2px 0 8px}
+.cst .cost-row{min-height:48px}
+/* By leg: the path. The leg tiles sit on one wire that flows from the sites to the clouds; each leg's card lists its rows. */
+.cst-tiles>.cst-tile[data-leg="true"]+.cst-tile[data-leg="true"]::before{content:"";position:absolute;left:-17px;top:27px;width:18px;height:4px;border-radius:2px;background:radial-gradient(circle,var(--cta) 1.4px,transparent 1.9px) 0 50% / 10px 4px repeat-x,color-mix(in srgb,var(--cta) 26%,transparent);animation:op-flow 1.1s linear infinite}
+.cst-lrow{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:44px;box-sizing:border-box;padding:5px 2px 5px 0;border:0;border-top:1px solid var(--border-secondary);background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;animation:cst-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.35s + var(--cst-d,0) * 50ms)}
+.cst-lrow:hover{background:var(--bg-wash)}.cst-lrow:first-child,.cst-body>.cost-back+.cst-lrow{border-top:0}
+.cst-lrow>i{width:10px;height:10px;border-radius:3px;box-sizing:border-box}
+.cst-lrow>span{display:grid;min-width:0}
+.cst-lrow .cst-nmr{display:flex;align-items:center;gap:6px;min-width:0}
+.cst-ink{display:grid;grid-template-columns:14px minmax(0,1fr) auto;grid-template-rows:20px 8px;column-gap:10px;row-gap:6px;align-items:center;width:100%;padding:10px 0;border:0;border-top:1px solid var(--border-secondary);background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;animation:cst-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.35s + var(--cst-d,0) * 60ms)}
+.cst-ink:first-child{border-top:0}.cst-ink:hover .cst-nm{color:var(--link)}
+.cst-ink>i{width:14px;height:10px;border-radius:3px;box-sizing:border-box}
+.cst-ink>.cst-ibar{grid-column:1 / -1;display:block;height:8px;border-radius:4px;background:var(--bg-neutral);overflow:hidden}
+.cst-ink>.cst-ibar>em{display:block;height:100%;border-radius:4px;transform-origin:0 50%;animation:cst-grow .9s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.45s + var(--cst-d,0) * 60ms)}
+.cst-pill{flex:none;padding:0 6px;border-radius:9999px;border:1px dashed var(--text-disabled);font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap}
+/* By region: a bar per place that grows, its inks the legend's; the moves beside it, Attach or Steer. */
+.cst .cost-bar{grid-template-columns:24px 176px minmax(0,1fr);gap:14px;min-height:52px;border-bottom:0;border-top:1px solid var(--border-secondary);animation:cst-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.3s + var(--cst-d,0) * 60ms)}
+.cst .cost-bar:first-child{border-top:0}
+.cst-bt{display:flex;align-items:center;gap:10px;min-width:0}
+.cst-bf{display:flex;flex:none;height:22px;min-width:6px;border-radius:5px;overflow:hidden;transform-origin:0 50%;animation:cst-grow 1s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.4s + var(--cst-d,0) * 70ms)}
+.cst-bf>span{display:block;height:100%;box-sizing:border-box}
+.cst-chips{display:flex;align-items:center;gap:12px;min-width:0;overflow:hidden}
+.cst .cost-save{grid-template-columns:24px minmax(0,1fr) 72px 72px 80px;gap:12px;min-height:52px;padding:6px 0;animation:cst-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.35s + var(--cst-d,0) * 60ms)}
+.cst .cost-save .cost-num{justify-content:flex-end;font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)}
+.cst .cost-save .cost-num[data-k="saved"]{color:var(--success)}
+.cst .cost-save:first-child{border-top:0}
+.cst-math{font-size:12px;line-height:16px;color:var(--text-body)}
+/* By destination: the stack of egress fans out to its four classes, each today and if all of it rode AT&T. */
+.cst-fan{display:grid;grid-template-columns:56px minmax(0,1fr);align-items:start;margin-block:auto;min-width:0}
+.cst-stack{display:flex;flex-direction:column;gap:4px}
+.cst-stack>button{display:block;width:100%;flex:none;border:0;padding:0;border-radius:6px;background:var(--cst-mod);cursor:pointer;transform-origin:50% 0;animation:cst-rise .7s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.3s + var(--cst-d,0) * 90ms)}
+.cst-stack>button:hover{filter:brightness(1.15)}
+.cst-dests{display:grid;gap:10px;min-width:0}
+.cst-dest{position:relative;display:grid;grid-template-columns:36px minmax(0,1fr) minmax(0,1.3fr) 104px;align-items:center;gap:16px;height:56px;box-sizing:border-box;padding:0 12px 0 132px;border:0;border-radius:10px;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.cst-dest:hover{background:var(--bg-wash)}
+.cst-rib{position:absolute;left:0;top:0;width:120px;height:56px;overflow:visible;pointer-events:none;animation:cst-wipe 1s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.55s + var(--cst-d,0) * 90ms)}
+.cst-rib>path{fill:color-mix(in srgb,var(--text-body) 13%,transparent);stroke:color-mix(in srgb,var(--text-body) 30%,transparent);stroke-width:1;transition:fill .2s}
+.cst-dest:hover .cst-rib>path{fill:color-mix(in srgb,var(--text-body) 24%,transparent)}
+.cst-dest .ic-tile{width:36px;height:36px;border-radius:10px}
+.cst-dn{display:grid;gap:2px;min-width:0}
+.cst-rate{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap}.cst-rate>b{font-weight:600;color:var(--text-heading)}.cst-rate>b[data-k="att"]{color:var(--link)}
+.cst-two{display:grid;gap:4px;min-width:0}
+.cst-two>span{display:block;height:9px;border-radius:5px;transform-origin:0 50%;animation:cst-grow .9s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.6s + var(--cst-d,0) * 90ms)}
+.cst-two>span.now{background:var(--cst-mod)}.cst-two>span.all{background:var(--cst-hatt)}
+.cst-twov{display:grid;justify-items:end;gap:0}.cst-twov>b{font-size:14px;line-height:18px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}.cst-twov>small{font-size:12px;line-height:16px;font-weight:600;color:var(--link);font-variant-numeric:tabular-nums}
+/* By first mile: the access each site buys, its sites and how many ride AT&T, its share of the bill as the Modelled hatch. */
+.cst-mrow{display:grid;grid-template-columns:32px minmax(0,170px) 120px minmax(0,1fr) 88px;align-items:center;gap:14px;width:100%;min-height:44px;box-sizing:border-box;padding:4px 0;border:0;border-top:1px solid var(--border-secondary);background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;animation:cst-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.3s + var(--cst-d,0) * 60ms)}
+.cst-mrow:first-child{border-top:0}.cst-mrow:hover{background:var(--bg-wash)}
+.cst-mrow .ic-tile{width:32px;height:32px;border-radius:9px}
+.cst-mrow[data-pub="true"] .ic-tile{background:var(--bg-neutral);color:var(--text-body)}
+.cst-hbar{display:block;height:14px;border-radius:7px;background:var(--bg-neutral);overflow:hidden}
+.cst-hbar>i{display:block;height:100%;border-radius:7px;background:var(--cst-mod);transform-origin:0 50%;animation:cst-grow 1s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.4s + var(--cst-d,0) * 70ms)}
+.cst-mv{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:12px;row-gap:10px;align-items:center;padding:12px 0;border-top:1px solid var(--border-secondary);animation:cst-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.4s + var(--cst-d,0) * 60ms)}
+.cst-mv:first-child{border-top:0}.cst-mv>.ic-tile{grid-column:1;grid-row:1 / 3;width:36px;height:36px;border-radius:10px}.cst-mv>.cst-nm{grid-column:2;grid-row:1}
+.cst-mv>.cst-do{grid-column:1 / -1;grid-row:3;height:34px}.cst-mv>.cst-chips{grid-column:2;grid-row:2}
+/* By bucket: each bucket today on one scale, the AT&T part blue and the saving striped, its Steer beside it. */
+.cst-brow{display:grid;grid-template-columns:24px minmax(0,210px) minmax(0,1fr) 80px 84px 88px;align-items:center;gap:14px;min-height:50px;border-top:1px solid var(--border-secondary);animation:cst-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.3s + var(--cst-d,0) * 60ms)}
+.cst-brow:first-of-type{border-top:0}
+.cst-brow .cost-num{justify-content:flex-end;font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)}.cst-brow .cost-num[data-k="saved"]{color:var(--success)}
+.cst-trk{display:flex;height:14px;border-radius:7px;background:var(--bg-neutral);overflow:hidden;min-width:0}
+.cst-trk>i{display:block;flex:none;height:100%;transform-origin:0 50%;animation:cst-grow 1s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.4s + var(--cst-d,0) * 70ms)}
+.cst-trk>i.after{background:var(--viz-1)}.cst-trk>i.save{background:var(--cst-save);border-radius:0 7px 7px 0}
+.cst-state{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body);white-space:nowrap}
+.cst-tot{display:grid;flex:1;grid-template-columns:24px minmax(0,210px) minmax(0,1fr) 80px 84px 88px;align-items:center;gap:14px;min-height:40px;border-top:1px solid var(--border-primary);font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)}
+.cst-tot>b{text-align:right;font-variant-numeric:tabular-nums}.cst-tot>b[data-k="saved"]{color:var(--success)}
+/* AT&T charges: the bill as lines, a total and the net; beside it, commit or stay metered as two bars and the saving between. */
+.cst-line{display:grid;grid-template-columns:36px minmax(0,1fr) minmax(0,1.2fr) 96px;align-items:center;gap:14px;min-height:56px;border-top:1px solid var(--border-secondary);animation:cst-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.3s + var(--cst-d,0) * 60ms)}
+.cst-line:first-child{border-top:0}
+.cst-line .ic-tile{width:36px;height:36px;border-radius:10px}
+.cst-line>.cst-v,.cst-sum>.cst-v{text-align:right}
+.cst-lbar{display:block;height:12px;border-radius:6px;background:var(--bg-neutral);overflow:hidden}.cst-lbar>i{display:block;height:100%;border-radius:6px;background:var(--viz-1);transform-origin:0 50%;animation:cst-grow 1s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.4s + var(--cst-d,0) * 70ms)}
+.cst-sum{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;min-height:44px;border-top:1px dashed var(--border-primary);font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)}
+.cst-sum+.cst-sum{border-top:1px solid var(--border-secondary)}
+.cst-ret{display:grid;gap:8px;padding-top:14px}
+.cst-ret>span{display:grid;grid-template-columns:110px minmax(0,1fr) 84px;align-items:center;gap:12px;font-size:13px;line-height:18px;color:var(--text-body)}
+.cst-ret i{display:block;height:14px;border-radius:7px;background:var(--bg-neutral);overflow:hidden}
+.cst-ret i>em{display:block;height:100%;border-radius:7px;transform-origin:0 50%;animation:cst-grow 1s cubic-bezier(.22,1,.36,1) backwards;animation-delay:.6s}
+.cst-ret em[data-k="att"]{background:var(--viz-1)}.cst-ret em[data-k="saved"]{background:var(--success)}
+.cst-ret b{text-align:right;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}.cst-ret b[data-k="saved"]{color:var(--success)}
+.cst-crow{display:grid;grid-template-columns:24px minmax(0,1fr) auto;grid-template-rows:20px auto;column-gap:12px;row-gap:8px;align-items:center;padding:12px 0;border-top:1px solid var(--border-secondary);animation:cst-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.35s + var(--cst-d,0) * 60ms)}
+.cst-crow:first-child{border-top:0}.cst-crow>.way-logo,.cst-crow>.cst-mk{grid-column:1;grid-row:1}.cst-crow>.cst-nm{grid-column:2;grid-row:1}.cst-crow>.cst-do{grid-column:3;grid-row:1 / 3}.cst-crow>.cst-cb{grid-row:2}
+.cst-cb{grid-column:2;display:grid;gap:4px;min-width:0}
+.cst-cb>span{display:grid;grid-template-columns:minmax(0,1fr) 64px;align-items:center;gap:8px;font-size:12px;line-height:16px;color:var(--text-body);font-variant-numeric:tabular-nums}
+.cst-cb>span>b{text-align:right;font-weight:600;color:var(--text-heading)}
+.cst-cb i{display:flex;height:8px;border-radius:4px;background:var(--bg-neutral);overflow:hidden}
+.cst-cb i>em{display:block;flex:none;height:100%;transform-origin:0 50%;animation:cst-grow .9s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.45s + var(--cst-d,0) * 60ms)}
+.cst-cb em.met{background:var(--text-disabled)}.cst-cb em.com{background:var(--text-body)}.cst-cb em.save{background:var(--cst-save)}
+@media (prefers-reduced-motion: reduce){.fx-card.cst-tile,.fx-card.cst-card,.cst-cu,.cst-cu::after,.cst-ring::before,.cst-spark>i,.cst-fork svg,.cst .cost-col,.cst-lines,.cst .cost-end,.cst-srow,.cst-sbar>i,.cst-lrow,.cst .cost-bar,.cst-bf,.cst .cost-save,.cst-stack>button,.cst-rib,.cst-two>span,.cst-mrow,.cst-hbar>i,.cst-mv,.cst-brow,.cst-trk>i,.cst-line,.cst-lbar>i,.cst-crow,.cst-cb i>em,.cst-ink,.cst-ink>.cst-ibar>em,.cst-ret i>em,.cst-tiles>.cst-tile[data-leg="true"]+.cst-tile[data-leg="true"]::before{animation:none}.fx-card.cst-tile,.cst-ring,.cst-do,.cst-do .ic,.cst-chev{transition:none}}
 /* Recommended's summary boxes (2026-10-06): the estate by how it connects today, each a door to its set. */
 .tab-ic{vertical-align:-3px;margin-right:7px;opacity:.85}
 .note-i{display:inline-flex;align-items:center;gap:6px;justify-self:start;font-size:12px;line-height:16px;color:var(--text-light);cursor:help}
