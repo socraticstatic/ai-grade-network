@@ -35,7 +35,7 @@ async function freeze(p, slug, title) {
     // The frame takes the page title; every layer takes a human name (html.to.design reads aria-label), so the file
     // reads Header, Rail, Stage, Your circuits, Wire: Last mile, Row: Branch O, Tile: Circuits, not div and span.
     document.title = title;
-    const txt = (e) => (e.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 48);
+    const txt = (e) => (e && e.textContent ? e.textContent : '').replace(/\s+/g, ' ').trim().slice(0, 48);
     const iconOf = (e) => { const m = /brand\/icons[^/]*\/([a-z0-9-]+)\.svg/.exec(e.getAttribute('style') || ''); return m ? m[1] : ''; };
     const RULES = [
       ['header', () => 'Header'], ['nav[aria-label="Products"]', () => 'Products'], ['aside', () => 'Rail'], ['main', () => 'Page'],
