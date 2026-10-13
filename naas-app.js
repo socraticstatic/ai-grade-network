@@ -1730,13 +1730,15 @@ export function pageRows(rows, size, page, setPage) {
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
 const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], govDrillRows: ['govDrillPage', 8, 'govDrillPager', 'govDrillPageSize'], drawerTags: ['tagPage', 10, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
-  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 4, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], bankRows: ['bankPage', 5, 'bankPager', 'bankPageSize'], regionSaveRows: ['regSavePage', 6, 'regSavePager', 'regSavePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
+  segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 4, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], bankRows: ['bankPage', 5, 'bankPager', 'bankPageSize'], regionSaveRows: ['regSavePage', 6, 'regSavePager', 'regSavePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'],
+  // Sources under its four cards (2026-10-13): six rows of 68px end inside 900; the found alert takes two, Andi one.
+  sources: ['srcPage', 6, 'srcPager', 'srcPageSize'] };
 // What an added source found sits over Discover's Estate (2026-09-30): its lists give up the rows
 // the alert takes, so the page keeps the fold (At a glance read 905 with it, a filtered Your clouds 973).
-const FOUND_SHRINK = { appRows: 1, cloudRows: 2, placeRows: 2 };
+const FOUND_SHRINK = { appRows: 1, cloudRows: 2, placeRows: 2, sources: 1 };
 // Andi beside Estate narrows it, and the title row's pills wrap to a second line (skeptic, 2026-10-01:
 // "Ask Andi" on a nine-row Your clouds read 931): the lists give up a row while he is open.
-const ANDI_SHRINK = { appRows: 1, cloudRows: 1, placeRows: 1 };
+const ANDI_SHRINK = { appRows: 1, cloudRows: 1, placeRows: 1, sources: 1 };
 // Fewer words, more icons (2026-10-07): every page tab leads with its glyph, every role chip with its own and carries its
 // question as its title (the question left the page), and a page whose head is chips draws them in place of the sentence.
 const TAB_ICON = { 'Recommended': 'bullseye', 'Ways to connect': 'cable', 'Orders': 'shopping-bag', 'At a glance': 'pie-chart', 'Your clouds': 'cloud', 'Your sites': 'large-building', 'Business units': 'person-group',
@@ -2618,7 +2620,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const logPattern = s.logPattern || 'all';
   // Logs never replaces the page (Micah, 13:36): it opens under the patterns and the page scrolls to it.
   const patternCards = X.patterns(est0, ob, inv).map(p => ({ ...p, key: p.key, hasRows: p.rows.length > 0, rows: p.rows.map(r => ({ ...r, key: r.key, go: () => toLogs({ logPattern: p.key }) })), legend: p.legend.map(l => ({ ...l, key: l.label })), goLogs: () => toLogs({ logPattern: p.key }) }));
-  const logChips = [{ key: 'all', label: 'All' }, ...patternCards.map(p => ({ key: p.key, label: p.title }))].map(ch => ({ ...ch, on: ch.key === logPattern, go: () => set({ logPattern: ch.key }), bg: ch.key === logPattern ? 'var(--cta)' : 'var(--bg-base)', color: ch.key === logPattern ? '#fff' : 'var(--text-heading)', border: ch.key === logPattern ? 'var(--cta)' : 'var(--border-secondary)' }));
+  const PAT_GLYPH = { region: 'pinpoint-area', regions: 'arrows-horizontal', clouds: 'cloud-transfer', internet: 'internet', inbound: 'import' };
+  const logChips = [{ key: 'all', label: 'All' }, ...patternCards.map(p => ({ key: p.key, label: p.title }))].map(ch => ({ ...ch, icon: PAT_GLYPH[ch.key] || '', hasIcon: !!PAT_GLYPH[ch.key], on: ch.key === logPattern, go: () => set({ logPattern: ch.key }), bg: ch.key === logPattern ? 'var(--cta)' : 'var(--bg-base)', color: ch.key === logPattern ? '#fff' : 'var(--text-heading)', border: ch.key === logPattern ? 'var(--cta)' : 'var(--border-secondary)' }));
   const TILE_ORDER = ['thr', 'util', 'p95', 'loss'];
   const obTiles = ob.kpis.filter(k => TILE_ORDER.includes(k.key)).sort((a, b) => TILE_ORDER.indexOf(a.key) - TILE_ORDER.indexOf(b.key)).map(k => ({ ...k, hasUnit: !!k.u, hasE: !!k.e }));
   // ---- Logs, as a section of Observe rather than a tab inside a panel ----
@@ -2674,10 +2677,64 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // explanation they start shut; the toggle opens them and the page drops rows to keep the fold.
   const logFiltersOn = s.logFiltersOpen === undefined ? !s.explain : !!s.logFiltersOpen;
   // Measured at 1440x900: the explanation takes three rows' room, and its "Made of" chips one more.
-  const logPageSize = Math.max(3, (logFiltersOn ? 6 : 9) - (s.explain ? 3 : 0) - (s.explain && (s.explain.parts || []).length ? 1 : 0));
-  const flowAll = logMatch.map(r => ({ ...r, key: r.id, actBg: r.deny ? (dark ? 'rgba(211,47,47,.2)' : '#fdecea') : 'var(--bg-wash)', actColor: r.deny ? 'var(--error)' : 'var(--text-body)',
-    pathInk: r.path === 'public' ? 'var(--warning)' : 'var(--success)',
-    pathWord: r.path === 'public' ? 'outside AT&T' : 'on AT&T' }));
+  // The story's verdict and stream sit over the rows (2026-10-13) and the filters fold onto two lines: six rows open, eight shut.
+  const logPageSize = Math.max(3, (logFiltersOn ? 6 : 8) - (s.explain ? 3 : 0) - (s.explain && (s.explain.parts || []).length ? 1 : 0));
+  // ---- Logs as a story (2026-10-13, Micah: "Each page should be its own gorgeous, extremely beautiful story, with calls to
+  // action on each"; "less words, and more visualizations, animations and icons") ----
+  // The verdict counts what the window's traffic did, every pattern, whatever the filters: a filter cuts the table, never
+  // the verdict. Each figure is a door through the one filter grammar (it sets the chip it names, a second press lets it
+  // go) and carries its move. Beside it the stream: every record a dot on its pattern's lane, in time.
+  const logEvery = X.records(est0, inv, ob, 'all').filter(inCut);
+  const recRegion = (r) => endsOf(r).find(id => est0.regionsList.some(x => x.region === id)) || null;
+  const gbOf = (rs) => `${rs.reduce((a, r) => a + (parseFloat(r.bytes) || 0), 0).toFixed(1)} GB`;
+  const PAT_ICON = PAT_GLYPH;
+  const patName = (k) => (patternCards.find(p => p.key === k) || { title: k }).title;
+  const traceGo = (region) => go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'map', sub: null, ...(region ? { mapRegion: region } : {}) });
+  const logBand = (() => {
+    const tot = logEvery.length, den = logEvery.filter(r => r.deny), out = logEvery.filter(r => r.path === 'public'), net = logEvery.filter(r => r.pattern === 'internet');
+    const pubRegs = [...new Set(out.map(recRegion).filter(id => { const g = est0.regionsList.find(x => x.region === id); return g && !g.priv; }))];
+    const plan = pubRegs.length ? DR.attachPlan(est0, pubRegs) : null;
+    const toggle = (key, cur, val) => () => set({ [key]: cur === val ? 'all' : val, logPage: 0, logSel: null });
+    const row = (key, icon, label, rs, on, go, title, act, bad) => ({ key, icon, label, n: enf(rs.length), gb: gbOf(rs), w: `${tot ? Math.round(rs.length / tot * 100) : 0}%`, on, cant: !rs.length, go: rs.length ? go : () => {}, title, act, tone: bad && rs.length ? 'bad' : '' });
+    return [
+      row('all', 'list', 'Records', logEvery, !(logQ || logPath !== 'all' || logAct !== 'all' || logPattern !== 'all'), () => set({ logQ: '', logPath: 'all', logAct: 'all', logPattern: 'all', logPage: 0, logSel: null }),
+        `${enf(tot)} flow records in this window, ${gbOf(logEvery)}. Show every record`,
+        { label: 'Trace', icon: 'map', go: traceGo(null), title: 'Trace these flows on the Traffic map' }),
+      row('deny', 'stop-sign', 'Denied', den, logAct === 'deny', toggle('logAct', logAct, 'deny'), `${enf(den.length)} denied by a policy. Show only them`,
+        { label: 'Review', icon: 'check-shield', go: go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'policies', sub: null }), title: 'Review the policies that allow and deny traffic, in Govern' }, true),
+      row('public', 'internet', 'Outside AT&T', out, logPath === 'public', toggle('logPath', logPath, 'public'), `${enf(out.length)} took a path outside AT&T, on the public internet. Show only them`,
+        plan ? { label: `Attach ${plan.regions.length}`, icon: 'cable', go: dd.order({ regions: plan.regions, note: attachNote(plan, `${enf(out.length)} records outside AT&T`) }), title: `${plan.label}: put this traffic on the AT&T network${plan.rest.length ? `, then ${plan.rest.map(g => `${g.regions.length} on ${g.cloud}`).join(', ')}` : ''}` }
+          : { label: 'Compare', icon: 'bullseye', go: go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'options' }), title: 'Compare the ways onto the AT&T network for what is still outside it, on Recommended' }),
+      row('internet', 'globe', 'Public destinations', net, logPattern === 'internet', toggle('logPattern', logPattern, 'internet'), `${enf(net.length)} went to a public address, still unresolved. Show only them`,
+        { label: 'Inspect', icon: 'firewall', go: () => { go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'policies', sub: null })(); set({ authoring: { match: 'tag Internet-facing', scope: 'the Internet', req: ['Inline security inspection'] } }); }, title: 'Author a policy: inspect traffic to the internet inline' }),
+    ];
+  })();
+  const matchIds = new Set(logMatch.map(r => r.id));
+  const flowAll = logMatch.map(r => { const region = recRegion(r);
+    return { ...r, key: r.id, sel: s.logSel === r.id,
+      pathIcon: r.path === 'public' ? 'internet' : 'hub', pathOn: r.path !== 'public', pathTitle: r.path === 'public' ? 'Outside AT&T, on the public internet' : 'On AT&T',
+      badgeCls: r.deny ? 'deny' : 'allow', badgeWord: r.deny ? 'Deny' : 'Allow', patIcon: PAT_ICON[r.pattern] || 'shuffle', patTitle: patName(r.pattern),
+      region, go: traceGo(region), goTitle: `Trace ${r.srcName} to ${r.dstName} on the map${region ? `, ${region}` : ''}` }; });
+  const logStream = (() => {
+    const secOf = (t) => { const [h, m, x] = String(t).split(':').map(Number); return ((h || 0) * 60 + (m || 0)) * 60 + (x || 0); };
+    const ts = logEvery.map(r => secOf(r.time)), STEP = 300;
+    const t0 = ts.length ? Math.floor(Math.min(...ts) / STEP) * STEP : 0, t1 = ts.length ? Math.max(t0 + STEP, Math.ceil((Math.max(...ts) + 1) / STEP) * STEP) : STEP;
+    const xOf = (t) => `${((t - t0) / (t1 - t0) * 100).toFixed(2)}%`;
+    const gbMax = Math.max(0.1, ...logEvery.map(r => parseFloat(r.bytes) || 0));
+    const hm = (t) => `${String(Math.floor(t / 3600)).padStart(2, '0')}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}`;
+    const pick = (r) => () => { const at = flowAll.findIndex(f => f.id === r.id);
+      if (at >= 0) set({ logSel: r.id, logPage: Math.floor(at / logPageSize) });
+      else set({ logQ: '', logPath: 'all', logAct: 'all', logPattern: 'all', logSel: r.id, logPage: Math.floor(Math.max(0, logEvery.indexOf(r)) / logPageSize) }); };
+    const lanes = patternCards.map(p => { const on = logPattern === p.key, mine = logEvery.filter(r => r.pattern === p.key);
+      return { key: p.key, label: p.title, icon: PAT_ICON[p.key] || 'shuffle', n: enf(mine.length), on, cant: !mine.length, go: () => set({ logPattern: on ? 'all' : p.key, logPage: 0, logSel: null }),
+        title: `${p.title}: ${enf(mine.length)} ${mine.length === 1 ? 'record' : 'records'}. ${on ? 'Show every pattern' : 'Show only them'}`,
+        dots: mine.map((r, i) => ({ key: r.id, x: xOf(secOf(r.time)), size: `${Math.round(8 + 9 * Math.sqrt((parseFloat(r.bytes) || 0) / gbMax))}px`, d: `${(i * 0.02 + (secOf(r.time) - t0) / (t1 - t0) * 0.4).toFixed(2)}s`,
+          path: r.path === 'public' ? 'out' : 'on', deny: !!r.deny, on: matchIds.has(r.id), sel: s.logSel === r.id, go: pick(r),
+          title: `${r.time} · ${r.srcName} to ${r.dstName} · ${r.proto} · ${r.bytes} · ${r.path === 'public' ? 'outside AT&T' : 'on AT&T'} · ${r.deny ? 'denied' : 'allowed'}` })) }; });
+    const axis = []; for (let t = t0; t <= t1; t += STEP) axis.push({ key: 't' + t, label: hm(t), x: xOf(t) });
+    // The key under the lanes: a dot's ink is its path; a red ring is a deny, the verdict's own red.
+    return { lanes, axis, key: [{ key: 'on', path: 'on', label: 'On AT&T' }, { key: 'out', path: 'out', label: 'Outside' }] };
+  })();
   const flowPage = pageOf(flowAll, logPageSize, 'logPage');
   const flowRecords = flowPage.rows, logPager = flowPage.pager;
   // User activity: the other half of a log. Flow records say what the network
@@ -2689,23 +2746,69 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // with Observe's change list, so every window sees its own history.
   const actNow = SCH.nowOf(s);
   const actRuns = (sched.runs || []).map(r => {
-    const how = r.trigger === 'manual' ? 'on demand' : `on schedule at ${SCH.clockLabel(r.at)}`;
+    // In fewer words (2026-10-13, "less words"): the counts and the clock, never a sentence.
+    const how = r.trigger === 'manual' ? 'on demand' : '';
     const bits = [`${r.accounts} ${r.accounts === 1 ? 'account' : 'accounts'}`, `${r.regions} ${r.regions === 1 ? 'region' : 'regions'}`];
     if (r.sites) bits.push(`${r.sites.toLocaleString('en-US')} ${r.sites === 1 ? 'site' : 'sites'}`);
-    return { ...r, detail: `${bits.join(', ')} · ${how}` };
+    return { ...r, detail: [...bits, how].filter(Boolean).join(' · ') };
   });
   const actAll = OD.activityOf(est, { customPolicies: s.customPolicies || [], steered: s.steered || [], conns, runs: actRuns, orders: s.orders || [], now: actNow })
     .map(a => ({ ...a, mins: Math.max(0, Math.round((actNow - a.at) / 60000)) }));
   const ago = (m) => m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
   const actQ = (s.actQ || '').toLowerCase();
-  const actMatch = actAll.filter(a => !actQ || (a.who + ' ' + a.verb + ' ' + a.target + ' ' + a.detail).toLowerCase().includes(actQ));
-  const actPageSize = 8;
-  const actAllRows = actMatch.map((a, i) => ({
-    key: 'ua' + i, when: ago(a.mins), who: a.who, verb: a.verb, target: a.target, detail: a.detail,
-    from: FROM[i % FROM.length], result: a.result || (a.ok ? 'Applied' : 'Denied'),
-    resBg: a.ok ? 'var(--bg-wash)' : (dark ? 'rgba(211,47,47,.2)' : '#fdecea'),
-    resInk: a.ok ? 'var(--text-body)' : 'var(--error)',
-  }));
+  // The result is searchable too (2026-10-13): the Denied door writes "denied" into the Find box, and a run that failed says so.
+  const resultOf = (a) => a.result || (a.ok ? 'Applied' : 'Denied');
+  const actMatch = actAll.filter(a => !actQ || (a.who + ' ' + a.verb + ' ' + a.target + ' ' + a.detail + ' ' + resultOf(a)).toLowerCase().includes(actQ));
+  // The story's verdict and lanes sit over the rows (2026-10-13): seven rows end inside 900.
+  const actPageSize = 7;
+  // Each change leads with its glyph and opens where you act on it: an attach or a flow on the map, a port or an impact on
+  // Capacity, a policy in Govern, a credential, a scope or a scan on Sources, a bandwidth change in Orders.
+  const ACT_KIND = [[/^att:/, 'cable', 'map'], [/^c?pol:/, 'check-shield', 'govern'], [/^cred:/, 'padlock', 'sources'], [/^impact:/, 'eye', 'conn'], [/^port:/, 'plus-circle', 'conn'],
+    [/^steer:/, 'shuffle', 'map'], [/^bw:/, 'high-meter', 'orders'], [/^run:/, 'sync', 'sources'], [/^scope$/, 'pencil', 'sources'], [/^export$/, 'download', null]];
+  const actDoor = (a) => { const k = (ACT_KIND.find(([re]) => re.test(a.key)) || [0, 'history', null])[2];
+    return k === 'map' ? traceGo(a.region) : k === 'conn' ? dd.conn(a.region) : k === 'govern' ? go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'policies', sub: null })
+      : k === 'sources' ? go('s1', { discoverView: 'sources' }) : k === 'orders' ? go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'orders', mapSel: null, mapRegion: null }) : null; };
+  const actAllRows = actMatch.map((a) => { const i = actAll.indexOf(a), from = FROM[i % FROM.length], door = actDoor(a), result = resultOf(a);
+    return {
+      key: 'ua:' + a.key, when: ago(a.mins), who: a.who, verb: a.verb, target: a.target, detail: a.detail,
+      from, result,
+      resBg: a.ok ? 'var(--bg-wash)' : (dark ? 'rgba(211,47,47,.2)' : '#fdecea'),
+      resInk: a.ok ? 'var(--text-body)' : 'var(--error)',
+      icon: (ACT_KIND.find(([re]) => re.test(a.key)) || [0, 'history'])[1], fromIcon: /token/.test(from) ? 'apis' : 'globe', fromTitle: `From ${from}`,
+      whoIcon: /^svc-/.test(a.who) ? 'gear' : 'person', badgeCls: result === 'Denied' ? 'deny' : result === 'Submitted' ? 'manip' : 'adv',
+      sel: false, can: !!door, cant: !door, go: door || (() => {}), goTitle: door ? `Open ${a.target}` : `${a.verb}: ${a.detail}`,
+    }; });
+  const actBand = (() => {
+    const has = (re) => actAll.filter(a => re.test(a.key)), pol = has(/^c?pol:/), scan = has(/^run:/), den = actAll.filter(a => resultOf(a) === 'Denied');
+    const q = (t) => () => set({ actQ: actQ === t ? '' : t, actPage: 0 });
+    const row = (key, icon, label, list, t, title, act, bad) => ({ key, icon, label, n: enf(list.length), w: `${actAll.length ? Math.round(list.length / actAll.length * 100) : 0}%`,
+      on: t === '' ? !actQ : actQ === t, cant: !list.length, go: list.length ? (t === '' ? () => set({ actQ: '', actPage: 0 }) : q(t)) : () => {}, title, act, tone: bad && list.length ? 'bad' : '' });
+    return [
+      row('all', 'history', 'Changes', actAll, '', `${enf(actAll.length)} changes and reads. Show every one`, { label: 'Correlate', icon: 'history', go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'changes', sub: null }), title: 'Line each change up with the problems it came before, on Traffic > Changes' }),
+      row('policy', 'check-shield', 'Policies', pol, 'policy', `${enf(pol.length)} policies enforced or simulated. Show only them`, { label: 'Review', icon: 'check-shield', go: go('s3', { layer: 'cloud', tab: 'govern', govPanel: 'policies', sub: null }), title: 'Review the policies, in Govern' }),
+      row('scan', 'sync', 'Scans', scan, 're-discovery', `${enf(scan.length)} discovery runs. Show only them`, (sched.accounts.length ? { label: 'Re-scan', icon: 'sync', go: sched.runNow(sched.accounts.map(a => a.id), 'manual'), title: 'Re-scan every account now; the run lands here' } : { label: 'Add a source', icon: 'plus', go: go('s1', { discoverView: 'sources' }), title: 'Nothing to scan yet: add a source' })),
+      row('denied', 'stop-sign', 'Denied', den, 'denied', `${enf(den.length)} denied. Show only them`, { label: 'Ask Andi', icon: 'ai', go: dd.andi({ id: 'activity:denied', label: 'Denied changes', lead: `${enf(den.length)} ${den.length === 1 ? 'change was' : 'changes were'} denied: ${den.map(a => `${a.verb} by ${a.who}`).join(', ')}.`, sub: 'Ask who can grant the role, or what the policy allows.', qs: ['Who can grant the export role?', 'What did the denial protect?'] }), title: 'Ask Andi about what was denied' }, true),
+    ];
+  })();
+  const actStream = (() => {
+    // On a log scale of age (2026-10-13): the history reaches back to the first credential, months, while most of it is
+    // this week; a linear axis drew this week as one pile at Now.
+    const t0 = actAll.length ? Math.min(...actAll.map(a => a.at)) : actNow - 30 * 86400000, span = Math.max(3600000, actNow - t0);
+    const H = 3600000, logSpan = Math.log1p(span / H), fx = (t) => Math.max(0, Math.min(1, 1 - Math.log1p(Math.max(0, actNow - t) / H) / logSpan));
+    const xOf = (t) => `${(fx(t) * 100).toFixed(2)}%`;
+    const shown = new Set(actMatch);
+    const who = [...new Set(actAll.map(a => a.who))].map(w => ({ w, n: actAll.filter(a => a.who === w).length })).sort((a, b) => b.n - a.n || a.w.localeCompare(b.w)).slice(0, 5);
+    const lanes = who.map(({ w, n }) => { const on = actQ === w.toLowerCase(), mine = actAll.filter(a => a.who === w);
+      return { key: w, label: w, icon: /^svc-/.test(w) ? 'gear' : 'person', n: enf(n), on, cant: false, go: () => set({ actQ: on ? '' : w, actPage: 0 }),
+        title: `${w}: ${enf(n)} ${n === 1 ? 'change' : 'changes'}. ${on ? 'Show everyone' : 'Show only theirs'}`,
+        dots: mine.map((a, i) => ({ key: a.key, x: xOf(a.at), size: a.change ? '12px' : '9px', d: `${(fx(a.at) * 0.4 + i * 0.02).toFixed(2)}s`, path: a.change ? 'on' : 'out', deny: resultOf(a) === 'Denied', on: shown.has(a), sel: false,
+          go: () => set({ actQ: a.who, actPage: Math.floor(Math.max(0, mine.indexOf(a)) / actPageSize) }),
+          title: `${ago(a.mins)} · ${a.who} · ${a.verb}: ${a.target} · ${resultOf(a)}` })) }; });
+    const days = Math.round(span / 86400000), ages = [[30 * 24, '30d'], [7 * 24, '7d'], [24, '1d']].filter(([h]) => h * H < span * 0.6);
+    const axis = [[actNow - span, days >= 2 ? `${days}d` : `${Math.round(span / H)}h`], ...ages.map(([h, label]) => [actNow - h * H, label]), [actNow, 'Now']]
+      .map(([t, label], i) => ({ key: 'a' + i, label, x: xOf(t) }));
+    return { lanes, axis, key: [{ key: 'on', path: 'on', label: 'Network change' }, { key: 'out', path: 'out', label: 'Other' }] };
+  })();
   const actPage = pageOf(actAllRows, actPageSize, 'actPage');
   const actRows = actPage.rows, actPager = actPage.pager;
   const logTab = s.logTab || 'flow';
@@ -2715,6 +2818,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     line: logTab === k ? 'var(--cta)' : 'transparent', color: logTab === k ? 'var(--text-heading)' : 'var(--text-light)', weight: logTab === k ? 700 : 500,
   }));
   const actVals = {
+    actBand: actBand.map((x, i) => ({ ...x, i })), actStream,
     logTabs, onFlowTab: logTab === 'flow', onUserTab: logTab === 'user',
     actRows, actPager, actPageSize, logPager, logPageSize, hasAct: actRows.length > 0, noAct: actRows.length === 0,
     actQ: s.actQ || '', setActQ: (e) => set({ actQ: e.target.value, actPage: 0 }),
@@ -2737,6 +2841,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   };
   const logVals = {
     ...actVals, ...explainVals,
+    logBand: logBand.map((x, i) => ({ ...x, i })), logStream,
+    logNoneHere: !logMatch.length && !(!logAll.length && !explain && logPattern === 'all'),
+    // No record at all (an estate with no source yet): the page says so with its one move, and draws no empty verdict.
+    logCalm: !logAll.length && !explain && logPattern === 'all', logHero: !(!logAll.length && !explain && logPattern === 'all'), logCalmGo: go('s1', { discoverView: 'sources' }),
     flowRecords, logChips, logPathChips, logActChips,
     logQ: s.logQ || '', setLogQ: (e) => set({ logQ: e.target.value, logPage: 0 }),
     logCount: `${logMatch.length.toLocaleString('en-US')} of ${logAll.length.toLocaleString('en-US')} records`,
@@ -3880,22 +3988,44 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   // picture, and the door to add more. The cloud rows are a read of est.accounts through
   // scheduleView; the AT&T rows are inventory AT&T keeps live, not a credential the customer
   // schedules, so they carry no cadence control.
-  const acctRow = (a) => ({
-    key: 'src:' + a.id, name: a.name, kind: a.cloud, cred: a.cred, scope: a.scope,
-    // The run record is written when the scan starts, so this label read
-    // "just now" for the two seconds the scan was still running.
-    seen: s.scanBusy ? 'scanning…' : SCH.agoLabel(a.lastRun, sched.nowMs),
-    nextSeen: SCH.nextLabel(a.schedule, a.nextRun, sched.nowMs),
-    cadenceValue: SCH.scheduleId(a.schedule), cadenceLabel: SCH.scheduleLabel(a.schedule),
-    setCadence: sched.setSchedule([a.id]), canSchedule: true, noSchedule: false,
-    sub: `${a.scope} · ${SCH.scheduleLabel(a.schedule).toLowerCase()}`,
-    state: 'Connected', dot: 'var(--success)', rescan: sched.runNow([a.id], 'manual'),
-  });
-  const attRow = (key, name, scope, sub) => ({
+  // The Sources story (2026-10-13, Micah: "Each page should be its own gorgeous, extremely beautiful story, with calls to
+  // action on each"): every row leads with its mark and its scan state, counts its scope as a glyph and a number, and draws
+  // its scans on one axis every row shares, two days back to a day ahead (SCH.heartbeat); the words are titles.
+  const pctOf = (x) => (Math.max(0, Math.min(1, x)) * 100).toFixed(2) + '%';
+  const SCAN_GLYPH = { fresh: ['check-circle', 'var(--link)', 'Fresh'], stale: ['clock', 'var(--warning)', 'Stale'], live: ['sync', 'var(--link)', 'Live'] };
+  const scanOf = (scan, title) => ({ scan, scanIcon: SCAN_GLYPH[scan][0], scanInk: SCAN_GLYPH[scan][1], scanTitle: title });
+  const acctRow = (a) => {
+    const now = sched.nowMs, seeded = ((est.accounts || []).find(x => x.id === a.id) || {}).schedule || a.schedule;
+    const scan = SCH.freshness(a.lastRun, now, a.schedule, seeded), ago = SCH.agoLabel(a.lastRun, now);
+    const hb = SCH.heartbeat({ id: a.id, seeded, schedule: a.schedule, added: a.added, lastRun: a.lastRun }, sched.runs, now);
+    const scanWord = (t) => (t === 'manual' ? 'Scanned on demand' : t === 'added' ? 'Scanned when added' : 'Scheduled scan');
+    return {
+      key: 'src:' + a.id, id: a.id, name: a.name, kind: a.cloud, cred: a.cred, scope: a.scope,
+      // The run record is written when the scan starts, so this label read
+      // "just now" for the two seconds the scan was still running.
+      seen: s.scanBusy ? 'scanning…' : ago,
+      nextSeen: SCH.nextLabel(a.schedule, a.nextRun, now), nextRun: a.nextRun, schedule: a.schedule,
+      cadenceValue: SCH.scheduleId(a.schedule), cadenceLabel: SCH.scheduleLabel(a.schedule),
+      setCadence: sched.setSchedule([a.id]), canSchedule: true, noSchedule: false,
+      sub: `${a.scope} · ${SCH.scheduleLabel(a.schedule).toLowerCase()}`,
+      state: 'Connected', dot: 'var(--success)', rescan: sched.runNow([a.id], 'manual'),
+      ...scanOf(scan, scan === 'fresh' ? `Fresh: scanned ${ago}, ${SCH.scheduleLabel(a.schedule).toLowerCase()}` : `Stale: last scanned ${ago}${a.schedule.kind === 'manual' ? ', on no schedule' : ', a scheduled scan missed'}`),
+      scopeN: enf(a.regions || 0), scopeIcon: 'cloud', scopeTitle: a.scope,
+      beat: { live: false, nowX: pctOf(hb.nowX),
+        past: hb.past.map((p, i) => ({ key: 'p' + i, x: pctOf(p.x), d: (Math.max(0, p.x) * 0.6).toFixed(2) + 's', last: i === hb.past.length - 1, manual: p.trigger !== 'schedule', title: `${scanWord(p.trigger)} ${SCH.agoLabel(p.at, now)}, ${SCH.clockLabel(p.at)}` })),
+        next: hb.next.map((p, i) => ({ key: 'n' + i, x: pctOf(p.x), d: (Math.max(0, p.x) * 0.6).toFixed(2) + 's', title: `Next scan ${SCH.clockLabel(p.at)}, ${SCH.nextLabel(a.schedule, p.at, now)}` })),
+        hasBefore: hb.before != null, beforeTitle: hb.before != null ? `Last scanned ${SCH.agoLabel(hb.before, now)}, before this axis starts` : '',
+        hasAfter: hb.after != null, afterTitle: hb.after != null ? `Next scan ${SCH.nextLabel(a.schedule, hb.after, now)}, after this axis ends` : '' },
+    };
+  };
+  const attRow = (key, name, scope, sub, n, icon) => ({
     key, name, kind: 'AT&T', cred: 'AT&T inventory', scope, seen: 'live', nextSeen: 'continuous',
     cadenceValue: '', cadenceLabel: 'AT&T inventory', setCadence: () => {},
     canSchedule: false, noSchedule: true, sub, state: 'Connected', dot: 'var(--success)',
     rescan: sched.runNow(sched.accounts.map(a => a.id), 'manual'),
+    ...scanOf('live', 'Live: AT&T keeps this inventory current, no schedule to keep'),
+    scopeN: n, scopeIcon: icon, scopeTitle: sub,
+    beat: { live: true, nowX: pctOf(2 / 3), past: [], next: [], hasBefore: false, beforeTitle: '', hasAfter: false, afterTitle: '' },
   });
   const connWord = conns.total === 1 ? 'connection' : 'connections';
   // The sites the AT&T inventory holds are the estate's sites, counted as the pill counts them
@@ -3903,16 +4033,19 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   const siteN = (stats.sites || est0.sitesCount || est0.sites.length).toLocaleString('en-US');
   const rawSources = [
     ...sched.accounts.map(acctRow),
-    ...(conns.total ? [attRow('src:netbond', 'NetBond inventory', `${conns.total} ${connWord}`, `${conns.total} ${connWord} · live`)] : []),
-    ...(est0.sites.length ? [attRow('src:sites', 'AVPN and access sites', `${siteN} sites`, `${siteN} sites · from AT&T inventory`)] : []),
+    ...(conns.total ? [attRow('src:netbond', 'NetBond inventory', `${conns.total} ${connWord}`, `${conns.total} ${connWord} · live`, enf(conns.total), 'cable')] : []),
+    ...(est0.sites.length ? [attRow('src:sites', 'AVPN and access sites', `${siteN} sites`, `${siteN} sites · from AT&T inventory`, siteN, 'large-building')] : []),
   ];
   // A source's scope is a count, and a door to it (2026-09-30): an account's regions on Your clouds,
   // the NetBond connections on Capacity, the access sites by place.
   const scopeDoor = (r) => r.key === 'src:netbond' ? dd.conn(null) : r.key === 'src:sites' ? dd.sites(null)
     : (est.regionsList || []).some(x => x.cloud === r.kind) ? dd.clouds(null, ['cloud:' + r.kind]) : null;
-  // The provider's mark, or AT&T's glyph, leads the account (2026-10-02).
-  const SRC_MARK = { AWS: 'brand/providers/aws.svg', Azure: 'brand/providers/azure.svg', GCP: 'brand/providers/google-icon.svg', Google: 'brand/providers/google-icon.svg', Oracle: 'brand/providers/oracle.svg' };
-  const sources = rawSources.map(r => ({ ...r, mark: SRC_MARK[r.kind] || '', hasMark: !!SRC_MARK[r.kind], isAtt: r.kind === 'AT&T', scopeCan: !!scopeDoor(r), scopeCant: !scopeDoor(r), scopeGo: scopeDoor(r) || (() => {}),
+  // The provider's mark, or AT&T's glyph, leads the account (2026-10-02); in its theme's ink (2026-10-13: AWS's dark
+  // wordmark vanished on the dark page), and a cloud with no mark here wears its initials.
+  const SRC_MARK = (kind) => W.markFor(/^google$/i.test(kind) ? 'GCP' : kind, dark ? 'dark' : 'light');
+  const sources = rawSources.map(r => ({ ...r, mark: SRC_MARK(r.kind), hasMark: !!SRC_MARK(r.kind), isAtt: r.kind === 'AT&T', noMark: r.kind !== 'AT&T' && !SRC_MARK(r.kind),
+    initials: String(r.kind).replace(/[^A-Za-z]/g, '').replace(/^(.)[a-z]*([A-Z]?).*$/, '$1$2').slice(0, 2).toUpperCase(), wordmark: r.kind === 'Oracle',
+    scopeCan: !!scopeDoor(r), scopeCant: !scopeDoor(r), scopeGo: scopeDoor(r) || (() => {}),
     edit: () => set({ sub: { page: 'discover', panel: 'add' }, sourceEdit: r.key }),
     // A source added in this session comes back out the same way (2026-09-30).
     remove: () => { const m = /^src:added-(\d+)-/.exec(r.key); if (!m) return; const mine = (s.addedSources || []).filter(a => a.estId === est.id); const drop = mine[+m[1]];
@@ -3937,8 +4070,72 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       foundAttach: ((pubFound) => dd.order({ regions: pubFound.length ? pubFound : found, note: `Attach the ${regsT} discovery just found.` }))(regs.filter(r => !r.priv).map(r => r.region)) };
   })();
   const credScanned = sources.filter(x => x.state === 'Connected').length;
+  // The verdict over the rows (2026-10-13): are we seeing everything? Four cards of one grammar, the Estate's: a head that
+  // opens the card's set, the figure, a ring, at most three legend rows (each a door), and a foot with the move. Sources and
+  // what feeds them; Coverage, the regions they read and which send flow logs (the home's "regions unseen"); Scan health;
+  // and the Next scan, whose move is the cadence for every account.
+  const srcStory = (() => {
+    const now = sched.nowMs, accts = sources.filter(r => r.canSchedule), atts = sources.filter(r => !r.canSchedule);
+    const ids = sched.accounts.map(a => a.id), byScan = (k) => accts.filter(r => r.scan === k);
+    const openAdd = () => set({ sub: { page: 'discover', panel: 'add' }, sourceEdit: null, srcCred: null });
+    const scans = () => { go('s3', { layer: 'cloud', tab: 'observe', obPage: 'logs', logTab: 'user', sub: null })(); set({ actQ: 're-discovery', actPage: 0 }); };
+    const ringOf = (rows) => DR.ringOf(DR.ringSegs(rows.filter(r => r.v > 0), { max: 3 }));
+    const legend = (rows) => rows.filter(r => r.v > 0).map(r => ({ key: r.key, label: r.label, n: r.nF || enf(r.v), color: r.color, icon: r.icon || '', hasIcon: !!r.icon && !r.mark, mark: r.mark || '', hasMark: !!r.mark, go: r.go, title: r.title }));
+    const nOf = (n, one, many) => `${enf(n)} ${n === 1 ? one : many}`;
+    const card = (o) => ({ hasUnit: !!o.unit, unit: o.unit || '', sub: o.sub || '', hasSub: !!o.sub, subGo: o.subGo || (() => {}), subCant: !o.subGo,
+      ring: ringOf(o.rows), ringLabel: `${o.title}: ${o.rows.filter(r => r.v > 0).map(r => r.title).join('; ')}`, legend: legend(o.rows),
+      hasAct: !!o.act, isSelect: !o.act, act: o.act || { label: '', icon: '', go: () => {}, title: '' }, cadValue: o.cadValue || '', setCad: o.setCad || (() => {}), ...o });
+    const clouds = [...new Set(accts.map(r => r.kind))];
+    const regs = est.regionsList || [], blindSet = new Set((obAll.blind || []).map(r => r.region));
+    const blind = regs.filter(r => blindSet.has(r.region)), seen = regs.filter(r => !blindSet.has(r.region));
+    const plan = blind.length ? DR.attachPlan(est, blind.map(r => r.region)) : null;
+    const fresh = byScan('fresh'), stale = byScan('stale');
+    const soon = accts.filter(r => r.nextRun != null).sort((a, b) => a.nextRun - b.nextRun);
+    const first = soon[0] || null, left = first ? first.nextRun - now : 0, H = 3600000;
+    const countdown = !first ? 'Manual' : left >= 48 * H ? `${Math.round(left / 24 / H)}d` : left >= H ? `${Math.round(left / H)}h` : `${Math.max(1, Math.round(left / 60000))}m`;
+    const period = first ? SCH.periodOf(first.schedule) : 0, gone = period ? Math.min(1, Math.max(0, 1 - left / period)) : 0;
+    const lastAt = sched.lastRun ? sched.lastRun.at : null;
+    const cards = [
+      card({ key: 'sources', title: 'Sources', icon: 'hybrid-cloud', headGo: () => set({ discoverView: 'estate', estPanel: 'glance', newOnly: false }), headTitle: 'Open the estate they draw',
+        big: enf(sources.length),
+        rows: [{ key: 'cloud', label: 'Clouds', v: accts.length, color: 'var(--viz-1)', icon: 'cloud', go: dd.clouds({ unit: 'cloud' }), title: `${nOf(accts.length, 'cloud account', 'cloud accounts')}, read-only: ${clouds.join(', ')}` },
+          { key: 'att', label: 'AT&T', v: atts.length, color: 'var(--viz-2)', icon: 'hub', go: est0.sites.length ? dd.sites(null) : dd.conn(null), title: `${nOf(atts.length, 'AT&T inventory', 'AT&T inventories')}, kept live: ${atts.map(r => r.name).join(', ')}` }],
+        act: { label: 'Add a source', icon: 'plus', go: openAdd, title: 'Connect another cloud account, read-only' } }),
+      card({ key: 'coverage', title: 'Coverage', icon: 'eye', headGo: dd.clouds({ unit: 'region' }), headTitle: 'Open every region the sources read',
+        big: enf(regs.length), unit: regs.length === 1 ? 'region' : 'regions', sub: est0.sites.length ? `${siteN} sites` : '', subGo: est0.sites.length ? dd.sites(null) : null,
+        rows: [{ key: 'seen', label: 'Seen', v: seen.length, color: 'var(--viz-1)', icon: 'eye', go: dd.clouds({ unit: 'region', regions: seen.map(r => r.region) }), title: `Seen: ${nOf(seen.length, 'region sends', 'regions send')} flow logs on AT&T` },
+          { key: 'unseen', label: 'Unseen', v: blind.length, color: 'var(--viz-6)', icon: 'eye-off', go: dd.clouds({ unit: 'region', regions: blind.map(r => r.region) }), title: `Unseen: ${nOf(blind.length, 'region sends', 'regions send')} no flow logs, read from inventory only` }],
+        act: plan ? { label: plan.label, icon: 'cable', go: dd.order({ regions: plan.regions, note: attachNote(plan, `${nOf(blind.length, 'region', 'regions')} unseen`) }), title: `Attach to the AT&T network and see the traffic: ${plan.label.replace(/^Attach /, '')}${plan.rest.length ? `, then ${plan.rest.map(g => `${g.regions.length} on ${g.cloud}`).join(', ')}` : ''}` }
+          : { label: 'Explore', icon: 'cloud', go: dd.clouds({ unit: 'region' }), title: 'Every region sends flow logs: explore them in Your clouds' } }),
+      card({ key: 'health', title: 'Scan health', icon: 'verified', headGo: scans, headTitle: 'Open the scan history in User activity',
+        big: enf(fresh.length), unit: `of ${accts.length}`, sub: lastAt != null ? SCH.agoLabel(lastAt, now) : '', subGo: lastAt != null ? scans : null,
+        rows: [{ key: 'fresh', label: 'Fresh', v: fresh.length, color: 'var(--viz-1)', icon: 'check-circle', go: scans, title: `Fresh: ${fresh.map(r => `${r.kind} ${r.seen}`).join(', ')}` },
+          { key: 'stale', label: 'Stale', v: stale.length, color: 'var(--warning)', icon: 'clock', go: stale.length ? sched.runNow(stale.map(r => r.id), 'manual') : scans, title: `Stale: ${stale.map(r => `${r.kind} ${r.seen}`).join(', ')}. Re-scan` },
+          { key: 'live', label: 'Live', v: atts.length, color: 'var(--viz-2)', icon: 'sync', go: est0.sites.length ? dd.sites(null) : dd.conn(null), title: `Live: ${atts.map(r => r.name).join(', ')}` }],
+        act: stale.length ? { label: `Re-scan ${stale.length}`, icon: 'sync', go: sched.runNow(stale.map(r => r.id), 'manual'), title: `Re-scan ${stale.map(r => r.name).join(', ')} now` }
+          : { label: 'Re-scan all', icon: 'sync', go: sched.runNow(ids, 'manual'), title: 'Re-scan every account now' } }),
+      card({ key: 'next', title: 'Next scan', icon: 'clock', headGo: () => set({ sub: { page: 'discover', panel: 'run' } }), headTitle: 'Open the discovery run',
+        big: countdown,
+        // The ring is the soonest account's cycle: the part gone since its last fire, the rest to its next.
+        rows: first ? [{ key: 'gone', label: 'Since the last', v: gone, color: 'var(--viz-1)', go: first.edit, title: `${first.name}: ${Math.round(gone * 100)}% of its cycle gone` }, { key: 'left', label: 'To the next', v: 1 - gone, color: 'var(--bg-neutral)', go: first.edit, title: `${first.name}: next scan ${first.nextSeen}` }] : [],
+        cadValue: sched.cadence.id, setCad: sched.setSchedule(ids) }),
+    ];
+    // Next scan's legend is the soonest accounts, each its mark and when, each opening that account's schedule.
+    const nx = cards[3];
+    const clockOf = (r) => (r.nextRun == null ? 'Manual' : r.schedule.kind === 'weekly' ? `Sun ${SCH.clockLabel(r.nextRun)}` : SCH.clockLabel(r.nextRun));
+    nx.legend = [...soon, ...accts.filter(r => r.nextRun == null)].slice(0, 3).map(r => ({ key: r.key, label: r.hasMark ? '' : r.kind, n: clockOf(r), color: '', icon: r.hasMark ? '' : 'clock', hasIcon: !r.hasMark, mark: r.mark, hasMark: r.hasMark, wordmark: !!r.wordmark, go: r.edit, title: `${r.name}: next scan ${r.nextSeen}. Change its schedule` }));
+    if (!nx.legend.length) nx.legend = [{ key: 'none', label: 'No account', n: '', color: '', icon: 'clock', hasIcon: true, mark: '', hasMark: false, go: openAdd, title: 'No cloud account to schedule: add a source' }];
+    // The clouds not yet connected, beside Add a source: each mark opens the drawer on its cloud.
+    const TILE = { AWS: 'AWS', Azure: 'Azure', GCP: 'Google Cloud', Oracle: 'Oracle Cloud', CoreWeave: 'CoreWeave' };
+    const addMarks = Object.keys(TILE).filter(k => !sched.accounts.some(a => a.cloud === k)).map(k => ({ key: k, label: `Add ${TILE[k]}`, mark: W.markFor(k, dark ? 'dark' : 'light'), hasMark: !!W.markFor(k, 'light'), noMark: !W.markFor(k, 'light'),
+      initials: k === 'CoreWeave' ? 'CW' : k.slice(0, 2).toUpperCase(), wordmark: k === 'Oracle', go: () => set({ sub: { page: 'discover', panel: 'add' }, sourceEdit: null, srcCred: null, intakeSource: 'credential', intakeProvider: k }) }));
+    const axis = [['-2d', 0], ['-1d', 1 / 3], ['Now', 2 / 3], ['+1d', 1]].map(([label, x], i) => ({ key: 'ax' + i, label, x: pctOf(x), now: label === 'Now' }));
+    // The marks ride the Sources card's foot, beside its Add a source; the cards enter one after another.
+    cards.forEach((x, i) => { x.i = i; x.marks = x.key === 'sources' ? addMarks : []; x.hasMarks = x.key === 'sources' && addMarks.length > 0; });
+    return { srcCards: cards, srcAddMarks: addMarks, hasSrcAddMarks: addMarks.length > 0, srcAxis: axis };
+  })();
   const gapVals = { gapRows, hasGap: gapRows.length > 0, noGap: gapRows.length === 0, gapSummary, gapCount: String(gapRows.length) };
-  const obX = { ...foundVals, sources, sourcesSub: `${credScanned} connected · ${sched.cadence.empty ? 'nothing on a schedule yet' : sched.cadence.label.toLowerCase()}`, ...(() => {
+  const obX = { ...foundVals, ...srcStory, sources, sourcesSub: `${credScanned} connected · ${sched.cadence.empty ? 'nothing on a schedule yet' : sched.cadence.label.toLowerCase()}`, ...(() => {
       // One drawer adds a source or edits one: which cloud (adding only), then its
       // credential, scope and schedule. AT&T inventory has nothing to manage.
       const CRED_OPTS = { AWS: ['Cross-account role', 'Access keys'], Azure: ['Service principal', 'Managed identity'], GCP: ['Service account', 'Workload identity federation'], Oracle: ['API signing key'], CoreWeave: ['API key'] };
@@ -3960,7 +4157,9 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
         // AT&T inventory is already live, so it adds nothing.
         addSource: () => set(editing || !prov
           ? { sub: null, sourceEdit: null, srcCred: null, ...(editing ? {} : { screen: 's1', discoverView: 'sources' }) }
-          : { addedSources: [...(s.addedSources || []), { provider: prov, name: `${tile} account`, cred: s.srcCred && creds.includes(s.srcCred) ? s.srcCred : creds[0] || '', cadence: s.srcCadence || 'nightly', at: SCH.nowOf(s), estId: est.id }], sub: null, sourceEdit: null, srcCred: null, screen: 's1', discoverView: 'sources' }),
+          : { addedSources: [...(s.addedSources || []), { provider: prov, name: `${tile} account`, cred: s.srcCred && creds.includes(s.srcCred) ? s.srcCred : creds[0] || '', cadence: s.srcCadence || 'nightly', at: SCH.nowOf(s), estId: est.id }], sub: null, sourceEdit: null, srcCred: null, screen: 's1', discoverView: 'sources',
+            // The page that holds the new source, under the alert that says what it found (2026-10-13).
+            srcPage: Math.floor(sched.accounts.length / Math.max(1, PAGE_SIZE.sources[1] - (FOUND_SHRINK.sources || 0))) }),
       };
     })(), ...dash, nextStop, connectNext, governNext, costNext,
     // Next stop is a button in the title row, not a strip (2026-09-28, no scrolling).

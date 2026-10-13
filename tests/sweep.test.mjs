@@ -193,15 +193,22 @@ test('with nothing attached, Next: Observe says what is true', () => {
 });
 
 test('the Sources Manage links wrap inside their column, never past the edge', () => {
-  const i = HTML.indexOf('data-th="Manage"');
-  const cell = HTML.slice(i, HTML.indexOf('</div>', i));
-  assert.match(cell, /display:flex;flex-wrap:wrap/);
-  const heads = HTML.slice(HTML.indexOf('id="sec-accounts"'), HTML.indexOf('<div class="dt-b">', HTML.indexOf('id="sec-accounts"')));
-  const widths = [...heads.matchAll(/dt-th" style="width:(\d+)%">(\w[\w ]*)</g)].map(m => [m[2], +m[1]]);
-  assert.equal(widths.reduce((a, [, w]) => a + w, 0), 100, JSON.stringify(widths));
-  // At 1440 the table is 1,152px. Fixed layout adds each cell's 32px of padding
-  // to its percentage and scales the row back to the table, so 20% is a 220px
-  // cell: 188px inside, and Re-scan, Edit access and Remove need 177px with
-  // their 12px gaps. Narrower than that, they wrap in place.
-  assert.ok(Object.fromEntries(widths).Manage >= 20, JSON.stringify(widths));
+  // Re-pinned 2026-10-13: the Sources story drew the accounts as rows on one grid (no table), and its actions as a compact
+  // Re-scan with Edit access and Remove as glyph buttons (their words in aria-label and title). The pin is the same: all
+  // three fit their column, never past the edge. The column is fixed in px, and Re-scan (about 92px), two 32px glyph
+  // buttons and two 6px gaps need 168px.
+  const i = HTML.indexOf('<span class="src-acts">');
+  assert.ok(i > 0, 'the Sources actions cell is gone');
+  const cell = HTML.slice(i, HTML.indexOf('</span></span>', HTML.indexOf('aria-label="Remove"', i)));
+  assert.match(cell, />Re-scan</);
+  assert.match(cell, /aria-label="Edit access"/);
+  assert.match(cell, /aria-label="Remove"/);
+  const css = readFileSync(new URL('../storefront.css', import.meta.url), 'utf8');
+  const grid = /\.src-row\{display:grid;grid-template-columns:([^;]+);/.exec(css);
+  assert.ok(grid, 'the Sources row grid is gone');
+  const last = grid[1].trim().split(/\s+(?![^(]*\))/).pop();
+  assert.match(last, /^\d+px$/, `the actions column is "${last}", not fixed`);
+  assert.ok(parseInt(last, 10) >= 168, `the actions column is ${last}; Re-scan, Edit access and Remove need 168px`);
+  // Re-scan leads the column on every row, so the three line up down the list; Remove trails where it shows.
+  assert.match(css, /\.src-acts\{display:flex;align-items:center;justify-content:flex-start;gap:6px/);
 });

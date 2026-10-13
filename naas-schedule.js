@@ -247,6 +247,40 @@ export function scheduleView(est, now, opts = {}) {
   };
 }
 
+// ---------- Scan health (2026-10-13, the Sources story: "are we seeing everything?") ----------
+// A scheduled source is fresh until it misses a scan its cadence owes it (a whole period and an hour with none); a manual
+// one stays fresh for a day. The cadence that ran the last scan counts too (`seeded`), so changing the cadence today does
+// not by itself make last night's scan stale. Never scanned is stale. AT&T inventory is live and never comes here.
+const limitOf = (sch) => { const p = periodOf(sch); return p ? p + HOUR : DAY; };
+export function freshness(lastRun, now, schedule, seeded = schedule) {
+  if (lastRun == null) return 'stale';
+  return now - lastRun > Math.max(limitOf(schedule), limitOf(seeded)) ? 'stale' : 'fresh';
+}
+
+/**
+ * One source's scans on the axis every row shares: `back` behind now to `ahead` after it, each as a fraction of the span
+ * (0 the left end, 1 the right). past: the fires the account's seeded cadence implies (the model seedRuns reads, never
+ * before the account was added), its last scan, and every run that covered it; next: the fires its cadence will make.
+ * A last scan before the axis starts is `before`, a next one after it ends `after`, so the strip can point off its ends.
+ */
+export function heartbeat({ id, seeded, schedule, added = null, lastRun = null }, runs, now, { back = 2 * DAY, ahead = DAY } = {}) {
+  const t0 = now - back, span = back + ahead, x = (t) => (t - t0) / span;
+  const past = new Map();
+  const p0 = periodOf(seeded);
+  if (p0) for (let t = prevRunAt(seeded, now); t != null && t >= t0 && (added == null || t >= added); t -= p0) past.set(t, 'schedule');
+  if (lastRun != null && lastRun >= t0 && lastRun <= now && !past.has(lastRun)) past.set(lastRun, added != null && lastRun === added ? 'added' : 'schedule');
+  (runs || []).forEach(r => { if ((r.accountIds || []).indexOf(id) >= 0 && r.at >= t0 && r.at <= now) past.set(r.at, r.trigger || 'manual'); });
+  const next = [];
+  const p = periodOf(schedule), first = nextRunAt(schedule, now);
+  if (p) for (let t = first; t != null && t <= now + ahead; t += p) next.push({ at: t, x: x(t) });
+  return {
+    past: [...past.entries()].sort((a, b) => a[0] - b[0]).map(([at, trigger]) => ({ at, x: x(at), trigger })),
+    next, nowX: x(now),
+    before: lastRun != null && lastRun < t0 ? lastRun : null,
+    after: first != null && first > now + ahead ? first : null,
+  };
+}
+
 // ---------- One clock (2026-09-30) ----------
 // Findings, schedules and incidents read one now: the pinned s.nowIso when a
 // test or a demo sets it, the real clock otherwise. Times print in Dallas.

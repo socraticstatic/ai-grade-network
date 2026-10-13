@@ -566,7 +566,16 @@ test('every container the markup opens, it closes', () => {
   // move counts, and a foot with its state and action; the h3 row carries the bars' key (div +12, span +17, sc-if +9,
   // sc-for +3, button +5): div 1343 -> 1355, span 1517 -> 1534, sc-if 683 -> 692, sc-for 401 -> 404, button 537 -> 542.
   // All three merged (2026-10-13): Estate, Govern and Optimize, recounted from the file: div 1357, span 1592, sc-if 710, sc-for 407, button 543.
-    ['div', /<div\b/g, /<\/div>/g, 1357],
+  // Sources and Logs as stories (2026-10-13, "Each page should be its own gorgeous, extremely beautiful story, with calls to
+  // action on each"). Sources: the dt table became four verdict cards of the Estate's grammar (head, figure, ring, legend,
+  // a foot with the move and the clouds not yet connected) over rows on one grid (mark and scan state, name, scope chip, the
+  // scan axis with its dots, cadence, Re-scan with Edit and Remove as glyph buttons), the head row carrying the axis and the
+  // pager; the drawer's promise became two glyph chips. Logs: the dt tables and the head line became one card a tab (the
+  // verdict rows, each a door and a move; the stream, a lane a pattern or a person, its dots, axis and key), the filters on
+  // two lines with glyph labels and the pattern chips' glyphs, the toggle, Clear and the pager on one bar, and the rows on
+  // one grid. Recounted from the file: div 1357 -> 1317, span 1592 -> 1679, sc-if 710 -> 723, sc-for 407 -> 423,
+  // button 543 -> 559, label 32 -> 33.
+    ['div', /<div\b/g, /<\/div>/g, 1317],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -577,7 +586,7 @@ test('every container the markup opens, it closes', () => {
   // Jump on the picture (2026-10-13, "immediately go to an asset deep down"): the flow map's button and search box in the
   // filter row, its glyph, the match it names and the count (span +3, sc-if +3, button +1, label +1):
   // span 1514 -> 1517, sc-if 680 -> 683, button 536 -> 537, label 31 -> 32.
-    ['span', /<span\b/g, /<\/span>/g, 1592], // Estate + Govern + Optimize (2026-10-13), told at the div pin
+    ['span', /<span\b/g, /<\/span>/g, 1679], // Estate + Govern + Optimize, then Sources and Logs (2026-10-13), told at the div pin
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
@@ -586,12 +595,12 @@ test('every container the markup opens, it closes', () => {
   // both hero buttons in one flex row (div +1), and Persona and Estate on one row in the rail foot so Spend ends inside
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 710], // Estate + Govern + Optimize (2026-10-13), told at the div pin
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 407], // Estate + Govern + Optimize (2026-10-13), told at the div pin
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 723], // Estate + Govern + Optimize, then Sources and Logs (2026-10-13), told at the div pin
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 423], // Estate + Govern + Optimize, then Sources and Logs (2026-10-13), told at the div pin
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 543], // Estate + Govern + Optimize (2026-10-13), told at the div pin
+    ['button', /<button\b/g, /<\/button>/g, 559], // Estate + Govern + Optimize, then Sources and Logs (2026-10-13), told at the div pin
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
-    ['label', /<label\b/g, /<\/label>/g, 32],
+    ['label', /<label\b/g, /<\/label>/g, 33], // Sources' cadence for every account (2026-10-13), told at the div pin
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);
