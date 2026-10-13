@@ -9,4 +9,4 @@ node scripts/figma-handoff/freeze.mjs --only portal
 
 Boards: the storefront journey (nine beats plus the Why panel), the portal journey (six beats), the four portal pages on Calloway (Set 1) and on the synthetic bank estate (Set 2). `index.json` lists them in order with their titles.
 
-Import: html.to.design, one board at a time, named from the index. Pilot one board, pixel-diff it against its reference, show Micah, then the rest. The captures folder is regenerated and never committed.
+Import: html.to.design by URL, one board at a time, named from the index; the captures are tracked so the live site serves them (https://socraticstatic.github.io/ai-grade-network/docs/figma-handoff/captures/<slug>.html). Pilot one board, pixel-diff it against its reference, show Micah, then the rest. Re-freeze and commit after any change to the pages.
