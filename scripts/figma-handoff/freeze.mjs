@@ -92,6 +92,7 @@ try {
       const slug = `storefront-journey-${String(beats.indexOf(beat) + 1).padStart(2, '0')}-${beat}${T}`;
       const seen = index.some(x => x.slug === slug);
       if (!seen) { n += 1; await freeze(p, slug, `Journey ${String(beats.indexOf(beat) + 1).padStart(2, '0')} ${BEAT_WORD[beat]}${TT}`);
+        if (beat === 'intent') { const rp = p.locator('.js-rpick button'); if (await rp.count() > 1) { await rp.nth(1).click(); await settle(p, 600); const w = (await rp.nth(1).innerText()).trim(); await freeze(p, `storefront-journey-04b-intent-${w}${T}`, `Journey 04b Needs ${w}${TT}`); await rp.nth(0).click(); await settle(p, 500); } }
         if (beat === 'recommend') { await p.locator('.js-deeper').click(); await settle(p, 700); await freeze(p, `storefront-journey-05b-recommend-why${T}`, `Journey 05b Why${TT}`); await p.locator('.js-whyp-x, .js-deeper').first().click(); await settle(p); } }
       if (beat === 'save') break;
       const go = p.locator('.js-go'); if (await go.isDisabled()) break;

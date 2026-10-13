@@ -1,0 +1,138 @@
+{
+  "frozen": "2026-10-13T10:58:19.488Z",
+  "live": "https://socraticstatic.github.io/ai-grade-network/",
+  "boards": [
+    {
+      "slug": "storefront-journey-01-today",
+      "title": "Journey 01 Today",
+      "html": "storefront-journey-01-today.html",
+      "png": "storefront-journey-01-today.png"
+    },
+    {
+      "slug": "storefront-journey-02-source",
+      "title": "Journey 02 Source",
+      "html": "storefront-journey-02-source.html",
+      "png": "storefront-journey-02-source.png"
+    },
+    {
+      "slug": "storefront-journey-03-found",
+      "title": "Journey 03 Found",
+      "html": "storefront-journey-03-found.html",
+      "png": "storefront-journey-03-found.png"
+    },
+    {
+      "slug": "storefront-journey-04-intent",
+      "title": "Journey 04 Needs",
+      "html": "storefront-journey-04-intent.html",
+      "png": "storefront-journey-04-intent.png"
+    },
+    {
+      "slug": "storefront-journey-04b-intent-westeurope",
+      "title": "Journey 04b Needs westeurope",
+      "html": "storefront-journey-04b-intent-westeurope.html",
+      "png": "storefront-journey-04b-intent-westeurope.png"
+    },
+    {
+      "slug": "storefront-journey-05-recommend",
+      "title": "Journey 05 Recommend",
+      "html": "storefront-journey-05-recommend.html",
+      "png": "storefront-journey-05-recommend.png"
+    },
+    {
+      "slug": "storefront-journey-05b-recommend-why",
+      "title": "Journey 05b Why",
+      "html": "storefront-journey-05b-recommend-why.html",
+      "png": "storefront-journey-05b-recommend-why.png"
+    },
+    {
+      "slug": "storefront-journey-06-connect",
+      "title": "Journey 06 Connect",
+      "html": "storefront-journey-06-connect.html",
+      "png": "storefront-journey-06-connect.png"
+    },
+    {
+      "slug": "storefront-journey-07-watch",
+      "title": "Journey 07 Live",
+      "html": "storefront-journey-07-watch.html",
+      "png": "storefront-journey-07-watch.png"
+    },
+    {
+      "slug": "storefront-journey-08-protect",
+      "title": "Journey 08 Protect",
+      "html": "storefront-journey-08-protect.html",
+      "png": "storefront-journey-08-protect.png"
+    },
+    {
+      "slug": "storefront-journey-09-save",
+      "title": "Journey 09 Save",
+      "html": "storefront-journey-09-save.html",
+      "png": "storefront-journey-09-save.png"
+    },
+    {
+      "slug": "storefront-journey-01-today-dark",
+      "title": "Journey 01 Today Dark",
+      "html": "storefront-journey-01-today-dark.html",
+      "png": "storefront-journey-01-today-dark.png"
+    },
+    {
+      "slug": "storefront-journey-02-source-dark",
+      "title": "Journey 02 Source Dark",
+      "html": "storefront-journey-02-source-dark.html",
+      "png": "storefront-journey-02-source-dark.png"
+    },
+    {
+      "slug": "storefront-journey-03-found-dark",
+      "title": "Journey 03 Found Dark",
+      "html": "storefront-journey-03-found-dark.html",
+      "png": "storefront-journey-03-found-dark.png"
+    },
+    {
+      "slug": "storefront-journey-04-intent-dark",
+      "title": "Journey 04 Needs Dark",
+      "html": "storefront-journey-04-intent-dark.html",
+      "png": "storefront-journey-04-intent-dark.png"
+    },
+    {
+      "slug": "storefront-journey-04b-intent-westeurope-dark",
+      "title": "Journey 04b Needs westeurope Dark",
+      "html": "storefront-journey-04b-intent-westeurope-dark.html",
+      "png": "storefront-journey-04b-intent-westeurope-dark.png"
+    },
+    {
+      "slug": "storefront-journey-05-recommend-dark",
+      "title": "Journey 05 Recommend Dark",
+      "html": "storefront-journey-05-recommend-dark.html",
+      "png": "storefront-journey-05-recommend-dark.png"
+    },
+    {
+      "slug": "storefront-journey-05b-recommend-why-dark",
+      "title": "Journey 05b Why Dark",
+      "html": "storefront-journey-05b-recommend-why-dark.html",
+      "png": "storefront-journey-05b-recommend-why-dark.png"
+    },
+    {
+      "slug": "storefront-journey-06-connect-dark",
+      "title": "Journey 06 Connect Dark",
+      "html": "storefront-journey-06-connect-dark.html",
+      "png": "storefront-journey-06-connect-dark.png"
+    },
+    {
+      "slug": "storefront-journey-07-watch-dark",
+      "title": "Journey 07 Live Dark",
+      "html": "storefront-journey-07-watch-dark.html",
+      "png": "storefront-journey-07-watch-dark.png"
+    },
+    {
+      "slug": "storefront-journey-08-protect-dark",
+      "title": "Journey 08 Protect Dark",
+      "html": "storefront-journey-08-protect-dark.html",
+      "png": "storefront-journey-08-protect-dark.png"
+    },
+    {
+      "slug": "storefront-journey-09-save-dark",
+      "title": "Journey 09 Save Dark",
+      "html": "storefront-journey-09-save-dark.html",
+      "png": "storefront-journey-09-save-dark.png"
+    }
+  ]
+}

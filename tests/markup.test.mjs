@@ -537,7 +537,8 @@ test('every container the markup opens, it closes', () => {
   // switch), four columns each with a head, a body of tier bands and rows, a pinned default row, and a pager
   // (div +12, span +28, sc-if +8, sc-for +6, button +6): div 1324 -> 1336, span 1488 -> 1516, sc-if 670 -> 678,
   // sc-for 394 -> 400, button 525 -> 531.
-    ['div', /<div\b/g, /<\/div>/g, 1339],
+    // The region picker in the cloud node (2026-10-13): div 1339 -> 1340, sc-if 679 -> 680, sc-for 400 -> 401, button 535 -> 536.
+    ['div', /<div\b/g, /<\/div>/g, 1340],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -554,10 +555,10 @@ test('every container the markup opens, it closes', () => {
   // both hero buttons in one flex row (div +1), and Persona and Estate on one row in the rail foot so Spend ends inside
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 679],
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 400],
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 680],
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 401],
     ['section', /<section\b/g, /<\/section>/g, 17],
-    ['button', /<button\b/g, /<\/button>/g, 535],
+    ['button', /<button\b/g, /<\/button>/g, 536],
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 31],
   ];

@@ -66,12 +66,12 @@ test('every way says why, in the deck\'s words: what fits, what to watch, what i
 test('the Intent beat sits before the recommendation; an answer re-ranks at once and the wire proposes the new pick', () => {
   const c = journey({ jStep: B.intent });
   let v = vals(c);
-  assert.equal(v.jIsIntent, true); assert.equal(v.jLine, 'What does your Azure connection need?'); assert.equal(v.jAct, 'See the recommendation');
+  assert.equal(v.jIsIntent, true); assert.equal(v.jLine, 'What does eastus need?'); assert.equal(v.jAct, 'See the recommendation');
   assert.deepEqual(v.jIntentQs.map(q => q.opts.filter(o => o.on).map(o => o.key)[0]), ['prod', 'standard', 'private', 'bgp']);
   assert.equal(v.jLink, 'proposed'); assert.equal(v.jLinkWord, 'Your ExpressRoute');
   v.jIntentQs.find(q => q.key === 'security').opts.find(o => o.key === 'inspected').go();
   v = vals(c);
-  assert.deepEqual(c.state.jIntent, { security: 'inspected' });
+  assert.deepEqual(c.state.jIntents, { eastus: { security: 'inspected' } }); // per region since 2026-10-13
   assert.equal(v.jLinkWord, 'Hosted transit gateway', 'the picture moves with the answer');
   v.jActGo();
   v = vals(c);

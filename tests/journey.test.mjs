@@ -48,7 +48,7 @@ test('the Customer switch opens the journey on its first beat, clean; the steppe
 test('one sentence a beat tells the story', () => {
   const lines = [0, 1, 2, 3, 4, 5].map(i => vals(journey({ jStep: i, addedSources: i >= 2 ? AZURE : [] })).jLine);
   assert.deepEqual(lines, ['AT&T already carries your 20 sites.', 'Connect a cloud account. Read only.', 'Azure runs 68 workloads outside the AT&T network.',
-    'What does your Azure connection need?', 'Move Azure onto AT&T. Save $3,600 a month.', 'Connect Azure with Your ExpressRoute.']);
+    'What does eastus need?', 'Move Azure onto AT&T. Save $3,600 a month.', 'Connect Azure with Your ExpressRoute.']);
   for (const l of lines) assert.ok(l.split(' ').length <= 9, l);
 });
 
