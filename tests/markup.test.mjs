@@ -551,7 +551,16 @@ test('every container the markup opens, it closes', () => {
   // (sc-if per mark, chip glyph and chevron); each unit its glyph; and showEstateBody's sc-if now closes after the panels it
   // guards, not before them (moved, not added): div 1343 -> 1346, span 1517 -> 1541, sc-if 683 -> 695, sc-for 401 -> 402,
   // button 537 -> 538.
-    ['div', /<div\b/g, /<\/div>/g, 1346],
+  // Govern, visual (2026-10-13, Micah: "Govern is extremely verbose - make it more visual, more beautiful, more amazing";
+  // "policy engine is all crunched up - make it extremely beautiful"). Findings: one grid row each (the count in its tile,
+  // the kind and where, the strip, a compact fix and Andi) under a head with its chip and the station words. Policies: the
+  // head carries the total as a chip and the station words; a row's match and count, its state and violations are glyphs
+  // and numbers; the open row puts each station's words under its node. Engine: a skipped rung's reason is its glyph, the
+  // word only for the rest (sc-if +1). Tags: one-ink rows of glyph and number counts under a heads row; the empty state a
+  // glyph. Templates: the kind switch, the cards and their foot on classes, a +N chip under a node, the match as a glyph and
+  // a number. Recounted from the file: div 1343 -> 1342, span 1517 -> 1551, sc-if 683 -> 689, sc-for 401 -> 403.
+  // Both merged (2026-10-13): Estate's deltas plus Govern's, recounted from the file: div 1345, span 1575, sc-if 701, sc-for 404.
+    ['div', /<div\b/g, /<\/div>/g, 1345],
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -562,7 +571,7 @@ test('every container the markup opens, it closes', () => {
   // Jump on the picture (2026-10-13, "immediately go to an asset deep down"): the flow map's button and search box in the
   // filter row, its glyph, the match it names and the count (span +3, sc-if +3, button +1, label +1):
   // span 1514 -> 1517, sc-if 680 -> 683, button 536 -> 537, label 31 -> 32.
-    ['span', /<span\b/g, /<\/span>/g, 1541], // the Estate beauty pass (2026-10-13), told at the div pin
+    ['span', /<span\b/g, /<\/span>/g, 1575], // Estate + Govern (2026-10-13), told at the div pin
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
@@ -571,8 +580,8 @@ test('every container the markup opens, it closes', () => {
   // both hero buttons in one flex row (div +1), and Persona and Estate on one row in the rail foot so Spend ends inside
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 695], // the Estate beauty pass (2026-10-13), told at the div pin
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 402], // the Estate beauty pass (2026-10-13), told at the div pin
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 701], // Estate + Govern (2026-10-13), told at the div pin
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 404], // Estate + Govern (2026-10-13), told at the div pin
     ['section', /<section\b/g, /<\/section>/g, 17],
     ['button', /<button\b/g, /<\/button>/g, 538], // the Estate beauty pass (2026-10-13), told at the div pin
     ['aside', /<aside\b/g, /<\/aside>/g, 11],

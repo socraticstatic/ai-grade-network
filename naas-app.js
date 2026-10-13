@@ -1469,6 +1469,15 @@ const GOV_PANEL = { policies: 'Violations & policies', tags: 'Tags', templates: 
 // The set a finding's head counts: the violations of the rule it names (naas-govern.js counts its head the same way).
 const FINDING_RULE = GV.FINDING_RULE;
 const POL_FILTERS = ['enforced', 'unenforced', 'viol'];
+// A Govern finding's mark (2026-10-13, Govern visual): the same glyphs the page head's chips wear for the same things.
+const FIND_ICON = { ipsec: 'internet', tunnel: 'shuffle', pci: 'globe', uninspected: 'eye-off', unsegmented: 'grid' };
+// A tag's footprint and exposure as glyphs (2026-10-13): VPCs, workloads, regions, clouds; public VPCs, exposed workloads.
+const TAG_ICON = { vpcs: 'network-folder', wl: 'apps', regions: 'map', clouds: 'cloud', public: 'globe', exposed: 'exclamation-circle' };
+/** A fix in a few words: the product and where, never its parenthesis or its tail ("NGFW (Palo Alto) in path" -> "NGFW in
+ *  path", "Hosted VPC in us-east-1, enforced" -> "Hosted VPC in us-east-1"). The whole name stays in the title. */
+export const fixShort = (name) => String(name || '').replace(/^Hosted (VPC|VNet) in (\d+) regions$/, '$2 hosted $1s').replace(/\s*\([^)]*\)/g, '').split(/,| to | across | with the /)[0].trim();
+/** The product's glyph on a fix button. */
+export const fixIcon = (name) => { const t = String(name || ''); return /segment/i.test(t) ? 'grid' : /hosted (vpc|vnet)/i.test(t) ? 'cloud' : /ngfw|firewall|inspect/i.test(t) ? 'firewall' : /avpn|netbond/i.test(t) ? 'hub' : 'wrench'; };
 export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} }) {
   const gk = out.govPanelTags ? 'tags' : out.govPanelTemplates ? 'templates' : out.govPanelLayers ? 'layers' : 'policies';
   const onGov = s.screen === 's3' && s.tab === 'govern' && s.layer === 'cloud';
@@ -1528,6 +1537,9 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
       const f = (est.findings || []).find(x => x.kind === d.key); if (!f) return null;
       if (d.key === 'ipsec') { const list = (est.sites || []).filter(x => siteModeOf(x) === 'ipsec' && !onAtt(x)), n = GV.count(list, 'site');
         return { crumb: D.KINDS[f.kind] || 'Finding', last: nOf(n, 'site', 'sites'), n, unit: 'site', line: f.head, rule: 'An IPsec tunnel on another carrier\'s internet, to a public cloud VPN gateway.', rows: list.map(siteRow) }; }
+      // The AT&T sites that state a tunnel over the internet (2026-10-13, Govern visual: every count a door, this one too).
+      if (d.key === 'tunnel') { const list = (est.sites || []).filter(x => x.tunnel && onAtt(x)), n = GV.count(list, 'site');
+        return { crumb: D.KINDS[f.kind] || 'Finding', last: nOf(n, 'site', 'sites'), n, unit: 'site', line: f.head, rule: 'AT&T access, then a tunnel over the internet to the cloud.', rows: list.map(siteRow) }; }
       const rule = FINDING_RULE[d.key]; if (!rule) return null;
       const ps = setsOf(rule); if (!ps.viol) return null;
       const n = GV.count(ps.viol, ps.unit);
@@ -1594,8 +1606,17 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
     const mGo = p.matched > 0 ? fig(`g-pol-${p.name}-matched`, p.matched, 'drill', openDrill({ panel: 'policies', kind: 'policy', name: p.name, what: 'matched' })) : null;
     const vGo = p.viol > 0 ? fig(`g-pol-${p.name}-viol`, p.viol, 'drill', openDrill({ panel: 'policies', kind: 'policy', name: p.name, what: 'viol' })) : null;
     const mLabel = p.matched == null ? 'Not yet measured' : p.matched ? nOf(p.matched, w[0], w[1]) : `no ${w[1]}`;
+    // Glyph-first (2026-10-13, Govern visual): the match without its kind word (the glyph says tag, site or region), the
+    // count as a glyph and a number, the violations the same; the words ride in titles. One ink but the verb badges.
+    const violLabel = p.viol == null ? (p.matched == null ? '' : 'Not yet measured') : p.viol ? nOf(p.viol, 'violation', 'violations') : 'no violations';
+    const st = p.state === 'enforced' ? null : p.state === 'simulated' ? ['clock', 'Simulated, not enforced'] : ['pencil', 'Draft, not enforced'];
     return { ...p, appliesTo: `${p.match} · ${mLabel}`, matchedLabel: mLabel, hasMatchedGo: !!mGo, noMatchedGo: !mGo, matchedGo: mGo || (() => {}),
-      violLabel: p.viol == null ? (p.matched == null ? '' : 'Not yet measured') : p.viol ? nOf(p.viol, 'violation', 'violations') : 'no violations',
+      matchShort: String(p.match || '').replace(/^(tag|branch|remote-site|site|region) /i, '').replace(/^Private cloud · /, ''), unitIcon: unit === 'site' ? 'large-building' : 'apps',
+      nF: p.matched == null ? '' : nf(p.matched), violN: p.viol ? nf(p.viol) : '', quietN: !mGo && p.matched != null,
+      statusIcon: p.viol ? 'exclamation-circle' : p.viol === 0 ? 'check-circle' : 'minus-circle', statusTitle: p.viol ? violLabel : p.viol === 0 ? 'No violations' : 'Not yet measured',
+      hasStateMark: !!st, stateIcon: st ? st[0] : 'check-shield', stateTitle: st ? st[1] : 'Enforced',
+      layers: (p.layers || []).map(l => ({ ...l, tip: `${l.label}: ${l.text}${l.broken ? '. It breaks here' : ''}` })),
+      violLabel,
       hasViolGo: !!vGo, noViolGo: !vGo, violGo: vGo || (() => {}), violColor: p.viol ? 'var(--error)' : 'var(--text-light)',
       // "See what is breaking it" opens the very set its violations count, here; it went to an unfiltered map.
       actGo: p.viol > 0 ? openDrill({ panel: 'policies', kind: 'policy', name: p.name, what: 'viol' }) : p.actGo };
@@ -1626,39 +1647,55 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
       ...(tailN ? [{ key: 'tail', icon: tw[0], n: tailN, label: tw[1], ink: tf ? 'var(--warning)' : 'var(--error)', title: tail, go: tailGo || (() => {}) }] : [])];
   }
   const governFindings = (out.governFindings || []).map(f => {
-    const n = lead(f.head), can = !drill && n != null && (FINDING_RULE[f.kind] || f.kind === 'ipsec');
+    const n = lead(f.head), can = !drill && n != null && (FINDING_RULE[f.kind] || f.kind === 'ipsec' || f.kind === 'tunnel');
     const g = can ? fig(`g-find-${f.kind}`, n, 'drill', openDrill({ panel: 'policies', kind: 'finding', key: f.kind })) : null;
     // The row's button is the drill's move; a set over more regions opens the drill, where each region's move sits.
     const viol = MOVE[f.kind] && FINDING_RULE[f.kind] ? setsOf(FINDING_RULE[f.kind]).viol : null, mv = viol && viol.length ? movesOf(f.kind, viol, f) : [];
     const rec = mv.length === 1 ? { name: mv[0].short, title: mv[0].label, choose: mv[0].go } : mv.length > 1 ? { name: `Hosted VPC in ${mv.length} regions`, title: `Hosted VPC in ${mv.length} regions: ${mv.map(m => m.label).join('; ')}`, choose: openDrill({ panel: 'policies', kind: 'finding', key: f.kind }) } : f.rec ? { ...f.rec, title: f.rec.title || f.rec.name } : f.rec;
-    return { ...f, rec, headParts: [{ key: 'h', text: f.head, isFig: !!g, isText: !g, go: g || (() => {}) }] };
+    // Visual (Micah, 2026-10-13: "Govern is extremely verbose"): the finding is its glyph, its count, its kind in a few
+    // words, where it lands and the path it breaks (the strip Insights draws for it); the sentence is the row's title.
+    const cloudy = (t) => /^(AWS|Azure|GCP|Google|Oracle|\d+ (AWS|Azure|GCP) )/.test(String(t || ''));
+    const strip = findStrip(f).map(x => ({ ...x, title: x.key === 'site' && f.pathSrc ? `Sites: ${f.pathSrc}` : x.key === 'cloud' && f.pathDst ? `Cloud: ${f.pathDst}` : x.title }));
+    const fix = rec ? { label: fixShort(rec.name), title: rec.title || rec.name, go: rec.choose, icon: fixIcon(rec.name) } : null;
+    return { ...f, rec, fix, icon: FIND_ICON[f.kind] || 'exclamation-circle', kindWord: D.KINDS[f.kind] || 'Finding', strip,
+      where: f.pathDst || '', whereIcon: /internet/i.test(f.pathDst || '') ? 'globe' : 'cloud', from: cloudy(f.pathSrc) ? f.pathSrc : '', hasFrom: cloudy(f.pathSrc),
+      headParts: [{ key: 'h', text: f.head, nF: n != null ? nf(n) : '', hasN: n != null, isFig: !!g, isText: !g, go: g || (() => {}) }] };
   });
 
   // ---- Tags: each row's footprint and exposure, and the tags with no policy ----
   const tf = s.tagFilter === 'bare' ? 'bare' : null;
   const tagAll = (out.drawerTags || []).map(t => {
     const ts = GV.tagSet(invAll, t.key), k = GV.tagKey(t.key);
-    const part = (what, n, one, many) => { const g = !drill && gk === 'tags' && n > 0 ? fig(`g-tag-${k}-${what}`, n, 'drill', openDrill({ panel: 'tags', kind: 'tag', tag: t.key, what })) : null; return { key: what, text: nOf(n, one, many), isFig: !!g, isText: !g, go: g || (() => {}) }; };
-    const sep = (x) => ({ key: 'sep' + x, text: x, isFig: false, isText: true, go: () => {} });
+    // Glyph-first (2026-10-13, Govern visual): each count is its glyph and its number, the words in its title.
+    const part = (what, n, one, many) => { const g = !drill && gk === 'tags' && n > 0 ? fig(`g-tag-${k}-${what}`, n, 'drill', openDrill({ panel: 'tags', kind: 'tag', tag: t.key, what })) : null; return { key: what, text: nOf(n, one, many), title: nOf(n, one, many), nF: nf(n), icon: TAG_ICON[what], isFig: !!g, isText: !g, go: g || (() => {}) }; };
     const pub = part('public', ts.publicVpcs.length, 'VPC', 'VPCs'), exp = part('exposed', ts.exposed.length, 'workload', 'workloads');
     return { ...t, wl: ts.workloads.length, exposedN: ts.exposed.length,
-      subParts: [part('vpcs', ts.vpcs.length, 'VPC', 'VPCs'), sep(' · '), part('wl', ts.workloads.length, 'workload', 'workloads'), sep(' · '), part('regions', ts.regions.length, 'region', 'regions'), sep(' in '), part('clouds', ts.clouds.length, 'cloud', 'clouds')].map((p, i) => ({ ...p, key: 'tp' + i })),
-      expo: ts.publicVpcs.length ? { ...pub, text: `${pub.text} on the public internet`, ink: WARN } : { key: 'public', text: 'All on AT&T', isFig: false, isText: true, go: () => {}, ink: 'var(--text-light)' },
-      expoWl: ts.exposed.length ? { ...exp, text: `${exp.text} exposed`, ink: WARN } : { key: 'exposed', text: 'None exposed', isFig: false, isText: true, go: () => {}, ink: 'var(--text-light)' } };
+      subParts: [part('vpcs', ts.vpcs.length, 'VPC', 'VPCs'), part('wl', ts.workloads.length, 'workload', 'workloads'), part('regions', ts.regions.length, 'region', 'regions'), part('clouds', ts.clouds.length, 'cloud', 'clouds')],
+      expo: ts.publicVpcs.length ? { ...pub, text: `${pub.text} on the public internet`, title: `${pub.text} on the public internet`, ink: WARN, none: false } : { key: 'public', text: 'All on AT&T', title: 'All on AT&T', nF: '', icon: 'hub', isFig: false, isText: true, go: () => {}, ink: 'var(--link)', none: true },
+      expoWl: ts.exposed.length ? { ...exp, text: `${exp.text} exposed`, title: `${exp.text} exposed`, ink: WARN, none: false } : { key: 'exposed', text: 'None exposed', title: 'None exposed', nF: '', icon: 'check-circle', isFig: false, isText: true, go: () => {}, ink: 'var(--text-light)', none: true },
+      doorShort: t.covered ? 'Open' : 'Set policy', doorIcon: t.covered ? 'arrow-right' : 'plus-circle', bare: !t.covered };
   });
   const bareN = tagAll.filter(t => !t.covered).length;
   const tagFigOk = gk === 'tags' && !drill;
   const tagAllGo = tagFigOk && tagAll.length ? fig('g-tags-all', tagAll.length, 'tagFilter:all', () => set({ tagFilter: null, tagPage: 0, govDrill: null })) : null;
   const tagBareGo = tagFigOk && bareN ? fig('g-tags-bare', bareN, 'tagFilter:bare', () => set({ tagFilter: 'bare', tagPage: 0, govDrill: null })) : null;
-  const tagSubParts = [{ text: nOf(tagAll.length, 'tag', 'tags'), go: tagAllGo }, { text: ' · ' }, { text: bareN ? `${nf(bareN)} with no policy` : 'every one covered by a policy', go: tagBareGo }]
-    .map((p, i) => ({ key: 'ts' + i, text: p.text, isFig: !!p.go, isText: !p.go, go: p.go || (() => {}) }));
+  const tagSubParts = [{ text: nOf(tagAll.length, 'tag', 'tags'), nF: nf(tagAll.length), icon: 'tag', go: tagAllGo },
+    { text: bareN ? `${nf(bareN)} with no policy` : 'every one covered by a policy', nF: bareN ? nf(bareN) : '', icon: bareN ? 'minus-circle' : 'check-shield', go: tagBareGo }]
+    .map((p, i) => ({ key: 'ts' + i, text: p.text, title: p.text, nF: p.nF, icon: p.icon, isFig: !!p.go, isText: !p.go, go: p.go || (() => {}) }));
   const tagRows = tf ? tagAll.filter(t => !t.covered) : tagAll;
 
   // ---- Templates: what each would match here today ----
   const examplePolicies = (out.examplePolicies || []).map(e => {
     const t = MULTI_LAYER.find(x => x.key === e.key) || { match: e.m, layers: { core: e.r } }, ps = setsOf({ match: t.match, req: t.layers.core }), n = GV.count(ps.matched, ps.unit), w = UNIT[ps.unit] || UNIT.workload;
     const g = gk === 'templates' && !drill && n > 0 ? fig(`g-tpl-${e.key}`, n, 'drill', openDrill({ panel: 'templates', kind: 'template', key: e.key })) : null;
-    return { ...e, figLabel: n == null ? 'Not yet measured' : n ? `Matches ${nOf(n, w[0], w[1])} today` : `Matches no ${w[1]} today`, hasFigGo: !!g, noFigGo: !g, figGo: g || (() => {}) };
+    const figLabel = n == null ? 'Not yet measured' : n ? `Matches ${nOf(n, w[0], w[1])} today` : `Matches no ${w[1]} today`;
+    // Glyph-first (2026-10-13, Govern visual): the sides without their kind word (the glyph says it), one requirement under
+    // each node with a count of the rest (all of them in the node's title), the match as its glyph and its number.
+    // A side this estate does not have (no private cloud on record) says so, never a blank.
+    const side = (x) => (!x || /undefined/.test(String(x)) ? 'None here' : String(x).replace(/^(tag|branch|remote-site|site|region) /i, '').replace(/^Private cloud · /, ''));
+    const layers = (e.layers || []).map(l => { const parts = String(l.full || l.text || '').split(' · ').filter(Boolean), more = parts.length > 1 ? `+${parts.length - 1}` : '';
+      return { ...l, short: String(l.text || '').split(' · ')[0], more, hasMore: !!more, title: `${l.label}: ${l.full || l.text}` }; });
+    return { ...e, layers, aShort: side(e.a), bShort: side(e.b), figLabel, figTitle: figLabel, figN: n == null ? '' : nf(n), figIcon: n == null ? 'minus-circle' : ps.unit === 'site' ? 'large-building' : 'apps', hasFigGo: !!g, noFigGo: !g, figGo: g || (() => {}) };
   });
 
   return {
@@ -1668,10 +1705,16 @@ export function governVals(out, s, set, { go, est, invAll, orderMove = () => {} 
     polRows, governFindings, hasGovernFindings: governFindings.length > 0,
     polFilterOn: !!pf, polFilterLabel: pfLabel, clearPolFilter: () => set({ polFilter: null, polPage: 0 }),
     ...(pf ? { polViolLine: listedViol ? `${nf(listedViol)} policy ${listedViol === 1 ? 'violation' : 'violations'}` : 'No policy violations' } : {}),
+    // The head's total as a glyph and a number (2026-10-13); polViolLine is its title.
+    polViolN: ((t) => (/^([\d,]+) /.exec(t) || [])[1] || '')(pf ? (listedViol ? nf(listedViol) + ' ' : '') : out.polViolLine),
+    polViolIcon: (pf ? listedViol : violSum) ? 'exclamation-circle' : 'check-circle',
+    // The station words sit over the rows in the head; Simulate, Enforce and Undo take their column when they show.
+    polHeadsOn: !!out.notAuthoring && polRows.length > 0 && !out.hasSim, polActCol: !!out.notAuthoring && polRows.length > 0 && !out.hasSim ? '3' : '2 / 4',
+    governFindingsN: governFindings.length, governFindingsTitle: `${nOf(governFindings.length, 'finding', 'findings')} on this estate`,
     hasPolViolGo: !!polViolGo, noPolViolGo: !polViolGo, polViolGo: polViolGo || (() => {}),
     verdictParts: verdictParts || [], hasVerdictParts: !!verdictParts, verdictPlain: !verdictParts, ...(govChips ? { verdictChips: govChips } : {}),
     drawerTags: onGov && gk === 'tags' ? tagRows : tagAll, tagSubParts, tagFilterOn: !!tf && tagFigOk, tagFilterLabel: tf ? `${nOf(bareN, 'tag', 'tags')} with no policy` : '', clearTagFilter: () => set({ tagFilter: null, tagPage: 0 }),
-    examplePolicies,
+    examplePolicies, tplKinds: (out.tplKinds || []).map(k => ({ ...k, icon: k.key === 'between' ? 'arrows-horizontal' : 'list' })),
     govBackOn: !!back, govBackGo, govBackLabel: 'Back to Govern',
     // Back to the Discover figure that opened this (2026-10-01).
     govFromOn: !!s.govFrom && onGov, govFromGo: () => { const f = s.govFrom || {}; go('s1', { discoverView: 'estate', estPanel: f.estPanel || 'glance', appPage: f.appPage || 0, scanStep: 4, scanBusy: false })(); },
@@ -1686,7 +1729,7 @@ export function pageRows(rows, size, page, setPage) {
   return { rows: rows.slice(p * size, p * size + size), pager: { label: n ? `${p * size + 1}–${Math.min(n, (p + 1) * size)} of ${n}` : '0 of 0', many: pages > 1,
     prevOp: p > 0 ? 1 : 0.4, nextOp: p < pages - 1 ? 1 : 0.4, prev: () => { if (p > 0) setPage(p - 1); }, next: () => { if (p < pages - 1) setPage(p + 1); } } };
 }
-const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], govDrillRows: ['govDrillPage', 8, 'govDrillPager', 'govDrillPageSize'], drawerTags: ['tagPage', 7, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
+const PAGE_SIZE = { insightRows: ['findPage', 6, 'findPager', 'findPageSize'], appRows: ['appPage', 5, 'appPager', 'appPageSize'], buSites: ['buPage', 10, 'buPager', 'buPageSize'], polRows: ['polPage', 5, 'polPager', 'polPageSize'], govDrillRows: ['govDrillPage', 8, 'govDrillPager', 'govDrillPageSize'], drawerTags: ['tagPage', 10, 'tagPager', 'tagPageSize'], placeRows: ['placePage', 10, 'placePager', 'placePageSize'], cloudRows: ['cloudPage', 9, 'cloudPager', 'cloudPageSize'],
   segDrillRows: ['segPage', 9, 'segPager', 'segPageSize'], pathTimeRows: ['pathsPage', 8, 'pathsPager', 'pathsPageSize'], roleActRows: ['rolePage', 4, 'rolePager', 'rolePageSize'], ticketRows: ['ticketPage', 6, 'ticketPager', 'ticketPageSize'], fixRows: ['fixPage', 5, 'fixPager', 'fixPageSize'], availRows: ['availPage', 6, 'availPager', 'availPageSize'], opsChangeRows: ['changePage', 5, 'opsChangePager', 'opsChangePageSize'], changeRows: ['changesPage', 6, 'changesPager', 'changesPageSize'], legAccessRows: ['legAPage', 6, 'legAPager', 'legAPageSize'], legConnectRows: ['legCPage', 6, 'legCPager', 'legCPageSize'], legCloudRows: ['legPPage', 6, 'legPPager', 'legPPageSize'], saveRows: ['savePage', 5, 'savePager', 'savePageSize'], bankRows: ['bankPage', 5, 'bankPager', 'bankPageSize'], regionSaveRows: ['regSavePage', 6, 'regSavePager', 'regSavePageSize'], pathFlowRows: ['pathPage', 8, 'pathPager', 'pathPageSize'], problemRows: ['probPage', 3, 'probPager', 'probPageSize'], sources: ['srcPage', 8, 'srcPager', 'srcPageSize'] };
 // What an added source found sits over Discover's Estate (2026-09-30): its lists give up the rows
 // the alert takes, so the page keeps the fold (At a glance read 905 with it, a filtered Your clouds 973).
@@ -4598,7 +4641,9 @@ function wizardVals(s, est, set, c) {
             const title = st === 'skip' ? `${g.name} does not match this flow: ${g.missed === 'Tag' ? `it asks for tag ${String(p.match || '').slice(4)}` : `its ${g.missed.toLowerCase()} side (${p.match || 'any'} to ${p.scope || 'any cloud'}) misses`}`
               : st === 'decides' ? `${g.name} decides this flow: ${asks}` : st === 'adds' ? `${g.name} adds ${asks}` : st === 'agrees' ? `${g.name} asks what ${g.with} already asks`
               : `${g.name} is ${p.state}: once enforced it would ${g.rel === 'agrees' ? `agree with ${g.with}` : `add ${asks}`}`;
-            return { key: 'lad' + i, prio: String(i + 1), name: g.name, icon: assetIcon(p.match || ''), state: st, lit: st === 'decides', glyph: R0.icon, word, ink: R0.ink, op: st === 'skip' ? 0.5 : 1, title, go: openPol(g.name) }; }) : [];
+            return { key: 'lad' + i, prio: String(i + 1), name: g.name, icon: assetIcon(p.match || ''), state: st, lit: st === 'decides', glyph: R0.icon, word, ink: R0.ink, op: st === 'skip' ? 0.5 : 1, title, go: openPol(g.name),
+              // A skip is quiet: its reason is the glyph, the words in the title (2026-10-13, "all crunched up").
+              showWord: st !== 'skip' }; }) : [];
           const denied = !!r && r.verdict === 'Denied';
           // The stations: the stamp each layer earns on the path this flow takes, its reason code, and the policy that asks.
           const CODED = new Set(['violated', 'unenforceable', 'blocks']);
