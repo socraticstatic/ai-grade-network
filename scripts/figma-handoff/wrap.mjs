@@ -25,6 +25,44 @@ const note = (dark, title, cite, applied) => { const [bg, bd, ink, soft, acc] = 
 const BAKE = () => {
   const st = { cells: 0, nowrap: 0, margins: 0, truncated: 0 };
   for (const c of document.querySelectorAll('.dt-c')) { const w = c.getBoundingClientRect().width; c.style.width = c.style.minWidth = c.style.maxWidth = w + 'px'; c.style.boxSizing = 'border-box'; st.cells++; }
+  // Row spans leave the grid (2026-10-14): Figma ignores a grid item's row span, so the home's and Cost's KPI rings
+  // (rows 2 / 4) stretched row 2 to their 62px, dropped the figure 20px and pushed the foot chips out of the tile.
+  // Each spanning item becomes absolute at the box Chrome gave it; if any sibling or the grid itself moves, the change is undone.
+  st.spans = 0;
+  const span = (s, e, n) => { const a = /^span (\d+)/.exec(e) || /^span (\d+)/.exec(s); if (a) return +a[1]; let x = parseInt(s), y = parseInt(e); if (isNaN(x) || isNaN(y)) return 1; if (y < 0) y = n + 2 + y; if (x < 0) x = n + 2 + x; return y - x; };
+  for (const g of [...document.querySelectorAll('body *')]) {
+    const gs = getComputedStyle(g); if (!/grid/.test(gs.display)) continue;
+    const tracks = gs.gridTemplateRows.split(/\s+/).filter(Boolean).length;
+    for (const k of [...g.children]) {
+      const kc = getComputedStyle(k); if (kc.position === 'absolute' || kc.position === 'fixed' || kc.display === 'none') continue;
+      if (span(kc.gridRowStart, kc.gridRowEnd, tracks) < 2) continue;
+      const sib = [...g.children].filter(x => x !== k), before = sib.map(x => x.getBoundingClientRect()), r = k.getBoundingClientRect(), pr = g.getBoundingClientRect();
+      const keep = k.getAttribute('style'), keepG = g.getAttribute('style');
+      if (gs.position === 'static') g.style.position = 'relative';
+      // The item may be what sizes a track (the ring is the whole of column 2), so the tracks are pinned to what Chrome resolved.
+      g.style.gridTemplateColumns = gs.gridTemplateColumns; g.style.gridTemplateRows = gs.gridTemplateRows;
+      Object.assign(k.style, { position: 'absolute', left: (r.left - pr.left - g.clientLeft) + 'px', top: (r.top - pr.top - g.clientTop) + 'px', width: r.width + 'px', height: r.height + 'px', margin: '0', boxSizing: 'border-box', gridArea: 'auto' });
+      const moved = sib.some((x, i) => { const a = x.getBoundingClientRect(), b = before[i]; return Math.abs(a.left - b.left) > 0.5 || Math.abs(a.top - b.top) > 0.5 || Math.abs(a.width - b.width) > 0.5 || Math.abs(a.height - b.height) > 0.5; });
+      const self = k.getBoundingClientRect(), gr = g.getBoundingClientRect(), off = Math.abs(self.left - r.left) > 0.5 || Math.abs(self.top - r.top) > 0.5 || Math.abs(gr.height - pr.height) > 0.5 || Math.abs(gr.width - pr.width) > 0.5;
+      if (moved || off) { keep == null ? k.removeAttribute('style') : k.setAttribute('style', keep); keepG == null ? g.removeAttribute('style') : g.setAttribute('style', keepG); continue; }
+      st.spans++;
+    }
+  }
+  // Space-between rows become plain gaps (2026-10-14): the home's and Cost's KPI tiles are the only grids that spread
+  // their rows with align-content:space-between, and the only ones Figma lays out wrong (the figure dropped, the foot
+  // chips fell out of the tile). Each such grid starts at the top with the gap Chrome actually rendered.
+  st.spread = 0;
+  for (const g of [...document.querySelectorAll('body *')]) {
+    const gs = getComputedStyle(g); if (!/grid/.test(gs.display) || gs.alignContent !== 'space-between') continue;
+    const tr = gs.gridTemplateRows.split(/\s+/).map(parseFloat); if (tr.length < 2 || tr.some(isNaN)) continue;
+    const inner = g.clientHeight - parseFloat(gs.paddingTop) - parseFloat(gs.paddingBottom), gap = (inner - tr.reduce((a, v) => a + v, 0)) / (tr.length - 1);
+    if (!(gap >= 0)) continue;
+    const kids = [...g.children], before = kids.map(x => x.getBoundingClientRect()), keep = g.getAttribute('style');
+    Object.assign(g.style, { alignContent: 'start', rowGap: gap + 'px', gridTemplateRows: gs.gridTemplateRows, height: g.getBoundingClientRect().height + 'px' });
+    const moved = kids.some((x, i) => { const a = x.getBoundingClientRect(), b = before[i]; return Math.abs(a.left - b.left) > 0.5 || Math.abs(a.top - b.top) > 0.5 || Math.abs(a.height - b.height) > 0.5; });
+    if (moved) { keep == null ? g.removeAttribute('style') : g.setAttribute('style', keep); continue; }
+    st.spread++;
+  }
   const leaves = [...document.querySelectorAll('body *')].filter(e => e.childElementCount === 0 && e.textContent.trim() && !['SCRIPT', 'STYLE', 'OPTION', 'svg', 'path'].includes(e.tagName));
   for (const e of leaves) {
     const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') continue;
@@ -100,12 +138,20 @@ const BAKE = () => {
       e.insertBefore(svg, e.firstChild); st.rings++;
     }
   }
+  // Open masks go (2026-10-14): the home's ring reveal is a conic-gradient mask that rests fully open, and Figma turns it
+  // into a fade across the ring. A mask whose only opaque run covers the whole turn masks nothing, so it is dropped.
+  st.masks = 0;
+  for (const e of [...document.querySelectorAll('body *')]) {
+    const cs = getComputedStyle(e), mk = cs.maskImage || cs.webkitMaskImage; if (!mk || !mk.includes('conic-gradient')) continue;
+    const g = parse(mk); if (!g || g.segs.length !== 1 || g.segs[0][1] > 0.01 || g.segs[0][2] < 99.99) continue;
+    e.style.setProperty('mask', 'none', 'important'); e.style.setProperty('-webkit-mask', 'none', 'important'); st.masks++;
+  }
   // Wedges as vectors (2026-10-14): the home's ring segments are solid circles cut by clip-path:polygon(), which Figma
-  // cannot express (they came through faded). Each becomes its own polygon as an SVG path inside its round box.
-  // OFF by default (2026-10-14): in Figma the re-baked Home lost its 900 pin and imported at full height (2062), so the
-  // pass runs only with --wedges until that is understood; the home's rings stay soft in the meantime.
+  // cannot express. Each becomes its own polygon as an SVG path inside its round box. (The Home board's 2062 height
+  // was never this pass: the home is the page that scrolls, the map sits below its fold, and its board is tall
+  // without the pass too, as the original Home board is at 1905.)
   st.wedges = 0;
-  for (const e of (window.__WEDGES ? [...document.querySelectorAll('body *')] : [])) {
+  for (const e of [...document.querySelectorAll('body *')]) {
     const cs = getComputedStyle(e); if (!cs.clipPath || !cs.clipPath.startsWith('polygon(')) continue;
     const bg = cs.backgroundColor; if (!bg || /rgba\([^)]*,\s*0\)|transparent/.test(bg)) continue;
     const r = e.getBoundingClientRect(); if (!r.width || !r.height) continue;
@@ -143,7 +189,6 @@ for (const b of idx.boards) {
   if (tall) s = s.replace('</head>', '<style id="tall-board">html,body{height:auto!important;min-height:0!important}</style></head>');
   const tmp = join(OUT, '.tmp.html'); await writeFile(tmp, s);
   await page.goto('file://' + (tmp.startsWith('/') ? tmp : join(process.cwd(), tmp)), { waitUntil: 'networkidle', timeout: 60000 }); await page.waitForTimeout(500);
-  if (args.includes('--wedges')) await page.evaluate(() => { window.__WEDGES = true; });
   const baked = await page.evaluate(BAKE); console.log(b.title, JSON.stringify(baked));
   await writeFile(join(OUT, b.title + '.html'), await page.content()); n++;
 }
