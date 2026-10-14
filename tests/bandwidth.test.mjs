@@ -48,7 +48,9 @@ test('Connections sits in the Observe card with its sister tabs, not a box of it
   assert.ok(a > 0 && c > a && c < b);
   assert.equal(HTML.indexOf('class="fx-card" aria-label="Connections"'), -1);
   const panel = HTML.slice(c, c + 9000);
-  for (const h of ['Connection', 'Ports', 'Utilization', 'Avg', 'Peak', 'Headroom', 'Trend', 'Full in', 'State']) assert.ok(panel.includes(`>${h}<`), h);
+  // Each connection is a card since Traffic became a story (2026-10-13): the figures keep their words (Avg, Peak, Headroom,
+  // Full in) and the rest moved into the card's titles and labels (Connection, Ports, Utilization, Trend, State).
+  for (const h of ['Connection', 'Ports', 'Utilization', 'Avg', 'Peak', 'Headroom', 'Trend', 'Full in', 'State']) assert.ok(panel.includes(`>${h}<`) || panel.includes(`="${h}`), h);
 });
 
 // ---- Is it full? (notes, 2026-09-30, Task 2.7) ----

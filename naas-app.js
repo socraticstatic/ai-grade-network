@@ -36,6 +36,7 @@ import * as DR from './naas-drill.js';
 import * as GV from './naas-govern.js';
 import * as PM from './naas-policy-model.js';
 import * as PC from './naas-policy-compile.js';
+import { trafficStory } from './naas-traffic.js';
 
 const SCREENS = { s0: 'Front door', s1: 'Discover', s2: 'Floor', s3: 'Department', s4: 'Compose', s5: 'Recommend', s6: 'Review', s7: 'Marketplace', s8: 'Product', s9: 'Help', sj: 'Journey' };
 const TABS = ['connect', 'govern', 'observe', 'cost'];
@@ -1249,6 +1250,10 @@ export function vals(c) {
   // Back names the page you came from by its own name (Traffic, Insights, Orders), never the section you are still in.
   const railCur = (out.railGroups || []).flatMap(g => g.items || []).find(i => i.cur);
   navLast = navPick(s); navTitle = s.screen === 's0' ? 'NaaS home' : s.journey === 'existing' ? 'the journey' : railCur ? railCur.label : out.pageTitle || 'the last page';
+  // Observe > Traffic as seven stories (2026-10-13): the verdict strip, each tab's picture and its verbs, read off the lists
+  // above before pageLists pages them (naas-traffic.js).
+  Object.assign(out, trafficStory(out, s, set, { go, attach: (region) => composeFor(go, est0.regionsList.find(r => r.region === region) || {}),
+    regionOf: (region) => est0.regionsList.find(r => r.region === region) || null, nowMs: SCH.nowOf(s), winMs: winDaysOf(s) * 864e5, winLabel: winLabelOf(s), theme: s.theme }));
   return pageLists(glyphPass(out), s, set);
 }
 
@@ -3072,7 +3077,8 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
   };
   // Performance mode paints and keys the one set of health inks (review round 2,
   // 2026-09-30): Within and Near SLO were hex beside the tokens Health draws.
-  const HEALTH_FILL = F.HEALTH_INK;
+  // Within SLO is the light blue (2026-10-13, Traffic as stories: "Green ONLY on a money saving"), apart from On AT&T's; Near and Over keep theirs.
+  const HEALTH_FILL = { ...F.HEALTH_INK, ok: 'var(--viz-2)' };
   // A path's second line sits under its label; where the next path's label starts before that line ends (three thin
   // public paths since 2026-10-05: SD-WAN, IPsec, Internet), the line stays in the hover instead of under a label.
   const midCs = map.nodes.filter(x => x.side === 'm').map(x => x.y + x.h / 2).sort((a, b) => a - b);
@@ -3331,7 +3337,10 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
       const ord = BW.sells(cp) ? BW.inFlight(s.orders, est0.id, g.id, bwNow) : null;
       const bw = { portsNote: ord ? `to ${ord.toShort}` : '', hasPortsNote: !!ord, rampLine: `${F.RAMP_NAME[g.ramp] || g.ramp}${ord ? ' · in progress' : ''}` };
       const series = X.utilSeries(g.id + ':' + (s.obWindow || '30d'), 24, g.pct, grow);
-      return { ...bw, title, capG, peakG, avgG, headG: +(capG - peakG).toFixed(1), toFull, portsF: row.bwShort || '10G', rampName: F.RAMP_NAME[g.ramp] || g.ramp,
+      // The card's move (Traffic > Capacity as a story, 2026-10-13): where AT&T sells the port, Modify bandwidth in place; else Add a port.
+      const sells = !!(cp.id && BW.sells(cp)), portLabel = cp.id ? capMoveLabel(s, est0, cp, sells ? 'Modify bandwidth' : 'Add a port') : 'Add a port';
+      const portGo = cp.id ? (sells ? openBw(g.id) : capMove(go, set, s, est0, cp)) : null;
+      return { ...bw, title, capG, peakG, avgG, headG: +(capG - peakG).toFixed(1), toFull, portsF: row.bwShort || '10G', rampName: F.RAMP_NAME[g.ramp] || g.ramp, portLabel, portGo,
         avgF: `${avgG} Gbps`, peakF: `${peakG} Gbps`, headF: `${+(capG - peakG).toFixed(1)} Gbps`, avgW: Math.min(100, avgG / capG * 100).toFixed(1) + '%', peakX: Math.min(100, g.pct).toFixed(1) + '%',
         fullIn, fullInk: toFull < 63 ? 'var(--warning)' : 'var(--text-light)',
         spark: series.map((v, i) => ({ key: 'b' + i, h: v.toFixed(1) + '%', bg: v >= 80 ? 'var(--warning)' : 'var(--viz-1)' })) }; })() }));

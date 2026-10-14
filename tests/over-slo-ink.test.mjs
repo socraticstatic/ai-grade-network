@@ -27,7 +27,8 @@ globalThis.localStorage = globalThis.localStorage || { getItem: k => store[k] ??
 const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
 const HEX = /#[0-9a-f]{3,8}\b/i;
 const RANK = { ok: 0, risk: 1, slo: 2, down: 3 };
-const INKS = new Set(Object.values(F.HEALTH_INK));
+// Within SLO paints the light blue on the Performance view since 2026-10-13 ("Green ONLY on a money saving"), apart from On AT&T's blue.
+const INKS = new Set([...Object.values(F.HEALTH_INK).filter(x => x !== F.HEALTH_INK.ok), 'var(--viz-2)']);
 const at = (view, patch = {}) => mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', ...patch });
 const probsOf = (view) => {
   const est = D.ESTATES[view], inv = A.inventory(est), ob = A.observe(est, [], inv), conns = X.connections(est, ob);
@@ -123,7 +124,7 @@ test('Performance legend and map: Within SLO and Near SLO are the health tokens,
   for (const theme of ['light', 'dark']) {
     const v = vals(at('partial', { mapMode: 'slo', theme }));
     const col = (l) => v.mapLegend.find(x => x.label === l).color;
-    assert.equal(col('Within SLO'), F.HEALTH_INK.ok, theme);
+    assert.equal(col('Within SLO'), 'var(--viz-2)', theme); // the light blue, never the saving's green (2026-10-13)
     assert.equal(col('Near SLO'), F.HEALTH_INK.risk, theme);
     assert.equal(col('Over SLO'), F.HEALTH_INK.slo, theme);
     for (const r of v.mapRibbons) assert.ok(INKS.has(r.fill), `${theme} ribbon ${r.key}: ${r.fill}`);

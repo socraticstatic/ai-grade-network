@@ -165,8 +165,11 @@ let eastusTicket = null;
 await beat('4 Health: the eastus flap already carries Andi\'s ticket', async () => {
   await tab('Health');
   await expect('Azure eastus · ExpressRoute', 'BGP flapping', 'Cloud provider');
-  const t = await text();
-  const m = t.slice(t.indexOf('Azure eastus · ExpressRoute')).match(/(T-\d{4}) · opened by Andi/);
+  // The ticket is a glyph and its number on the problem's row since Traffic became a story (2026-10-13); "opened by Andi"
+  // moved into the chip's title, so the beat reads the row's titles after the eastus name, as expectTitle reads them.
+  const t = await page.evaluate(() => { const row = [...document.querySelectorAll('.trf-prob')].find(r => r.innerText.includes('Azure eastus · ExpressRoute'));
+    return row ? `${row.innerText}\n${[...row.querySelectorAll('[title]')].map(e => e.getAttribute('title')).join('\n')}` : ''; });
+  const m = t.match(/(T-\d{4}) · opened by Andi/);
   if (!m) throw new Error('the eastus row has no "T-nnnn · opened by Andi"');
   eastusTicket = m[1];
   if (await page.locator('button:visible', { hasText: 'Open ticket' }).count()) throw new Error('Open ticket shows beside Andi\'s tickets');

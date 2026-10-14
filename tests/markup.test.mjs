@@ -597,7 +597,17 @@ test('every container the markup opens, it closes', () => {
   // what waits, Read with Andi, and who gets it with a glyph a role. Recounted from the file: div 1357 -> 1372,
   // span 1592 -> 1738, sc-if 710 -> 728, sc-for 407 -> 412, button 543 -> 578.
   // Insights merged onto Cost and Sources/Logs (2026-10-13), recounted from the file; each equals main + Insights' deltas.
-    ['div', /<div\b/g, /<\/div>/g, 1356], // + Insights (2026-10-13)
+  // Observe > Traffic as seven stories (2026-10-13, "Do this for more pages! Great space, great layout, calls to action on all
+  // widgets"; "Each page should be its own gorgeous, extremely beautiful story, with calls to action on each"): the one Observe
+  // card became the tabs on the page (Jump with its key, the alerts as a bell and count), one verdict strip of glyph tiles shared by
+  // every tab (head, figure, meter or spark), the map in its own card (the view, path and health segments and the By chips in its
+  // head, Replay, the key and its move in its foot), and a story per tab: Over time's axis, average and peak; Where it goes' rows
+  // with their verbs beside the split's ring and its parts; Health's view chips, Path by app beside the open problems (state glyph,
+  // ticket, move, owner, reach, age), App health with its thresholds in the head, By segment with owner and source glyphs; Paths'
+  // latency bars against the SLO tick, a verb a row and the picked path's hops; Capacity's cards (ring, keyed figures, utilization
+  // bar, run, move); Changes' timeline of pins and problem bands over every change with its verb. Recounted from the file:
+  // div 1356 -> 1376, span 2015 -> 2098, sc-if 765 -> 775, sc-for 446 -> 447, button 659 -> 685.
+    ['div', /<div\b/g, /<\/div>/g, 1376], // + Traffic as stories (2026-10-13)
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -608,7 +618,7 @@ test('every container the markup opens, it closes', () => {
   // Jump on the picture (2026-10-13, "immediately go to an asset deep down"): the flow map's button and search box in the
   // filter row, its glyph, the match it names and the count (span +3, sc-if +3, button +1, label +1):
   // span 1514 -> 1517, sc-if 680 -> 683, button 536 -> 537, label 31 -> 32.
-    ['span', /<span\b/g, /<\/span>/g, 2015], // + Insights (2026-10-13)
+    ['span', /<span\b/g, /<\/span>/g, 2098], // + Traffic as stories (2026-10-13), told at the div pin
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
@@ -617,10 +627,10 @@ test('every container the markup opens, it closes', () => {
   // both hero buttons in one flex row (div +1), and Persona and Estate on one row in the rail foot so Spend ends inside
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 765], // + Insights (2026-10-13)
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 446], // + Insights (2026-10-13)
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 775], // + Traffic as stories (2026-10-13), told at the div pin
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 447], // + Traffic as stories (2026-10-13), told at the div pin
     ['section', /<section\b/g, /<\/section>/g, 17], // + Insights (2026-10-13)
-    ['button', /<button\b/g, /<\/button>/g, 659], // + Insights (2026-10-13)
+    ['button', /<button\b/g, /<\/button>/g, 685], // + Traffic as stories (2026-10-13), told at the div pin
     ['aside', /<aside\b/g, /<\/aside>/g, 11],
     ['label', /<label\b/g, /<\/label>/g, 33], // Sources' cadence for every account (2026-10-13), told at the div pin
   ];

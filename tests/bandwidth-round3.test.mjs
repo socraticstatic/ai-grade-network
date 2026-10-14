@@ -73,7 +73,8 @@ test('one average: the drawer, the Capacity row and Optimize read one 6-month fi
   const sum = v.gaugeRows.reduce((a, g) => a + g.avgG, 0);
   assert.equal(t.v, `${sum.toFixed(1)} Gbps`);
   assert.match(t.sub, /6-month average$/);
-  assert.match(HTML, />Average use, 6 months</, 'the Capacity legend says which average');
+  // The legend's words are the Avg figure's title on each connection's card since 2026-10-13 (Traffic as stories).
+  assert.match(HTML, /title="Average use, 6 months"/, 'the Capacity legend says which average');
 });
 
 test('Bank scale: the Traffic map\'s Add a port opens Modify bandwidth in place at one port more, like Capacity and Optimize', () => {

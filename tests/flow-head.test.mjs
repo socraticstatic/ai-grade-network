@@ -59,7 +59,9 @@ test('the cost view colours what leaves AT&T and prices it on hover', () => {
 test('the head carries no sentences: no subtitle, no persona line, no pattern gloss', () => {
   const h = card();
   assert.doesNotMatch(h, /\{\{ mapSub \}\}|\{\{ plKicker \}\}|\{\{ patternWhy \}\}/);
-  assert.match(h, /<sc-for list="\{\{ flowTiles \}\}"/);
+  // The six rollups are the verdict strip's tiles since Traffic became a story (2026-10-13): trfTiles, read off flowTiles one for
+  // one (tests/traffic-story.test.mjs holds the labels and figures to flowTiles').
+  assert.match(h, /<sc-for list="\{\{ trfTiles \}\}"/);
   assert.match(h, /<sc-for list="\{\{ flowViews \}\}"/);
   assert.equal(HTML.indexOf('id="sec-health"'), -1, 'the second tile row is back');
 });

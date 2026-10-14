@@ -84,7 +84,8 @@ test('money on a tile is whole dollars, as on every other tile', () => {
 });
 
 test('the live alerts are called alerts, so "open" means findings', () => {
-  assert.match(HTML, />Alerts · \{\{ queueCount \}\}</);
+  // The alerts are a bell and their count beside Jump since 2026-10-13 (Traffic as stories); the words are its name.
+  assert.match(HTML, /aria-label="Alerts · \{\{ queueCount \}\}"/);
   assert.match(vals(mkC({ view: 'partial', screen: 's3', tab: 'observe', estateParam: null })).queueCount, /^\d+$/);
 });
 

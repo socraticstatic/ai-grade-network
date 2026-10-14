@@ -459,11 +459,14 @@ test('the markup: a modal drawer that closes on Escape and outside click, focus 
   assert.match(comp, /data-bw-scrim/);
   assert.match(comp, /\[aria-label="Modify bandwidth"\]/);
   assert.match(comp, /this\._bwReturn/);
-  // Observe > Capacity: one button per row again, opening the panel.
+  // Observe > Capacity: each connection is a card since 2026-10-13 (Traffic as stories, "calls to action on all widgets"): its head
+  // and its ring open the connection's panel in place (the row's one click, g.click), and its foot carries the move.
   const conn = gate(HTML, 'obPanelConn');
-  const row = conn.slice(conn.indexOf('<sc-for list="{{ gaugeRows }}"'), conn.indexOf('</sc-for>', conn.indexOf('{{ g.stateWord }}')));
-  assert.equal((row.match(/<button\b/g) || []).length, 1, 'one button per Capacity row');
-  assert.match(row, /<button onClick="\{\{ g\.click \}\}"/);
+  const row = conn.slice(conn.indexOf('<sc-for list="{{ trfCap.cards }}"'), conn.indexOf('</article>', conn.indexOf('{{ g.stateWord }}')));
+  assert.equal((row.match(/<button\b/g) || []).length, 3, 'a Capacity card: two doors to the panel and its move');
+  assert.equal((row.match(/<button[^>]*onClick="\{\{ g\.open\.go \}\}"/g) || []).length, 2);
+  assert.ok(row.includes('{{ g.cta.go }}'));
+  { const v = vals(mkC({ view: 'mature', screen: 's3', tab: 'observe', estateParam: null, obPanel: 'conn' })); assert.ok(v.trfCap.cards.every((cd, i) => cd.open.go === v.gaugeRows[i].click), 'the card opens what the row opened'); }
   assert.ok(row.includes('{{ g.portsNote }}'));
   assert.ok(!/cap-wide|class="cap-/.test(HTML), 'the per-figure grid is gone with its container query');
 });
