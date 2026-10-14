@@ -2145,6 +2145,8 @@ button.trf-pl{border:0;background:transparent;padding:0;font:inherit;font-size:1
 .trf-cap[data-rows="2"] .trf-ring{width:84px;height:84px}.trf-cap[data-rows="2"] .trf-ring::after{inset:9px}.trf-cap[data-rows="2"] .trf-ring>b{font-size:18px;line-height:22px}
 .trf-cap[data-rows="2"] .trf-figs{gap:1px}.trf-cap[data-rows="2"] .trf-figs b{font-size:13px;line-height:17px}.trf-cap[data-rows="2"] .fx-card.trf-conn{gap:10px;padding:14px 18px}
 .trf-cap[data-rows="2"] .trf-use{gap:8px}.trf-cap[data-rows="2"] .trf-cf{min-height:30px}.trf-cap[data-rows="2"] .ins-go{height:30px}
+/* One row of cards (2026-10-14): the run fills its row, so the six months start under the usage bar, not 260px down. */
+.trf-cap[data-rows="1"] .trf-cspark{max-height:none}
 .trf-cspark>em{position:absolute;left:0;right:0;bottom:80%;border-top:1.5px dashed var(--warning);pointer-events:none}
 .trf-cspark>i{flex:1;min-width:0;border-radius:2px 2px 0 0;transform-origin:50% 100%;animation:trf-rise .8s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.35s + var(--trf-i,0) * 80ms)}
 .trf-full{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:600;white-space:nowrap}
@@ -2335,7 +2337,8 @@ button.trf-pl{border:0;background:transparent;padding:0;font:inherit;font-size:1
 .home-wfs:hover{background:var(--bg-wash)}.home-wfs:hover>small{color:var(--link)}
 .home-wfs>.v{font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap;font-variant-numeric:tabular-nums}
 .home-wfs[data-k="step"]>.v{color:var(--success)}
-.home-wfc{display:flex;flex-direction:column;justify-content:flex-end;width:100%;height:150px;border-bottom:1px solid var(--border-secondary)}
+/* The column box is H in naas-app.js's FinOps waterfall: 104px since 2026-10-14; change both together. */
+.home-wfc{display:flex;flex-direction:column;justify-content:flex-end;width:100%;height:104px;border-bottom:1px solid var(--border-secondary)}
 .home-wfc>i{display:block;width:64%;max-width:76px;margin:0 auto;border-radius:5px 5px 0 0;transform-origin:50% 100%;animation:home-rise .7s var(--home-ease) backwards;animation-delay:calc(.35s + var(--d,0) * 110ms)}
 .home-wfs[data-k="today"] .home-wfc>i{background:var(--viz-6)}
 .home-wfs[data-k="step"] .home-wfc>i{background:var(--home-save);border-radius:5px}

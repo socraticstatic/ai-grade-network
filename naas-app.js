@@ -1606,7 +1606,7 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est =
       const pr = openF.filter(x => x.priced && x.save).sort((x, y) => y.save - x.save);
       // The waterfall as a story (2026-10-13): each step is a saving, striped green, its owner a glyph under it (FinOps a
       // person, engineering the router); Today is the slate of what you pay now, After the AT&T blue. H is the panel's.
-      const INK = { FinOps: 'var(--viz-2)', Engineering: 'var(--viz-1)' }, OWN = { FinOps: ['person', 'FinOps acts'], Engineering: ['router', 'Engineering acts'] }, H = 150, k = H / start;
+      const INK = { FinOps: 'var(--viz-2)', Engineering: 'var(--viz-1)' }, OWN = { FinOps: ['person', 'FinOps acts'], Engineering: ['router', 'Engineering acts'] }, H = 104, k = H / start; // H is .home-wfc's height in storefront.css (104px since 2026-10-14, so FinOps' row ends inside the first screen); change both together
       let run = start;
       const steps = pr.map(x => { const owner = /FinOps/.test(x.persona || '') ? 'FinOps' : 'Engineering', top = run; run -= x.save;
         return { key: x.kind, label: ({ avoidable: 'Internet egress', crosscloud: 'Cloud to cloud', ipsecegress: 'IPsec branches', ipsec: 'IPsec branches' }[x.kind] || (D.KINDS[x.kind] || x.kind).replace(/^\w/, c => c.toUpperCase())), valF: `-${fmt(x.save)}`, h: `${Math.max(2, Math.round(x.save * k))}px`, mb: `${Math.round(run * k)}px`, ink: INK[owner], owner, kind: 'step', ownIcon: OWN[owner][0], ownTitle: OWN[owner][1], hasOwn: true, title: `-${fmt(x.save)}/mo${x.head ? ` · ${x.head}` : ''}` }; });
@@ -1624,7 +1624,9 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est =
         { key: 'alert', head: 'Alert on exit fees', sub: `${fmt(outN)}/mo leaves outside AT&T today`, outcome: 'No alert set', outInk: 'var(--warning)', label: 'Set alert', go: toSpend },
         { key: 'verify', head: 'Savings on the invoice', sub: `${tile('banked') || '$0'} banked to date`, outcome: 'Confirm', outInk: 'var(--success)', label: 'Verify', go: toSpend },
       ].filter(Boolean);
-      return { homeFin: true, homeFinOff: false, finWf: wf, finWhatIf: p, setFinWhatIf: (e) => set({ finWhatIf: +e.target.value }), finWhatIfSave: `${fmt(wiSave)}/mo`,
+      // At most five rows on the home in all (2026-10-14): the role's moves first, then FinOps' own, so the row ends inside the first screen.
+      const finRoom = Math.max(0, 5 - Math.min(6, acts.length));
+      return { homeFin: true, homeFinOff: false, finActsRoom: finRoom, finWf: wf, finWhatIf: p, setFinWhatIf: (e) => set({ finWhatIf: +e.target.value }), finWhatIfSave: `${fmt(wiSave)}/mo`,
         finBuRows: bu.map((x, i) => ({ ...x, vF: fmt(x.v), w: `${Math.round(x.v / buMax * 100)}%`, d: i, go: toLegs })), hasFinBu: bu.length > 0, finLegsGo: toLegs,
         finActs: finActs.map((a, i) => ({ ...a, d: i + Math.min(6, acts.length), hasSave: false, noSave: true, saveT: '', markBg: 'var(--bg-accent)', markInk: 'var(--link)', verbIcon: ({ Showback: 'pie-chart', 'Assign owners': 'person-group', 'Set alert': 'bell', Verify: 'verified' })[a.label] || ACT_ICON[a.label] || 'arrow-right' })) }; })(),
     // Glyph-first rows (2026-10-07, "pare words down along the way"): the state wears its glyph, the place the cloud's mark
@@ -2009,6 +2011,7 @@ function glyphPass(out) {
   const RING_ICON = { Sites: 'large-building', Clouds: 'cloud', Workloads: 'apps', Apps: 'grid' };
   if (Array.isArray(out.glanceRings)) out.glanceRings = out.glanceRings.map(g => ({ ...g, icon: RING_ICON[String(g.title || '').replace(/^\w/, ch => ch.toUpperCase())] || RING_ICON[g.title] || 'pie-chart' }));
   for (const k of ['homeDo', 'finActs']) if (Array.isArray(out[k])) out[k] = out[k].map(d => ({ ...d, headAll: d.head, head: pareHead(firstSentence(d.head)), outIcon: outIcon(d.outcome) }));
+  out.finActsShown = Array.isArray(out.finActs) ? out.finActs.slice(0, out.finActsRoom == null ? out.finActs.length : out.finActsRoom) : [];
   for (const k of ['roleActRows', 'insightRows']) if (Array.isArray(out[k])) out[k] = out[k].map(d => ({ ...d, headShort: pareHead(firstSentence(d.head)) }));
   for (const k of TAB_LISTS) if (Array.isArray(out[k])) out[k] = out[k].map(t => { const base = String(t.label || '').split(' · ')[0].trim(); return { ...t, icon: TAB_ICON[base] || 'more-ellipse' }; });
   for (const k of ['roleChips', 'sigChips']) if (Array.isArray(out[k])) out[k] = out[k].map(r => ({ ...r, icon: ROLE_ICON[r.key] || 'person', title: ROLE_OF[r.key] ? `For ${ROLE_OF[r.key].short}: ${ROLE_OF[r.key].q}` : r.label }));
@@ -5697,20 +5700,22 @@ function ordersStory(out, s, set, { go, est, openF, obAll, conns }) {
   const ways = (out.wayGroups || []).flatMap(g => g.cards).filter(w => w.notSoon);
   const orderable = (openF || []).filter(f => !f.event && (f.ladder || []).length).slice().sort((a, b) => (b.save || 0) - (a.save || 0));
   const calm = (icon, label, title, goTo) => [{ key: 'calm', hasMark: false, markSrc: '', hasIcon: true, icon, label, title, fig: '', figKind: '', hasFig: false, figTitle: '', go: goTo }];
+  // Two entries a door (2026-10-14): three doors of three read as nine lines on an empty page; two keep the story and halve the words.
+  const ORD_DOOR_ROWS = 2;
   const doors = !onPage ? [] : [
     { key: 'recommended', icon: 'bullseye', title: 'Recommended', n: mv.length, unit: mv.length === 1 ? 'move' : 'moves', go: () => set({ cnPage: 'options' }), headTitle: 'Moves ranked for this estate by what they save. Open Recommended',
       cta: empty ? { label: 'Add a source', icon: 'plus-circle', go: go('s1', { discoverView: 'sources' }) } : { label: 'See moves', icon: 'arrow-right', go: () => set({ cnPage: 'options' }) },
-      rows: mv.length ? mv.slice(0, 3).map((m, i) => ({ key: m.key, hasMark: !!m.hasMarkSrc, markSrc: m.markSrc || '', hasIcon: !m.hasMarkSrc, icon: m.kindIcon || 'cloud', label: m.short && m.short !== m.cloud ? m.short : (m.regions || []).length > 1 ? `${m.regions.length} ${m.cloud} regions` : m.short || m.title, title: m.title,
+      rows: mv.length ? mv.slice(0, ORD_DOOR_ROWS).map((m, i) => ({ key: m.key, hasMark: !!m.hasMarkSrc, markSrc: m.markSrc || '', hasIcon: !m.hasMarkSrc, icon: m.kindIcon || 'cloud', label: m.short && m.short !== m.cloud ? m.short : (m.regions || []).length > 1 ? `${m.regions.length} ${m.cloud} regions` : m.short || m.title, title: m.title,
         fig: m.impact > 0 ? `${fmt(m.impact)}/mo` : '', figKind: 'save', hasFig: m.impact > 0, figTitle: m.impact > 0 ? `Saves ${fmt(m.impact)} a month, modelled` : '', go: () => set({ cnPage: 'options', movePage: i }) }))
         : empty ? calm('search', 'Nothing discovered yet', 'Recommended ranks what discovery finds. Add a source', go('s1', { discoverView: 'sources' })) : calm('check-circle', 'Nothing left to move', 'Everything discovered is on the AT&T network', () => set({ cnPage: 'options' })) },
     { key: 'ways', icon: 'cable', title: 'Ways to connect', n: ways.length, unit: 'ways', go: startWays, headTitle: 'The six ways into a cloud, each scored for cost, performance, security, effort and scale',
       cta: { label: 'Pick a way', icon: 'arrow-right', go: startWays },
-      rows: ways.slice().sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, 3).map(w => ({ key: w.key, hasMark: false, markSrc: '', hasIcon: true, icon: w.icon, label: w.title, title: `Start an order with ${w.title}`,
+      rows: ways.slice().sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, ORD_DOOR_ROWS).map(w => ({ key: w.key, hasMark: false, markSrc: '', hasIcon: true, icon: w.icon, label: w.title, title: `Start an order with ${w.title}`,
         fig: w.hasPts && !w.out ? String(w.points) : '', figKind: 'score', hasFig: !!(w.hasPts && !w.out), figTitle: w.ptsTitle || '', go: w.start })) },
     { key: 'finding', icon: 'exclamation-circle', title: 'Findings', n: orderable.length, unit: 'to act on', go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'open', findPage: 0 }),
       headTitle: `${orderable.length} open ${orderable.length === 1 ? 'finding names' : 'findings name'} a move you can order. Open the findings`,
       cta: { label: 'See findings', icon: 'arrow-right', go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'open', findPage: 0 }) },
-      rows: orderable.length ? orderable.slice(0, 3).map(f => ({ key: f.key, hasMark: false, markSrc: '', hasIcon: true, icon: kindIconOf(f), label: D.KINDS[f.kind] || pareHead(firstSentence(f.head)), title: f.head,
+      rows: orderable.length ? orderable.slice(0, ORD_DOOR_ROWS).map(f => ({ key: f.key, hasMark: false, markSrc: '', hasIcon: true, icon: kindIconOf(f), label: D.KINDS[f.kind] || pareHead(firstSentence(f.head)), title: f.head,
         fig: f.priced && f.save ? `${fmt(f.save)}/mo` : '', figKind: 'save', hasFig: !!(f.priced && f.save), figTitle: f.priced && f.save ? `Saves ${fmt(f.save)} a month` : '', go: () => set({ fdKey: f.key }) }))
         : calm('check-circle', 'No finding to act on', 'No open finding names a move to order', go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'open', findPage: 0 })) },
   ].map((d, i) => ({ ...d, i, nF: String(d.n), cu: cuOf(d.n), off: !d.n, big: !cards0.length, stack: stacked, rowsOn: !cards0.length || stacked, cta: { title: d.headTitle, ...d.cta } }));

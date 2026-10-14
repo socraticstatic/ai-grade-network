@@ -218,3 +218,13 @@ test('the markup: the verdict, the tiles, the panel and the moves, one prefixed 
   assert.ok(!/#[0-9a-f]{3,8}\b/i.test(sheet.replace(/#000\b/g, '')), 'a raw colour in the home block');
   assert.ok(!/font-size:(?:[0-9]|1[01])(?:\.\d+)?px/.test(sheet), 'type below 12px');
 });
+
+// FinOps' Do next is the role's moves plus FinOps' own actions; six ran its row to 919 past the first screen
+// (2026-10-14). At most five show on the home; Your actions holds the rest, and finActs itself stays whole.
+test('FinOps home shows at most five Do next rows in all, and keeps finActs whole', () => {
+  for (const view of ['partial', 'mature', 'trust']) {
+    const v = vals(mkC({ view, estateParam: null, persona: 'finops' }));
+    assert.ok(v.homeDo.length + v.finActsShown.length <= 5, `${view}: ${v.homeDo.length} + ${v.finActsShown.length}`);
+    assert.ok(v.finActs.length >= v.finActsShown.length, view);
+  }
+});

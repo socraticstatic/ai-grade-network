@@ -200,7 +200,8 @@ test('No orders yet is a story: the three doors that start an order, each with i
     assert.ok(v.ordDoors[2].n > 0, `${view}: no finding offers an order`);
     for (const d of v.ordDoors) {
       assert.ok(d.title && d.unit && d.cta && d.cta.label && typeof d.cta.go === 'function', `${view} ${d.key}: a door with no move`);
-      assert.ok(d.rows.length >= 1 && d.rows.length <= 3, `${view} ${d.key}: ${d.rows.length} rows`);
+      // Two entries a door (2026-10-14, after "Words went up" on the empty page: nine entries became six).
+      assert.ok(d.rows.length >= 1 && d.rows.length <= 2, `${view} ${d.key}: ${d.rows.length} rows`);
       for (const r of d.rows) assert.ok(r.label && r.title && typeof r.go === 'function' && (r.hasMark || r.hasIcon), `${view} ${d.key}: a row that is not a door`);
     }
   }

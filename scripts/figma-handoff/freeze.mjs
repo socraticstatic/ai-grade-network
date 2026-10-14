@@ -4,7 +4,12 @@
 // animations stilled, so html.to.design imports it pixel for pixel. Layers are named by aria-label, as the earlier
 // hand-off did. Headless only; never touches Micah's browser.
 //
-// Usage: node scripts/figma-handoff/freeze.mjs [--only storefront|portal|pages] [--out docs/figma-handoff/captures]
+// Usage: node scripts/figma-handoff/freeze.mjs [--only storefront|portal|pages|site] [--out docs/figma-handoff/captures]
+//          [--version v2] [--keys home,discover-estate,...]
+// --version (2026-10-14, Micah: "name them like the original, but with a version number"): every board keeps its original
+// title with the version after it ("Discover Estate v2", "Discover Estate Dark v2") and its slug gains the same suffix, so a
+// new version sits beside the boards it replaces and never overwrites them. --keys freezes only the listed site pages
+// ("just the updated pages").
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +18,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..'), ORIGIN =
 const LIVE = 'https://socraticstatic.github.io/ai-grade-network/';
 const args = process.argv.slice(2), opt = (f, d) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : d; };
 const OUT = join(ROOT, opt('--out', 'docs/figma-handoff/captures')), only = opt('--only', '');
+const VERSION = opt('--version', ''), KEYS = opt('--keys', '') ? new Set(opt('--keys', '').split(',').map(k => k.trim()).filter(Boolean)) : null;
 // Both themes (Micah, 2026-10-12: "as well as dark mode"): a dark board carries -dark in its slug.
 const THEMES = (opt('--theme', 'both') === 'both' ? ['light', 'dark'] : [opt('--theme', 'light')]);
 await mkdir(OUT, { recursive: true });
@@ -30,6 +36,7 @@ async function page(theme) {
 // The beats' words for titles and layer names.
 const BEAT_WORD = { today: 'Today', source: 'Source', found: 'Found', intent: 'Needs', recommend: 'Recommend', connect: 'Connect', watch: 'Live', protect: 'Protect', save: 'Save', request: 'Request' };
 async function freeze(p, slug, title) {
+  if (VERSION) { slug = `${slug}-${VERSION}`; title = `${title} ${VERSION}`; }
   await p.waitForTimeout(350);
   const html = await p.evaluate(({ css, live, title }) => {
     // The frame takes the page title; every layer takes a human name (html.to.design reads aria-label), so the file
@@ -124,18 +131,21 @@ try {
       ['Optimize', 'Cost Optimize', 'cost-optimize'], ['Spend', 'Cost Spend', 'cost-spend']];
     const p = await page();
     await p.goto(`${ORIGIN}/NaaS%20Storefront.dc.html?view=mature&theme=${theme}`, { waitUntil: 'networkidle' }); await settle(p, 1200);
-    await freeze(p, `site-home${T}`, `Home${TT}`);   // the landing is Home; its rail entry is a group title, not a labeled item
+    if (!KEYS || KEYS.has('home')) await freeze(p, `site-home${T}`, `Home${TT}`);   // the landing is Home; its rail entry is a group title, not a labeled item
     for (const [label, title, key] of SITE.slice(1)) {
+      if (KEYS && !KEYS.has(key)) continue;
       const b = p.locator(`aside[aria-label$="sections"] button[aria-label="${label}"]`).first();
       if (!(await b.count())) { console.log('no rail item', label); continue; }
       await b.click(); await settle(p, 1000);
       await freeze(p, `site-${key}${T}`, `${title}${TT}`);
     }
     await p.close();
-    const q = await page();
-    await q.goto(`${ORIGIN}/personas.html?theme=${theme}`, { waitUntil: 'networkidle' }); await settle(q, 1000);
-    await freeze(q, `site-personas${T}`, `Personas${TT}`);
-    await q.close();
+    if (!KEYS || KEYS.has('personas')) {
+      const q = await page();
+      await q.goto(`${ORIGIN}/personas.html?theme=${theme}`, { waitUntil: 'networkidle' }); await settle(q, 1000);
+      await freeze(q, `site-personas${T}`, `Personas${TT}`);
+      await q.close();
+    }
   }
   if (!only || only === 'pages') {
     for (const [fixture, st, tag] of [['calloway', 'a', 'calloway'], ['scale', 'b', 'scale']]) {

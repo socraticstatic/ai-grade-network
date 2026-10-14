@@ -140,3 +140,10 @@ test('the markup draws one verdict strip, a story per tab, and no sentence on th
   for (const [, name, body] of kf) assert.ok(!/\bto\{|100%\{/.test(body), `${name} names its last frame`);
   assert.match(CSS, /@media \(prefers-reduced-motion: reduce\)\{[^}]*\.trf/, 'reduced motion does not stop the Traffic motion');
 });
+
+// Capacity (2026-10-14, "a band of air between the bar and the run chart"): on one row the run chart fills its row
+// instead of sitting capped at 260px against the foot, so the six months start under the usage bar.
+test('a one-row Capacity card lets its six-month run fill the row', () => {
+  const css = readFileSync(new URL('../storefront.css', import.meta.url), 'utf8');
+  assert.match(css, /\.trf-cap\[data-rows="1"\] \.trf-cspark\{[^}]*max-height:none/, 'the one-row run chart is still capped');
+});
