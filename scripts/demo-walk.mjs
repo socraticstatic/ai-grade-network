@@ -95,8 +95,10 @@ await beat('0 NaaS home: the take-away, the snapshot, the map below', async () =
   await expect("Andi's briefing", 'Do next', 'Needs attention');
   // Fewer words (2026-10-07): what an action gets you is its glyph, the words its label.
   if (!(await inHome('[aria-label="Shows the traffic you cannot see"]').count())) throw new Error('no action says it shows the traffic you cannot see');
-  await takes('Azure eastus is down', 'Finance rides it · 40 workloads · 22 min', 'Trace it');
-  const rows = await inHome('[aria-label="Do next"] .hm-do').count();
+  // Re-pinned 2026-10-13 (the home as a story): the take-away's line is glyph chips, a figure each, its words in the titles.
+  await takes('Azure eastus is down', 'Finance', '40', '22 min', 'Trace it');
+  await expectTitle('Finance rides it', '40 workloads');
+  const rows = await inHome('[aria-label="Do next"] .home-do').count();
   // The tunnel finding (2026-10-05, four AT&T sites on tunnels over the internet) is Network Eng's fourth action of five.
   if (rows !== 5) throw new Error(`Do next lists ${rows} actions, not Network Eng's 5`);
   // Do next pares a finding's head to its figures (2026-10-07); the full sentence is the line's title.
@@ -113,7 +115,9 @@ await beat('0 NaaS home: the take-away, the snapshot, the map below', async () =
   await tab('Executive', 'section[aria-label="NaaS home"]');
   const exec = await takeaway();
   if (exec === neteng) throw new Error('the take-away did not change for Executive');
-  await takes('$41,500/mo on the table', '3 moves · 1 outage on Finance', 'See the moves');
+  // Re-pinned 2026-10-13: the Executive's line is two chips, 3 and 1, with "3 moves" and "1 outage on Finance" in their titles.
+  await takes('$41,500/mo on the table', 'See the moves');
+  await expectTitle('3 moves', '1 outage on Finance');
   if (!(await cards())[0].includes('$89,600')) throw new Error('Egress does not lead for Executive');
   await tab('Network Eng', 'section[aria-label="NaaS home"]');
 });
@@ -227,7 +231,9 @@ await beat('8 Estate switch to Established', async () => {
   await page.selectOption('select[aria-label="View as"]', 'mature'); await settle(600);
   await expect('3 paths send no telemetry', '2 regions over latency SLO');
   // The outage leads, not the at-risk region (skeptic, 2026-09-30).
-  await takes('AWS eu-central-1 is down', '2 apps ride it · 96 workloads');
+  // Re-pinned 2026-10-13 (the home as a story): the line is chips, 2 and 96, their words in the titles.
+  await takes('AWS eu-central-1 is down', '2', '96');
+  await expectTitle('2 apps ride it', '96 workloads');
   if (!(await cards())[1].includes('7 of 8')) throw new Error(`Established's On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 7 of 8`);
   // Established's role list, not Growing's: one blind region where Growing has several.
   await expect('1 region sends no flow logs');

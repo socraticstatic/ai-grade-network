@@ -1897,3 +1897,236 @@ button.cost-tile:hover{border-color:var(--border-primary);background:var(--bg-wa
 .js-no{height:26px;padding:0 9px;border:0;border-radius:6px;background:transparent;font:inherit;font-size:13px;color:var(--text-body);cursor:pointer;white-space:nowrap}
 .js-no[aria-checked="true"]{background:var(--bg-base);color:var(--link);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}.js-no:disabled{cursor:default}
 
+
+/* The home as a story (Micah, 2026-10-13: "Do this for more pages! Great space, great layout, calls to action on all
+   widgets"; "Each page should be its own gorgeous, extremely beautiful story, with calls to action on each"; "tell the
+   story with less words, and more visualizations, animations and icons"). The NaaS home in three acts, one grammar with
+   Optimize, Cost's story tabs and Insights: the verdict (a seal, the figure that counts up, the line as glyph chips, the
+   role's own picture, two doors), the evidence (four tiles whose rings are doors, then the role's own panel), the moves
+   (Do next and Needs attention, every line led by its mark and closed by its verb). Inks: AT&T blue, the slate of outside
+   AT&T, a saving striped or solid green and nothing else green, a real problem red. Motion is entrance only: the verdict
+   rises, figures count up (Cost's cst-cu), rings sweep, bars grow and rise, lines draw, cells light; every home- keyframe
+   names its first frame alone, so animation:none and reduced motion rest on the last one. Shared hm- classes stay as
+   Insights and Orders use them; the home draws with home- alone, but for the pinned hooks (hm-cta, hm-kseg, hm-chart). */
+@property --home-p{syntax:'<number>';inherits:false;initial-value:100}
+@keyframes home-in{from{opacity:0;transform:translateY(8px)}}
+@keyframes home-pop{from{opacity:0;transform:scale(.7)}}
+@keyframes home-grow{from{transform:scaleX(0)}}
+@keyframes home-rise{from{transform:scaleY(0)}}
+@keyframes home-wipe{from{clip-path:inset(0 100% 0 0)}}
+@keyframes home-fade{from{opacity:0}}
+@keyframes home-sweep{from{--home-p:0}}
+@keyframes home-light{from{background:var(--bg-neutral);transform:scale(.4)}}
+@keyframes home-ripple{from{opacity:.6;transform:scale(1)}}
+.home{--home-ease:cubic-bezier(.22,1,.36,1);
+  --home-save:repeating-linear-gradient(-45deg,var(--success) 0 2.5px,color-mix(in srgb,var(--success) 26%,transparent) 2.5px 5.5px)}
+.home button{font:inherit}
+.home .home-mark{display:inline-block;flex:none;width:18px;height:18px;background:center / contain no-repeat}
+.home-chev{flex:none;color:var(--text-body);transition:transform .15s,color .15s}
+.home-sp{flex:1;min-width:0}
+/* The band: the role picker and Andi's briefing. */
+.home-band{display:flex;align-items:center;gap:16px;min-width:0}
+.home-roles{display:inline-flex;gap:2px;padding:3px;border-radius:12px;background:var(--bg-neutral)}
+.home-role{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border:0;border-radius:9px;background:transparent;font-size:13px;line-height:18px;font-weight:500;color:var(--text-body);cursor:pointer;white-space:nowrap;transition:background .2s,color .2s,box-shadow .2s}
+.home-role:hover{color:var(--link)}
+.home-role[aria-selected="true"]{background:var(--bg-base);color:var(--text-heading);font-weight:700;box-shadow:0 1px 2px rgba(15,23,42,.12),0 0 0 1px var(--border-secondary)}
+.home-role[aria-selected="true"] .ic{color:var(--link)}
+.home-brief{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px 0 10px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);font-size:13px;line-height:18px;font-weight:600;color:var(--link);cursor:pointer;white-space:nowrap;transition:border-color .2s,background .2s}
+.home-brief:hover{border-color:var(--border-active);background:var(--bg-accent)}
+.home-brief .ic{transition:transform .2s}.home-brief:hover .ic{transform:translateX(2px)}
+.home-andi{display:block;flex:none;width:18px;height:18px;background:center / contain no-repeat}
+/* Act one, the verdict: the seal, the headline led by its figure, the line as chips, the role's picture, two doors. */
+.home-verdict{position:relative;display:flex;align-items:center;gap:24px;min-width:0;min-height:132px;box-sizing:border-box;padding:22px 26px;border:1px solid var(--border-secondary);border-radius:20px;
+  background:linear-gradient(100deg,var(--hv-wash) 0%,var(--bg-base) 62%);animation:home-in .5s var(--home-ease) backwards}
+.home-seal{position:relative;display:grid;place-items:center;flex:none;width:72px;height:72px;border-radius:20px;background:var(--hv-tint);animation:home-pop .6s var(--home-ease) backwards .08s}
+.home-seal>span{display:block;width:34px;height:34px;background:var(--hv-ink)}
+.home-seal::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 2px var(--hv-ink);opacity:0;transform:scale(1.55);pointer-events:none}
+.home-verdict[data-live="true"] .home-seal::after{animation:home-ripple 1.5s ease-out .6s 2 backwards}
+.home-vt{display:grid;gap:12px;flex:1 1 auto;min-width:0}
+.home-vh{margin:0;min-width:0;font-size:30px;line-height:40px;font-weight:700;letter-spacing:-.025em;color:var(--text-heading)}
+.home-vhb{display:block;max-width:100%;border:0;background:transparent;padding:0;color:inherit;letter-spacing:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home .home-vhb{font-size:30px;line-height:40px;font-weight:700}
+.home-vhb:hover:not(:disabled){color:var(--link)}.home-vhb:disabled{cursor:default}
+.home-vfig{font-size:36px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.home-vchips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}
+.home-vchip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px 0 10px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);font-size:14px;line-height:20px;color:var(--text-heading);cursor:pointer;white-space:nowrap;
+  transition:border-color .2s,background .2s;animation:home-in .45s var(--home-ease) backwards;animation-delay:calc(.3s + var(--d,0) * 80ms)}
+.home-vchip>b{font-weight:700;font-variant-numeric:tabular-nums}
+.home-vchip:hover:not(:disabled){border-color:var(--border-active);background:var(--bg-accent)}
+.home-vchip:disabled{cursor:default;color:var(--text-heading)}
+.home-viz{display:grid;place-items:center;flex:none;min-width:0}
+.home-viz[data-kind=""]{display:none}
+.home-vcta{display:flex;flex-direction:column-reverse;align-items:stretch;gap:8px;flex:none;min-width:196px}
+.home-vcta .hm-cta{justify-content:center;height:44px;padding:0 22px;border-radius:9999px;box-shadow:0 8px 18px -10px color-mix(in srgb,var(--cta) 70%,transparent)}
+.home-vcta .hm-cta.alt{height:36px;font-size:14px;font-weight:600;box-shadow:none;background:var(--bg-base)}
+.home-vcta .hm-cta.alt:hover{background:var(--bg-accent)}
+/* The pictures: Network Eng's path to what broke, Security's hundred cells, the Architect's regions, FinOps' banked
+   months, the Executive's moves on the table. */
+.ps.home-vpath{width:270px;border:0;background:transparent;padding:4px 0;cursor:pointer;--n:40px}
+.ps.home-vpath i{border-width:2px;transition:box-shadow .2s;animation:home-pop .5s var(--home-ease) backwards}
+.ps.home-vpath>span:nth-child(2) i{animation-delay:.35s}.ps.home-vpath>span:nth-child(3) i{animation-delay:.5s}
+.ps.home-vpath>span::before{height:2px;top:calc(var(--n) / 2 - 1px);background:var(--cta);transform-origin:0 50%;animation:home-grow .7s var(--home-ease) backwards .2s}
+.ps.home-vpath>span[data-state="broken"]::before{background:repeating-linear-gradient(90deg,var(--error) 0 5px,transparent 5px 9px)}
+.ps.home-vpath>span[data-state="risk"]::before{background:repeating-linear-gradient(90deg,var(--warning) 0 5px,transparent 5px 9px)}
+.ps.home-vpath [data-state="risk"] i{border-color:var(--warning);color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--bg-base))}
+.ps.home-vpath [data-state="risk"] small{color:var(--text-heading);font-weight:600}
+.ps.home-vpath [data-state="broken"] i::after,.ps.home-vpath [data-state="risk"] i::after{content:"";position:absolute;inset:-2px;border-radius:50%;box-shadow:0 0 0 2px currentColor;opacity:0;transform:scale(1.6);animation:home-ripple 1.5s ease-out .8s 2 backwards}
+.ps.home-vpath small{font-size:12px;line-height:16px}
+.ps.home-vpath:hover i{box-shadow:0 0 0 4px var(--bg-accent)}
+.home-waffle{display:grid;grid-template-columns:repeat(20,8px);grid-auto-rows:8px;gap:3px;padding:8px;border:0;border-radius:12px;background:transparent;cursor:pointer;transition:background .2s}
+.home-waffle:hover{background:var(--bg-accent)}
+.home-waffle>i{display:block;border-radius:2px;background:var(--bg-neutral)}
+.home-waffle>i[data-on="true"]{background:var(--error);animation:home-light .35s var(--home-ease) backwards;animation-delay:calc(.3s + var(--d,0) * 22ms)}
+.home-vdots{display:grid;gap:8px}
+.home-dg{display:flex;align-items:center;gap:8px}
+.home-dg>.home-mark,.home-dg>.ic{margin-right:4px}
+.home-dot{width:16px;height:16px;padding:0;border:2px solid var(--viz-6);border-radius:50%;background:transparent;cursor:pointer;transition:transform .15s,box-shadow .15s;animation:home-pop .4s var(--home-ease) backwards;animation-delay:calc(.35s + var(--d,0) * 70ms)}
+.home-dot[data-priv="true"]{border-color:var(--viz-1);background:var(--viz-1)}
+.home-dot:hover{transform:scale(1.2);box-shadow:0 0 0 3px var(--bg-accent)}
+.home-vspark{display:flex;align-items:flex-end;gap:4px;width:200px;height:64px;padding:0;border:0;border-bottom:1px solid var(--border-secondary);background:transparent;cursor:pointer}
+.home-vspark>i{flex:1;min-width:0;border-radius:3px 3px 0 0;background:var(--success);transform-origin:50% 100%;animation:home-rise .7s var(--home-ease) backwards;animation-delay:calc(.3s + var(--d,0) * 45ms)}
+.home-vspark:hover>i{filter:brightness(1.1)}
+.home-vmoves{display:flex;gap:4px;width:240px;height:30px}
+.home-vmoves>button{display:block;min-width:8px;height:100%;padding:0;border:0;border-radius:8px;background:var(--home-save);cursor:pointer;transform-origin:0 50%;transition:filter .15s,transform .15s;animation:home-grow .7s var(--home-ease) backwards;animation-delay:calc(.35s + var(--d,0) * 120ms)}
+.home-vmoves>button:hover{filter:brightness(1.12);transform:translateY(-2px)}
+/* Act two, the evidence: four tiles, each a head that is a door, a figure that counts up, a ring whose arcs are doors and
+   its counts as glyph and figure. */
+.home-tile{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:28px 36px 20px;align-content:space-between;gap:8px 14px;height:136px;min-width:0;box-sizing:border-box;padding:16px 18px;
+  border:1px solid var(--border-secondary);border-radius:16px;background:var(--bg-base);transition:border-color .2s,box-shadow .2s,transform .2s;animation:home-in .55s var(--home-ease) backwards;animation-delay:calc(.12s + var(--cst-i,0) * 70ms)}
+.home-tile:hover{border-color:var(--border-active);transform:translateY(-2px);box-shadow:0 14px 30px -18px rgba(15,23,42,.35)}
+.home-th{grid-column:1 / -1;display:flex;align-items:center;gap:8px;min-width:0;border:0;background:transparent;padding:0;font-size:14px;line-height:20px;color:var(--text-heading);text-align:left;cursor:pointer}
+.home-th>b{min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s}
+.home-th:hover>b{color:var(--link)}.home-th:hover .home-chev{color:var(--link);transform:translateX(2px)}
+.home-pill{margin-left:auto;display:inline-flex;align-items:center;gap:4px;flex:none;height:24px;padding:0 8px 0 6px;border-radius:9999px;font-size:13px;line-height:18px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.home-big{grid-column:1;justify-self:start;align-self:end;max-width:100%;border:0;background:transparent;padding:0;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.02em;color:var(--text-heading);font-variant-numeric:tabular-nums;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home .home-big{font-size:28px;line-height:36px;font-weight:700}
+.home-big>small{margin-left:2px;font-size:14px;line-height:20px;font-weight:500;letter-spacing:0;color:var(--text-body)}
+.home-big:hover:not(:disabled){color:var(--link)}.home-big:disabled{cursor:default}
+.home-ring{grid-column:2;grid-row:2 / 4;align-self:center;position:relative;width:62px;height:62px;border-radius:50%;background:var(--bg-neutral);
+  -webkit-mask:conic-gradient(#000 calc(var(--home-p) * 1%),transparent 0);mask:conic-gradient(#000 calc(var(--home-p) * 1%),transparent 0);animation:home-sweep 1.3s var(--home-ease) backwards;animation-delay:calc(.3s + var(--cst-i,0) * 70ms)}
+.home-ring>.hm-kseg{position:absolute;inset:0;width:auto;height:auto;border-radius:50%;box-shadow:none;transition:filter .15s}
+.home-ring>.hm-kseg:hover{filter:brightness(1.15);box-shadow:none}
+.home-ring>.hm-kseg[data-zero="true"]{display:none}
+.home-ring-c{position:absolute;inset:10px;border-radius:50%;background:var(--bg-base)}
+.home-tf{grid-column:1;display:flex;align-items:center;gap:14px;min-width:0;overflow:hidden}
+.home-tf .kchip.btn{margin:0;padding:0 2px;font-size:13px}
+/* The panels: one card grammar, a head that is a door, a body, a foot with its key and its action. */
+.home-main{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;min-width:0}
+.home-card{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:16px;min-width:0;box-sizing:border-box;padding:18px 20px;border:1px solid var(--border-secondary);border-radius:16px;background:var(--bg-base);animation:home-in .6s var(--home-ease) backwards .28s}
+.home-docard{animation-delay:.36s}
+.home-ch{display:flex;align-items:center;gap:10px;min-height:32px;min-width:0}
+.home-chb{display:inline-flex;align-items:center;gap:10px;min-width:0;border:0;background:transparent;padding:0;font-size:16px;line-height:22px;color:var(--text-heading);text-align:left;cursor:pointer}
+.home-chb>b{font-weight:700;white-space:nowrap;transition:color .15s}
+.home-chb:hover>b{color:var(--link)}.home-chb:hover .home-chev{color:var(--link);transform:translateX(2px)}
+.home-tile-bad{background:color-mix(in srgb,var(--error) 12%,transparent);color:var(--error)}
+.home-badge{display:inline-flex;align-items:center;gap:5px;flex:none;height:26px;padding:0 10px 0 8px;border:1px solid var(--border-secondary);border-radius:9999px;font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap}
+.home-cf{display:flex;align-items:center;gap:16px;min-height:36px;min-width:0}
+.home .op-go{min-width:168px;flex:none}
+.home-cf>.op-go{margin-left:auto}
+.home-key{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;min-width:0;font-size:12px;line-height:16px;color:var(--text-body)}
+.home-key>span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.home-key i{display:block;flex:none;width:16px;height:8px;border-radius:4px}
+.home-key .home-k-line{height:0;border-radius:0;border-top:2.5px solid var(--viz-1)}
+.home-key .home-k-dash{height:0;border-radius:0;border-top:2px dashed var(--text-light)}
+.home-key .home-k-act{height:0;border-radius:0;border-top:2.5px solid var(--text-heading)}
+.home-key .home-k-save{background:var(--home-save)}
+.home-key .home-k-after{background:var(--viz-1)}
+.home-k-tick{display:block;width:0;height:12px;border-left:2px solid var(--text-heading)}
+.home-rates{display:flex;align-items:center;gap:14px;min-width:0;margin-right:4px}
+.home-cb{display:grid;grid-template-rows:auto minmax(0,1fr);gap:14px;min-height:0;min-width:0}
+/* The Executive's egress: the trio counts up, the months draw, and what acting saves fills striped green. */
+.home-trio{display:flex;align-items:flex-end;gap:32px}
+.home-trio>button{display:grid;gap:2px;border:0;background:transparent;padding:0;text-align:left;cursor:pointer}
+.home-trio small{font-size:12px;line-height:16px;color:var(--text-body)}
+.home-trio b{font-size:24px;line-height:30px;font-weight:700;letter-spacing:-.02em;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap;transition:color .15s}
+.home-trio>button[data-save="true"] b{color:var(--success)}
+.home-trio>button:hover small{color:var(--link)}
+.home-chart.hm-chart{grid-template-rows:minmax(150px,1fr) 18px;min-height:168px}
+.home-chart .hm-plot>svg{animation:home-wipe 1.1s var(--home-ease) backwards .45s}
+.home-chart .hm-ends b{animation:home-fade .5s ease backwards 1.4s;color:var(--text-body)}
+.home-chart .hm-yax span,.home-chart .hm-xax span{color:var(--text-body)}
+.home-save{position:absolute;inset:0;background:var(--home-save);opacity:.85;animation:home-fade .6s ease backwards 1.2s}
+/* FinOps' waterfall: today in the slate, each move a striped saving with its owner's glyph, after in the AT&T blue. */
+.home-wf{display:flex;align-items:flex-end;gap:12px;min-width:0}
+.home-wfs{flex:1;display:grid;justify-items:center;gap:6px;min-width:0;border:0;border-radius:10px;background:transparent;padding:4px 0;cursor:pointer;transition:background .15s}
+.home-wfs:hover{background:var(--bg-wash)}.home-wfs:hover>small{color:var(--link)}
+.home-wfs>.v{font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);white-space:nowrap;font-variant-numeric:tabular-nums}
+.home-wfs[data-k="step"]>.v{color:var(--success)}
+.home-wfc{display:flex;flex-direction:column;justify-content:flex-end;width:100%;height:150px;border-bottom:1px solid var(--border-secondary)}
+.home-wfc>i{display:block;width:64%;max-width:76px;margin:0 auto;border-radius:5px 5px 0 0;transform-origin:50% 100%;animation:home-rise .7s var(--home-ease) backwards;animation-delay:calc(.35s + var(--d,0) * 110ms)}
+.home-wfs[data-k="today"] .home-wfc>i{background:var(--viz-6)}
+.home-wfs[data-k="step"] .home-wfc>i{background:var(--home-save);border-radius:5px}
+.home-wfs[data-k="after"] .home-wfc>i{background:var(--viz-1)}
+.home-wfs>small{max-width:100%;font-size:12px;line-height:16px;color:var(--text-body);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-own{display:grid;place-items:center;width:22px;height:22px;margin-top:-2px;border-radius:50%;background:var(--bg-accent);color:var(--link)}
+.home-fin2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:center}
+.home-wi{display:flex;align-items:center;gap:10px;min-width:0;height:44px;padding:0 14px;border:1px solid var(--border-secondary);border-radius:12px;font-size:14px;line-height:20px;color:var(--text-heading)}
+.home-wi>input{flex:1;min-width:60px;accent-color:var(--cta)}
+.home-wi>b{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.home-saved{color:var(--success)}
+.home-bu{display:grid;gap:6px;min-width:0;border:0;background:transparent;padding:0;text-align:left;cursor:pointer}
+.home-bur{display:grid;grid-template-columns:128px minmax(0,1fr) 64px;align-items:center;gap:10px;font-size:12px;line-height:16px;color:var(--text-body)}
+.home-bur>small{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-bur>b{justify-self:end;font-size:13px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.home-burt{display:block;height:8px;border-radius:4px;background:var(--bg-neutral);overflow:hidden}
+.home-burt>i{display:block;height:100%;border-radius:4px;background:var(--viz-1);transform-origin:0 50%;animation:home-grow .8s var(--home-ease) backwards;animation-delay:calc(.5s + var(--d,0) * 80ms)}
+.home-bu:hover .home-bur>small{color:var(--link)}
+/* The bar panels (paths, exposure, regions): every row a door, led by its mark, its bar on one scale, its figure. */
+.home-bars{display:grid;align-content:start;min-width:0}
+.home-calm{display:grid;justify-items:center;align-content:center;gap:12px;min-height:120px;text-align:center}
+.home-calm-i{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--bg-neutral);color:var(--link)}
+.home-calm>b{font-size:14px;line-height:20px;font-weight:600;color:var(--text-body)}
+.home-br{display:grid;grid-template-columns:28px minmax(0,200px) minmax(0,1fr) auto 64px 14px;align-items:center;gap:12px;min-height:46px;margin:0 -8px;padding:0 8px;border:0;border-top:1px solid var(--border-secondary);border-radius:0;background:transparent;text-align:left;cursor:pointer;
+  transition:background .15s;animation:home-in .45s var(--home-ease) backwards;animation-delay:calc(.35s + var(--d,0) * 55ms)}
+.home-br:first-child{border-top-color:transparent}
+.home-br:hover{background:var(--bg-wash)}.home-br:hover .home-chev{color:var(--link);transform:translateX(2px)}
+.home-br>.ic-tile{color:var(--link)}
+.home-brn{display:grid;min-width:0}
+.home-brn>b{font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-brn>small{font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-brt{position:relative;display:block;height:12px}
+.home-brs{display:flex;height:100%;border-radius:6px;background:var(--bg-neutral);overflow:hidden}
+.home-brs>i{display:block;flex:none;height:100%;transform-origin:0 50%;animation:home-grow .8s var(--home-ease) backwards;animation-delay:calc(.4s + var(--d,0) * 55ms)}
+.home-brt>em{position:absolute;top:-5px;bottom:-5px;width:0;margin-left:-1px;border-left:2px solid var(--text-heading)}
+.home-brp{color:var(--text-body)}
+.home-brv{justify-self:end;font-size:14px;line-height:20px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* Act three, the moves: Do next led by what each gets you, closed by its verb; the saving the one green figure. */
+.home-dolist{display:grid;align-content:start;min-width:0}
+.home-do{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:54px;border-top:1px solid var(--border-secondary);animation:home-in .45s var(--home-ease) backwards;animation-delay:calc(.42s + var(--d,0) * 60ms)}
+.home-do:first-child{border-top-color:transparent}
+.home-dom{display:grid;place-items:center;width:36px;height:36px;border-radius:10px}
+.home-don{display:grid;gap:2px;min-width:0}
+.home-don>b{font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-dosub{display:flex;align-items:center;gap:8px;min-width:0}
+.home-dosub>small{min-width:0;font-size:12px;line-height:16px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-dos{display:inline-flex;align-items:center;gap:4px;flex:none;border:0;background:transparent;padding:0;font-size:13px;line-height:18px;font-weight:700;color:var(--success);cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}
+.home-dos:hover{text-decoration:underline;text-underline-offset:3px}
+.home .cst-do{min-width:84px;padding:0 12px}
+.home-none{padding:12px 0;font-size:13px;line-height:18px;color:var(--text-body)}
+/* Needs attention: each problem led by its state's glyph, named in a few words, its figure, where, what it touches, Trace. */
+.home-attn{grid-template-rows:auto auto}
+.home-alist{display:grid;min-width:0}
+.home-ar{display:grid;grid-template-columns:36px minmax(0,1fr) 150px minmax(0,.7fr) 150px 36px;align-items:center;gap:16px;min-height:54px;border-top:1px solid var(--border-secondary);animation:home-in .45s var(--home-ease) backwards;animation-delay:calc(.5s + var(--d,0) * 60ms)}
+.home-ar:first-child{border-top-color:transparent}
+.home-as{display:grid;place-items:center;width:36px;height:36px;border-radius:10px}
+.home-an{display:flex;align-items:center;gap:14px;min-width:0;white-space:nowrap}
+.home-an>b{font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);overflow:hidden;text-overflow:ellipsis}
+.home-an .kchip{font-size:13px}
+.home-aw{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
+.ps.home-astrip{width:150px;padding:0;border:0;background:transparent;cursor:pointer;--n:30px}
+.ps.home-astrip>span::before{background:var(--cta)}
+.ps.home-astrip>span[data-state="broken"]::before{background:repeating-linear-gradient(90deg,var(--error) 0 4px,transparent 4px 7px)}
+.ps.home-astrip>span[data-state="risk"]::before{background:repeating-linear-gradient(90deg,var(--warning) 0 4px,transparent 4px 7px)}
+.ps.home-astrip [data-state="risk"] i{border-color:var(--warning);color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--bg-base))}
+.ps.home-astrip:hover i{box-shadow:0 0 0 3px var(--bg-accent)}
+.ps.home-astrip .home-mark{width:16px;height:16px}
+.home-aw>b{font-size:14px;line-height:20px;font-weight:600;color:var(--text-heading);overflow:hidden;text-overflow:ellipsis}
+.home-ai{display:flex;align-items:center;gap:14px;min-width:0}
+.home-ai .kchip.btn{margin:0;font-size:13px}
+.home-ib{display:grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid var(--border-secondary);border-radius:50%;background:var(--bg-base);color:var(--link);cursor:pointer;transition:border-color .2s,background .2s,transform .2s}
+.home-ib:hover{border-color:var(--cta);background:var(--bg-accent);transform:scale(1.06)}
+@media (prefers-reduced-motion: reduce){.home-verdict,.home-seal,.home-seal::after,.home-vchip,.ps.home-vpath i,.ps.home-vpath i::after,.ps.home-vpath>span::before,.home-waffle>i,.home-dot,.home-vspark>i,.home-vmoves>button,.home-tile,.home-ring,.home-card,
+  .home-chart .hm-plot>svg,.home-chart .hm-ends b,.home-save,.home-wfc>i,.home-burt>i,.home-br,.home-brs>i,.home-do,.home-ar{animation:none}
+  .home-tile,.home-role,.home-vchip,.home-dot,.home-vmoves>button,.home-ib,.home-br{transition:none}}
+/* end of the home story */

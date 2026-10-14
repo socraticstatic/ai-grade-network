@@ -208,7 +208,7 @@ export const DEMO_KEYS = ['naas.life', 'naas.tags', 'naas.hero', 'naas.openHint'
 export function defaults() {
   return {
     // Network Engineering on the Growing estate is the default story (2026-09-28).
-    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, layDir: 'o2p', layLit: null, layPage: 0, engReturn: null, appState: null, homeRange: 12, journey: null, jStep: 0, jTags: {}, jIntent: null, intents: {}, jFlip: 0, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
+    screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, layDir: 'o2p', layLit: null, layPage: 0, engReturn: null, appState: null, homeRange: 12, homeRowPage: 0, journey: null, jStep: 0, jTags: {}, jIntent: null, intents: {}, jFlip: 0, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', siteTags: {}, buCustom: {}, buActive: null, buNew: '',
     // Cost's filter bar and By leg's drill (2026-09-30): the slice, its member, and the row opened; Spend's list (savings, or the banked sources and their scope) and the pages of Banked and By region's save rows.
     costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0,
     steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [],
@@ -1334,6 +1334,21 @@ function briefVals(out, s, set, { go, est, est0, obAll, conns, life, lifeNow, fi
 // every figure is a field vals() already computed for the page it opens, and
 // every door here opens exactly the set that figure counts. It reads
 // problemRows before pageLists pages them.
+/**
+ * A Health problem in a few words (the home as a story, 2026-10-13): its name, and its figures as glyph chips; the
+ * sentence rides in the row's title. "Latency spike · p95 136 ms at peak, 0.3% loss" is Latency spike and 136 ms;
+ * "81% of 5 × 10 Gbps purchased" is Capacity and 81%. One figure a line: the rest rides in the title.
+ */
+export function attnName(what) {
+  const w = String(what || ''), cap = /^(\d+%) of (.+?) purchased$/.exec(w);
+  if (cap) return { name: 'Capacity', figs: [{ key: 'u', icon: 'high-meter', t: cap[1], title: `${cap[1]} of ${cap[2]} purchased` }] };
+  const i = w.indexOf(' · '), name = i > 0 ? w.slice(0, i) : w.split(' ').slice(0, 4).join(' '), rest = i > 0 ? w.slice(i + 3) : '';
+  // One figure on the line, so the line keeps to five pieces of text (name, figure, region, apps, workloads).
+  const figs = [...rest.matchAll(/(against )?(\d[\d.,]*(?: ms|%))( loss| drops)?/g)].slice(0, 1).map((m, k) => ({ key: 'f' + k, t: m[2],
+    icon: m[1] ? 'target' : /%/.test(m[2]) ? 'minus-circle' : 'clock', title: m[1] ? `SLO ${m[2]}` : /%/.test(m[2]) ? `${m[2]}${m[3] || ' loss'}` : `p95 ${m[2]}` }));
+  return { name, figs };
+}
+
 export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est = null }) {
   const rk = roleKeyOf(s);
   const stat = (k) => String(((out.invStats || []).find(x => x.key === k) || {}).v ?? '');
@@ -1409,6 +1424,118 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est =
   // Waiting on you is what still waits: an open finding (Accept) or a port to add. An acknowledged
   // one has left it for Your actions (skeptic, 2026-09-30).
   const waiting = acts.filter(a => a.waiting);
+  // ---- The home as a story (Micah, 2026-10-13: "Each page should be its own gorgeous, extremely beautiful story, with
+  // calls to action on each"; "less words, and more visualizations, animations and icons"). The verdict leads with its
+  // figure and draws the role's own picture; the line is glyph chips; each role gets its own evidence panel; every row
+  // of the moves leads with its mark. Every figure is one this function or its page already prints.
+  const homeTake = journeyTake ? { ...journeyTake, hasAlt: false } : take && { key: take.key, head: take.head, sub: take.sub, cta: take.cta, ink: take.ink, hasAlt: true, alt: { label: 'Connect a cloud', go: journeyDoor(s, set).start },
+    tint: `color-mix(in srgb, ${take.ink} 14%, transparent)`, wash: `color-mix(in srgb, ${take.ink} 7%, var(--bg-base))`,
+    icon: `brand/icons-light/${take.icon}.svg`, go: doorOf(take.door), headGo: doorOf(take.headDoor) || (() => {}), headOff: !doorOf(take.headDoor),
+    parts: take.parts.map((p, i) => { const g = doorOf(p.door, p.arg); return { key: 'p' + i, t: p.t, sep: i > 0, off: !g, go: g || (() => {}) }; }) };
+  if (homeTake) {
+    const src = journeyTake ? today.groups.map(g => ({ icon: g.icon, fig: String(g.n) })) : take.parts;
+    homeTake.chips = homeTake.parts.map((p, i) => { const sp = src[i] || {};
+      const marks = (sp.clouds || []).map(cl => ({ key: cl, src: W.markFor(cl, s.theme), title: cl })).filter(m => m.src);
+      const t = sp.fig || (marks.length ? '' : p.t);
+      return { key: p.key, d: i, icon: sp.icon || 'information-circle', t, hasT: !!t, title: p.t, iink: sp.ink || 'var(--text-body)', marks, hasMarks: marks.length > 0, noMarks: !marks.length, go: p.go, off: p.off }; });
+    const f0 = journeyTake ? { has: false, pre: homeTake.head, n: '', u: '', rest: '', ink: 'var(--text-heading)' }
+      : HM.heroFigOf(take, { onTableF: openSave ? fmt(openSave) : '', could: { l: couldT.l, v: couldT.v || '', u: couldT.u } });
+    homeTake.fig = { ...f0, hasPre: !!f0.pre, hasRest: !!f0.rest, title: homeTake.head, cu: cstCu(f0.n) };
+    homeTake.live = !journeyTake && !!worst && rk === 'neteng' && worst.state === 'down';
+    homeTake.viz = (() => {
+      const none = { kind: '', isPath: false, isWaffle: false, isDots: false, isSpark: false, isMoves: false, title: '', go: () => {}, stations: [], cells: [], clouds: [], bars: [], segs: [], total: '' };
+      if (journeyTake) return none;
+      const as = (kind, rest) => ({ ...none, kind, ['is' + kind[0].toUpperCase() + kind.slice(1)]: true, ...rest });
+      if (rk === 'neteng' && worst) {
+        const cloudName = String(worst.where).split(' ')[0], region = String(worst.where).split(' ').slice(1).join(' ') || worst.where, pub = /internet/i.test(worst.thing || '');
+        const mark = W.MARK[cloudName] ? W.markFor(cloudName, s.theme) : '';
+        return as('path', { title: `${worst.where} · ${worst.thing}: ${worst.what}`, go: takeDoor.trace(), stations: [
+          { key: 'site', icon: 'large-building', label: 'Sites', state: 'set', title: 'Your sites', mark: '', hasMark: false, noMark: true },
+          { key: 'thing', icon: pub ? 'globe' : 'cable', label: worst.thing, state: worst.state === 'risk' ? 'risk' : 'broken', title: `${worst.thing}: ${worst.what}`, mark: '', hasMark: false, noMark: true },
+          { key: 'region', icon: 'cloud', label: region, state: 'set', title: worst.where, mark, hasMark: !!mark, noMark: !mark }] });
+      }
+      if (rk === 'security') {
+        const e = HM.numOf(stat('e')), w = HM.numOf(stat('w'));
+        return as('waffle', { title: `${stat('e')} of ${stat('w')} workloads exposed`, go: doors.discover(), cells: HM.waffleOf(e, w, 'var(--error)').map((x, i) => ({ ...x, d: i })) });
+      }
+      if (rk === 'architect') {
+        const regs = out.allRegions || [], clouds = [...new Set(regs.map(r => r.cloud))];
+        return as('dots', { title: `${regs.filter(r => r.priv).length} of ${regs.length} regions private on AT&T`, go: doors.picture(),
+          clouds: clouds.map(cl => ({ key: cl, mark: W.MARK[cl] ? W.markFor(cl, s.theme) : '', hasMark: !!W.MARK[cl], noMark: !W.MARK[cl], title: cl,
+            dots: regs.filter(r => r.cloud === cl).map((r, i) => ({ key: `${cl}-${r.region}`, priv: !!r.priv, d: i, title: `${cl} ${r.region} · ${r.priv ? 'private on AT&T' : 'public internet'} · ${r.wl} workloads`, go: r.priv ? doors.picture() : doors.options() })) })) });
+      }
+      if (rk === 'finops') {
+        const bk = (out.spendTiles || []).find(t => t.key === 'banked');
+        if (bk && bk.hasSpark && (bk.spark || []).length) return as('spark', { title: bk.title || 'Banked to date', go: doors.spend(), total: bk.v, bars: bk.spark.map((b, i) => ({ key: b.key, h: b.h, d: i, title: b.title })) });
+        return none;
+      }
+      if (rk === 'exec') {
+        const priced = acts.filter(a => HM.numOf(a.saveFig)), tot = priced.reduce((a, x) => a + HM.numOf(x.saveFig), 0);
+        if (!tot) return none;
+        return as('moves', { title: `${fmt(tot)}/mo across ${priced.length} ${priced.length === 1 ? 'move' : 'moves'}`, go: takeDoor.moves(),
+          segs: priced.map((a, i) => ({ key: a.key, d: i, w: `${(HM.numOf(a.saveFig) / tot * 100).toFixed(2)}%`, title: `${a.saveFig} · ${pareHead(firstSentence(a.head))}`, go: a.hasDoor ? a.door : a.open })) });
+      }
+      return none;
+    })();
+  }
+  // The role's own evidence (the home as a story, 2026-10-13): the Executive the money, FinOps the waterfall, Network Eng
+  // the paths, Security the exposure, the Architect the estate's regions. A bar panel pages its rows, never scrolls.
+  const healthGo = obs({ obPanel: 'health', healthView: 'app', appState: null });
+  const homePanel = (() => {
+    const base = { kind: '', isChart: false, isFin: false, isBars: false, title: '', icon: 'pie-chart', go: () => {}, headTitle: '', badge: { has: false, icon: '', t: '', title: '', ink: '' },
+      legend: [], rows: [], hasRows: false, noRows: false, calm: '', pager: { many: false, label: '', prev: () => {}, next: () => {}, prevOp: 0.4, nextOp: 0.4 }, cta: { label: '', icon: 'arrow-right', go: () => {} } };
+    if (isEmpty) return base;
+    const badge = (icon, t, title, ink) => ({ has: !!t, icon, t, title, ink: ink || 'var(--text-body)' });
+    // A bar panel with nothing to list (the journey's estate has sites and no cloud yet) says so calmly, and its action is
+    // the journey's door rather than a page that would list nothing either.
+    const paged = (rows, calm) => { const pg = pageRows(rows.map(r => ({ hasPath: false, pathIcon: '', pathTitle: '', ...r, hasSub: !!r.sub })), 6, s.homeRowPage, (n) => set({ homeRowPage: n }));
+      return { rows: pg.rows.map((r, i) => ({ ...r, d: i })), pager: pg.pager, hasRows: rows.length > 0, noRows: !rows.length, calm,
+        ...(rows.length ? {} : { cta: { label: 'Connect a cloud', icon: 'cloud', go: journeyDoor(s, set).start } }) }; };
+    const finOn = rk === 'finops' && HM.numOf(tile('spend')) > 0;
+    if (finOn) return { ...base, kind: 'fin', isFin: true, title: 'To optimized', headTitle: "From today's spend to optimized: each step an open move, by who acts", icon: 'trending-down', go: doors.spend(),
+      cta: { label: 'Optimize', icon: 'trending-down', go: doors.optimize() } };
+    if (rk === 'neteng') {
+      const RANKS = { down: 0, slo: 1, risk: 2, ok: 3 }, all = (out.pathTimeAll || []).map((r, ix) => ({ r, ix })).sort((a, b) => (RANKS[a.r.state] ?? 4) - (RANKS[b.r.state] ?? 4) || b.r.total - a.r.total);
+      const scale = Math.max(1, ...all.map(({ r }) => Math.max(r.total || 0, r.slo || 0))) * 1.08;
+      const bad = all.filter(({ r }) => r.state !== 'ok').length;
+      const rows = all.map(({ r, ix }) => { const cl = String(r.where || '').split(' ')[0], mark = W.MARK[cl] ? W.markFor(cl, s.theme) : '';
+        return { key: r.key, icon: 'tag', name: r.label, sub: String(r.where || '').split(' ').slice(1).join(' '), mark, hasMark: !!mark, noMark: !mark, title: r.title,
+          segs: [{ key: 'ms', w: `${Math.min(100, (r.total || 0) / scale * 100).toFixed(2)}%`, ink: F.HEALTH_FILL_BAR[r.state] || 'var(--viz-1)' }].map(g => ({ ...g, ink: r.state === 'ok' ? 'var(--viz-1)' : g.ink })),
+          tick: `${Math.min(100, (r.slo || 0) / scale * 100).toFixed(2)}%`, hasTick: !!r.slo, tickTitle: `SLO ${r.slo} ms`, v: r.totalF, vInk: r.state === 'ok' ? 'var(--text-heading)' : (F.HEALTH_INK[r.state] || 'var(--text-heading)'),
+          go: obs({ obPanel: 'paths', pathSel: r.key, pathsPage: Math.floor(ix / 8) }) }; });
+      return { ...base, kind: 'paths', isBars: true, title: 'Paths', headTitle: 'Each app on its slowest path, against its SLO', icon: 'shuffle', go: obs({ obPanel: 'paths' }),
+        badge: badge('clock', bad ? String(bad) : '', `${bad} ${bad === 1 ? 'path' : 'paths'} over SLO, down or at risk`, bad ? 'var(--error)' : ''),
+        legend: [{ key: 'ok', label: 'Healthy', ink: 'var(--viz-1)' }, ...(['down', 'slo', 'risk'].filter(k => all.some(({ r }) => r.state === k)).map(k => ({ key: k, label: F.HEALTH_WORD[k], ink: F.HEALTH_FILL_BAR[k] }))), { key: 'slo', label: 'SLO', ink: '', isTick: true }]
+          .map(l => ({ ...l, isTick: !!l.isTick, isSw: !l.isTick })),
+        cta: { label: 'Open Paths', icon: 'shuffle', go: obs({ obPanel: 'paths' }) }, ...paged(rows, 'No cloud paths yet') };
+    }
+    if (rk === 'security') {
+      const apps = (out.appAll || []).slice().sort((a, b) => (b.exposed || 0) - (a.exposed || 0) || b.wl - a.wl), max = Math.max(1, ...apps.map(a => a.wl || 0));
+      const rows = apps.map(a => ({ key: a.key, icon: 'tag', name: a.name, sub: '', mark: ((a.runs || [])[0] || {}).mark || '', hasMark: !!((a.runs || [])[0] || {}).hasMark, noMark: !((a.runs || [])[0] || {}).hasMark,
+        title: `${a.name}: ${a.exposedF} of ${a.wlF} workloads exposed · ${a.runsIn}`, sub2: '',
+        segs: [{ key: 'ex', w: `${((a.exposed || 0) / max * 100).toFixed(2)}%`, ink: 'var(--error)' }, { key: 'rest', w: `${(((a.wl || 0) - (a.exposed || 0)) / max * 100).toFixed(2)}%`, ink: 'var(--viz-6)' }],
+        tick: '0%', hasTick: false, tickTitle: '', v: a.exposedF, vInk: a.exposed ? 'var(--error)' : 'var(--text-heading)', go: a.exposedCan ? a.exposedGo : a.go }));
+      return { ...base, kind: 'exposure', isBars: true, title: 'Exposed by app', headTitle: 'Each app\'s workloads, the exposed ones first', icon: 'personal-security', go: doors.discover(),
+        badge: badge('globe', stat('e'), `${stat('e')} workloads exposed`, 'var(--error)'),
+        legend: [{ key: 'ex', label: 'Exposed', ink: 'var(--error)', isTick: false, isSw: true }, { key: 'rest', label: 'Not exposed', ink: 'var(--viz-6)', isTick: false, isSw: true }],
+        cta: { label: 'Set policy', icon: 'check-shield', go: doors.policies() }, ...paged(rows, 'No workloads read yet') };
+    }
+    if (rk === 'architect') {
+      const regs = (out.allRegions || []).slice().sort((a, b) => (a.priv === b.priv ? 0 : a.priv ? 1 : -1) || b.wl - a.wl), max = Math.max(1, ...regs.map(r => r.wl || 0));
+      const pubN = regs.filter(r => !r.priv).length;
+      const rows = regs.map(r => { const mark = W.MARK[r.cloud] ? W.markFor(r.cloud, s.theme) : '';
+        return { key: `${r.cloud}-${r.region}`, icon: r.priv ? 'hub' : 'globe', name: r.region, sub: '', mark, hasMark: !!mark, noMark: !mark,
+          hasPath: true, pathIcon: r.priv ? 'hub' : 'globe', pathTitle: r.priv ? 'Private on AT&T' : 'Public internet',
+          title: `${r.cloud} ${r.region} · ${r.priv ? 'private on AT&T' : 'public internet'} · ${r.wl} workloads`,
+          segs: [{ key: 'wl', w: `${((r.wl || 0) / max * 100).toFixed(2)}%`, ink: r.priv ? 'var(--viz-1)' : 'var(--viz-6)' }], tick: '0%', hasTick: false, tickTitle: '',
+          v: String(r.wl), vInk: 'var(--text-heading)', go: r.priv ? doors.picture() : doors.options() }; });
+      return { ...base, kind: 'regions', isBars: true, title: 'Regions', headTitle: 'Each region\'s workloads, the public ones first', icon: 'cloud', go: doors.picture(),
+        badge: badge('globe', pubN ? String(pubN) : '', `${pubN} ${pubN === 1 ? 'region' : 'regions'} on the public internet`),
+        legend: [{ key: 'priv', label: 'Private on AT&T', ink: 'var(--viz-1)', isTick: false, isSw: true }, { key: 'pub', label: 'Public internet', ink: 'var(--viz-6)', isTick: false, isSw: true }],
+        cta: { label: 'Ways to connect', icon: 'cable', go: doors.options() }, ...paged(rows, 'No cloud regions yet') };
+    }
+    return { ...base, kind: 'chart', isChart: true, title: 'Egress spend', icon: 'trending-up', go: doors.spend(), cta: { label: 'Optimize', icon: 'trending-down', go: doors.optimize() } };
+  })();
   return {
     // The home offers the journey (2026-10-09, "integrate into the rest of the site"): an estate with sites and no cloud yet
     // reads the journey's first beat, its sites by access as parts, and Find your clouds resumes the story at Source.
@@ -1416,15 +1543,17 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est =
     // on a home whose rows end short (the journey's estate, 2026-10-09). An empty estate has no map below.
     homeMinH: isEmpty ? '0' : 'calc(100vh - 116px)',
     // A second door on every hero that is not the journey already (2026-10-12, "also 2"): the story starts clean.
-    homeTake: journeyTake ? { ...journeyTake, hasAlt: false } : take && { key: take.key, head: take.head, sub: take.sub, cta: take.cta, ink: take.ink, hasAlt: true, alt: { label: 'Connect a cloud', go: journeyDoor(s, set).start },
-      tint: `color-mix(in srgb, ${take.ink} 14%, transparent)`, wash: `color-mix(in srgb, ${take.ink} 7%, var(--bg-base))`,
-      icon: `brand/icons-light/${take.icon}.svg`, go: doorOf(take.door), headGo: doorOf(take.headDoor) || (() => {}), headOff: !doorOf(take.headDoor),
-      parts: take.parts.map((p, i) => { const g = doorOf(p.door, p.arg); return { key: 'p' + i, t: p.t, sep: i > 0, off: !g, go: g || (() => {}) }; }) },
-    homeCards,
+    homeTake,
+    // The tiles count up from their own figure (the home as a story, 2026-10-13).
+    homeCards: homeCards.map((c, i) => ({ ...c, i, cu: cstCu(c.big) })),
+    homePanel,
     // Dev's home (2026-10-01): Do next is the role's actions ranked, each with what it gets you; the chart is
     // Spend's egress line, today and if you act; Needs attention is Health's open problems.
-    homeDo: acts.slice(0, 6).map((a, i) => ({ key: a.key, n: i + 1, head: a.head, sub: String(a.rec || '').replace(/^Recommended: /, ''), outcome: a.outcome, outInk: a.outInk,
-      label: a.hasDoor ? a.doorLabel : 'Review', go: a.hasDoor ? a.door : a.open })),
+    // A move that saves money shows the saving, the one green figure on the line (2026-10-13).
+    homeDo: acts.slice(0, 6).map((a, i) => { const save = /^Save (\$[\d,]+(?:\/mo)?)$/.exec(a.outcome || ''), label = a.hasDoor ? a.doorLabel : 'Review';
+      return { key: a.key, n: i + 1, d: i, head: a.head, sub: String(a.rec || '').replace(/^Recommended: /, ''), outcome: a.outcome, outInk: a.outInk, hasSave: !!save, saveT: save ? save[1] : '', noSave: !save,
+        markBg: save ? 'color-mix(in srgb, var(--success) 12%, transparent)' : 'var(--bg-accent)', markInk: save ? 'var(--success)' : 'var(--link)',
+        label, verbIcon: ACT_ICON[label] || 'arrow-right', go: a.hasDoor ? a.door : a.open }; }),
     homeDoLine: `${acts.length} open · ranked for ${ROLE_OF[rk] ? ROLE_OF[rk].short : 'you'}`, hasHomeDo: acts.length > 0,
     homeChart: (() => { const eg = homeCards.find(x => x.key === 'egress'); if (!eg) return null; const ahead = (out.spendTiles || []).find(t => t.key === 'ahead') || {}, asIs = HM.numOf(ahead.asIsV || ''), ah = HM.numOf(tile('ahead'));
       // The trio reads one clock (Micah, 2026-10-05: "make sure the math adds up"): in 90 days as is, in 90 days if you act, and
@@ -1434,7 +1563,10 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est =
       const cols = out.spendCols || [], range = s.homeRange === 6 ? 6 : 12;
       const pastN = cols.filter(x => x.kind === 'past').map(x => x.spendN), nx = cols.filter(x => x.kind === 'next');
       const spark = pastN.length ? HM.sparkOf(pastN.slice(-range), nx.map(x => x.asIsN), nx.map(x => x.movedN)) : eg.spark;
-      return { spark, ranges: [6, 12].map(k => ({ key: 'r' + k, label: `${k} mo`, on: range === k, go: () => set({ homeRange: k }) })), today: tile('spend'), asIs: ahead.asIsV || tile('spend'), act: tile('ahead'), save: asIs > ah ? `$${(asIs - ah).toLocaleString('en-US')}` : '$0', go: eg.go, perGb: 'Per GB: $0.09 on the internet, $0.02 on the AT&T network, 78% lower',
+      // The trio counts up from its own figures (the home as a story, 2026-10-13).
+      const saveV = asIs > ah ? `$${(asIs - ah).toLocaleString('en-US')}` : '$0';
+      return { cuAsIs: cstCu(ahead.asIsV || tile('spend')), cuAct: cstCu(tile('ahead')), cuSave: cstCu(saveV), optGo: doors.optimize(),
+        spark, ranges: [6, 12].map(k => ({ key: 'r' + k, label: `${k} mo`, on: range === k, go: () => set({ homeRange: k }) })), today: tile('spend'), asIs: ahead.asIsV || tile('spend'), act: tile('ahead'), save: asIs > ah ? `$${(asIs - ah).toLocaleString('en-US')}` : '$0', go: eg.go, perGb: 'Per GB: $0.09 on the internet, $0.02 on the AT&T network, 78% lower',
         // The unit cost as marks and figures (2026-10-07: fewer words).
         rates: [{ key: 'i', icon: 'globe', v: '$0.09/GB', title: 'Per GB through the internet' }, { key: 'a', icon: 'hub', v: '$0.02/GB', title: 'Per GB on the AT&T network' }, { key: 'd', icon: 'trending-down', v: '78% lower', title: '78% lower per GB on the AT&T network' }],
         note: `Monthly egress run-rate: the last ${range} months and the next 90 days. In 90 days as is, if you act, and the difference.` }; })(),
@@ -1442,12 +1574,15 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est =
       const isFin = rk === 'finops' && !isEmpty, start = HM.numOf(tile('spend'));
       if (!isFin || !start) return { homeFin: false, homeFinOff: true };
       const pr = openF.filter(x => x.priced && x.save).sort((x, y) => y.save - x.save);
-      const INK = { FinOps: 'var(--viz-2)', Engineering: 'var(--viz-1)' }, H = 180, k = H / start;
+      // The waterfall as a story (2026-10-13): each step is a saving, striped green, its owner a glyph under it (FinOps a
+      // person, engineering the router); Today is the slate of what you pay now, After the AT&T blue. H is the panel's.
+      const INK = { FinOps: 'var(--viz-2)', Engineering: 'var(--viz-1)' }, OWN = { FinOps: ['person', 'FinOps acts'], Engineering: ['router', 'Engineering acts'] }, H = 150, k = H / start;
       let run = start;
       const steps = pr.map(x => { const owner = /FinOps/.test(x.persona || '') ? 'FinOps' : 'Engineering', top = run; run -= x.save;
-        return { key: x.kind, label: ({ avoidable: 'Internet egress', crosscloud: 'Cloud to cloud', ipsecegress: 'IPsec branches', ipsec: 'IPsec branches' }[x.kind] || (D.KINDS[x.kind] || x.kind).replace(/^\w/, c => c.toUpperCase())), valF: `-${fmt(x.save)}`, h: `${Math.max(2, Math.round(x.save * k))}px`, mb: `${Math.round(run * k)}px`, ink: INK[owner], owner }; });
-      const wf = [{ key: 'today', label: 'Today', valF: fmt(start), h: `${H}px`, mb: '0px', ink: 'var(--text-light)', owner: '' }, ...steps,
-        { key: 'after', label: 'After', valF: fmt(Math.max(0, run)), h: `${Math.max(2, Math.round(Math.max(0, run) * k))}px`, mb: '0px', ink: 'var(--success)', owner: '' }];
+        return { key: x.kind, label: ({ avoidable: 'Internet egress', crosscloud: 'Cloud to cloud', ipsecegress: 'IPsec branches', ipsec: 'IPsec branches' }[x.kind] || (D.KINDS[x.kind] || x.kind).replace(/^\w/, c => c.toUpperCase())), valF: `-${fmt(x.save)}`, h: `${Math.max(2, Math.round(x.save * k))}px`, mb: `${Math.round(run * k)}px`, ink: INK[owner], owner, kind: 'step', ownIcon: OWN[owner][0], ownTitle: OWN[owner][1], hasOwn: true, title: `-${fmt(x.save)}/mo${x.head ? ` · ${x.head}` : ''}` }; });
+      const wf = [{ key: 'today', label: 'Today', valF: fmt(start), h: `${H}px`, mb: '0px', ink: 'var(--text-light)', owner: '', kind: 'today', ownIcon: '', ownTitle: '', hasOwn: false, title: `${fmt(start)}/mo egress today` }, ...steps,
+        { key: 'after', label: 'After', valF: fmt(Math.max(0, run)), h: `${Math.max(2, Math.round(Math.max(0, run) * k))}px`, mb: '0px', ink: 'var(--success)', owner: '', kind: 'after', ownIcon: '', ownTitle: '', hasOwn: false, title: `${fmt(Math.max(0, run))}/mo once every move is made` }]
+        .map((w, i) => ({ ...w, d: i, go: w.kind === 'step' ? doors.optimize() : doors.spend() }));
       const last = (out.spendCols || []).filter(x => x.kind === 'past').slice(-1)[0] || {}, outN = last.outN || 0;
       const p = Number.isFinite(s.finWhatIf) ? s.finWhatIf : 40, wiSave = Math.round(outN * p / 100 * (0.07 / 0.09) / 10) * 10;
       const bu = (out.finBu || []).slice(0, 4), buMax = Math.max(1, ...bu.map(x => x.v));
@@ -1460,15 +1595,24 @@ export function homeVals(out, s, set, { go, isEmpty, openSave, openF = [], est =
         { key: 'verify', head: 'Savings on the invoice', sub: `${tile('banked') || '$0'} banked to date`, outcome: 'Confirm', outInk: 'var(--success)', label: 'Verify', go: toSpend },
       ].filter(Boolean);
       return { homeFin: true, homeFinOff: false, finWf: wf, finWhatIf: p, setFinWhatIf: (e) => set({ finWhatIf: +e.target.value }), finWhatIfSave: `${fmt(wiSave)}/mo`,
-        finBuRows: bu.map(x => ({ ...x, vF: fmt(x.v), w: `${Math.round(x.v / buMax * 100)}%` })), hasFinBu: bu.length > 0, finActs }; })(),
+        finBuRows: bu.map((x, i) => ({ ...x, vF: fmt(x.v), w: `${Math.round(x.v / buMax * 100)}%`, d: i, go: toLegs })), hasFinBu: bu.length > 0, finLegsGo: toLegs,
+        finActs: finActs.map((a, i) => ({ ...a, d: i + Math.min(6, acts.length), hasSave: false, noSave: true, saveT: '', markBg: 'var(--bg-accent)', markInk: 'var(--link)', verbIcon: ({ Showback: 'pie-chart', 'Assign owners': 'person-group', 'Set alert': 'bell', Verify: 'verified' })[a.label] || ACT_ICON[a.label] || 'arrow-right' })) }; })(),
     // Glyph-first rows (2026-10-07, "pare words down along the way"): the state wears its glyph, the place the cloud's mark
     // and the path's glyph, the impact two chips (apps, workloads); every sentence stays in a title.
     homeAttn: probs.slice(0, 5).map(p => { const cloud = String(p.where || '').split(' ')[0], m = /^([\d,]+) apps? · ([\d,]+) workloads?$/.exec(p.appsF || '');
       const mark = W.MARK[cloud] ? W.markFor(cloud, s.theme) : '', pub = /internet/i.test(p.thing || '');
-      return { key: p.key, word: F.HEALTH_WORD[p.state] || p.state, ink: F.HEALTH_INK[p.state] || 'var(--warning)', stateIcon: ({ down: 'close-circle', slo: 'clock', risk: 'exclamation-triangle' })[p.state] || 'exclamation-circle',
+      const nm = attnName(p.what);
+      // The problem's path as a strip (2026-10-13): your sites, the thing that broke in Health's ink, the region's mark.
+      const stations = [{ key: 'site', icon: 'large-building', state: 'set', title: 'Your sites', mark: '', hasMark: false, noMark: true },
+        { key: 'thing', icon: pub ? 'globe' : 'cable', state: p.state === 'risk' ? 'risk' : 'broken', title: `${p.thing}: ${p.what}`, mark: '', hasMark: false, noMark: true },
+        { key: 'region', icon: 'cloud', state: 'set', title: p.where, mark, hasMark: !!mark, noMark: !mark }];
+      return { key: p.key, ...nm, title: p.what, stations, stateBg: `color-mix(in srgb, ${F.HEALTH_INK[p.state] || 'var(--warning)'} 12%, transparent)`, d: 0,
+        word: F.HEALTH_WORD[p.state] || p.state, ink: F.HEALTH_INK[p.state] || 'var(--warning)', stateIcon: ({ down: 'close-circle', slo: 'clock', risk: 'exclamation-triangle' })[p.state] || 'exclamation-circle',
         what: p.what, where: `${p.where} · ${p.thing}`, markSrc: mark, hasMark: !!mark, noMark: !mark, region: String(p.where || '').split(' ').slice(1).join(' ') || p.where, thingIcon: pub ? 'globe' : 'cable', thing: p.thing,
-        impact: p.appsF || '', impactChips: m ? [{ key: 'a', icon: 'grid', t: m[1], title: `${m[1]} ${m[1] === '1' ? 'app' : 'apps'}` }, { key: 'w', icon: 'apps', t: m[2], title: `${m[2]} workloads` }] : [{ key: 'x', icon: 'apps', t: p.appsF || '', title: p.appsF || '' }],
-        go: p.trace || p.go || (() => {}) }; }),
+        impact: p.appsF || '', impactChips: (m ? [{ key: 'a', icon: 'grid', t: m[1], title: `${m[1]} ${m[1] === '1' ? 'app' : 'apps'}` }, { key: 'w', icon: 'apps', t: m[2], title: `${m[2]} workloads` }] : [{ key: 'x', icon: 'apps', t: p.appsF || '', title: p.appsF || '' }]).map(x => ({ ...x, go: healthGo })),
+        // Trace leaves the home for Paths (2026-10-13: the row set Paths' state and stayed on the home).
+        go: p.trace ? () => { obs({})(); p.trace(); } : p.go || (() => {}) }; }).map((a, i) => ({ ...a, d: i })),
+    homeAttnN: String(probs.length), homeHealthGo: healthGo, homeDoN: String(acts.length),
     hasHomeAttn: probs.length > 0,
     homeBriefGo: go('s3', { ...cloud, tab: 'observe', obPage: 'insights', insPanel: 'brief' }),
     homeWaiting: waiting.slice(0, 3), hasHomeWaiting: waiting.length > 0, noHomeWaiting: !waiting.length, homeWaitingNone: waiting.length ? '' : 'No finding waits on you',
@@ -3917,7 +4061,7 @@ function addendumVals(c, s, set, est, ob, inv, go, findingCard, totalSave, est0,
     const roleVerdict = { n: all.length, nTitle: `${all.length || 'No'} ${all.length === 1 ? 'move' : 'moves'} for ${role.short}`, waitingN, waitingTitle: `${waitingN || 'None'} waiting on you`,
       underWayN, underWayTitle: `${underWayN || 'None'} under way`, hasSave: saveN > 0, saveF: `${fmt(saveN)}/mo`, saveTitle: `${fmt(saveN)}/mo to save across the priced moves` };
     const roleEmpty = all.length ? '' : rk === 'exec' ? 'Nothing priced on the table.' : 'Nothing to act on yet. What AT&T finds for this role lands here.';
-    const roleChips = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk; return { key: k, label: ROLE_OF[k].short, on, ...seg(on), go: () => set({ persona: k, rolePage: 0 }) }; });
+    const roleChips = ['architect', 'neteng', 'security', 'finops', 'exec'].map(k => { const on = k === rk; return { key: k, label: ROLE_OF[k].short, on, ...seg(on), go: () => set({ persona: k, rolePage: 0, homeRowPage: 0 }) }; });
     // How many it lists, beside the title: the home's "3 moves" and "All 3 in Your actions" land on their number (2026-09-30).
     const countNoun = rk === 'exec' ? ['move', 'moves'] : ['action', 'actions'];
     // Fewer than three moves on a page: the slots left hold one card for everything else open, a door to Findings (2026-10-13).
