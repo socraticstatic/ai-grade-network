@@ -681,9 +681,42 @@ export function placedRecord(f, est, at, n) {
   const o = flowOrder(f, est);
   const hasTerm = f.term !== null && f.term !== undefined;
   const r = regionsOf(est).find(x => regionName(x) === f.regions[0]);
+  const monthlyN = o.priced ? (hasTerm ? termPrice(o.monthly, f.term) : o.monthly) : null;
   return {
-    id: `o${n}`, title: o.title, type: f.ctype || '', way: f.way || null, what: [wayWords(f), f.regions.join(', ') || coloWords(f), locWords(f), f.bandwidth || '', tierOf(f)].filter(Boolean).join(' · '),
-    monthly: o.priced ? `${fmt(hasTerm ? termPrice(o.monthly, f.term) : o.monthly)}/mo · Modelled` : PRICE_NOTE,
+    // The card's name (2026-10-13): yours if you gave one, else the way or type alone; the path strip names its ends.
+    id: `o${n}`, title: o.title, short: f.name.trim() || wayWords(f) || f.ctype || o.title, type: f.ctype || '', way: f.way || null, what: [wayWords(f), f.regions.join(', ') || coloWords(f), locWords(f), f.bandwidth || '', tierOf(f)].filter(Boolean).join(' · '),
+    // The catalog product its price starts from, so Orders' figure opens where the price comes from (2026-10-13).
+    monthly: o.priced ? `${fmt(monthlyN)}/mo · Modelled` : PRICE_NOTE, monthlyN, product: isLmcc(f) ? 'lmcc' : TYPE_PRODUCT[f.ctype] || 'netbond',
     term: hasTerm ? termTitle(f.term) : '', policy: f.policy.join(', '), at, stage: ORDER_STAGE, region: r ? r.region : null, fromFlow: true,
+    // What it carries, end to end (Orders as a story, 2026-10-13): plain data, kept at placing, so Orders draws the order's
+    // own path long after the flow that built it is gone.
+    path: orderPath(f, est).map(({ state, ...nd }) => nd),
   };
+}
+
+// ---------- The order's path, end to end (Orders as a story, 2026-10-13) ----------
+/** A wizard step's glyph, for the order in progress drawn as the steps it has walked. */
+export const STEP_ICON = { type: 'grid', provider: 'cloud', endpoints: 'large-building', basic: 'gear', advanced: 'shuffle', terms: 'history', review: 'checklist', confirm: 'check-circle' };
+/** A region's name short enough for a station: the cloud is its mark, so the station says the region. */
+const regionShort = (name) => String(name || '').split(' ').slice(1).join(' ') || String(name || '');
+/**
+ * One order's path as Govern draws a policy's and the ways draw theirs (W.wayStrip): where it starts, the AT&T edge it
+ * lands on, the core at its resiliency, where its way joins the cloud (when it rides one), and the cloud region it
+ * reaches. Each station names the order's own end; nothing it has not chosen is named ('any').
+ */
+export function orderPath(f, est) {
+  const dg = wipDiagram(f, est), w = f.way ? W.wayOf(f.way) : null, clouds = cloudsOf(f), tier = tierOf(f);
+  const colo = isColo(f), cc = c2c(f), inet = !colo && !cc && !carriesSites(f);
+  const node = (key, icon, cloud, label, title, set) => ({ key, icon: cloud ? '' : icon, cloud: cloud || '', label, title, state: set ? 'set' : 'any' });
+  const from = cc && f.regions[0] ? node('from', 'cloud', cloudOfName(f.regions[0]), regionShort(f.regions[0]), `From ${f.regions[0]}`, true)
+    : node('from', colo ? 'large-building' : inet ? 'globe' : 'large-building', '', dg.left, `${colo ? 'Colo A' : inet ? 'From' : 'Your sites'}: ${dg.left}`, dg.leftSet);
+  const edge = node('edge', 'router', '', f.loc.length === 1 ? f.loc[0] : f.loc.length ? `${f.loc.length} metros` : 'Edge',
+    `AT&T edge: ${f.loc.length ? locWords(f) : 'metro not chosen'}${f.bandwidth ? ` · ${f.bandwidth}` : ''}`, f.loc.length > 0);
+  const core = node('core', 'hub', '', f.tier ? tier : 'Core', f.tier ? `AT&T core: ${tier} · ${dg.dual ? '2 paths' : '1 path'}` : 'AT&T core: resiliency not chosen', !!f.tier);
+  const join = w ? [{ ...node('join', w.join[0], '', w.join[1], w.join[3], true), state: w.join[2] === 'nodata' ? 'filled' : 'set' }] : [];
+  const toCloud = cc ? cloudOfName(f.regions[1] || '') : clouds[0] || '';
+  const toLabel = colo ? dg.right : (cc ? f.regions.length === 2 : f.regions.length === 1) ? regionShort(cc ? f.regions[1] : f.regions[0]) : dg.right;
+  const to = colo ? node('to', 'large-building', '', toLabel, `Colo B: ${dg.right}`, dg.rightSet)
+    : node('to', 'cloud', dg.rightSet ? toCloud : '', toLabel, `${cc ? 'To' : 'Cloud region'}: ${dg.right}`, dg.rightSet);
+  return [from, edge, core, ...join, to];
 }

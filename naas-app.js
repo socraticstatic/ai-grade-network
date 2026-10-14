@@ -215,7 +215,7 @@ export function defaults() {
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
     // The connect flow (2026-09-30): the set a Ways to connect figure opened, the orders placed this session, the location area shown.
-    waySet: null, waySetPage: 0, wayZone: 'intra', appThresh: null, orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0,
+    waySet: null, waySetPage: 0, wayZone: 'intra', appThresh: null, orders: [], ordersPage: 0, ordStage: null, cfArea: null, wipList: null, wipListPage: 0,
     order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null,
     simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36,
     // Modify bandwidth (2026-09-30): the connection it is open on, the size picked ({ id, ports, mbps }),
@@ -361,7 +361,7 @@ export function vals(c) {
     // Discover's new filter is a landing's, and a map's panel is the map's (skeptic, 2026-10-01): a way
     // back to Estate never opens new-filtered, nor under the connection panel a bandwidth door left open.
     // Consistency: every navigation drops the map's selection, not only Estate's.
-    govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null, govBack: null, govFrom: null, newOnly: false, mapSel: null, engReturn: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
+    govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null, govBack: null, govFrom: null, newOnly: false, mapSel: null, engReturn: null, ordStage: null, ...pre, ...(extra || {}) }); window.scrollTo(0, 0); syncHash(screen, extra && extra.layer || s.layer, extra && extra.tab || s.tab); };
   // Scheduled auto-discovery (wave 4). One clock, one account list and one run
   // history for the whole render. s.acctSched and s.scanRuns are keyed by estate
   // so the demo picker cannot carry one estate's cadence onto another. Neither
@@ -1153,49 +1153,71 @@ export function vals(c) {
       const tpaN = (est.sites || []).filter(x => !x.priv && S.servicesOf(x).some(v => v.key === 'tpa')).length;
       const pubR = est.regionsList.filter(r => !r.priv);
       const bareTag = (est.policies || []).length < 8;
+      // Help as a story (2026-10-13): each guide is a card with its mark, a figure from this estate where the guide has
+      // one (a glyph and a number, a door to the same move), and its three steps as a strip of station words, the whole
+      // sentence of each in its title. Steps are [sentence, station word, glyph].
+      const sitesN = (est.sites || []).length, polN = (est.policies || []).length;
+      const fig = (n, icon, unit, title) => ({ has: n > 0, n, nF: String(n), icon, unit, title });
       const guides = (est.stage === 'empty' ? [
-        { key: 'source', icon: 'lock', title: 'Add your first source', steps: ['Pick a cloud account', 'Give AT&T read-only access', 'Discovery draws your estate'], cta: 'Add a source', go: go('s1', { discoverView: 'sources' }) },
-        { key: 'first', icon: 'cloud', title: 'Connect your first cloud', steps: ['Choose the region', 'Pick NetBond or the on-ramp', 'Order and watch it come up'], cta: 'Open Connect', go: go('s3', { layer: 'cloud', tab: 'connect' }) },
+        { key: 'source', icon: 'lock', title: 'Add your first source', steps: [['Pick a cloud account', 'Pick', 'cloud'], ['Give AT&T read-only access', 'Grant', 'lock'], ['Discovery draws your estate', 'Discover', 'search']], cta: 'Add a source', go: go('s1', { discoverView: 'sources' }), fig: fig(0, 'cloud', 'sources', '') },
+        { key: 'first', icon: 'cloud', title: 'Connect your first cloud', steps: [['Choose the region', 'Region', 'pinpoint'], ['Pick NetBond or the on-ramp', 'Pick', 'cable'], ['Order and watch it come up', 'Order', 'shopping-bag']], cta: 'Open Connect', go: go('s3', { layer: 'cloud', tab: 'connect' }), fig: fig(0, 'cloud', 'regions', '') },
       ] : [
-        ...(tpaN ? [{ key: 'ipsec', icon: 'lock', title: `Move ${tpaN} IPsec ${tpaN === 1 ? 'site' : 'sites'} onto AT&T`, steps: ['Find the IPsec sites on Discover', 'Pick AVPN, ASE on Demand or ADI', 'Order and cut over'], cta: 'Start', go: go('s1') }] : []),
-        ...(pubR.length ? [{ key: 'attach', icon: 'cloud', title: `Attach ${pubR.length} ${pubR.length === 1 ? 'region' : 'regions'} privately`, steps: ['Open the region on Connect', 'Compare NetBond with the on-ramp', 'Attach and watch it on Observe'], cta: 'Open Connect', go: go('s3', { layer: 'cloud', tab: 'connect' }) }] : []),
-        { key: 'map', icon: 'hub', title: 'Read the Traffic map', steps: ['Sites on the left, by region', 'The path they take in the middle', 'Hover any path for Gbps and cost'], cta: 'Open Traffic', go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf' }) },
-        ...(bareTag ? [{ key: 'policy', icon: 'check-shield', title: 'Set a policy for a tag', steps: ['Open Tags on Observe', 'Pick a tag with no policy', 'Require a private path'], cta: 'Open Policies', go: go('s3', { layer: 'cloud', tab: 'govern' }) }] : []),
-      ]).slice(0, 4).map(g0 => ({ ...g0, steps: g0.steps.map((l, i) => ({ key: i, n: i + 1, label: l })), iconSrc: iconDir + '/' + g0.icon + '.svg' }))
-        .filter(g0 => hit(g0.title + ' ' + g0.steps.map(x => x.label).join(' ')));
+        ...(tpaN ? [{ key: 'ipsec', icon: 'lock', title: `Move ${tpaN} IPsec ${tpaN === 1 ? 'site' : 'sites'} onto AT&T`, steps: [['Find the IPsec sites on Discover', 'Find', 'search'], ['Pick AVPN, ASE on Demand or ADI', 'Pick', 'list'], ['Order and cut over', 'Cut over', 'repeat']], cta: 'Start', go: go('s1'), fig: fig(tpaN, 'large-building', tpaN === 1 ? 'site' : 'sites', `${tpaN} ${tpaN === 1 ? 'site rides' : 'sites ride'} IPsec over the public internet`) }] : []),
+        ...(pubR.length ? [{ key: 'attach', icon: 'cloud', title: `Attach ${pubR.length} ${pubR.length === 1 ? 'region' : 'regions'} privately`, steps: [['Open the region on Connect', 'Open', 'cloud'], ['Compare NetBond with the on-ramp', 'Compare', 'arrows-horizontal'], ['Attach and watch it on Observe', 'Attach', 'eye']], cta: 'Open Connect', go: go('s3', { layer: 'cloud', tab: 'connect' }), fig: fig(pubR.length, 'cloud', pubR.length === 1 ? 'region' : 'regions', `${pubR.length} cloud ${pubR.length === 1 ? 'region rides' : 'regions ride'} the public internet`) }] : []),
+        { key: 'map', icon: 'hub', title: 'Read the Traffic map', steps: [['Sites on the left, by region', 'Sites', 'large-building'], ['The path they take in the middle', 'Path', 'hub'], ['Hover any path for Gbps and cost', 'Hover', 'eye']], cta: 'Open Traffic', go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf' }), fig: fig(sitesN, 'large-building', sitesN === 1 ? 'site' : 'sites', `${sitesN} ${sitesN === 1 ? 'site' : 'sites'} on the map`) },
+        ...(bareTag ? [{ key: 'policy', icon: 'check-shield', title: 'Set a policy for a tag', steps: [['Open Tags on Observe', 'Tags', 'tag'], ['Pick a tag with no policy', 'Pick', 'list'], ['Require a private path', 'Require', 'lock']], cta: 'Open Policies', go: go('s3', { layer: 'cloud', tab: 'govern' }), fig: fig(polN, 'check-shield', polN === 1 ? 'policy' : 'policies', `${polN} ${polN === 1 ? 'policy' : 'policies'} in force`) }] : []),
+      ]).slice(0, 4).map(g0 => ({ ...g0, steps: g0.steps.map(([l, short, icon], i) => ({ key: i, n: i + 1, label: l, short, icon, title: `${i + 1}. ${l}` })), fig: { ...g0.fig, go: g0.go } }))
+        .filter(g0 => hit(g0.title + ' ' + g0.steps.map(x => x.label).join(' ')))
+        .map((g0, i) => ({ ...g0, i, primary: i === 0, noFig: !g0.fig.has, stepsLabel: g0.steps.map(st => st.title).join(' ') }));
       const soon = { soon: true, go: () => {} };
       const resources = [
-        { key: 'glossary', icon: 'grid', title: 'Network Glossary', desc: 'The words on these screens', tags: ['Access', 'Core', 'SLO'], cta: 'Open glossary', go: () => set({ helpPanel: 'terms' }) },
+        { key: 'glossary', icon: 'tag', title: 'Network Glossary', desc: 'The words on these screens', tags: ['Access', 'Core', 'SLO'], cta: 'Open glossary', go: () => set({ helpPanel: 'terms' }) },
         { key: 'tickets', icon: 'checklist', title: 'Support Tickets', desc: 'Open problems and their tickets', tags: ['Trouble report', 'Change'], cta: 'Open tickets', live: true, go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'ops', opsPanel: 'tickets' }) },
         { key: 'tour', icon: 'hub', title: 'Interactive Tour', desc: 'A guided walk through the picture', tags: ['Overview', 'Navigation'], cta: 'Start tour', go: () => { set({ openHintSeen: false }); try { localStorage.removeItem('naas.openHint'); } catch (e) {} go('s3', { layer: 'cloud', tab: 'connect', drill: [], cloudPick: null })(); } },
         { key: 'kb', icon: 'apps', title: 'Knowledge Base', desc: 'Articles and FAQs', tags: ['Common issues', 'Use cases'], cta: 'Browse articles', ...soon },
         { key: 'video', icon: 'smart-meter', title: 'Video Tutorials', desc: 'Short how-to videos', tags: ['Quickstart', 'Troubleshooting'], cta: 'Watch videos', ...soon },
         { key: 'docs', icon: 'download', title: 'Documentation', desc: 'Guides, APIs and best practice', tags: ['Getting started', 'API'], cta: 'Read docs', ...soon },
         { key: 'contact', icon: 'person-group', title: 'Contact Support', desc: 'Talk to the AT&T team', tags: ['24/7', 'Billing'], cta: 'Ask Andi first', go: () => set({ andiOpen: true }) },
-      ].map(r0 => ({ ...r0, soon: !!r0.soon, live: !r0.soon, tagRows: r0.tags.map(t => ({ key: t, t })), iconSrc: iconDir + '/' + r0.icon + '.svg' }));
+      ].map(r0 => ({ ...r0, soon: !!r0.soon, live: !r0.soon, tagRows: r0.tags.map(t => ({ key: t, t })), n: 0, hasN: false, nTitle: '' }));
       const TERMS = [
-        ['Access', 'The first mile: the circuit from a site, or a cloud\'s own port, into a network.'],
-        ['Edge', 'Where a circuit lands and gets its service: an AT&T PE, an ENNI, or an on-ramp.'],
-        ['Core', 'The backbone between edges. AT&T\'s, or a third party\'s.'],
-        ['NetBond', 'AT&T\'s private on-ramp into a cloud, ordered like any other AT&T port.'],
-        ['AVPN', 'AT&T VPN over MPLS: private, with classes of service.'],
-        ['ASE on Demand', 'AT&T Switched Ethernet you can turn up and resize from the portal.'],
-        ['ADI', 'AT&T Dedicated Internet. Internet, but it rides the AT&T core.'],
-        ['AIA-B', 'AT&T Internet Air for Business: fixed wireless that rides the AT&T core.'],
-        ['Third Party Access', 'Another carrier\'s circuit. Its traffic leaves the AT&T network.'],
-        ['IPsec', 'An encrypted tunnel over the public internet. Private payload, public path and bill.'],
-        ['Egress', 'What a cloud charges to send data out. Lower on a private on-ramp.'],
-        ['SLO', 'The latency or loss a path promises. Over SLO means it missed.'],
-        ['Hosted VPC', 'A VPC AT&T runs for you, with inspection and egress built in.'],
-        ['Cross-connect', 'A cable inside a colo between two networks. Yours if you ordered it.'],
+        // Each term leads with its glyph (Help as a story, 2026-10-13): the idea before the words.
+        ['Access', 'The first mile: the circuit from a site, or a cloud\'s own port, into a network.', 'cable'],
+        ['Edge', 'Where a circuit lands and gets its service: an AT&T PE, an ENNI, or an on-ramp.', 'router'],
+        ['Core', 'The backbone between edges. AT&T\'s, or a third party\'s.', 'hub'],
+        ['NetBond', 'AT&T\'s private on-ramp into a cloud, ordered like any other AT&T port.', 'cloud-transfer'],
+        ['AVPN', 'AT&T VPN over MPLS: private, with classes of service.', 'lock'],
+        ['ASE on Demand', 'AT&T Switched Ethernet you can turn up and resize from the portal.', 'ethernet'],
+        ['ADI', 'AT&T Dedicated Internet. Internet, but it rides the AT&T core.', 'internet'],
+        ['AIA-B', 'AT&T Internet Air for Business: fixed wireless that rides the AT&T core.', 'wireless-network'],
+        ['Third Party Access', 'Another carrier\'s circuit. Its traffic leaves the AT&T network.', 'arrows-horizontal'],
+        ['IPsec', 'An encrypted tunnel over the public internet. Private payload, public path and bill.', 'padlock'],
+        ['Egress', 'What a cloud charges to send data out. Lower on a private on-ramp.', 'export'],
+        ['SLO', 'The latency or loss a path promises. Over SLO means it missed.', 'clock'],
+        ['Hosted VPC', 'A VPC AT&T runs for you, with inspection and egress built in.', 'check-shield'],
+        ['Cross-connect', 'A cable inside a colo between two networks. Yours if you ordered it.', 'merge'],
       ];
+      const termsShown = TERMS.filter(([t, d]) => hit(t + ' ' + d));
       const asks = ['Where is my egress going?', 'Which sites are outside AT&T?', 'What is over its SLO?'].map(a0 => ({ key: a0, q: a0, go: () => set({ andiOpen: true, andiThread: [...(s.andiThread || []), { key: 'q' + ((s.andiThread || []).length + 1), screen: s.screen + (s.tab || ''), q: a0, a: answer(a0, est, ob, s) }] }) }));
       const hk = s.helpPanel === 'terms' ? 'terms' : 'start';
-      return { helpPanels: [['start', 'Start here'], ['terms', 'Glossary']].map(([k, l]) => { const on = hk === k; return { key: k, label: l, on, go: () => set({ helpPanel: k }), line: on ? 'var(--cta)' : 'transparent', color: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; }), helpPanelStart: hk === 'start', helpPanelTerms: hk === 'terms',
+      // The verdict (2026-10-13): what help is at hand, as glyph and number, each a door. Guides and terms are the page's
+      // two views, so their figures are its tabs; Andi opens beside the page.
+      const helpVerdict = [
+        { key: 'guides', icon: 'map', hasMark: false, markSrc: '', n: guides.length, label: 'Guides', unit: guides.length === 1 ? 'guide' : 'guides', on: hk === 'start', tab: true, btn: false,
+          title: `${guides.length} ${guides.length === 1 ? 'guide' : 'guides'} built from this estate${q ? ' for your search' : ''}`, go: () => set({ helpPanel: 'start' }) },
+        { key: 'terms', icon: 'tag', hasMark: false, markSrc: '', n: termsShown.length, label: 'Glossary', unit: termsShown.length === 1 ? 'term' : 'terms', on: hk === 'terms', tab: true, btn: false,
+          title: `${termsShown.length} ${termsShown.length === 1 ? 'term' : 'terms'} from these screens${q ? ' for your search' : ''}, one line each`, go: () => set({ helpPanel: 'terms' }) },
+        { key: 'andi', icon: '', hasMark: true, markSrc: 'brand/andi-symbol.svg', n: asks.length, label: 'Andi', unit: 'questions', on: false, tab: false, btn: true,
+          title: 'Andi answers from what the traffic shows: paths, tags, spend and health. Ask him', go: () => set({ andiOpen: true }) },
+      ].map((x, i) => ({ ...x, i, nF: String(x.n), cu: { r: x.n } }));
+      return { helpVerdict, helpPanelStart: hk === 'start', helpPanelTerms: hk === 'terms',
         sS9: s.screen === 's9', goHelp: go('s9'), helpCur: s.screen === 's9', helpQ: s.helpQ || '', setHelpQ: (e) => set({ helpQ: e.target.value, helpPanel: e.target.value ? 'terms' : s.helpPanel }), clearHelpQ: () => set({ helpQ: '' }), hasHelpQ: !!q,
-        helpGuides: guides, hasHelpGuides: guides.length > 0, helpResources: resources, helpLive: resources.filter(r0 => r0.live), helpSoonLine: 'Coming soon: ' + resources.filter(r0 => r0.soon).map(r0 => r0.title).join(' · '), helpAsks: asks, askAndiHelp: () => set({ andiOpen: true }),
-        helpTerms: TERMS.filter(([t, d]) => hit(t + ' ' + d)).map(([term, def]) => ({ key: term, term, def })), hasHelpTerms: TERMS.some(([t, d]) => hit(t + ' ' + d)),
-        helpIcon: iconDir + '/question-circle.svg', helpSoonBg: s.theme === 'dark' ? 'rgba(209,143,224,.16)' : 'rgba(175,41,187,.12)', helpSoonInk: s.theme === 'dark' ? '#e2a6ee' : '#8f2199' };
+        helpGuides: guides, hasHelpGuides: guides.length > 0, noHelpGuides: !guides.length,
+        // One row of guides at any width, Andi's dock open or not: a wrapped fourth card ran Help to 1114 (2026-10-13).
+        helpGuideCols: `repeat(${Math.max(2, guides.length)},minmax(0,1fr))`, helpResources: resources, helpLive: resources.filter(r0 => r0.live), helpSoonLine: 'Coming soon: ' + resources.filter(r0 => r0.soon).map(r0 => r0.title).join(' · '), helpAsks: asks, askAndiHelp: () => set({ andiOpen: true }),
+        helpTerms: termsShown.map(([term, def, icon], i) => ({ key: term, term, def, icon, i })), hasHelpTerms: termsShown.length > 0, noHelpTerms: !termsShown.length,
+        // The resources with nothing behind them yet fold into one chip, in neutral ink (2026-10-13: no purple, anywhere).
+        helpSoonN: resources.filter(r0 => r0.soon).length,
+        helpIcon: iconDir + '/question-circle.svg' };
     })(),
     ...filterVals, showOpenHint: !s.openHintSeen && !s.drill.length && !cloudPick && !isEmpty, dismissOpenHint: () => { set({ openHintSeen: true }); try { localStorage.setItem('naas.openHint', 'seen'); } catch (e) {} },
     ...jumpVals,
@@ -1241,6 +1263,9 @@ export function vals(c) {
     orderMove: (f, label, cloud) => chooseTier(c, f, label, D.CATALOG.find(p => p.id === (cloud === 'Azure' ? 'hosted-vnet' : 'hosted-vpc')), est) }));
   if (s.screen === 's3' && s.tab === 'observe' && s.obPage === 'insights' && out.insPanelBrief) Object.assign(out, { andiSub: out.briefText, hasAndiSub: true });
   Object.assign(out, journeyVals(out, s, set, est));
+  // Orders as a story (2026-10-13): reads the flow's orders, the ways and the moves, so it comes after them.
+  Object.assign(out, ordersStory(out, s, set, { go, est, openF, obAll, conns }));
+  Object.assign(out, helpStory(out, s, set));
   // Back in the title row: shown once there is somewhere to go back to, named for it.
   // A dive into the policy engine returns to its own step, whatever the history holds (2026-10-09).
   const engRet = s.engReturn && s.screen === 's3' ? s.engReturn : null;
@@ -5090,8 +5115,9 @@ function wizardVals(s, est, set, c) {
 // binds it. A compose is what an entry wrote plus what the person chose; the
 // person's choices are the fields the flow writes, marked "you".
 const BLANK_COMPOSE = () => ({ outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] });
-/** A compose the person has started: an entry wrote it, or they picked something in the flow. */
-export const composeStarted = (cp) => !!(cp && (cp.outcome || cp.ctype || cp.prefillSets || (cp.passed || []).length));
+/** A compose the person has started: an entry wrote it, or they picked something in the flow. A way's Start is an entry
+ *  (Orders as a story, 2026-10-13): the order it starts waits in Orders before a step is passed, and Resume walks back in. */
+export const composeStarted = (cp) => !!(cp && (cp.outcome || cp.ctype || cp.way || cp.prefillSets || (cp.passed || []).length));
 const CF_INK = {
   current: { fill: 'var(--cta)', ring: 'var(--cta)', dash: 'solid', ink: 'var(--link)', markInk: '#fff', weight: 700, subInk: 'var(--text-light)' },
   done: { fill: 'var(--success)', ring: 'var(--success)', dash: 'solid', ink: 'var(--text-heading)', markInk: '#fff', weight: 600, subInk: 'var(--text-light)' },
@@ -5295,7 +5321,7 @@ function flowVals(s, set, est, c) {
     const regIds = (f.regions || []).map(n => ((est.regionsList || []).find(r => CF.regionName(r) === n) || {}).region).filter(Boolean);
     if (regIds.length) rec.regions = [...new Set(regIds)];
     const all = [...orders, rec];
-    c.setState({ orders: all, ordersPage: 0, order: { ...ord, lines: ord.lines.map(l => ({ ...l, term: CF.termTitle(f.term) })) }, submitted: true, pendingDismissed: false, compose: BLANK_COMPOSE(), screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', waySet: null, wipList: null, wipListPage: 0, cfArea: null });
+    c.setState({ orders: all, ordersPage: 0, ordStage: null, order: { ...ord, lines: ord.lines.map(l => ({ ...l, term: CF.termTitle(f.term) })) }, submitted: true, pendingDismissed: false, compose: BLANK_COMPOSE(), screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders', waySet: null, wipList: null, wipListPage: 0, cfArea: null });
     scrollTop(); syncHash('s3', 'cloud', 'connect');
   };
   // Your order, in progress. "All N sites" and "All N regions" open exactly
@@ -5343,7 +5369,8 @@ function flowVals(s, set, est, c) {
     return { ...o, key: o.id, stage: stageOf(o), atLine: `Placed at ${o.at}`, sub: [o.term, o.policy].filter(Boolean).join(' · '), stageInk: 'var(--cta)',
       // Go live (2026-10-05, task rows): the demo's delivery, on the order itself, where the task's Provision phase points. It validates the region the order reaches; the task's Live and Insight phases light from it.
       canGoLive: !!o.region && !!o.fromFlow && stageOf(o) === o.stage, goLive: () => set({ landed: landWith(s, o.regions || [o.region], o.est || est.id, o.id), events: [...(s.events || []), { key: 'e' + ((s.events || []).length + 1), t: SCH.hhmm(SCH.nowOf(s)), text: landingEvent(o, o.region, (est.regionsList || []).find(r => r.region === o.region)) }] }) }; };
-  const opg = pageRows(shown.slice().reverse().map(ordRow), 6, s.ordersPage, (n) => set({ ordersPage: n }));
+  // Newest first; Orders' story (ordersStory, below vals) pages them as cards with the order in progress.
+  const ordAll = shown.slice().reverse().map(ordRow);
   const note = f.note;
   return {
     wayTypes, wayCards, wayGroups, cfTypes, waySet, wayFoot: 'From the Cloud Connectivity Decision Matrix (October 2026). Each criterion scored 1 to 5, the most favourable 5, and weighted to a score out of 100: cost 30, performance 20, security 20, effort and time 15, scale 15. Cost is one region at 1 Gbps a month on us-east-1 list rates; a hosted way is cloud pass-through, and its hub (vSRX, compute, AT&T margin) is priced at review. Only NetBond Advanced\'s setup time is proven in market; the rest are proof-of-concept targets. Start a way, then pick what it connects.',
@@ -5388,11 +5415,164 @@ function flowVals(s, set, est, c) {
     cfWipTitle: 'Your order, in progress', cfWip: wip, cfWipList, cfDiagram, cfStrip, cfOutcome, cfPrice: price, cfPriced: price.has, cfUnpriced: !price.has,
     hasParsedNote: !!note && key === noteKey, parsedNote: note || '', parsedNoteTitle: f.noteTitle,
     // Orders.
-    ordInProgress: { has: started, title: started ? (f.name.trim() || CF.defaultName(f)) : '', stepLine: started ? `At ${CF.STEP_META[key].title}` : '', rows: started ? CF.wipRows(f, est).map(r => ({ ...r, ...WIP_INK[r.state] })) : [], resume: () => { c.setState({ screen: 's4' }); scrollTop(); syncHash('s4'); } },
-    ordCols: started ? 'minmax(0,1fr) minmax(280px,340px)' : 'minmax(0,1fr)',
-    ordRows: opg.rows, ordPager: opg.pager, hasOrdRows: shown.length > 0, noOrders: !started && !shown.length, ordNonePlaced: started && !shown.length, ordersEmpty: 'No orders yet', ordersEmptyLine: 'An order you start from Ways to connect, Recommended or a finding waits here until you place it.',
+    // The order in progress, as Orders draws it (2026-10-13): its way, the path it has so far, the steps it has walked,
+    // its price so far; the wizard's rows stay for anything that reads them.
+    ordInProgress: { has: started, title: started ? (f.name.trim() || CF.defaultName(f)) : '', stepLine: started ? `At ${CF.STEP_META[key].title}` : '', stepTitle: started ? CF.STEP_META[key].title : '', short: started ? (f.name.trim() || CF.wayWords(f) || f.ctype || CF.defaultName(f)) : '',
+      rows: started ? CF.wipRows(f, est).map(r => ({ ...r, ...WIP_INK[r.state] })) : [], resume: () => { c.setState({ screen: 's4' }); scrollTop(); syncHash('s4'); },
+      way: started ? f.way || null : null, ctype: started ? f.ctype || '' : '', path: started ? CF.orderPath(f, est) : [], price: started ? price : null,
+      steps: started ? keys.map(k => { const st = f.passed.includes(k) ? 'done' : k === key ? 'set' : 'any'; return { key: k, icon: CF.STEP_ICON[k] || 'checklist', state: st, title: `${CF.STEP_META[k].title}: ${st === 'done' ? 'done' : st === 'set' ? 'you are here' : 'still to do'}` }; }) : [] },
+    ordAll, hasOrdRows: shown.length > 0, noOrders: !started && !shown.length, ordNonePlaced: started && !shown.length, ordersEmpty: 'No orders yet', ordersEmptyLine: 'An order you start from Ways to connect, Recommended or a finding waits here until you place it.',
     goWays: () => set({ cnPage: 'ways' }),
   };
+}
+
+// ---------- Connect > Orders as a story (2026-10-13) ----------
+// Micah: "Each page should be its own gorgeous, extremely beautiful story, with calls to action on each"; "less words,
+// and more visualizations, animations and icons". The verdict: where the orders stand, the lifecycle road (in progress,
+// then ORDER_PHASES), each station a glyph, a number and a door. The evidence: every order a card with its way's mark,
+// its path from its own ends, its monthly figure, its lifecycle. The moves: Resume, Go live, Open its connection; and
+// the three doors that start an order, which are the whole page while nothing is placed. Never invented: the cards are
+// the orders placed this session and the one in progress, and every count is the estate's own.
+const ORD_ROAD = [['draft', 'In progress', 'pencil'], ...ORDER_PHASES];
+const ORD_TYPE_ICON = { 'Internet to Cloud': 'globe', 'Cloud to Cloud': 'arrows-horizontal', 'Colo to Colo': 'large-building', 'AVPN to Cloud': 'lock', 'DataCenter / CoLocation to Cloud': 'large-building' };
+const ORD_PAGE = 3;
+/** A monthly a record states, as a number: its own, or the dollars it reads; none when AT&T prices it after review. */
+const monthlyOf = (o) => (Number.isFinite(o.monthlyN) ? o.monthlyN : (() => { const m = /^\$([\d,]+)\/mo/.exec(String(o.monthly || '')); return m ? +m[1].replace(/,/g, '') : null; })());
+/** A count that counts up (Optimize's .op-cu): thousands and the rest, the real figure in the DOM throughout. */
+const cuOf = (n) => { const v = Math.max(0, Math.round(n || 0)), big = v >= 1000 && v < 1e6; return { k: big ? Math.floor(v / 1000) : 0, r: big ? v % 1000 : v, kOn: big }; };
+function ordersStory(out, s, set, { go, est, openF, obAll, conns }) {
+  const theme = s.theme, wip = out.ordInProgress || { has: false }, all = out.ordAll || [];
+  const nowMs = SCH.nowOf(s);
+  const lens = ['provisioning', 'live', 'insight'].includes(s.ordStage) ? s.ordStage : null;
+  const regionOfId = (id) => (est.regionsList || []).find(x => x.region === id) || null;
+  const openRegion = (id) => { const r = regionOfId(id) || {}; return go('s3', { layer: 'cloud', tab: 'connect', cnPage: 'picture', cloudPick: r.cloud || null, cloudDrill: r.cloud ? [id] : [] }); };
+  const flowsOf = (id) => go('s3', { layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', obPanel: 'paths', pathPin: '|' + id, pathSel: '|' + id, pathsPage: 0 });
+  const ask = (q) => () => set({ andiOpen: true, andiThread: [...(s.andiThread || []), { key: 'q' + ((s.andiThread || []).length + 1), screen: s.screen + (s.tab || ''), q, a: answer(q, est, obAll, s) }] });
+  // A station of a path strip, as the page draws it: a provider's mark where it names a cloud, else its glyph.
+  const nodeOf = (n, state) => { const mark = n.cloud ? W.markFor(n.cloud === 'Google Cloud' ? 'GCP' : n.cloud, theme) : '';
+    return { key: n.key, label: n.label, title: n.title, state: state || n.state || 'set', icon: mark ? '' : n.icon || 'cloud', hasIcon: !mark, markSrc: mark, hasMark: !!mark }; };
+  // An order the journey or the catalog placed carries no path of its own: its ends as it recorded them.
+  const recordPath = (o) => {
+    if (o.kind === 'bandwidth') return [{ key: 'now', icon: 'cable', label: o.from, title: `Today: ${o.from}` }, { key: 'next', icon: 'high-meter', label: o.to, title: `Ordered: ${o.to}, ${o.atLine ? o.atLine.toLowerCase() : ''}`.replace(/, $/, '') }, { key: 'to', cloud: o.cloud, label: o.region, title: `${o.cloud} ${o.region}` }];
+    if (Array.isArray(o.path) && o.path.length) return o.path;
+    const r = regionOfId(o.region), cloud = o.cloud || (r && r.cloud) || '', w = o.way ? W.wayOf(o.way) : null;
+    const [src, dst] = String(o.what || '').split(' · ');
+    const regions = o.regions || (o.region ? [o.region] : []);
+    return [{ key: 'from', icon: 'large-building', label: o.fromFlow ? 'Your sites' : src || 'Your sites', title: `From: ${o.fromFlow ? 'your sites' : src || 'your sites'}` },
+      { key: 'edge', icon: 'router', label: 'Edge', title: "AT&T's edge" }, { key: 'core', icon: 'hub', label: 'Core', title: "AT&T's core" },
+      ...(w ? [{ key: 'join', icon: w.join[0], label: w.join[1], title: w.join[3] }] : []),
+      { key: 'to', cloud, icon: 'cloud', label: regions.length > 1 ? `${regions.length} regions` : o.region || dst || 'Cloud', title: regions.length ? `${cloud} ${regions.join(', ')}`.trim() : `To: ${dst || 'your cloud'}` }];
+  };
+  const stripCls = (n) => (n === 5 ? 'five' : n === 3 ? 'three' : '');
+  // An order's figure opens the catalog product its price starts from (the Marketplace's own page and term pricing).
+  const productOf = (o) => o.product || (D.CATALOG.find(x => x.name === o.type) || {}).id || 'netbond';
+  const productGo = (o) => go('s8', { product: productOf(o) });
+  const bwPhases = (o, isLive) => orderPhases({ regions: ['x'] }, isLive ? ['x'] : []).phases.map((ph, i) => ({ ...ph,
+    title: [`Ordered: placed at ${o.at}`, `Provision: ${isLive ? 'done' : o.atLine.toLowerCase()}`, `Live: ${isLive ? o.atLine.toLowerCase() : 'not yet'}`, `Insight: ${isLive ? 'Capacity reads the new size' : 'not yet'}`][i] }));
+  // One placed order as a card.
+  const card = (o) => {
+    const bw = o.kind === 'bandwidth';
+    const op = bw ? null : orderPhases(o, W.landedIdsFor(s, o.est || est.id, o.id));
+    const live = bw ? BW.stageOf(o, nowMs) === 'live' : op.landed;
+    const region = o.region || (o.regions || [])[0] || null;
+    const doors = [null, null, live && region ? openRegion(region) : null, live && region ? flowsOf(region) : null];
+    const phases = (bw ? bwPhases(o, live) : op.phases).map((ph, i) => ({ ...ph, hasDoor: !!doors[i], noDoor: !doors[i], go: doors[i] || (() => {}) }));
+    const w = o.way ? W.wayOf(o.way) : null;
+    const n = monthlyOf(o);
+    const termShort = o.term ? o.term.replace(/^(\d+)-month$/, '$1 mo').replace('Month-to-month', 'Monthly') : '';
+    const chips = bw ? [{ key: 'at', icon: 'clock', label: o.effectiveF, title: o.atLine }]
+      : [{ key: 'at', icon: 'clock', label: o.at, title: `Placed at ${o.at}` }, ...(termShort ? [{ key: 'term', icon: 'history', label: termShort, title: `${o.term} term` }] : [])];
+    const move = o.canGoLive ? { key: 'live', label: 'Go live', icon: 'play', go: o.goLive, title: 'Validate the region this order reaches and light its Live and Insight phases' }
+      : (live || bw) && region ? { key: 'open', label: 'Open connection', icon: 'hub', go: openRegion(region), title: `Open ${(regionOfId(region) || {}).cloud || ''} ${region} on Connections`.replace('  ', ' ') }
+      : { key: 'ask', label: 'Ask Andi', icon: 'ai', go: ask('How long until it is live?'), title: 'Ask Andi when it goes live' };
+    const pathRaw = recordPath(o), cl = o.cloud || (regionOfId(region) || {}).cloud || '';
+    return { key: o.key || o.id, id: o.id, kind: bw ? 'bandwidth' : 'order', stage: live ? 'live' : 'provisioning', live, top: false,
+      title: o.short || o.title, titleFull: [o.title, o.what].filter(Boolean).join(' · '),
+      tileIcon: w ? w.icon : bw ? 'high-meter' : ORD_TYPE_ICON[o.type] || 'shopping-bag', tileTitle: w ? (cl && W.wayLabel(w.key, cl)) || w.title : o.type || 'Order',
+      chips, fig: { has: n !== null, big: n !== null ? fmt(n) : '', unit: '/mo', title: bw ? `${o.monthly}: the connection at its new size, list price` : n !== null ? `${o.monthly}${/Modelled/.test(o.monthly) ? ', list price' : ''}` : o.monthly, cu: cuOf(n), go: productGo(o), goTitle: `Where the price starts: ${(D.CATALOG.find(x => x.id === productOf(o)) || {}).name || 'the catalog'}` },
+      figNone: n === null, noneWord: 'At review', noneTitle: o.monthly || CF.PRICE_NOTE,
+      path: { cls: stripCls(pathRaw.length), nodes: pathRaw.map(nd => nodeOf(nd, live ? 'done' : nd.state === 'filled' ? 'filled' : 'set')) }, pathLabel: `Path: ${pathRaw.map(nd => nd.label).join(', ')}${live ? ', live' : ''}`,
+      phases, hasPhases: true, hasSteps: false, steps: [], stepCols: '', stepsLabel: '', move: { ...move, primary: false } };
+  };
+  // The order in progress as the first card: dashed, its path as far as it is chosen, its steps walked.
+  const draft = wip.has ? (() => { const w = wip.way ? W.wayOf(wip.way) : null, p = wip.price || {}, path = wip.path || [];
+    const n = p.has ? +String(p.big || '').replace(/[^\d]/g, '') : null;
+    return { key: 'draft', id: 'draft', kind: 'draft', stage: 'draft', live: false, top: false, title: wip.short || wip.title, titleFull: `${wip.title} · ${wip.stepLine}`,
+      tileIcon: w ? w.icon : ORD_TYPE_ICON[wip.ctype] || 'pencil', tileTitle: w ? w.title : wip.ctype || 'Order in progress',
+      chips: [{ key: 'step', icon: 'pencil', label: wip.stepTitle, title: wip.stepLine }],
+      fig: { has: n !== null && n > 0, big: n ? fmt(n) : '', unit: '/mo', title: p.has ? `So far: ${p.big}/mo, ${p.sub || 'modelled'}` : '', cu: cuOf(n), go: wip.resume, goTitle: `So far: ${p.big || ''}/mo. Resume it` }, figNone: !(n > 0), noneWord: 'Not priced yet', noneTitle: 'Priced once it names what it reaches',
+      path: { cls: stripCls(path.length), nodes: path.map(nd => nodeOf(nd, nd.state === 'any' ? 'any' : 'filled')) },
+      pathLabel: `Path so far: ${path.map(nd => nd.state === 'any' ? `${nd.key} not chosen` : nd.label).join(', ')}`,
+      phases: [], hasPhases: false, hasSteps: true, steps: wip.steps || [], stepCols: `repeat(${(wip.steps || []).length || 1},minmax(0,1fr))`,
+      stepsLabel: `Steps: ${(wip.steps || []).map(st => st.title).join('; ')}`,
+      move: { key: 'resume', label: 'Resume', icon: 'arrow-right', go: wip.resume, title: `Resume at ${wip.stepTitle}`, primary: false } }; })() : null;
+  const placed = all.map(card);
+  const cards0 = [...(draft ? [draft] : []), ...placed];
+  // The next thing to do: finish the order in progress, else the newest that can go live.
+  const lead = draft || placed.find(x => x.move.key === 'live') || null;
+  if (lead) lead.top = true;
+  const liveN = placed.filter(x => x.live).length, provN = placed.length - liveN;
+  const at = (k) => (k === 'live' || k === 'insight' ? 'live' : k);
+  cards0.forEach((x, i) => { x.i = i; x.dim = !!lens && x.stage !== at(lens); });
+  // A station lights its set and pages to its first card; pressing it again clears.
+  const pressOf = (k) => () => { if (lens === k) { set({ ordStage: null }); return; } const first = cards0.findIndex(x => x.stage === at(k)); set({ ordStage: k, ordersPage: first < 0 ? s.ordersPage || 0 : Math.floor(first / ORD_PAGE) }); };
+  const pg = pageRows(cards0, ORD_PAGE, s.ordersPage, (n) => set({ ordersPage: n }));
+  const stacked = pg.rows.length > 0 && pg.rows.length < ORD_PAGE;
+  const counts = { draft: wip.has ? 1 : 0, ordered: placed.length, provisioning: provN, live: liveN, insight: liveN };
+  const startWays = () => set({ cnPage: 'ways' });
+  const road = ORD_ROAD.map(([key, label, icon], i) => { const n = counts[key];
+    const pct = key === 'draft' ? (n ? 100 : 0) : placed.length ? Math.round(n / placed.length * 100) : 0;
+    const title = key === 'draft' ? (n ? `In progress: ${wip.title}, ${wip.stepLine.toLowerCase()}. Resume it` : 'Nothing in progress. Start one on Ways to connect')
+      : key === 'ordered' ? `${n} placed this session${n ? '. Show them all' : ''}` : key === 'provisioning' ? `${n} provisioning: AT&T stands them up` : key === 'live' ? `${n} live: validated, carrying traffic` : `${n} with first flow logs in`;
+    // Reached: an order sits here or has passed it, so the road into it is drawn; a station passed and empty is outlined.
+    const reached = key === 'draft' ? n > 0 : key === 'ordered' || key === 'provisioning' ? placed.length > 0 : liveN > 0;
+    return { key, label, icon, n, nF: String(n), pct, i, on: lens === key, off: !reached, state: n ? 'on' : reached ? 'done' : 'off', draft: key === 'draft', title,
+      go: key === 'draft' ? (n ? wip.resume : startWays) : key === 'ordered' ? () => set({ ordStage: null }) : n ? pressOf(key) : () => {} }; });
+  const priced = placed.filter(x => x.kind === 'order' && x.fig.has);
+  const money = priced.reduce((a, x) => a + monthlyOf(all.find(o => (o.key || o.id) === x.key) || {}), 0);
+  const ordHead = { n: placed.length, nF: String(placed.length), empty: !placed.length, hasN: placed.length > 0, word: placed.length ? (placed.length === 1 ? 'order placed' : 'orders placed') : out.ordersEmpty,
+    title: placed.length ? `${placed.length} placed this session, ${liveN} live` : out.ordersEmptyLine, cu: cuOf(placed.length),
+    hasMoney: money > 0, money: money > 0 ? fmt(money) : '', moneyTitle: `${fmt(money)}/mo modelled at list price and term, the ${priced.length === 1 ? 'order' : `${priced.length} orders`} AT&T has priced`, go: () => set({ ordStage: null }) };
+  const ordLead = draft ? { label: 'Resume', icon: 'arrow-right', go: draft.move.go, title: draft.move.title }
+    : lead ? { label: 'Go live', icon: 'play', go: lead.move.go, title: `Go live: ${lead.title}` }
+    : liveN ? { label: 'Open connections', icon: 'hub', go: () => set({ cnPage: 'picture' }), title: 'See the live orders on the Connections map' }
+    : { label: 'Ways to connect', icon: 'cable', go: startWays, title: 'Start an order from the six ways into a cloud' };
+  // The three doors that start an order: Recommended, Ways to connect, a finding. Each counts what its page lists.
+  const onPage = !!out.cnIsOrders;
+  const empty = !est || est.stage === 'empty' || !(est.regionsList || []).length;
+  const mv = onPage ? (movesVals({ ...s, cnPage: 'options' }, set, go, est, { openF, obAll, conns }).moveList || []) : [];
+  const ways = (out.wayGroups || []).flatMap(g => g.cards).filter(w => w.notSoon);
+  const orderable = (openF || []).filter(f => !f.event && (f.ladder || []).length).slice().sort((a, b) => (b.save || 0) - (a.save || 0));
+  const calm = (icon, label, title, goTo) => [{ key: 'calm', hasMark: false, markSrc: '', hasIcon: true, icon, label, title, fig: '', figKind: '', hasFig: false, figTitle: '', go: goTo }];
+  const doors = !onPage ? [] : [
+    { key: 'recommended', icon: 'bullseye', title: 'Recommended', n: mv.length, unit: mv.length === 1 ? 'move' : 'moves', go: () => set({ cnPage: 'options' }), headTitle: 'Moves ranked for this estate by what they save. Open Recommended',
+      cta: empty ? { label: 'Add a source', icon: 'plus-circle', go: go('s1', { discoverView: 'sources' }) } : { label: 'See moves', icon: 'arrow-right', go: () => set({ cnPage: 'options' }) },
+      rows: mv.length ? mv.slice(0, 3).map((m, i) => ({ key: m.key, hasMark: !!m.hasMarkSrc, markSrc: m.markSrc || '', hasIcon: !m.hasMarkSrc, icon: m.kindIcon || 'cloud', label: m.short && m.short !== m.cloud ? m.short : (m.regions || []).length > 1 ? `${m.regions.length} ${m.cloud} regions` : m.short || m.title, title: m.title,
+        fig: m.impact > 0 ? `${fmt(m.impact)}/mo` : '', figKind: 'save', hasFig: m.impact > 0, figTitle: m.impact > 0 ? `Saves ${fmt(m.impact)} a month, modelled` : '', go: () => set({ cnPage: 'options', movePage: i }) }))
+        : empty ? calm('search', 'Nothing discovered yet', 'Recommended ranks what discovery finds. Add a source', go('s1', { discoverView: 'sources' })) : calm('check-circle', 'Nothing left to move', 'Everything discovered is on the AT&T network', () => set({ cnPage: 'options' })) },
+    { key: 'ways', icon: 'cable', title: 'Ways to connect', n: ways.length, unit: 'ways', go: startWays, headTitle: 'The six ways into a cloud, each scored for cost, performance, security, effort and scale',
+      cta: { label: 'Pick a way', icon: 'arrow-right', go: startWays },
+      rows: ways.slice().sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, 3).map(w => ({ key: w.key, hasMark: false, markSrc: '', hasIcon: true, icon: w.icon, label: w.title, title: `Start an order with ${w.title}`,
+        fig: w.hasPts && !w.out ? String(w.points) : '', figKind: 'score', hasFig: !!(w.hasPts && !w.out), figTitle: w.ptsTitle || '', go: w.start })) },
+    { key: 'finding', icon: 'exclamation-circle', title: 'Findings', n: orderable.length, unit: 'to act on', go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'open', findPage: 0 }),
+      headTitle: `${orderable.length} open ${orderable.length === 1 ? 'finding names' : 'findings name'} a move you can order. Open the findings`,
+      cta: { label: 'See findings', icon: 'arrow-right', go: go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'open', findPage: 0 }) },
+      rows: orderable.length ? orderable.slice(0, 3).map(f => ({ key: f.key, hasMark: false, markSrc: '', hasIcon: true, icon: kindIconOf(f), label: D.KINDS[f.kind] || pareHead(firstSentence(f.head)), title: f.head,
+        fig: f.priced && f.save ? `${fmt(f.save)}/mo` : '', figKind: 'save', hasFig: !!(f.priced && f.save), figTitle: f.priced && f.save ? `Saves ${fmt(f.save)} a month` : '', go: () => set({ fdKey: f.key }) }))
+        : calm('check-circle', 'No finding to act on', 'No open finding names a move to order', go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'open', findPage: 0 })) },
+  ].map((d, i) => ({ ...d, i, nF: String(d.n), cu: cuOf(d.n), off: !d.n, big: !cards0.length, stack: stacked, rowsOn: !cards0.length || stacked, cta: { title: d.headTitle, ...d.cta } }));
+  return { ordHead, ordRoad: road, ordLead, ordCards: pg.rows, hasOrdCards: cards0.length > 0, ordPager: pg.pager, ordRows: pg.rows.filter(x => x.kind !== 'draft').map(x => all.find(o => (o.key || o.id) === x.key)).filter(Boolean),
+    ordDoors: doors, ordDoorsBig: !cards0.length, ordDoorsSmall: cards0.length > 0, ordLens: lens, ordLensOn: !!lens,
+    // The page is three columns: the cards on this page take their share, the doors the rest of the row, or a row of their own.
+    ordGridSpan: Math.max(1, pg.rows.length), ordGridCols: `repeat(${Math.max(1, pg.rows.length)},minmax(0,1fr))`,
+    ordDoorsStack: stacked, ordDoorsCol: stacked ? `span ${ORD_PAGE - pg.rows.length}` : '1 / -1' };
+}
+
+/** Help's resources as doors (2026-10-13): Support Tickets counts the open tickets Operations lists, a glyph and a number. */
+function helpStory(out, s, set) {
+  if (!Array.isArray(out.helpLive)) return {};
+  const openN = (out.opsFacts || {}).openN || 0;
+  return { helpLive: out.helpLive.map((r, i) => ({ ...r, i, ...(r.key === 'tickets' ? { n: openN, hasN: true, nTitle: `${openN} open ${openN === 1 ? 'ticket' : 'tickets'}` } : {}), tip: `${r.title}: ${r.desc}` })) };
 }
 
 // ---------- Shell: elevator, top tabs, rail ----------
