@@ -81,8 +81,13 @@ async function freeze(p, slug, title) {
     return '<!doctype html>\n' + doc.outerHTML;
   }, { css, live: LIVE, title });
   await writeFile(join(OUT, `${slug}.html`), html);
-  await p.screenshot({ path: join(OUT, `${slug}.png`) });
-  index.push({ slug, title, html: `${slug}.html`, png: `${slug}.png` });
+  // A page Micah let scroll (Ways to connect, 2026-10-13) is frozen whole: the reference shows every section and the
+  // index marks it tall, so wrap.mjs keeps its height instead of pinning it to 900.
+  // Only the scroll allowance counts (data-fold="scrolls", scripts/fold-rule.mjs); the home's map below the fold was never
+  // part of its board, so Home keeps the first screen as the original did.
+  const tall = await p.evaluate(() => !!document.querySelector('[data-fold="scrolls"]') && document.documentElement.scrollHeight > 905);
+  await p.screenshot({ path: join(OUT, `${slug}.png`), fullPage: tall });
+  index.push({ slug, title, html: `${slug}.html`, png: `${slug}.png`, ...(tall ? { tall: true } : {}) });
   console.log('froze', slug);
 }
 const settle = (p, ms = 500) => p.waitForTimeout(ms);
@@ -137,6 +142,9 @@ try {
       const b = p.locator(`aside[aria-label$="sections"] button[aria-label="${label}"]`).first();
       if (!(await b.count())) { console.log('no rail item', label); continue; }
       await b.click(); await settle(p, 1000);
+      // Discover scans on arrival (four 750ms steps): wait for the page itself, never the scan skeleton (2026-10-14).
+      for (let i = 0; i < 40 && await p.evaluate(() => /Scanning/.test((document.querySelector('main') || document.body).innerText)); i++) await p.waitForTimeout(250);
+      await settle(p, 600);
       await freeze(p, `site-${key}${T}`, `${title}${TT}`);
     }
     await p.close();

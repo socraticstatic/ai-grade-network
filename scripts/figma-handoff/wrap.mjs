@@ -14,7 +14,12 @@ const LIVE = 'https://socraticstatic.github.io/ai-grade-network/';
 const FONTS = [400, 500, 700].map((w, i) => `@font-face{font-family:'ATT Aleck Sans';src:url('${LIVE}fonts/ATTAleckSans_${['Regular', 'Medium', 'Bold'][i]}.woff2') format('woff2');font-weight:${w}}`).join('');
 const FIXES = `<style id="noshrink-labels">b,small,strong,em,i,label,legend,figcaption,span>b,.js-cap,.js-soft{flex-shrink:0}select{white-space:nowrap}</style>` +
   `<style id="strip-segments">.ps>span::before{left:0;right:calc(50% + var(--n)/2)}.ps>span::after{content:'';position:absolute;left:calc(50% + var(--n)/2);right:0;top:calc(var(--n)/2 - 0.75px);height:1.5px;background:var(--border-secondary)}.ps.big>span::after{height:2px;top:calc(var(--n)/2 - 1px)}.ps>span:first-child::before{display:none}.ps>span:last-child::after{display:none}</style>` +
-  `<style id="figma-font-override">*{font-family:'ATT Aleck Sans',Arial,sans-serif!important}</style>`;
+  `<style id="figma-font-override">*{font-family:'ATT Aleck Sans',Arial,sans-serif!important}</style>` +
+  // Still (2026-10-14): freeze appends animation:none inside the big inline stylesheet, which the slim step above swaps for
+  // the live link, so the rule was dropped and the importer caught count-ups and line draws mid-flight ($121,399 for
+  // $121,400, no forecast lines). Every animation's base style is its last frame, so stilling it shows the page settled;
+  // the count-up overlays (CSS counters an importer cannot draw) go, leaving the figure's own text.
+  `<style id="still">*,*::before,*::after{animation:none!important;transition:none!important}.op-cu::after,.cst-cu::after{content:none!important}</style>`;
 const note = (dark, title, cite, applied) => { const [bg, bd, ink, soft, acc] = dark ? ['#16191d', '#2d3238', '#e8eaed', '#b4b9c0', '#4fc3f7'] : ['#ffffff', '#d7dbe0', '#0f1419', '#50565d', '#009fdb']; const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
   return `<aside aria-label="Requirement from the portal team" style="box-sizing:border-box;width:1440px;padding:20px 24px;border:1px solid ${bd};border-left:5px solid ${acc};border-radius:12px;background:${bg};color:${ink};font-family:'ATT Aleck Sans',Arial,sans-serif;font-size:14px;line-height:20px;display:flex;flex-direction:column;gap:8px"><div aria-label="Note head" style="display:flex;align-items:baseline;gap:12px"><span aria-label="Board" style="font-size:16px;line-height:22px;font-weight:700">${esc(title)}</span><span aria-label="Source" style="font-size:13px;line-height:18px;color:${soft}">From Amir's note for the Network Fabric portal team, 2026-10-12</span></div><div aria-label="Their words" style="display:flex;gap:10px"><span style="font-weight:700;color:${acc};white-space:nowrap">Amir asked</span><span>${esc(cite)}</span></div><div aria-label="Applied here" style="display:flex;gap:10px"><span style="font-weight:700;color:${acc};white-space:nowrap">Applied here</span><span>${esc(applied)}</span></div></aside>`; };
 const BAKE = () => {
@@ -41,12 +46,18 @@ let n = 0;
 for (const b of idx.boards) {
   let s = await readFile(join(dirname(INDEX), b.slug + '.html'), 'utf8');
   s = s.replace(/<style[^>]*>([\s\S]*?)<\/style>/g, (m, css) => css.length > 100000 ? `<link rel="stylesheet" href="${LIVE}storefront.css"><style>${FONTS}</style>` : m);
-  s = s.replace(/\s(data-dc-tpl|data-fn)="[^"]*"/g, '').replace('min-height: 100vh;', 'height: 900px; overflow: hidden;');
-  const dark = b.slug.endsWith('-dark'), key = b.slug.replace(/-dark$/, ''), nt = notes[key];
-  const wash = dark ? '#0b0d10' : '#eef0f3', tall = /personas/.test(b.slug);
+  // A versioned board (2026-10-14, freeze --version) ends in -v2 after its theme: -dark-v2 is still dark, and a board the
+  // freeze marked tall (a page that scrolls) keeps its height like Personas instead of a 900 pin.
+  const tall = !!b.tall || /personas/.test(b.slug);
+  s = s.replace(/\s(data-dc-tpl|data-fn)="[^"]*"/g, '');
+  if (!tall) s = s.replace('min-height: 100vh;', 'height: 900px; overflow: hidden;');
+  const base = b.slug.replace(/-v\d+$/, ''), dark = base.endsWith('-dark'), key = base.replace(/-dark$/, ''), nt = notes[key];
+  const wash = dark ? '#0b0d10' : '#eef0f3';
   const screen = `<div aria-label="Screen" style="width:1440px;${tall ? 'height:auto' : 'height:900px;overflow:hidden'};position:relative">`;
   const open = nt ? `<div aria-label="Board with note" style="display:flex;flex-direction:column;gap:24px;width:1440px;background:${wash}">${note(dark, b.title, nt[0], nt[1])}${screen}` : screen;
   s = s.replace(/<body([^>]*)>/, `<body$1 style="margin:0;width:1440px${nt ? ';background:' + wash : ''}">${open}`).replace('</body>', (nt ? '</div>' : '') + '</div></body>').replace('</head>', FIXES + '</head>');
+  // A tall board's body is released from the stylesheet's 100% height, or the import clips it at 900 (2026-10-14).
+  if (tall) s = s.replace('</head>', '<style id="tall-board">html,body{height:auto!important;min-height:0!important}</style></head>');
   const tmp = join(OUT, '.tmp.html'); await writeFile(tmp, s);
   await page.goto('file://' + (tmp.startsWith('/') ? tmp : join(process.cwd(), tmp)), { waitUntil: 'networkidle', timeout: 60000 }); await page.waitForTimeout(500);
   await page.evaluate(BAKE);
