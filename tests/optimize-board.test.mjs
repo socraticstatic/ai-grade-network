@@ -157,3 +157,13 @@ test('the motion collapses to the last frame: every op- keyframe starts from its
   for (const p of ['--op-p', '--op-k', '--op-r']) assert.match(CSS, new RegExp(`@property ${p}\\{`), p);
   assert.match(CSS, /@media \(prefers-reduced-motion: ?reduce\)\{[^@]*\.op-/, 'reduced motion stills the board');
 });
+
+// One saving ink across Cost (2026-10-13): the story tabs draw a saving as green stripes (--cst-save) and Optimize drew
+// it as blue ones (--viz-2), which is Cost's list-price ink. Green only on the saving, the same stripe on every tab.
+test('Optimize stripes its saving in the saving ink, as the Cost story tabs do', () => {
+  const css = readFileSync(new URL('../storefront.css', import.meta.url), 'utf8');
+  const op = (css.match(/--op-stripes:([^;}]+)/) || [])[1] || '';
+  const cst = (css.match(/--cst-save:([^;}]+)/) || [])[1] || '';
+  assert.match(op, /var\(--success\)/, 'Optimize still stripes its saving in another ink');
+  assert.equal(op.trim(), cst.trim(), 'the two saving stripes differ');
+});

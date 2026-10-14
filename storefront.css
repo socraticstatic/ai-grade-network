@@ -388,7 +388,7 @@ a{color:#0057b8}a:hover{color:#00388f}
 @property --op-r{syntax:'<integer>';inherits:true;initial-value:0}
 @property --op-p{syntax:'<number>';inherits:true;initial-value:0}
 @counter-style op-pad3{system:extends decimal;pad:3 "0"}
-.op-board{display:grid;gap:14px;min-width:0;--op-stripes:repeating-linear-gradient(-45deg,var(--viz-2) 0 2.5px,color-mix(in srgb,var(--viz-2) 24%,transparent) 2.5px 5.5px)}
+.op-board{display:grid;gap:14px;min-width:0;--op-stripes:repeating-linear-gradient(-45deg,var(--success) 0 2.5px,color-mix(in srgb,var(--success) 26%,transparent) 2.5px 5.5px)}
 .op-top{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:24px}
 .op-top h3{margin:0;font-size:18px;line-height:24px;font-weight:700;color:var(--text-heading)}
 .op-key{display:flex;align-items:center;gap:20px;font-size:13px;line-height:18px;color:var(--text-body)}
