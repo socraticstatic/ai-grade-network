@@ -82,13 +82,15 @@ const STATE_PHRASE = { down: 'down', slo: 'over SLO', risk: 'at risk', ok: 'heal
 export function takeAway(rk, f) {
   const probs = worstFirst(f.probs), acts = f.acts || [];
   const out = (o) => ({ headDoor: o.door, ...o, sub: o.parts.map(p => p.t).join(' · ') });
+  // Each part also carries its glyph and its figure (the home as a story, 2026-10-13): the line draws as chips, a glyph
+  // and a figure each, and the part's words ride in the chip's title.
   if (rk === 'exec') {
     const down = probs.filter(p => p.state === 'down');
     const on = down.length ? ` on ${down[0].apps.length === 1 ? cap(down[0].apps[0]) : `${down[0].apps.length} apps`}` : '';
     return out({ key: 'exec', icon: 'bill', ink: 'var(--success)', door: 'moves', cta: 'See the moves',
       head: f.onTableF ? `${f.onTableF}/mo on the table` : 'Nothing priced on the table',
-      parts: [{ t: one(acts.length, 'move', 'moves'), door: acts.length ? 'moves' : '' },
-        down.length ? { t: `${one(down.length, 'outage', 'outages')}${on}`, door: 'health' } : { t: 'nothing down', door: '' }] });
+      parts: [{ t: one(acts.length, 'move', 'moves'), door: acts.length ? 'moves' : '', icon: 'checklist', fig: String(acts.length) },
+        down.length ? { t: `${one(down.length, 'outage', 'outages')}${on}`, door: 'health', icon: 'close-circle', fig: String(down.length), ink: HEALTH_INK.down } : { t: 'nothing down', door: '', icon: 'close-circle', fig: '0' }] });
   }
   const cn = f.connect || {}, cm = /^([\d,]+) of ([\d,]+) regions?$/.exec(cn.value || '');
   const pub = cm ? numOf(cm[1]) : 0;
@@ -100,8 +102,8 @@ export function takeAway(rk, f) {
     const could = f.could && typeof f.could === 'object' ? f.could : { l: 'Could save', v: f.could || '', u: '/mo', sub: 'if every public region moves' };
     return out({ key: 'finops', icon: 'pie-chart', ink: 'var(--success)', door: 'optimize', cta: 'Optimize', headDoor: 'spend',
       head: numOf(could.v) ? `${could.l} ${could.v}${could.u} ${could.sub}` : `Egress runs ${f.spend}/mo`,
-      parts: [numOf(f.banked) ? { t: `${f.banked} banked to date`, door: 'spend' } : { t: 'Nothing banked yet', door: '' },
-        pub ? { t: `${one(pub, 'region', 'regions')} to move`, door: 'options' } : { t: 'every region on AT&T', door: '' }] });
+      parts: [numOf(f.banked) ? { t: `${f.banked} banked to date`, door: 'spend', icon: 'check-circle', fig: f.banked, ink: 'var(--success)' } : { t: 'Nothing banked yet', door: '', icon: 'minus-circle', fig: '$0' },
+        pub ? { t: `${one(pub, 'region', 'regions')} to move`, door: 'options', icon: 'cloud', fig: String(pub) } : { t: 'every region on AT&T', door: '', icon: 'hub', fig: 'All' }] });
   }
   if (rk === 'security') {
     // One line, Govern's own total; the policies left it (skeptic, 2026-09-30:
@@ -113,25 +115,62 @@ export function takeAway(rk, f) {
     const gv = f.govern || {}, e = String(f.exposed), vn = numOf(gv.value);
     return out({ key: 'security', icon: 'check-shield', ink: numOf(e) ? 'var(--warning)' : 'var(--link)', door: 'violations', cta: 'Review violations',
       head: numOf(e) ? `${e} ${e === '1' ? 'workload' : 'workloads'} exposed` : 'No workload exposed', headDoor: numOf(e) ? 'exposed' : '',
-      parts: [vn ? { t: `${gv.value} policy ${vn === 1 ? 'violation' : 'violations'}`, door: 'violations' } : { t: 'No policy violations', door: '' }] });
+      parts: [vn ? { t: `${gv.value} policy ${vn === 1 ? 'violation' : 'violations'}`, door: 'violations', icon: 'exclamation-circle', fig: String(gv.value), ink: 'var(--error)' } : { t: 'No policy violations', door: '', icon: 'exclamation-circle', fig: '0' }] });
   }
   if (rk === 'architect') {
     // The clouds are named, not counted: the public regions' own clouds (skeptic,
     // 2026-09-30: the estate's count read as if the problem spanned every cloud).
     if (!pub) return out({ key: 'architect', icon: 'cloud', ink: 'var(--link)', door: 'connect', cta: cn.door || 'Connect',
-      head: cm ? 'Every region rides the AT&T network' : (cn.value || 'Nothing connected yet'), parts: [{ t: cn.sub || 'nothing on the public internet', door: '' }] });
+      head: cm ? 'Every region rides the AT&T network' : (cn.value || 'Nothing connected yet'), parts: [{ t: cn.sub || 'nothing on the public internet', door: '', icon: 'hub', fig: 'All' }] });
     return out({ key: 'architect', icon: 'cloud', ink: 'var(--warning)', door: 'connect', cta: cn.door || 'Recommended',
       head: `${cn.value} still ${pub === 1 ? 'rides' : 'ride'} the public internet`,
-      parts: [{ t: `${f.pubWl} workloads ride ${pub === 1 ? 'it' : 'them'}`, door: 'discover' }, { t: `on ${nameList(f.pubClouds)}`, door: '' }] });
+      parts: [{ t: `${f.pubWl} workloads ride ${pub === 1 ? 'it' : 'them'}`, door: 'discover', icon: 'apps', fig: f.pubWl },
+        { t: `on ${nameList(f.pubClouds)}`, door: '', icon: 'cloud', fig: '', clouds: [...new Set(f.pubClouds || [])] }] });
   }
   // Network Eng: the worst live problem, in Health's own words.
   const p = probs[0];
   if (!p) return out({ key: 'neteng', icon: 'router', ink: HEALTH_INK.ok, door: 'health', cta: 'See Health',
-    head: 'Nothing is down or over SLO', parts: [{ t: `${f.healthy} apps healthy`, door: 'health' }] });
-  const who = p.apps.length === 1 ? { t: `${cap(p.apps[0])} rides it`, door: 'app', arg: p.apps[0] } : { t: `${p.apps.length} apps ride it`, door: 'health' };
+    head: 'Nothing is down or over SLO', parts: [{ t: `${f.healthy} apps healthy`, door: 'health', icon: 'check-circle', fig: f.healthy }] });
+  const who = p.apps.length === 1 ? { t: `${cap(p.apps[0])} rides it`, door: 'app', arg: p.apps[0], icon: 'tag', fig: cap(p.apps[0]) } : { t: `${p.apps.length} apps ride it`, door: 'health', icon: 'grid', fig: String(p.apps.length) };
   return out({ key: 'neteng', icon: 'router', ink: HEALTH_INK[p.state] || 'var(--warning)', door: 'trace', cta: 'Trace it', probKey: p.key,
     head: `${p.where} is ${STATE_PHRASE[p.state] || p.state}`,
-    parts: [who, { t: `${enf(p.wl)} workloads`, door: 'health' }, { t: p.ago, door: '' }] });
+    parts: [who, { t: `${enf(p.wl)} workloads`, door: 'health', icon: 'apps', fig: enf(p.wl) }, { t: p.ago, door: '', icon: 'clock', fig: p.ago }] });
+}
+
+/**
+ * The verdict's figure (the home as a story, 2026-10-13): the headline split so its number can lead, count up and wear
+ * the one ink it earns. pre + n + u + rest reads the head; FinOps' condition ("if you act on Spend and Routing") stays in
+ * the headline's title. Green is for money saved alone; a verdict with no number prints its head as pre.
+ */
+export function heroFigOf(take, f = {}) {
+  const none = { has: false, pre: take ? take.head : '', n: '', u: '', rest: '', ink: 'var(--text-heading)' };
+  if (!take) return none;
+  const h = String(take.head || '');
+  if (take.key === 'exec' && f.onTableF) return { has: true, pre: '', n: f.onTableF, u: '/mo', rest: 'on the table', ink: 'var(--success)' };
+  if (take.key === 'finops') {
+    const c = f.could || {};
+    if (numOf(c.v)) return { has: true, pre: c.l || 'Could save', n: c.v, u: c.u || '', rest: '', ink: 'var(--success)' };
+    const m = /^Egress runs (\$[\d,]+)(\/mo)$/.exec(h);
+    return m ? { has: true, pre: 'Egress runs', n: m[1], u: m[2], rest: '', ink: 'var(--text-heading)' } : none;
+  }
+  if (take.key === 'security') { const m = /^([\d,]+) (workloads? exposed)$/.exec(h); return m ? { has: true, pre: '', n: m[1], u: '', rest: m[2], ink: 'var(--text-heading)' } : none; }
+  if (take.key === 'architect') { const m = /^([\d,]+)( of [\d,]+) (regions? .+)$/.exec(h); return m ? { has: true, pre: '', n: m[1], u: m[2], rest: m[3], ink: 'var(--text-heading)' } : none; }
+  return none;
+}
+
+/**
+ * One wedge of a ring, as a clip-path (the home as a story, 2026-10-13): from the centre round the arc from a0 to a1,
+ * in turns from twelve o'clock, clockwise. The arc's points sit outside the ring's circle (radius 72 of 100) at most a
+ * twelfth of a turn apart, so the circle the element's own border-radius draws is the ring's edge and every wedge is a
+ * door of exactly its share (a clip-path is hit-tested; a conic gradient is not).
+ */
+export function wedgeOf(a0, a1) {
+  if (!(a1 > a0)) return 'polygon(50% 50%)';
+  const R = 72, steps = Math.max(1, Math.ceil((a1 - a0) * 12));
+  const pt = (a) => { const t = a * 2 * Math.PI; return `${(50 + R * Math.sin(t)).toFixed(2)}% ${(50 - R * Math.cos(t)).toFixed(2)}%`; };
+  const pts = [];
+  for (let i = 0; i <= steps; i++) pts.push(pt(a0 + (a1 - a0) * i / steps));
+  return `polygon(50% 50%, ${pts.join(', ')})`;
 }
 
 // ---- The pictures ----
@@ -202,7 +241,13 @@ export function sparkOf(past, asIs, moved) {
     { key: 'act', t: kOf(moved[moved.length - 1]), top: pc(mEnd[1], SPARK.h), ink: 'var(--text-heading)', title: 'In 90 days, if you act' }] : [];
   // Two end labels never sit on top of each other.
   if (ends.length === 2 && Math.abs(parseFloat(ends[0].top) - parseFloat(ends[1].top)) < 12) { const mid = (parseFloat(ends[0].top) + parseFloat(ends[1].top)) / 2; ends[0].top = `${mid - 6}%`; ends[1].top = `${mid + 6}%`; }
-  return { past: d(P), asIs: d(A), act: d(M), yTicks, xTicks, ends, lo, hi,
+  // What acting saves, as the area between the two forecasts (the home as a story, 2026-10-13): it fills striped green,
+  // the one saving ink, from today to 90 days on.
+  // It is drawn as a clip on a striped layer, in percent of the plot, so the stripes keep their angle however the plot
+  // stretches (an SVG pattern under preserveAspectRatio="none" would shear).
+  const save = asIs.length ? `${d(A)} ${M.slice().reverse().map(p => `L${p[0]},${p[1]}`).join(' ')} Z` : '';
+  const saveClip = asIs.length ? `polygon(${[...A, ...M.slice().reverse()].map(p => `${(p[0] / SPARK.w * 100).toFixed(2)}% ${(p[1] / SPARK.h * 100).toFixed(2)}%`).join(', ')})` : 'polygon(0 0)';
+  return { past: d(P), asIs: d(A), act: d(M), save, saveClip, yTicks, xTicks, ends, lo, hi,
     // The months that happened, filled to the floor.
     area: P.length ? `${d(P)} L${today[0]},${SPARK.h} L${P[0][0]},${SPARK.h} Z` : '',
     todayL: pc(today[0], SPARK.w), todayT: pc(today[1], SPARK.h), asIsT: pc(end[1], SPARK.h) };
@@ -312,37 +357,39 @@ export function snapshotCards(rk, f, doors) {
   // that says if it needs you, the figure, one segmented bar, one footnote. The figures are the card's own.
   const pct = (n, of) => (of > 0 ? `${Math.max(0, Math.min(100, n / of * 100)).toFixed(1)}%` : '0%');
   const PILL = { bad: ['var(--error)', 'color-mix(in srgb, var(--error) 12%, transparent)'], warn: ['var(--warning)', 'color-mix(in srgb, var(--warning) 14%, transparent)'], ok: ['var(--link)', 'color-mix(in srgb, var(--link) 12%, transparent)'] };
-  const kp = (tone, t) => ({ pill: t, pillInk: PILL[tone][0], pillBg: PILL[tone][1], hasPill: !!t });
+  // The pill is a glyph and its figure (the home as a story, 2026-10-13): "3 need attention" draws as its glyph and 3, the
+  // words in its title; a pill with no figure ("Rising", "All healthy") is its glyph alone.
+  const kp = (tone, t, icon) => ({ pill: t, pillInk: PILL[tone][0], pillBg: PILL[tone][1], hasPill: !!t, pillIcon: icon || 'information-circle', pillN: (/^[\d,]+(?=\s)/.exec(t || '') || [''])[0] });
   // A card with nothing to count wears no verdict (2026-10-09): 'All healthy' over 0 of 0 says nothing true.
-  const NOPILL = { pill: '', pillInk: 'var(--text-light)', pillBg: 'transparent', hasPill: false };
+  const NOPILL = { pill: '', pillInk: 'var(--text-light)', pillBg: 'transparent', hasPill: false, pillIcon: '', pillN: '' };
   const cnt = (st) => flows.filter(r => r.state === st).length;
   const appDoor = (st) => (doors.appState ? doors.appState(st) : doors.health());
   const okN = cnt('ok'), downN = cnt('down'), sloN = cnt('slo'), riskN = cnt('risk'), badN = flows.length - okN;
   const lastPast = cols.filter(x => x.kind === 'past').slice(-1)[0] || {};
   const nowN = numOf(spend.spend), aheadN = numOf(spend.ahead), endAsIs = next.length ? next[next.length - 1].asIsN : nowN;
   const KPI = {
-    apps: { kLabel: 'Apps healthy', big: enf(okN), of: `of ${enf(flows.length)}`, ...(badN ? kp(downN ? 'bad' : 'warn', `${badN} need attention`) : flows.length ? kp('ok', 'All healthy') : NOPILL),
+    apps: { kLabel: 'Apps healthy', big: enf(okN), of: `of ${enf(flows.length)}`, ...(badN ? kp(downN ? 'bad' : 'warn', `${badN} need attention`, 'exclamation-circle') : flows.length ? kp('ok', 'All healthy', 'check-circle') : NOPILL),
       // Each state is a door to App health listing just those apps (reviewer, 2026-10-08: "make the bar clickable so only
       // those areas of issues can be listed in a table format").
       bar: [['ok', okN], ['down', downN], ['slo', sloN], ['risk', riskN]].filter(x => x[1]).map(([key, n]) => ({ key, w: pct(n, flows.length), ink: HEALTH_FILL_BAR[key], go: appDoor(key), title: `${n} ${HEALTH_WORD[key] || key}: list ${n === 1 ? 'it' : 'them'}` })),
       foot: [downN && `${downN} down`, sloN && `${sloN} over latency target`, riskN && `${riskN} at risk`].filter(Boolean).join(' · ') || 'Every app inside its target' },
-    onatt: { kLabel: 'Private on AT&T', big: enf(regPriv), of: `of ${enf(regTotal)} regions`, ...(regTotal - regPriv ? kp('warn', `${enf(regTotal - regPriv)} public`) : regTotal ? kp('ok', 'All private') : NOPILL),
+    onatt: { kLabel: 'Private on AT&T', big: enf(regPriv), of: `of ${enf(regTotal)} regions`, ...(regTotal - regPriv ? kp('warn', `${enf(regTotal - regPriv)} public`, 'globe') : regTotal ? kp('ok', 'All private', 'padlock') : NOPILL),
       bar: [{ key: 'priv', w: pct(regPriv, regTotal), ink: INK_PRIV }], foot: `Sites on AT&T: ${enf(sitesOn)} of ${enf(sitesTotal)}` },
-    egress: { kLabel: 'Egress spend', big: spend.spend || '$0', of: '/mo', ...(endAsIs > nowN ? kp('warn', 'Rising') : nowN ? kp('ok', 'Flat') : NOPILL),
+    egress: { kLabel: 'Egress spend', big: spend.spend || '$0', of: '/mo', ...(endAsIs > nowN ? kp('warn', 'Rising', 'trending-up') : nowN ? kp('ok', 'Flat', 'arrows-horizontal') : NOPILL),
       bar: [{ key: 'att', w: pct(lastPast.attN || 0, lastPast.spendN || 1), ink: 'var(--viz-1)' }, { key: 'out', w: pct(lastPast.outN || 0, lastPast.spendN || 1), ink: 'var(--warning)' }],
       foot: nowN > aheadN && aheadN ? `$${enf(nowN - aheadN)}/mo you can avoid in 90 days` : 'Nothing to avoid yet' },
-    exposed: { kLabel: 'Exposed workloads', big: enf(exN), of: `of ${enf(wlN)}`, ...(numOf(gv.value) ? kp('bad', `${gv.value} violations`) : wlN ? kp('ok', 'No violations') : NOPILL),
+    exposed: { kLabel: 'Exposed workloads', big: enf(exN), of: `of ${enf(wlN)}`, ...(numOf(gv.value) ? kp('bad', `${gv.value} violations`, 'exclamation-circle') : wlN ? kp('ok', 'No violations', 'check-shield') : NOPILL),
       bar: [{ key: 'ex', w: pct(exN, wlN), ink: 'var(--error)' }], foot: `${wlN ? Math.round(exN / wlN * 100) : 0}% of workloads reachable from outside` },
-    tags: { kLabel: 'Tags with no policy', big: enf(bare), of: `of ${enf(tagRows.length)}`, ...(bare ? kp('warn', `${enf(bare)} uncovered`) : kp('ok', 'All covered')),
+    tags: { kLabel: 'Tags with no policy', big: enf(bare), of: `of ${enf(tagRows.length)}`, ...(bare ? kp('warn', `${enf(bare)} uncovered`, 'padlock-open') : kp('ok', 'All covered', 'check-shield')),
       bar: [{ key: 'cov', w: pct(tagRows.length - bare, tagRows.length), ink: 'var(--link)' }], foot: bare ? 'A tag with no policy can reach anything' : 'Every tag has a policy' },
   };
   const allSave = ow.mine + ow.eng || 1;
   Object.assign(KPI, {
-    approve: { kLabel: 'Yours to approve', big: enf(ow.mineN), of: ow.mineN === 1 ? 'move' : 'moves', ...(ow.mineN ? kp('warn', `${ow.mineN} to approve`) : kp('ok', 'Nothing waiting')),
+    approve: { kLabel: 'Yours to approve', big: enf(ow.mineN), of: ow.mineN === 1 ? 'move' : 'moves', ...(ow.mineN ? kp('warn', `${ow.mineN} to approve`, 'checklist') : kp('ok', 'Nothing waiting', 'check-circle')),
       bar: [{ key: 'mine', w: pct(ow.mine, allSave), ink: 'var(--success)' }], foot: `${Math.round(ow.mine / allSave * 100)}% of the open savings are FinOps' own moves` },
-    eng: { kLabel: 'With engineering', big: usd(ow.eng), of: '/mo', ...(ow.engN ? kp('warn', `${ow.engN} with other teams`) : kp('ok', 'Nothing waiting')),
+    eng: { kLabel: 'With engineering', big: usd(ow.eng), of: '/mo', ...(ow.engN ? kp('warn', `${ow.engN} with other teams`, 'person-group') : kp('ok', 'Nothing waiting', 'check-circle')),
       bar: [{ key: 'eng', w: pct(ow.eng, allSave), ink: 'var(--viz-1)' }], foot: 'Network and architecture moves: FinOps follows up, engineering acts' },
-    banked: { kLabel: 'Savings banked', big: ow.banked || '$0', of: 'to date', ...(numOf(ow.banked) ? kp('ok', 'Confirmed') : kp('warn', 'Nothing banked')),
+    banked: { kLabel: 'Savings banked', big: ow.banked || '$0', of: 'to date', ...(numOf(ow.banked) ? kp('ok', 'Confirmed', 'check-circle') : kp('warn', 'Nothing banked', 'minus-circle')),
       bar: [{ key: 'b', w: numOf(ow.banked) ? '100%' : '0%', ink: 'var(--success)' }], foot: 'Saved by moves already made on the AT&T network' },
   });
   // The footnote as glyph chips (Micah, 2026-10-07: "less words, more icons"; "pare words down along the way"): a glyph and
@@ -352,7 +399,8 @@ export function snapshotCards(rk, f, doors) {
   const CHIPS = {
     apps: [downN && { ...fc('close-circle', enf(downN), `${downN} down`, HEALTH_INK.down), go: appDoor('down') }, sloN && { ...fc('clock', enf(sloN), `${sloN} over latency target`, HEALTH_INK.slo), go: appDoor('slo') }, riskN && { ...fc('exclamation-triangle', enf(riskN), `${riskN} at risk`, HEALTH_INK.risk), go: appDoor('risk') }].filter(Boolean),
     onatt: [fc('large-building', `${enf(sitesOn)} of ${enf(sitesTotal)}`, `Sites on AT&T: ${enf(sitesOn)} of ${enf(sitesTotal)}`)],
-    egress: nowN > aheadN && aheadN ? [fc('trending-down', `$${enf(nowN - aheadN)}/mo`, `$${enf(nowN - aheadN)}/mo you can avoid in 90 days`, 'var(--success)'), fc('history', '90 days', 'Over the next 90 days')] : [fc('check-circle', 'Nothing to avoid', 'Nothing to avoid yet')],
+    // The 90 days ride in the saving's title (the home as a story, 2026-10-13): the tile's ring takes the room a second chip had.
+    egress: nowN > aheadN && aheadN ? [fc('trending-down', `$${enf(nowN - aheadN)}/mo`, `$${enf(nowN - aheadN)}/mo you can avoid in 90 days`, 'var(--success)')] : [fc('check-circle', 'Nothing to avoid', 'Nothing to avoid yet')],
     exposed: [fc('globe', `${pctOf(exN, wlN)}%`, `${pctOf(exN, wlN)}% of workloads reachable from outside`)],
     tags: [bare ? fc('padlock-open', `${enf(bare)} reach anything`, 'A tag with no policy can reach anything', 'var(--warning)') : fc('check-shield', 'Covered', 'Every tag has a policy')],
     approve: [fc('pie-chart', `${pctOf(ow.mine, allSave)}%`, `${pctOf(ow.mine, allSave)}% of the open savings are FinOps' own moves`)],
@@ -360,8 +408,15 @@ export function snapshotCards(rk, f, doors) {
     banked: [fc('hub', 'On AT&T', 'Saved by moves already made on the AT&T network')],
   };
   // A segment or chip with no door of its own opens its card's page.
-  Object.keys(by).forEach(k2 => { const k = KPI[k2] || {}, home = by[k2].valueGo || by[k2].go || (() => {});
-    Object.assign(by[k2], k, { bar: (k.bar || []).map(b => ({ ...b, go: b.go || home, title: b.title || `Open ${by[k2].door || 'it'}` })), footChips: (CHIPS[k2] || []).map(x => ({ ...x, go: x.go || home })) }); });
+  // The bar is also the tile's ring (the home as a story, 2026-10-13): each segment a wedge from where the last one ended,
+  // a hair of gap between two, so the ring's arcs are the bar's doors. A segment that counts nothing draws no wedge.
+  const ringOf = (bar) => { let at = 0; const gap = bar.length > 1 ? 0.006 : 0;
+    return bar.map(b => { const f = parseFloat(b.w) / 100 || 0, from = +at.toFixed(4); at += f;
+      return { ...b, from, zero: !(f > 0), clip: wedgeOf(from + gap / 2, Math.min(1, from + f) - gap / 2) }; }); };
+  // A card whose figure is not a door (FinOps' Yours to approve, With engineering) sends its ring and chips to its page;
+  // they had fallen on the figure's empty door and did nothing (found by the home's user walk, 2026-10-13).
+  Object.keys(by).forEach(k2 => { const k = KPI[k2] || {}, home = (!by[k2].valueOff && by[k2].valueGo) || by[k2].go || (() => {});
+    Object.assign(by[k2], k, { bar: ringOf((k.bar || []).map(b => ({ ...b, go: b.go || home, title: b.title || `Open ${by[k2].door || 'it'}` }))), footChips: (CHIPS[k2] || []).map(x => ({ ...x, go: x.go || home })) }); });
   return (CARD_ORDER[rk] || CARD_ORDER.neteng).map(k => dotGrid(by[k])).map(c => ({ ...c,
     figs: c.figs.map(x => ({ ...x, hasSwatch: !!x.swatch })), hasSwatch: !!c.swatch, hasSuffix: !!c.suffix }));
 }

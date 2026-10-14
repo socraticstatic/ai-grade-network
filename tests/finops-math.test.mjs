@@ -24,8 +24,10 @@ test('the home trio: as is minus if you act equals You save, and both are the Sp
     assert.ok(n(h.save) > 0, `${view}: the estate has moves, so acting saves something`);
   }
   // Pared (2026-10-07): the trio's labels drop "In 90 days," for a 90 days chip on the head; the clock is the title.
-  assert.match(HTML, /<div class="hm-trio" title="In 90 days: as is, if you act, and what you save"><div><small>As is<\/small><b>\{\{ homeChart\.asIs \}\}\/mo<\/b>/);
-  assert.match(HTML, /<small>You save<\/small><b[^>]*>\{\{ homeChart\.save \}\}\/mo<\/b>/);
+  // Re-pinned 2026-10-13 (the home as a story): each figure counts up inside its own door, the 90 days ride in the trio's
+  // title and the x-axis, and You save opens Optimize; the labels and the figures are the same fields.
+  assert.match(HTML, /<div class="home-trio" title="In 90 days: as is, if you act, and what you save"><button onClick="\{\{ homeChart\.go \}\}" title="In 90 days, as is"><small>As is<\/small><b><span class="cst-cu"[^>]*>\{\{ homeChart\.asIs \}\}<\/span>\/mo<\/b>/);
+  assert.match(HTML, /<small>You save<\/small><b><span class="cst-cu"[^>]*>\{\{ homeChart\.save \}\}<\/span>\/mo<\/b>/);
 });
 
 test('Spend, Optimize and By bucket quote one saving; By bucket\'s rows add to its total', () => {
