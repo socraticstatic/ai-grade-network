@@ -37,6 +37,89 @@ const BAKE = () => {
     let clip = e, clipped = false; for (let k = 0; k < 4 && clip; k++) { const c = getComputedStyle(clip); if (c.overflow === 'hidden' || c.overflowX === 'hidden' || c.textOverflow === 'ellipsis') { clipped = true; break; } clip = clip.parentElement; }
     if (clipped && e.scrollWidth > e.clientWidth + 1) { const full = e.textContent.trim(); let lo = 0, hi = full.length; while (lo < hi) { const mid = (lo + hi + 1) >> 1; e.textContent = full.slice(0, mid) + '…'; if (e.scrollWidth <= e.clientWidth + 1) lo = mid; else hi = mid - 1; } e.textContent = full.slice(0, lo).trimEnd() + '…'; e.style.overflow = 'visible'; st.truncated++; }
   }
+  // One line stays one line (2026-10-14): a flex row Chrome lays out on a single line is pinned to nowrap. Figma measures
+  // text a hair wider, and a wrapping row pushed Cost's "Catalog prices" and Govern's "View logs" onto a second line,
+  // sliding the whole page 28px down and cutting the bottom actions off the 900 frame.
+  st.rows = 0;
+  for (const e of document.querySelectorAll('body *')) {
+    const cs = getComputedStyle(e); if (!/flex/.test(cs.display) || !/wrap/.test(cs.flexWrap) || cs.flexDirection.startsWith('column')) continue;
+    const kids = [...e.children].filter(k => { const c = getComputedStyle(k); const r = k.getBoundingClientRect(); return c.position !== 'absolute' && c.position !== 'fixed' && r.width > 0 && r.height > 0; });
+    if (kids.length < 2) continue;
+    const tops = kids.map(k => Math.round(k.getBoundingClientRect().top)), mid = kids.map(k => { const r = k.getBoundingClientRect(); return r.top + r.height / 2; });
+    const oneLine = kids.every((k, i) => { const r = k.getBoundingClientRect(); return mid[0] >= r.top - 1 && mid[0] <= r.bottom + 1; }) && Math.max(...tops) - Math.min(...tops) < 40;
+    if (oneLine) { e.style.flexWrap = 'nowrap'; st.rows++; }
+  }
+  // Rings as vectors (2026-10-14): a hard-stop conic-gradient arrives in Figma as a soft angular gradient (the home's and
+  // Cost's rings came through faded). Each one, on the element or its ::before/::after, is redrawn as SVG sectors from its
+  // computed stops, painted where the gradient was, and the gradient itself goes.
+  st.rings = 0;
+  const split = (t) => { const out = []; let d = 0, cur = ''; for (const ch of t) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && d === 0) { out.push(cur.trim()); cur = ''; } else cur += ch; } if (cur.trim()) out.push(cur.trim()); return out; };
+  const parse = (bg) => {
+    const m = /conic-gradient\((.*)\)\s*$/.exec(bg); if (!m || /,\s*(?:linear|radial|conic)-gradient/.test(bg.slice(0, bg.indexOf('conic')))) return null;
+    let parts = split(m[1]), from = 0;
+    if (/^from |^at /.test(parts[0])) { const f = /from\s+(-?[\d.]+)deg/.exec(parts[0]); if (f) from = +f[1]; parts = parts.slice(1); }
+    const stops = [];
+    for (const pt of parts) {
+      const cm = /^(rgba?\([^)]*\)|#[0-9a-f]+|transparent|[a-z]+)\s*(.*)$/i.exec(pt); if (!cm) return null;
+      const pos = (cm[2].match(/-?[\d.]+(%|deg|turn|px)?/g) || []).map(v => v.endsWith('deg') ? parseFloat(v) / 3.6 : v.endsWith('turn') ? parseFloat(v) * 100 : v.endsWith('px') ? 0 : parseFloat(v));
+      stops.push({ c: cm[1], p: pos });
+    }
+    const flat = []; let last = 0;
+    stops.forEach((x, i) => { const ps = x.p.length ? x.p : [i === 0 ? 0 : i === stops.length - 1 ? 100 : null]; ps.forEach(v => { let q = v == null ? null : Math.max(last, v); if (q != null) last = q; flat.push({ c: x.c, p: q }); }); });
+    for (let i = 0; i < flat.length; i++) if (flat[i].p == null) { let j = i; while (j < flat.length && flat[j].p == null) j++; const a = flat[i - 1].p, b = j < flat.length ? flat[j].p : 100; for (let k = i; k < j; k++) flat[k].p = a + (b - a) * (k - i + 1) / (j - i + 1); }
+    const segs = []; if (flat.length && flat[0].p > 0) segs.push([flat[0].c, 0, flat[0].p]);
+    for (let i = 0; i < flat.length - 1; i++) if (flat[i + 1].p > flat[i].p) segs.push([flat[i].c, flat[i].p, flat[i + 1].p]);
+    if (flat.length && flat[flat.length - 1].p < 100) segs.push([flat[flat.length - 1].c, flat[flat.length - 1].p, 100]);
+    return { from, segs: segs.filter(s => s[2] - s[1] > 0.01 && !/rgba\([^)]*,\s*0\)|transparent/.test(s[0])) };
+  };
+  const sector = (cx, cy, r, a0, a1) => { const rad = (a) => (a - 90) * Math.PI / 180, x0 = cx + r * Math.cos(rad(a0)), y0 = cy + r * Math.sin(rad(a0)), x1 = cx + r * Math.cos(rad(a1)), y1 = cy + r * Math.sin(rad(a1));
+    if (a1 - a0 >= 359.99) return `M${cx - r},${cy}a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0Z`; return `M${cx},${cy}L${x0},${y0}A${r},${r} 0 ${a1 - a0 > 180 ? 1 : 0},1 ${x1},${y1}Z`; };
+  let ringId = 0;
+  for (const e of [...document.querySelectorAll('body *')]) {
+    for (const pseudo of [null, '::before', '::after']) {
+      const cs = getComputedStyle(e, pseudo); if (!cs.backgroundImage || !cs.backgroundImage.includes('conic-gradient')) continue;
+      if (pseudo && (cs.content === 'none' || cs.content === 'normal')) continue;
+      const g = parse(cs.backgroundImage); if (!g) continue;
+      const host = e.getBoundingClientRect(); if (!host.width) continue;
+      let left = 0, top = 0, w = host.width, h = host.height;
+      if (pseudo) { const pw = parseFloat(cs.width), ph = parseFloat(cs.height); if (!(pw > 0 && ph > 0)) continue; w = pw; h = ph;
+        const ins = ['top', 'left'].map(k => parseFloat(cs[k])); top = isNaN(ins[0]) ? 0 : ins[0]; left = isNaN(ins[1]) ? 0 : ins[1];
+        if (cs.position !== 'absolute') { left = 0; top = 0; } }
+      const r = Math.min(w, h) / 2, cx = w / 2, cy = h / 2;
+      const paths = g.segs.map(([c, a, b]) => `<path d="${sector(cx, cy, r, g.from + a * 3.6, g.from + b * 3.6)}" fill="${c}"/>`).join('');
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', w); svg.setAttribute('height', h); svg.setAttribute('viewBox', `0 0 ${w} ${h}`); svg.setAttribute('aria-label', 'Ring');
+      svg.setAttribute('style', `position:absolute;left:${left}px;top:${top}px;width:${w}px;height:${h}px;pointer-events:none;overflow:visible;z-index:0`);
+      svg.innerHTML = paths;
+      if (getComputedStyle(e).position === 'static') e.style.position = 'relative';
+      const id = 'r' + (ringId++); e.setAttribute('data-ring', id);
+      const kill = document.createElement('style'); kill.textContent = pseudo ? `[data-ring="${id}"]${pseudo}{background-image:none!important}` : `[data-ring="${id}"]{background-image:none!important}`; document.head.appendChild(kill);
+      // The ring sits under the element's own content: a positioned SVG paints above static siblings, which hid the
+      // ring's hole and its figure, so every other child is lifted (position relative, no offset, z-index 1).
+      for (const k of [...e.children]) { const kc = getComputedStyle(k); if (kc.position === 'static') { k.style.position = 'relative'; if (kc.zIndex === 'auto') k.style.zIndex = '1'; } }
+      e.insertBefore(svg, e.firstChild); st.rings++;
+    }
+  }
+  // Wedges as vectors (2026-10-14): the home's ring segments are solid circles cut by clip-path:polygon(), which Figma
+  // cannot express (they came through faded). Each becomes its own polygon as an SVG path inside its round box.
+  // OFF by default (2026-10-14): in Figma the re-baked Home lost its 900 pin and imported at full height (2062), so the
+  // pass runs only with --wedges until that is understood; the home's rings stay soft in the meantime.
+  st.wedges = 0;
+  for (const e of (window.__WEDGES ? [...document.querySelectorAll('body *')] : [])) {
+    const cs = getComputedStyle(e); if (!cs.clipPath || !cs.clipPath.startsWith('polygon(')) continue;
+    const bg = cs.backgroundColor; if (!bg || /rgba\([^)]*,\s*0\)|transparent/.test(bg)) continue;
+    const r = e.getBoundingClientRect(); if (!r.width || !r.height) continue;
+    const pts = cs.clipPath.slice(8, -1).split(',').map(pp => pp.trim().split(/\s+/).map((v, i) => v.endsWith('%') ? parseFloat(v) / 100 * (i ? r.height : r.width) : parseFloat(v)));
+    if (pts.some(p2 => p2.length !== 2 || p2.some(isNaN))) continue;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', r.width); svg.setAttribute('height', r.height); svg.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); svg.setAttribute('aria-label', 'Wedge');
+    svg.setAttribute('style', 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none');
+    svg.innerHTML = `<path d="M${pts.map(p2 => p2.join(',')).join('L')}Z" fill="${bg}"/>`;
+    if (cs.position === 'static') e.style.position = 'relative';
+    e.style.clipPath = 'none'; e.style.background = 'transparent'; e.style.overflow = 'hidden';
+    for (const k of [...e.children]) { const kc = getComputedStyle(k); if (kc.position === 'static') { k.style.position = 'relative'; if (kc.zIndex === 'auto') k.style.zIndex = '1'; } }
+    e.insertBefore(svg, e.firstChild); st.wedges++;
+  }
   return st;
 };
 const idx = JSON.parse(await readFile(INDEX, 'utf8')), notes = NOTES ? JSON.parse(await readFile(NOTES, 'utf8')) : {};
@@ -60,7 +143,8 @@ for (const b of idx.boards) {
   if (tall) s = s.replace('</head>', '<style id="tall-board">html,body{height:auto!important;min-height:0!important}</style></head>');
   const tmp = join(OUT, '.tmp.html'); await writeFile(tmp, s);
   await page.goto('file://' + (tmp.startsWith('/') ? tmp : join(process.cwd(), tmp)), { waitUntil: 'networkidle', timeout: 60000 }); await page.waitForTimeout(500);
-  await page.evaluate(BAKE);
+  if (args.includes('--wedges')) await page.evaluate(() => { window.__WEDGES = true; });
+  const baked = await page.evaluate(BAKE); console.log(b.title, JSON.stringify(baked));
   await writeFile(join(OUT, b.title + '.html'), await page.content()); n++;
 }
 await browser.close();
