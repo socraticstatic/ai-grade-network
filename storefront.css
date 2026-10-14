@@ -2412,3 +2412,173 @@ button.trf-pl{border:0;background:transparent;padding:0;font:inherit;font-size:1
   .home-chart .hm-plot>svg,.home-chart .hm-ends b,.home-save,.home-wfc>i,.home-burt>i,.home-br,.home-brs>i,.home-do,.home-ar{animation:none}
   .home-tile,.home-role,.home-vchip,.home-dot,.home-vmoves>button,.home-ib,.home-br{transition:none}}
 /* end of the home story */
+/* Connect > Orders as a story (2026-10-13, Micah: "Each page should be its own gorgeous, extremely beautiful story, with calls
+   to action on each"). The verdict is the lifecycle road beside the headline and the next move; the evidence is every order
+   a card on fixed slots (head, figure, path, lifecycle and move); the doors that start an order close the page, or are the
+   page while nothing is placed. Motion rests on its last frame: the cards rise in, the rings sweep, the live path draws. */
+.ord-page{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;min-width:0;padding-bottom:8px}
+.ord-page>.ord-verdict,.ord-page>.ord-pg{grid-column:1 / -1}
+.fx-card.ord-verdict{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:32px;padding:18px 24px;border-radius:16px;animation:ord-in .5s cubic-bezier(.22,1,.36,1) backwards}
+.ord-head{display:flex;align-items:center;gap:14px;min-width:0;padding:0;border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:12px}
+.ord-head:focus-visible,.ord-st-b:focus-visible,.ord-door-r:focus-visible{outline:2px solid var(--border-active);outline-offset:3px}
+.ord-head-tile{width:52px;height:52px;border-radius:14px}
+.ord-head-t{display:grid;gap:4px;justify-items:start;min-width:0}
+.ord-head-f{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.ord-head-f>b{font-size:32px;line-height:38px;font-weight:700;letter-spacing:-.02em;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.ord-head-f>small{font-size:14px;line-height:20px;font-weight:600;color:var(--text-body)}
+.ord-head-w{font-size:22px;line-height:28px;font-weight:700;letter-spacing:-.01em;color:var(--text-heading);white-space:nowrap}
+.ord-head:hover .ord-head-f>b,.ord-head:hover .ord-head-w{text-decoration:underline;text-decoration-color:var(--link);text-underline-offset:4px}
+.ord-money{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;color:var(--text-body);white-space:nowrap}
+.ord-money>b{font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}.ord-money small{font-size:13px;font-weight:500;color:var(--text-body)}.ord-money .ic{color:var(--text-body)}
+/* The road: five stations on one line, each a ring that sweeps to its share of the orders placed, its glyph inside. */
+.ord-road{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));min-width:0;max-width:640px;justify-self:center;width:100%}
+.ord-st{position:relative;display:grid;justify-items:center;min-width:0}
+.ord-st:not(:first-child)::before{content:"";position:absolute;left:-50%;right:50%;top:27px;height:2px;margin:0 32px;border-radius:1px;background:var(--cta);transform-origin:0 50%;animation:ord-draw .7s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.25s + var(--op-i,0) * 110ms)}
+.ord-st[data-off="true"]::before{background:var(--border-secondary)}
+.ord-st:nth-child(2)::before{height:0;background:transparent;border-top:2px dashed var(--border-primary)}
+.ord-st-b{display:grid;justify-items:center;gap:2px;min-width:0;width:100%;padding:0;border:0;background:transparent;font:inherit;color:inherit;cursor:pointer;border-radius:12px}
+.ord-ring{position:relative;display:grid;place-items:center;width:56px;height:56px;margin-bottom:6px;border-radius:50%;background:conic-gradient(var(--cta) calc(var(--op-p) * 1%),var(--bg-neutral) 0);color:var(--link);transition:box-shadow .2s;animation:op-ring 1.2s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.15s + var(--op-i,0) * 110ms)}
+.ord-ring::before{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--bg-base)}
+.ord-ring>.ic{position:relative}
+.ord-st[data-off="true"] .ord-ring{color:var(--text-disabled)}
+.ord-st[data-state="done"] .ord-ring{background:var(--cta)}.ord-st[data-state="done"] .ord-ring::before{inset:2px}
+.ord-st[data-draft="true"] .ord-ring{background:transparent;border:2px dashed var(--border-primary);box-sizing:border-box}
+.ord-st[data-draft="true"][data-off="false"] .ord-ring{border-color:var(--link)}
+.ord-st[data-draft="true"] .ord-ring::before{inset:3px}
+.ord-st-b>b{font-size:20px;line-height:24px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.ord-st-b>small{max-width:100%;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ord-st[data-off="true"] .ord-st-b>b{color:var(--text-light)}
+.ord-st-b:hover .ord-ring,.ord-st-b[aria-pressed="true"] .ord-ring{box-shadow:0 0 0 4px var(--bg-accent)}
+.ord-st-b[aria-pressed="true"]>small,.ord-st-b[aria-pressed="true"]>b{color:var(--link)}
+.op-go.ord-lead{min-width:184px}
+/* The cards: three a page, each the same slots, the lead one ringed. */
+.ord-pg{display:flex;justify-content:flex-end;min-height:28px;margin:-12px 0 -14px}.ord-pg .est-pager{margin:0}
+.ord-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;min-width:0}
+.fx-card.ord-card{position:relative;grid-template-rows:44px 40px auto auto;gap:18px;padding:20px 22px;border-radius:16px;transition:transform .25s,box-shadow .25s,border-color .25s,opacity .3s,filter .3s;animation:ord-in .6s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.1s + var(--op-i,0) * 90ms)}
+.fx-card.ord-card:hover{transform:translateY(-3px);border-color:var(--border-active);box-shadow:0 16px 36px -18px rgba(15,23,42,.35)}
+.fx-card.ord-card[data-top="true"]{border-color:var(--cta);box-shadow:inset 0 0 0 1px var(--cta)}
+.fx-card.ord-card[data-top="true"]:hover{box-shadow:inset 0 0 0 1px var(--cta),0 16px 36px -18px rgba(15,23,42,.35)}
+.fx-card.ord-card[data-kind="draft"]{border-style:dashed;border-color:var(--border-primary)}
+.fx-card.ord-card[data-kind="draft"][data-top="true"]{border-color:var(--cta);box-shadow:none}
+.fx-card.ord-card[data-dim="true"]{opacity:.42;filter:saturate(.2)}
+.ord-ch{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;gap:12px;min-width:0}
+.ord-tile{width:44px;height:44px;border-radius:12px}
+.ord-ct{display:grid;gap:4px;min-width:0}
+.ord-ct>b{font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ord-chips{display:flex;align-items:center;gap:14px;min-width:0;overflow:hidden}
+.ord-chip{display:inline-flex;align-items:center;gap:5px;flex:none;font-size:12px;line-height:16px;font-weight:600;color:var(--text-body);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ord-chip .ic{color:var(--text-body)}
+.ord-fig{display:flex;align-items:center;min-width:0}
+.ord-big{display:inline-flex;align-items:baseline;gap:4px;white-space:nowrap}
+.ord-big>.op-cu{font-size:30px;line-height:38px;font-weight:700;letter-spacing:-.02em;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.ord-big>small{font-size:14px;line-height:20px;color:var(--text-body)}
+.ord-none{display:inline-flex;align-items:center;gap:8px;font-size:14px;line-height:20px;font-weight:600;color:var(--text-body)}
+.ord-path{padding-top:16px;border-top:1px solid var(--border-secondary)}
+.ord-mk{display:block;width:16px;height:16px;background:center / contain no-repeat}
+.ord-path [data-state="done"] i,.ord-path [data-state="set"] i{background:var(--bg-base)}
+.ord-card[data-live="true"] .ord-path>span::before{transform-origin:0 50%;animation:ord-draw .8s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.35s + var(--op-i,0) * 90ms)}
+.ord-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:0;padding-top:16px;border-top:1px solid var(--border-secondary)}
+.ord-life{flex:0 1 168px;min-width:104px}
+.ord-steps.ps.sm{flex-basis:188px}
+.op-go.ord-go{flex:none;min-width:0;height:36px;padding:0 16px}
+/* Andi's dock narrows the page: a card under 320px keeps its lifecycle whole and its verb, the verb's glyph goes. */
+.fx-card.ord-card{container-type:inline-size}
+@container (max-width:320px){.op-go.ord-go{padding:0 12px;font-size:13px}.op-go.ord-go>.ic{display:none}.ord-foot{gap:10px}}
+/* The doors that start an order: compact under the cards, the whole page while nothing is placed. */
+.ord-doors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;min-width:0}
+.ord-doors[data-stack="true"]{grid-template-columns:minmax(0,1fr);grid-auto-rows:1fr;gap:16px;align-self:stretch;container-type:inline-size}
+/* Stacked beside one card, a door is wide enough to name its top entry, itself a door; beside two it keeps to its count. */
+.ord-door[data-stack="true"] .ord-door-rows{display:none}
+@container (min-width:560px){
+  .fx-card.ord-door[data-stack="true"]{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) auto;grid-template-areas:"h r go" "f r go"}
+  .ord-door[data-stack="true"] .ord-door-rows{display:grid;grid-area:r;align-self:center;border-top:0}
+  .ord-door[data-stack="true"] .ord-door-r{min-height:40px;padding:0 12px;border:0;border-radius:10px;background:var(--bg-wash)}
+  .ord-door[data-stack="true"] .ord-door-r:hover{box-shadow:none;background:var(--bg-accent)}
+  .ord-door[data-stack="true"] .ord-door-r:nth-child(n+2){display:none}
+}
+.fx-card.ord-door{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"h go" "f go";align-items:center;gap:2px 16px;padding:14px 18px;border-radius:14px;transition:border-color .2s,box-shadow .2s;animation:ord-in .5s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.3s + var(--op-i,0) * 80ms)}
+.fx-card.ord-door:hover{border-color:var(--border-active);box-shadow:0 12px 28px -20px rgba(15,23,42,.45)}
+.ord-door-h{grid-area:h;min-width:0}
+.ord-door-go{grid-area:go}
+.ord-door-f{grid-area:f;justify-self:start;display:inline-flex;align-items:baseline;gap:6px;margin-left:42px;white-space:nowrap}
+.ord-door-f>b{font-size:22px;line-height:28px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.ord-door-f>small{font-size:13px;line-height:18px;font-weight:600;color:var(--text-body)}
+.src-go.ord-door-go{flex:none;max-width:200px}
+.fx-card.ord-door[data-big="true"]{grid-template-columns:minmax(0,1fr);grid-template-areas:"h" "f" "rows" "go";grid-template-rows:32px 44px minmax(0,1fr) 36px;align-items:start;gap:16px 12px;min-height:356px;padding:22px 24px;border-radius:16px}
+.ord-door[data-big="true"]>.ord-door-f{align-self:center;margin-left:0}
+.ord-door[data-big="true"]>.ord-door-f>b{font-size:34px;line-height:40px;letter-spacing:-.02em}
+.ord-door[data-big="true"]>.ord-door-go{justify-self:stretch;max-width:none;height:36px}
+.ord-door-rows{grid-area:rows;display:grid;align-content:start;border-top:1px solid var(--border-secondary)}
+.ord-door-r{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:46px;padding:0;border:0;border-bottom:1px solid var(--border-secondary);background:transparent;font:inherit;color:var(--text-heading);text-align:left;cursor:pointer;transition:background .12s,box-shadow .12s}
+.ord-door-r:hover{background:var(--bg-wash);box-shadow:-10px 0 0 var(--bg-wash),10px 0 0 var(--bg-wash)}
+.ord-door-r>.ic{color:var(--link)}.ord-door-r>.ord-mk{width:20px;height:20px}
+.ord-door-l{min-width:0;font-size:14px;line-height:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ord-door-r:hover .ord-door-l{text-decoration:underline;text-decoration-color:var(--link);text-underline-offset:3px}
+.ord-door-v{font-size:13px;line-height:18px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ord-door-v[data-k="save"]{color:var(--success)}
+.ord-door-v[data-k="score"]{display:grid;place-items:center;min-width:34px;height:24px;padding:0 6px;box-sizing:border-box;border-radius:8px;background:var(--bg-accent);color:var(--link)}
+/* Help & Resources as a story (2026-10-13): the brand band holds the one search box, Andi's questions and the verdict (guides,
+   terms, Andi as glyph and number; the two views' figures are the tabs); the guides are cards of fixed slots with their marks,
+   a figure from this estate and their steps as a strip; the resources close the page as doors. No purple: the coming-soon
+   resources are one neutral chip. */
+.hlp-page{display:grid;gap:24px;grid-template-columns:minmax(0,1fr);min-width:0;padding-bottom:8px;animation:fadeIn .3s}
+.hlp-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:40px;padding:24px 28px;border-radius:16px;background:linear-gradient(120deg,#0057b8 0%,#003d82 55%,#009fdb 100%);color:#fff}
+.hlp-ask{display:grid;gap:14px;min-width:0}
+.hlp-ask>h1{margin:0;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.03em}
+.fx-search.hlp-search{width:100%;height:46px;padding:0 16px;gap:10px;border:0;border-radius:9999px;background:#fff;box-shadow:0 8px 24px -14px rgba(0,0,0,.5)}
+.fx-search.hlp-search .ic{color:#454b52}
+.fx-search.hlp-search input{font-size:15px;color:#13171b}.fx-search.hlp-search input::placeholder{color:#50565d}
+.fx-search.hlp-search:focus-within{outline:2px solid #fff;outline-offset:2px}
+.hlp-asks{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.hlp-asks>button{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border:1px solid rgba(255,255,255,.38);border-radius:9999px;background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:13px;line-height:18px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s}
+.hlp-asks>button:hover{background:rgba(255,255,255,.24)}
+.hlp-verdict{display:flex;align-items:stretch;gap:10px}
+.hlp-tabs{display:flex;gap:10px}
+.hlp-v{display:grid;justify-items:center;align-content:center;gap:2px;width:104px;min-height:120px;box-sizing:border-box;padding:12px 8px;border:1px solid rgba(255,255,255,.32);border-radius:14px;background:rgba(255,255,255,.08);color:#fff;font:inherit;cursor:pointer;transition:background .2s,border-color .2s,transform .2s;animation:ord-in .5s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.1s + var(--op-i,0) * 90ms)}
+.hlp-v:hover{background:rgba(255,255,255,.18);transform:translateY(-2px)}
+.hlp-v[aria-selected="true"]{background:#fff;border-color:#fff;color:#0057b8}
+.hlp-v:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.hlp-v-i{display:grid;place-items:center;width:36px;height:36px;margin-bottom:4px;border-radius:50%;background:rgba(255,255,255,.18)}
+.hlp-v[aria-selected="true"] .hlp-v-i{background:#e6f0fa}
+.hlp-v>b{font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hlp-v>small{font-size:13px;line-height:18px;font-weight:600;opacity:.92}
+.hlp-v[data-andi="true"] .hlp-v-i{background:#fff}
+.hlp-andi-mk{display:block;width:24px;height:24px;background:url('brand/andi-symbol.svg') center / contain no-repeat}
+.hlp-andi-mk.sm{width:18px;height:18px}
+.hlp-guides{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;min-width:0}
+.fx-card.hlp-guide{grid-template-rows:48px 44px auto 36px;gap:18px;padding:22px 22px 20px;border-radius:16px;transition:transform .25s,box-shadow .25s,border-color .25s;animation:ord-in .6s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.15s + var(--op-i,0) * 90ms)}
+.fx-card.hlp-guide:hover{transform:translateY(-3px);border-color:var(--border-active);box-shadow:0 16px 36px -18px rgba(15,23,42,.35)}
+.fx-card.hlp-guide[data-primary="true"]{border-color:var(--cta);box-shadow:inset 0 0 0 1px var(--cta)}
+.hlp-g-h{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hlp-g-tile{width:48px;height:48px;border-radius:14px}
+.hlp-g-fig{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--text-body);font:inherit;cursor:pointer;transition:border-color .15s}
+.hlp-g-fig>b{font-size:16px;line-height:20px;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.hlp-g-fig:hover{border-color:var(--border-active)}.hlp-g-fig:hover>b{color:var(--link)}
+.hlp-g-t{margin:0;align-self:center;font-size:16px;line-height:22px;font-weight:700;letter-spacing:-.01em;color:var(--text-heading);text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hlp-steps{padding-top:16px;border-top:1px solid var(--border-secondary)}
+.hlp-steps>span::before{transform-origin:0 50%;animation:ord-draw .7s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.4s + var(--op-i,0) * 90ms)}
+.hlp-steps [data-state="set"] i{background:var(--bg-base)}
+.op-go.hlp-go{min-width:0;width:100%;height:36px}
+.hlp-none{display:flex;align-items:center;justify-content:center;gap:12px;min-height:120px;border:1px dashed var(--border-primary);border-radius:16px;font-size:15px;line-height:20px;color:var(--text-heading)}
+.hlp-none>.ic{color:var(--text-body)}
+.hlp-res{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:16px;min-width:0}
+.hlp-r{display:flex;align-items:center;gap:12px;min-width:0;height:60px;box-sizing:border-box;padding:0 16px;border:1px solid var(--border-secondary);border-radius:14px;background:var(--bg-base);font:inherit;color:var(--text-heading);text-align:left;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .2s;animation:ord-in .5s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(.35s + var(--op-i,0) * 70ms)}
+.hlp-r:hover{border-color:var(--border-active);transform:translateY(-2px);box-shadow:0 12px 28px -20px rgba(15,23,42,.45)}
+.hlp-r>b{min-width:0;font-size:14px;line-height:20px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hlp-r-n{display:grid;place-items:center;min-width:24px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:9999px;background:var(--bg-accent);color:var(--link);font-size:13px;line-height:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.hlp-r>.hlp-r-n{margin-left:auto}.hlp-r:hover>b{color:var(--link)}
+.hlp-soon{display:inline-flex;align-items:center;gap:6px;align-self:center;height:32px;padding:0 12px;border-radius:9999px;background:var(--bg-neutral);color:var(--text-body);font-size:13px;line-height:18px;font-weight:600;white-space:nowrap;cursor:help}
+.hlp-soon>b{color:var(--text-heading);font-variant-numeric:tabular-nums}
+.hlp-gloss{display:grid;gap:16px;min-width:0}
+.hlp-terms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:32px;min-width:0;border-top:1px solid var(--border-secondary)}
+.hlp-term{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:14px;min-height:58px;box-sizing:border-box;padding:7px 0;border-bottom:1px solid var(--border-secondary);animation:ord-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(var(--op-i,0) * 30ms)}
+.hlp-term-t{display:grid;gap:1px;min-width:0}
+.hlp-term-t>b{font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)}
+.hlp-term-t>span{font-size:13px;line-height:18px;color:var(--text-body);text-wrap:pretty}
+.hlp-gloss-f{display:flex;align-items:center;justify-content:flex-end;gap:12px}
+.op-go.hlp-ask-go{min-width:0}
+@media (prefers-reduced-motion: reduce){.hlp-v,.fx-card.hlp-guide,.hlp-steps>span::before,.hlp-r,.hlp-term{animation:none}.hlp-v,.fx-card.hlp-guide,.hlp-r,.hlp-asks>button{transition:none}.hlp-v:hover,.fx-card.hlp-guide:hover,.hlp-r:hover{transform:none}}
+@keyframes ord-in{from{opacity:0;transform:translateY(8px)}}
+@keyframes ord-draw{from{transform:scaleX(0)}}
+@media (prefers-reduced-motion: reduce){.fx-card.ord-verdict,.fx-card.ord-card,.fx-card.ord-door,.ord-ring,.ord-st::before,.ord-card .ord-path>span::before{animation:none}.fx-card.ord-card,.fx-card.ord-door,.ord-ring,.ord-door-r{transition:none}.fx-card.ord-card:hover{transform:none}}
+

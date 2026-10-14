@@ -962,31 +962,66 @@
     </sc-for>
   </div>
   </sc-if>
-  <!-- Orders (2026-09-30, "options and orders is so weird"): the order in progress, which you can resume, and the orders placed this session with their stage. Never invented history. -->
+  <!-- Orders (2026-09-30, "options and orders is so weird"): the order in progress, which you can resume, and the orders placed this session with their stage. Never invented history.
+       As a story (2026-10-13, Micah: "Each page should be its own gorgeous, extremely beautiful story, with calls to action on
+       each"; "less words, and more visualizations, animations and icons"): the verdict is where the orders stand, the
+       lifecycle road (in progress, Ordered, Provision, Live, Insight) as glyph and number, each station a door, beside the
+       next move; the evidence is every order as a card with its way's mark, its path from its own ends, its monthly figure
+       and its lifecycle; the moves are Resume, Go live and Open connection, and the three doors that start an order. With
+       nothing placed the doors are the page. -->
   <sc-if value="{{ cnIsOrders }}" hint-placeholder-val="{{ false }}">
-  <div aria-label="Orders" style="display:grid;grid-template-columns:{{ ordCols }};gap:24px;align-items:start">
-    <div style="display:grid;gap:8px;min-width:0">
-      <h3 class="fx-card-title">Placed this session</h3>
-      <sc-if value="{{ hasOrdRows }}" hint-placeholder-val="{{ false }}">
-      <div class="dt">
-        <div class="dt-h"><div class="dt-r"><div class="dt-c dt-th" style="width:30%">Order</div><div class="dt-c dt-th">Connection</div><div class="dt-c dt-th" style="width:16%">Monthly</div><div class="dt-c dt-th" style="width:20%">Stage</div></div></div>
-        <div class="dt-b"><sc-for list="{{ ordRows }}" as="or" hint-placeholder-count="2"><div class="dt-r"><div data-th="Order" class="dt-c" style="vertical-align:top"><div style="font-weight:600;color:var(--text-heading);overflow-wrap:anywhere">{{ or.title }}</div><div style="font-size:12px;line-height:16px;color:var(--text-light);overflow-wrap:anywhere">{{ or.sub }}</div></div><div data-th="Connection" class="dt-c" style="vertical-align:top"><div style="color:var(--text-heading);overflow-wrap:anywhere">{{ or.type }}</div><div style="font-size:12px;line-height:16px;color:var(--text-light);overflow-wrap:anywhere">{{ or.what }}</div></div><div data-th="Monthly" class="dt-c" style="vertical-align:top;overflow-wrap:anywhere">{{ or.monthly }}</div><div data-th="Stage" class="dt-c" style="vertical-align:top"><div style="display:flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;background:{{ or.stageInk }};flex:none"></span><span style="color:var(--text-heading)">{{ or.stage }}</span></div><div style="font-size:12px;line-height:16px;color:var(--text-light)">{{ or.atLine }}</div><sc-if value="{{ or.canGoLive }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ or.goLive }}" title="Validate the region this order reaches and light the task's Live and Insight phases" style="height:26px;padding:0 10px;font-size:12px;margin-top:6px;gap:6px"><span class="ic s14" style="--ic:url('brand/icons/play.svg')"></span>Go live</button></sc-if></div></div></sc-for></div>
+  <div aria-label="Orders" class="ord-page" data-empty="{{ ordDoorsBig }}">
+    <div class="fx-card ord-verdict" role="group" aria-label="Where your orders stand">
+      <button class="ord-head" onClick="{{ ordHead.go }}" title="{{ ordHead.title }}">
+        <span class="ic-tile ord-head-tile"><span class="ic s24" style="--ic:url('brand/icons/shopping-bag.svg')"></span></span>
+        <span class="ord-head-t">
+          <sc-if value="{{ ordHead.empty }}" hint-placeholder-val="{{ false }}"><b class="ord-head-w">{{ ordHead.word }}</b></sc-if>
+          <sc-if value="{{ ordHead.hasN }}" hint-placeholder-val="{{ true }}"><span class="ord-head-f"><b class="op-cu" data-k="false" style="--op-k:0;--op-r:{{ ordHead.cu.r }};--op-pre:'';--op-suf:''">{{ ordHead.nF }}</b><small>{{ ordHead.word }}</small></span></sc-if>
+          <sc-if value="{{ ordHead.hasMoney }}" hint-placeholder-val="{{ true }}"><span class="ord-money" title="{{ ordHead.moneyTitle }}"><span class="ic s16" style="--ic:url('brand/icons/bill.svg')"></span><b>{{ ordHead.money }}<small>/mo</small></b></span></sc-if>
+        </span>
+      </button>
+      <div class="ord-road" role="list" aria-label="The lifecycle: in progress, Ordered, Provision, Live, Insight">
+        <sc-for list="{{ ordRoad }}" as="rd" hint-placeholder-count="5"><div role="listitem" class="ord-st" data-draft="{{ rd.draft }}" data-off="{{ rd.off }}" data-state="{{ rd.state }}" style="--op-i:{{ rd.i }}"><button class="ord-st-b" aria-pressed="{{ rd.on }}" onClick="{{ rd.go }}" title="{{ rd.title }}" aria-label="{{ rd.title }}"><span class="ord-ring" style="--op-p:{{ rd.pct }}"><span class="ic s20" style="--ic:url('brand/icons/{{ rd.icon }}.svg')"></span></span><b>{{ rd.nF }}</b><small>{{ rd.label }}</small></button></div></sc-for>
       </div>
-      <sc-if value="{{ ordPager.many }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;line-height:16px;color:var(--text-light)"><span>{{ ordPager.label }}</span><button class="fx-btn" onClick="{{ ordPager.prev }}" aria-label="Previous page" style="opacity:{{ ordPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ ordPager.next }}" aria-label="Next page" style="opacity:{{ ordPager.nextOp }}">›</button></div></sc-if>
-      </sc-if>
-      <sc-if value="{{ ordNonePlaced }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 0;border-top:1px solid var(--border-secondary);font-size:13px;line-height:19px;color:var(--text-light)">Nothing placed yet this session. The order beside this is still in progress.</div></sc-if>
-      <sc-if value="{{ noOrders }}" hint-placeholder-val="{{ true }}">
-        <!-- The empty state centred, a glyph above it (gestalt review, 2026-10-08): not a line hugging the corner of an empty page. -->
-        <div style="display:grid;gap:10px;justify-items:center;text-align:center;padding:72px 0 24px;border-top:1px solid var(--border-secondary)"><span class="ic-tile" style="width:56px;height:56px;border-radius:16px"><span class="ic s24" style="--ic:url('brand/icons/shopping-bag.svg')"></span></span><div style="font-size:18px;line-height:24px;font-weight:700;color:var(--text-heading)">{{ ordersEmpty }}</div><div style="font-size:13px;line-height:19px;color:var(--text-light);text-wrap:pretty">{{ ordersEmptyLine }}</div><button class="fx-btn" onClick="{{ goWays }}">Ways to connect</button></div>
-      </sc-if>
+      <button class="op-go ord-lead" data-primary="true" onClick="{{ ordLead.go }}" title="{{ ordLead.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ ordLead.icon }}.svg')"></span>{{ ordLead.label }}</button>
     </div>
-    <sc-if value="{{ ordInProgress.has }}" hint-placeholder-val="{{ false }}">
-    <aside aria-label="Order in progress" style="padding:18px 20px;background:var(--bg-base);border:1px solid var(--border-secondary);border-radius:16px;display:grid;gap:10px;align-content:start">
-      <div style="display:grid;gap:1px"><span style="font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)">In progress</span><span style="font-size:15px;line-height:21px;font-weight:700;color:var(--text-heading);overflow-wrap:anywhere">{{ ordInProgress.title }}</span><span style="font-size:12px;line-height:16px;color:var(--text-light)">{{ ordInProgress.stepLine }}</span></div>
-      <div><sc-for list="{{ ordInProgress.rows }}" as="ip" hint-placeholder-count="8"><div style="display:grid;grid-template-columns:10px 104px minmax(0,1fr);gap:8px;align-items:baseline;padding:5px 0;border-top:1px solid var(--border-secondary)"><span aria-hidden="true" style="width:8px;height:8px;border-radius:9999px;border:1.5px {{ ip.dash }} {{ ip.ring }};background:{{ ip.dot }};box-sizing:border-box"></span><span style="font-size:12px;line-height:16px;color:var(--text-light)">{{ ip.label }}</span><span style="font-size:12px;line-height:16px;color:{{ ip.ink }};overflow-wrap:anywhere">{{ ip.value }}</span></div></sc-for></div>
-      <button onClick="{{ ordInProgress.resume }}" style="justify-self:start;height:34px;padding:0 16px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Resume</button>
-    </aside>
+    <sc-if value="{{ ordPager.many }}" hint-placeholder-val="{{ false }}"><div class="ord-pg"><span class="est-pager"><span>{{ ordPager.label }}</span><button class="fx-btn" onClick="{{ ordPager.prev }}" aria-label="Previous page" style="opacity:{{ ordPager.prevOp }}">‹</button><button class="fx-btn" onClick="{{ ordPager.next }}" aria-label="Next page" style="opacity:{{ ordPager.nextOp }}">›</button></span></div></sc-if>
+    <sc-if value="{{ hasOrdCards }}" hint-placeholder-val="{{ false }}">
+      <div class="ord-grid" role="list" aria-label="Your orders" style="grid-column:span {{ ordGridSpan }};grid-template-columns:{{ ordGridCols }}">
+        <sc-for list="{{ ordCards }}" as="oc" hint-placeholder-count="3">
+        <div role="listitem" class="fx-card ord-card" data-kind="{{ oc.kind }}" data-top="{{ oc.top }}" data-dim="{{ oc.dim }}" data-live="{{ oc.live }}" aria-label="{{ oc.title }}" style="--op-i:{{ oc.i }}">
+          <div class="ord-ch">
+            <span class="ic-tile ord-tile" role="img" aria-label="{{ oc.tileTitle }}" title="{{ oc.tileTitle }}"><span class="ic s20" style="--ic:url('brand/icons/{{ oc.tileIcon }}.svg')"></span></span>
+            <span class="ord-ct"><b title="{{ oc.titleFull }}">{{ oc.title }}</b><span class="ord-chips"><sc-for list="{{ oc.chips }}" as="ch" hint-placeholder-count="2"><span class="ord-chip" title="{{ ch.title }}"><span class="ic s14" style="--ic:url('brand/icons/{{ ch.icon }}.svg')"></span>{{ ch.label }}</span></sc-for></span></span>
+          </div>
+          <div class="ord-fig">
+            <sc-if value="{{ oc.fig.has }}" hint-placeholder-val="{{ true }}"><button class="fx-fig ord-big" onClick="{{ oc.fig.go }}" title="{{ oc.fig.title }}. {{ oc.fig.goTitle }}"><span class="op-cu" data-k="{{ oc.fig.cu.kOn }}" style="--op-k:{{ oc.fig.cu.k }};--op-r:{{ oc.fig.cu.r }};--op-pre:'$';--op-suf:''">{{ oc.fig.big }}</span><small>{{ oc.fig.unit }}</small></button></sc-if>
+            <sc-if value="{{ oc.figNone }}" hint-placeholder-val="{{ false }}"><span class="ord-none" title="{{ oc.noneTitle }}"><span class="ic s16" style="--ic:url('brand/icons/clock.svg')"></span>{{ oc.noneWord }}</span></sc-if>
+          </div>
+          <div class="ps {{ oc.path.cls }} ord-path" role="img" aria-label="{{ oc.pathLabel }}">
+            <sc-for list="{{ oc.path.nodes }}" as="pn" hint-placeholder-count="5"><span data-state="{{ pn.state }}" title="{{ pn.title }}"><i><sc-if value="{{ pn.hasIcon }}" hint-placeholder-val="{{ true }}"><span class="ic s14" style="--ic:url('brand/icons/{{ pn.icon }}.svg')"></span></sc-if><sc-if value="{{ pn.hasMark }}" hint-placeholder-val="{{ false }}"><span class="ord-mk" style="background-image:url('{{ pn.markSrc }}')"></span></sc-if></i><small>{{ pn.label }}</small></span></sc-for>
+          </div>
+          <div class="ord-foot">
+            <sc-if value="{{ oc.hasPhases }}" hint-placeholder-val="{{ true }}"><span class="ps sm ord-life" role="group" aria-label="Where this order is"><sc-for list="{{ oc.phases }}" as="ph" hint-placeholder-count="4"><span data-state="{{ ph.state }}" title="{{ ph.title }}"><button class="ps-node" onClick="{{ ph.go }}" disabled="{{ ph.noDoor }}" aria-label="{{ ph.title }}"><i><span class="ic s14" style="--ic:url('brand/icons/{{ ph.icon }}.svg')"></span></i></button></span></sc-for></span></sc-if>
+            <sc-if value="{{ oc.hasSteps }}" hint-placeholder-val="{{ false }}"><span class="ps sm ord-life ord-steps" role="img" aria-label="{{ oc.stepsLabel }}" style="grid-template-columns:{{ oc.stepCols }}"><sc-for list="{{ oc.steps }}" as="sp" hint-placeholder-count="6"><span data-state="{{ sp.state }}" title="{{ sp.title }}"><i><span class="ic s14" style="--ic:url('brand/icons/{{ sp.icon }}.svg')"></span></i></span></sc-for></span></sc-if>
+            <button class="op-go ord-go" data-primary="{{ oc.move.primary }}" onClick="{{ oc.move.go }}" title="{{ oc.move.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ oc.move.icon }}.svg')"></span>{{ oc.move.label }}</button>
+          </div>
+        </div>
+        </sc-for>
+      </div>
     </sc-if>
+    <!-- The doors fill the cards' row when fewer than three cards are on it, stacked (2026-10-13: one order and two thirds of
+         the row empty was a dead half-page); with three they are a row of their own, and with none they are the page. -->
+    <div class="ord-doors" data-big="{{ ordDoorsBig }}" data-stack="{{ ordDoorsStack }}" role="list" aria-label="Start an order" style="grid-column:{{ ordDoorsCol }}">
+      <sc-for list="{{ ordDoors }}" as="od" hint-placeholder-count="3">
+      <div role="listitem" class="fx-card ord-door" data-big="{{ od.big }}" data-stack="{{ od.stack }}" data-off="{{ od.off }}" style="--op-i:{{ od.i }}">
+        <button class="est-kpi-h ord-door-h" onClick="{{ od.go }}" title="{{ od.headTitle }}"><span class="ic-tile s32"><span class="ic s18" style="--ic:url('brand/icons/{{ od.icon }}.svg')"></span></span>{{ od.title }}<span class="ic s16 go" style="--ic:url('brand/icons/chevron-right.svg')"></span></button>
+        <button class="fx-fig ord-door-f" onClick="{{ od.go }}" title="{{ od.headTitle }}"><b class="op-cu" data-k="false" style="--op-k:0;--op-r:{{ od.cu.r }};--op-pre:'';--op-suf:''">{{ od.nF }}</b><small>{{ od.unit }}</small></button>
+        <sc-if value="{{ od.rowsOn }}" hint-placeholder-val="{{ true }}"><div class="ord-door-rows"><sc-for list="{{ od.rows }}" as="dr" hint-placeholder-count="3"><button class="ord-door-r" onClick="{{ dr.go }}" title="{{ dr.title }}"><sc-if value="{{ dr.hasMark }}" hint-placeholder-val="{{ false }}"><span class="ord-mk" style="background-image:url('{{ dr.markSrc }}')"></span></sc-if><sc-if value="{{ dr.hasIcon }}" hint-placeholder-val="{{ true }}"><span class="ic s16" style="--ic:url('brand/icons/{{ dr.icon }}.svg')"></span></sc-if><span class="ord-door-l">{{ dr.label }}</span><sc-if value="{{ dr.hasFig }}" hint-placeholder-val="{{ false }}"><b class="ord-door-v" data-k="{{ dr.figKind }}" title="{{ dr.figTitle }}">{{ dr.fig }}</b></sc-if></button></sc-for></div></sc-if>
+        <button class="src-go ord-door-go" onClick="{{ od.cta.go }}" title="{{ od.cta.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ od.cta.icon }}.svg')"></span>{{ od.cta.label }}</button>
+      </div>
+      </sc-for>
+    </div>
   </div>
   </sc-if>
   <!-- Connect · Recommended (Micah, 2026-09-30: "with AT&amp;T tier options here's what you'd get"): one ranked list of moves, each a set one order serves; today once, then three AT&amp;T tiers side by side, each with Security, Performance and Cost after it. -->
@@ -2653,47 +2688,49 @@
 </sc-if>
 
 <!-- ===== S7 BROWSE ===== -->
-<!-- Help & Resources (2026-09-28): NetBond Advanced's information center, simpler. Andi, guides from this estate, seven resources, the glossary. -->
+<!-- Help & Resources (2026-09-28): NetBond Advanced's information center, simpler. Andi, guides from this estate, seven resources, the glossary.
+     As a story (2026-10-13, Micah: "Each page should be its own gorgeous, extremely beautiful story, with calls to action on
+     each"; "less words, and more visualizations, animations and icons"): the verdict is what help is at hand, guides, terms
+     and Andi as glyph and number, the two views' figures being the page's tabs; the search box stays the one it was ("don't
+     invent a new ui for filtering/searching"). The evidence is the guides as cards with their marks, a figure from this
+     estate and their steps as a strip; the moves are each guide's verb, Andi's questions, and the resources as doors. -->
 <sc-if value="{{ sS9 }}" hint-placeholder-val="{{ false }}">
-<section data-screen-label="S9 Help" style="animation:fadeIn .3s;display:grid;gap:18px;grid-template-columns:minmax(0,1fr)">
-  <div style="display:grid;gap:14px;padding:22px 28px;border-radius:16px;background:linear-gradient(120deg,#0057b8 0%,#003d82 55%,#009fdb 100%);color:#fff">
-    <h1 style="margin:0;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.03em">How can we help?</h1>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <label style="flex:1 1 360px;display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:9999px;background:#fff;color:#13171b;min-width:0"><span aria-hidden="true" style="width:18px;height:18px;flex:none;background:url('brand/icons-light/search.svg') center / contain no-repeat"></span><input value="{{ helpQ }}" onChange="{{ setHelpQ }}" placeholder="Search guides and terms" aria-label="Search help" style="flex:1;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:15px;color:#13171b"></label>
-      <button onClick="{{ askAndiHelp }}" style="height:44px;padding:0 20px;border:0;border-radius:9999px;background:#fff;color:#0057b8;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Ask Andi</button>
+<section data-screen-label="S9 Help" class="hlp-page">
+  <div class="hlp-hero">
+    <div class="hlp-ask">
+      <h1>How can we help?</h1>
+      <label class="fx-search hlp-search"><span class="ic s18" aria-hidden="true" style="--ic:url('brand/icons/search.svg')"></span><input value="{{ helpQ }}" onChange="{{ setHelpQ }}" placeholder="Search guides and terms" aria-label="Search help"></input></label>
+      <div class="hlp-asks" role="group" aria-label="Ask Andi"><sc-for list="{{ helpAsks }}" as="ha" hint-placeholder-count="3"><button onClick="{{ ha.go }}" title="Ask Andi: {{ ha.q }}"><span class="ic s14" style="--ic:url('brand/icons/ai.svg')"></span>{{ ha.q }}</button></sc-for></div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ helpAsks }}" as="ha" hint-placeholder-count="3"><button onClick="{{ ha.go }}" style="height:30px;padding:0 12px;border:1px solid rgba(255,255,255,.35);border-radius:9999px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap" style-hover="background:rgba(255,255,255,.24)">{{ ha.q }}</button></sc-for></div>
+    <div class="hlp-verdict" role="group" aria-label="Help at hand">
+      <div role="tablist" aria-label="Help views" class="hlp-tabs"><sc-for list="{{ helpVerdict }}" as="hv" hint-placeholder-count="2"><sc-if value="{{ hv.tab }}" hint-placeholder-val="{{ true }}"><button role="tab" aria-selected="{{ hv.on }}" aria-label="{{ hv.label }}" class="hlp-v" onClick="{{ hv.go }}" title="{{ hv.title }}" style="--op-i:{{ hv.i }}"><span class="hlp-v-i"><span class="ic s20" style="--ic:url('brand/icons/{{ hv.icon }}.svg')"></span></span><b class="op-cu" data-k="false" style="--op-k:0;--op-r:{{ hv.n }};--op-pre:'';--op-suf:''">{{ hv.nF }}</b><small>{{ hv.unit }}</small></button></sc-if></sc-for></div>
+      <sc-for list="{{ helpVerdict }}" as="hb" hint-placeholder-count="1"><sc-if value="{{ hb.btn }}" hint-placeholder-val="{{ false }}"><button class="hlp-v" data-andi="true" onClick="{{ askAndiHelp }}" title="{{ hb.title }}" aria-label="Andi" style="--op-i:{{ hb.i }}"><span class="hlp-v-i"><span class="hlp-andi-mk" aria-hidden="true"></span></span><b>{{ hb.nF }}</b><small>{{ hb.unit }}</small></button></sc-if></sc-for>
+    </div>
   </div>
-  <div role="tablist" aria-label="Help views" style="display:flex;align-items:center;border-bottom:1px solid var(--border-secondary)"><sc-for list="{{ helpPanels }}" as="hp" hint-placeholder-count="2"><button role="tab" aria-selected="{{ hp.on }}" onClick="{{ hp.go }}" style="border:0;border-bottom:2px solid {{ hp.line }};background:transparent;padding:6px 2px;margin-right:18px;font:inherit;font-size:15px;line-height:22px;font-weight:{{ hp.weight }};color:{{ hp.color }};cursor:pointer;white-space:nowrap">{{ hp.label }}</button></sc-for></div>
   <sc-if value="{{ helpPanelStart }}" hint-placeholder-val="{{ true }}">
   <sc-if value="{{ hasHelpGuides }}" hint-placeholder-val="{{ true }}">
-  <div style="display:grid;gap:12px">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px">
-      <sc-for list="{{ helpGuides }}" as="hg" hint-placeholder-count="4"><div class="fx-card" style="gap:14px;padding:20px">
-        <div style="display:flex;align-items:center;gap:12px"><span aria-hidden="true" style="width:40px;height:40px;flex:none;border-radius:10px;background:var(--bg-accent);display:flex;align-items:center;justify-content:center"><span style="width:22px;height:22px;background:url('{{ hg.iconSrc }}') center / contain no-repeat"></span></span><h3 class="fx-card-title" style="margin:0;white-space:normal;line-height:21px">{{ hg.title }}</h3></div>
-        <div style="display:grid;gap:8px"><sc-for list="{{ hg.steps }}" as="st" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:10px"><span aria-hidden="true" style="width:22px;height:22px;flex:none;border-radius:9999px;background:var(--bg-neutral);color:var(--text-heading);font-size:12px;line-height:22px;font-weight:700;text-align:center">{{ st.n }}</span><span style="font-size:13px;line-height:18px;color:var(--text-body)">{{ st.label }}</span></div></sc-for></div>
-        <button onClick="{{ hg.go }}" style="justify-self:start;margin-top:auto;height:34px;padding:0 16px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--cta-hover)">{{ hg.cta }} →</button>
-      </div></sc-for>
+  <div class="hlp-guides" role="list" aria-label="Guides from your estate" style="grid-template-columns:{{ helpGuideCols }}">
+    <sc-for list="{{ helpGuides }}" as="hg" hint-placeholder-count="4">
+    <div role="listitem" class="fx-card hlp-guide" data-primary="{{ hg.primary }}" style="--op-i:{{ hg.i }}">
+      <div class="hlp-g-h"><span class="ic-tile hlp-g-tile"><span class="ic s24" style="--ic:url('brand/icons/{{ hg.icon }}.svg')"></span></span><sc-if value="{{ hg.fig.has }}" hint-placeholder-val="{{ true }}"><button class="hlp-g-fig" onClick="{{ hg.fig.go }}" title="{{ hg.fig.title }}" aria-label="{{ hg.fig.title }}"><span class="ic s16" style="--ic:url('brand/icons/{{ hg.fig.icon }}.svg')"></span><b>{{ hg.fig.nF }}</b></button></sc-if></div>
+      <h3 class="hlp-g-t">{{ hg.title }}</h3>
+      <div class="ps three hlp-steps" role="img" aria-label="{{ hg.stepsLabel }}"><sc-for list="{{ hg.steps }}" as="st" hint-placeholder-count="3"><span data-state="set" title="{{ st.title }}"><i><span class="ic s14" style="--ic:url('brand/icons/{{ st.icon }}.svg')"></span></i><small>{{ st.short }}</small></span></sc-for></div>
+      <button class="op-go hlp-go" data-primary="{{ hg.primary }}" onClick="{{ hg.go }}" title="{{ hg.title }}">{{ hg.cta }}<span class="ic s16" style="--ic:url('brand/icons/arrow-right.svg')"></span></button>
     </div>
+    </sc-for>
   </div>
   </sc-if>
-  <div style="display:grid;gap:12px">
-    <div style="font-size:12px;line-height:16px;font-weight:600;color:var(--text-body)">Resources</div>
-    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
-      <sc-for list="{{ helpLive }}" as="hr" hint-placeholder-count="3"><div class="fx-card" style="gap:10px;padding:18px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span aria-hidden="true" style="width:36px;height:36px;border-radius:8px;background:var(--bg-wash);border:1px solid var(--border-secondary);display:flex;align-items:center;justify-content:center"><span style="width:20px;height:20px;background:url('{{ hr.iconSrc }}') center / contain no-repeat"></span></span><sc-if value="{{ hr.soon }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 10px;border-radius:8px;background:{{ helpSoonBg }};color:{{ helpSoonInk }};font-size:12px;font-weight:600;white-space:nowrap">Coming soon</span></sc-if></div>
-        <div style="display:grid;gap:2px"><div style="font-size:15px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ hr.title }}</div><div style="font-size:13px;line-height:18px;color:var(--text-body)">{{ hr.desc }}</div></div>
-        <sc-if value="{{ hr.live }}" hint-placeholder-val="{{ true }}"><button onClick="{{ hr.go }}" style="margin-top:auto;height:34px;border:1px solid var(--border-secondary);border-radius:9999px;background:var(--bg-base);color:var(--link);font:inherit;font-size:13px;font-weight:600;cursor:pointer" style-hover="border-color:var(--border-active)">{{ hr.cta }} ›</button></sc-if>
-        <sc-if value="{{ hr.soon }}" hint-placeholder-val="{{ false }}"><span style="margin-top:auto;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-secondary);border-radius:9999px;color:var(--text-disabled);font-size:13px;font-weight:600">{{ hr.cta }}</span></sc-if>
-      </div></sc-for>
-    </div>
-    <div style="font-size:13px;line-height:18px;color:var(--text-light)">{{ helpSoonLine }}</div>
-  </div>
+  <sc-if value="{{ noHelpGuides }}" hint-placeholder-val="{{ false }}"><div class="hlp-none"><span class="ic s20" style="--ic:url('brand/icons/search.svg')"></span><b>No guide matches</b><button class="fx-btn" onClick="{{ clearHelpQ }}">Clear the search</button></div></sc-if>
+  <nav class="hlp-res" aria-label="Resources">
+    <sc-for list="{{ helpLive }}" as="hr" hint-placeholder-count="4"><button class="hlp-r" onClick="{{ hr.go }}" title="{{ hr.tip }}" style="--op-i:{{ hr.i }}"><span class="ic-tile s32"><span class="ic s18" style="--ic:url('brand/icons/{{ hr.icon }}.svg')"></span></span><b>{{ hr.title }}</b><sc-if value="{{ hr.hasN }}" hint-placeholder-val="{{ false }}"><span class="hlp-r-n" title="{{ hr.nTitle }}">{{ hr.n }}</span></sc-if></button></sc-for>
+    <span class="hlp-soon" title="{{ helpSoonLine }}"><span class="ic s16" style="--ic:url('brand/icons/clock.svg')"></span><b>{{ helpSoonN }}</b>coming soon</span>
+  </nav>
   </sc-if>
   <sc-if value="{{ helpPanelTerms }}" hint-placeholder-val="{{ false }}">
-  <div id="sec-help-glossary" style="display:grid;gap:12px">
-    <sc-if value="{{ hasHelpTerms }}" hint-placeholder-val="{{ true }}"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:1px;background:var(--border-secondary);border:1px solid var(--border-secondary);border-radius:12px;overflow:hidden"><sc-for list="{{ helpTerms }}" as="gt" hint-placeholder-count="8"><div style="display:grid;gap:2px;padding:12px 16px;background:var(--bg-base)"><span style="font-size:14px;line-height:20px;font-weight:700;color:var(--text-heading)">{{ gt.term }}</span><span style="font-size:13px;line-height:18px;color:var(--text-body)">{{ gt.def }}</span></div></sc-for></div></sc-if>
-    <sc-if value="{{ hasHelpQ }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearHelpQ }}" style="justify-self:start;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--link);cursor:pointer">Clear the search</button></sc-if>
+  <div id="sec-help-glossary" class="hlp-gloss">
+    <sc-if value="{{ hasHelpTerms }}" hint-placeholder-val="{{ true }}"><div class="hlp-terms" role="list" aria-label="Glossary"><sc-for list="{{ helpTerms }}" as="gt" hint-placeholder-count="8"><div role="listitem" class="hlp-term" style="--op-i:{{ gt.i }}"><span class="ic-tile s32"><span class="ic s18" style="--ic:url('brand/icons/{{ gt.icon }}.svg')"></span></span><span class="hlp-term-t"><b>{{ gt.term }}</b><span>{{ gt.def }}</span></span></div></sc-for></div></sc-if>
+    <sc-if value="{{ noHelpTerms }}" hint-placeholder-val="{{ false }}"><div class="hlp-none"><span class="ic s20" style="--ic:url('brand/icons/search.svg')"></span><b>No term matches</b></div></sc-if>
+    <div class="hlp-gloss-f"><sc-if value="{{ hasHelpQ }}" hint-placeholder-val="{{ false }}"><button class="fx-btn" onClick="{{ clearHelpQ }}">Clear the search</button></sc-if><button class="op-go hlp-ask-go" onClick="{{ askAndiHelp }}" title="A word that is not here: Andi explains it from your estate"><span class="hlp-andi-mk sm" aria-hidden="true"></span>Ask Andi</button></div>
   </div>
   </sc-if>
 </section>
@@ -3116,7 +3153,7 @@
 <script>(function(){var d=document.querySelector('x-dc'),t=d&&d.querySelector('template');if(!t)return;window.__resources=window.__resources||{};d.replaceChildren(t.content);})();</script>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, bwFor: null, bwPick: null, bwStep: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, layDir: 'o2p', layLit: null, layPage: 0, engReturn: null, appState: null, homeRange: 12, homeRowPage: 0, journey: null, jStep: 0, jTags: {}, jIntent: null, intents: {}, jFlip: 0, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', waySet: null, waySetPage: 0, wayZone: 'intra', appThresh: null, orders: [], ordersPage: 0, cfArea: null, wipList: null, wipListPage: 0, order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36, govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null, govBack: null, optShow: null, govFrom: null }; }
+  constructor(p) { super(p); this.state = { screen: 's0', view: 'partial', persona: 'neteng', estateParam: null, bwFor: null, bwPick: null, bwStep: null, addedSources: [], otSeries: 'both', finWhatIf: 40, govTplKind: 'layered', engFlow: null, engPick: null, engAll: false, layDir: 'o2p', layLit: null, layPage: 0, engReturn: null, appState: null, homeRange: 12, homeRowPage: 0, journey: null, jStep: 0, jTags: {}, jIntent: null, intents: {}, jFlip: 0, jPick: null, jScan: null, jProv: null, jLive: false, jDone: [], jTagPick: null, jTagNew: '', jDetail: false, jPolHover: null, healthView: 'app', segOpen: null, segTrail: [], segPage: 0, pathSel: null, pathPin: null, pathsPage: 0, changesPage: 0, opsPanel: 'overview', andiTickets: true, ticketPage: 0, fixPage: 0, availPage: 0, changePage: 0, rolePage: 0, insPanel: 'signals', sigPage: 0, sigOpen: null, sigListPage: 0, sigWeek: null, briefCfg: { cadence: 'monthly' }, mode: 'foryou', theme: 'light', layer: 'cloud', tab: 'connect', logPage: 0, actPage: 0, cnPage: 'picture', moveSel: {}, moveTier: {}, movePage: 0, nowIso: null, prodPanel: 'get', findingLife: {}, fdKey: null, findFilter: 'open', siteGroup: 'region', saveGroup: 'region', costBy: 'all', costPick: null, legDrill: null, spendList: 'savings', bankScope: null, bankSource: null, bankPage: 0, regSavePage: 0, placeTrail: [], cloudTrailE: [], cloudFilter: null, placeFilter: null, siteFilter: {}, svcMenu: false, siteTags: {}, buCustom: {}, buActive: null, buNew: '', steered: [], inv: {}, invSel: [], obTab: 'flow', groupBy: 'Path', breakdownOpen: false, events: [], drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [], compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '', waySet: null, waySetPage: 0, wayZone: 'intra', appThresh: null, orders: [], ordersPage: 0, ordStage: null, cfArea: null, wipList: null, wipListPage: 0, order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null, simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36, govDrill: null, govDrillPage: 0, polFilter: null, tagFilter: null, govBack: null, optShow: null, govFrom: null }; }
   componentDidUpdate() {
     // Guarded on the instance, not on prevState: comparing against prevState
     // re-entered on the very setState this handler makes, and React counted

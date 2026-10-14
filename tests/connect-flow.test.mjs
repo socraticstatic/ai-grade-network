@@ -505,11 +505,13 @@ test('Review totals the order at its term, the same price the panel shows', () =
 
 test('Orders spans the page when nothing is in progress, and makes room for the order in progress when there is one', () => {
   const c = mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' });
-  assert.equal(vals(c).ordCols, 'minmax(0,1fr)');
+  // Re-pinned 2026-10-13 (Orders as a story): the side column (ordCols) left with the table; the order in progress is
+  // the first card of the page's one grid, so nothing in progress draws no draft and one in progress leads the cards.
+  assert.ok(!vals(c).ordCards.some(x => x.kind === 'draft'));
   c.state.cnPage = 'ways';
   vals(c).wayTypes.find(t => t.label === 'Cloud to Cloud').start();
   Object.assign(c.state, { screen: 's3', cnPage: 'orders' });
-  assert.match(vals(c).ordCols, /^minmax\(0,1fr\) minmax\(/);
+  assert.equal(vals(c).ordCards[0].kind, 'draft');
 });
 
 test('a member of a type\'s set starts the flow with it attached, filled from your estate', () => {
