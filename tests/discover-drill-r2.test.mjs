@@ -16,7 +16,7 @@ import * as X from '../naas-connections.js';
 //     709 sites, offered "Move 1,640 sites to AT&T".
 //  3. Set policy started a policy that simulated "40 matched" whatever it came from.
 //  4. Attach on a set across clouds opened an order the flow refuses (one cloud).
-//  5. p95 opened a path that read another latency.
+//  5. p95 opened a path that read another latency (Peak since 2026-10-15: a link, never a delay).
 //  6. A ring's small segments had no legend door and an arc too thin to click.
 //  7. The new filter stayed on where nothing showed it, and the tiles beside it
 //     counted the whole estate.
@@ -236,17 +236,19 @@ test('4. Attach starts an order the flow can take: one cloud an order, named on 
   assert.ok(v.cloudSetPub.length === 5);
 });
 
-test('5. p95 opens the workloads whose path sets it, and the landing reads the same latency', () => {
+test('5. Peak opens the workloads in the region of the link it reads; Public opens the app', () => {
   for (const view of ESTATES) {
     const est = estateFor(disc(view).state);
     for (const a of vals(disc(view)).appAll) {
-      const c = disc(view); vals(c).appAll.find(x => x.key === a.key).p95Go(EV);
-      const v = vals(c), where = `${view} ${a.name} p95 ${a.p95F}`;
+      const c = disc(view); vals(c).appAll.find(x => x.key === a.key).linkGo(EV);
+      const v = vals(c), where = `${view} ${a.name} peak ${a.linkF}`;
       assert.equal(c.state.screen, 's1', where); assert.ok(v.estPanelClouds, `${where}: not on Your clouds`);
-      assert.ok(String(v.cloudLine).includes(a.p95F), `${where}: the landing reads "${v.cloudLine}"`);
       const f = c.state.cloudFilter;
       assert.equal(f.tag, a.name, where);
-      for (const rg of f.regions) { const r = est.regionsList.find(x => x.region === rg); assert.equal(`${r.priv ? r.fab : r.pub} ms`, a.p95F, `${where}: ${rg} is not the path at ${a.p95F}`); }
+      if (a.link) {
+        assert.deepEqual(f.regions, [a.link.region], where);
+        assert.ok(est.regionsList.find(x => x.region === a.link.region).priv, `${where}: a link rides a private region`);
+      } else assert.equal(f.regions, undefined, where);
       assert.ok(v.cloudListN > 0 && v.cloudActs.length >= 1, where);
     }
   }

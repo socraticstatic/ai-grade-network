@@ -14,8 +14,8 @@ import { mkC } from './harness.mjs';
 // regions while the cards beside it billed cross-cloud and GCP; the Architect's
 // findings owned by Network Eng; Steer on a pair with nothing on AT&T; a head
 // that said 12 weeks over labels that say 11; --viz-1 meaning Covered and On
-// AT&T; two lists called Latency over SLO; two moves for one connection; and
-// lead cards that open another role's work.
+// AT&T; two lists of one thing (the delay card's, gone since 2026-10-15); two
+// moves for one connection; and lead cards that open another role's work.
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 const store = {};
@@ -108,7 +108,7 @@ test('Steer only where one end of the flow is on AT&T; otherwise the move is Att
     const endsOf = (f) => (f.kind === 'App' ? [f.region] : f.name.split(' ↔ '));
     for (const p of PERSONAS) {
       const v = vals(ins(view, { persona: p }));
-      for (const k of ['multi', 'slo']) for (const r of card(v, k).all.filter(x => x.id)) {
+      for (const k of ['multi']) for (const r of card(v, k).all.filter(x => x.id)) {
         const f = ob.flows.find(x => x.id === r.id);
         if (f.controlled) continue;
         const want = endsOf(f).some(onAtt) ? 'Steer' : 'Attach';
@@ -147,7 +147,7 @@ test('a finding the Architect owns reads the Architect as its owner, in the tabl
 
 test('one colour, one meaning across every Signals card and the role visuals', () => {
   // The meaning each ink carries, as the legends say it.
-  const MEANS = { 'var(--viz-1)': /AT&T/, 'var(--viz-6)': /public/i, 'var(--warning)': /no policy|above 80|at risk/i, 'var(--success)': /save/i, 'var(--viz-5)': /over slo/i, 'var(--viz-2)': /peak use/i, 'var(--error)': /down/i };
+  const MEANS = { 'var(--viz-1)': /AT&T/, 'var(--viz-6)': /public/i, 'var(--warning)': /no policy|above 80|at risk/i, 'var(--success)': /save/i, 'var(--viz-2)': /peak use/i, 'var(--error)': /down/i };
   for (const view of VIEWS) for (const p of PERSONAS) {
     const v = vals(ins(view, { persona: p }));
     for (const x of v.sigAll) {
@@ -168,19 +168,21 @@ test('one colour, one meaning across every Signals card and the role visuals', (
   for (const n of ['zoom.us', 'github.com']) assert.ok(sh.find(r => r.label === n).segs.every(s => s.fill !== 'var(--viz-1)'), n);
 });
 
-test('Latency over SLO is one list on Signals and in Your actions', () => {
+// Network Eng's Your actions draws its health problems and its idle capacity, each its Signals card's own list; no list of
+// delays anywhere (2026-10-15).
+test('Network Eng\'s Your actions draws Health and Idle capacity, each one list with its Signals card', () => {
   for (const view of VIEWS) {
-    const sig = card(vals(ins(view, { persona: 'neteng' })), 'slo');
-    const rv = vals(ins(view, { persona: 'neteng', insPanel: 'role' })).roleVisuals.find(x => x.key === 'slo');
-    if (!sig.all.length) { assert.ok(!rv, `${view}: Your actions draws a list Signals calls empty`); continue; }
-    assert.ok(rv, `${view}: Signals lists ${sig.all.length} and Your actions none`);
-    assert.deepEqual(rv.rows.map(r => [r.label, r.v]), sig.all.slice(0, rv.rows.length).map(r => [r.label, r.v]), view);
-    assert.equal(rv.rows.length, Math.min(4, sig.all.length));
+    const v = vals(ins(view, { persona: 'neteng' }));
+    const rvs = vals(ins(view, { persona: 'neteng', insPanel: 'role' })).roleVisuals;
+    assert.ok(rvs.every(x => ['problems', 'idle'].includes(x.key)), `${view}: ${rvs.map(x => x.key).join(', ')}`);
+    const rv = rvs.find(x => x.key === 'problems'), h = card(v, 'health');
+    if (!h.all.length) { assert.ok(!rv, `${view}: Your actions draws problems Signals calls none`); continue; }
+    assert.ok(rv, `${view}: Signals lists ${h.all.length} problems and Your actions none`);
+    assert.deepEqual(rv.rows.map(r => r.label), h.all.slice(0, rv.rows.length).map(r => r.label), view);
   }
-  // Growing: the eu-west-1 spike leads both.
-  const rv = vals(ins('partial', { persona: 'neteng', insPanel: 'role' })).roleVisuals.find(x => x.key === 'slo');
-  assert.equal(rv.rows[0].label, 'Latency spike');
-  assert.equal(rv.rows[0].v, '136 ms');
+  for (const view of VIEWS) for (const p of PERSONAS) {
+    for (const rv of vals(ins(view, { persona: p, insPanel: 'role' })).roleVisuals) assert.doesNotMatch(`${rv.title} ${rv.rows.map(r => `${r.label} ${r.v}`).join(' ')}`, /\bms\b|SLO|[Ll]atency/, `${view} ${p} ${rv.key}`);
+  }
 });
 
 test('one connection, one move: Health and Capacity offer the same for it', () => {

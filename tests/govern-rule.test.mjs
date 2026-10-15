@@ -149,10 +149,12 @@ test('the rule: what a policy matches and what breaks it', () => {
   const pci = GV.policySets(est, inv, { match: 'tag PCI', req: 'Private path required' });
   assert.ok(pci.matched.every(r => r.vpc.priv), 'the PCI VPCs are on AT&T');
   assert.deepEqual(pci.viol.map(r => r.w.id), pci.matched.filter(r => r.w.exposed).map(r => r.w.id), 'on AT&T, only the exposed break it');
-  // A latency SLO is broken where the region runs above it.
-  const gpu = GV.policySets(est, inv, { match: 'tag AI', req: 'Latency SLO 15 ms' });
-  assert.ok(gpu.viol.length > 0, 'us-central1 runs above 15 ms');
-  assert.ok(gpu.viol.every(r => r.latency > 15) && gpu.matched.filter(r => r.latency > 15).length === gpu.viol.length);
+  // A latency SLO was broken where the region ran above it, until the delay figures left (2026-10-15). Priority traffic has
+  // no breaker here: no count of violations, never a zero.
+  const pri = GV.policySets(est, inv, { match: 'tag AI', req: 'Priority traffic' });
+  assert.ok(pri.matched.length > 0, 'the AI workloads are matched');
+  assert.equal(pri.viol, null, 'nothing here says what breaks a class of service');
+  assert.equal(GV.ruleLine('Latency SLO 15 ms', 'workload'), '', 'no rule reads a delay');
   // A site policy counts sites, rollups at their own count.
   const remote = GV.policySets(D.ESTATES.trust, A.inventory(D.ESTATES.trust), { match: 'tag RemoteSite', req: 'No direct internet path' });
   assert.equal(remote.unit, 'site');
@@ -212,7 +214,13 @@ test('Govern\'s headline figures equal what its pages list, and the home\'s door
 
 // A tag no workload carries matches none, in words, as "no violations" reads beside it (2026-10-01).
 test('a policy over a tag no workload carries reads "no workloads", not a zero', () => {
-  const gpu = at('partial').polRows.find(p => p.match === 'tag GPU');
+  // The estate's own GPU policy was a latency SLO and left with the delay figures (2026-10-15); a GPU path policy stands
+  // in for it on the estate for this test alone (an authored policy carries no figures, so it cannot).
+  const pols = D.ESTATES.partial.policies;
+  pols.push({ name: 'GPU private', match: 'tag GPU', req: 'Private path required', matched: 0, viol: 0, state: 'simulated' });
+  let gpu = null;
+  try { for (let i = 0; i < 4 && !gpu; i += 1) gpu = at('partial', { polPage: i }).polRows.find(p => p.match === 'tag GPU'); } finally { pols.pop(); }
+  assert.ok(gpu, 'the GPU policy is listed');
   assert.equal(gpu.matchedLabel, 'no workloads');
   assert.equal(gpu.hasMatchedGo, false);
 });

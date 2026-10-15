@@ -37,7 +37,7 @@ export const CARD_ORDER = {
 };
 
 // The worst live thing leads (skeptic, 2026-09-30: an outage beats an at-risk).
-const WORST = { down: 0, slo: 1, risk: 2 };
+const WORST = { down: 0, risk: 1 };
 /** Health's problems, worst state first; within a state, Health's own order. */
 export function worstFirst(probs) {
   return [...(probs || [])].sort((a, b) => (WORST[a.state] ?? 3) - (WORST[b.state] ?? 3));
@@ -48,8 +48,8 @@ export function nameList(names) {
   return n.length < 2 ? (n[0] || '') : `${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`;
 }
 
-// A unit rides its number: "22 min", "15 ms" and "84%" are one word each.
-const UNIT = /^(ms|min|h|d|mo|\/mo|Gbps|Mbps|GB|TB)$/i;
+// A unit rides its number: "22 min", "15 Gbps" and "84%" are one word each.
+const UNIT = /^(min|h|d|mo|\/mo|Gbps|Mbps|GB|TB)$/i;
 /**
  * Words on the home, counted as a reader counts them (the twelve-word rule,
  * 2026-09-30): separators (·, ›, ×) are not words, and a unit rides the number
@@ -68,7 +68,7 @@ export function numOf(s) {
 const enf = (n) => Number(n || 0).toLocaleString('en-US');
 const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : '');
 const one = (n, a, b) => `${n} ${String(n) === '1' ? a : b}`;
-const STATE_PHRASE = { down: 'down', slo: 'over SLO', risk: 'at risk', ok: 'healthy' };
+const STATE_PHRASE = { down: 'down', risk: 'at risk', ok: 'healthy' };
 
 /**
  * The take-away: one headline, one line and one action for the role, each
@@ -129,8 +129,14 @@ export function takeAway(rk, f) {
   }
   // Network Eng: the worst live problem, in Health's own words.
   const p = probs[0];
-  if (!p) return out({ key: 'neteng', icon: 'router', ink: HEALTH_INK.ok, door: 'health', cta: 'See Health',
-    head: 'Nothing is down or over SLO', parts: [{ t: `${f.healthy} apps healthy`, door: 'health', icon: 'check-circle', fig: f.healthy }] });
+  // Health's problems are a link down or a port near full (2026-10-15); with none, an app's own signals can still read it
+  // over or at risk, and the line says so rather than calling every app healthy.
+  if (!p) {
+    const ok = numOf(f.healthy), all = numOf(String(f.healthy || '').split(' of ')[1]), bad = all - ok;
+    return out({ key: 'neteng', icon: 'router', ink: HEALTH_INK.ok, door: 'health', cta: 'See Health', head: 'No link is down or near full',
+      parts: [bad > 0 ? { t: `${one(bad, 'app', 'apps')} over or at risk`, door: 'health', icon: 'exclamation-triangle', fig: String(bad) }
+        : { t: `${f.healthy} apps healthy`, door: 'health', icon: 'check-circle', fig: all ? 'All' : '0' }] });
+  }
   const who = p.apps.length === 1 ? { t: `${cap(p.apps[0])} rides it`, door: 'app', arg: p.apps[0], icon: 'tag', fig: cap(p.apps[0]) } : { t: `${p.apps.length} apps ride it`, door: 'health', icon: 'grid', fig: String(p.apps.length) };
   return out({ key: 'neteng', icon: 'router', ink: HEALTH_INK[p.state] || 'var(--warning)', door: 'trace', cta: 'Trace it', probKey: p.key,
     head: `${p.where} is ${STATE_PHRASE[p.state] || p.state}`,
@@ -311,7 +317,7 @@ export function snapshotCards(rk, f, doors) {
     door: 'Health', go: doors.health(), value: f.health || '0 of 0', unit: 'apps healthy', swatch: HEALTH_INK.ok, valueGo: doors.health(), valueOff: !numOf(f.health), isDots: true,
     dots: flows.map(r => ({ key: r.tag, ink: HEALTH_INK[r.state] || 'var(--text-disabled)', ring: 'none', rad: healthRadius(r.state), title: `${r.label} · ${HEALTH_WORD[r.state] || r.state}`, go: doors.appPath(r.tag) })),
     // Healthy is the unit's own swatch; the legend names the states that are not.
-    legend: ['down', 'slo', 'risk'].filter(k => seen.has(k)).map(k => ({ key: k, word: HEALTH_WORD[k], ink: HEALTH_INK[k], ring: 'none', rad: healthRadius(k) })),
+    legend: ['down', 'over', 'risk'].filter(k => seen.has(k)).map(k => ({ key: k, word: HEALTH_WORD[k], ink: HEALTH_INK[k], ring: 'none', rad: healthRadius(k) })),
   });
 
   const cols = f.spendCols || [];
@@ -364,15 +370,15 @@ export function snapshotCards(rk, f, doors) {
   const NOPILL = { pill: '', pillInk: 'var(--text-light)', pillBg: 'transparent', hasPill: false, pillIcon: '', pillN: '' };
   const cnt = (st) => flows.filter(r => r.state === st).length;
   const appDoor = (st) => (doors.appState ? doors.appState(st) : doors.health());
-  const okN = cnt('ok'), downN = cnt('down'), sloN = cnt('slo'), riskN = cnt('risk'), badN = flows.length - okN;
+  const okN = cnt('ok'), downN = cnt('down'), overN = cnt('over'), riskN = cnt('risk'), badN = flows.length - okN;
   const lastPast = cols.filter(x => x.kind === 'past').slice(-1)[0] || {};
   const nowN = numOf(spend.spend), aheadN = numOf(spend.ahead), endAsIs = next.length ? next[next.length - 1].asIsN : nowN;
   const KPI = {
     apps: { kLabel: 'Apps healthy', big: enf(okN), of: `of ${enf(flows.length)}`, ...(badN ? kp(downN ? 'bad' : 'warn', `${badN} need attention`, 'exclamation-circle') : flows.length ? kp('ok', 'All healthy', 'check-circle') : NOPILL),
       // Each state is a door to App health listing just those apps (reviewer, 2026-10-08: "make the bar clickable so only
       // those areas of issues can be listed in a table format").
-      bar: [['ok', okN], ['down', downN], ['slo', sloN], ['risk', riskN]].filter(x => x[1]).map(([key, n]) => ({ key, w: pct(n, flows.length), ink: HEALTH_FILL_BAR[key], go: appDoor(key), title: `${n} ${HEALTH_WORD[key] || key}: list ${n === 1 ? 'it' : 'them'}` })),
-      foot: [downN && `${downN} down`, sloN && `${sloN} over latency target`, riskN && `${riskN} at risk`].filter(Boolean).join(' · ') || 'Every app inside its target' },
+      bar: [['ok', okN], ['down', downN], ['over', overN], ['risk', riskN]].filter(x => x[1]).map(([key, n]) => ({ key, w: pct(n, flows.length), ink: HEALTH_FILL_BAR[key], go: appDoor(key), title: `${n} ${HEALTH_WORD[key] || key}: list ${n === 1 ? 'it' : 'them'}` })),
+      foot: [downN && `${downN} down`, overN && `${overN} over threshold`, riskN && `${riskN} at risk`].filter(Boolean).join(' · ') || 'Every app inside its thresholds' },
     onatt: { kLabel: 'Private on AT&T', big: enf(regPriv), of: `of ${enf(regTotal)} regions`, ...(regTotal - regPriv ? kp('warn', `${enf(regTotal - regPriv)} public`, 'globe') : regTotal ? kp('ok', 'All private', 'padlock') : NOPILL),
       bar: [{ key: 'priv', w: pct(regPriv, regTotal), ink: INK_PRIV }], foot: `Sites on AT&T: ${enf(sitesOn)} of ${enf(sitesTotal)}` },
     egress: { kLabel: 'Egress spend', big: spend.spend || '$0', of: '/mo', ...(endAsIs > nowN ? kp('warn', 'Rising', 'trending-up') : nowN ? kp('ok', 'Flat', 'arrows-horizontal') : NOPILL),
@@ -397,7 +403,7 @@ export function snapshotCards(rk, f, doors) {
   const fc = (icon, t, title, ink) => ({ icon, t, title, ink: ink || 'var(--text-body)', iink: ink || 'var(--text-light)' });
   const pctOf = (n, of) => (of > 0 ? Math.round(n / of * 100) : 0);
   const CHIPS = {
-    apps: [downN && { ...fc('close-circle', enf(downN), `${downN} down`, HEALTH_INK.down), go: appDoor('down') }, sloN && { ...fc('clock', enf(sloN), `${sloN} over latency target`, HEALTH_INK.slo), go: appDoor('slo') }, riskN && { ...fc('exclamation-triangle', enf(riskN), `${riskN} at risk`, HEALTH_INK.risk), go: appDoor('risk') }].filter(Boolean),
+    apps: [downN && { ...fc('close-circle', enf(downN), `${downN} down`, HEALTH_INK.down), go: appDoor('down') }, overN && { ...fc('high-meter', enf(overN), `${overN} over threshold`, HEALTH_INK.over), go: appDoor('over') }, riskN && { ...fc('exclamation-triangle', enf(riskN), `${riskN} at risk`, HEALTH_INK.risk), go: appDoor('risk') }].filter(Boolean),
     onatt: [fc('large-building', `${enf(sitesOn)} of ${enf(sitesTotal)}`, `Sites on AT&T: ${enf(sitesOn)} of ${enf(sitesTotal)}`)],
     // The 90 days ride in the saving's title (the home as a story, 2026-10-13): the tile's ring takes the room a second chip had.
     egress: nowN > aheadN && aheadN ? [fc('trending-down', `$${enf(nowN - aheadN)}/mo`, `$${enf(nowN - aheadN)}/mo you can avoid in 90 days`, 'var(--success)')] : [fc('check-circle', 'Nothing to avoid', 'Nothing to avoid yet')],

@@ -29,26 +29,30 @@ test('Cost shows dollars: every node, the middle, the heads and the legend', () 
   assert.ok(Math.abs(money(tile(v, 'cost').v) - Math.round(sum / 100) * 100) <= 100, `${tile(v, 'cost').v} vs ${sum}`);
 });
 
-test('Performance shows latency: every node reads its p95, colored by its health', () => {
-  const v = vals(at({ mapMode: 'slo' }));
-  assert.ok(real(v).every(n => /^p95 \d+ ms$/.test(n.vF)), real(v).map(n => n.vF).join(', '));
+// The Performance view left with every delay figure (2026-10-15, "we can't measure that"): Utilization reads what is
+// measured, each connection's peak against what was bought, and says so where nothing is.
+test('Utilization shows use: a path a connection carries reads its share at peak, the internet reads not measured', () => {
+  const v = vals(at({ mapMode: 'util' }));
+  assert.ok(real(v).every(n => /^\d+%$/.test(n.vF) || n.vF === ''), real(v).map(n => n.vF).join(', '));
   const inet = v.mapNodes.find(n => n.label === 'Internet');
-  assert.equal(inet.fill, 'var(--viz-5)', 'Over SLO ink (review, 2026-09-30)');
-  assert.match(inet.pathSay, /over/i);
+  assert.equal(inet.vF, '');
+  assert.match(inet.pathSay, /not measured/i);
   const nb = v.mapNodes.find(n => n.label === 'NetBond');
-  assert.notEqual(nb.fill, 'var(--viz-5)');
-  assert.ok(v.mapLegend.some(l => /Within SLO/.test(l.label)) && v.mapLegend.some(l => /Over SLO/.test(l.label)));
+  assert.match(nb.vF, /^\d+%$/);
+  assert.match(nb.pathSay, /% at peak/);
+  assert.deepEqual(v.mapLegend.map(l => l.label), ['Healthy', 'Near full', 'Down', 'Not measured']);
+  assert.ok(!v.mapNodes.some(n => / ms\b|p95|SLO/.test(`${n.vF} ${n.pathSay} ${n.title}`)), 'no delay figure on the map');
 });
 
 test('the tiles are the map\'s own numbers, in every scope', () => {
   for (const patch of [{}, { obDim: 'first', obScope: 'first:avpn' }, { obDim: 'app', obScope: 'app:PCI' }, { obDim: 'cloud', obScope: 'cloud:AWS' }]) {
     const v = vals(at(patch));
     assert.equal(tile(v, 'traffic').v, v.mapTotal.toFixed(1), JSON.stringify(patch));
-    // The tile counts the path-to-destination links over SLO, the same links the Over SLO filter lights
-    // (2026-09-30, "the healthy sankey doesn't work": it counted nodes, and read 0 beside an Over SLO ribbon).
-    const red = v.mapRibbons.filter(r => String(r.from).startsWith('mid:') && r.state === 'slo').length;
-    assert.equal(tile(v, 'slo').v, String(red), `${JSON.stringify(patch)}: Over SLO ${tile(v, 'slo').v} vs ${red} links over SLO on the map`);
-    assert.equal(tile(v, 'p95').v, String(v.mapP95));
+    // The tile counts the path-to-destination links near full, the same links the At risk filter lights
+    // (2026-09-30, "the healthy sankey doesn't work": it counted nodes, and read 0 beside a lit ribbon).
+    const full = v.mapRibbons.filter(r => String(r.from).startsWith('mid:') && r.state === 'risk').length;
+    assert.equal(tile(v, 'near').v, String(full), `${JSON.stringify(patch)}: Near full ${tile(v, 'near').v} vs ${full} links near full on the map`);
+    assert.match(tile(v, 'util').v, /^(\d+|None)$/, tile(v, 'util').v);
   }
   const pci = vals(at({ obDim: 'app', obScope: 'app:PCI' }));
   const outside = pci.mapNodes.filter(n => n.side === 'm' && !n.priv).length;
@@ -72,11 +76,11 @@ test('Health filters the map', () => {
   const v0 = vals(c);
   // One rule since 2026-09-30 ("the healthy sankey doesn't work"): Down is a state, the lit chip clears
   // itself, and a state lights its links and the nodes at their ends (tests/map-health.test.mjs).
-  assert.deepEqual(v0.healthChips.map(h => h.label), ['Healthy', 'At risk', 'Over SLO', 'Down']);
-  v0.healthChips.find(h => h.label === 'Over SLO').go();
+  assert.deepEqual(v0.healthChips.map(h => h.label), ['Healthy', 'At risk', 'Down']);
+  v0.healthChips.find(h => h.label === 'At risk').go();
   const v = vals(c);
   const on = v.mapRibbons.filter(r => r.op >= 0.35), ends = new Set(on.flatMap(r => [r.from, r.to]));
-  assert.ok(on.every(r => r.state === 'slo'));
+  assert.ok(on.every(r => r.state === 'risk'));
   assert.ok(v.mapNodes.filter(n => n.nodeKey && n.side !== 'ctx').every(n => (n.op === 1) === ends.has(n.nodeKey)));
   assert.ok(HTML.includes('aria-label="Health"'));
 });

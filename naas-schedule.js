@@ -297,7 +297,7 @@ export function agoOf(at, now) {
 /** When a seeded incident started: minutes before now, so it reads the same at any hour. */
 export function startOf(key, now, minutesAgo) { return now - minutesAgo * 60000; }
 /** How long ago each kind of seeded incident started, in minutes. */
-export const INCIDENT_MIN = { flap: 22, spike: 47, sat: 180, slo: 22 };
+export const INCIDENT_MIN = { flap: 22, sat: 180 };
 
 /**
  * An estate with the sources added in this session (2026-09-30). Each added

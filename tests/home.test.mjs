@@ -23,7 +23,7 @@ const LIVE = ESTATES.filter(e => e !== 'empty');
 const ROLES = ['architect', 'neteng', 'security', 'finops', 'exec'];
 const home = (view, patch = {}) => mkC({ view, estateParam: null, screen: 's0', nowIso: NOW, ...patch });
 const observe = (view, patch = {}) => mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', nowIso: NOW, ...patch });
-const WORD = { down: 'down', slo: 'over SLO', risk: 'at risk' };
+const WORD = { down: 'down', risk: 'at risk' };
 const tile = (v, k) => v.spendTiles.find(t => t.key === k).v;
 const roll = (v, k) => v.rollup.find(t => t.key === k);
 const stat = (v, k) => String(v.invStats.find(x => x.key === k).v);
@@ -47,14 +47,14 @@ test('the take-away is one headline, one line and one action per persona, each f
       const t = v.homeTake;
       assert.ok(t && t.head && t.sub && t.cta, `${where}: no take-away`);
       if (persona === 'neteng') {
-        // The worst live problem leads (skeptic, 2026-09-30): an outage beats over SLO beats at risk.
-        const p = [...v.problemRows].sort((a, b) => ({ down: 0, slo: 1, risk: 2 }[a.state] - { down: 0, slo: 1, risk: 2 }[b.state]))[0];
+        // The worst live problem leads (skeptic, 2026-09-30): an outage beats at risk.
+        const p = [...v.problemRows].sort((a, b) => ({ down: 0, risk: 1 }[a.state] - { down: 0, risk: 1 }[b.state]))[0];
         if (p) {
           assert.equal(t.head, `${p.where} is ${WORD[p.state]}`, where);
           const who = p.apps.length === 1 ? `${p.apps[0][0].toUpperCase()}${p.apps[0].slice(1)} rides it` : `${p.apps.length} apps ride it`;
           assert.equal(t.sub, `${who} · ${p.wl.toLocaleString('en-US')} workloads · ${p.ago}`, where);
           assert.equal(t.cta, 'Trace it', where);
-        } else assert.equal(t.head, 'Nothing is down or over SLO', where);
+        } else assert.equal(t.head, 'No link is down or near full', where);
       }
       if (persona === 'exec') {
         const fig = t.head.replace(/\/mo on the table$/, '');
@@ -184,7 +184,7 @@ test('every card\'s figures are its page\'s own, on every estate', () => {
     const apps = card(v, 'apps');
     assert.equal(apps.value, v.healthTiles.find(x => x.key === 'ok').v, `${view}: apps`);
     assert.deepEqual(apps.dots.map(d => d.key), v.pathFlowAll.map(r => r.tag), `${view}: dots`);
-    const INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: 'var(--viz-5)', down: 'var(--error)' };
+    const INK = { ok: 'var(--success)', risk: 'var(--warning)', over: 'var(--viz-5)', down: 'var(--error)' };
     apps.dots.forEach((d, i) => { const st = v.pathFlowAll[i].state; assert.equal(d.ink, INK[st], `${view} ${d.key}`); assert.equal(d.rad, st === 'down' ? '2px' : '9999px', `${view} ${d.key}`); });
     // Egress: Spend's this month, and Spend's In 90 days with the moves.
     const eg = card(v, 'egress');

@@ -2,12 +2,13 @@
 // nine-row table (segment, owner, what to show, where the data comes from) and
 // the seven grid columns of the Health tab (Site, Edge, Backbone, On-ramp,
 // Cloud link, Hub, App), read from data the product already holds: the
-// connection rows, the one latency rule, the sites' own state, the regions
-// without flow logs, and each app's traffic by region. What the product cannot
+// connection rows (their link and their use against what was bought), the sites'
+// own state, the regions without flow logs, and each app's traffic by region.
+// Nothing is timed (2026-10-15). What the product cannot
 // see yet reads "Not yet measured". Nothing here invents a live number.
 import { accessThing, cloudEdgeThing, cloudAccessThing, entersAtt } from './naas-things.js';
 import { attHolds, connModeOf, siteModeOf, RAMP_EDGE, regionOf, regionRows } from './naas-logic.js';
-import { regionState, healthOf, SLO, SLO_PRIVATE, HEALTH_WORD } from './naas-flowmap.js';
+import { regionState, HEALTH_WORD, NEAR_FULL } from './naas-flowmap.js';
 import { countOf, stateOf, placeName } from './naas-sites.js';
 import { siteState } from './naas-volume.js';
 import { appsOf } from './naas-apps.js';
@@ -33,19 +34,19 @@ export const HUB_NAME = { AWS: 'Transit Gateway', Azure: 'Virtual WAN hub', GCP:
 
 /** The stakeholder's nine rows, in his order. */
 export const TABLE = [
-  { key: 'access', label: 'Site access (AVPN, ADI, ASE on Demand, broadband)', owner: 'att', show: 'Up or down, usage, errors, drops, delay to the AT&T edge', source: 'AT&T access systems', limited: false },
-  { key: 'access3p', label: 'Other carrier access', owner: 'third', show: 'Reachability and delay only', source: 'Tests from the AT&T side', limited: true },
-  { key: 'backbone', label: 'AT&T edge and backbone', owner: 'att', show: 'Delay, loss, jitter between points, maintenance windows', source: 'AT&T backbone data', limited: false },
+  { key: 'access', label: 'Site access (AVPN, ADI, ASE on Demand, broadband)', owner: 'att', show: 'Up or down, usage, errors, drops', source: 'AT&T access systems', limited: false },
+  { key: 'access3p', label: 'Other carrier access', owner: 'third', show: 'Reachability only', source: 'Tests from the AT&T side', limited: true },
+  { key: 'backbone', label: 'AT&T edge and backbone', owner: 'att', show: 'Loss between points, maintenance windows', source: 'AT&T backbone data', limited: false },
   { key: 'onramp', label: 'Cloud on-ramp (IPE, NetBond port)', owner: 'att', show: 'Port usage, drops, errors, BGP to the cloud', source: 'NetBond Advanced data', limited: false },
   { key: 'cloudlink', label: 'Cloud connection', owner: 'cloud', show: 'Link state, BGP state, bits in and out, optical levels', source: 'AWS Direct Connect, Azure ExpressRoute, Google Cloud Interconnect metrics', limited: false },
   { key: 'ipsec', label: 'IPsec tunnels', owner: 'customer', show: 'Tunnel up or down, flaps, throughput', source: 'Cloud VPN metrics', limited: false },
   { key: 'hub', label: 'Cloud routing hub (Transit Gateway, Virtual WAN, NCC)', owner: 'customer', show: 'Attachment state, drops from missing or dead routes', source: 'Hub metrics and route tables', limited: false },
   { key: 'exit', label: 'Cloud exit (NAT, internet gateway)', owner: 'customer', show: 'Port exhaustion, dropped packets, exit volume', source: 'NAT gateway metrics', limited: false },
-  { key: 'app', label: 'VPC and app', owner: 'customer', show: 'Rejected flows, delay to app, DNS failures', source: 'Flow logs, security rules, DNS logs', limited: false, gap: 'DNS not yet measured' },
+  { key: 'app', label: 'VPC and app', owner: 'customer', show: 'Rejected flows, DNS failures', source: 'Flow logs, security rules, DNS logs', limited: false, gap: 'DNS not yet measured' },
 ];
 
 const NOT_YET = 'Not yet measured';
-const RANK = { ok: 0, risk: 1, slo: 2, down: 3 };
+const RANK = { ok: 0, risk: 1, over: 2, down: 3 };
 
 /** Everything the segment model reads, built once from the whole estate; probs is the open incident list (naas-observe-dash problems()). */
 export function segCtxOf(est, { inv, ob, conns, probs = [], thresholds = null }) {
@@ -55,26 +56,27 @@ export function segCtxOf(est, { inv, ob, conns, probs = [], thresholds = null })
 }
 
 const rowOf = (ctx, region) => (ctx.conns.rows || []).find(r => r.region === region) || null;
-const slowWhy = (r) => { const ms = r.priv ? r.fab : r.pub, slo = r.priv ? SLO_PRIVATE : SLO; return `p95 ${ms} ms against ${slo} ms`; };
+const fullWhy = (row) => `${row.pct}% of ${row.bw || row.ports + ' × 10 Gbps'} purchased`;
 const C = (state, thing, owner, why, limited = false) => ({ state, thing, owner, why, limited });
 
 // One region's state in one column.
 function part(key, r, ctx, app) {
   const row = rowOf(ctx, r.region), mode = connModeOf(r);
   if (key === 'onramp' || key === 'cloudlink') {
-    if (!r.priv) { const st = regionState(r); return C(st, 'Public internet', 'public', st === 'ok' ? 'Healthy' : slowWhy(r), true); }
+    if (!r.priv) { const st = regionState(r); return C(st, 'Public internet', 'public', st === 'ok' ? 'Healthy' : HEALTH_WORD[st], true); }
     if (key === 'onramp') {
-      if (mode === 'third') return C(row && row.degraded ? 'down' : row && row.hot ? 'risk' : 'ok', 'Equinix Fabric', 'third', row && row.hot ? `${row.pct}% of ${row.bw || row.ports + ' × 10 Gbps'} purchased` : 'Healthy', true);
+      if (mode === 'third') return C(row && row.degraded ? 'down' : row && row.hot ? 'risk' : 'ok', 'Equinix Fabric', 'third', row && row.hot ? fullWhy(row) : 'Healthy', true);
       if (!attHolds(r)) return C('none', '', '', '');
       if (row && row.degraded && mode === 'netbond') return C('down', 'NetBond', 'att', `BGP flapping · ${row.drops} drops`);
-      if (row && row.hot) return C('risk', 'NetBond', 'att', `${row.pct}% of ${row.bw || row.ports + ' × 10 Gbps'} purchased`);
+      if (row && row.hot) return C('risk', 'NetBond', 'att', fullWhy(row));
       return C('ok', 'NetBond', 'att', 'Healthy');
     }
     if (mode === 'direct') {
       const t = cloudEdgeThing(r);
       if (row && row.degraded) return C('down', t.label, 'cloud', `BGP flapping · ${row.drops} drops`);
-      const st = regionState({ ...r, link: null });
-      return C(st, t.label, 'cloud', st === 'ok' ? 'Healthy' : slowWhy(r));
+      // The cloud's own port reads its use against what was bought, as NetBond's does (2026-10-15).
+      if (row && row.hot) return C('risk', t.label, 'cloud', fullWhy(row));
+      return C('ok', t.label, 'cloud', 'Healthy');
     }
     const t = cloudAccessThing(r);
     return C('nodata', t.label, 'cloud', NOT_YET);
@@ -84,8 +86,7 @@ function part(key, r, ctx, app) {
     if (ctx.blind.has(r.region)) return C('nodata', `${r.cloud} ${r.region}`, 'customer', `${NOT_YET}: no flow logs`);
     const down = row && row.degraded;
     if (down) return (r.paths || 1) < 2 ? C('down', `${r.cloud} ${r.region}`, 'customer', 'One path, and it is down') : C('risk', `${r.cloud} ${r.region}`, 'customer', 'The second path holds');
-    const st = (app && app.health) || 'ok';
-    return C(st, `${r.cloud} ${r.region}`, 'customer', st === 'ok' ? 'Healthy' : `p95 ${app.p95} ms against ${app.slo} ms`);
+    return C('ok', `${r.cloud} ${r.region}`, 'customer', 'Healthy');
   }
   return C('none', '', '', '');
 }
@@ -107,7 +108,7 @@ function siteCell(key, ctx) {
 // Worst of the parts: down wins from any part; otherwise the worst material one.
 // On a tie the part AT&T measures beats a limited view (review round 2,
 // 2026-09-30): Bank scale analytics' On-ramp is the NetBond saturation you can
-// act on, not the public-internet spike's hollow ring that happens to come first.
+// act on, not the public internet's hollow ring that happens to come first.
 const worse = (p, w) => RANK[p.state] > RANK[w.state] || (RANK[p.state] === RANK[w.state] && !!w.limited && !p.limited);
 function worst(parts) {
   const downs = parts.filter(p => p.c.state === 'down');
@@ -160,7 +161,7 @@ function itemsOf(est, ctx) {
   };
 }
 function tally(items) {
-  const counts = { n: 0, ok: 0, risk: 0, slo: 0, down: 0, nodata: 0 };
+  const counts = { n: 0, ok: 0, risk: 0, down: 0, nodata: 0 };
   let now = null;
   for (const it of items) {
     counts.n += it.n || 1; counts[it.state] = (counts[it.state] || 0) + (it.n || 1);
@@ -214,11 +215,11 @@ export function segmentDrill(est, ctx, key, trail = []) {
  * 2026-09-30), so the tiles, the grid and the problem list agree.
  */
 export function pathFlow(ctx) {
-  const R = { none: -2, nodata: -1, ok: 0, risk: 1, slo: 2, down: 3 };
+  const R = { none: -2, nodata: -1, ok: 0, risk: 1, over: 2, down: 3 };
   return (ctx.apps || []).map(a => {
     const cells = cellsFor(a.tag, ctx);
     const listed = (ctx.probs || []).filter(p => (p.apps || []).includes(a.tag)).map(p => p.state);
-    // Healthy means the path holds its SLO and the app's own compute, database and network stay under your thresholds (2026-10-06).
+    // Healthy means the path's links hold and the app's own compute, database and network stay under your thresholds (2026-10-06).
     const pathState = [...cells.map(c => c.state), ...listed].reduce((w, st) => (R[st] > R[w] ? st : w), 'ok');
     const res = (ctx.resource || {})[a.tag] || null;
     const state = res && R[res.state] > R[pathState] ? res.state : pathState;
@@ -229,16 +230,16 @@ export function pathFlow(ctx) {
 
 // One Paths row: an app group on one region (or, with no app, the region
 // alone), from the site that sends that region the most. The hops are the ones
-// the product already draws (naas-paths path()), placed in the seven columns;
-// they add up to Site to app. Loss shows only where a source reports it: the
-// connection's own drops, or 0.3% on a public path already marked warn.
+// the product already draws (naas-paths path()), placed in the seven columns.
+// Nothing is timed (2026-10-15): the row reads the link it rides, its
+// connection's peak against what was bought, and its state. Loss shows only
+// where a source reports it: the connection's own drops.
 function timeRow(ctx, a, r) {
   const top = regionSites(ctx.est, r, 1).rows[0];
   if (!top) return null;
   const site = top.site, drawn = hopsOf(site, r), row = rowOf(ctx, r.region), mode = connModeOf(r);
-  const step = (i) => drawn.hops[i].ms - drawn.hops[i - 1].ms;
-  const cells = SEGMENTS.map(seg => ({ key: seg.key, label: seg.label, ms: null, names: [], loss: null, why: '' }));
-  const put = (key, i) => { const c = cells.find(x => x.key === key); c.ms = (c.ms || 0) + step(i); c.names.push(drawn.hops[i].name); };
+  const cells = SEGMENTS.map(seg => ({ key: seg.key, label: seg.label, on: false, names: [], loss: null, why: '' }));
+  const put = (key, i) => { const c = cells.find(x => x.key === key); c.on = true; c.names.push(drawn.hops[i].name); };
   drawn.hops.forEach((h, i) => {
     if (!i) return;
     if (h.kind === 'access' || h.kind === 'hub') put('site', i);
@@ -248,24 +249,27 @@ function timeRow(ctx, a, r) {
     else if (h.kind === 'region') put('app', i);
   });
   if (row && r.priv) cells.find(x => x.key === (mode === 'direct' ? 'cloudlink' : 'onramp')).loss = row.drops;
-  if (!r.priv && r.rel === 'warn') cells.find(x => x.key === 'backbone').loss = '0.30%';
   const out = cells.map(c => {
-    const why = c.ms != null ? '' : c.key === 'hub' ? NOT_YET : c.key === 'cloudlink' && r.priv && mode !== 'direct' ? `Inside the ${mode === 'third' ? 'Equinix' : 'NetBond'} on-ramp` : 'Not on this path';
-    const title = c.ms != null ? `${c.label} · ${c.names.join(', ')} · ${c.ms} ms · loss ${c.loss || NOT_YET.toLowerCase()}` : `${c.label} · ${why}`;
-    return { key: c.key, ms: c.ms, msF: c.ms != null ? `${c.ms} ms` : '', loss: c.loss, lossF: c.loss || '', title };
+    const why = c.on ? '' : c.key === 'hub' ? NOT_YET : c.key === 'cloudlink' && r.priv && mode !== 'direct' ? `Inside the ${mode === 'third' ? 'Equinix' : 'NetBond'} on-ramp` : 'Not on this path';
+    const title = c.on ? `${c.label} · ${c.names.join(', ')} · loss ${c.loss || NOT_YET.toLowerCase()}` : `${c.label} · ${why}`;
+    return { key: c.key, on: c.on, loss: c.loss, lossF: c.loss || '', title };
   });
-  const slo = r.priv ? SLO_PRIVATE : SLO, topApp = a && (a.topApps || [])[0];
+  const topApp = a && (a.topApps || [])[0];
+  // The link it rides: a private region's connection, at its peak against what was bought. The public internet has none
+  // anyone here measures, so a public path carries no figure.
+  const link = r.priv && row ? { pct: row.pct, bw: row.bw || `${row.ports} × 10 Gbps`, near: row.pct >= NEAR_FULL } : null;
   // The lift the Health grid takes (review round 2, 2026-09-30): a row whose app
   // and region an open problem lists is at least that problem's state, and its
   // title, and the cell the problem sits on, carry the problem's words.
   const listed = a ? listedOn(ctx, a.tag, r.region) : [];
-  const state = liftTo(row && row.degraded ? 'down' : healthOf(drawn.ms, slo), listed);
-  const cellOf = (q) => (q.kind === 'spike' ? 'backbone' : mode === 'direct' ? 'cloudlink' : 'onramp');
+  const state = liftTo(row && row.degraded ? 'down' : row && row.hot ? 'risk' : 'ok', listed);
+  const cellOf = () => (mode === 'direct' ? 'cloudlink' : 'onramp');
   const cells2 = out.map(c => { const on = listed.filter(q => cellOf(q) === c.key); return on.length ? { ...c, title: [c.title, ...on.map(q => q.what)].join(' · ') } : c; });
   const label = !a ? `${r.cloud} ${r.region}` : topApp ? `${a.tag} → ${topApp}` : a.tag;
-  const title = [`${label} · ${site.name} to ${r.cloud} ${r.region} · ${drawn.ms} ms against ${slo} ms · ${HEALTH_WORD[state] || state}`, ...listed.map(q => `${q.thing}: ${q.what}`)].join(' · ');
+  const linkWords = link ? `${link.pct}% of ${link.bw} at peak` : 'public internet, not measured';
+  const title = [`${label} · ${site.name} to ${r.cloud} ${r.region} · ${linkWords} · ${HEALTH_WORD[state] || state}`, ...listed.map(q => `${q.thing}: ${q.what}`)].join(' · ');
   return { key: `${a ? a.tag : ''}|${r.region}`, tag: a ? a.tag : null, label, region: r.region, where: `${r.cloud} ${r.region}`, site: site.name,
-    aggHub: drawn.hops.some(h => h.kind === 'hub'), cells: cells2, total: drawn.ms, totalF: `${drawn.ms} ms`, slo, state, title, hops: drawn.hops, wl: a ? a.wl : (r.wl || 0) };
+    aggHub: drawn.hops.some(h => h.kind === 'hub'), cells: cells2, link, linkF: link ? `${link.pct}%` : 'Public', state, title, hops: drawn.hops, wl: a ? a.wl : (r.wl || 0) };
 }
 
 /**
@@ -283,7 +287,7 @@ export function pinFor(ctx, region, tags = []) {
 }
 
 /**
- * Is it fast (notes, 2026-09-30, B2): one row per app group, on its worst
+ * Each app's path (notes, 2026-09-30, B2): one row per app group, on its worst
  * material region, from the site that sends it the most.
  *
  * Pins (final review, 2026-09-30, finding 6): the {tag, region} pairs Trace
@@ -292,12 +296,12 @@ export function pinFor(ctx, region, tags = []) {
  */
 export function pathTimes(ctx, { pins = [] } = {}) {
   const regs = ctx.est.regionsList || [];
-  const RW = { down: 4, slo: 3, risk: 2, ok: 1 };
+  const RW = { down: 4, risk: 2, ok: 1 };
   const base = (ctx.apps || []).map(a => {
     const parts = (a.parts || []).filter(p => p.share >= 0.05).map(p => ({ p, r: regs.find(x => x.region === p.region) })).filter(x => x.r);
     if (!parts.length) return null;
     // The worst region counts the problems that list the app there, so the row lands where Health says it hurts.
-    const weight = ({ r, p }) => { const row = rowOf(ctx, r.region); return (RW[liftTo(row && row.degraded ? 'down' : regionState(r), listedOn(ctx, a.tag, r.region))] || 1) * 10 + p.share; };
+    const weight = ({ r, p }) => { const row = rowOf(ctx, r.region); return (RW[liftTo(row && row.degraded ? 'down' : row && row.hot ? 'risk' : regionState(r), listedOn(ctx, a.tag, r.region))] || 1) * 10 + p.share; };
     const { r } = parts.reduce((w, x) => (weight(x) > weight(w) ? x : w), parts[0]);
     return timeRow(ctx, a, r);
   }).filter(Boolean).sort((x, y) => (RW[y.state] || 0) - (RW[x.state] || 0) || y.wl - x.wl);

@@ -5,7 +5,7 @@
 //
 // Each tab reads top to bottom as verdict, evidence, moves. The verdict is one strip of glyph tiles that holds its place as
 // the tabs change (the map's six rollups, four on every other tab), each tile a figure and a door. The evidence is the tab's
-// own picture (the flow map, the days as columns, the destinations' split, the seven stations, the latency against its SLO,
+// own picture (the flow map, the days as columns, the destinations' split, the seven stations, the links at their peak,
 // the ports as rings, the window as a timeline). The moves are a verb on every card and a glyph verb on every row.
 //
 // Pure view models over what vals() already counted: every figure here is one the page printed before (flowTiles, otTiles,
@@ -13,7 +13,7 @@
 // a delta, a healthy state and a spend read in the house inks. The actions are the page's own doors (the map's filters, a
 // problem's Trace, a port's move, Logs' explain) or navigations to the page where you act.
 
-import { SLO, SLO_PRIVATE } from './naas-flowmap.js';
+import { NEAR_FULL } from './naas-flowmap.js';
 import { markFor, MARK } from './naas-ways.js';
 
 export const TRF_PANELS = ['map', 'time', 'where', 'health', 'paths', 'conn', 'changes'];
@@ -38,12 +38,12 @@ export function ringOf(segs, whole) {
 const HEAD = 'var(--text-heading)';
 const HEALTHY = 'var(--viz-1)';
 // Health in Traffic's inks: healthy is the calm blue (green is the saving's alone), the rest keep their house tokens.
-export const TRF_INK = { ok: HEALTHY, risk: 'var(--warning)', slo: 'var(--viz-5)', down: 'var(--error)', nodata: 'var(--text-disabled)', none: 'var(--border-secondary)' };
+export const TRF_INK = { ok: HEALTHY, risk: 'var(--warning)', over: 'var(--viz-5)', down: 'var(--error)', nodata: 'var(--text-disabled)', none: 'var(--border-secondary)' };
 // A tile: its glyph, name and figure (counting up), a door; a ratio rides its foot as a meter, a trend as a delta or a spark.
 const tile = (t, i) => ({ u: '', tone: HEAD, on: false, lead: i === 0, hasRing: false, ring: '', ringLabel: '', hasDelta: false, delta: '', deltaIcon: 'trending-up', deltaInk: 'var(--text-body)', deltaTitle: '', hasSpark: false, spark: [], ...t, i, cu: cuOf(t.v),
   hasMeter: t.meter != null && isFinite(t.meter), meterW: `${Math.max(0, Math.min(100, +t.meter || 0)).toFixed(2)}%`, noAside: !t.hasDelta && !t.hasSpark });
 const act = (label, icon, go, title, extra = {}) => ({ label, icon, go, title: title || label, aria: title ? `${label}: ${title}` : label, primary: false, ...extra });
-const unitOf = (s) => { const m = /^(.*?)\s+(Tbps|Gbps|Mbps|Kbps|ms)$/.exec(String(s || '')); return m ? [m[1], m[2]] : [String(s || ''), '']; };
+const unitOf = (s) => { const m = /^(.*?)\s+(Tbps|Gbps|Mbps|Kbps)$/.exec(String(s || '')); return m ? [m[1], m[2]] : [String(s || ''), '']; };
 const dollars = (v) => { const m = /\$([\d,]+)/.exec(String(v || '')); return m ? +m[1].replace(/,/g, '') : 0; };
 const ofParts = (v) => { const m = /^([\d,]+) of ([\d,]+)$/.exec(String(v || '')); return m ? [+m[1].replace(/,/g, ''), +m[2].replace(/,/g, '')] : null; };
 const plural = (n, one, many) => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
@@ -69,18 +69,17 @@ export function trafficStory(out, s, set, ctx) {
   // ---- Traffic, the flow map: six rollups that filter it, and the move the view it is in points at.
   const ft = Object.fromEntries((out.flowTiles || []).map(t => [t.key, t]));
   const mode = ((out.flowViews || []).find(x => x.on) || {}).key || 'state';
-  const could = dollars((ft.could || {}).v), sloN = +((ft.slo || {}).v) || 0, onAtt = ofParts((ft.onatt || {}).v);
-  const MAP_ICON = { traffic: 'global-network', p95: 'smart-meter', onatt: 'large-building', cost: 'bill', could: 'trending-down', slo: 'clock' };
+  const could = dollars((ft.could || {}).v), nearN = +((ft.near || {}).v) || 0, onAtt = ofParts((ft.onatt || {}).v);
+  const MAP_ICON = { traffic: 'global-network', util: 'smart-meter', onatt: 'large-building', cost: 'bill', could: 'trending-down', near: 'exclamation-triangle' };
   const mapTiles = (out.flowTiles || []).map((t, i) => tile({ lead: false, key: t.key, icon: MAP_ICON[t.key] || 'pie-chart', l: t.l, v: t.v, u: t.u, go: t.go, on: !!t.on, title: t.title,
-    tone: t.key === 'could' && could > 0 ? 'var(--success)' : t.key === 'slo' && sloN > 0 ? TRF_INK.slo : HEAD,
+    tone: t.key === 'could' && could > 0 ? 'var(--success)' : t.key === 'near' && nearN > 0 ? TRF_INK.risk : HEAD,
     ...(t.hasD ? { hasDelta: true, delta: t.dShort, deltaIcon: /^[-−]/.test(t.dShort) ? 'trending-down' : 'trending-up', deltaTitle: t.d } : {}),
     ...(t.key === 'onatt' && onAtt && onAtt[1] ? { hasRing: true, ring: ringOf([{ v: onAtt[0], c: HEALTHY }], onAtt[1]), ringLabel: t.title, meter: onAtt[0] / onAtt[1] * 100 } : {}) }, i));
-  const trace0 = worst ? worst.trace : toPanel('paths');
   const trfMap = { mode,
     cta: mode === 'cost' ? act('Optimize', 'trending-down', toOptimize, `${(ft.cost || {}).v || ''}/mo rides this map; the moves that lower it are on Optimize`, { primary: true })
-      : mode === 'slo' ? (sloN > 0 ? act('Trace', 'target', trace0, `${plural(sloN, 'link', 'links')} over SLO: trace the worst, hop by hop`, { primary: true }) : act('Paths', 'shuffle', toPanel('paths'), 'Each app on its slowest path, hop by hop'))
+      : mode === 'util' ? (nearN > 0 ? act('Capacity', 'high-meter', toPanel('conn'), `${plural(nearN, 'link', 'links')} near full: each port against its peak, and its move`, { primary: true }) : act('Paths', 'shuffle', toPanel('paths'), 'Each app on its path, hop by hop'))
         : could > 0 ? act('Move to AT&T', 'trending-down', toOptimize, `Your sites' traffic outside AT&T would save ${ft.could.v}/mo on the AT&T network: the moves on Optimize`, { primary: true })
-          : sloN > 0 ? act('Trace', 'target', trace0, `${plural(sloN, 'link', 'links')} over SLO: trace the worst, hop by hop`, { primary: true })
+          : nearN > 0 ? act('Capacity', 'high-meter', toPanel('conn'), `${plural(nearN, 'link', 'links')} near full: each port against its peak, and its move`, { primary: true })
             : act('Records', 'list', toLogs('flow'), 'The flow records behind this map') };
 
   // ---- Over time: the days as columns, the peak marked, the average drawn; the moves are capacity and the replay.
@@ -152,17 +151,17 @@ export function trafficStory(out, s, set, ctx) {
   const okParts = ofParts((ht.ok || {}).v);
   const riskN = +((ht.risk || {}).v) || 0, downN = +((ht.down || {}).v) || 0;
   const downProb = probs.find(p => p.state === 'down');
-  const worstApp = (out.appHealthRows || []).some(r => r.state === 'slo') ? 'slo' : 'risk';
+  const worstApp = (out.appHealthRows || []).some(r => r.state === 'over') ? 'over' : 'risk';
   const healthTiles = [
-    { key: 'ok', icon: 'verified', src: ht.ok, go: () => set({ obPanel: 'health', healthView: 'cloud', appState: null }), title: `${(ht.ok || {}).v || '0 of 0'} apps hold their SLO and stay inside your thresholds: App health`,
+    { key: 'ok', icon: 'verified', src: ht.ok, go: () => set({ obPanel: 'health', healthView: 'cloud', appState: null }), title: `${(ht.ok || {}).v || '0 of 0'} apps ride healthy links and stay inside your thresholds: App health`,
       ...(okParts && okParts[1] ? { hasRing: true, ring: ringOf([{ v: okParts[0], c: HEALTHY }], okParts[1]), ringLabel: `${okParts[0]} of ${okParts[1]} apps healthy`, meter: okParts[0] / okParts[1] * 100 } : {}) },
     // The model's label names both states in five words; the tile says it in four (glyph first, 2026-10-13).
-    { key: 'risk', icon: 'clock', l: 'Over SLO, at risk', src: ht.risk, tone: riskN ? TRF_INK.slo : HEAD, go: () => set({ obPanel: 'health', healthView: 'cloud', appState: worstApp }), title: `${plural(riskN, 'app', 'apps')} over SLO or at risk: App health, filtered to them` },
+    { key: 'risk', icon: 'exclamation-triangle', l: 'Over or at risk', src: ht.risk, tone: riskN ? TRF_INK.over : HEAD, go: () => set({ obPanel: 'health', healthView: 'cloud', appState: worstApp }), title: `${plural(riskN, 'app', 'apps')} over a threshold or at risk: App health, filtered to them` },
     { key: 'down', icon: 'close-circle', src: ht.down, tone: downN ? TRF_INK.down : HEAD, go: downProb ? downProb.trace : toPanel('conn'), title: downProb ? `${downProb.where} · ${downProb.thing} is down: trace it hop by hop` : 'No connection down: Capacity shows each one' },
     { key: 'alerts', icon: 'bell', src: ht.alerts, go: toOps('tickets'), title: `${plural(probs.length, 'alert', 'alerts')} open: Operations, Tickets` },
   ].map((t, i) => tile({ key: t.key, icon: t.icon, l: t.l || (t.src || {}).l || t.key, v: (t.src || {}).v || '0', u: (t.src || {}).u || '', tone: t.tone || HEAD, go: t.go, title: t.title, ...(t.hasRing ? { hasRing: true, ring: t.ring, ringLabel: t.ringLabel, meter: t.meter } : {}) }, i));
   const OWNER_ICON = { 'AT&T': 'check-shield', 'Cloud provider': 'cloud', 'Public internet': 'internet', 'Third party': 'person-group', You: 'person' };
-  const STATE_ICON = { down: 'close-circle', slo: 'clock', risk: 'exclamation-triangle', ok: 'check-circle' };
+  const STATE_ICON = { down: 'close-circle', over: 'high-meter', risk: 'exclamation-triangle', ok: 'check-circle' };
   out.problemRows = probs.map((p, i) => ({ ...p, d: i % 3, first: i === 0, stateIcon: STATE_ICON[p.state] || 'exclamation-circle', ownerIcon: OWNER_ICON[p.ownerLabel] || 'person',
     whatShort: String(p.what || '').split(' · ')[0], ticketId: (String(p.ticketF || '').match(/T-\d{4}/) || [''])[0], appsN: String((p.apps || []).length), changeSay: p.changeF ? ` · ${p.changeF}` : '',
     verb: act(p.moveLabel || 'Trace', p.moveLabel === 'Trace' ? 'target' : p.moveLabel === 'In progress' ? 'clock' : 'plus-circle', p.move, `${p.where} · ${p.thing}: ${p.what}`),
@@ -180,42 +179,42 @@ export function trafficStory(out, s, set, ctx) {
       open: act(r.label, 'shuffle', pr ? () => set({ obPanel: 'paths', pathSel: pr.key, pathPin: null }) : toPanel('paths'), `${r.label}: its path hop by hop`) }; });
   const view = s.healthView === 'segment' ? 'segment' : s.healthView === 'cloud' ? 'cloud' : 'app';
   const trfHealth = { view, problems: out.problemRows, hasProblems: out.problemRows.length > 0, noProblems: !out.problemRows.length,
-    paths: act('Paths', 'shuffle', toPanel('paths'), 'Each app on its slowest path, hop by hop'),
+    paths: act('Paths', 'shuffle', toPanel('paths'), 'Each app on its path, hop by hop'),
     tickets: act('Tickets', 'checklist', toOps('tickets'), 'Operations, every ticket open and who holds it'),
-    cta: view === 'segment' ? (nodata ? act('Add a source', 'plus-circle', () => { toSources(); if (typeof out.openAddSource === 'function') out.openAddSource(); }, 'Segments not yet measured read once a source sends them', { primary: true }) : act('Paths', 'shuffle', toPanel('paths'), 'Each app on its slowest path, hop by hop', { primary: true }))
-      : view === 'cloud' ? (out.appThreshChanged ? act('Reset', 'repeat', out.appThreshReset, 'Back to the default thresholds', { primary: true }) : act('Paths', 'shuffle', toPanel('paths'), 'Each app on its slowest path, hop by hop', { primary: true }))
+    cta: view === 'segment' ? (nodata ? act('Add a source', 'plus-circle', () => { toSources(); if (typeof out.openAddSource === 'function') out.openAddSource(); }, 'Segments not yet measured read once a source sends them', { primary: true }) : act('Paths', 'shuffle', toPanel('paths'), 'Each app on its path, hop by hop', { primary: true }))
+      : view === 'cloud' ? (out.appThreshChanged ? act('Reset', 'repeat', out.appThreshReset, 'Back to the default thresholds', { primary: true }) : act('Paths', 'shuffle', toPanel('paths'), 'Each app on its path, hop by hop', { primary: true }))
         : act('Tickets', 'checklist', toOps('tickets'), 'Operations: every ticket open and who holds it') };
 
-  // ---- Paths: is it fast. Each app on its slowest path, the hops, and the time against its SLO; a verb per row.
+  // ---- Paths: each app on its path, the hops, and the link it rides at its peak against what was bought (no delay figure,
+  // 2026-10-15: "we can't measure that"); a verb per row.
   const pAll = out.pathTimeAll || [];
-  const msMax = Math.max(1, ...pAll.map(r => Math.max(r.total || 0, r.slo || 0)));
-  const slowest = pAll.slice().sort((a, b) => (b.total || 0) - (a.total || 0))[0] || null;
-  const overRows = pAll.filter(r => r.state === 'slo' || r.state === 'down');
+  const busiestPath = pAll.filter(r => r.link).sort((a, b) => b.link.pct - a.link.pct)[0] || null;
+  const nearRows = pAll.filter(r => r.link && r.link.near);
   const lossy = (r) => (r.cells || []).filter(c => c.lossF && c.lossF !== '0.00%').length;
   const lossN = pAll.reduce((a, r) => a + lossy(r), 0), lossRow = pAll.find(r => lossy(r) > 0);
   const okN = pAll.filter(r => r.state === 'ok').length;
   const selPath = (r) => () => { const ix = Math.max(0, pAll.findIndex(x => x.key === r.key)); set({ obPanel: 'paths', pathSel: r.key, pathsPage: Math.floor(ix / 8) }); };
   const pathVerb = (r) => { const reg = regionOf(r.region), pub = !!reg && !reg.priv;
     if (r.state === 'down') return act('Health', 'verified', toPanel('health'), `${r.where} is down: its problem, its ticket and its move`);
-    if ((r.state === 'slo' || r.state === 'risk') && pub && attach) return act('Attach', 'cable', attach(r.region), `${r.where} rides the public internet: attach it to the AT&T network`);
-    if (r.state === 'slo' || r.state === 'risk') return act('Capacity', 'high-meter', toPanel('conn'), `${r.where}: its port against its peak`);
+    if (r.state === 'risk' && pub && attach) return act('Attach', 'cable', attach(r.region), `${r.where} rides the public internet: attach it to the AT&T network`);
+    if (r.state === 'risk') return act('Capacity', 'high-meter', toPanel('conn'), `${r.where}: its port against its peak`);
     return act('Map', 'global-network', () => set({ obPanel: 'map', mapRegion: r.region }), `${r.where} on the flow map`); };
   const pathTiles = [
-    { key: 'slowest', icon: 'clock', l: 'Slowest', v: slowest ? String(slowest.total) : 'None', u: slowest ? 'ms' : '', tone: slowest && slowest.state !== 'ok' ? TRF_INK[slowest.state] || HEAD : HEAD, go: slowest ? selPath(slowest) : toPanel('map'), title: slowest ? `${slowest.label}, ${slowest.site} to ${slowest.where}: ${slowest.totalF} against ${slowest.slo} ms` : 'No path to time yet' },
-    { key: 'over', icon: 'exclamation-circle', l: 'Over SLO', v: String(overRows.length), u: overRows.length === 1 ? 'path' : 'paths', tone: overRows.length ? TRF_INK.slo : HEAD, go: overRows[0] ? selPath(overRows[0]) : toPanel('health'), title: `${plural(overRows.length, 'path', 'paths')} over SLO or down${overRows[0] ? `, first ${overRows[0].label}` : ''}` },
+    { key: 'busiest', icon: 'high-meter', l: 'Busiest link', v: busiestPath ? String(busiestPath.link.pct) : 'None', u: busiestPath ? '%' : '', tone: busiestPath && busiestPath.state !== 'ok' ? TRF_INK[busiestPath.state] || HEAD : HEAD, go: busiestPath ? selPath(busiestPath) : toPanel('conn'), title: busiestPath ? `${busiestPath.label}, ${busiestPath.site} to ${busiestPath.where}: ${busiestPath.link.pct}% of ${busiestPath.link.bw} at peak` : 'No path rides a connection on AT&T yet' },
+    { key: 'near', icon: 'exclamation-triangle', l: 'Near full', v: String(nearRows.length), u: nearRows.length === 1 ? 'path' : 'paths', tone: nearRows.length ? TRF_INK.risk : HEAD, go: nearRows[0] ? selPath(nearRows[0]) : toPanel('conn'), title: `${plural(nearRows.length, 'path', 'paths')} on a connection at ${NEAR_FULL}% or more of what was bought, at peak${nearRows[0] ? `, first ${nearRows[0].label}` : ''}` },
     { key: 'loss', icon: 'exclamation-triangle', l: 'Loss', v: String(lossN), u: lossN === 1 ? 'hop' : 'hops', go: lossRow ? selPath(lossRow) : toPanel('health'), title: lossN ? `${plural(lossN, 'hop', 'hops')} where a source reports loss` : 'No hop reports loss' },
-    { key: 'ok', icon: 'verified', l: 'Within SLO', v: `${okN} of ${pAll.length}`, u: '', go: toPanel('health'), title: `${okN} of ${pAll.length} paths within their SLO: Health`,
-      hasRing: pAll.length > 0, ring: ringOf([{ v: okN, c: HEALTHY }], pAll.length), ringLabel: `${okN} of ${pAll.length} within SLO`, ...(pAll.length ? { meter: okN / pAll.length * 100 } : {}) },
+    { key: 'ok', icon: 'verified', l: 'Healthy', v: `${okN} of ${pAll.length}`, u: '', go: toPanel('health'), title: `${okN} of ${pAll.length} paths healthy, their links up and under ${NEAR_FULL}% at peak: Health`,
+      hasRing: pAll.length > 0, ring: ringOf([{ v: okN, c: HEALTHY }], pAll.length), ringLabel: `${okN} of ${pAll.length} healthy`, ...(pAll.length ? { meter: okN / pAll.length * 100 } : {}) },
   ].map(tile);
-  out.pathTimeRows = (out.pathTimeRows || []).map((r, i) => { const full = pAll.find(x => x.key === r.key) || {}; const ms = full.total || 0, slo = full.slo || SLO;
-    return { ...r, d: i % 8, ink: TRF_INK[r.state] || HEALTHY, barW: `${Math.max(2, ms / msMax * 100).toFixed(2)}%`, sloLeft: `${Math.min(100, slo / msMax * 100).toFixed(2)}%`, sloF: `SLO ${slo} ms`, verb: pathVerb(full.key ? full : r) }; });
+  // The bar is the link's peak share of what was bought, its tick the near-full line Capacity draws; a public path has no bar.
+  out.pathTimeRows = (out.pathTimeRows || []).map((r, i) => { const full = pAll.find(x => x.key === r.key) || {}; const link = full.link || null;
+    return { ...r, d: i % 8, ink: TRF_INK[r.state] || HEALTHY, barW: link ? `${Math.max(2, Math.min(100, link.pct)).toFixed(2)}%` : '0%', tickLeft: `${NEAR_FULL}%`, tickF: `Near full at ${NEAR_FULL}%`, verb: pathVerb(full.key ? full : r) }; });
   const selRow = pAll.find(r => r.key === s.pathSel) || null;
-  const leadRow = selRow || overRows[0] || slowest;
-  const trfPaths = { rows: out.pathTimeRows, sloPriv: `${SLO_PRIVATE} ms`, sloPub: `${SLO} ms`, hasSel: !!selRow, noSel: !selRow,
-    // A hop's own time is the step from the one before (the hops carry the time at arrival); where the time is lost reads in its state's ink.
-    hops: selRow ? (selRow.hops || []).slice(1).map((h, i, a) => { const prev = i ? a[i - 1].ms || 0 : ((selRow.hops || [])[0] || {}).ms || 0, own = Math.max(0, (h.ms || 0) - prev);
-      return { key: 'h' + i, name: h.name, ms: `${own} ms`, grow: Math.max(1, own), ink: h.state === 'bad' ? TRF_INK.slo : h.state === 'warn' ? 'var(--warning)' : i % 2 ? 'var(--viz-4)' : HEALTHY }; }) : [],
-    selLabel: selRow ? selRow.label : '', selTotal: selRow ? selRow.totalF : '',
+  const leadRow = selRow || nearRows[0] || busiestPath;
+  const trfPaths = { rows: out.pathTimeRows, hasSel: !!selRow, noSel: !selRow,
+    // The picked row's hops in order, each in its state's ink: where no one controls the path reads as a caution.
+    hops: selRow ? (selRow.hops || []).slice(1).map((h, i) => ({ key: 'h' + i, name: h.name, sub: h.sub, grow: 1, ink: h.state === 'warn' ? 'var(--warning)' : i % 2 ? 'var(--viz-4)' : HEALTHY })) : [],
+    selLabel: selRow ? selRow.label : '', selTotal: selRow ? selRow.linkF : '',
     cta: leadRow ? { ...pathVerb(leadRow), primary: true } : act('Map', 'global-network', toPanel('map'), 'The flow map', { primary: true }) };
 
   // ---- Capacity: is it full. Each connection a card: its peak as a ring, its run, when it fills, and its move.

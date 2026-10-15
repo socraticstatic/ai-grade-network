@@ -15,7 +15,7 @@ test('every station has a glyph on disk, in the heads and in every cell', () => 
   assert.equal(v.segHeads.length, 7);
   for (const h of v.segHeads) assert.ok(onDisk(h.icon), `${h.key}: ${h.icon}`);
   assert.ok(v.pathFlowRows.length > 0);
-  for (const r of v.pathFlowRows) for (const c of r.cells) { assert.ok(onDisk(c.icon), `${r.tag} ${c.key}: ${c.icon}`); assert.ok(['ok', 'risk', 'slo', 'down', 'nodata', 'none'].includes(c.state), c.state); }
+  for (const r of v.pathFlowRows) for (const c of r.cells) { assert.ok(onDisk(c.icon), `${r.tag} ${c.key}: ${c.icon}`); assert.ok(['ok', 'risk', 'down', 'nodata', 'none'].includes(c.state), c.state); }
 });
 
 test('a Paths cell reads its state off the figures: measured, lossy, or not yet measured', () => {
@@ -32,5 +32,7 @@ test('the markup draws both rows as the seven-station strip', () => {
   assert.match(HTML, /<div class="ps seven sm" aria-label="\{\{ pf\.label \}\} across the path">/);
   assert.match(HTML, /<div class="ps seven sm" aria-label="\{\{ pt\.label \}\}, hop by hop">/);
   assert.ok(HTML.includes('.ps.seven{grid-template-columns:repeat(7,minmax(0,1fr))}'));
-  for (const st of ['ok', 'risk', 'slo', 'down', 'nodata', 'none']) assert.ok(HTML.includes(`.ps [data-state="${st}"] i{`), st);
+  // A station is Healthy, At risk (near full), Down, not yet measured or not on the path; no delay state since 2026-10-15.
+  for (const st of ['ok', 'risk', 'down', 'nodata', 'none']) assert.ok(HTML.includes(`.ps [data-state="${st}"] i{`), st);
+  assert.ok(!HTML.includes('.ps [data-state="slo"]'));
 });

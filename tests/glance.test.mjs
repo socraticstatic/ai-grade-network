@@ -32,10 +32,12 @@ test('the apps: every workload, one row per app, largest first, paged to fit', (
   assert.equal(all.reduce((a, x) => a + x.wl, 0), num(v.invStats.find(k => k.l === 'workloads').v));
   assert.ok(v.appRows.length <= v.appPageSize && v.appRows.length > 0);
   for (const r of v.appRows) {
-    assert.ok(r.name && r.runsIn && r.wlF && r.onAttF && r.gbpsF && r.p95F, r.name);
+    assert.ok(r.name && r.runsIn && r.wlF && r.onAttF && r.gbpsF && r.linkF, r.name);
     assert.match(r.onAttW, /%$/); assert.match(r.wlW, /%$/);
-    // Over SLO is its own ink, not Down's red (review, 2026-09-30).
-    assert.ok(['var(--success)', 'var(--warning)', 'var(--viz-5)'].includes(r.healthInk), r.name);
+    // Peak replaced p95 (2026-10-15): the link an app rides at its peak, or Public. A healthy link is a hollow ring; a
+    // problem fills in its state's ink, never the saving's green.
+    assert.match(r.linkF, /^(\d+%|Public)$/, r.name);
+    assert.ok(['transparent', 'var(--warning)', 'var(--error)'].includes(r.linkFill), r.name);
   }
   assert.equal(num(v.invStats.find(k => k.l === 'exposed workloads').v), all.reduce((a, x) => a + x.exposed, 0));
 });
@@ -63,7 +65,8 @@ test('the markup: rings, the apps table, and the gaps on a line each', () => {
   assert.match(panel, /aria-label="Estate at a glance"/);
   assert.match(panel, /class="fx-ring"/);
   assert.match(panel, /aria-label="Apps"/);
-  for (const h of ['App', 'Workloads', 'Runs in', 'On AT&amp;T', 'Exposed', 'Traffic', 'p95']) assert.ok(panel.includes(`>${h}<`), h);
+  for (const h of ['App', 'Workloads', 'Runs in', 'On AT&amp;T', 'Exposed', 'Traffic', 'Peak']) assert.ok(panel.includes(`>${h}<`), h);
+  assert.ok(!panel.includes('>p95<'), 'no delay column');
   assert.match(panel, /<sc-for list="\{\{ glanceGaps \}\}"/);
   assert.ok(!panel.includes('{{ haveCards }}'), 'the text cards are gone');
 });

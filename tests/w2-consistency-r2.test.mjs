@@ -48,7 +48,7 @@ test('A Signals traffic figure lands on the records it counts, or says no sample
   let seen = 0, empty = 0;
   for (const view of VIEWS) for (const persona of ['architect', 'neteng', 'security', 'finops', 'exec']) {
     const v0 = vals(ins(view, { persona }));
-    for (const k of ['talkers', 'multi', 'slo']) {
+    for (const k of ['talkers', 'multi']) {
       const cd = card(v0, k); if (!cd) continue;
       cd.all.forEach((r, i) => {
         if (r.fig === 'finding' || r.fig === 'logs') return;
@@ -71,8 +71,7 @@ test('A Signals traffic figure lands on the records it counts, or says no sample
             assert.equal(rec.path, /on AT&T/.test(r.sub) ? 'private' : 'public', `${say}: the pair reads ${r.sub}`);
           } else {
             assert.equal(src, r.region, `${say}: not from ${r.region}`);
-            if (k === 'slo') assert.equal(rec.path, / · on AT&T$/.test(r.sub) ? 'private' : 'public', `${say}: the flow runs ${r.sub}`);
-            else if (outside) assert.equal(rec.path, 'public', `${say}: the row counts traffic outside AT&T`);
+            if (outside) assert.equal(rec.path, 'public', `${say}: the row counts traffic outside AT&T`);
             else if (onRow) assert.equal(rec.path, 'private', `${say}: the row counts traffic on AT&T`);
             if (/egress|exposure/.test(cd.title) && r.xPub) assert.equal(rec.pattern, 'clouds', `${say}: the row counts its cross-cloud pair`);
           }
@@ -96,7 +95,7 @@ test('An explanation no sample record carries says so, on its count and in the e
 
 // The Traffic map with a cloud opened and one of its regions selected, or a connection's own panel.
 const mapAt = (view, cloud, sel) => mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'map', mapOpen: cloud ? ['cloud:' + cloud] : [], mapSel: sel });
-const WORST = ['ok', 'risk', 'slo', 'down'];
+const WORST = ['ok', 'risk', 'down'];
 test('A connection that is down is traced first on the map too, never given a port', () => {
   let seen = 0;
   for (const view of VIEWS) {
@@ -127,7 +126,7 @@ test('A region node\'s chip reads its Health state, its connection included, in 
       if (!p) continue;
       const listed = health.filter(x => x.where === `${r.cloud} ${r.region}`).map(x => x.state);
       const want = [r.state, ...listed].reduce((a, s) => (WORST.indexOf(s) > WORST.indexOf(a) ? s : a), 'ok');
-      const WORD = { ok: 'Healthy', risk: 'At risk', slo: 'Over SLO', down: 'Down' }, INK = { ok: 'var(--success)', risk: 'var(--warning)', slo: 'var(--viz-5)', down: 'var(--error)' };
+      const WORD = { ok: 'Healthy', risk: 'At risk', down: 'Down' }, INK = { ok: 'var(--success)', risk: 'var(--warning)', down: 'var(--error)' };
       if (WORST.indexOf(want) >= WORST.indexOf(r.state)) {
         assert.equal(p.stateWord, WORD[want], `${view} ${r.cloud} ${r.region}: the chip reads ${p.stateWord}; Health lists ${listed.join(', ') || 'nothing'} and Capacity reads ${r.state}`);
         assert.equal(p.stateDot, INK[want], `${view} ${r.cloud} ${r.region}: the chip's dot is ${p.stateDot} for ${p.stateWord}`);
@@ -139,26 +138,23 @@ test('A region node\'s chip reads its Health state, its connection included, in 
   assert.ok(seen > 5, `only ${seen} panels checked`);
 });
 
-test('Health lists every region the latency finding says runs above the SLO, so the home\'s dot and its chip agree', async () => {
-  const F = await import('../naas-flowmap.js');
-  const { ESTATES } = await import('../naas-data.js');
+// The latency finding this test once chained to Health left with the delay figures (2026-10-15). The chain it guarded
+// holds for what is measured: a connection Capacity reads down or near full is a Health row, and the home's dot agrees.
+test('Health lists every connection Capacity reads down or near full, so the home\'s dot agrees', () => {
   let seen = 0;
   for (const view of VIEWS) {
-    const over = ESTATES[view].regionsList.filter(r => F.regionState(r) === 'slo');
     const health = healthAll(view);
     const home = vals(mkC({ view, estateParam: null, screen: 's0', persona: 'neteng' }));
-    const chip = home.roleActAll.find(a => /above the latency SLO/.test(a.head));
-    for (const r of over) {
-      const row = health.find(p => p.where === `${r.cloud} ${r.region}` && p.state === 'slo');
-      assert.ok(row, `${view}: ${r.cloud} ${r.region} runs ${r.priv ? r.fab : r.pub} ms over its SLO and Health does not list it (${health.map(p => p.where + ' ' + p.state).join(', ')})`);
-      // A spike's region reads its spike, worse than its p95.
-      if (!/^Latency spike/.test(row.what)) assert.match(row.what, new RegExp(`${r.priv ? r.fab : r.pub} ms`), `${view}: Health's row reads "${row.what}"`);
+    for (const r of vals(mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'conn' })).capRows.filter(x => x.state !== 'ok')) {
+      const row = health.find(p => p.where === `${r.cloud} ${r.region}` && p.state === r.state);
+      assert.ok(row, `${view}: ${r.cloud} ${r.region} reads ${r.state} on Capacity and Health does not list it (${health.map(p => p.where + ' ' + p.state).join(', ')})`);
+      assert.doesNotMatch(row.what, /\bms\b|SLO|latency/i, `${view}: Health's row reads "${row.what}"`);
       const dot = home.heroRegions.find(x => x.region === r.region && !x.ghost);
-      if (dot) assert.equal(dot.relState, 'slo', `${view}: the home's ${r.region} dot reads ${dot.relState} ("${dot.relTitle}") beside "${chip && chip.head}"`);
+      if (dot) assert.equal(dot.relState, r.state, `${view}: the home's ${r.region} dot reads ${dot.relState} ("${dot.relTitle}")`);
       seen += 1;
     }
   }
-  assert.ok(seen >= 2, `only ${seen} regions over SLO`);
+  assert.ok(seen >= 4, `only ${seen} connections down or near full`);
 });
 
 // Orders on the one clock (SCH.nowOf): ordered Tue Sep 29, read Mon Oct 5.

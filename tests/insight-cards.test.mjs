@@ -10,21 +10,23 @@ import { mkC } from './harness.mjs';
 // They came back on the Insights page. On 2026-09-30 ("Observe insights is
 // light"; "the previous insights in the last one yesterday were really good")
 // Signals became nine cards in one loop, the six plus Health, Capacity and
-// Spend; tests/signals.test.mjs walks every door they open.
+// Spend; tests/signals.test.mjs walks every door they open. Latency over SLO
+// left on 2026-10-15 ("we can't measure that"): eight cards.
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
 // Insights became an Observe page on 2026-09-28 ("it needs to be a page").
 const panel = () => { const a = HTML.indexOf('<sc-if value="{{ obIsInsights }}"'); return HTML.slice(a, HTML.indexOf('<sc-if value="{{ obIsPerf }}"', a)); };
-const SIX = ['Top talkers', 'New destinations', 'Shadow SaaS', 'Egress growth', 'Cloud-to-cloud paths', 'Latency over SLO'];
+const FIVE = ['Top talkers', 'New destinations', 'Shadow SaaS', 'Egress growth', 'Cloud-to-cloud paths'];
 const observe = (patch = {}) => mkC({ view: 'mature', screen: 's3', tab: 'observe', estateParam: null, obPage: 'insights', ...patch });
 
-test('the Insights page carries yesterday\'s six cards and three more, behind their own gate', () => {
+test('the Insights page carries five of yesterday\'s six cards and three more, behind their own gate', () => {
   const p = panel();
   assert.match(p, /<sc-if value="\{\{ sigGrid \}\}"/);
   assert.match(p, /<sc-for list="\{\{ sigCards \}\}" as="sg"/);
   const titles = vals(observe()).sigAll.map(x => x.title);
-  for (const name of SIX) assert.ok(titles.some(t => t.startsWith(name)), `${name} is missing from ${titles.join(', ')}`);
+  for (const name of FIVE) assert.ok(titles.some(t => t.startsWith(name)), `${name} is missing from ${titles.join(', ')}`);
+  assert.ok(!titles.some(t => /latency|SLO/i.test(t)), titles.join(', '));
   for (const name of ['Health', 'Capacity', 'Spend by bucket']) assert.ok(titles.includes(name), name);
 });
 
@@ -32,7 +34,7 @@ test('every card has rows to show on a customer with traffic', () => {
   const v = vals(observe());
   assert.equal(v.obIsInsights, true);
   assert.equal(v.hasIw, true);
-  for (const k of ['talkers', 'newDest', 'shadow', 'slo']) assert.ok(v.iw[k].length > 0, k);
+  for (const k of ['talkers', 'newDest', 'shadow']) assert.ok(v.iw[k].length > 0, k);
   assert.ok(v.iw.multi.rows.length > 0);
   assert.ok(v.iw.growth.weeks.length > 0);
   for (const x of v.sigAll) assert.ok(x.isCols ? x.cols.length === 12 : x.rows.length > 0, x.key);
@@ -46,7 +48,7 @@ test('a customer with no traffic yet gets no cards, not empty ones', () => {
 
 test('the cards paint from theme tokens, so dark mode recolours them', () => {
   const v = vals(observe());
-  const fills = [...v.iw.talkers, ...v.iw.newDest, ...v.iw.shadow, ...v.iw.slo, ...v.iw.multi.rows].map(r => r.fill);
+  const fills = [...v.iw.talkers, ...v.iw.newDest, ...v.iw.shadow, ...v.iw.multi.rows].map(r => r.fill);
   for (const f of fills) assert.match(f, /^var\(--/, `hard-coded fill ${f}`);
   const cards = panel().slice(0, panel().indexOf('id="sec-insights"'));
   assert.doesNotMatch(cards, /background:#[0-9a-f]{3,6}/i, 'a legend swatch is hard-coded');

@@ -26,7 +26,7 @@ test('Advanced Settings splits the requirements into Routing and Security and li
   vals(c).cfNext();
   let v = vals(c);
   assert.equal(v.cfKey, 'advanced');
-  assert.deepEqual(v.cfPolicyRouting.map(p => p.key), ['Private path required', 'No direct internet path', 'Latency SLO', 'Cost-aware routing']);
+  assert.deepEqual(v.cfPolicyRouting.map(p => p.key), ['Private path required', 'No direct internet path', 'Priority traffic', 'Cost-aware routing']);
   assert.deepEqual(v.cfPolicySecurity.map(p => p.key), ['Inline inspection', 'Segment by tag']);
   // A private path allows the matching routes, both ways; the default-route block is NetBond's baseline row (2026-10-09).
   assert.deepEqual(v.cfRouteRules.map(r => [r.verb, r.label, r.o2p, r.p2o]), [['Allow', 'Matching routes', true, true]]);
@@ -108,7 +108,7 @@ test('your thresholds move every count that reads app health, here and on the ho
 test('a database whose memory climbs is at risk whatever it reads; a signal at its threshold is over', () => {
   const est = D.ESTATES.partial;
   const fin = AH.signalsOf(est, 'finance');
-  assert.equal(fin.signals.find(g => g.key === 'db').state, 'slo');
+  assert.equal(fin.signals.find(g => g.key === 'db').state, 'over');
   const high = AH.signalsOf(est, 'finance', { db: 95 });
   assert.equal(high.signals.find(g => g.key === 'db').state, 'risk', 'leaking, so at risk even under the threshold');
   const calm = AH.signalsOf(est, 'pci');
@@ -140,7 +140,7 @@ test('a home card\'s footnote is glyph chips whose titles say what the footnote 
     for (const x of c.footChips) assert.ok(x.icon && x.t && x.title && x.t.length <= x.title.length, `${c.key}: ${x.t}`);
   }
   const apps = v.homeCards.find(c => c.key === 'apps');
-  assert.deepEqual(apps.footChips.map(x => [x.icon, x.t, x.title]), [['close-circle', '1', '1 down'], ['clock', '1', '1 over latency target'], ['exclamation-triangle', '1', '1 at risk']]);
+  assert.deepEqual(apps.footChips.map(x => [x.icon, x.t, x.title]), [['close-circle', '1', '1 down'], ['exclamation-triangle', '2', '2 at risk']]);
   const eg = v.homeCards.find(c => c.key === 'egress');
   assert.equal(eg.footChips[0].t, '$32,300/mo');
   assert.equal(eg.footChips[0].ink, 'var(--success)', 'the saving alone wears the success ink');
@@ -150,7 +150,6 @@ test('a Signals line splits into a glyph and its figure per part', async () => {
   const { headChips } = await import('../naas-app.js');
   const pick = (h) => headChips(h).map(x => [x.icon, x.t]);
   assert.deepEqual(pick('3 problems · 2 apps affected'), [['exclamation-circle', '3'], ['apps', '2']]);
-  assert.deepEqual(pick('3 of 23 flows over SLO · 1 spike'), [['clock', '3 of 23'], ['trending-up', '1']]);
   assert.deepEqual(pick('None of 2 above 80% at peak · 1 could shrink'), [['high-meter', 'None of 2'], ['trending-down', '1']]);
   assert.deepEqual(pick('AWS us-east-1 · 31% of traffic'), [['cloud', 'AWS us-east-1'], ['cloud-transfer', '31%']]);
   assert.deepEqual(pick('Public egress +$6,800/mo in 11 weeks · +10%'), [['bill', '+$6,800/mo'], ['trending-up', '+10%']]);
@@ -174,7 +173,6 @@ test('a finding head pares to the same figures in fewer words; an unknown head p
     ['Azure eastus has one path, and finance rides it', 'Azure eastus: one path, finance on it'],
     ['AWS us-west-2 peaks at 84% of 2 × 10 Gbps', 'AWS us-west-2 peaks at 84%'],
     ['GCP us-central1 at 81% of 5 × 10 Gbps purchased', 'GCP us-central1 at 81%'],
-    ['2 regions run above the latency SLO', '2 regions over latency SLO'],
     ['6 PCI-tagged workloads reach the internet directly', '6 PCI-tagged workloads reach the internet'],
     ['6 paths send no telemetry', '6 paths send no telemetry'],
   ];

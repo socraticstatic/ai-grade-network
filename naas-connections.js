@@ -82,8 +82,8 @@ export function patterns(est, ob, inv) {
   const legend = [{ label: 'On AT&T', fill: FAB }, { label: 'Public internet', fill: PUB }];
   const pathWord = (c) => c ? 'on AT&T' : 'public internet';
   const region = bar(rs.map(r => ({ key: r.region, name: `${r.cloud} ${r.region}`, sub: `${n(r.wl)} workloads · between VPCs`, gbps: +(r.wl * 0.14 * 0.6).toFixed(1), priv: r.priv, fill: r.priv ? FAB : PUB })).sort((a, b) => b.gbps - a.gbps).slice(0, 5)).map(r => ({ ...r, v: G(r.gbps) }));
-  const regions = bar(flows.filter(f => f.to === 'object storage').map(f => ({ key: f.id, name: `${f.from} → object storage`, sub: `${f.region} · ${pathWord(f.controlled)} · ${f.latency} ms`, gbps: f.gbps, priv: f.controlled, fill: f.controlled ? FAB : PUB })).sort((a, b) => b.gbps - a.gbps).slice(0, 5)).map(r => ({ ...r, v: G(r.gbps) }));
-  const clouds = bar(flows.filter(f => f.kind !== 'App').map(f => ({ key: f.id, name: f.name, sub: `${pathWord(f.controlled)} · ${f.latency} ms`, gbps: f.gbps, priv: f.controlled, fill: f.controlled ? FAB : PUB })).sort((a, b) => b.gbps - a.gbps).slice(0, 5)).map(r => ({ ...r, v: G(r.gbps) }));
+  const regions = bar(flows.filter(f => f.to === 'object storage').map(f => ({ key: f.id, name: `${f.from} → object storage`, sub: `${f.region} · ${pathWord(f.controlled)}`, gbps: f.gbps, priv: f.controlled, fill: f.controlled ? FAB : PUB })).sort((a, b) => b.gbps - a.gbps).slice(0, 5)).map(r => ({ ...r, v: G(r.gbps) }));
+  const clouds = bar(flows.filter(f => f.kind !== 'App').map(f => ({ key: f.id, name: f.name, sub: pathWord(f.controlled), gbps: f.gbps, priv: f.controlled, fill: f.controlled ? FAB : PUB })).sort((a, b) => b.gbps - a.gbps).slice(0, 5)).map(r => ({ ...r, v: G(r.gbps) }));
   const internet = bar(flows.filter(f => f.kind === 'App' && f.to !== 'object storage').map(f => ({ key: f.id, name: f.name, sub: `${f.region} · ${f.controlled ? 'AT&T egress' : 'hyperscaler exit'} · $${f.perGb.toFixed(2)}/GB`, gbps: f.gbps, priv: f.controlled, fill: f.controlled ? FAB : PUB })).sort((a, b) => b.gbps - a.gbps).slice(0, 5)).map(r => ({ ...r, v: G(r.gbps) }));
   const sites = P.allSites(est);
   const inbound = bar(sites.map(st => ({ key: st.id || st.name, name: st.name, sub: `${st.access || 'Access'} · ${st.priv ? 'private first mile' : 'public first mile'}`, gbps: +rs.reduce((a, r) => a + P.gbps(est, st, r), 0).toFixed(2), priv: !!st.priv, fill: st.priv ? FAB : PUB })).filter(x => x.gbps > 0).sort((a, b) => b.gbps - a.gbps).slice(0, 5)).map(r => ({ ...r, v: r.gbps >= 1 ? G(r.gbps) : Math.round(r.gbps * 1000) + ' Mbps' }));
@@ -188,12 +188,12 @@ function pathsOfSite(est, site) {
     const r = est.regionsList.find(x => x.region === site.via);
     const carrier = site.carrier || site.viaRamp || 'third party';
     return { level: 'path', label: `${site.name || site.id} · paths`, rows: r ? [{ key: 'path:' + r.region, name: `${r.cloud} ${r.region}`,
-      access: `${site.access} · ${P.path(site, r).ms} ms · ${carrier} network`, priv: true, core: 'third', via: r.region, viaRamp: site.viaRamp, accessSla: site.accessSla, carrier: site.carrier, circuit: site.access, xc: site.xc,
+      access: `${site.access} · ${carrier} network`, priv: true, core: 'third', via: r.region, viaRamp: site.viaRamp, accessSla: site.accessSla, carrier: site.carrier, circuit: site.access, xc: site.xc,
       leaf: true, region: r.region }] : [] };
   }
   return pathsOfAttSite(est, site);
 }
-function pathsOfAttSite(est, site) { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, accessSla: site.accessSla, carrier: site.carrier, circuit: site.access, xc: site.xc, gbps: x.gbps, leaf: true, region: x.region.region })) }; }
+function pathsOfAttSite(est, site) { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, accessSla: site.accessSla, carrier: site.carrier, circuit: site.access, xc: site.xc, gbps: x.gbps, leaf: true, region: x.region.region })) }; }
 
 const byName = (a, b) => a.name.localeCompare(b.name);
 const groupRow = (key, name, sites) => ({ key, name, access: rollupLine(sites), priv: sites.some(onAtt), drillKey: key, rollup: true, lines: linesOf(sites), cursor: 'pointer' });
@@ -316,7 +316,6 @@ export function siteDrillRows(est, trail, opts = {}) {
   const clsLabel = S.labelOfKey(est, trail[0]);
   const siteRowOf = (x) => ({ key: 'site:' + x.id, name: x.id, access: x.address || `${x.metro} · ${x.access || ''}`, priv: !!x.priv, drillKey: x.id, rollup: false, cursor: 'pointer' });
   const pathsOf = (site) => pathsOfSite(est, site);
-  const _unused = (site) => { const sr = P.siteRegions(est, site, 6); return { level: 'path', label: `${site.name || site.id} · paths`, rows: sr.rows.map(x => ({ key: 'path:' + x.region.region, name: `${x.region.cloud} ${x.region.region}`, access: `${site.access || 'Access'} · ${P.path(site, x.region).ms} ms · ${x.region.priv ? 'AT&T network' : 'public internet'}`, priv: !!x.region.priv, gbps: x.gbps, leaf: true, region: x.region.region })) }; };
   if (trail.length === 1) {
     const rows = kids.map(ch => ch.kind === 'metro'
       ? { key: 'metro:' + ch.key, name: `${ch.name} (${ch.count.toLocaleString('en-US')})`, access: `${ch.onFabric.toLocaleString('en-US')} of ${ch.count.toLocaleString('en-US')} on AT&T · ${ch.access}`, priv: ch.onFabric >= ch.count / 2, drillKey: ch.key, rollup: true, cursor: 'pointer' }

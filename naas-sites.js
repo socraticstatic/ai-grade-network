@@ -71,16 +71,15 @@ function splitMetros(n, seed, pool = METROS) {
   return counts.map((c, i) => ({ metro: pool[(i + seed) % pool.length], count: c }));
 }
 
-/** One site row. Private share follows the class; latency and address are seeded. */
+/** One site row. Private share follows the class; the address is seeded. */
 function siteRow(cls, metro, i, priv) {
   const c = CLASS[cls] || CLASS.Branch;
   const id = `${c.prefix}-${METRO_ABBR[metro] || metro.slice(0, 3).toUpperCase()}-${String(100 + i * 37 % 900).padStart(4, '0')}`;
   const host = cls === 'Edge' ? HOSTS[i % HOSTS.length] + ', ' : '';
   const streets = STREETS[metro] || STREETS.Dallas;
   const address = `${host}${1200 + i * 310} ${streets[i % streets.length]}`;
-  const ms = priv ? 4 + (i * 5) % 12 : 28 + (i * 9) % 40;
   const since = (i * 71 + (METROS.indexOf(metro) + 2) * 37) % 365; // days since discovery, seeded
-  return { id, name: id, address, metro, priv, ms, exposed: !priv, since };
+  return { id, name: id, address, metro, priv, exposed: !priv, since };
 }
 
 /**
@@ -110,7 +109,7 @@ export function siteTree(est) {
         const onFabric = privShare >= 1 ? m.count : privShare <= 0 ? 0 : Math.round(m.count * (privShare + ((mi % 3) - 1) * 0.08));
         return {
           kind: 'metro', key: `${g.cls}:${ri}:${m.metro}`, name: m.metro, count: m.count, onFabric: Math.max(0, Math.min(m.count, onFabric)),
-          access: r.access, ramp: `${m.metro} PoP`, ms: 4 + (mi * 3) % 9, sites, more: Math.max(0, m.count - sites.length),
+          access: r.access, ramp: `${m.metro} PoP`, sites, more: Math.max(0, m.count - sites.length),
           gen: { cls: g.cls, mi, privShare },
         };
       }); });

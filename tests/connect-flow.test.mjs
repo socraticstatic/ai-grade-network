@@ -217,7 +217,9 @@ test('Standard, Maximum and Geodiversity each say what they get you, from the pa
   for (const t of v.cfTiers) {
     assert.equal(t.protects, CF.TIER_PROTECTS[t.tier]);
     assert.equal(t.security, netbond.sec.split(' · ')[0]);
-    assert.match(t.performance, /^\d+ ms · deterministic$/);
+    // Uptime from the path, in place of a delay (2026-10-15).
+    assert.equal(t.reliability, netbond.relLabel.split(' · ')[0]);
+    assert.equal(t.performance, undefined);
     assert.equal(t.costSub, 'Modelled · list price');
   }
   // NetBond Advanced, $1,900 list (the deck, 2026-10-08; was $1,800), times composeOrder's tier multipliers.
@@ -434,7 +436,7 @@ test('the Sites row says when this type has none at the location, and Cloud to C
   assert.ok(!vals(startWays('Cloud to Cloud')).cfWip.some(r => r.key === 'sites'), 'Cloud to Cloud joins two clouds; it carries no sites');
 });
 
-test('the path table in Connection Profile reads the region this order reaches, the same latency the tiers read', () => {
+test('the path table in Connection Profile reads the region this order reaches, and the uptime the tiers read', () => {
   const c = startWays('DataCenter / CoLocation to Cloud');
   pickRegion(c, 'Azure eastus');
   vals(c).cfNext();
@@ -442,11 +444,12 @@ test('the path table in Connection Profile reads the region this order reaches, 
   assert.equal(v.cfPathsFor, 'Azure eastus');
   assert.deepEqual(v.cfPaths.map(p => p.short), R.PATHS.map(p => p.short));
   const nb = v.cfPaths.find(p => p.key === 'netbond');
-  assert.equal(nb.performance, '11 ms', 'Azure eastus rides the AT&T network at 11 ms');
-  for (const t of v.cfTiers) assert.match(t.performance, /^11 ms/);
+  assert.equal(nb.region, 'Azure eastus');
+  for (const t of v.cfTiers) assert.equal(t.reliability, nb.reliability, 'the tiers and the table quote one uptime');
+  for (const p of v.cfPaths) assert.ok(!('performance' in p), `${p.key}: no delay column`);
   assert.equal(nb.rides, true, 'DataCenter / CoLocation to Cloud rides NetBond');
   assert.equal(v.cfPaths.filter(p => p.rides).length, 1);
-  for (const p of v.cfPaths) for (const x of [p.security, p.performance, p.reliability, p.cost, p.setup]) assert.ok(!/of your/.test(x), 'a count of your regions is not what this order gets');
+  for (const p of v.cfPaths) for (const x of [p.security, p.reliability, p.cost, p.setup]) assert.ok(!/of your/.test(x), 'a count of your regions is not what this order gets');
   const i2c = startWays('Internet to Cloud');
   pickRegion(i2c, 'AWS us-west-2');
   vals(i2c).cfNext();

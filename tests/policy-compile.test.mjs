@@ -26,7 +26,7 @@ test('each intent compiles to the enforcement points that can carry it (a snapsh
   assert.deepEqual(rows('Internet egress only through AT&T'), ['edge/netbond:adv:o2p:cloud~', 'edge/vsrx:allow:o2p:internet', 'cloud/rt:allow:p2o:internet']);
   assert.deepEqual(rows('Inline security inspection'), ['edge/vsrx:allow:both:any', 'edge/netbond:manip:both:cloud~', 'cloud/rt:allow:p2o:any~']);
   assert.deepEqual(rows('Segment intra-tag only'), ['site/cpe:allow:both:cloud~', 'edge/netbond:allow:both:cloud~', 'edge/netbond:deny:p2o:cloud~', 'edge/vsrx:allow:both:any~', 'core/vrf:allow:both:cloud', 'cloud/rt:allow:both:cloud~']);
-  assert.deepEqual(rows('Latency SLO 15 ms'), ['site/cpe:manip:o2p:any~', 'core/cos:manip:both:cloud~']);
+  assert.deepEqual(rows('Priority traffic'), ['site/cpe:manip:o2p:any~', 'core/cos:manip:both:cloud~']);
   assert.deepEqual(rows('Two paths, diverse metros'), ['edge/netbond:manip:both:cloud~']);
   assert.deepEqual(rows('Encrypt in transit'), [], 'not compiled yet: the engine reads it Undetermined');
   // A row's words are the object of its verb: "Deny local breakout", never "Deny no local breakout".
@@ -38,13 +38,12 @@ test('each intent compiles to the enforcement points that can carry it (a snapsh
   }
 });
 
-test('the corrected NetBond mappings: egress advertises a static 0/0 out, an SLO pushes nothing, two paths never prepend', () => {
+test('the corrected NetBond mappings: egress advertises a static 0/0 out, priority traffic pushes nothing, two paths never prepend', () => {
   const eg = routeRulesOf({ path: ['Internet egress only through AT&T'] });
   assert.deepEqual(eg, { 'advanced:advertise-static-routes': { o2p: true } });
   assert.equal(eg['deny:block-default-routes'], undefined);
-  assert.deepEqual(routeRulesOf({ req: 'Latency SLO 15 ms' }), {});
-  assert.deepEqual(routeRulesOf({ req: 'Latency SLO' }), {}, "the composer's bare chip is an SLO with no target yet");
-  assert.equal(PC.intentOf('Latency SLO').key, 'slo'); assert.equal(PC.intentOf('Latency SLO').param, null);
+  assert.deepEqual(routeRulesOf({ req: 'Priority traffic' }), {}, 'a class of service, never a route row');
+  assert.equal(PC.intentOf('Priority traffic').key, 'priority');
   assert.equal(routeRulesOf({ path: ['Two paths, diverse metros'] })['manip:prepend-advertisements'], undefined);
   // The template slot "Segment-aware firewall" asks for segments; "No local internet breakout" does not forbid the internet.
   assert.equal(PC.intentOf('Segment-aware firewall').key, 'segment');
@@ -110,7 +109,7 @@ test('an equal stated priority inside a tier is a publish error; across tiers it
 
 test('the Policies list numbers rows in the order the engine reads them, priorities and tiers included', () => {
   const custom = [{ name: 'Owner first', match: 'tag PCI', scope: 'any cloud', req: 'Inline security inspection', state: 'enforced', custom: true, priority: 1 },
-    { name: 'Estate late', match: 'tag Prod', scope: 'any cloud', req: 'Latency SLO 15 ms', state: 'enforced', tier: 'T1', priority: 5 }];
+    { name: 'Estate late', match: 'tag Prod', scope: 'any cloud', req: 'Priority traffic', state: 'enforced', tier: 'T1', priority: 5 }];
   const c = mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies', customPolicies: custom });
   // The list pages within its slot: read every page.
   const all = []; for (let i = 0; i < 4; i += 1) { c.setState({ polPage: i }); for (const r of vals(c).polRows) if (!all.some(x => x.name === r.name)) all.push(r); }
@@ -141,11 +140,11 @@ test('a region\'s way comes from a landed order that names it, else its stated r
   assert.equal(sendTo({ landed: ['us-west-2'], orders: s.orders.map(o => ({ ...o, est: 'trust' })) }).capWord, 'No enforcement point', "another estate's order lights nothing");
 });
 
-test('review fixes (2026-10-09): an SLO with no target, segmentation and the internet, a third party\'s sources, a direct way', () => {
-  // A bare "Latency SLO" has no target: Undetermined, never "9 ms > null", and never counted violated.
+test('review fixes (2026-10-09): a phrase the engine cannot judge, segmentation and the internet, a third party\'s sources, a direct way', () => {
+  // A saved "Latency SLO" is no typed intent since 2026-10-15: Undetermined on its layer, and never counted violated.
   const slo = [{ name: 'SLO', match: 'tag PCI', scope: 'any cloud', req: 'Latency SLO', state: 'enforced' }];
   const core = PM.decide(P, slo, { from: pc, to: 'AWS us-east-1', tag: 'PCI' }, { inv }).layers.find(l => l.key === 'core');
-  assert.deepEqual([core.stamp, core.text], ['undetermined', 'No target']);
+  assert.deepEqual([core.stamp, core.text], ['undetermined', 'No data']);
   assert.ok(!PM.sweep(P, slo, { inv }).violated.some(v => v.name === 'SLO'));
   // Segmentation keeps traffic in its VLAN; it never decides an internet flow ahead of a breakout deny.
   const seg = [{ name: 'Seg', match: 'tag PCI', scope: 'any cloud', req: 'Segment by tag and Inline inspection', state: 'enforced' },

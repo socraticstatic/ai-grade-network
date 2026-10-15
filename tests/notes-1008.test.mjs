@@ -14,8 +14,9 @@ const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url)
 const home = (extra = {}) => mkC({ view: 'partial', estateParam: null, screen: 's0', ...extra });
 
 test('each state on the Apps healthy bar opens App health on just those apps; its chips do too', () => {
-  for (const st of ['down', 'slo', 'risk', 'ok']) {
-    const c = home();
+  // Over is an app over one of your thresholds (it was a region over its latency SLO until 2026-10-15); Established has one.
+  for (const [view, st] of [['partial', 'down'], ['mature', 'over'], ['partial', 'risk'], ['partial', 'ok']]) {
+    const c = home({ view });
     const seg = vals(c).homeCards.find(x => x.key === 'apps').bar.find(b => b.key === st);
     assert.ok(seg, st);
     seg.go();
@@ -37,11 +38,11 @@ test('each state on the Apps healthy bar opens App health on just those apps; it
   assert.match(HTML, /<button class="kchip btn" onClick="\{\{ kc\.go \}\}"/);
 });
 
-test('Over SLO draws in stripes beside Down\'s solid red, wherever the two share a bar', () => {
+test('Over threshold draws in stripes beside Down\'s solid red, wherever the two share a bar', () => {
   assert.equal(HEALTH_FILL_BAR.down, HEALTH_INK.down);
-  assert.match(HEALTH_FILL_BAR.slo, /^repeating-linear-gradient\(.*var\(--viz-5\)/);
-  const apps = vals(home()).homeCards.find(x => x.key === 'apps');
-  assert.match(apps.bar.find(b => b.key === 'slo').ink, /repeating-linear-gradient/);
+  assert.match(HEALTH_FILL_BAR.over, /^repeating-linear-gradient\(.*var\(--viz-5\)/);
+  const apps = vals(home({ view: 'mature' })).homeCards.find(x => x.key === 'apps');
+  assert.match(apps.bar.find(b => b.key === 'over').ink, /repeating-linear-gradient/);
   assert.equal(apps.bar.find(b => b.key === 'down').ink, 'var(--error)');
 });
 

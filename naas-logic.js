@@ -347,13 +347,12 @@ export function heroLayout(est, opts) {
       privRegs.forEach(r => { const line = cloudEdgeThing(r).id; (byLine[line] = byLine[line] || []).push(r); });
       const lines = Object.entries(byLine).map(([line, xs]) => ({ line, cloud: c, ramp: xs[0].ramp, regions: xs.map(r => r.region), xc: (xs.find(r => r.xc) || {}).xc || null }));
       card.lines = lines.map(l2 => l2.line);
-      const avg = (f) => Math.round(lr.reduce((a2, r) => a2 + (r[f] || 0), 0) / lr.length);
       const stand = { cloud: c, region: c, card: true, priv, ramp: lines.length === 1 ? lines[0].ramp : null, lines: priv ? lines : null, regions: lr.map(r => r.region),
-        wl: lr.reduce((a2, r) => a2 + (r.wl || 0), 0), fab: avg('fab'), pub: avg('pub'), tags: [...new Set(lr.flatMap(r => r.tags || []))],
+        wl: lr.reduce((a2, r) => a2 + (r.wl || 0), 0), tags: [...new Set(lr.flatMap(r => r.tags || []))],
         link: lr.some(r => r.link === 'degraded') ? 'degraded' : 'ok', cy };
       out.edges.push({ id: `eg:${c}`, kind: 'egress', priv, ghost: card.ghost, viaLane: viaLane && !card.ghost, x1: bandX + bandW,
         y1: viaLane ? clampLane(cy) : Math.round(Math.min(bandY + bandH - 40, Math.max(bandY + 24, cy))), x2: RX, y2: cy,
-        chip: null, shield: false, region: stand, dur: stand.fab ? Math.max(1.2, stand.fab / 6) : 3 });
+        chip: null, shield: false, region: stand, dur: 3 });
       if (card.wl) out.workloads.push({ region: c, y: ry + 7, label: card.wl.toLocaleString('en-US') + ' workloads', key: 'wl' + c, tags: [] });
     });
     y = k ? topR + (k - 1) * gapR + CARD + groupGap : COL_TOP;
@@ -365,7 +364,7 @@ export function heroLayout(est, opts) {
       const ry = y;
       out.regions.push({ ...r, y: ry, cy: ry + 14, key: (r.child ? 'c:' : '') + r.region });
       const viaLane = !r.priv && !r.ghost;
-      if (!r.noEdge && !r.other) out.edges.push({ id: 'eg' + out.regions.length, kind: 'egress', priv: !!r.priv, ghost: !!r.ghost, viaLane, x1: bandX + bandW, y1: viaLane ? clampLane(ry + 14) : Math.round(Math.min(bandY + bandH - 40, Math.max(bandY + 24, ry + 14))), x2: RX, y2: ry + 14, chip: r.ramp, shield: !!r.priv && (r.ramp === 'NetBond' || r.ramp === 'ER'), region: r, dur: r.fab ? Math.max(1.2, r.fab / 6) : 3 });
+      if (!r.noEdge && !r.other) out.edges.push({ id: 'eg' + out.regions.length, kind: 'egress', priv: !!r.priv, ghost: !!r.ghost, viaLane, x1: bandX + bandW, y1: viaLane ? clampLane(ry + 14) : Math.round(Math.min(bandY + bandH - 40, Math.max(bandY + 24, ry + 14))), x2: RX, y2: ry + 14, chip: r.ramp, shield: !!r.priv && (r.ramp === 'NetBond' || r.ramp === 'ER'), region: r, dur: 3 });
       if (r.wl) out.workloads.push({ region: r.region, y: ry + 3, label: r.wlLabel || (r.wl.toLocaleString('en-US') + ' workloads'), key: 'wl' + (r.child ? 'c:' : '') + r.region, tags: r.tags });
       y += rowH;
     });

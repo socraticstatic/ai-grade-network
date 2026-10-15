@@ -46,8 +46,10 @@ test('every phrase in use resolves to a typed intent; an unknown one keeps its w
   assert.equal(k('Segment intra-tag only'), 'segment');
   assert.equal(k('Two paths, diverse metros'), 'two-paths');
   assert.equal(k('Internet egress only through AT&T'), 'egress');
-  const slo = PM.intentOf('Latency SLO 15 ms');
-  assert.deepEqual([slo.key, slo.param, slo.layers], ['slo', 15, ['core']]);
+  const pr = PM.intentOf('Priority traffic');
+  assert.deepEqual([pr.key, pr.param, pr.layers], ['priority', null, ['core']]);
+  // A delay target is no typed intent since 2026-10-15 ("we can't measure that"): it keeps its words, as any unknown phrase does.
+  assert.equal(PM.intentOf('Latency SLO 15 ms').key, 'other:latency slo 15 ms');
   assert.ok(PM.intentOf('Private path required').forbids && PM.intentOf('No direct internet path').forbids && !PM.intentOf('Inline security inspection').forbids);
   const odd = PM.intentOf('Cost-aware routing');
   assert.equal(odd.key, 'other:cost-aware routing'); assert.deepEqual(odd.layers, [otherLayer('Cost-aware routing')]);
@@ -118,16 +120,20 @@ test('a third party\'s access and core are unenforceable; a public region takes 
   assert.deepEqual(plain.layers.map(l => l.stamp), ['any', 'notonpath', 'notonpath', 'any']);
 });
 
-test('an SLO reads the latency of the path the flow takes', () => {
-  const m = D.ESTATES.mature, inv = A.inventory(m), f = { from: 'Ashburn DC', to: 'GCP us-central1', tag: 'AI' };
-  const at = (ms) => layer(PM.decide(m, [{ name: 'S', match: 'tag AI', scope: 'any cloud', req: `Latency SLO ${ms} ms`, state: 'enforced' }], f, { inv }), 'core');
-  assert.deepEqual([at(15).stamp, at(15).code, at(15).text], ['holds', 'SLA_MET', '11 ms']);
-  assert.deepEqual([at(5).stamp, at(5).code], ['violated', 'SLA_UNMET']);
+// Priority traffic replaced the latency SLO (2026-10-15): a class of service holds where the AT&T core carries the flow,
+// and the public internet carries no class at all.
+test('priority traffic holds on the AT&T core and reads Best effort on the internet', () => {
+  const m = D.ESTATES.mature, inv = A.inventory(m);
+  const at = (to) => layer(PM.decide(m, [{ name: 'S', match: 'tag AI', scope: 'any cloud', req: 'Priority traffic', state: 'enforced' }], { from: 'Ashburn DC', to, tag: 'AI' }, { inv }), 'core');
+  assert.deepEqual([at('GCP us-central1').stamp, at('GCP us-central1').code, at('GCP us-central1').text], ['holds', 'CORE_PRIORITY', 'Priority class']);
+  assert.deepEqual([at('AWS ap-southeast-1').stamp, at('AWS ap-southeast-1').code, at('AWS ap-southeast-1').text], ['violated', 'CORE_NO_CLASS', 'Best effort']);
+  assert.equal(at('Azure eastus').stamp, 'unenforceable', 'on the cloud\'s own port AT&T\'s core is no enforcement point');
 });
 
 test('dead policies are named: a tag no workload carries, a site group no site is in', () => {
-  const p = D.ESTATES.partial, dead = PM.deadPolicies(p, A.inventory(p), p.policies);
-  assert.deepEqual(dead.map(x => x.name), ['Finance segmentation', 'GPU latency SLO']);
+  // The estate's own GPU policy was a latency SLO and left with the delay figures (2026-10-15); a GPU policy is added here.
+  const p = D.ESTATES.partial, dead = PM.deadPolicies(p, A.inventory(p), [...p.policies, { name: 'GPU priority', match: 'tag GPU', req: 'Priority traffic', state: 'simulated' }]);
+  assert.deepEqual(dead.map(x => x.name), ['Finance segmentation', 'GPU priority']);
   assert.match(dead[1].why, /no workload is tagged GPU/);
   assert.deepEqual(PM.deadPolicies(p, A.inventory(p), [{ name: 'Gone', match: pc, scope: 'AWS mars-1', state: 'enforced' }]).map(x => x.why), ['AWS mars-1 is not in this estate']);
 });

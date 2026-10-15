@@ -15,8 +15,8 @@ const tile = (v, k) => v.flowTiles.find(t => t.key === k);
 const node = (v, id) => v.mapNodes.find(n => n.id === id);
 const dollars = (s) => +String(s).replace(/^[^$]*\$([\d,]+).*$/, '$1').replace(/,/g, '');
 const GCP = { obDim: 'cloud', obScope: 'cloud:GCP' };
-// Over SLO has its own ink since the review (2026-09-30); red is Down's alone.
-const RED = 'var(--viz-5)';
+// The Utilization view (in place of the Performance view, 2026-10-15) inks a link by its connection: Near full is At
+// risk's ink, Down is Down's red, and a link nothing here measures reads Not measured.
 
 // Since 2026-10-05 the bucket is shared by every public middle: the IPsec tunnels, the SD-WAN
 // tunnels (Boston, Houston) and the plain internet. Together they are the $8,600 bucket; each
@@ -60,21 +60,26 @@ test('Sites on AT&T under a cloud pick counts what the map draws', () => {
   assert.equal(tile(at(), 'onatt').v, '20 of 25');
 });
 
-test('in the Traffic view, the Over SLO ink means over SLO, the same as the tile and the Performance view', () => {
+test('in the Utilization view, the Near full ink means near full, the same as the tile and the At risk filter', () => {
+  const RISK = 'var(--warning)', DOWN = 'var(--error)', NONE = 'var(--text-disabled)';
+  let seen = 0;
   for (const patch of [{}, { view: 'mature' }, { view: 'trust' }, GCP]) {
-    const v = at(patch);
-    // Nothing is red unless it is over SLO; every destination over SLO is red.
-    // The middle keeps its path ink (on AT&T or outside), which is the Traffic view's job.
-    const redAny = v.mapNodes.filter(n => n.fill === RED);
-    assert.ok(redAny.every(n => n.health === 'slo'), `${JSON.stringify(patch)}: red but within SLO: ${redAny.filter(n => n.health !== 'slo').map(n => n.id).join(', ')}`);
-    const redR = v.mapNodes.filter(n => n.side === 'r' && n.fill === RED).map(n => n.id).sort();
-    const overR = v.mapNodes.filter(n => n.side === 'r' && n.health === 'slo').map(n => n.id).sort();
-    assert.deepEqual(redR, overR, JSON.stringify(patch));
-    // The tile counts the links over SLO the filter lights (2026-09-30, "the healthy sankey doesn't work").
-    const over = v.mapRibbons.filter(r => String(r.from).startsWith('mid:') && r.state === 'slo').length;
-    assert.equal(tile(v, 'slo').v, String(over));
-    const sleeves = v.mapRibbons.filter(r => r.sleeve === RED).length;
-    const perfRed = at({ ...patch, mapMode: 'slo' }).mapRibbons.filter(r => r.fill === RED).length;
-    assert.equal(sleeves, perfRed, `${JSON.stringify(patch)}: ${sleeves} red sleeves, ${perfRed} over-SLO ribbons`);
+    const v = at({ ...patch, mapMode: 'util' });
+    // A link's ink is its state's, and only its state's.
+    for (const r of v.mapRibbons) {
+      if (r.fill === RISK) assert.equal(r.state, 'risk', `${JSON.stringify(patch)} ${r.from} > ${r.to}`);
+      if (r.fill === DOWN) assert.equal(r.state, 'down', `${JSON.stringify(patch)} ${r.from} > ${r.to}`);
+      if (r.state == null) assert.equal(r.fill, NONE, `${JSON.stringify(patch)} ${r.from} > ${r.to}: not measured`);
+    }
+    // The tile counts the near-full links out of a path, the ones the At risk filter lights (2026-09-30, "the healthy sankey doesn't work").
+    const near = v.mapRibbons.filter(r => String(r.from).startsWith('mid:') && r.state === 'risk').length;
+    assert.equal(tile(v, 'near').v, String(near), JSON.stringify(patch));
+    // A site's own access is not measured, so no site reads Down for a path it takes.
+    for (const n of v.mapNodes.filter(x => x.side === 'l')) assert.equal(n.fill, NONE, `${JSON.stringify(patch)} ${n.id}`);
+    // The Traffic view keeps its path inks: nothing there is drawn in a state's ink but a degraded link's red.
+    const t = at(patch);
+    assert.ok(!t.mapNodes.some(n => n.fill === RISK || n.fill === DOWN), JSON.stringify(patch));
+    seen += near;
   }
+  assert.ok(seen >= 1, 'no near-full link to check');
 });

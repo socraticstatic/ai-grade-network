@@ -47,10 +47,10 @@ export function policyDeck(rows, intent = {}) {
     return { tag, req: d[1], word: d[2], icon: d[3], layer: d[4], name: `${tag} ${d[1] === 'Inline security inspection' ? 'inspection' : d[1] === 'No direct internet path' ? 'no direct internet' : 'private path'}`, match: `tag ${tag}`, apps: apps.map(a => a.name), appKeys: apps.map(a => a.key), wl: apps.reduce((s, a) => s + (a.wl || 0), 0) }; });
 }
 /** What the intent asks of the whole cloud, as one policy: each answer that needs the path to do something adds its
- *  requirement (two paths, a latency SLO, inspection, a per-service allow-list, segments). Null when nothing does. */
+ *  requirement (two paths, a priority class, inspection, a per-service allow-list, segments). Null when nothing does. */
 export const INTENT_PARTS = {
   critical: ['Two paths, diverse metros', 'rides two paths', 'merge', 'Two paths'],
-  priority: ['Latency SLO 20 ms', 'is held to 20 ms', 'high-meter', '20 ms SLO'],
+  priority: ['Priority traffic', 'rides a priority class', 'high-meter', 'Priority'],
   inspected: ['Inline security inspection', 'is inspected in path', 'firewall', 'Inspected'],
   service: ['Per-service allow-list', 'is allow-listed per service', 'restricted', 'Allow-list'],
   transitive: ['Segment by environment', 'is segmented by environment', 'global-network', 'Segments'],
@@ -110,7 +110,7 @@ export function foundOf(est, done = []) {
   // The cloud this pass of the journey is about: the newest source, never one already carried through (attach more).
   const fresh = (est.regionsList || []).filter(r => r.fresh && !done.includes(r.cloud));
   // A region's own tags seed the suggestions; the ones you apply join it, and must not suggest themselves to its other workloads.
-  const regions = fresh.map(r => ({ key: r.region, cloud: r.cloud, region: r.region, wl: r.wl, ms: r.pub, priv: !!r.priv, tags: r.baseTags || r.tags || [],
+  const regions = fresh.map(r => ({ key: r.region, cloud: r.cloud, region: r.region, wl: r.wl, priv: !!r.priv, tags: r.baseTags || r.tags || [],
     apps: (r.apps || []).map(([name, version, port, purpose, kind]) => ({ key: `${r.region}:${name}`, name, version, port, purpose, kind, region: r.region })) }));
   const apps = regions.flatMap(r => r.apps.map(a => ({ ...a, wl: Math.max(1, Math.round(r.wl / Math.max(1, r.apps.length))), regionTags: r.tags })));
   return { has: regions.length > 0, regions, apps, wl: regions.reduce((a, r) => a + r.wl, 0), publicN: regions.filter(r => !r.priv).length, cloud: (regions[0] || {}).cloud || '' };

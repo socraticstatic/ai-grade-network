@@ -28,12 +28,14 @@ const obs = (patch = {}) => vals(mkC({ view: 'partial', estateParam: null, scree
 // home's chip and Signals named while Health called it Healthy. It is the degraded finding already,
 // so it is not a second finding event.
 test('Alerts, the Home hero and the findings events count one list', () => {
-  assert.equal(obs().queueCount, '3');
-  assert.equal(vals(mkC({ view: 'partial', estateParam: null, screen: 's0' })).healthIncidents.length, 3);
+  // Growing's eu-west-1 spike and westeurope's SLO left with the delay figures (2026-10-15): the eastus flap is the one alert.
+  assert.equal(obs().queueCount, '1');
+  assert.equal(vals(mkC({ view: 'partial', estateParam: null, screen: 's0' })).healthIncidents.length, 1);
   const v = obs({ obPage: 'insights', insPanel: 'findings', findFilter: 'all' });
-  const keys = new Set(probsOf('partial').filter(p => p.kind !== 'latency').map(p => p.key));
+  const keys = new Set(probsOf('partial').map(p => p.key));
   assert.deepEqual(v.findAll.filter(r => keys.has(r.key)).map(r => r.key).sort(), [...keys].sort(), 'every problem is a finding event');
-  assert.ok(probsOf('partial').some(p => p.kind === 'latency') && v.findAll.some(r => r.key === 'degraded'), 'a region over its SLO is the degraded finding');
+  assert.ok(probsOf('partial').every(p => ['link', 'sat'].includes(p.kind)), 'a problem is a link down or a port near full');
+  assert.ok(!v.findAll.some(r => r.key === 'degraded'), 'no finding reads a delay');
 });
 
 test('Growing: the first problem is the eastus flap, owned by the cloud provider', () => {
@@ -57,7 +59,8 @@ test('Blind regions are not alerts; they stay the blindspots finding', () => {
 
 test('the head counts the flap and keeps the savings', () => {
   // 14 since 2026-10-05: the four AT&T sites on tunnels are a finding; it is not priced, so the savings hold.
-  assert.equal(obs().pageVerdict, '14 findings open. $41,500/mo potential savings.');
+  // 12 since 2026-10-15: the region-over-SLO finding and the eu-west-1 spike event left with the delay figures; neither was priced.
+  assert.equal(obs().pageVerdict, '12 findings open. $41,500/mo potential savings.');
 });
 
 test('the head reads the whole estate under a Traffic pick', () => {

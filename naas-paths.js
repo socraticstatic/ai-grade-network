@@ -11,7 +11,6 @@
 import * as S from './naas-sites.js';
 import { rampName, attInternet, tunnelEndThing } from './naas-things.js';
 
-export const SLO = 100;
 const PER_SITE = { 'Data center': 6, Campus: 2.5, Plant: 1.5, Office: 0.8, Branch: 0.04, Edge: 0.005, Field: 0.3 };
 const METRO_GEO = { Frankfurt: 'eu', London: 'eu', Paris: 'eu', Amsterdam: 'eu', Singapore: 'ap', Tokyo: 'ap', Sydney: 'ap', Mumbai: 'ap' };
 export const geoOfMetro = (m) => METRO_GEO[m] || 'us';
@@ -34,30 +33,31 @@ export function gbps(est, site, region) {
 
 const worst = (a, b) => ['ok', 'warn', 'bad'].indexOf(a) >= ['ok', 'warn', 'bad'].indexOf(b) ? a : b;
 
-/** The hops from a site to a region with cumulative latency and a state per hop. */
+/** The hops from a site to a region, with a state per hop. Nothing on it is timed (2026-10-15): a hop is
+ *  warn where no one controls the path (a public first mile, the internet), and the link's own state
+ *  is the connection's, read where the connection is. */
 export function path(site, region) {
   const metro = site.metro === 'Various' ? 'nearest' : site.metro;
-  const hops = []; let ms = 0;
-  hops.push({ kind: 'site', name: site.name, sub: site.clsLabel || site.cls, ms: 0, state: 'ok' });
-  ms += site.ms || 0;
-  hops.push({ kind: 'access', name: site.access || 'Access', sub: site.priv ? 'private first mile' : 'public first mile', ms, state: site.priv ? 'ok' : 'warn' });
-  if (AGG.has(site.cls)) { ms += 1; hops.push({ kind: 'hub', name: `${metro} hub`, sub: 'branch aggregation', ms, state: 'ok' }); }
-  ms += 2; hops.push({ kind: 'pop', name: `${metro} PoP`, sub: 'AT&T on-net', ms, state: 'ok' });
+  const hops = [];
+  hops.push({ kind: 'site', name: site.name, sub: site.clsLabel || site.cls, state: 'ok' });
+  hops.push({ kind: 'access', name: site.access || 'Access', sub: site.priv ? 'private first mile' : 'public first mile', state: site.priv ? 'ok' : 'warn' });
+  if (AGG.has(site.cls)) hops.push({ kind: 'hub', name: `${metro} hub`, sub: 'branch aggregation', state: 'ok' });
+  hops.push({ kind: 'pop', name: `${metro} PoP`, sub: 'AT&T on-net', state: 'ok' });
   // A stated tunnel on AT&T's own internet (2026-10-05) never reaches an on-ramp: every
   // region is over the internet, and the one it lands in ends on its VPN gateway or SD-WAN hub.
   const tun = site.tunnel && site.tunnelTo && attInternet(site) ? { kind: site.tunnel, cloud: String(site.tunnelTo).split(' ')[0] } : null;
   const lands = tun && `${region.cloud} ${region.region}` === site.tunnelTo;
   if (region.priv && !tun) {
-    ms += Math.max(2, (region.fab || 8) - 4); hops.push({ kind: 'fabric', name: 'AT&T network', sub: 'deterministic path', ms, state: region.rel === 'warn' ? 'warn' : 'ok' });
-    ms += 1; hops.push({ kind: 'ramp', name: `${rampName(region)} on-ramp`, sub: region.city || 'private on-ramp', ms, state: 'ok' });
+    hops.push({ kind: 'fabric', name: 'AT&T network', sub: 'private path', state: 'ok' });
+    hops.push({ kind: 'ramp', name: `${rampName(region)} on-ramp`, sub: region.city || 'private on-ramp', state: 'ok' });
   } else {
-    ms += Math.max(4, (region.pub || 60) - 2); hops.push({ kind: 'public', name: lands ? `${tun.kind} tunnel` : 'Public internet', sub: lands ? 'over the internet · unmeasured, no one answers for it' : 'no path control', ms, state: ms > SLO ? 'bad' : 'warn' });
-    if (lands) { ms += 1; hops.push({ kind: 'gateway', name: tunnelEndThing(tun.kind, tun.cloud).label, sub: `${tun.cloud}'s, where the tunnel ends`, ms, state: 'ok' }); }
+    hops.push({ kind: 'public', name: lands ? `${tun.kind} tunnel` : 'Public internet', sub: lands ? 'over the internet · unmeasured, no one answers for it' : 'no path control', state: 'warn' });
+    if (lands) hops.push({ kind: 'gateway', name: tunnelEndThing(tun.kind, tun.cloud).label, sub: `${tun.cloud}'s, where the tunnel ends`, state: 'ok' });
   }
-  ms += 1; hops.push({ kind: 'region', name: `${region.cloud} ${region.region}`, sub: region.priv ? 'private path' : 'public path', ms, state: region.rel === 'warn' ? 'warn' : 'ok' });
+  hops.push({ kind: 'region', name: `${region.cloud} ${region.region}`, sub: region.priv ? 'private path' : 'public path', state: 'ok' });
   const state = hops.reduce((a, h) => worst(a, h.state), 'ok');
   const badIdx = hops.findIndex(h => h.state === state && state !== 'ok');
-  return { hops, ms, state, badIdx };
+  return { hops, state, badIdx };
 }
 
 /** Sites that reach a region, ranked by traffic. */

@@ -85,9 +85,9 @@ test('beat 2: Azure with a read-only role; the scan ticks on the cloud node, add
 test('beat 3: the cloud node becomes Azure, its regions and apps; the public internet path appears under AT&T', () => {
   const v = vals(journey({ jStep: 2, addedSources: AZURE }));
   assert.equal(v.jCloud.state, 'found'); assert.equal(v.jCloud.wl, '68'); assert.equal(v.jWide, true);
-  assert.deepEqual(v.jRegions.map(r => [r.region, r.wlF, r.msF]), [['eastus', '40', '64 ms'], ['westeurope', '28', '102 ms']]);
+  assert.deepEqual(v.jRegions.map(r => [r.region, r.wlF]), [['eastus', '40'], ['westeurope', '28']]);
+  assert.ok(v.jRegions.every(r => !('msF' in r)), 'a region is never timed (2026-10-15)');
   assert.deepEqual(v.jRegions[1].apps.map(a => a.name), ['payments-api', 'fin-ledger']);
-  // The latency is a figure of its own on the path (2026-10-08), not part of the word.
   assert.equal(v.jNet, 'public'); assert.equal(v.jNetWord, 'Not on AT&T network');
   // The public path is named, never timed: nobody measures it (2026-10-09).
   assert.equal(v.jNetMs, undefined); assert.doesNotMatch(HTML, /jNetMs|jNetHasMs/);
@@ -180,12 +180,13 @@ test('the markup: one stage of three nodes and two wires, the internet path, a s
   assert.deepEqual(J.BEATS.map(b2 => b2.key), ['today', 'source', 'found', 'intent', 'recommend', 'connect', 'watch', 'protect', 'save']);
 });
 
-test('the picture carries the figures (2026-10-08): latency on each wire, the monthly before and after, the traffic on the path it rides', () => {
+// No wire is timed since 2026-10-15 ("we can't measure that"): the picture carries the money and the traffic only.
+test('the picture carries the figures (2026-10-08): the monthly before and after, the traffic on the path it rides; no wire is timed', () => {
   const found = vals(journey({ jStep: 2, addedSources: AZURE }));
-  assert.equal(found.jNetMs, undefined); assert.equal(found.jFlow, 'net'); assert.equal(found.jLinkHasMs, false); assert.equal(found.jMoney.has, false);
+  assert.equal(found.jNetMs, undefined); assert.equal(found.jFlow, 'net'); assert.equal(found.jMoney.has, false);
   const rec = vals(journey({ jStep: B.recommend, addedSources: AZURE }));
-  // Azure's AT&T latency reads 19 ms (the seed's, inside the 20 ms private SLO, as the Oracle seed's is): 102 -> 19.
-  assert.equal(rec.jLinkMs, '19 ms'); assert.equal(rec.jLinkDrop, '−83 ms'); assert.equal(rec.jLinkHasDrop, true);
+  for (const k of ['jLinkMs', 'jLinkDrop', 'jLinkHasDrop', 'jLinkHasMs']) assert.equal(rec[k], undefined, k);
+  assert.doesNotMatch(HTML, /jLinkMs|jLinkDrop|jLinkHasMs|js-ms/);
   assert.deepEqual([rec.jMoney.has, rec.jMoney.before, rec.jMoney.after, rec.jMoney.up], [true, '$16,800/mo', '$13,200/mo', false]);
   const hosted = vals(journey({ jStep: B.recommend, jPick: 2, addedSources: AZURE }));
   assert.equal(hosted.jMoney.up, true, 'a dearer way reads in heading ink, never green');
@@ -216,7 +217,7 @@ test('beat 7: Go live lands both regions at once; every app blinks green; the in
   assert.match(HTML, /\.ps \[data-state="ok"\] i\{border-color:var\(--success\)/, 'health keeps its green');
   assert.equal(v.jHealth.length, 4);
   // The figures survive the move leaving the ranked list: the order snapshotted them at Place.
-  assert.equal(v.jLinkMs, '19 ms'); assert.equal(v.jMoney.after, '$13,800/mo');
+  assert.equal(v.jMoney.after, '$13,800/mo');
   // One lifecycle (2026-10-09): Orders reads the journey's Go live; it once still said Submitted for approval.
   const ord = vals(mkC({ ...c.state, journey: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' })).ordRows.find(r => r.journey);
   assert.equal(ord.stage, 'Live'); assert.equal(ord.canGoLive, false);

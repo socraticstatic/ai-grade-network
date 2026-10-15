@@ -9,21 +9,20 @@ import * as S from './naas-sites.js';
 // Stakeholder round 2: path tradeoffs, health, endpoints/resources, Observe cuts, Cost arbitrage.
 import { fmt, pct, connModeOf, attHolds, siteModeOf, tunnelOf } from './naas-logic.js';
 import { CATALOG } from './naas-data.js';
-import { agoOf, hhmm, startOf, INCIDENT_MIN } from './naas-schedule.js';
-import { regionState, RAMP_NAME, HEALTH_INK, healthOf, SLO as SLO_PUBLIC, SLO_PRIVATE } from './naas-flowmap.js';
+import { agoOf, startOf, INCIDENT_MIN } from './naas-schedule.js';
+import { regionState } from './naas-flowmap.js';
 import { rampName } from './naas-things.js';
 import { bucketInk } from './naas-cost-view.js';
 import { egressByRegion, openByRegion, bucketWeights } from './naas-lifecycle.js';
 
-// ---------- Three paths x four lenses ----------
+// ---------- Three paths x three lenses ----------
 export const PATHS = [
-  { id: 'netbond', name: 'NetBond on the AT&T network', short: 'NetBond', rel: 99.99, relLabel: '99.99% · dual PE, managed failover', lat: (r) => r.fab, latLabel: (r) => `${r.fab} ms · deterministic`, egress: 0.02, sec: 'Private · never on the internet · inline inspection available', secScore: 3, relScore: 3, latScore: 3, costScore: 3, setup: 'From 10 business days · AT&T provisions both ends', tone: '#0057b8' },
-  { id: 'native', name: 'Hyperscaler-native (Direct Connect, ExpressRoute, Interconnect)', short: 'Hyperscaler-native', rel: 99.9, relLabel: '99.9% · single circuit unless you buy two', lat: (r) => r.fab + 3, latLabel: (r) => `${r.fab + 3} ms · deterministic`, egress: 0.02, sec: 'Private · one cloud at a time · you run the routers', secScore: 2, relScore: 2, latScore: 3, costScore: 2, setup: '4 to 8 weeks · you order the port, the LOA, the cross-connect', tone: '#5d6f80' },
-  { id: 'internet', name: 'Internet attach (IPsec over public transit)', short: 'Internet attach', rel: 99.5, relLabel: '99.5% · best effort, no SLA on the middle', lat: (r) => r.pub, latLabel: (r) => `${r.pub} ms · varies by hour`, egress: 0.09, sec: 'Encrypted but exposed · hyperscaler egress path · no inspection', secScore: 1, relScore: 1, latScore: 1, costScore: 1, setup: 'Same day · nothing to order', tone: '#8a949c' },
+  { id: 'netbond', name: 'NetBond on the AT&T network', short: 'NetBond', rel: 99.99, relLabel: '99.99% · dual PE, managed failover', egress: 0.02, sec: 'Private · never on the internet · inline inspection available', secScore: 3, relScore: 3, costScore: 3, setup: 'From 10 business days · AT&T provisions both ends', tone: '#0057b8' },
+  { id: 'native', name: 'Hyperscaler-native (Direct Connect, ExpressRoute, Interconnect)', short: 'Hyperscaler-native', rel: 99.9, relLabel: '99.9% · single circuit unless you buy two', egress: 0.02, sec: 'Private · one cloud at a time · you run the routers', secScore: 2, relScore: 2, costScore: 2, setup: '4 to 8 weeks · you order the port, the LOA, the cross-connect', tone: '#5d6f80' },
+  { id: 'internet', name: 'Internet attach (IPsec over public transit)', short: 'Internet attach', rel: 99.5, relLabel: '99.5% · best effort, no SLA on the middle', egress: 0.09, sec: 'Encrypted but exposed · hyperscaler egress path · no inspection', secScore: 1, relScore: 1, costScore: 1, setup: 'Same day · nothing to order', tone: '#8a949c' },
 ];
 export const LENSES = [
   { id: 'security', label: 'Security', q: 'Does it ever touch the public internet?' },
-  { id: 'performance', label: 'Performance', q: 'What latency, and is it the same at 3pm and 3am?' },
   { id: 'reliability', label: 'Reliability', q: 'What uptime, and who fixes it?' },
   { id: 'cost', label: 'Cost', q: 'What does a GB cost to move, and what does the path cost to keep?' },
 ];
@@ -33,11 +32,11 @@ function gbPerWl(est, base) { const pubWl = est.regionsList.filter(r => !r.priv)
 export function regionPath(r) { const m = connModeOf(r); return m === 'netbond' ? 'netbond' : m === 'internet' ? 'internet' : 'native'; }
 export function compareRegion(r, base, est) {
   const gb = Math.round(r.wl * (r.gbPerWl || GB_PER_WL_MO)), cur = regionPath(r);
-  return PATHS.map(p => ({ ...p, cur: p.id === cur, egressMo: Math.round(gb * p.egress), latMs: p.lat(r), latText: p.latLabel(r), gbF: gb.toLocaleString('en-US'), math: `${gb.toLocaleString('en-US')} GB × $${p.egress.toFixed(2)} = ${fmt(Math.round(gb * p.egress))}/mo` }));
+  return PATHS.map(p => ({ ...p, cur: p.id === cur, egressMo: Math.round(gb * p.egress), gbF: gb.toLocaleString('en-US'), math: `${gb.toLocaleString('en-US')} GB × $${p.egress.toFixed(2)} = ${fmt(Math.round(gb * p.egress))}/mo` }));
 }
 export function lensScore(r, lens) {
   const p = PATHS.find(x => x.id === regionPath(r));
-  const s = { security: p.secScore, performance: r.rel === 'warn' ? 1 : p.latScore, reliability: r.rel === 'warn' ? 1 : p.relScore, cost: p.costScore }[lens];
+  const s = { security: p.secScore, reliability: p.relScore, cost: p.costScore }[lens];
   return s; // 3 good, 2 fair, 1 poor
 }
 export const SCORE_COLOR = { 3: 'var(--success)', 2: 'var(--warning)', 1: 'var(--error)' };
@@ -48,7 +47,6 @@ export function lensVerdict(est, lens) {
   const gbPub = rs.filter(r => !r.priv).reduce((a, r) => a + r.wl * GB_PER_WL_MO, 0);
   return {
     security: `${poor.length} of ${rs.length} regions touch the public internet. ${rs.length - poor.length} never do.`,
-    performance: `${poor.length} ${poor.length === 1 ? 'region runs' : 'regions run'} above 100 ms or with loss; the AT&T network path to the same regions is ${Math.min(...rs.map(r => r.fab))}–${Math.max(...rs.map(r => r.fab))} ms, every hour.`,
     reliability: `${rs.length - poor.length - fair.length} regions at 99.99%, ${fair.length} at 99.9% on a single native circuit, ${poor.length} best-effort.`,
     cost: `${gbPub.toLocaleString('en-US')} GB/mo leaves on public rates at $0.09. The same bytes on AT&T: $0.02, ${fmt(Math.round(gbPub * 0.07))}/mo less.`,
   }[lens];
@@ -59,16 +57,15 @@ export function health(est, ob, steered, now = Date.now()) {
   const rs = est.regionsList;
   const age = (k) => agoOf(startOf(k, now, INCIDENT_MIN[k]), now);
   const regionHealth = {};
-  // One rule (2026-09-30): a degraded link is red, over SLO or a latency spike is amber.
-  rs.forEach(r => { const st = regionState(r); regionHealth[r.region] = st === 'down' ? 'red' : st === 'slo' || r.rel === 'warn' ? 'amber' : 'green'; });
+  // One rule (2026-09-30): a degraded link is red; nothing else is measured on the region itself (2026-10-15).
+  rs.forEach(r => { const st = regionState(r); regionHealth[r.region] = st === 'down' ? 'red' : 'green'; });
   const amber = Object.values(regionHealth).filter(h => h !== 'green').length;
   // Incidents come from the one list, OD.problems (2026-09-30).
   const incidents = [];
   const uptime = rs.length ? (rs.reduce((a, r) => a + (r.priv ? 99.99 : 99.5), 0) / rs.length).toFixed(2) : '';
   return { regionHealth, amber, incidents, strip: rs.length ? [
     { key: 'up', l: 'Uptime', v: uptime + '%', tone: 'var(--success)' },
-    { key: 'p95', l: 'P95 latency', v: ob.kpis[1].v + ' ms', tone: +ob.kpis[1].v > 100 ? 'var(--warning)' : 'var(--success)' },
-    { key: 'loss', l: 'Packet loss', v: ob.kpis[2].v + '%', tone: +ob.kpis[2].v > 0.1 ? 'var(--warning)' : 'var(--success)' },
+    { key: 'loss', l: 'Packet loss', v: ob.kpis[1].v + '%', tone: +ob.kpis[1].v > 0.1 ? 'var(--warning)' : 'var(--success)' },
     { key: 'inc', l: 'Incidents', v: String(incidents.length), tone: incidents.length ? 'var(--warning)' : 'var(--success)' },
     { key: 'ctl', l: 'On AT&T', v: ob.covPct + '%', tone: 'var(--link)' },
   ] : [] };
@@ -123,13 +120,14 @@ export function applyScope(est, scope) {
   return est;
 }
 // Every window Since offers compares (2026-09-29 audit): the hour and day barely move, the year a lot.
-const TREND = { '1h': [0.01, -0.01, 0, 0.01, 0, 0.01, 0], '24h': [0.02, -0.02, 0.01, 0.03, 0.01, 0.02, 0.01], '7d': [0.04, -0.03, 0.01, 0.06, 0.02, 0.05, 0.03], '30d': [0.11, -0.08, -0.02, 0.18, 0.06, 0.14, 0.09], '90d': [0.31, -0.19, -0.05, 0.42, 0.15, 0.36, 0.22], '6m': [0.52, -0.24, -0.07, 0.66, 0.21, 0.55, 0.34], '12m': [0.88, -0.31, -0.1, 1.05, 0.33, 0.9, 0.51] };
+// One figure per kpi in ob.kpis order: throughput, loss, egress, on AT&T, savings, utilization.
+const TREND = { '1h': [0.01, 0, 0.01, 0, 0.01, 0], '24h': [0.02, 0.01, 0.03, 0.01, 0.02, 0.01], '7d': [0.04, 0.01, 0.06, 0.02, 0.05, 0.03], '30d': [0.11, -0.02, 0.18, 0.06, 0.14, 0.09], '90d': [0.31, -0.05, 0.42, 0.15, 0.36, 0.22], '6m': [0.52, -0.07, 0.66, 0.21, 0.55, 0.34], '12m': [0.88, -0.1, 1.05, 0.33, 0.9, 0.51] };
 /** How much traffic grew across a Since window: the Sankey averages and replays it. */
 export const growthOf = (window) => (TREND[window] || [0])[0];
 export function trends(ob, window) {
   const f = { '7d': 1, '30d': 1, '90d': 1 }[window] || 1;
   const d = TREND[window] || [0, 0, 0, 0, 0, 0, 0];
-  return ob.kpis.map((k, i) => { const delta = d[i] || 0; const good = (i === 1 || i === 2 || i === 3) ? delta <= 0 : delta >= 0; return { ...k, delta: (delta >= 0 ? '+' : '') + Math.round(delta * 100) + '%', deltaTone: good ? 'var(--success)' : 'var(--warning)', arrow: delta >= 0 ? '↑' : '↓', vs: `vs prior ${window}`, vsShort: `vs ${window}` }; });
+  return ob.kpis.map((k, i) => { const delta = d[i] || 0; const good = (k.key === 'loss' || k.key === 'egr') ? delta <= 0 : delta >= 0; return { ...k, delta: (delta >= 0 ? '+' : '') + Math.round(delta * 100) + '%', deltaTone: good ? 'var(--success)' : 'var(--warning)', arrow: delta >= 0 ? '↑' : '↓', vs: `vs prior ${window}`, vsShort: `vs ${window}` }; });
 }
 /** Public egress growth over the twelve weeks, as a percent of the figures the cards print: at the money grid (hundreds)
  *  when the estate prices its egress (pubMo, this month's public egress in dollars), else of the raw volumes (2026-10-05:
@@ -144,8 +142,6 @@ export function egressPct(ob, pubMo = 0) {
 }
 export function anomalies(est, ob, now = Date.now()) {
   const out = [];
-  const spike = startOf('spike', now, INCIDENT_MIN.spike);
-  est.regionsList.filter(r => r.rel === 'warn').forEach(r => out.push({ key: 'an-' + r.region, when: `Started ${hhmm(spike)} · ${agoOf(spike, now)}`, sev: 'amber', head: `Latency spike on ${r.cloud} ${r.region}`, cause: `Upstream transit congestion between the hyperscaler edge and your users; p95 rose from ${r.pub} to ${r.pub + 40} ms with 0.3% loss.`, did: 'AT&T flagged the event and confirmed the AT&T network path to the same region held at ' + r.fab + ' ms.', can: 'Attach the region and set a latency SLO; the AT&T network re-routes before the ceiling is hit.', region: r.region }));
   const newDest = est.regionsList.find(r => !r.priv && (r.tags || []).includes('Prod'));
   if (newDest) out.push({ key: 'an-dest', when: 'Yesterday', sev: 'amber', head: `New destination from ${newDest.region}: files.slack-edge.com`, cause: `Workloads tagged Prod began sending 3.1 GB/day to a destination not seen in the prior 30 days.`, did: 'Logged and classified as SaaS; no policy matched, so nothing was blocked.', can: 'Author a policy: when tag Prod reaches the Internet, require inline inspection.', region: newDest.region });
   // The same series the Signals card draws (2026-09-30): the card's drill lands here.
@@ -207,7 +203,7 @@ export function arbitrage(est, base, open) {
       nowN: now, now: fmt(now), fabricN: after, fabric: fmt(after), saveN: save, save: fmt(save), share,
       math: `${share}: ${fmt(out)} × ${nf(r.wl)}/${nf(wSum)} = ${fmt(now)} outside AT&T; ${fmt(saveAll)} × ${nf(r.wl)}/${nf(wSum)} = ${fmt(save)} to save; ${fmt(now)} − ${fmt(save)} = ${fmt(after)} at the AT&T price`,
       alt: r.priv ? `Already attached: steer ${r.cloud}'s egress onto AT&T here, no new circuit.`
-        : nearby ? `Or move the workload to ${nearby.region}, already attached: same saving, no new circuit, +${Math.abs(nearby.fab - r.fab)} ms.` : 'No attached region in this cloud yet; the attach is the move.' };
+        : nearby ? `Or move the workload to ${nearby.region}, already attached: same saving, no new circuit.` : 'No attached region in this cloud yet; the attach is the move.' };
   }).sort((a, b) => b.saveN - a.saveN || b.nowN - a.nowN);
 }
 /**
@@ -368,19 +364,9 @@ export function insightWidgets(est, ob, win = 30, price = {}) {
   const labelOf = (f) => { const p = pairOf(f); return p && p.length === 2 ? `${p[0].region} ↔ ${p[1].region}` : f.name; };
   const cloudsOf = (f) => { const p = pairOf(f); return p && p.length === 2 ? (p[0].cloud === p[1].cloud ? p[0].cloud : `${p[0].cloud} ↔ ${p[1].cloud}`) : ''; };
   const xflows = flows.filter(f => f.kind !== 'App'); const xMax = Math.max(1, ...xflows.map(f => f.gbps));
-  const multiRows = xflows.map(f => ({ key: f.id, id: f.id, region: regionOf(f), name: f.name, label: labelOf(f), clouds: cloudsOf(f), path: pathOf(f), ms: f.latency, sub: `${pathOf(f)} · ${f.latency} ms`, v: f.gbps.toFixed(1) + ' Gbps', w: Math.round(f.gbps / xMax * 100) + '%', fill: f.controlled ? 'var(--viz-1)' : 'var(--viz-6)', controlled: f.controlled, steerable: canSteer(f) }));
+  const multiRows = xflows.map(f => ({ key: f.id, id: f.id, region: regionOf(f), name: f.name, label: labelOf(f), clouds: cloudsOf(f), path: pathOf(f), sub: pathOf(f), v: f.gbps.toFixed(1) + ' Gbps', w: Math.round(f.gbps / xMax * 100) + '%', fill: f.controlled ? 'var(--viz-1)' : 'var(--viz-6)', controlled: f.controlled, steerable: canSteer(f) }));
   const multi = { rows: multiRows, privN: multiRows.filter(m => m.controlled).length, totalN: multiRows.length };
-  // 6. Latency over SLO, worst first, in the Over SLO ink (review round 2, 2026-09-30):
-  // red is Down's alone. By the one rule Health uses (second round, 2026-09-30): a
-  // flow is over when healthOf calls it over against its path's SLO, 20 ms on AT&T
-  // and 100 ms outside; the flat 100 ms missed westeurope at 21 ms on AT&T.
-  // sloN counts every flow over, not the five the card draws (2026-09-30: it undercounted past five).
-  const sloOf = (f) => (f.controlled ? SLO_PRIVATE : SLO_PUBLIC);
-  const over = flows.filter(f => healthOf(f.latency, sloOf(f)) === 'slo').sort((a, b) => b.latency - a.latency); const lMax = Math.max(1, ...over.map(f => f.latency));
-  const sloAll = over.map(f => ({ key: f.id, id: f.id, region: regionOf(f), where: f.region, name: f.name, label: labelOf(f), path: pathOf(f), ms: f.latency, slo: sloOf(f), gbps: f.gbps, controlled: f.controlled, sub: `${pathOf(f)} · ${f.gbps.toFixed(1)} Gbps`, v: f.latency + ' ms', w: Math.round(f.latency / lMax * 100) + '%', fill: HEALTH_INK.slo, steerable: canSteer(f) }));
-  // How close the closest flow runs to its SLO, for a card with none over.
-  const closest = flows.slice().sort((a, b) => b.latency / sloOf(b) - a.latency / sloOf(a))[0] || null;
-  return { talkers, talkersAll, newDest, newDestN: newDest.length, shadow, shadowAll: shadow, shadowN, shadowGb: shadowGb.toFixed(1), growth, multi, slo: sloAll.slice(0, 5), sloAll, sloN: sloAll.length, sloTotal: flows.length, sloClosest: closest ? { name: closest.name, where: closest.region, ms: closest.latency, slo: sloOf(closest) } : null };
+  return { talkers, talkersAll, newDest, newDestN: newDest.length, shadow, shadowAll: shadow, shadowN, shadowGb: shadowGb.toFixed(1), growth, multi };
 }
 
 /** What AT&T bills for the cloud side (2026-09-30: one function for the AT&T

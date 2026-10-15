@@ -38,8 +38,8 @@ export const MULTI_LAYER = [
     layers: { site: 'SD-WAN or Third Party Access tunnels to the AT&T edge', edge: 'Terminate tunnels at the AT&T edge', core: 'No direct internet path', cloud: 'Private on-ramp into the region' },
     short: { site: 'Tunnels to AT&T', edge: 'Tunnels end at edge', core: 'No direct internet', cloud: 'Private on-ramp' } },
   { icon: 'ai', key: 'gpu', name: 'AI and GPU traffic', match: 'tag AI', why: 'Training data moves on capacity that is sized and measured for it.',
-    layers: { site: 'Data centers on 10G Switched Ethernet', edge: 'Dedicated 10G on-ramp port', core: 'Latency SLO 15 ms', cloud: 'GPU regions on a private path' },
-    short: { site: 'DCs on 10G', edge: 'Dedicated 10G port', core: '15 ms SLO', cloud: 'Private GPU regions' } },
+    layers: { site: 'Data centers on 10G Switched Ethernet', edge: 'Dedicated 10G on-ramp port', core: 'Priority traffic', cloud: 'GPU regions on a private path' },
+    short: { site: 'DCs on 10G', edge: 'Dedicated 10G port', core: 'Priority traffic', cloud: 'Private GPU regions' } },
   { icon: 'globe', key: 'inet', name: 'Internet-facing apps', match: 'tag Internet-facing', why: 'What faces the internet is inspected once, at the edge, for every cloud.',
     layers: { site: 'No local internet breakout', edge: 'DDoS protection and inline inspection', core: 'Egress through AT&T, never direct', cloud: 'Public subnets behind the edge' },
     short: { site: 'No local breakout', edge: 'DDoS + inspection', core: 'Egress via AT&T', cloud: 'Behind the edge' } },
@@ -91,8 +91,8 @@ export function pairOutcome(est, au, price = {}) {
   const picks = au.path || [], req = au.req || [];
   const wantsPrivate = picks.some(p => PRIVATE_PICKS.includes(p)) || req.some(q => /private path|no direct internet/i.test(q));
   const fmt$ = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
-  const today = r ? { path: r.priv ? 'Private on the AT&T network' : 'Public internet', ms: r.priv ? r.fab : r.pub } : { path: 'Not measured', ms: null };
-  const after = r && (r.priv || wantsPrivate) ? { path: 'Private on the AT&T network', ms: r.fab } : today;
+  const today = r ? { path: r.priv ? 'Private on the AT&T network' : 'Public internet' } : { path: 'Not measured' };
+  const after = r && (r.priv || wantsPrivate) ? { path: 'Private on the AT&T network' } : today;
   const lines = [];
   if (r && wantsPrivate && !r.priv) lines.push({ key: 'nb', text: `NetBond to ${r.cloud} ${r.region}`, v: price.netbond || 0 });
   if (r && picks.includes('Two paths, diverse metros')) lines.push({ key: 'nb2', text: 'A second NetBond port, another metro', v: price.netbond || 0 });
@@ -110,8 +110,8 @@ export function pairOutcome(est, au, price = {}) {
     if (ds.length) pushed.push({ layer: 'edge', text: `${({ deny: 'Deny', manip: 'Apply', allow: 'Allow', advanced: 'Apply' })[rr.section]} ${rr.label.toLowerCase()} (${ds.join(', ')})` }); }
   const ORDER = ['site', 'edge', 'core', 'cloud'];
   pushed.sort((x, y) => ORDER.indexOf(x.layer) - ORDER.indexOf(y.layer));
-  const tip = today.ms == null ? 'Pick a cloud region on the other side to see the path.'
-    : `Today this pair rides ${today.path === 'Public internet' ? 'the public internet' : 'the AT&T network'} at ${today.ms} ms. With this policy: ${after.path === 'Public internet' ? 'still public' : 'private'}, ${after.ms} ms, ${delta ? `+${fmt$(delta)}/mo` : 'no added cost'}.${missing.length ? ` ${missing[0].text}.` : ''}`;
+  const tip = !r ? 'Pick a cloud region on the other side to see the path.'
+    : `Today this pair rides ${today.path === 'Public internet' ? 'the public internet' : 'the AT&T network'}. With this policy: ${after.path === 'Public internet' ? 'still public' : 'private'}, ${delta ? `+${fmt$(delta)}/mo` : 'no added cost'}.${missing.length ? ` ${missing[0].text}.` : ''}`;
   return { today, after, lines, delta, deltaF: delta ? `+${fmt$(delta)}/mo` : '$0', missing, pushed, tip };
 }
 
@@ -221,9 +221,9 @@ export function assetIcon(label) {
 }
 // The verbs a policy compiles to across its layers (Deny, Allow, Manipulate, Advertise, in NetBond's colors), then what
 // the path asks for, in neutral: three at most. A verb carries the directions its rows run (2026-10-09, from the compile
-// table, so an SLO is a Manipulate of the class of service and never a prepend).
+// table, so priority traffic is a Manipulate of the class of service and never a prepend).
 const INTENT_BADGE = { private: ['path', 'Path'], 'no-internet': ['path', 'Path'], 'two-paths': ['path', 'Path'], 'no-breakout': ['path', 'Path'], inspect: ['inspect', 'Inspect'],
-  segment: ['segment', 'Segment'], slo: ['slo', 'SLO'], egress: ['egress', 'Egress'], encrypt: ['encrypt', 'Encrypt'], 'zero-trust': ['access', 'Access'], 'allow-list': ['inspect', 'Inspect'] };
+  segment: ['segment', 'Segment'], priority: ['priority', 'Priority'], egress: ['egress', 'Egress'], encrypt: ['encrypt', 'Encrypt'], 'zero-trust': ['access', 'Access'], 'allow-list': ['inspect', 'Inspect'] };
 export function verbBadges(p) {
   const out = [], seen = new Set(), add = (key, label, cls) => { if (!seen.has(key)) { seen.add(key); out.push({ key, label, cls }); } };
   const rows = compilePolicy(p || {}, ROUTE_RULES), dirs = {};

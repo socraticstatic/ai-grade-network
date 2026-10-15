@@ -11,24 +11,22 @@ import * as G from '../naas-segments.js';
 import * as OD from '../naas-observe-dash.js';
 import { appsOf } from '../naas-apps.js';
 
-// Over SLO reads purple everywhere; one lift rule on Health and Paths (review
-// round 2, 2026-09-30). Round 1 gave Down the red and the square and Over SLO
-// --viz-5, on Health. A verifier found Over SLO still drawn in Down's red on
-// Insights (the bars and the legend) and in the Traffic site panel, every
-// public path amber however fast, the Signals card counting an 86 ms spike as
-// over SLO, the Home banner drawing every problem amber and round, hex on the
-// Performance legend, Paths rows that never took the lift Health rows take,
-// and a Bank scale On-ramp cell that swapped the AT&T NetBond saturation for a
-// hollow public-internet ring on a tie.
+// Each state wears its own ink and shape everywhere; one lift rule on Health and Paths (review round 2, 2026-09-30).
+// Round 1 gave Down the red and the square. A verifier found states drawn in Down's red in the Traffic site panel,
+// every public path amber, the Home banner drawing every problem amber and round, hex on the map legend, Paths rows
+// that never took the lift Health rows take, and a Bank scale On-ramp cell that swapped the AT&T NetBond saturation
+// for a hollow public-internet ring on a tie. This file was over-slo-ink until 2026-10-15, when every delay figure and
+// its Over SLO state left the site ("we can't measure that"); what it pins now is the measured states' inks.
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 const store = {};
 globalThis.localStorage = globalThis.localStorage || { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
 const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
 const HEX = /#[0-9a-f]{3,8}\b/i;
-const RANK = { ok: 0, risk: 1, slo: 2, down: 3 };
-// Within SLO paints the light blue on the Performance view since 2026-10-13 ("Green ONLY on a money saving"), apart from On AT&T's blue.
-const INKS = new Set([...Object.values(F.HEALTH_INK).filter(x => x !== F.HEALTH_INK.ok), 'var(--viz-2)']);
+const RANK = { ok: 0, risk: 1, down: 2 };
+// Healthy paints the light blue on the Utilization view ("Green ONLY on a money saving", 2026-10-13), apart from On AT&T's
+// blue; what no connection measures takes the not-yet-measured ink.
+const INKS = new Set([F.HEALTH_INK.risk, F.HEALTH_INK.down, 'var(--viz-2)', 'var(--text-disabled)']);
 const at = (view, patch = {}) => mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obTab: 'flow', ...patch });
 const probsOf = (view) => {
   const est = D.ESTATES[view], inv = A.inventory(est), ob = A.observe(est, [], inv), conns = X.connections(est, ob);
@@ -39,68 +37,44 @@ const ctxOf = (view) => {
   return G.segCtxOf(est, { inv, ob, conns, probs: OD.problems(est, conns, ob, appsOf(est, inv, ob.flows), [], Date.parse('2026-09-29T12:00:00Z')) });
 };
 
-test('Insights: the Latency over SLO bars are the Over SLO ink, on Signals and on Your actions', () => {
-  let seen = 0;
-  for (const view of ['partial', 'mature', 'trust']) {
-    const sig = vals(at(view, { obPage: 'insights', insPanel: 'signals' })).iw;
-    for (const r of sig.slo) { seen++; assert.equal(r.fill, F.HEALTH_INK.slo, `${view} Signals ${r.name}: ${r.fill}`); }
-    const role = vals(at(view, { obPage: 'insights', insPanel: 'role', persona: 'neteng' })).roleVisuals.find(x => x.key === 'slo');
-    for (const r of (role ? role.rows : [])) { seen++; assert.equal(r.fill, F.HEALTH_INK.slo, `${view} Your actions ${r.label}: ${r.fill}`); }
-  }
-  assert.ok(seen > 0, 'some estate has a flow over SLO to draw');
-});
-
-// The nine Signals cards share one legend loop (2026-09-30): the swatch binds its
-// card's own ink, and Latency over SLO's is the Over SLO ink.
-test('Signals: the Latency over SLO legend swatch is the Over SLO ink, never Down\'s red', () => {
+// The Signals cards share one legend loop (2026-09-30): the swatch binds its card's own ink.
+test('Signals: a legend swatch binds its card\'s own ink, never a default red', () => {
   // The key reads its first words since the Insights story (2026-10-13); the whole label is the item's title.
   const i = HTML.indexOf('{{ lg.short }}', HTML.indexOf('<sc-for list="{{ sg.legend }}"'));
   const swatch = HTML.slice(HTML.lastIndexOf('<i ', i), i);
   assert.ok(!swatch.includes('var(--error)'), swatch);
   const bound = (swatch.match(/background:\{\{ ([\w.]+) \}\}/) || [])[1];
   assert.equal(bound, 'lg.ink', swatch);
-  const card = vals(at('partial', { obPage: 'insights', insPanel: 'signals' })).sigAll.find(x => x.key === 'slo');
-  assert.deepEqual(card.legend.map(l => l.ink), [F.HEALTH_INK.slo]);
-  assert.equal(vals(at('partial', { obPage: 'insights', insPanel: 'signals' })).iw.sloInk, F.HEALTH_INK.slo);
+  const health = vals(at('partial', { obPage: 'insights', insPanel: 'signals' })).sigAll.find(x => x.key === 'health');
+  for (const l of health.legend) assert.equal(l.ink, F.HEALTH_INK[l.key], l.label);
 });
 
-test('Traffic site panel: each path is inked by the one rule, and a 66 ms public path is Healthy', () => {
-  const PARTIAL = { 'London DC': { 'us-west-2': 'ok', 'eu-west-1': 'slo', 'us-east-1': 'ok' }, 'Ashburn DC': { 'us-west-2': 'ok', 'eu-west-1': 'slo', eastus: 'down' } };
+// One rule for a site's paths (review round 2, 2026-09-30; 2026-10-15): Down on a degraded link, At risk where its
+// connection is near full, else Healthy, never timed; a public path is Healthy, not amber by default.
+test('Traffic site panel: each path is inked by the one rule, and a public path is Healthy', () => {
+  const PARTIAL = { 'London DC': { 'us-west-2': 'ok', 'eu-west-1': 'ok', 'us-east-1': 'ok' }, 'Ashburn DC': { 'us-west-2': 'ok', 'eu-west-1': 'ok', eastus: 'down' } };
   for (const [site, want] of Object.entries(PARTIAL)) {
     const p = vals(at('partial', { obPanel: 'map', mapSel: 'asset:' + site })).panel;
     for (const [region, state] of Object.entries(want)) {
       const x = p.paths.find(y => y.key === region);
-      assert.equal(x.dot, F.HEALTH_INK[state], `${site} to ${x.region} at ${x.ms} ms is ${state}, inked ${x.dot}`);
+      assert.equal(x.dot, F.HEALTH_INK[state], `${site} to ${x.region} is ${state}, inked ${x.dot}`);
       assert.equal(x.rad, F.healthRadius(state), `${site} to ${x.region}: radius ${x.rad}`);
+      assert.equal(x.stateF, F.HEALTH_WORD[state], `${site} to ${x.region} reads ${x.stateF}`);
     }
   }
   for (const view of ['small', 'partial', 'mature', 'trust']) {
+    const est = D.ESTATES[view], conns = X.connections(est, A.observe(est, [], A.inventory(est)));
     for (const site of new Set(vals(at(view, { obPanel: 'paths' })).pathTimeAll.map(r => r.site))) {
       const p = vals(at(view, { obPanel: 'map', mapSel: 'asset:' + site })).panel;
       for (const x of p.paths) {
-        const r = D.ESTATES[view].regionsList.find(y => y.region === x.key);
-        const state = r.link === 'degraded' ? 'down' : F.healthOf(x.ms, x.priv ? F.SLO_PRIVATE : F.SLO);
-        assert.equal(x.dot, F.HEALTH_INK[state], `${view} ${site} to ${x.region} at ${x.ms} ms`);
+        const r = est.regionsList.find(y => y.region === x.key), cx = conns.rows.find(c => c.region === x.key);
+        const state = r.link === 'degraded' ? 'down' : cx && cx.hot ? 'risk' : 'ok';
+        assert.equal(x.dot, F.HEALTH_INK[state], `${view} ${site} to ${x.region}`);
       }
     }
   }
   assert.ok(HTML.includes('border-radius:{{ pa.rad }};background:{{ pa.dot }}'), 'the panel path dot draws its radius');
-});
-
-test('the Latency over SLO card counts a spike only when the one rule calls it over SLO', () => {
-  // The card's count is its finds (2026-09-30, Signals: every count a button).
-  const drilled = (view) => { const c = at(view, { obPage: 'insights', insPanel: 'signals' }); const f = vals(c).sigAll.find(x => x.key === 'slo').finds; f.go(); return { n: f.n, keys: vals(c).insightRows.map(r => r.key) }; };
-  for (const view of ['small', 'partial', 'mature', 'trust']) {
-    const { n, keys } = drilled(view);
-    assert.equal(keys.length, n, `${view}: the card says ${n} and drills to ${keys.join(',')}`);
-    for (const r of D.ESTATES[view].regionsList.filter(x => x.rel === 'warn')) {
-      const over = F.healthOf(r.pub + 40, F.SLO) === 'slo';
-      assert.equal(keys.includes('an-' + r.region), over, `${view} ${r.region}: peak ${r.pub + 40} ms`);
-    }
-  }
-  assert.ok(!drilled('small').keys.includes('an-us-west-2'), '86 ms is At risk, not over SLO');
-  assert.ok(!drilled('trust').keys.includes('an-us-west-2'), '100 ms is not over 100 ms');
-  assert.ok(drilled('partial').keys.includes('an-eu-west-1'), '136 ms is over');
+  assert.ok(HTML.includes('{{ pa.stateF }}') && !HTML.includes('{{ pa.msF }}'), 'the path reads its state, never a time');
 });
 
 test('Home: each incident on the banner is drawn in its own ink and shape', () => {
@@ -120,13 +94,14 @@ test('Home: each incident on the banner is drawn in its own ink and shape', () =
   assert.ok(!row.includes('var(--warning)'), 'nothing on the banner is amber by default');
 });
 
-test('Performance legend and map: Within SLO and Near SLO are the health tokens, no hex', () => {
+test('Utilization legend and map: the health tokens and the not-measured ink, no hex', () => {
   for (const theme of ['light', 'dark']) {
-    const v = vals(at('partial', { mapMode: 'slo', theme }));
+    const v = vals(at('partial', { mapMode: 'util', theme }));
     const col = (l) => v.mapLegend.find(x => x.label === l).color;
-    assert.equal(col('Within SLO'), 'var(--viz-2)', theme); // the light blue, never the saving's green (2026-10-13)
-    assert.equal(col('Near SLO'), F.HEALTH_INK.risk, theme);
-    assert.equal(col('Over SLO'), F.HEALTH_INK.slo, theme);
+    assert.equal(col('Healthy'), 'var(--viz-2)', theme); // the light blue, never the saving's green (2026-10-13)
+    assert.equal(col('Near full'), F.HEALTH_INK.risk, theme);
+    assert.equal(col('Down'), F.HEALTH_INK.down, theme);
+    assert.equal(col('Not measured'), 'var(--text-disabled)', theme);
     for (const r of v.mapRibbons) assert.ok(INKS.has(r.fill), `${theme} ribbon ${r.key}: ${r.fill}`);
     assert.ok(!v.mapLegend.some(x => HEX.test(x.color)), JSON.stringify(v.mapLegend));
   }
@@ -156,8 +131,12 @@ test('Paths: a row whose app and region an open problem lists is at least that p
     }
   }
   const paths = (view) => vals(at(view, { obPanel: 'paths' })).pathTimeAll;
-  assert.equal(paths('trust').find(r => r.tag === 'prod').state, 'risk', 'Bank scale prod rides the us-west-2 spike');
-  assert.equal(paths('small').find(r => r.tag === 'internet-facing').state, 'risk', 'Small internet-facing rides the 86 ms spike');
+  // A public path carries no connection to measure: Healthy, and its link reads Public, never a figure.
+  for (const [view, tag] of [['trust', 'prod'], ['small', 'internet-facing']]) {
+    const row = paths(view).find(r => r.tag === tag);
+    assert.equal(row.state, 'ok', `${view} ${tag}`);
+    assert.equal(row.linkF, 'Public', `${view} ${tag}`);
+  }
   assert.equal(paths('trust').find(r => r.tag === 'ai').state, 'risk', 'Bank scale ai rides the us-central1 saturation');
   const inet = paths('mature').find(r => r.tag === 'internet-facing');
   assert.equal(inet.region, 'us-west-2', 'Established internet-facing sits on the saturated region');

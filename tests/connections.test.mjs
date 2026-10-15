@@ -85,7 +85,9 @@ test('left drill: class → metros → sites → paths, context kept', () => {
   const l2 = siteDrillRows(est, ['Branch', l1.rows[0].drillKey]);
   assert.equal(l2.level, 'site'); assert.ok(l2.rows.length >= 1); assert.match(l2.rows[0].name, /^RS-/);
   const l3 = siteDrillRows(est, ['Branch', l1.rows[0].drillKey, l2.rows[0].drillKey]);
-  assert.equal(l3.level, 'path'); assert.ok(l3.rows.length >= 1); assert.ok(l3.rows[0].leaf); assert.match(l3.rows[0].access, /ms/);
+  assert.equal(l3.level, 'path'); assert.ok(l3.rows.length >= 1); assert.ok(l3.rows[0].leaf);
+  // A path reads its access and whether it rides the AT&T network, never a delay (2026-10-15).
+  assert.match(l3.rows[0].access, / · (AT&T network|public internet)$/); assert.doesNotMatch(l3.rows[0].access, /\bms\b/);
   const named = siteDrillRows(est, ['Data center']);
   assert.equal(named.level, 'site'); assert.equal(named.rows[0].name, 'Ashburn DC');
   const dcPaths = siteDrillRows(est, ['Data center', 'Ashburn DC']);

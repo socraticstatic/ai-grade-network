@@ -63,7 +63,7 @@ test('each role\'s verdict draws its own picture from figures the page already p
   for (const view of LIVE) {
     // Network Eng: the worst problem's path, sites to the thing that broke to the region.
     const ne = vals(home(view, { persona: 'neteng' }));
-    const worst = ne.problemRows.slice().sort((a, b) => ({ down: 0, slo: 1, risk: 2 }[a.state] ?? 3) - ({ down: 0, slo: 1, risk: 2 }[b.state] ?? 3))[0];
+    const worst = ne.problemRows.slice().sort((a, b) => ({ down: 0, risk: 1 }[a.state] ?? 3) - ({ down: 0, risk: 1 }[b.state] ?? 3))[0];
     if (worst) {
       const z = ne.homeTake.viz;
       assert.equal(z.kind, 'path', view);
@@ -150,7 +150,8 @@ test('each role has its own evidence panel, every row a door to the page that pr
       const tot = r.segs.reduce((a, g) => a + parseFloat(g.w), 0);
       assert.ok(tot <= 100.5, `${view}/${persona} ${r.key}: the bar overruns at ${tot}%`);
     }
-    if (persona === 'neteng') for (const r of p.rows) assert.ok(v.pathTimeAll.some(x => x.key === r.key && x.totalF === r.v), `${view}: ${r.key} ${r.v} is not Paths' own`);
+    // Network Eng's rows read the link each path rides at its peak, Paths' own figure (no delay since 2026-10-15).
+    if (persona === 'neteng') for (const r of p.rows) assert.ok(v.pathTimeAll.some(x => x.key === r.key && x.linkF === r.v), `${view}: ${r.key} ${r.v} is not Paths' own`);
     if (persona === 'security') for (const r of p.rows) assert.ok(v.appAll.some(a => a.key === r.key && a.exposedF === r.v), `${view}: ${r.key} ${r.v} is not Discover's own`);
     if (persona === 'architect') for (const r of p.rows) assert.ok(v.allRegions.some(g => `${g.cloud} ${g.region}` === r.title.split(' · ')[0] && String(g.wl) === r.v), `${view}: ${r.title} ${r.v}`);
   }
@@ -194,8 +195,8 @@ test('Needs attention names each problem in a few words, its figures as chips, t
   const p = vals(home('partial')).homeAttn;
   assert.equal(p[0].name, 'BGP flapping');
   assert.deepEqual(p[0].figs.map(f => f.t), ['0.31%']);
-  assert.equal(p[1].name, 'Latency spike');
-  assert.deepEqual(p[1].figs.map(f => f.t), ['136 ms']);
+  // Growing's latency spike left with the delay figures (2026-10-15); Established reads a port near full, then a flap.
+  assert.deepEqual(vals(home('mature')).homeAttn.map(a => [a.name, a.figs.map(f => f.t)]), [['Capacity', ['84%']], ['BGP flapping', ['0.31%']]]);
   assert.deepEqual(vals(home('trust')).homeAttn.find(a => a.name === 'Capacity').figs.map(f => f.t), ['81%']);
 });
 

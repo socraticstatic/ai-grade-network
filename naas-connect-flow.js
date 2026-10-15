@@ -127,7 +127,7 @@ export const ceilMbpsOf = (p) => [...((p && p.included) || []), ...((p && p.limi
 // the nearest metro Compose offers (the skeptic, 2026-09-30: missing, its Attach door opened US East, no location).
 export const REGION_GEO = { 'us-east-1': 'Ashburn', 'us-east-2': 'Chicago', 'us-west-2': 'Seattle', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'London', 'ap-southeast-1': 'Singapore', eastus: 'Ashburn', westeurope: 'Amsterdam', centralus: 'Dallas', 'us-central1': 'Chicago', 'us-east-04': 'New York', 'uk-south': 'London', 'europe-west1': 'Amsterdam', 'us-ashburn-1': 'Ashburn', 'eu-frankfurt-1': 'Frankfurt' };
 // The policy a control ships as, in Govern's words (moved from naas-app.js).
-export const POLICY_FOR_CONTROL = { 'Private path required': { match: 'tag PCI', req: 'Private path required' }, 'No direct internet path': { match: 'tag Prod', req: 'No direct internet path' }, 'Inline inspection': { match: 'tag Internet-facing', req: 'Inline security inspection' }, 'Inline security inspection': { match: 'tag Internet-facing', req: 'Inline security inspection' }, 'Segment by tag': { match: 'branch Finance', req: 'Segment intra-tag only' }, 'Latency SLO': { match: 'tag GPU', req: 'Latency SLO 15 ms' }, 'Cost-aware routing': { match: 'region *', req: 'Cost-aware routing' } };
+export const POLICY_FOR_CONTROL = { 'Private path required': { match: 'tag PCI', req: 'Private path required' }, 'No direct internet path': { match: 'tag Prod', req: 'No direct internet path' }, 'Inline inspection': { match: 'tag Internet-facing', req: 'Inline security inspection' }, 'Inline security inspection': { match: 'tag Internet-facing', req: 'Inline security inspection' }, 'Segment by tag': { match: 'branch Finance', req: 'Segment intra-tag only' }, 'Priority traffic': { match: 'tag GPU', req: 'Priority traffic' }, 'Cost-aware routing': { match: 'region *', req: 'Cost-aware routing' } };
 const AREA_ORDER = ['US East', 'US Central', 'US West', 'Europe', 'Asia Pacific', 'International', 'Nationwide'];
 
 // ---------- What each type applies to, in this estate ----------
@@ -430,22 +430,22 @@ const TYPE_PRODUCT = { 'Internet to Cloud': 'i2c', 'AVPN to Cloud': 'netbond', '
 const productOf = (id) => CATALOG.find(p => p.id === id);
 /** The path a type rides, from R.PATHS: the internet types ride Internet attach, the rest the AT&T network. */
 export const pathOf = (f) => PATHS.find(p => p.id === (f.ctype === 'Internet to Cloud' && !isLmcc(f) ? 'internet' : 'netbond'));
-/** The region a latency reads from: the first one chosen, else the estate's first on the public internet. */
+/** The region the path table reads: the first one chosen, else the estate's first on the public internet. */
 export function sampleRegion(f, est) {
   const rs = regionsOf(est);
   return rs.find(r => regionName(r) === f.regions[0]) || rs.find(r => !r.priv) || rs[0] || null;
 }
 /**
  * What you'd get, path by path (the comparison that left Ways to connect,
- * 2026-09-30): R.PATHS read for the region this order reaches, so the table
- * and the tiers beside it quote one latency. The row this order rides is marked.
+ * 2026-09-30): R.PATHS read for the region this order reaches. The row this
+ * order rides is marked.
  */
 export function pathTable(f, est) {
   const r = sampleRegion(f, est), rides = pathOf(f).id;
   const two = (s) => { const [a, ...b] = String(s).split(' · '); return [a, b.join(' · ')]; };
   return PATHS.map(p => {
-    const [security, securitySub] = two(p.sec), [reliability, reliabilitySub] = two(p.relLabel), [perf, performanceSub] = r ? two(p.latLabel(r)) : ['Pick a region', ''];
-    return { key: p.id, short: p.short, tone: p.tone, rides: p.id === rides, security, securitySub, performance: perf, performanceSub, reliability, reliabilitySub, cost: `$${p.egress.toFixed(2)}/GB`, costSub: 'egress, every GB out', setup: p.setup };
+    const [security, securitySub] = two(p.sec), [reliability, reliabilitySub] = two(p.relLabel);
+    return { key: p.id, short: p.short, tone: p.tone, rides: p.id === rides, region: r ? regionName(r) : '', security, securitySub, reliability, reliabilitySub, cost: `$${p.egress.toFixed(2)}/GB`, costSub: 'egress, every GB out', setup: p.setup };
   });
 }
 /** The region the path table and the tiers read, and whether you picked it. */
@@ -511,15 +511,15 @@ export function termPrice(monthly, term) {
 export const priceable = (f) => !!f.ctype && (isColo(f) ? !!(f.colo.a.site && f.colo.b.site) : f.regions.length > 0);
 
 /**
- * What a tier gets you, from the path the type rides (R.PATHS: security,
- * latency for the chosen region) and the order at that tier (CATALOG x the
+ * What a tier gets you, from the path the type rides (R.PATHS: security and
+ * uptime) and the order at that tier (CATALOG x the
  * tier multiplier). Modelled, and it says so.
  */
 export function tierGets(f, est, tier) {
   // Priced as the order it would be once picked: on AWS alone, Internet or VPN
   // to Cloud at Maximum is Interconnect - Last Mile (wizardDoor.ts tierForkArmed).
   const g = { ...f, tier };
-  const p = pathOf(g), r = sampleRegion(g, est);
+  const p = pathOf(g);
   const o = flowOrder(g, est);
   return {
     tier,
@@ -527,7 +527,8 @@ export function tierGets(f, est, tier) {
     protects: (isColo(f) ? COLO_TIER_PROTECTS : TIER_PROTECTS)[tier] || '',
     security: p.sec.split(' · ')[0],
     securitySub: p.sec.split(' · ').slice(1).join(' · '),
-    performance: r ? p.latLabel(r) : 'Pick a region for its latency',
+    reliability: p.relLabel.split(' · ')[0],
+    reliabilitySub: p.relLabel.split(' · ').slice(1).join(' · '),
     // Chosen but past what the catalog price covers reads AT&T's words, not "once chosen" (2026-09-30).
     cost: !priceable(f) ? 'Priced once the type and region are chosen' : o.priced ? `${fmt(o.monthly)}/mo` : PRICE_NOTE,
     costSub: priceable(f) && o.priced ? MODELLED : '',

@@ -51,6 +51,14 @@ const expect = async (...needles) => {
   for (const n of needles) if (!(n instanceof RegExp ? new RegExp(n.source, n.flags.includes('i') ? n.flags : n.flags + 'i').test(t) : t.toLowerCase().includes(n.toLowerCase()))) throw new Error(`missing ${n}`);
 };
 
+// No delay anywhere a person reads (2026-10-15, "we can't measure that"): no N ms, SLO, latency or p95 in the text or a title.
+const DELAY = /\d\s?ms\b|\bSLO\b|latency|p95/i;
+const noDelay = async (where) => {
+  const t = await page.evaluate(() => { const m = document.querySelector('main') || document.body; return [m.innerText, ...[...m.querySelectorAll('[title], [aria-label]')].map(e => `${e.getAttribute('title') || ''} ${e.getAttribute('aria-label') || ''}`)].join('\n'); });
+  const hit = t.match(new RegExp(`.{0,40}(${DELAY.source}).{0,40}`, 'i'));
+  if (hit) throw new Error(`${where} reads a delay: "${hit[0]}"`);
+};
+
 // A count that became a glyph and a number keeps its words in its title (2026-10-07, the words pass); this reads them.
 const expectTitle = async (...needles) => {
   const t = await page.evaluate(() => [...(document.querySelector('main') || document.body).querySelectorAll('[title], [aria-label]')].map(e => `${e.getAttribute('title') || ''} ${e.getAttribute('aria-label') || ''}`).join('\n'));
@@ -99,8 +107,10 @@ await beat('0 NaaS home: the take-away, the snapshot, the map below', async () =
   await takes('Azure eastus is down', 'Finance', '40', '22 min', 'Trace it');
   await expectTitle('Finance rides it', '40 workloads');
   const rows = await inHome('[aria-label="Do next"] .home-do').count();
-  // The tunnel finding (2026-10-05, four AT&T sites on tunnels over the internet) is Network Eng's fourth action of five.
-  if (rows !== 5) throw new Error(`Do next lists ${rows} actions, not Network Eng's 5`);
+  // The tunnel finding (2026-10-05, four AT&T sites on tunnels over the internet) is Network Eng's third action of four
+  // since the latency action left with the delay figures (2026-10-15).
+  if (rows !== 4) throw new Error(`Do next lists ${rows} actions, not Network Eng's 4`);
+  await noDelay('the home');
   // Do next pares a finding's head to its figures (2026-10-07); the full sentence is the line's title.
   await expect('4 AT&T sites tunnel over the internet');
   const c = await cards();
@@ -196,17 +206,20 @@ await beat('6 Cost: the four moves, then By leg', async () => {
 await beat('7 Insights: Signals, Your actions and Operations', async () => {
   await rail('Insights');
   // westeurope is not on AT&T, so its flows offer Attach; Steer stays on us-east-1 to eastus (third round, 2026-09-30).
-  // Health lists westeurope's latency over SLO too, as the home's chip and this card's list do (w2 second pass, 2026-09-30).
   // The Insights story (2026-10-13): each card's verb is its foot's button in words; a row's move is its glyph, the
   // verb in its title. The head is the card's figure, counting up, and its sentence rides in the figure's title.
-  await expect('Health', 'Latency over SLO', 'Capacity', 'Trace', 'Steer');
+  // No delay figures (2026-10-15, "we can't measure that"): Latency over SLO left, so Health leads with the eastus flap
+  // alone and Capacity follows it; Your actions has no latency action.
+  await expect('Health', 'Capacity', 'Trace', 'Steer');
   await expectTitle('Attach', 'Resize');
-  if (!(await page.locator('.sig-card .ins-fig[title="3 problems · 2 apps affected"]').count())) throw new Error('Health lost its 3 problems · 2 apps affected figure');
+  if (!(await page.locator('.sig-card .ins-fig[title="1 problem · 1 app affected"]').count())) throw new Error('Health lost its 1 problem · 1 app affected figure');
   const lead = await page.locator('[aria-label="Signal cards"] .sig-head .t').allInnerTexts();
-  if (!/^Health/.test(lead[0] || '') || !/^Latency over SLO/.test(lead[1] || '') || !/^Capacity/.test(lead[2] || '')) throw new Error(`Network Eng leads with ${lead.slice(0, 3).join(', ')}`);
+  if (!/^Health/.test(lead[0] || '') || !/^Capacity/.test(lead[1] || '') || !/^Top talkers/.test(lead[2] || '')) throw new Error(`Network Eng leads with ${lead.slice(0, 3).join(', ')}`);
+  await noDelay('Signals');
   await tab('Your actions', '[aria-label="Insights views"]');
   // Each action says what it gets you (Dev's Insights content, 2026-10-01); Do it's "Coming soon" moved to its title.
-  await expect('Actions for Network Eng', 'Brings latency under SLO');
+  await expect('Actions for Network Eng', 'Takes traffic off the internet');
+  await noDelay('Your actions');
   await tab('Operations', '[aria-label="Insights views"]');
   // The line is the note's title now (2026-10-07); the tiles carry the figures.
   if (!(await page.locator('[role="note"][title*="Sev 1 open now"]').count())) throw new Error('the Operations note lost its Sev 1 line');
@@ -226,13 +239,15 @@ await beat('8 Estate switch to Established', async () => {
   // Switched while on the home, the new estate's own figures show, with no stale role list.
   // v2 home (2026-09-30): the On AT&T card counts Oracle's two public regions (2 of 7 became 2 of 9).
   await rail('NaaS');
-  // w2 (2026-09-30): the latency action counts eu-west-1's spike too, as Latency over SLO lists it.
+  // The home's moves are Your actions' own, and none reads a delay (2026-10-15).
   const growingChips = await page.evaluate(() => (document.querySelector('main') || document.body).innerText);
-  await expect('2 regions over latency SLO');
+  await expect('5 sites on IPsec over the internet');
+  await noDelay('the Growing home');
   await takes('Azure eastus is down');
   if (!(await cards())[1].includes('2 of 9')) throw new Error(`On AT&T reads "${(await cards())[1].replace(/\n/g, ' | ')}", not 2 of 9`);
   await page.selectOption('select[aria-label="View as"]', 'mature'); await settle(600);
-  await expect('3 paths send no telemetry', '2 regions over latency SLO');
+  await expect('3 paths send no telemetry');
+  await noDelay('the Established home');
   // The outage leads, not the at-risk region (skeptic, 2026-09-30).
   // Re-pinned 2026-10-13 (the home as a story): the line is chips, 2 and 96, their words in the titles.
   await takes('AWS eu-central-1 is down', '2', '96');

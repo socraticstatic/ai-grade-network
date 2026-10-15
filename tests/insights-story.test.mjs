@@ -23,7 +23,7 @@ const snap = (st) => JSON.stringify(st);
 test('heroOf reads a card head into its headline figure, the words under it, and the rest', () => {
   const h = (head) => { const x = SG.heroOf(head); return { v: x.v, unit: x.unit, rest: x.rest, calm: x.calm, save: x.save }; };
   assert.deepEqual(h('3 problems · 2 apps affected'), { v: '3', unit: 'problems', rest: ['2 apps affected'], calm: false, save: false });
-  assert.deepEqual(h('3 of 23 flows over SLO · 1 spike'), { v: '3 of 23', unit: 'flows over SLO', rest: ['1 spike'], calm: false, save: false });
+  assert.deepEqual(h('3 of 23 paths near full · 1 down'), { v: '3 of 23', unit: 'paths near full', rest: ['1 down'], calm: false, save: false });
   assert.deepEqual(h('None of 2 above 80% at peak · 1 could shrink'), { v: 'None of 2', unit: 'above 80% at peak', rest: ['1 could shrink'], calm: false, save: false });
   // A head that names its place first leads with the figure, and the place rides as a chip.
   assert.deepEqual(h('AWS us-east-1 · 31% of traffic'), { v: '31%', unit: 'of traffic', rest: ['AWS us-east-1'], calm: false, save: false });
@@ -35,7 +35,7 @@ test('heroOf reads a card head into its headline figure, the words under it, and
   assert.deepEqual(h('$71,600/mo billed public · 27.5 Gbps outside AT&T'), { v: '$71,600/mo', unit: 'billed public', rest: ['27.5 Gbps outside AT&T'], calm: false, save: false });
   assert.deepEqual(h('27.5 Gbps public · 60% of traffic'), { v: '27.5 Gbps', unit: 'public', rest: ['60% of traffic'], calm: false, save: false });
   assert.deepEqual(h('2 of 7 regions on AT&T · 40% of traffic'), { v: '2 of 7', unit: 'regions on AT&T', rest: ['40% of traffic'], calm: false, save: false });
-  assert.deepEqual(h('None of 20 flows over SLO'), { v: 'None of 20', unit: 'flows over SLO', rest: [], calm: false, save: false });
+  assert.deepEqual(h('None of 20 links near full'), { v: 'None of 20', unit: 'links near full', rest: [], calm: false, save: false });
   // No figure at all is a calm card: its words, no number.
   assert.deepEqual(h('No problems open'), { v: '', unit: 'No problems open', rest: [], calm: true, save: false });
   assert.deepEqual(h('Every domain has a policy · sample'), { v: '', unit: 'Every domain has a policy', rest: ['sample'], calm: true, save: false });
@@ -47,7 +47,7 @@ test('heroOf counts up only what it can count: a whole number with its prefix an
   assert.deepEqual(SG.heroOf('AWS us-east-1 · 31% of traffic').cu, { on: true, k: 0, r: 31, kOn: false, preCss: "''", sufCss: "'%'" });
   assert.deepEqual(SG.heroOf('Public egress +$6,800/mo in 11 weeks · +10%').cu, { on: true, k: 6, r: 800, kOn: true, preCss: "'+$'", sufCss: "'/mo'" });
   // A decimal, a ratio and None hold still.
-  for (const head of ['27.5 Gbps public', '3 of 23 flows over SLO', 'None of 2 above 80% at peak', 'No problems open']) assert.equal(SG.heroOf(head).cu.on, false, head);
+  for (const head of ['27.5 Gbps public', '3 of 23 paths near full', 'None of 2 above 80% at peak', 'No problems open']) assert.equal(SG.heroOf(head).cu.on, false, head);
 });
 
 test('Signals: every card leads with a figure off its own head and carries one verb', () => {
@@ -92,13 +92,14 @@ test('Signals: a full page shows three rows a card; a page of one row gives its 
     for (const x of v.sigCards) if (!x.isCols) assert.equal(x.rows.length, Math.min(3, x.all.length), `${view} ${x.key} page one`);
     v.sigPager.next();
     const w = vals(c);
-    assert.equal(w.sigCards.length, 3);
+    // Eight cards since Latency over SLO left (2026-10-15): six on page one, two on page two.
+    assert.equal(w.sigCards.length, 2);
     assert.equal(w.sigTall, true);
     for (const x of w.sigCards) if (!x.isCols) assert.equal(x.rows.length, Math.min(8, x.all.length), `${view} ${x.key} page two`);
   }
 });
 
-test('Signals: the index is the nine cards in order, each a door, the ones with findings marked', () => {
+test('Signals: the index is the eight cards in order, each a door, the ones with findings marked', () => {
   for (const view of VIEWS) for (const p of PERSONAS) {
     const c = ins(view, { persona: p });
     const v = vals(c);

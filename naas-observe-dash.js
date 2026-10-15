@@ -38,12 +38,13 @@ export function gauges(conns) {
 export const OWNER_LABEL = { att: 'AT&T', third: 'Third party', cloud: 'Cloud provider', customer: 'You', public: 'Public internet' };
 
 /**
- * The one incident list (2026-09-30): a degraded link, a port near full, a
- * latency spike. Each says where, on which thing, who holds the SLA, which
- * apps ride it, when it started and what changed just before. Home, the
- * Alerts count, the Health tab and the findings events all read it. Blind
- * regions and flow-level Over SLO are findings, not alerts. Ranked by apps
- * affected, then severity (1 is worst), then workloads.
+ * The one incident list (2026-09-30): a degraded link, a port near full.
+ * Each says where, on which thing, who holds the SLA, which apps ride it, when
+ * it started and what changed just before. Home, the Alerts count, the Health
+ * tab and the findings events all read it. Blind regions are findings, not
+ * alerts. Nothing here is timed (2026-10-15): a delay is not something the
+ * product can measure. Ranked by apps affected, then severity (1 is worst),
+ * then workloads.
  */
 export function problems(est, conns, ob, apps = [], chg = [], now = Date.now()) {
   const regs = est.regionsList || [];
@@ -58,36 +59,21 @@ export function problems(est, conns, ob, apps = [], chg = [], now = Date.now()) 
     const t = cloudEdgeThing(regs.find(x => x.region === r.region) || r), key = 'an-sat-' + r.region;
     out.push({ key, kind: 'sat', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: t.label, what: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'} purchased`, short: 'near full', fig: `${r.pct}% of ${r.bw || r.ports + ' × 10 Gbps'}`, owner: t.owner, ownerLabel: OWNER_LABEL[t.owner] || t.owner, state: 'risk', sev: 2, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('sat', now, INCIDENT_MIN.sat), change: changeFor(key), connId: r.id, action: 'port', actionLabel: 'Add a port' });
   });
-  // A spike is as bad as the one latency rule says (review, 2026-09-30): 86 ms
-  // at peak is At risk, 100 ms is not over 100, and a peak within it is no problem.
-  regs.filter(r => r.rel === 'warn').forEach(r => {
-    const key = 'an-' + r.region, peak = r.pub + 40, state = F.healthOf(peak, F.SLO);
-    if (state === 'ok') return;
-    out.push({ key, kind: 'spike', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: 'Public internet', what: `Latency spike · p95 ${peak} ms at peak, 0.3% loss`, short: 'Latency spike', fig: `p95 ${peak} ms`, ms: peak, owner: 'public', ownerLabel: OWNER_LABEL.public, state, sev: 3, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('spike', now, INCIDENT_MIN.spike), change: changeFor(key), connId: null, action: 'impact', actionLabel: 'See impact' });
-  });
-  // A region whose path runs over its SLO by the one rule is a problem too (w2, 2026-09-30: the
-  // home's chip and Signals named westeurope above the latency SLO while Health, and so the map's
-  // dot, called it Healthy). One row per region, a spike's region already has its own.
-  regs.filter(r => r.link !== 'degraded' && F.regionState(r) === 'slo' && !out.some(p => p.region === r.region && p.kind === 'spike')).forEach(r => {
-    const key = 'an-slo-' + r.region, ms = r.priv ? r.fab : r.pub, slo = r.priv ? F.SLO_PRIVATE : F.SLO;
-    const t = r.priv ? cloudEdgeThing(r) : { label: 'Public internet', owner: 'public' };
-    out.push({ key, kind: 'latency', region: r.region, cloud: r.cloud, where: `${r.cloud} ${r.region}`, thing: t.label, what: `Latency over SLO · p95 ${ms} ms against ${slo} ms`, short: 'Latency', fig: `p95 ${ms} ms`, ms, owner: t.owner, ownerLabel: OWNER_LABEL[t.owner] || t.owner, state: 'slo', sev: 3, apps: appsOn(r.region), wl: r.wl, startedAt: startOf('slo', now, INCIDENT_MIN.slo), change: changeFor(key), connId: null, action: 'impact', actionLabel: 'See impact' });
-  });
   return out.sort((a, b) => b.apps.length - a.apps.length || a.sev - b.sev || b.wl - a.wl);
 }
 
 /** The Alerts rows: the incident list in the queue's words. */
 export function queue(probs, now = Date.now()) {
-  const WORD = { link: 'Degraded', sat: 'Saturating', spike: 'Latency spike' };
+  const WORD = { link: 'Degraded', sat: 'Saturating' };
   return probs.map(p => ({ key: p.key, sev: p.sev, state: WORD[p.kind], health: p.state, what: p.kind === 'link' ? `${p.what.replace(/^BGP flapping/, 'BGP flapping on ' + p.thing)}` : p.what, where: p.where, age: agoOf(p.startedAt, now), wl: p.wl, action: p.action, actionLabel: p.actionLabel, connId: p.connId, region: p.region }));
 }
 
 // One connection, one move (w2, 2026-09-30): a connection that is down is traced first, as Health
 // and Signals trace it, never given a port; one near full gets a port.
 const connMove = (row) => (row.degraded ? [{ key: 'trace', label: 'Trace', region: row.region, id: row.id }] : row.hot ? [{ key: 'port', label: 'Add a port', region: row.region, id: row.id }] : []);
-// A region's state by the one rule Health uses: its path's latency against its SLO, its connection's
-// (down on a degraded link, at risk near full), the worst of them.
-const RANK = ['ok', 'risk', 'slo', 'down'];
+// A region's state by the one rule Health uses: its link, and its connection's (down on a degraded
+// link, at risk near full), the worst of them.
+const RANK = ['ok', 'risk', 'down'];
 const regionHealth = (est, region, row) => { const r = (est.regionsList || []).find(x => x.region === region); if (!r) return null;
   return [F.regionState(r), row ? (row.degraded ? 'down' : row.hot ? 'risk' : 'ok') : 'ok'].reduce((a, s) => (RANK.indexOf(s) > RANK.indexOf(a) ? s : a), 'ok'); };
 // A connection's peak as Capacity and Modify bandwidth read it: Gbps, then the share of what is bought.
@@ -134,8 +120,8 @@ export function panelFor(sel, ctx) {
         key: c.panelSel || c.wlSel || (c.kind === 'metro' ? `vol:${c.siteCls || c.cls}|${c.metro}` : '') || (c.kind === 'sitename' ? `asset:${c.siteName}` : ''),
         name: c.kind === 'metro' ? `${n(c.count || 0) || c.metro} · ${c.metro}` : c.name,
         sub: c.sub || `${c.v >= 1 ? c.v.toFixed(1) + ' Gbps' : Math.round(c.v * 1000) + ' Mbps'}`,
-        warn: c.state === 'slo' || c.state === 'degraded',
-        note: c.state === 'degraded' ? 'degraded' : c.state === 'slo' ? 'outside AT&T' : '',
+        warn: c.state === 'public' || c.state === 'degraded',
+        note: c.state === 'degraded' ? 'degraded' : c.state === 'public' ? 'outside AT&T' : '',
       })),
     };
   })();
@@ -144,7 +130,7 @@ export function panelFor(sel, ctx) {
   // its traffic says what the map draws: what your sites send it.
   const rh = region && (node.kind === 'region' || /^cloud:[^/]+\/./.test(node.key || sel)) ? regionHealth(est, region, row) : null;
   return { kind: node.kind, title: node.name, sub: node.sub || '', trail: tr, children: kids,
-    overview: [...(node.opened ? [['Opened', 'children shown in place']] : []), [rh ? 'From your sites' : 'Traffic', `${node.v.toFixed(2)} Gbps`], ['On AT&T', `${node.v ? Math.round(node.fabV / node.v * 100) : 0}%`], ['Share of all traffic', `${share}%`], ['Change vs prior window', (node.delta >= 0 ? '+' : '') + node.delta + '%'], ['State', rh ? F.HEALTH_WORD[rh] : node.state === 'ok' ? 'Healthy' : node.state === 'degraded' ? 'Degraded' : 'Over SLO or public'],
+    overview: [...(node.opened ? [['Opened', 'children shown in place']] : []), [rh ? 'From your sites' : 'Traffic', `${node.v.toFixed(2)} Gbps`], ['On AT&T', `${node.v ? Math.round(node.fabV / node.v * 100) : 0}%`], ['Share of all traffic', `${share}%`], ['Change vs prior window', (node.delta >= 0 ? '+' : '') + node.delta + '%'], ['State', rh ? F.HEALTH_WORD[rh] : node.state === 'ok' ? 'Healthy' : node.state === 'degraded' ? 'Degraded' : 'Outside AT&T'],
       // State is the paths'; the region's connection says its own, in Capacity's words and figure (skeptic, 2026-09-30), so Add a port has its reason.
       // Its peak in Gbps too, the figure Modify bandwidth opens on (w2, 2026-09-30: the node read 14.13 Gbps of the
       // map's site traffic and its Add a port opened a drawer at a 40.5 Gbps peak, with nothing between to say why).
@@ -156,7 +142,7 @@ export function panelFor(sel, ctx) {
 export function findSite(est, id) {
   const named = P.allSites(est).find(x => x.id === id || x.name === id);
   if (named) return { ...named, clsLabel: named.clsLabel || (S.CLASS[named.cls] || {}).label, trail: [(S.CLASS[named.cls] || { label: named.cls }).label, named.metro, named.name] };
-  for (const c of S.siteTree(est)) for (const ch of c.children) if (ch.kind === 'metro') { const hit = S.metroSites(ch).find(x => x.id === id); if (hit) return { ...hit, cls: c.cls, clsLabel: c.label, access: ch.access, ramp: ch.ramp, popMs: ch.ms, trail: [c.label, ch.name, hit.id] }; }
+  for (const c of S.siteTree(est)) for (const ch of c.children) if (ch.kind === 'metro') { const hit = S.metroSites(ch).find(x => x.id === id); if (hit) return { ...hit, cls: c.cls, clsLabel: c.label, access: ch.access, ramp: ch.ramp, trail: [c.label, ch.name, hit.id] }; }
   return null;
 }
 
@@ -165,17 +151,17 @@ export function sitePanel(id, ctx) {
   const { est, inv, flows } = ctx;
   const site = findSite(est, id); if (!site) return null;
   const sr = P.siteRegions(est, site, 6);
-  // Each path's state is the one rule Paths reads (review round 2, 2026-09-30):
-  // Down on a degraded link, else its end-to-end ms against its SLO, so a 66 ms
-  // public path is Healthy and a path over its SLO is Over SLO, never Down's red.
-  const paths = sr.rows.map(x => { const pth = P.path(site, x.region); const bad = pth.hops.find(h => h.state !== 'ok'); return { key: x.region.region, region: `${x.region.cloud} ${x.region.region}`, ms: pth.ms, gbps: x.gbps, priv: !!x.region.priv, via: pth.hops.filter(h => h.kind !== 'site' && h.kind !== 'region').map(h => h.name).join(' → '), state: x.region.link === 'degraded' ? 'down' : F.healthOf(pth.ms, x.region.priv ? F.SLO_PRIVATE : F.SLO), worst: bad ? `${bad.name}: ${bad.sub}` : 'clean' }; });
+  // Each path's state is the one rule Paths reads (review round 2, 2026-09-30; 2026-10-15): Down on a
+  // degraded link, At risk where its connection is near full, else Healthy, never timed.
+  const connOf = (region) => ((ctx.conns && ctx.conns.rows) || []).find(r => r.region === region);
+  const paths = sr.rows.map(x => { const pth = P.path(site, x.region); const bad = pth.hops.find(h => h.state !== 'ok'), cx = connOf(x.region.region); return { key: x.region.region, region: `${x.region.cloud} ${x.region.region}`, gbps: x.gbps, priv: !!x.region.priv, via: pth.hops.filter(h => h.kind !== 'site' && h.kind !== 'region').map(h => h.name).join(' → '), state: x.region.link === 'degraded' ? 'down' : cx && cx.hot ? 'risk' : 'ok', worst: bad ? `${bad.name}: ${bad.sub}` : 'clean' }; });
   const regionsOf = inv.flatMap(c => c.regions);
   const talks = sr.rows.slice(0, 3).map(x => { const r = regionsOf.find(z => z.region === x.region.region); const v = r && r.vpcs[0]; const w = v && v.subnets.flatMap(sn => sn.workloads || [])[0]; return { key: x.region.region, label: `${x.region.cloud} ${x.region.region}`, what: v ? `${v.name}${w ? ' · ' + (w.tag || v.name) + '/' + w.name : ''}` : 'workloads', gbps: x.gbps }; });
   const recs = records(est, inv, { flows }, 'inbound').filter(r => r.srcName === site.name || r.srcName === site.id).slice(0, 8);
   const pub = !site.priv;
   const state = site.state === 'degraded' ? 'Degraded' : pub ? 'Public first mile' : 'On AT&T';
   return { kind: 'site', title: site.name || site.id, sub: `${site.clsLabel || site.cls} · ${site.metro}${site.address ? ' · ' + site.address : ''}`, trail: site.trail.map((t, i) => ({ key: 'st' + i, name: t })),
-    overview: [['Class', site.clsLabel || site.cls], ['Metro', site.metro], ...(site.address ? [['Address', site.address]] : []), ['Access', S.servicesOf(site).map(v => `${v.label} ${v.bwF}${v.role === 'backup' ? ' backup' : ''}`).join(' + ') || site.access || 'Access'], ['First mile', pub ? 'Public internet' : 'AT&T private'], ['PoP', `${site.metro === 'Various' ? 'nearest' : site.metro} PoP · ${site.popMs || site.ms || 4} ms`], ['State', state], ['Traffic', (() => { const g = sr.rows.reduce((a, x) => a + x.gbps, 0); return g >= 1 ? g.toFixed(1) + ' Gbps' : Math.max(1, Math.round(g * 1000)) + ' Mbps'; })()], ['Reaches', `${sr.total} regions`], ['Discovered', `${site.since || 0} days ago`]],
+    overview: [['Class', site.clsLabel || site.cls], ['Metro', site.metro], ...(site.address ? [['Address', site.address]] : []), ['Access', S.servicesOf(site).map(v => `${v.label} ${v.bwF}${v.role === 'backup' ? ' backup' : ''}`).join(' + ') || site.access || 'Access'], ['First mile', pub ? 'Public internet' : 'AT&T private'], ['PoP', `${site.metro === 'Various' ? 'nearest' : site.metro} PoP`], ['State', state], ['Traffic', (() => { const g = sr.rows.reduce((a, x) => a + x.gbps, 0); return g >= 1 ? g.toFixed(1) + ' Gbps' : Math.max(1, Math.round(g * 1000)) + ' Mbps'; })()], ['Reaches', `${sr.total} regions`], ['Discovered', `${site.since || 0} days ago`]],
     paths, talks, impact: null, records: recs,
     actions: [...(pub ? [{ key: 'attach', label: `Attach ${site.id || site.name}`, site: site.id || site.name }] : [{ key: 'path', label: 'Add a second path', site: site.id || site.name }]), { key: 'failover', label: 'Run a failover test' }, { key: 'policy', label: `Author a policy for ${(site.clsLabel || site.cls || 'this class').toLowerCase()}` }] };
 }
@@ -205,7 +191,6 @@ export function workloadPanel(sel, ctx) {
 
   const app = w.tag || 'untagged';
   const row = conns && conns.rows.find(r => r.region === region);
-  const ms = top.priv ? top.fab : top.pub;
   // Its neighbours: the other workloads carrying the same app tag. That is
   // what "who does this talk to" can honestly mean from tags and flow logs.
   const peers = reg.vpcs.flatMap(v => v.subnets.flatMap(x => (x.workloads || []).map(y => ({ ...y, vpc: v.name, sn: x.name }))))
@@ -234,7 +219,6 @@ export function workloadPanel(sel, ctx) {
       ['Availability zone', sn.az],
       ['Reachability', w.exposed ? 'Exposed to the internet' : 'Private'],
       ['Path', top.priv ? `AT&T network · ${rampName(top)}` : 'Public internet'],
-      ['Latency to the on-ramp', `${ms} ms`],
       ...(row ? [['Connection', `${rampName(row)} · ${row.state}`]] : []),
       ['First seen', w.since === 0 ? 'today' : w.since === 1 ? '1 day ago' : `${w.since} days ago`],
       ['Instances sharing this app', `${peers.length + 1}`],
@@ -253,16 +237,12 @@ export function workloadPanel(sel, ctx) {
         // Cost page prices its egress with, split across the workload's
         // listeners — so an application's number rolls up to the bill.
         const gbMo = (top.gbPerWl || 42) * ([0.62, 0.28, 0.10][k] ?? 0.05);
-        // Latency is the region's own measured path, plus the queueing a
-        // listener behind the load balancer actually adds.
-        const p95 = (top.priv ? top.fab : top.pub) + (k * 3) + (open ? 6 : 0);
         return { key: '', port: e.port || 'no listener', name: e.app, ver: e.ver, sub: e.note, warn: open,
           rate: gbMo >= 10 ? Math.round(gbMo) + ' GB/mo' : gbMo.toFixed(1) + ' GB/mo',
-          lat: p95 + ' ms p95',
           note: open ? 'reachable from the internet' : 'private to the VPC' };
       }).sort((a, b) => (b.warn - a.warn)),
     } : null,
-    paths: [{ key: 'p0', region: `${top.cloud} ${top.region}`, ms, gbps: 0.04, priv: !!top.priv, via: top.priv ? rampName(top) : 'hyperscaler edge', state: F.regionState(top), worst: w.exposed ? 'reachable from the internet' : 'clean' }],
+    paths: [{ key: 'p0', region: `${top.cloud} ${top.region}`, gbps: 0.04, priv: !!top.priv, via: top.priv ? rampName(top) : 'hyperscaler edge', state: F.regionState(top), worst: w.exposed ? 'reachable from the internet' : 'clean' }],
     talks, impact: null, records: recs,
     actions: [
       ...(w.exposed ? [{ key: 'attach', label: `Isolate ${w.name}`, site: `${w.name} · ${w.ip}` }] : []),
@@ -325,7 +305,6 @@ export function vpcPanel(sel, ctx) {
       ['Instances sharing this app', `${n(apps.length)} ${apps.length === 1 ? 'app' : 'apps'}: ${apps.slice(0, 3).join(', ')}`],
       ['Reachability', exposed ? `${n(exposed)} exposed to the internet` : 'All private'],
       ['Path', top.priv ? `AT&T network · ${rampName(top)}` : 'Public internet'],
-      ['Latency to the on-ramp', `${top.priv ? top.fab : top.pub} ms`],
     ],
     children: { title: `${n(vpc.subnets.length)} ${vpc.subnets.length === 1 ? 'subnet' : 'subnets'}`, rows: vpc.subnets.map(x => {
       const ws = x.workloads || [], ex = ws.filter(y => y.exposed).length;
@@ -413,11 +392,8 @@ export function activityOf(est, { customPolicies = [], steered = [], conns = { r
 
 export function changes(est, conns, activity, now = Date.now(), orders = []) {
   // Problem starts come from the same seeds problems() uses, so the two agree without calling each other.
-  const flap = startOf('flap', now, INCIDENT_MIN.flap), spike = startOf('spike', now, INCIDENT_MIN.spike);
-  const probs = [
-    ...(conns.rows || []).filter(r => r.degraded).map(r => ({ key: 'an-link-' + r.region, region: r.region, at: flap })),
-    ...(est.regionsList || []).filter(r => r.rel === 'warn').map(r => ({ key: 'an-' + r.region, region: r.region, at: spike })),
-  ];
+  const flap = startOf('flap', now, INCIDENT_MIN.flap);
+  const probs = (conns.rows || []).filter(r => r.degraded).map(r => ({ key: 'an-link-' + r.region, region: r.region, at: flap }));
   const lined = (region, at) => { const p = region && probs.find(q => q.region === region && at <= q.at && q.at - at <= 15 * MIN); return p ? p.key : null; };
   const rows = [
     ...activity.filter(a => a.change).map(a => ({ key: a.key, at: a.at, kind: 'config', text: `${a.verb}: ${a.target}`, region: a.region, source: a.who, linedUp: lined(a.region, a.at), upcoming: false })),
@@ -466,11 +442,11 @@ export function capacity(conns, win = '30d') {
 // minutes (20h 31m); the windows hold 1 (24h), 3 (7d), 7 (30d) and 15 (90d).
 const H = (ago, fix, sev, what) => ({ ago, fix, sev, what });
 const GROWING_HISTORY = [
-  H(0.4, 190, 2, 'Port errors on the on-ramp'), H(3, 845, 2, 'Latency over SLO'), H(6, 2295, 2, 'BGP session reset'),
+  H(0.4, 190, 2, 'Port errors on the on-ramp'), H(3, 845, 2, 'Port near full'), H(6, 2295, 2, 'BGP session reset'),
   H(11, 1560, 2, 'Route leak from a branch'), H(17, 582, 1, 'Link down'), H(23, 2069, 2, 'Packet loss at peak'), H(28, 1076, 3, 'Flow logs stopped'),
-  H(34, 1320, 2, 'Latency over SLO'), H(41, 640, 3, 'Tag drift on a VPC'), H(48, 1880, 2, 'Port errors on the on-ramp'), H(55, 930, 3, 'Certificate renewal'),
+  H(34, 1320, 2, 'Port near full'), H(41, 640, 3, 'Tag drift on a VPC'), H(48, 1880, 2, 'Port errors on the on-ramp'), H(55, 930, 3, 'Certificate renewal'),
   H(62, 2410, 2, 'BGP flapping'), H(70, 715, 3, 'Flow logs stopped'), H(77, 1150, 2, 'Packet loss at peak'), H(85, 1705, 2, 'Route leak from a branch'),
-  H(120, 2600, 1, 'Link down'), H(190, 980, 2, 'Latency over SLO'), H(260, 1430, 3, 'Tag drift on a VPC'), H(330, 1210, 2, 'BGP session reset'),
+  H(120, 2600, 1, 'Link down'), H(190, 980, 2, 'Port near full'), H(260, 1430, 3, 'Tag drift on a VPC'), H(330, 1210, 2, 'BGP session reset'),
 ];
 const scaled = (hs, k) => hs.map(h => ({ ...h, fix: Math.round(h.fix * k) }));
 export const HISTORY = {
@@ -490,10 +466,9 @@ export function durF(min) {
 const HOLDER = { att: 'AT&T', cloud: 'Cloud provider', third: 'Third party', public: 'Public internet' };
 const TARGET = { att: 99.99, cloud: 99.9, third: 99.9, public: 99.5 };
 // A sample Sev 1 lands on the connection the estate already shows in trouble (a
-// degraded link, else a public region marked warn), never on a healthy one; the
-// rest spread over the private connections.
+// degraded link), never on a healthy one; the rest spread over the private connections.
 const closedOf = (est, now) => { const regs = est.regionsList || []; const pool = regs.filter(r => r.priv).length ? regs.filter(r => r.priv) : regs;
-  const trouble = regs.find(r => r.link === 'degraded') || regs.find(r => r.rel === 'warn') || null;
+  const trouble = regs.find(r => r.link === 'degraded') || null;
   return (HISTORY[est.id] || []).map((h, i) => { const r = h.sev === 1 ? trouble : pool.length ? pool[(i * 3) % pool.length] : null;
     if (h.sev === 1 && !r) return null;
     return { key: `hist-${i}`, closedAt: now - h.ago * DAYMS, fixMin: h.fix, sev: h.sev, what: h.what, region: r ? r.region : null, where: r ? `${r.cloud} ${r.region}` : '', owner: HOLDER[(r && r.slaHolder) || 'att'] }; }).filter(Boolean); };

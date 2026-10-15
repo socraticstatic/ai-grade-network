@@ -110,31 +110,18 @@ test('Cloud-to-cloud agrees with the cross-cloud finding it links', () => {
   assert.equal(card(vals(ins('mature')), 'multi').head, '2 of 3 on AT&T');
 });
 
-test('Latency over SLO follows the one rule Health uses: 20 ms on AT&T, 100 ms outside, and a spike over it', () => {
+// The Latency over SLO card left with every delay figure (2026-10-15, "we can't measure that"): no card, row, legend or
+// head on Signals reads a time, and Health's rows are only what is measured.
+test('no Signals card reads a delay; Health lists only links down and ports near full', () => {
   for (const view of VIEWS) {
     const v = vals(ins(view));
-    const x = card(v, 'slo');
-    const all = x.all;
-    const o = observe(ESTATES[view], [], null);
-    const want = o.flows.filter(f => F.healthOf(f.latency, f.controlled ? F.SLO_PRIVATE : F.SLO) === 'slo').map(f => f.id).sort();
-    assert.deepEqual(all.filter(r => r.id).map(r => r.id).sort(), want, `${view}: the flows over their path's SLO`);
-    // A region over its SLO is a Health problem too (w2 second pass, 2026-09-30); its flows are the card's rows, so only spikes add one.
-    const pc = ins(view); let pv = vals(pc); const probAll = [...pv.problemRows];
-    while (pv.probPager.many && pv.probPager.nextOp === 1) { pv.probPager.next(); pv = vals(pc); probAll.push(...pv.problemRows); }
-    const spikes = probAll.filter(p => /^an-(?!link-|sat-|slo-)/.test(p.key) && p.state === 'slo').map(p => p.key).sort();
-    assert.deepEqual(all.filter(r => !r.id).map(r => r.key).sort(), spikes, `${view}: a spike Health calls Over SLO is on the card`);
-    assert.doesNotMatch(x.head, /100 ms/, `${view}: "${x.head}" applies one flat SLO`);
-    for (const r of all) assert.equal(r.segs[0].fill, F.HEALTH_INK.slo);
-    if (all.length) assert.match(x.legend[0].label, /Over SLO/);
+    assert.ok(!v.sigAll.some(x => x.key === 'slo'), view);
+    for (const x of v.sigAll) {
+      const words = [x.title, x.head, x.empty, ...x.legend.map(l => l.label), ...x.all.map(r => `${r.label} ${r.sub} ${r.v} ${r.v2}`)].join(' ');
+      assert.doesNotMatch(words, /\d ?ms\b|SLO|[Ll]atency|p95/, `${view} ${x.key}`);
+    }
+    for (const r of card(v, 'health').all) assert.ok(/^an-(link|sat)-/.test(r.key), `${view} ${r.key}`);
   }
-  const m = card(vals(ins('mature')), 'slo');
-  assert.ok(m.all.some(r => /Azure westeurope/.test(r.sub)), 'westeurope runs 21 ms on AT&T against 20');
-  const p = card(vals(ins('partial')), 'slo');
-  assert.ok(p.all.some(r => /AWS eu-west-1/.test(r.sub)), 'eu-west-1 is Over SLO on Health and missing here');
-  // What the count opens is what the rows show: the regions over SLO and the spikes.
-  const c = ins('partial'); const pc = card(vals(c), 'slo'); pc.finds.go();
-  const keys = vals(c).insightRows.map(r => r.key).sort();
-  assert.deepEqual(keys, ['an-eu-west-1', 'degraded']);
 });
 
 test('the Architect owns the coverage and topology findings, and every role\'s lead cards open its own work', () => {
@@ -201,13 +188,16 @@ test('with nothing on AT&T, no card offers Steer: the first step is Attach', () 
 });
 
 test('an empty card never leads', () => {
-  assert.deepEqual(SG.orderOf('neteng', new Set(['slo', 'capacity'])).slice(0, 3), ['health', 'talkers', 'multi']);
+  assert.deepEqual(SG.orderOf('neteng', new Set(['capacity'])).slice(0, 3), ['health', 'talkers', 'multi']);
   assert.deepEqual(SG.orderOf('neteng', new Set()), SG.orderOf('neteng'));
   for (const view of VIEWS) for (const p of PERSONAS) {
     const v = vals(ins(view, { persona: p }));
-    const full = v.sigAll.filter(x => !x.noRows).length;
+    // Empty is nothing to show: no rows and no findings to count (2026-10-15: Small's Health has no problem open, and its
+    // count still opens the regions it cannot see).
+    const empty = (x) => x.noRows && !x.finds.n;
+    const full = v.sigAll.filter(x => !empty(x)).length;
     const lead = v.sigCards.slice(0, SG.LEAD_N);
-    if (full >= SG.LEAD_N) assert.ok(lead.every(x => !x.noRows), `${view} ${p} leads with an empty ${lead.filter(x => x.noRows).map(x => x.key).join(', ')}`);
+    if (full >= SG.LEAD_N) assert.ok(lead.every(x => !empty(x)), `${view} ${p} leads with an empty ${lead.filter(empty).map(x => x.key).join(', ')}`);
   }
 });
 
@@ -255,7 +245,6 @@ test('every Egress growth figure is a button that opens its week', () => {
 test('the Gbps yesterday\'s cards showed are back beside each figure', () => {
   const v = vals(ins('partial'));
   for (const r of card(v, 'talkers').rows) assert.match(r.v2, /^\d+\.\d Gbps$/, `talkers ${r.label}`);
-  for (const r of card(v, 'slo').all.filter(x => x.id)) assert.match(r.v2, /^\d+\.\d Gbps$/, `latency ${r.label}`);
   for (const r of card(v, 'multi').rows) assert.match(r.v, /^\d+\.\d Gbps$/, `cloud to cloud ${r.label}`);
   const p = panel();
   for (const b of ['{{ r.v2 }}', '{{ fr.v2 }}']) {

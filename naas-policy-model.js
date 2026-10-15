@@ -147,9 +147,8 @@ export function assess(it, k, x) {
       // fabric is no AT&T enforcement point at all. A way nobody stated reads Undetermined.
       return x.way === 'hosted' ? H('EDGE_INSPECTED', 'vSRX in path') : x.way === 'netbond' ? U('EDGE_NO_FW', 'NetBond only')
         : x.way === 'direct' ? U('EDGE_NO_ATT_PEP', `${rampName(x.region)} port`) : x.way === 'third' ? U('EDGE_THIRD_PARTY', rampName(x.region)) : Q('Way unknown');
-    case 'slo': { if (it.param == null) return Q('No target');
-      const ms = x.crosses ? x.region.fab : x.region.pub;
-      return ms == null ? Q('Not measured') : ms <= it.param ? H('SLA_MET', `${ms} ms`) : V('SLA_UNMET', `${ms} ms > ${it.param}`); }
+    // A class of service rides the AT&T core: where the core holds the flow, its class does; on the internet nothing carries one.
+    case 'priority': { const c = coreAssess(x); return c.stamp === 'holds' ? H('CORE_PRIORITY', 'Priority class') : c.code === 'CORE_NOT_ON_PATH' ? V('CORE_NO_CLASS', 'Best effort') : c; }
     case 'two-paths': return !x.crosses ? V('EDGE_NOT_ON_PATH', 'No on-ramp') : (x.region.paths || 1) >= 2 ? H('EDGE_TWO_PATHS', 'Two paths') : V('EDGE_SINGLE_PATH', 'One path');
     case 'segment': return Q('No segments');
     default: return Q('No data');

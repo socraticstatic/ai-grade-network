@@ -51,7 +51,9 @@ test('Support Tickets opens the tickets list in Operations', () => {
 test('the glossary is the storefront\'s own words, one line each, and the search narrows it', () => {
   const c = help();
   const all = vals(c).helpTerms;
-  for (const t of ['Access', 'Edge', 'Core', 'NetBond', 'AVPN', 'ADI', 'AIA-B', 'IPsec', 'SLO', 'Egress']) assert.ok(all.some(x => x.term === t), t);
+  // Utilization stands where SLO stood (2026-10-15): the storefront names no delay target.
+  for (const t of ['Access', 'Edge', 'Core', 'NetBond', 'AVPN', 'ADI', 'AIA-B', 'IPsec', 'Utilization', 'Egress']) assert.ok(all.some(x => x.term === t), t);
+  assert.ok(!all.some(x => /SLO|latency|\bms\b/i.test(x.term + ' ' + x.def)), 'no glossary line reads a delay');
   assert.ok(all.every(x => x.def.length < 110), 'one line each');
   vals(c).setHelpQ({ target: { value: 'ipsec' } });
   const v = vals(c);

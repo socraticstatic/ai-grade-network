@@ -48,9 +48,11 @@ test('Review opens with today against the order, the price and when it stands up
   assert.equal(v.cfIsReview, true);
   assert.equal(v.cfOutcome.has, true);
   assert.equal(v.cfOutcome.todayPath, 'Public internet');
-  assert.match(v.cfOutcome.todayMs, /^\d+ ms p95$/);
+  // Today and after read the path and its uptime, never a delay (2026-10-15).
+  assert.equal(v.cfOutcome.todayLine, 'Best effort, no SLA on the middle');
   assert.equal(v.cfOutcome.afterPath, 'Private on the AT&T network');
-  assert.match(v.cfOutcome.afterLine, /ms · 99\.99% · Private/);
+  assert.match(v.cfOutcome.afterLine, /^99\.99% · Private/);
+  assert.equal(v.cfOutcome.todayMs, undefined);
   assert.match(v.cfOutcome.standUp, /business days/);
   assert.match(v.cfOutcome.priceBig, /^\$[\d,]+\/mo$/);
 });

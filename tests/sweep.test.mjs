@@ -119,10 +119,10 @@ test('the Connection type chips read product names and still filter by the ramp'
 
 test('an empty Paths cell is empty, and its title says why', () => {
   const v = vals(ctx({ view: 'partial', screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf' }));
-  // A timed cell's title reads "Label · hops · N ms · loss ..."; an untimed one, "Label · why".
-  const blanks = v.pathTimeRows.flatMap(r => r.cells).filter(c => !/ ms · loss /.test(c.title));
+  // A cell on the path reads "Label · hops · loss ..."; one off it, "Label · why", and prints nothing (no delay figure since 2026-10-15).
+  const blanks = v.pathTimeRows.flatMap(r => r.cells).filter(c => !/ · loss /.test(c.title));
   assert.ok(blanks.length > 0, 'no path skips a column; the fixture changed');
-  assert.deepEqual([...new Set(blanks.map(c => c.msShow))], ['']);
+  assert.deepEqual([...new Set(blanks.map(c => [c.state, c.lossF, c.hasLoss].join('|')))], ['nodata||false']);
   assert.ok(blanks.some(c => / · Not on this path$/.test(c.title)), blanks.map(c => c.title).join(' | '));
 });
 
@@ -145,7 +145,8 @@ test('Time to fix with nothing fixed reads None yet', () => {
 
 test('with no Sev 1 open, the ops line and the briefing say so in words', () => {
   const small = vals(ctx({ view: 'small', screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'ops' }));
-  assert.match(small.opsLine, /^No Sev 1 is open now\. 1 ticket open\./);
+  // Small's one ticket was a latency spike, gone with the delay figures (2026-10-15).
+  assert.match(small.opsLine, /^No Sev 1 is open now\. 0 tickets open\./);
   for (const view of ['partial', 'mature', 'trust']) {
     assert.match(vals(ctx({ view, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'ops' })).opsLine, /^1 Sev 1 open now\./, view);
   }
@@ -171,9 +172,9 @@ test('the last hour reads once: never "in the last the last hour"', () => {
 test('the order line has no stray space before its comma or its period', () => {
   const c = ctx({ view: 'partial', screen: 's6' });
   const plain = vals(c).orderVisibleLine;
-  assert.equal(plain, 'Visible on delivery: path, throughput, P95 latency, loss, egress and flow logs.');
+  assert.equal(plain, 'Visible on delivery: path, throughput, utilization, loss, egress and flow logs.');
   c.setState({ order: { title: 'Hosted', lines: [{ product: 'Hosted VPC', qty: 1, monthly: 100 }] } });
-  assert.equal(vals(c).orderVisibleLine, 'Visible on delivery: path, throughput, P95 latency, loss, egress and flow logs, with inspection from the vSRX pair.');
+  assert.equal(vals(c).orderVisibleLine, 'Visible on delivery: path, throughput, utilization, loss, egress and flow logs, with inspection from the vSRX pair.');
   // The runtime wraps each {{ }} in a span; inside a flex row that span is its own
   // item, so text either side of it drew with the row's gap. The line binds alone.
   const i = HTML.indexOf('{{ orderVisibleLine }}');

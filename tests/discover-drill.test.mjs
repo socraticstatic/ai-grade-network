@@ -192,10 +192,11 @@ test('the apps table: every cell opens its own set, and only Traffic reaches Log
       else assert.equal(a.exposedCan, false, `${where}: None is not a door`);
       const t = land(() => disc(view), at('gbpsGo'));
       assert.equal(t.s.obPage, 'logs', `${where} traffic`); assert.equal(t.s.logQ, a.name, `${where} traffic`);
-      // p95 opens the app's workloads on the path that sets it, reading that latency (2026-10-01; it opened Paths).
-      const p = land(() => disc(view), at('p95Go'));
-      assert.equal(p.at, 'clouds', `${where} p95`); assert.ok(String(p.v.cloudLine).includes(a.p95F), `${where} p95: "${p.v.cloudLine}"`);
-      logsCheck(p, `${where} p95`);
+      // Peak (p95 until 2026-10-15) opens the app's workloads in the region of the link it reads; Public opens them all.
+      const p = land(() => disc(view), at('linkGo'));
+      assert.equal(p.at, 'clouds', `${where} peak`);
+      assert.deepEqual(p.s.cloudFilter.regions, a.link ? [a.link.region] : undefined, `${where} peak`);
+      logsCheck(p, `${where} peak`);
       const row = land(() => disc(view), at('go'));
       expectList(row, 'clouds', a.wl, `${where} row`);
       expectActs(row, `${where} row`);
@@ -451,7 +452,7 @@ test('the markup: every figure is a real button, the ring too, and no loop insid
     assert.ok(at.some(i => part.slice(part.lastIndexOf('<', i), part.lastIndexOf('<', i) + 7) === '<button'), `${bind} is never on a button on Discover`);
   };
   const disc0 = between('<!-- ===== S1 DISCOVER ===== -->', '<!-- ===== S2 FLOOR');
-  for (const bind of ['{{ k.go }}', '{{ newStrip.go }}', '{{ gr.pick }}', '{{ gr.headGo }}', '{{ lg.go }}', '{{ ap.nameGo }}', '{{ ap.wlGo }}', '{{ ap.runsGo }}', '{{ ap.onAttGo }}', '{{ ap.exposedGo }}', '{{ ap.gbpsGo }}', '{{ ap.p95Go }}',
+  for (const bind of ['{{ k.go }}', '{{ newStrip.go }}', '{{ gr.pick }}', '{{ gr.headGo }}', '{{ lg.go }}', '{{ ap.nameGo }}', '{{ ap.wlGo }}', '{{ ap.runsGo }}', '{{ ap.onAttGo }}', '{{ ap.exposedGo }}', '{{ ap.gbpsGo }}', '{{ ap.linkGo }}',
     '{{ gp.go }}', '{{ gs.go }}', '{{ ct.go }}', '{{ cm.go }}', '{{ mp.go }}', '{{ cp.go }}', '{{ bp.go }}', '{{ cr.go }}', '{{ cr.costGo }}', '{{ pp.go }}', '{{ pr.go }}', '{{ pr.costGo }}', '{{ bl.countGo }}', '{{ bl.go }}', '{{ sr.scopeGo }}',
     '{{ clearCloudFilter }}', '{{ clearPlaceFilter }}', '{{ ca.go }}', '{{ pa.go }}', '{{ glanceSpend.totalGo }}', '{{ gl.go }}', '{{ fp.go }}']) onButton(disc0, bind);
   assert.ok(!/class="fx-ring" role="img"/.test(disc0), 'the ring is still an image');

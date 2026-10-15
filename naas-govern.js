@@ -21,7 +21,6 @@
 //     broken by a workload that reaches the internet directly: its VPC has no
 //     private path to AT&T, or it has a public address with its own route out
 //     (Discover's "exposed"). For a site: it reaches the cloud outside AT&T;
-//   - a latency SLO is broken by a workload whose region runs above it;
 //   - anything else has no source here: "Not yet measured".
 // Pure functions; the view binds them.
 import { onAtt } from './naas-logic.js';
@@ -30,12 +29,10 @@ import * as S from './naas-sites.js';
 export const tagKey = (t) => String(t || '').toLowerCase().replace(/\s+/g, '-');
 const uniq = (xs) => [...new Set(xs)];
 const PATH_REQ = /private path|direct internet|inspection/i;
-const SLO_REQ = /latency slo\s*(\d+)/i;
 
 /** The words for each rule, as a drill names its filter: "A workload breaks it when ...". */
 export const RULE = {
   path: 'it reaches the internet directly: no private path to AT&T, or a public address with its own route out',
-  slo: (ms) => `its region runs above the ${ms} ms latency SLO`,
   site: 'it reaches the cloud outside the AT&T network, or over a tunnel on the internet',
 };
 
@@ -43,7 +40,7 @@ export const RULE = {
 export function workloadsOf(inv) {
   const out = [];
   (inv || []).forEach(cl => (cl.regions || []).forEach(rg => (rg.vpcs || []).forEach(v => (v.subnets || []).forEach(sn => (sn.workloads || []).forEach(w =>
-    out.push({ w, cloud: cl.name, region: rg.region, latency: rg.latency, attached: !!rg.priv, vpc: v, sn }))))));
+    out.push({ w, cloud: cl.name, region: rg.region, attached: !!rg.priv, vpc: v, sn }))))));
   return out;
 }
 
@@ -56,7 +53,7 @@ export function tagSet(inv, tag) {
 /** Every tag at once: the estate's workloads, read the way one tag's are. */
 export const allSet = (inv) => setOf(workloadsOf(inv));
 function setOf(workloads) {
-  const vpcs = uniq(workloads.map(r => r.vpc)).map(v => { const r = workloads.find(x => x.vpc === v); return { cloud: r.cloud, region: r.region, latency: r.latency, v }; });
+  const vpcs = uniq(workloads.map(r => r.vpc)).map(v => { const r = workloads.find(x => x.vpc === v); return { cloud: r.cloud, region: r.region, v }; });
   return {
     vpcs, workloads,
     regions: uniq(vpcs.map(x => `${x.cloud} ${x.region}`)).map(k2 => vpcs.find(x => `${x.cloud} ${x.region}` === k2)),
@@ -113,7 +110,6 @@ export function breaker(req, unit) {
   const preds = String(req || '').split(/\s+and\s+/i).map(cl => {
     if (unit === 'workload') {
       if (PATH_REQ.test(cl)) return (r) => !r.vpc.priv || !!r.w.exposed;
-      const s = SLO_REQ.exec(cl); if (s) return (r) => r.latency > +s[1];
     }
     // A stated tunnel is on AT&T access and still on the internet (2026-10-05).
     if (unit === 'site' && PATH_REQ.test(cl)) return (st) => !onAtt(st) || (!st.priv && !!st.tunnel);
@@ -126,13 +122,12 @@ export function breaker(req, unit) {
  *  a drill read "PCI private path requires private path required."). */
 export function reqPhrase(req) {
   return String(req || '').split(/\s+and\s+/i).map(cl => {
-    const slo = SLO_REQ.exec(cl);
-    if (slo) return `latency under ${slo[1]} ms`;
     if (/private path/i.test(cl)) return 'a private path to AT&T';
     if (/direct internet/i.test(cl)) return 'no direct path to the internet';
     if (/inspection/i.test(cl)) return 'inline security inspection in path';
     if (/segment/i.test(cl)) return 'traffic kept within the tag';
     if (/cost-aware/i.test(cl)) return 'cost-aware routing';
+    if (/priority traffic|class of service/i.test(cl)) return 'a priority class of service';
     return cl.trim().toLowerCase();
   }).join(' and ');
 }
@@ -140,7 +135,7 @@ export function reqPhrase(req) {
 /** The sentence a drill prints under its count: when a thing breaks the requirement. */
 export function ruleLine(req, unit) {
   const r = String(req || '');
-  const words = unit === 'site' ? (PATH_REQ.test(r) ? RULE.site : '') : PATH_REQ.test(r) ? RULE.path : SLO_REQ.test(r) ? RULE.slo(+SLO_REQ.exec(r)[1]) : '';
+  const words = unit === 'site' ? (PATH_REQ.test(r) ? RULE.site : '') : PATH_REQ.test(r) ? RULE.path : '';
   return words ? `A ${unit === 'site' ? 'site' : 'workload'} breaks it when ${words}.` : '';
 }
 
@@ -163,9 +158,8 @@ export function figured(est, inv, opts = {}) {
   return (est.policies || []).map(p => { const f = policyFigures(est, inv, p, opts); return { ...p, matched: f.matched, viol: f.viol, unit: f.unit }; });
 }
 
-/** Why one workload breaks a path or latency rule, in a drill row's words. */
-export function whyOf(r, req) {
-  if (SLO_REQ.test(String(req || ''))) return `${r.latency} ms on its path`;
+/** Why one workload breaks a path rule, in a drill row's words. */
+export function whyOf(r) {
   if (!r.vpc.priv) return 'Its VPC rides the public internet';
   if (r.w.exposed) return 'Public address, its own route out';
   return 'On a private path';

@@ -64,8 +64,10 @@ test('the tiles print the figures the tabs already counted, never new ones', () 
     if (conn.bwTiles.length) assert.deepEqual(conn.trfTiles.map(t => `${t.v} ${t.u}`), conn.bwTiles.map(t => t.v), `${view}: Capacity`);
     const paths = vals(at(view, { obPanel: 'paths' }));
     const p = Object.fromEntries(paths.trfTiles.map(t => [t.key, t]));
-    const worst = paths.pathTimeAll.slice().sort((a, b) => b.total - a.total)[0];
-    if (worst) assert.equal(`${p.slowest.v} ${p.slowest.u}`, worst.totalF, `${view}: the slowest path is the Paths table's`);
+    // The slowest path left with the delay figures (2026-10-15): the busiest link and the paths near full are the table's own.
+    const busiest = paths.pathTimeAll.filter(r => r.link).sort((a, b) => b.link.pct - a.link.pct)[0];
+    if (busiest) assert.equal(`${p.busiest.v}${p.busiest.u}`, busiest.linkF, `${view}: the busiest link is the Paths table's`);
+    assert.equal(p.near.v, String(paths.pathTimeAll.filter(r => r.link && r.link.near).length), `${view}: near full`);
     assert.equal(p.ok.v, `${paths.pathTimeAll.filter(r => r.state === 'ok').length} of ${paths.pathTimeAll.length}`);
     const chg = vals(at(view, { obPanel: 'changes' }));
     const c = Object.fromEntries(chg.trfTiles.map(t => [t.key, t.v]));
@@ -116,11 +118,11 @@ test('the saving alone wears the green: no delta, health state or spend is succe
       assert.ok(!/success/.test(t.ring || ''), `${view} ${obPanel} ${t.key}: its ring is not a saving`);
     }
   }
-  // Healthy reads blue on Traffic, never the saving's green (the strip, the dots, the Performance view).
+  // Healthy reads blue on Traffic, never the saving's green (the strip, the dots, the Utilization view).
   assert.match(CSS, /\.trf \.ps \[data-state="ok"\] i\{[^}]*var\(--viz-1\)/, 'the strip draws Healthy in the healthy blue');
-  const slo = vals(at('partial', { mapMode: 'slo' }));
-  assert.notEqual(slo.mapLegend.find(x => x.label === 'Within SLO').color, 'var(--success)', 'Within SLO is not the saving\'s green');
-  assert.ok(slo.mapRibbons.every(r => r.fill !== 'var(--success)'), 'no ribbon is the saving\'s green');
+  const util = vals(at('partial', { mapMode: 'util' }));
+  assert.notEqual(util.mapLegend.find(x => x.label === 'Healthy').color, 'var(--success)', 'Healthy is not the saving\'s green');
+  assert.ok(util.mapRibbons.every(r => r.fill !== 'var(--success)'), 'no ribbon is the saving\'s green');
 });
 
 test('the markup draws one verdict strip, a story per tab, and no sentence on the page', () => {

@@ -17,8 +17,8 @@
 //
 // The NetBond mappings are corrected here: a private path allows the matching routes (the default-route block is
 // NetBond's own baseline row, not the policy's); inspection needs the vSRX and only tags CVs on NetBond so the return
-// path stays symmetric; egress advertises a static 0/0 On Premise → Partner (it was backwards); an SLO pushes no route row
-// (it is a class of service, judged on measured latency); two paths prefers by community, never by prepending.
+// path stays symmetric; egress advertises a static 0/0 On Premise → Partner (it was backwards); priority traffic pushes no
+// route row (it is a class of service on the AT&T core, never a timed promise); two paths prefers by community, never by prepending.
 
 // ---- The typed intent catalog: every phrase in use (estates, the composer, templates, the journey) ----
 // `home`: the layer a phrase lands on when it stands alone (the composer's strip, Govern's broken cell). `layers`: where the engine checks the intent as an assertion on the path. `forbids`: the intent keeps traffic off the
@@ -34,8 +34,9 @@ export const INTENTS = [
   // Before inspection: "Segment-aware firewall" asks for segments, it is not an inspection policy.
   { key: 'segment', home: 'core', word: 'Segmented', icon: 'grid', layers: ['core'], alias: /segment/i },
   { key: 'inspect', home: 'edge', word: 'Inspected', icon: 'firewall', layers: ['edge'], alias: /inspect|ngfw|ids\/ips|web proxy|ddos|firewall/i },
-  // The composer's chip says "Latency SLO" with no number: an SLO with no target yet, never an unknown phrase.
-  { key: 'slo', home: 'core', word: 'Latency SLO', icon: 'clock', layers: ['core'], alias: /latency slo(?:\s*(\d+))?/i, param: (m) => (m[1] ? +m[1] : null) },
+  // Priority traffic is a class of service (2026-10-15): the CPE marks it and the AT&T core carries it in its class. It is
+  // never a timed promise ("we can't measure that").
+  { key: 'priority', home: 'core', word: 'Priority traffic', icon: 'high-meter', layers: ['core'], alias: /priority traffic|class of service/i },
   { key: 'two-paths', home: 'edge', word: 'Two paths', icon: 'merge', layers: ['edge'], alias: /two paths|active\/active/i },
   { key: 'encrypt', home: 'edge', word: 'Encrypted', icon: 'lock', layers: ['edge'], alias: /encrypt|decrypt/i },
   { key: 'zero-trust', home: 'site', word: 'Zero-trust access', icon: 'user-access', layers: ['site'], alias: /zero-trust/i },
@@ -125,7 +126,7 @@ const COMPILE = {
     R('netbond', 'allow', 'both', 'cloud', false, 'Your CVs', { 'allow:community-value-filter-customer': { o2p: true, p2o: true } }),
     R('netbond', 'deny', 'p2o', 'cloud', false, "AT&T's CVs", { 'deny:community-value-filter-att': { p2o: true } }),
     R('vsrx', 'allow', 'both', 'any', false, 'A zone per segment'), R('vrf', 'allow', 'both', 'cloud', true, 'A VRF per segment'), R('rt', 'allow', 'both', 'cloud', false, 'A table per segment')],
-  slo: [R('cpe', 'manip', 'o2p', 'any', false, 'DSCP, app-aware path'), R('cos', 'manip', 'both', 'cloud', false, 'SLA class')],
+  priority: [R('cpe', 'manip', 'o2p', 'any', false, 'DSCP, app-aware path'), R('cos', 'manip', 'both', 'cloud', false, 'Priority class')],
   'two-paths': [R('netbond', 'manip', 'both', 'cloud', false, 'Local preference by CV', { 'manip:selective-cv-tagging': { o2p: true }, 'manip:community-value-tag': { p2o: true } })],
 };
 /** The rows one intent compiles to (none for an intent the table does not cover yet: it reads Undetermined). */

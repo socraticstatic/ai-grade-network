@@ -42,13 +42,14 @@ test('Reset demo clears every saved key and the head reads a clean estate', () =
   store['naas.tags'] = JSON.stringify({ siteTags: { x: 'HQ' }, buCustom: {} });
   store['naas.hero'] = '{}'; store['naas.openHint'] = 'seen';
   // The eastus flap is a finding since Task 1.4 (2026-09-30), the four AT&T-access tunnels since
-  // 2026-10-05: 14 open clean, 13 after one snooze.
-  assert.match(vals(c).pageVerdict, /^13 findings open\./);
+  // 2026-10-05: 14 open clean, 13 after one snooze. 12 clean and 11 after the snooze since 2026-10-15: the
+  // region-over-SLO finding and the eu-west-1 spike left with the delay figures.
+  assert.match(vals(c).pageVerdict, /^11 findings open\./);
   vals(c).resetDemo();
   for (const k of DEMO_KEYS) assert.equal(store[k], undefined, k);
   assert.deepEqual(c.state.findingLife, {});
   assert.deepEqual(c.state.siteTags, {});
-  assert.match(vals(c).pageVerdict, /^14 findings open\./);
+  assert.match(vals(c).pageVerdict, /^12 findings open\./);
 });
 
 test('DEMO_KEYS names every naas.* key the app saves', () => {

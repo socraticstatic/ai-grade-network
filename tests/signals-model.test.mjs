@@ -4,17 +4,18 @@ import * as SG from '../naas-signals.js';
 import { HEALTH_INK, HEALTH_WORD, healthRadius } from '../naas-flowmap.js';
 
 // Signals (notes, 2026-09-30): "Observe insights is light"; "all need to be
-// useful and action oriented"; "make sure mock data matches persona". Nine
-// cards, the persona picks which three lead, and every row carries its move.
+// useful and action oriented"; "make sure mock data matches persona". Eight
+// cards since the delay card left (2026-10-15), the persona picks which three
+// lead, and every row carries its move.
 // These are the pure rules; tests/signals.test.mjs walks them on the page.
 
 const PERSONAS = ['architect', 'neteng', 'security', 'finops', 'exec'];
 
-test('nine cards, and each persona orders all nine with no repeats', () => {
-  assert.deepEqual(SG.CARDS.slice().sort(), ['capacity', 'growth', 'health', 'multi', 'newdest', 'shadow', 'slo', 'spend', 'talkers']);
+test('eight cards, and each persona orders all eight with no repeats', () => {
+  assert.deepEqual(SG.CARDS.slice().sort(), ['capacity', 'growth', 'health', 'multi', 'newdest', 'shadow', 'spend', 'talkers']);
   for (const p of PERSONAS) {
     const o = SG.orderOf(p);
-    assert.equal(o.length, 9, p);
+    assert.equal(o.length, 8, p);
     assert.deepEqual(o.slice().sort(), SG.CARDS.slice().sort(), `${p} repeats or drops a card`);
   }
   assert.deepEqual(SG.orderOf('nobody'), SG.orderOf('neteng'), 'an unknown persona reads as Network Eng, as roleKeyOf does');
@@ -24,7 +25,7 @@ test('the persona picks the three that lead, by the concerns the owner named', (
   const lead = (p) => SG.orderOf(p).slice(0, SG.LEAD_N).sort();
   assert.deepEqual(lead('security'), ['newdest', 'shadow', 'talkers'], 'Security: new destinations, shadow SaaS, exposure');
   assert.deepEqual(lead('finops'), ['growth', 'spend', 'talkers'], 'FinOps: egress growth, spend, talkers by egress');
-  assert.deepEqual(lead('neteng'), ['capacity', 'health', 'slo'], 'Network Eng: health, latency, capacity');
+  assert.deepEqual(lead('neteng'), ['capacity', 'health', 'talkers'], 'Network Eng: health, capacity, then what talks the most');
   assert.deepEqual(lead('architect'), ['capacity', 'multi', 'talkers'], 'Architect: cloud to cloud, coverage');
   assert.deepEqual(lead('exec'), ['health', 'spend', 'talkers'], 'Executive: spend, health, how much rides AT&T');
   // By egress, not by cost (second round, 2026-09-30): the buckets price egress by cloud, so a dollar per region contradicted Spend.
@@ -126,11 +127,11 @@ test('Capacity: Add a port above 80%, Resize where one fewer port holds the peak
 
 test('Health: problems ranked by apps affected, in the one health ink and word', () => {
   const P = [
-    { key: 'an-x', state: 'risk', where: 'AWS x', thing: 'Public internet', what: 'Latency spike', appsN: 1, wlN: 31 },
+    { key: 'an-sat-x', state: 'risk', where: 'AWS x', thing: 'NetBond', what: '84% of 2 × 10 Gbps purchased', appsN: 1, wlN: 31 },
     { key: 'an-link-y', state: 'down', where: 'Azure y', thing: 'ExpressRoute', what: 'BGP flapping · 0.31% drops', appsN: 3, wlN: 120 },
   ];
   const h = SG.health(P);
-  assert.deepEqual(h.rows.map(r => r.key), ['an-link-y', 'an-x']);
+  assert.deepEqual(h.rows.map(r => r.key), ['an-link-y', 'an-sat-x']);
   assert.equal(h.rows[0].sub, `${HEALTH_WORD.down} · BGP flapping · 0.31% drops`);
   assert.equal(h.rows[0].segs[0].fill, HEALTH_INK.down);
   assert.equal(h.rows[0].rad, healthRadius('down'));
@@ -140,13 +141,10 @@ test('Health: problems ranked by apps affected, in the one health ink and word',
 });
 
 test('the findings behind each card belong to it; the talkers follow the lens', () => {
-  const ctx = { spikeKeys: new Set(['an-eu-west-1', 'an-us-west-2']), spikesOver: new Set(['an-eu-west-1']) };
+  const ctx = {};
   const hit = (card, lens) => (k) => SG.findsOf(card, lens, ctx)(k);
-  assert.ok(hit('slo', 'share')('an-eu-west-1'));
-  assert.ok(!hit('slo', 'share')('an-us-west-2'), 'At risk is not over SLO');
-  assert.ok(!hit('slo', 'share')('an-link-eastus'), 'a BGP flap is Health, not latency');
-  assert.ok(!hit('slo', 'share')('an-sat-us-west-2'), 'a full port is Capacity, not latency');
-  assert.ok(hit('health', 'share')('an-link-eastus') && hit('health', 'share')('an-us-west-2') && hit('health', 'share')('unmonitored'));
+  assert.ok(hit('health', 'share')('an-link-eastus') && hit('health', 'share')('unmonitored'));
+  assert.ok(!hit('health', 'share')('an-sat-us-west-2'), 'a full port is Capacity\'s');
   assert.ok(hit('capacity', 'share')('an-sat-us-west-2') && !hit('capacity', 'share')('an-link-eastus'));
   assert.ok(hit('talkers', 'egress')('ipsecegress') && !hit('talkers', 'egress')('pci'));
   assert.ok(hit('talkers', 'exposure')('pci') && !hit('talkers', 'exposure')('avoidable'));
@@ -161,5 +159,5 @@ test('the findings behind each card belong to it; the talkers follow the lens', 
 });
 
 test('only the traffic cards may open Logs', () => {
-  assert.deepEqual([...SG.TRAFFIC].sort(), ['growth', 'multi', 'newdest', 'shadow', 'slo', 'talkers']);
+  assert.deepEqual([...SG.TRAFFIC].sort(), ['growth', 'multi', 'newdest', 'shadow', 'talkers']);
 });

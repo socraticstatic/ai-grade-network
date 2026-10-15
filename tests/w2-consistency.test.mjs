@@ -134,7 +134,7 @@ test('A Signals traffic figure opens its records with that figure, never a map s
   let seen = 0;
   for (const view of VIEWS) for (const persona of ['architect', 'neteng', 'security', 'finops']) {
     const v = vals(ins(view, { persona }));
-    for (const k of ['talkers', 'multi', 'slo']) {
+    for (const k of ['talkers', 'multi']) {
       const cd = card(v, k); if (!cd) continue;
       cd.all.forEach((r, i) => {
         if (r.fig === 'finding') return;
@@ -152,7 +152,7 @@ test('A Signals traffic figure opens its records with that figure, never a map s
   assert.ok(seen > 20, `only ${seen} figures checked`);
 });
 
-const WORST = { ok: 0, risk: 1, slo: 2, down: 3 };
+const WORST = { ok: 0, risk: 1, down: 3 };
 test('The home\'s map dots draw only what Health lists, and a rolled-up row draws none', () => {
   for (const view of VIEWS) {
     const health = vals(obs(view, { obPanel: 'health' })).problemRows;
@@ -238,16 +238,13 @@ test('Order ids never repeat, whatever Reset demo leaves', () => {
   assert.notEqual(BW.nextId([{ id: 'o1', kind: 'bandwidth' }, flow]), 'o2');
 });
 
-test('Network Eng\'s latency action counts the regions its Latency over SLO list shows', () => {
+// Network Eng's latency action and its Latency over SLO list left together (2026-10-15): neither can come back alone.
+test('Network Eng carries no latency action and no latency list', () => {
   for (const view of VIEWS) {
     const v = vals(ins(view, { persona: 'neteng', insPanel: 'role' }));
-    const list = (v.roleVisuals || []).find(x => x.key === 'slo');
-    const regions = new Set((card(vals(ins(view, { persona: 'neteng' })), 'slo') || { all: [] }).all.map(r => r.region));
-    const act = v.roleActAll.find(a => /above the latency SLO/.test(a.head));
-    if (!regions.size) { assert.ok(!act, `${view}: "${act && act.head}" with nothing over SLO`); continue; }
-    assert.ok(act, `${view}: ${regions.size} regions over SLO and no action`);
-    assert.match(act.head, new RegExp(`^${regions.size} ${regions.size === 1 ? 'region runs' : 'regions run'} above`), `${view}: "${act.head}" under a list of ${[...regions].join(', ')}`);
-    if (list) assert.ok(list.rows.length > 0);
+    assert.ok(!(v.roleVisuals || []).some(x => x.key === 'slo'), `${view}: a latency visual`);
+    assert.equal(card(vals(ins(view, { persona: 'neteng' })), 'slo'), undefined, `${view}: a latency card`);
+    for (const a of v.roleActAll) assert.doesNotMatch(a.head, /latency|SLO|\bms\b/i, `${view}: "${a.head}"`);
   }
 });
 

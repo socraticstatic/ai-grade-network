@@ -140,16 +140,19 @@ test('a policy on the ladder opens in Violations & policies, its row open on its
 test('the head counts what decides, what is violated on real flows and what matches nothing; Clean only when none', () => {
   const c = eng();
   let v = vals(c);
-  assert.deepEqual(v.engHeadChips.map(x => `${x.key}:${x.t}`), ['pol:4', 'viol:3', 'dead:2'], 'four enforced decide; three staged wait');
+  // One dead policy since 2026-10-15: Growing's GPU latency SLO left with the delay figures.
+  assert.deepEqual(v.engHeadChips.map(x => `${x.key}:${x.t}`), ['pol:4', 'viol:3', 'dead:1'], 'four enforced decide; two staged wait');
   assert.ok(v.engHeadChips.every(x => onDisk(x.icon) && x.title));
   assert.match(v.engHeadChips[1].title, /PCI private path \(CLOUD_EXPOSED\)/);
-  assert.match(v.engHeadChips[2].title, /Finance segmentation, no site is in Finance; GPU latency SLO, no workload is tagged GPU/);
+  assert.match(v.engHeadChips[2].title, /Finance segmentation, no site is in Finance/);
+  assert.doesNotMatch(v.engHeadChips[2].title, /latency|SLO/);
   assert.ok(!v.engHeadChips.some(x => x.key === 'clean'), 'never Clean while Govern counts PCI exposed');
   assert.ok(vals(mkC({ view: 'partial', estateParam: null, screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies' })).verdictChips.some(x => /exposed/.test(x.label)));
-  // Staged: three wait; the toggle reads them as if enforced, and EU residency now decides westeurope.
-  assert.equal(v.hasEngStaged, true); assert.equal(v.engStagedN, '3'); assert.equal(v.engStaged, false);
+  // Staged: two wait (the simulated GPU latency SLO was the third until 2026-10-15); the toggle reads them as if
+  // enforced, and EU residency now decides westeurope.
+  assert.equal(v.hasEngStaged, true); assert.equal(v.engStagedN, '2'); assert.equal(v.engStaged, false);
   v.toggleEngStaged(); v = vals(c);
-  assert.equal(v.engStaged, true); assert.equal(v.engHeadChips[0].t, '7');
+  assert.equal(v.engStaged, true); assert.equal(v.engHeadChips[0].t, '6');
   vals(c).engPickers[1].options.find(o => o.label === 'Azure westeurope').go(); vals(c).engPickers[2].options.find(o => o.label === 'Nothing tagged').go();
   v = vals(c);
   assert.equal(v.engDecided, 'EU residency');

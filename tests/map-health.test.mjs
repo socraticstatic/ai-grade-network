@@ -5,16 +5,17 @@ import { mkC } from './harness.mjs';
 
 // "the healthy sankey doesn't work" (Micah, 2026-09-30). One rule for the map's
 // Health filter: a ribbon is Down when it rides a degraded link, otherwise its
-// latency state; choosing a state lights the ribbons in that state and the nodes
-// at both their ends, and dims the rest. Down is a choice like the others.
+// connection's state (At risk near full, 2026-10-15: no delay figures); choosing a
+// state lights the ribbons in that state and the nodes at both their ends, and
+// dims the rest. Down is a choice like the others.
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 const traffic = (view, h) => mkC({ view, estateParam: null, screen: 's3', layer: 'cloud', tab: 'observe', obPage: 'perf', obPanel: 'map', mapHealth: h });
 const lit = (x) => x.op >= 0.35;
 
-test('the chips are Healthy, At risk, Over SLO and Down; clicking the lit one clears it', () => {
+test('the chips are Healthy, At risk and Down; clicking the lit one clears it', () => {
   const c = traffic('partial', 'all');
-  assert.deepEqual(vals(c).healthChips.map(h => h.label), ['Healthy', 'At risk', 'Over SLO', 'Down']);
+  assert.deepEqual(vals(c).healthChips.map(h => h.label), ['Healthy', 'At risk', 'Down']);
   vals(c).healthChips.find(h => h.label === 'Down').go();
   assert.equal(c.state.mapHealth, 'down');
   vals(c).healthChips.find(h => h.label === 'Down').go();
@@ -22,7 +23,7 @@ test('the chips are Healthy, At risk, Over SLO and Down; clicking the lit one cl
 });
 
 test('every lit ribbon has both its ends lit, and only those ends light', () => {
-  for (const view of ['partial', 'mature', 'trust']) for (const h of ['ok', 'risk', 'slo', 'down']) {
+  for (const view of ['partial', 'mature', 'trust']) for (const h of ['ok', 'risk', 'down']) {
     const v = vals(traffic(view, h));
     const on = v.mapRibbons.filter(lit), ends = new Set(on.flatMap(r => [r.from, r.to]));
     for (const r of on) assert.equal(r.state, h, `${view} ${h}: ${r.from} -> ${r.to} is ${r.state}`);
@@ -40,10 +41,20 @@ test('Growing: Healthy never lights the flapping ExpressRoute path; Down lights 
   assert.ok(down.mapNodes.some(n => n.op === 1 && /Azure/.test(n.label)), 'Azure lights');
 });
 
-test('the Over SLO tile counts the links the Over SLO chip lights', () => {
+test('the Near full tile counts the links the At risk chip lights', () => {
   for (const view of ['partial', 'mature', 'trust', 'small']) {
-    const v = vals(traffic(view, 'slo'));
+    const v = vals(traffic(view, 'risk'));
     const n = v.mapRibbons.filter(r => lit(r) && String(r.from).startsWith('mid:')).length;
-    assert.equal(v.flowTiles.find(t => t.key === 'slo').v, String(n), view);
+    assert.equal(v.flowTiles.find(t => t.key === 'near').v, String(n), view);
+  }
+});
+
+test('a link no connection measures (the internet, a tunnel, your own WAN) lights under no state', () => {
+  for (const view of ['partial', 'mature', 'trust']) for (const h of ['ok', 'risk', 'down']) {
+    const v = vals(traffic(view, h));
+    const inet = v.mapNodes.find(n => n.label === 'Internet');
+    if (!inet) continue;
+    const intoNet = v.mapRibbons.filter(r => r.to === inet.nodeKey || r.from === inet.nodeKey);
+    for (const r of intoNet) assert.ok(r.state === null || r.state === 'down', `${view} ${h}: ${r.from} -> ${r.to} reads ${r.state}`);
   }
 });

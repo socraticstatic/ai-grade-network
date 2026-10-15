@@ -69,7 +69,7 @@ export function observeNext(conns) {
       ? 'Attach the first region to give Govern something to enforce.'
       : deg
         ? `${deg.wl.toLocaleString('en-US')} workloads behind ${deg.cloud} ${deg.region} ${deg.paths >= 2 ? 'have a second path but no policy that requires one' : 'ride a single path with no policy that requires a second'}. Author the policy, simulate it, then enforce it.`
-        : 'Every connection is up. Set a latency SLO for the tags that still cross the public internet, then enforce it.',
+        : 'Every connection is up. Set a private path for the tags that still cross the public internet, then enforce it.',
     cta: 'Open Govern',
   };
 }

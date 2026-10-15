@@ -29,7 +29,8 @@ const EXPECT = {
     connect: '1 of 8 regions still ride the public internet. 7 are private: 2 on NetBond, 4 on direct connects, 1 on Equinix Fabric.',
     // Re-pinned (w2-govern, 2026-09-30): the head counts the six policies Govern lists, not a tally it never shows,
     // and Established's exposed PCI workloads carry a finding, as on every estate.
-    govern: '5 policies enforced. 6 PCI-tagged workloads reach the internet directly.',
+    // Four since 2026-10-15: the enforced GPU latency SLO left with the delay figures.
+    govern: '4 policies enforced. 6 PCI-tagged workloads reach the internet directly.',
     // Established prices its savings (2026-09-30), so Cost leads with what is on the table.
     cost: '$17,500/mo on the table across 2 priced findings. $61,400/mo already saved on AT&T.',
     // us-west-2 to us-central1 rides the public internet (2026-09-30), as the AWS West/EU cross-cloud

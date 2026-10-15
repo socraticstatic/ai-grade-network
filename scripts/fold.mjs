@@ -168,9 +168,9 @@ function measure({ allow, edge, width }) {
     const d = Math.min(r.left - L, R - r.right, r.top - T, B - r.bottom);
     if (d < edge) edges.push(`${(b.getAttribute('aria-label') || b.textContent || '').trim().slice(0, 32)} ${d.toFixed(1)}px`);
   }
-  // Clipped words in Signals (skeptic, 2026-09-30: "Over SLO · Latency spike ·
-  // p95 1…" hid the number that makes it Over SLO): any text the Signals panel
-  // cuts with an ellipsis. Shorten the words; never truncate the figure.
+  // Clipped words in Signals (skeptic, 2026-09-30: an ellipsis hid the number
+  // that made a row a problem): any text the Signals panel cuts with an
+  // ellipsis. Shorten the words; never truncate the figure.
   const clipped = [];
   for (const el of document.querySelectorAll('[aria-label="Signals"] *')) {
     if (!shown(el) || getComputedStyle(el).textOverflow !== 'ellipsis') continue;

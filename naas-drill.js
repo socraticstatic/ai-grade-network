@@ -148,11 +148,9 @@ export function cloudSet(est, inv, trail = [], f = {}) {
   }
   const noun = UNIT_NOUN[f.unit] || ['row', 'rows'];
   const vN = items.filter(x => x.kind === 'vpc').length, wN = items.filter(x => x.kind === 'workload').length;
-  // The latency an app's p95 reads, on the path that sets it (2026-10-01): the region's own, as the app reads it.
-  const p95 = f.p95 && f.regions && f.regions.length ? (() => { const r = (est.regionsList || []).find(x => x.region === f.regions[0]); return r ? (r.priv ? r.fab : r.pub) : null; })() : null;
   const line = f.unit === 'new' ? `${nf(items.length)} new · ${nn(vN, 'VPC', 'VPCs')} and ${nn(wN, 'workload', 'workloads')}`
-    : `${nn(items.length, noun[0], noun[1])}${p95 != null ? ` · p95 ${p95} ms` : ''}`;
-  return { unit: f.unit, items, total: items.length, noun, label: cloudFilterLabel(f), line, p95 };
+    : nn(items.length, noun[0], noun[1]);
+  return { unit: f.unit, items, total: items.length, noun, label: cloudFilterLabel(f), line };
 }
 
 /**

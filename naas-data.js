@@ -41,7 +41,7 @@ export const HEADSTART = [
 // cloud provider's; an Equinix port is a third party's; the internet is no one's.
 // An entry may state its own in x.slaHolder.
 const SLA_OF = (priv, ramp) => (!priv ? 'public' : ramp === 'EQX' ? 'third' : !ramp || ramp === 'NetBond' ? 'att' : 'cloud');
-const REG = (cloud, region, wl, priv, ramp, pub, fab, tags, rel, x) => ({ cloud, region, wl, priv, ramp, pub, fab, tags: tags || [], rel: rel || 'ok', link: (x && x.link) || 'ok', paths: (x && x.paths) || 1, acct: (x && x.acct) || null, xc: (x && x.xc) || null, slaHolder: (x && x.slaHolder) || SLA_OF(priv, ramp) });
+const REG = (cloud, region, wl, priv, ramp, tags, x) => ({ cloud, region, wl, priv, ramp, tags: tags || [], link: (x && x.link) || 'ok', paths: (x && x.paths) || 1, acct: (x && x.acct) || null, xc: (x && x.xc) || null, slaHolder: (x && x.slaHolder) || SLA_OF(priv, ramp) });
 
 // What a newly added source finds (notes, 2026-09-30: "add a new source, and rerun
 // discovery"). Oracle is the demo: two regions on the public internet with ERP on
@@ -71,24 +71,24 @@ export const FOUND_SOURCES = {
   // The second cloud the journey attaches (2026-10-08, "attach more"): AWS, on the public internet too.
   AWS: {
     regions: [
-      { ...REG('AWS', 'us-east-1', 36, false, null, 58, 9, ['Prod']), apps: [AWS_APPS.orders, AWS_APPS.inventory] },
-      { ...REG('AWS', 'eu-west-1', 18, false, null, 88, 17, ['Internet-facing']), apps: [AWS_APPS.tracking] },
+      { ...REG('AWS', 'us-east-1', 36, false, null, ['Prod']), apps: [AWS_APPS.orders, AWS_APPS.inventory] },
+      { ...REG('AWS', 'eu-west-1', 18, false, null, ['Internet-facing']), apps: [AWS_APPS.tracking] },
     ],
     bucket: { id: 'awsr', name: 'AWS egress', cloud: 'AWS', today: 11400, fabric: 3900, finding: 'newcloud-aws' },
     finding: { kind: 'newcloud-aws', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your sites', pathDst: '2 AWS regions', head: '2 AWS regions found on the public internet', ev: 'us-east-1 and eu-west-1 carry 54 workloads, orders among them, over public egress.', priced: true, save: 5600, why: 'NetBond reaches AWS Direct Connect in Ashburn and Dublin.', ladder: ['Your Direct Connect', "AT&T's Direct Connect", 'Hosted VPC peering'] },
   },
   Azure: {
     regions: [
-      { ...REG('Azure', 'eastus', 40, false, null, 64, 11, ['Prod']), apps: [AZ_APPS.dispatch, AZ_APPS.portal] },
-      { ...REG('Azure', 'westeurope', 28, false, null, 102, 19, ['Finance']), apps: [AZ_APPS.payments, AZ_APPS.ledger] },
+      { ...REG('Azure', 'eastus', 40, false, null, ['Prod']), apps: [AZ_APPS.dispatch, AZ_APPS.portal] },
+      { ...REG('Azure', 'westeurope', 28, false, null, ['Finance']), apps: [AZ_APPS.payments, AZ_APPS.ledger] },
     ],
     bucket: { id: 'azr', name: 'Azure egress', cloud: 'Azure', today: 16800, fabric: 5600, finding: 'newcloud-azure' },
     finding: { kind: 'newcloud-azure', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your sites', pathDst: '2 Azure regions', head: '2 Azure regions found on the public internet', ev: 'eastus and westeurope carry 68 workloads, payments among them, over public egress.', priced: true, save: 7400, why: 'NetBond reaches Azure ExpressRoute in Ashburn and Amsterdam.', ladder: ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted VNet peering'] },
   },
   Oracle: {
     regions: [
-      { ...REG('Oracle', 'us-ashburn-1', 48, false, null, 44, 11, ['ERP', 'Finance']), apps: [ERP_APPS.ledger, ERP_APPS.payables, ERP_APPS.ebs] },
-      { ...REG('Oracle', 'eu-frankfurt-1', 22, false, null, 96, 24, ['ERP']), apps: [ERP_APPS.ledger, ERP_APPS.ebs] },
+      { ...REG('Oracle', 'us-ashburn-1', 48, false, null, ['ERP', 'Finance']), apps: [ERP_APPS.ledger, ERP_APPS.payables, ERP_APPS.ebs] },
+      { ...REG('Oracle', 'eu-frankfurt-1', 22, false, null, ['ERP']), apps: [ERP_APPS.ledger, ERP_APPS.ebs] },
     ],
     bucket: { id: 'oci', name: 'Oracle egress', cloud: 'Oracle', today: 3400, fabric: 1500, finding: 'newcloud-oracle' },
     finding: { kind: 'newcloud-oracle', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your sites', pathDst: '2 Oracle regions', head: '2 Oracle regions found on the public internet', ev: 'us-ashburn-1 and eu-frankfurt-1 carry 70 workloads, ERP among them, over public egress.', priced: true, save: 1900, why: 'NetBond reaches Oracle FastConnect in Ashburn and Frankfurt.', ladder: ['Attach over NetBond', 'Oracle FastConnect over NetBond', 'Multi-cloud routing'] },
@@ -113,8 +113,8 @@ export const ESTATES = {
       { name: 'Houston yard', cls: 'Plant', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Houston' },
     ],
     regionsList: [
-      REG('AWS', 'us-east-1', 12, false, null, 34, 8, ['Prod']),
-      REG('AWS', 'us-west-2', 8, false, null, 46, 11, ['Internet-facing'], 'warn'),
+      REG('AWS', 'us-east-1', 12, false, null, ['Prod']),
+      REG('AWS', 'us-west-2', 8, false, null, ['Internet-facing']),
     ],
     regionsExtra: 0,
     arcs: [{ from: 'us-east-1', to: 'us-west-2', priv: false }],
@@ -177,13 +177,13 @@ export const ESTATES = {
       { name: 'Manila branch', cls: 'Branch', access: 'IPsec VPN over internet', tunnel: 'IPsec', tunnelTo: 'AWS us-west-2', services: [{ svc: 'tpa' }], priv: false, metro: 'Manila' },
     ],
     regionsList: [
-      REG('AWS', 'us-east-1', 89, true, 'NetBond', 41, 9, ['PCI', 'Prod'], 'ok', { paths: 2 }),
-      REG('AWS', 'us-west-2', 44, false, null, 58, 14, ['Prod']),
-      REG('AWS', 'eu-west-1', 31, false, null, 96, 71, ['Internet-facing'], 'warn'),
-      REG('Azure', 'eastus', 40, true, 'ER', 39, 11, ['Finance'], 'ok', { link: 'degraded', acct: 'sub 7f3a-…-21c4' }),
-      REG('Azure', 'westeurope', 28, false, null, 102, 74, ['Finance']),
-      REG('GCP', 'us-central1', 41, false, null, 47, 12, ['AI', 'GPU']),
-      REG('GCP', 'europe-west1', 30, false, null, 99, 73, []),
+      REG('AWS', 'us-east-1', 89, true, 'NetBond', ['PCI', 'Prod'], { paths: 2 }),
+      REG('AWS', 'us-west-2', 44, false, null, ['Prod']),
+      REG('AWS', 'eu-west-1', 31, false, null, ['Internet-facing']),
+      REG('Azure', 'eastus', 40, true, 'ER', ['Finance'], { link: 'degraded', acct: 'sub 7f3a-…-21c4' }),
+      REG('Azure', 'westeurope', 28, false, null, ['Finance']),
+      REG('GCP', 'us-central1', 41, false, null, ['AI', 'GPU']),
+      REG('GCP', 'europe-west1', 30, false, null, []),
     ],
     regionsExtra: 5,
     arcs: [{ from: 'us-east-1', to: 'eastus', priv: false }, { from: 'us-west-2', to: 'us-central1', priv: false }],
@@ -191,13 +191,11 @@ export const ESTATES = {
       // Every policy counts by Govern's one rule (naas-govern.js, w2-govern 2026-09-30): matched is the
       // workloads that carry the tag, each its own (Discover's apps table and Govern > Tags, 2026-10-01),
       // a violation one that reaches the internet directly, and a figure with no source is null, "Not yet
-      // measured" (tests/govern-rule.test.mjs). No workload carries GPU (the GPUs run in the AI-tagged
-      // ones), so the GPU latency SLO matches none, as Cost > Optimize's Resiliency rule already read it.
+      // measured" (tests/govern-rule.test.mjs).
       { name: 'PCI private path', match: 'tag PCI', req: 'Private path required', matched: 58, viol: 6, state: 'enforced' },
       { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 31, viol: 31, state: 'enforced' },
       { name: 'Finance segmentation', match: 'remote-site Finance', req: 'Segment intra-tag only', matched: null, viol: null, state: 'enforced' },
       { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 28, viol: 28, state: 'enforced' },
-      { name: 'GPU latency SLO', match: 'tag GPU', req: 'Latency SLO 15 ms', matched: 0, viol: 0, state: 'simulated' },
       { name: 'EU residency', match: 'region eu-*', req: 'Private path required', matched: 89, viol: 89, state: 'authored' },
       { name: 'AI provider private', match: 'tag AI', req: 'Private path required', matched: 27, viol: 27, state: 'authored' },
     ],
@@ -250,16 +248,16 @@ export const ESTATES = {
       { name: 'Singapore DC', cls: 'Data center', access: 'ADI (Dedicated Internet)', priv: false, metro: 'Singapore' },
     ],
     regionsList: [
-      REG('AWS', 'us-east-1', 210, true, 'NetBond', 38, 8, ['PCI', 'Prod'], 'ok', { paths: 2 }),
+      REG('AWS', 'us-east-1', 210, true, 'NetBond', ['PCI', 'Prod'], { paths: 2 }),
       // A dedicated Direct Connect port: AWS issued the LOA-CFA, the customer
       // ordered the cable from Equinix, and Equinix answers for it.
-      REG('AWS', 'us-west-2', 120, true, 'DX', 52, 12, ['Prod'], 'ok', { acct: 'acct 4102-8837-5510', paths: 2, xc: { by: 'yours', at: 'Equinix SE2, Seattle' } }),
-      REG('AWS', 'eu-central-1', 96, true, 'DX', 88, 19, ['Prod'], 'ok', { link: 'degraded', acct: 'acct 4102-8837-5510', paths: 1 }),
-      REG('Azure', 'eastus', 140, true, 'ER', 36, 9, ['Finance'], 'ok', { acct: 'sub 7f3a-…-21c4' }),
-      REG('Azure', 'westeurope', 88, true, 'ER', 91, 21, ['Finance'], 'ok', { acct: 'sub 7f3a-…-21c4' }),
-      REG('GCP', 'us-central1', 110, true, 'NetBond', 44, 11, ['AI', 'GPU'], 'ok', { paths: 2 }),
-      REG('CoreWeave', 'us-east-04', 64, true, 'EQX', 51, 13, ['AI', 'GPU']),
-      REG('AWS', 'ap-southeast-1', 52, false, null, 188, 96, ['Prod'], 'warn'),
+      REG('AWS', 'us-west-2', 120, true, 'DX', ['Prod'], { acct: 'acct 4102-8837-5510', paths: 2, xc: { by: 'yours', at: 'Equinix SE2, Seattle' } }),
+      REG('AWS', 'eu-central-1', 96, true, 'DX', ['Prod'], { link: 'degraded', acct: 'acct 4102-8837-5510', paths: 1 }),
+      REG('Azure', 'eastus', 140, true, 'ER', ['Finance'], { acct: 'sub 7f3a-…-21c4' }),
+      REG('Azure', 'westeurope', 88, true, 'ER', ['Finance'], { acct: 'sub 7f3a-…-21c4' }),
+      REG('GCP', 'us-central1', 110, true, 'NetBond', ['AI', 'GPU'], { paths: 2 }),
+      REG('CoreWeave', 'us-east-04', 64, true, 'EQX', ['AI', 'GPU']),
+      REG('AWS', 'ap-southeast-1', 52, false, null, ['Prod']),
     ],
     regionsExtra: 10,
     // us-west-2 to us-central1 rides the public internet (2026-09-30): the AWS West/EU
@@ -272,7 +270,6 @@ export const ESTATES = {
       { name: 'Internet-facing inspection', match: 'tag Internet-facing', req: 'Inline security inspection', matched: 86, viol: 86, state: 'enforced' },
       { name: 'Finance segmentation', match: 'remote-site Finance', req: 'Segment intra-tag only', matched: null, viol: null, state: 'enforced' },
       { name: 'Prod no direct internet', match: 'tag Prod', req: 'No direct internet path', matched: 162, viol: 46, state: 'enforced' },
-      { name: 'GPU latency SLO', match: 'tag GPU', req: 'Latency SLO 15 ms', matched: 0, viol: 0, state: 'enforced' },
       { name: 'APAC residency', match: 'region ap-*', req: 'Private path required', matched: 52, viol: 52, state: 'simulated' },
     ],
     buckets: [
@@ -293,10 +290,10 @@ export const ESTATES = {
     ],
     tailored: {
       addons: [
-        { conn: 'us-east-1 hosted VPC', inspection: 'In path', segmentation: 'By tag', slo: 'Add 10 ms SLO' },
-        { conn: 'eastus hosted VNet', inspection: 'Add NGFW', segmentation: 'By tag', slo: 'Add 10 ms SLO' },
-        { conn: 'us-central1 hosted VPC', inspection: 'In path', segmentation: 'Add', slo: '15 ms enforced' },
-        { conn: 'eu-central-1 Direct Connect', inspection: 'Add NGFW', segmentation: 'Add', slo: 'Add 25 ms SLO' },
+        { conn: 'us-east-1 hosted VPC', inspection: 'In path', segmentation: 'By tag' },
+        { conn: 'eastus hosted VNet', inspection: 'Add NGFW', segmentation: 'By tag' },
+        { conn: 'us-central1 hosted VPC', inspection: 'In path', segmentation: 'Add' },
+        { conn: 'eu-central-1 Direct Connect', inspection: 'Add NGFW', segmentation: 'Add' },
       ],
       terms: [
         { conn: 'Ashburn NetBond 10G', od: 4200, m12: 3570, m36: 2100 },
@@ -327,12 +324,12 @@ export const ESTATES = {
       { name: 'Trading floors (12)', cls: 'Campus', access: 'ASE (Switched Ethernet)', priv: true, metro: 'Various', rollup: true },
     ],
     regionsList: [
-      REG('AWS', 'us-east-1', 812, true, 'NetBond', 40, 9, ['PCI', 'Prod'], 'ok', { paths: 2 }),
-      REG('AWS', 'us-east-2', 420, true, 'DX', 44, 10, ['PCI'], 'ok', { link: 'degraded', acct: 'acct 6620-1194-3308' }),
-      REG('AWS', 'us-west-2', 388, false, null, 60, 14, ['Prod'], 'warn'),
-      REG('Azure', 'eastus', 560, true, 'ER', 38, 9, ['Finance'], 'ok', { paths: 2, acct: 'sub 0c9e-…-88b1' }),
-      REG('Azure', 'centralus', 210, false, null, 51, 13, ['Finance']),
-      REG('GCP', 'us-central1', 290, true, 'NetBond', 46, 12, ['AI', 'GPU']),
+      REG('AWS', 'us-east-1', 812, true, 'NetBond', ['PCI', 'Prod'], { paths: 2 }),
+      REG('AWS', 'us-east-2', 420, true, 'DX', ['PCI'], { link: 'degraded', acct: 'acct 6620-1194-3308' }),
+      REG('AWS', 'us-west-2', 388, false, null, ['Prod']),
+      REG('Azure', 'eastus', 560, true, 'ER', ['Finance'], { paths: 2, acct: 'sub 0c9e-…-88b1' }),
+      REG('Azure', 'centralus', 210, false, null, ['Finance']),
+      REG('GCP', 'us-central1', 290, true, 'NetBond', ['AI', 'GPU']),
     ],
     regionsExtra: 8,
     arcs: [{ from: 'us-east-1', to: 'eastus', priv: true }, { from: 'us-west-2', to: 'centralus', priv: false }],
@@ -354,7 +351,7 @@ export const ESTATES = {
       { kind: 'avoidable', layer: 'cloud', tab: 'cost', pillar: 'Cost control', persona: 'FinOps', pathSrc: 'Your 3 clouds', pathDst: 'The internet', head: '$128,000/mo of internet egress the AT&T network would carry for $57,000', ev: 'GPU inference and misc internet buckets across 3 clouds, last 30 days of egress spend.', priced: true, save: 71000, why: 'Every bucket terminates in a metro with an AT&T on-ramp already carrying this estate.', ladder: ['Steer this bucket on AT&T', 'Steer every internet bucket', 'Hosted VPC with AT&T egress for the region'] },
       { kind: 'crosscloud', layer: 'cloud', tab: 'cost', pillar: 'Cost control', persona: 'Cloud & Platform Architect', pathSrc: 'Your clouds', pathDst: 'Your other clouds', head: '$100,000/mo of cross-cloud traffic crosses the public internet', ev: 'us-west-2 to centralus, over public egress, last 30 days.', priced: true, save: 61000, why: 'Each pair has an on-ramp for both clouds in the same metro.', ladder: ['Cloud to Cloud for the pair', 'Multi-region, multi-cloud routing', 'Neocloud reach via Equinix Fabric'] },
       { kind: 'pci', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'Your sites', pathDst: '2 AWS regions', head: '12 PCI-tagged workloads reach the internet directly', ev: '12 of 678 PCI-tagged workloads in us-east-1 and us-east-2 have a public address and a default route to an internet gateway.', priced: false, why: 'us-east-1 rides NetBond and us-east-2 Direct Connect, but these workloads sit in public subnets with their own route out, and us-east-2 has no hosted VPC to enforce the policy on.', ladder: ['Author "private path required" for tag PCI', 'Hosted VPC in us-east-2 with the policy enforced', 'Hosted VPC plus inline inspection'] },
-      { kind: 'unsegmented', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'Your sites', pathDst: 'Azure centralus', head: 'Finance and non-finance workloads share a routing domain', ev: 'centralus: 210 workloads, 84 Finance-tagged, one route table.', priced: false, why: 'Segmentation needs a hosted VNet in the region to hold the per-tag routing domains.', ladder: ['Author "segment intra-tag only"', 'Segmentation across the region\'s hosted VNet', 'Segmentation plus latency SLO per tag'] },
+      { kind: 'unsegmented', layer: 'cloud', tab: 'govern', pillar: 'Policy control', persona: 'Security and Compliance', pathSrc: 'Your sites', pathDst: 'Azure centralus', head: 'Finance and non-finance workloads share a routing domain', ev: 'centralus: 210 workloads, 84 Finance-tagged, one route table.', priced: false, why: 'Segmentation needs a hosted VNet in the region to hold the per-tag routing domains.', ladder: ['Author "segment intra-tag only"', 'Segmentation across the region\'s hosted VNet', 'Segmentation plus priority traffic per tag'] },
       { kind: 'nothub', layer: 'transport', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your branches', pathDst: 'Your clouds', head: '2,850 connections route outside a Connection Hub', ev: 'Branches East and Central reach the clouds over SD-WAN internet paths with no Connection Hub in the metro.', priced: false, why: 'Two Connection Hubs, Atlanta and Chicago, would carry both branch groups privately.', ladder: ['Connection Hub in Atlanta', 'Connection Hubs in Atlanta and Chicago', 'Hubs plus SD-WAN steer on AT&T'] },
       { kind: 'unmonitored', layer: 'net', tab: 'observe', pillar: 'Observability', persona: 'Network Engineering', pathSrc: 'Branches and ATMs', pathDst: 'Your clouds', head: '2,898 paths send no telemetry', ev: 'Branches East and Central and ATMs send no flow logs to AT&T.', priced: false, why: 'Telemetry starts at the first attach.', ladder: ['Enable flow logs on the public paths', 'Advanced Network Monitoring for the estate', 'Managed NOC with path telemetry'] },
     ],
@@ -385,23 +382,23 @@ export const CATEGORIES = [
   { id: 'managed', label: 'Managed' },
 ];
 
-const P = (id, layer, cat, name, provider, promise, price, tags, proof, extra) => Object.assign({ id, layer, cat, name, provider, promise, price, tags: tags || [], proof: proof || ['99.99% uptime', '<10 ms metro', '24x7 support'], included: [], limits: [], runsWith: [], popular: 50 }, extra || {});
+const P = (id, layer, cat, name, provider, promise, price, tags, proof, extra) => Object.assign({ id, layer, cat, name, provider, promise, price, tags: tags || [], proof: proof || ['99.99% uptime', '24x7 support'], included: [], limits: [], runsWith: [], popular: 50 }, extra || {});
 
 export const CATALOG = [
-  P('hosted-vpc', 'cloud', 'hosted', 'AT&T-hosted VPC per region', 'AT&T', 'A VPC in your region with policy, routing and inspection baked in, validated live.', 2400, ['Anchor', 'AWS', 'GCP'], ['99.99% uptime', '9 ms to us-east-1', '24x7 managed'], { popular: 98, included: ['VPC in the region', 'vSRX HA pair', 'TGW (Transit Gateway) attachment', 'Private VIF plus BGP to AT&T', 'Live validation'], limits: ['One region per instance', 'Up to 10 Gbps', 'Policies unlimited'], runsWith: ['ngfw', 'steer', 'monitoring'], evidence: '78% of estates your size run this with inline inspection', stages: true }),
-  P('hosted-vnet', 'cloud', 'hosted', 'AT&T-hosted VNet per region', 'AT&T', 'A VNet in your Azure region with the vSRX pair, VNet peering and private peering to AT&T.', 2400, ['Anchor', 'Azure'], ['99.99% uptime', '11 ms to eastus', '24x7 managed'], { popular: 90, included: ['VNet in the region', 'vSRX HA pair', 'VNet peering', 'Private peering plus BGP to AT&T', 'Live validation'], limits: ['One region per instance', 'Up to 10 Gbps'], runsWith: ['ngfw', 'steer'], evidence: '71% of Azure estates your size run this with segmentation by tag', stages: true }),
+  P('hosted-vpc', 'cloud', 'hosted', 'AT&T-hosted VPC per region', 'AT&T', 'A VPC in your region with policy, routing and inspection baked in, validated live.', 2400, ['Anchor', 'AWS', 'GCP'], ['99.99% uptime', 'Up to 10 Gbps', '24x7 managed'], { popular: 98, included: ['VPC in the region', 'vSRX HA pair', 'TGW (Transit Gateway) attachment', 'Private VIF plus BGP to AT&T', 'Live validation'], limits: ['One region per instance', 'Up to 10 Gbps', 'Policies unlimited'], runsWith: ['ngfw', 'steer', 'monitoring'], evidence: '78% of estates your size run this with inline inspection', stages: true }),
+  P('hosted-vnet', 'cloud', 'hosted', 'AT&T-hosted VNet per region', 'AT&T', 'A VNet in your Azure region with the vSRX pair, VNet peering and private peering to AT&T.', 2400, ['Anchor', 'Azure'], ['99.99% uptime', 'Up to 10 Gbps', '24x7 managed'], { popular: 90, included: ['VNet in the region', 'vSRX HA pair', 'VNet peering', 'Private peering plus BGP to AT&T', 'Live validation'], limits: ['One region per instance', 'Up to 10 Gbps'], runsWith: ['ngfw', 'steer'], evidence: '71% of Azure estates your size run this with segmentation by tag', stages: true }),
   P('l3-attach', 'cloud', 'hosted', 'Customer L3 attach into hosted VPC/VNet', 'AT&T', 'Bring your own VPC into the hosted VPC over a routed attachment.', 400, ['Attach'], null, { popular: 70, included: ['Routed attachment', 'BGP session', 'Route policy'], limits: ['Per attachment'], runsWith: ['hosted-vpc'] }),
-  P('netbond', 'cloud', 'private', 'NetBond Advanced', 'AT&T', 'Private on-ramp to AWS, Azure, Google Cloud and Oracle from the AT&T network.', 1900, ['On-ramp', 'AWS', 'Azure', 'GCP', 'Oracle'], ['99.99% uptime', '9 ms metro', '24x7 support'], { popular: 95, included: ['Private on-ramp', 'Up to 10 Gbps', 'BGP routing'], limits: ['Per cloud per metro'], runsWith: ['hosted-vpc', 'steer'], evidence: '84% of estates your size start here' }),
-  P('steer', 'cloud', 'private', 'Steer on the AT&T network', 'AT&T', 'Replace public egress with the AI-grade path. Savings re-check on every change.', null, ['Savings', 'Egress'], ['99.99% uptime', '9 ms metro', 'Savings per bucket'], { popular: 88, included: ['Per-bucket steering', 'Arbitrage engine', 'Savings line on every order'], limits: ['Priced by the arbitrage engine'], runsWith: ['netbond', 'hosted-vpc'] }),
-  P('c2c', 'cloud', 'private', 'Multi-region, multi-cloud routing', 'AT&T', 'Cloud to Cloud on AT&T, on the best path, never the public internet.', 1200, ['Cloud to Cloud'], ['99.99% uptime', '12 ms cross-cloud', '24x7 support'], { popular: 80, included: ['Connection Hub routing', 'Cost-aware path', 'Latency SLO (service level objective)'], limits: ['Per region pair'], runsWith: ['hosted-vpc', 'c2c'] }),
-  P('neocloud', 'cloud', 'private', 'Neocloud L3 reach via Equinix Fabric', 'AT&T', 'Private reach to CoreWeave, Lambda and other neoclouds through Equinix Fabric.', 2100, ['Neocloud', 'Equinix Fabric'], ['99.99% uptime', '13 ms metro', '24x7 support'], { popular: 60, included: ['Equinix Fabric virtual connection', 'L3 routing on AT&T'], limits: ['Where Equinix Fabric is present'], runsWith: ['ai-transport'] }),
-  P('lmcc', 'cloud', 'maxres', 'AWS Interconnect Last Mile (LMCC)', 'AT&T', 'Maximum resiliency to AWS: two metros, two paths, one order.', 5200, ['Max resiliency', 'AWS'], ['99.999% uptime', '8 ms metro', '24x7 managed'], { popular: 75, included: ['Two metros', 'Two Direct Connect paths', 'Managed failover'], limits: ['AWS only', '9 metros live today'], runsWith: ['hosted-vpc', 'monitoring'], evidence: '92% of maximum-resiliency estates pair this with a hosted VPC' }),
-  P('i2c', 'cloud', 'internet', 'Internet to Cloud', 'AT&T', 'Encrypted IP (IPSec) from any internet site into the cloud through the AT&T network.', 600, ['Internet', 'IPSec'], ['99.9% uptime', '20 ms metro', '24x7 support'], { popular: 72, included: ['IPSec tunnel', 'Connection Hub termination'], limits: ['Up to 1 Gbps'], runsWith: ['netbond'] }),
+  P('netbond', 'cloud', 'private', 'NetBond Advanced', 'AT&T', 'Private on-ramp to AWS, Azure, Google Cloud and Oracle from the AT&T network.', 1900, ['On-ramp', 'AWS', 'Azure', 'GCP', 'Oracle'], ['99.99% uptime', 'Up to 10 Gbps', '24x7 support'], { popular: 95, included: ['Private on-ramp', 'Up to 10 Gbps', 'BGP routing'], limits: ['Per cloud per metro'], runsWith: ['hosted-vpc', 'steer'], evidence: '84% of estates your size start here' }),
+  P('steer', 'cloud', 'private', 'Steer on the AT&T network', 'AT&T', 'Replace public egress with the AI-grade path. Savings re-check on every change.', null, ['Savings', 'Egress'], ['99.99% uptime', 'Savings per bucket'], { popular: 88, included: ['Per-bucket steering', 'Arbitrage engine', 'Savings line on every order'], limits: ['Priced by the arbitrage engine'], runsWith: ['netbond', 'hosted-vpc'] }),
+  P('c2c', 'cloud', 'private', 'Multi-region, multi-cloud routing', 'AT&T', 'Cloud to Cloud on AT&T, on the best path, never the public internet.', 1200, ['Cloud to Cloud'], ['99.99% uptime', '24x7 support'], { popular: 80, included: ['Connection Hub routing', 'Cost-aware path', 'Priority traffic'], limits: ['Per region pair'], runsWith: ['hosted-vpc', 'c2c'] }),
+  P('neocloud', 'cloud', 'private', 'Neocloud L3 reach via Equinix Fabric', 'AT&T', 'Private reach to CoreWeave, Lambda and other neoclouds through Equinix Fabric.', 2100, ['Neocloud', 'Equinix Fabric'], ['99.99% uptime', '24x7 support'], { popular: 60, included: ['Equinix Fabric virtual connection', 'L3 routing on AT&T'], limits: ['Where Equinix Fabric is present'], runsWith: ['ai-transport'] }),
+  P('lmcc', 'cloud', 'maxres', 'AWS Interconnect Last Mile (LMCC)', 'AT&T', 'Maximum resiliency to AWS: two metros, two paths, one order.', 5200, ['Max resiliency', 'AWS'], ['99.999% uptime', '24x7 managed'], { popular: 75, included: ['Two metros', 'Two Direct Connect paths', 'Managed failover'], limits: ['AWS only', '9 metros live today'], runsWith: ['hosted-vpc', 'monitoring'], evidence: '92% of maximum-resiliency estates pair this with a hosted VPC' }),
+  P('i2c', 'cloud', 'internet', 'Internet to Cloud', 'AT&T', 'Encrypted IP (IPSec) from any internet site into the cloud through the AT&T network.', 600, ['Internet', 'IPSec'], ['99.9% uptime', 'Up to 1 Gbps', '24x7 support'], { popular: 72, included: ['IPSec tunnel', 'Connection Hub termination'], limits: ['Up to 1 Gbps'], runsWith: ['netbond'] }),
   P('colo', 'cloud', 'private', 'Colo to Colo', 'AT&T', 'Private connection between two colocation facilities on AT&T.', 900, ['Colo'], null, { popular: 55, included: ['Cross connect at both ends', 'L2 or L3'], limits: ['Where AT&T is present'], runsWith: ['hub'] }),
   P('hub', 'cloud', 'private', 'Connection Hub', 'AT&T', 'The routing entity. Every path in a metro terminates on one hub.', 800, ['Routing'], null, { popular: 78, included: ['Routing domain', 'Route policy', 'Up to 40 connections'], limits: ['Per metro'], runsWith: ['netbond', 'c2c'] }),
-  P('policy', 'cloud', 'hosted', 'Policy engine', 'AT&T', 'Tag, region and workload policies. Author, simulate, enforce. Ships with every path.', null, ['Control', 'Ships with every path'], ['Simulate first', 'Enforced on delivery', 'Undo any time'], { popular: 85, included: ['Requirements: private path, no direct internet, inspection, segment by tag, latency SLO', 'Allow-deny, segmentation, route steering', 'Cost-aware routing'], limits: ['Included with every path'], runsWith: ['hosted-vpc'] }),
+  P('policy', 'cloud', 'hosted', 'Policy engine', 'AT&T', 'Tag, region and workload policies. Author, simulate, enforce. Ships with every path.', null, ['Control', 'Ships with every path'], ['Simulate first', 'Enforced on delivery', 'Undo any time'], { popular: 85, included: ['Requirements: private path, no direct internet, inspection, segment by tag, priority traffic', 'Allow-deny, segmentation, route steering', 'Cost-aware routing'], limits: ['Included with every path'], runsWith: ['hosted-vpc'] }),
   P('ngfw', 'cloud', 'security', 'NGFW (Palo Alto) in path', 'Palo Alto', 'Next-generation firewall inserted on the path inside the hosted VPC.', 1400, ['Inspection', 'Palo Alto'], ['99.99% uptime', 'Inline', '24x7 managed'], { popular: 82, included: ['Service insertion', 'Inspection zone in flow logs'], limits: ['Per hosted VPC'], runsWith: ['hosted-vpc', 'policy'] }),
-  P('observability', 'cloud', 'managed', 'Observability', 'AT&T', 'Path, throughput, latency, loss, flow logs and cost analytics per path and workload.', null, ['Control', 'Ships with every path'], ['From day one', 'Per path', 'Per workload'], { popular: 84, included: ['Path visualization', 'Traffic and policy analytics', 'Cost analytics'], limits: ['Included with every path'], runsWith: ['hosted-vpc'] }),
+  P('observability', 'cloud', 'managed', 'Observability', 'AT&T', 'Path, throughput, utilization, loss, flow logs and cost analytics per path and workload.', null, ['Control', 'Ships with every path'], ['From day one', 'Per path', 'Per workload'], { popular: 84, included: ['Path visualization', 'Traffic and policy analytics', 'Cost analytics'], limits: ['Included with every path'], runsWith: ['hosted-vpc'] }),
   P('sdwan', 'net', 'managed', 'SD-WAN', 'Cisco, VeloCloud', 'Managed SD-WAN over any first mile, steered on AT&T.', 180, ['SD-WAN'], null, { popular: 80, included: ['Managed edge', 'Policy steering'], limits: ['Per site'], runsWith: ['flexware'] }),
   P('flexware', 'net', 'vnf', 'FlexWare', 'AT&T', 'Universal CPE hosting VNFs at the site.', 220, ['VNF host'], null, { popular: 58, included: ['uCPE', 'VNF hosting'], limits: ['Per site'], runsWith: ['vnf-pan'] }),
   P('ddos', 'net', 'security', 'DDoS Defense', 'AT&T', 'Volumetric attack mitigation on the AT&T backbone.', 950, ['Security'], null, { popular: 77, included: ['Always-on detection', 'Backbone scrubbing'], limits: ['Per circuit'], runsWith: ['mfw'] }),
@@ -442,7 +439,7 @@ export const PACKAGES = [
 export const OUTCOMES = [
   { id: 'u1', name: 'Reach a cloud privately', dir: 'Site to cloud', control: ['Private path required'], optional: ['Inline security inspection'], desc: 'Ingress from your sites into a cloud region over the AT&T network.' },
   { id: 'u2', name: 'Control what leaves the cloud', dir: 'Cloud to Internet or WAN', control: ['No direct internet path', 'Inline security inspection'], desc: 'Egress from a cloud region through NGFW and AT&T egress.' },
-  { id: 'u3', name: 'Join two clouds on the best path', dir: 'Cloud to cloud', control: ['Latency SLO', 'Cost-aware routing'], desc: 'Two regions joined on AT&T, latency and cost aware.' },
+  { id: 'u3', name: 'Join two clouds on the best path', dir: 'Cloud to cloud', control: ['Priority traffic', 'Cost-aware routing'], desc: 'Two regions joined on AT&T, priority and cost aware.' },
 ];
 
 export const COMPOSE_CHIPS = {
@@ -450,7 +447,7 @@ export const COMPOSE_CHIPS = {
   dest: ['Clouds', 'Neoclouds', 'AI providers', 'The Internet', 'The WAN'],
   regions: { 'US East': ['Ashburn', 'Atlanta', 'New York'], 'US Central': ['Dallas', 'Chicago', 'Denver'], 'US West': ['San Jose', 'Los Angeles', 'Seattle'], 'Europe': ['Frankfurt', 'London', 'Amsterdam'], 'APAC': ['Singapore', 'Tokyo', 'Sydney'] },
   resiliency: ['Standard', 'Geodiversity', 'Maximum'],
-  control: ['Private path required', 'No direct internet path', 'Inline inspection', 'Segment by tag', 'Latency SLO', 'Cost-aware routing'],
+  control: ['Private path required', 'No direct internet path', 'Inline inspection', 'Segment by tag', 'Priority traffic', 'Cost-aware routing'],
 };
 
 export const FLOWS = [

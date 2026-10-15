@@ -30,8 +30,8 @@ test('an explicit route sheet is its own; an intent derives NetBond\'s rules', (
   assert.ok(insp['manip:selective-cv-tagging'].o2p && insp['manip:community-value-tag'].p2o, 'inspection is a manipulation');
   const seg = routeRulesOf({ req: 'Segment intra-tag only' });
   assert.ok(seg['allow:community-value-filter-customer'].o2p && seg['deny:community-value-filter-att'].p2o);
-  // An SLO is a class of service judged on measured latency: no route row, never a prepend.
-  assert.deepEqual(routeRulesOf({ req: 'Latency SLO 15 ms' }), {});
+  // Priority traffic is a class of service (it replaced the latency SLO, 2026-10-15): no route row, never a prepend.
+  assert.deepEqual(routeRulesOf({ req: 'Priority traffic' }), {});
   // Egress through AT&T advertises a static 0/0 On Premise → Partner, and never blocks the default route (it was backwards).
   assert.deepEqual(routeRulesOf({ path: ['Internet egress only through AT&T'] }), { 'advanced:advertise-static-routes': { o2p: true } });
   // Two paths prefer by community (local preference), never by prepending.
@@ -48,7 +48,7 @@ test('verb badges come first, from the derived sheet, so every estate policy wea
   }
   // The verbs come from every layer's compiled rows: a private path denies the local breakout and allows the routes.
   assert.deepEqual(verbBadges({ req: 'Private path required' }).map(x => x.label), ['Deny', 'Allow', 'Path']);
-  assert.deepEqual(verbBadges({ req: 'Latency SLO 15 ms' }).map(x => x.label), ['Manipulate', 'SLO']);
+  assert.deepEqual(verbBadges({ req: 'Priority traffic' }).map(x => x.label), ['Manipulate', 'Priority']);
 });
 
 test('the sheet reads one flow: four NetBond sections, every rule, each direction by the policy first in precedence', () => {

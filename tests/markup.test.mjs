@@ -627,7 +627,11 @@ test('every container the markup opens, it closes', () => {
   // leads each term with its glyph and ends on Ask Andi (div -7, span +13, sc-if +3, sc-for +1, button +3).
   // div 1356 -> 1334, span 2015 -> 2053, sc-if 765 -> 777, sc-for 446 -> 453, button 659 -> 669, aside 11 -> 10.
   // Orders and Help merged onto the home and Traffic (2026-10-13), recounted from the file; each equals main + Orders/Help's deltas.
-    ['div', /<div\b/g, /<\/div>/g, 1348], // + Orders/Help (2026-10-13)
+  // No delay figures (2026-10-15, "we can't measure that"): the journey wire's ms and its drop go (sc-if -2), the region's
+  // latency chip (span -2), the facilities card's ms line (div -1), the outcome's today and after ms (span -2), the Paths
+  // key's SLO swatches (span -4) and its total (span -1), a hop strip's ms, a channel's latency (span -1, sc-if -1).
+  // Recounted from the file: div 1348 -> 1347, span 2173 -> 2163, sc-if 818 -> 815.
+    ['div', /<div\b/g, /<\/div>/g, 1347], // - delay figures (2026-10-15)
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -638,7 +642,7 @@ test('every container the markup opens, it closes', () => {
   // Jump on the picture (2026-10-13, "immediately go to an asset deep down"): the flow map's button and search box in the
   // filter row, its glyph, the match it names and the count (span +3, sc-if +3, button +1, label +1):
   // span 1514 -> 1517, sc-if 680 -> 683, button 536 -> 537, label 31 -> 32.
-    ['span', /<span\b/g, /<\/span>/g, 2173], // + Orders/Help (2026-10-13)
+    ['span', /<span\b/g, /<\/span>/g, 2163], // - delay figures (2026-10-15), told at the div pin
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
@@ -647,7 +651,7 @@ test('every container the markup opens, it closes', () => {
   // both hero buttons in one flex row (div +1), and Persona and Estate on one row in the rail foot so Spend ends inside
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 818], // + Orders/Help (2026-10-13)
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 815], // - delay figures (2026-10-15), told at the div pin
     ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 466], // + Orders/Help (2026-10-13)
     ['section', /<section\b/g, /<\/section>/g, 17], // + Orders/Help (2026-10-13)
     ['button', /<button\b/g, /<\/button>/g, 715], // + Orders/Help (2026-10-13)

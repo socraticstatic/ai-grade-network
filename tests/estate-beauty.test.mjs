@@ -64,7 +64,7 @@ test('Spend: the bar is the legs its legend lists, each its share of the month',
   }
 });
 
-test('Apps: where an app runs is its clouds\' marks and their regions; p95 is green nowhere', () => {
+test('Apps: where an app runs is its clouds\' marks and their regions; Peak is green nowhere', () => {
   for (const view of ESTATES) {
     const v = vals(disc(view));
     for (const a of v.appAll) {
@@ -80,8 +80,9 @@ test('Apps: where an app runs is its clouds\' marks and their regions; p95 is gr
         if (g.mark) assert.ok(mark(g.mark), `${view} ${g.cloud}: ${g.mark} missing`);
         assert.equal(g.title, `${g.cloud} ${g.t}`);
       }
-      assert.ok(!GREEN.test(a.p95Fill) && !GREEN.test(a.p95Ring), `${view} ${a.name}: p95 in green`);
-      if (a.healthInk !== 'var(--success)') assert.equal(a.p95Fill, a.healthInk, `${view} ${a.name}: a problem keeps its ink`);
+      // Peak replaced p95 (2026-10-15): a link's state is its ink, never the saving's green.
+      assert.ok(!GREEN.test(a.linkFill) && !GREEN.test(a.linkRing), `${view} ${a.name}: Peak in green`);
+      if (a.link && a.link.state !== 'ok') assert.equal(a.linkFill, a.linkRing, `${view} ${a.name}: a problem keeps its ink`);
     }
   }
 });
@@ -185,7 +186,7 @@ test('the markup: the Estate panels read the new keys and draw no green', () => 
   const a = HTML.indexOf('<sc-if value="{{ showEstateBody }}"');
   const panel = HTML.slice(a, HTML.indexOf('<sc-if value="{{ isEmpty }}"', a));
   assert.ok(!GREEN.test(panel), 'green ink written into the Estate markup');
-  for (const k of ['{{ gr.unit }}', '{{ gl.w }}', '{{ rg.mark }}', '{{ ap.runsMore }}', '{{ ap.p95Fill }}', '{{ gg.icon }}', '{{ gs.ink }}', '{{ gs.icon }}', '{{ ct.icon }}', '{{ cr.mark }}', '{{ cr.stateIcon }}', '{{ pr.stateIcon }}', '{{ bs.inUnit }}'])
+  for (const k of ['{{ gr.unit }}', '{{ gl.w }}', '{{ rg.mark }}', '{{ ap.runsMore }}', '{{ ap.linkFill }}', '{{ gg.icon }}', '{{ gs.ink }}', '{{ gs.icon }}', '{{ ct.icon }}', '{{ cr.mark }}', '{{ cr.stateIcon }}', '{{ pr.stateIcon }}', '{{ bs.inUnit }}'])
     assert.ok(panel.includes(k), `${k} is not bound on Estate`);
   const head = HTML.slice(HTML.indexOf('<!-- ===== S1 DISCOVER ===== -->'), a);
   for (const k of ['{{ k.icon }}', '{{ k.aria }}']) assert.ok(head.includes(k), `${k} is not bound in the title row`);

@@ -287,8 +287,8 @@ export const INTENT = [
     ['prod', 'Production', 'apps', 'Production: the deck\'s weights as they stand'],
     ['lab', 'Lab', 'gear', 'A lab: cost and speed first; one zone is fine'] ] },
   { key: 'traffic', label: 'Traffic', icon: 'arrows-horizontal', opts: [
-    ['priority', 'Priority', 'high-meter', 'Priority traffic: deterministic latency, held to an SLO'],
-    ['standard', 'Standard', 'smart-meter', 'Standard traffic: best path, no SLO of its own'] ] },
+    ['priority', 'Priority', 'high-meter', 'Priority traffic: its own class of service on the AT&T core'],
+    ['standard', 'Standard', 'smart-meter', 'Standard traffic: best path, no class of its own'] ] },
   { key: 'security', label: 'Security', icon: 'check-shield', opts: [
     ['private', 'Private', 'padlock', 'A private path: never the public internet, route policy at L3'],
     ['inspected', 'Inspected', 'firewall', 'Inspected in path: L3 to L7 on the vSRX in AT&T\'s hub'],
@@ -347,7 +347,7 @@ export function wayWhy(key, cloud, intent, zone) {
   const [purpose, traffic, security, routing] = answersOf(intent);
   if (purpose === 'critical') { if (!w.hosted) r('ok', 'verified', '99.99% SLA', 'redundancy included', 'purpose'); else if (z !== 'intra') r('ok', 'merge', 'Zone-redundant', 'across AZs', 'purpose'); }
   if (purpose === 'lab') { if (z === 'intra') r('ok', 'bill', '$0 last hop', 'free inside one AZ', 'purpose'); else if ((sc.cost || [])[0] >= 5) r('ok', 'bill', 'Lowest monthly', 'at 1 Gbps', 'purpose'); if (w.level === 'approve') r('ok', 'clock', 'Click + approve', `one action, ${w.time}`, 'purpose'); }
-  if (traffic === 'priority') { if ((sc.perf || [])[0] >= 5) r('ok', 'high-meter', w.hosted ? 'Multi-region' : 'Deterministic', w.hosted ? 'policy-driven' : 'private MPLS path', 'traffic'); else r('warn', 'high-meter', 'One more hop', 'through AT&T\'s hub', 'traffic'); }
+  if (traffic === 'priority') { if ((sc.perf || [])[0] >= 5) r('ok', 'high-meter', w.hosted ? 'Multi-region' : 'Priority class', w.hosted ? 'policy-driven' : 'private MPLS path', 'traffic'); else r('warn', 'high-meter', 'One more hop', 'through AT&T\'s hub', 'traffic'); }
   if (security === 'private') r('ok', 'padlock', w.hosted ? 'Private IP' : 'Never the internet', w.hosted ? 'end to end' : 'private, end to end', 'security');
   if (security === 'inspected' && w.inspect) r('ok', 'firewall', 'L3 to L7', 'vSRX in AT&T\'s hub', 'security');
   if (security === 'service' && key === 'privatelink') r('ok', 'restricted', 'Per-service allow-list', 'one endpoint each', 'security');

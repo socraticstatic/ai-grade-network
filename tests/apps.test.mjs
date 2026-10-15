@@ -23,16 +23,38 @@ for (const id of ['partial', 'mature', 'trust']) {
     for (const x of apps) {
       assert.ok(x.onAtt >= 0 && x.onAtt <= 1 && x.exposed <= x.wl, x.tag);
       assert.ok(x.regions.length >= 1 && x.clouds.length >= 1, x.tag);
-      assert.ok(x.p95 > 0 && ['ok', 'risk', 'slo'].includes(x.health), x.tag);
+      // Its parts are its regions' shares, and add up to the whole app (no delay figure since 2026-10-15).
+      assert.ok(Math.abs(x.parts.reduce((a, p) => a + p.share, 0) - 1) < 1e-6, x.tag);
+      for (const k of ['p95', 'slo', 'health', 'p95Regions']) assert.ok(!(k in x), `${x.tag} still carries ${k}`);
       assert.ok(Array.isArray(x.topApps) && x.topApps.length <= 3, x.tag);
     }
     assert.deepEqual(apps.map(x => x.wl), apps.map(x => x.wl).slice().sort((a, b) => b - a), 'largest first');
   });
 }
 
-test('an app whose p95 is over its SLO reads Over SLO', () => {
-  const { est, inv, flows } = ctx('mature');
-  for (const x of appsOf(est, inv, flows)) if (x.p95 > x.slo) assert.equal(x.health, 'slo', `${x.tag} ${x.p95}/${x.slo}`);
-  const fin = appsOf(est, inv, flows).find(x => x.tag === 'finance');
-  assert.equal(fin.health, 'slo', 'westeurope at 21 ms carries a third of finance');
+// The Estate's Apps table reads the link an app rides at its peak, in place of a delay (2026-10-15).
+test('an app\'s Peak is the link that matters most (down, else near full, else busiest) at its peak, in its own state; an app on the internet reads Public', async () => {
+  globalThis.window = globalThis.window || { scrollTo: () => {}, scrollY: 0 };
+  const { vals } = await import('../naas-app.js');
+  const { mkC } = await import('./harness.mjs');
+  const X = await import('../naas-connections.js');
+  let seen = 0;
+  for (const view of ['partial', 'mature', 'trust', 'small']) {
+    const { est, inv, flows } = ctx(view);
+    const conns = X.connections(est, A.observe(est, [], inv)).rows;
+    const rows = vals(mkC({ view, estateParam: null, screen: 's1', estPanel: 'glance' })).appAll;
+    for (const x of appsOf(est, inv, flows)) {
+      const row = rows.find(r => r.key === x.tag); if (!row) continue; seen++;
+      const cs = conns.filter(c => x.parts.some(p => p.share >= 0.05 && p.region === c.region));
+      if (!cs.length) { assert.equal(row.linkF, 'Public', `${view} ${x.tag}`); continue; }
+      const stOf = (c) => (c.degraded ? 'down' : c.hot ? 'risk' : 'ok'), R = { ok: 0, risk: 1, down: 2 };
+      const worst = Math.max(...cs.map(c => R[stOf(c)])), top = cs.filter(c => R[stOf(c)] === worst).sort((a, b) => b.pct - a.pct)[0], st = stOf(top);
+      assert.equal(row.linkF, `${top.pct}%`, `${view} ${x.tag}`);
+      assert.equal(row.linkFill, st === 'ok' ? 'transparent' : F.HEALTH_INK[st], `${view} ${x.tag}`);
+      // The figure, the ink and the title read one link.
+      assert.ok(row.linkTitle.startsWith(`${top.cloud} ${top.region} `) && row.linkTitle.endsWith(F.HEALTH_WORD[st]), row.linkTitle);
+      assert.doesNotMatch(row.linkTitle, /\bms\b|p95|SLO/, row.linkTitle);
+    }
+  }
+  assert.ok(seen > 10, `only ${seen} apps checked`);
 });

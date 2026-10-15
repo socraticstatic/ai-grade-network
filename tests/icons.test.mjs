@@ -48,9 +48,9 @@ test('verb badges: NetBond Advanced\'s four in their colors, the path\'s asks in
   assert.deepEqual(b.map(x => x.label), ['Deny', 'Allow', 'Path']);
   assert.deepEqual(b.map(x => x.cls), ['deny', 'allow', '']);
   // The verbs come from every layer's compiled rows (2026-10-09, slice 2), so the verb leads and the path's asks follow:
-  // inspection allows through the vSRX and tags CVs on NetBond; an SLO manipulates the class of service.
+  // inspection allows through the vSRX and tags CVs on NetBond; priority traffic manipulates the class of service.
   assert.deepEqual(verbBadges({ req: 'Inline security inspection' }).map(x => x.label), ['Allow', 'Manipulate', 'Inspect']);
-  assert.deepEqual(verbBadges({ req: 'Latency SLO 15 ms' }).map(x => x.label), ['Manipulate', 'SLO']);
+  assert.deepEqual(verbBadges({ req: 'Priority traffic' }).map(x => x.label), ['Manipulate', 'Priority']);
 });
 
 import { vals } from '../naas-app.js';

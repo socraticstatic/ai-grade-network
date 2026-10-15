@@ -28,7 +28,7 @@ const page = (view, patch) => vals(mkC({ view, estateParam: null, screen: 's3', 
 const card = (v, k) => v.homeCards.find(x => x.key === k);
 const stat = (v, k) => String(v.invStats.find(x => x.key === k).v);
 const n = (s) => +String(s).replace(/,/g, '');
-const RANK = { ok: 0, risk: 1, slo: 2, down: 3 };
+const RANK = { ok: 0, risk: 1, over: 2, down: 3 };
 const worst = (states) => states.reduce((a, s) => (RANK[s] > RANK[a] ? s : a), 'ok');
 
 // ---- P6: one word for the exposed workloads ----
@@ -172,12 +172,14 @@ test('P14: every node dot on the map is Health\'s state for its regions, in Heal
   }
   const g = vals(home('partial'));
   assert.equal(g.heroClouds.find(c => c.cloud === 'Azure').relFill, F.HEALTH_INK.down, 'Azure eastus is down');
-  assert.equal(g.heroClouds.find(c => c.cloud === 'AWS').relFill, F.HEALTH_INK.slo, 'AWS eu-west-1 runs over SLO at its peak');
+  // AWS eu-west-1's latency spike left with the delay figures (2026-10-15): Growing's AWS is healthy, Established's is down.
+  assert.equal(g.heroClouds.find(c => c.cloud === 'AWS').relFill, F.HEALTH_INK.ok, 'Health lists nothing on Growing\'s AWS');
+  assert.equal(vals(home('mature')).heroClouds.find(c => c.cloud === 'AWS').relFill, F.HEALTH_INK.down, 'AWS eu-central-1 is down');
 });
 
 // A mark is its colour and its kind: a solid line, a dashed line or a dot. One mark is one thing, and a
 // colour never means both a path and a state (red was a "poor" wire and a Down dot; purple a third
-// party and Over SLO). A cloud provider and a third party share the grey of "not AT&T"; the dash says which.
+// party and Over SLO, before 2026-10-15). A cloud provider and a third party share the grey of "not AT&T"; the dash says which.
 test('P14: on the home, one colour in the map\'s legend means one thing', () => {
   for (const view of LIVE) {
     const v = vals(home(view));
@@ -207,14 +209,14 @@ test('P14: on the home, one colour in the map\'s legend means one thing', () => 
 
 // ---- P11: Health's tile counts what the home's legend names ----
 
-test('P11: Health\'s tile names both states it counts, so the home\'s Over SLO and At risk add up on it', () => {
+test('P11: Health\'s tile names both states it counts, so the home\'s Over threshold and At risk add up on it', () => {
   for (const view of LIVE) {
     const h = page(view, { tab: 'observe', obPage: 'perf', obPanel: 'health' });
     const t = h.healthTiles.find(x => x.key === 'risk');
-    assert.equal(t.l, 'Over SLO or at risk', view);
+    assert.equal(t.l, 'Over or at risk', view);
     const apps = card(vals(home(view)), 'apps');
-    const named = apps.dots.filter(d => / · (Over SLO|At risk)$/.test(d.title)).length;
-    assert.equal(+t.v, named, `${view}: the home draws ${named} over SLO or at risk, Health counts ${t.v}`);
+    const named = apps.dots.filter(d => / · (Over threshold|At risk)$/.test(d.title)).length;
+    assert.equal(+t.v, named, `${view}: the home draws ${named} over or at risk, Health counts ${t.v}`);
   }
 });
 

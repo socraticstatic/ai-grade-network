@@ -59,6 +59,7 @@ test('user activity pages the same way', () => {
   const c = mkC({ view: 'partial', screen: 's3', tab: 'observe', obPage: 'logs', logTab: 'user', estateParam: null });
   const v = vals(c);
   assert.ok(v.actRows.length <= v.actPageSize);
-  assert.match(v.actPager.label, /^1–\d+ of 18$/);
+  // 17 since 2026-10-15: Growing's GPU latency SLO policy, and its row here, left with the delay figures.
+  assert.match(v.actPager.label, /^1–\d+ of 17$/);
   assert.match(HTML, /aria-label="Next page"/);
 });

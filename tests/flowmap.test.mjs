@@ -147,7 +147,8 @@ test('filterRegion narrows, scrub scales, deltas and states exist', () => {
   const all = buildMap(est, inv, flows, {});
   assert.ok(buildMap(est, inv, flows, { filterRegion: 'eu-central-1' }).total < all.total);
   assert.notEqual(Math.round(buildMap(est, inv, flows, { t: 0.5 }).total * 100), Math.round(all.total * 100));
-  assert.ok(all.nodes.every(x => typeof x.delta === 'number' && ['ok', 'degraded', 'slo'].includes(x.state)));
+  // A node is on a healthy link, a degraded one, or outside AT&T (public, which once read over SLO; 2026-10-15).
+  assert.ok(all.nodes.every(x => typeof x.delta === 'number' && ['ok', 'degraded', 'public'].includes(x.state)));
   assert.equal(deltaOf('x'), deltaOf('x'));
   assert.ok(shapeAt('x', 0.3) > 0.5 && shapeAt('x', 0.3) < 1.3);
 });

@@ -9,11 +9,11 @@
 // "discover options - show attributes of cost, performance and security"; "with
 // AT&T tier options here's what you'd get"). The estate as ranked MOVES: each a
 // set that one order serves, each with three AT&T tiers and, for every tier, what
-// Security, Performance and Cost would read after it against today.
+// Security, Uptime (or a port's Capacity) and Cost would read after it against today.
 //
 // Pure: the view decorates. Every number comes from the estate and the models the
 // other pages read: the buckets and the arbitrage split (Cost > By region), the
-// path latencies (region fab and pub ms, P.path), the catalog's "Starting at",
+// paths' uptime (R.PATHS and the catalog), the catalog's "Starting at",
 // the cloud providers' list prices (R.CSP_PORT, R.CSP_VPN, marked modelled), the
 // capacity rows (Observe > Capacity) and the open findings.
 import * as S from './naas-sites.js';
@@ -58,7 +58,7 @@ export const TIERS = ['Start here', 'Recommended', 'Full control'];
 /** NetBond Advanced's connection types, the contract with the compose flow. */
 export const CONN_TYPES = ['Internet to Cloud', 'Layer 2 to Cloud', 'AVPN to Cloud', 'DataCenter/CoLocation to Cloud', 'Cloud to Cloud'];
 /** Ranking weight of the risk a move closes, used only where dollars tie. */
-export const RISK = { down: 4, slo: 3, full: 2, exposed: 1, single: 1, none: 0 };
+export const RISK = { down: 4, full: 2, exposed: 1, single: 1, none: 0 };
 const REC = 1;
 
 // A way's own products (the AT&T-provided port, PrivateLink, Cloud WAN) price from naas-ways.js beside the catalog.
@@ -98,16 +98,6 @@ const PROD = {
   'lh-cwan': { name: 'Cloud WAN', path: 'netbond', inspect: true },
   'lh-pl': { name: 'PrivateLink', path: 'netbond', inspect: true },
 };
-
-/** The traffic-weighted 95th percentile of a set of paths: [{ ms, w }]. */
-export function p95(pts) {
-  const xs = pts.filter(p => p.w > 0).sort((a, b) => a.ms - b.ms);
-  if (!xs.length) return 0;
-  const tot = xs.reduce((a, p) => a + p.w, 0);
-  let cum = 0;
-  for (const p of xs) { cum += p.w; if (cum >= tot * 0.95) return p.ms; }
-  return xs[xs.length - 1].ms;
-}
 
 /**
  * Each region's egress a month, read off Cost > By region's rows (R.arbitrage,
@@ -177,10 +167,9 @@ function ladderTiers(f, ctx) {
 
 // ---------- the three attributes ----------
 
-const TONE_OF_HEALTH = { ok: 'good', risk: 'risk', slo: 'slo', down: 'bad' };
 /**
  * Cost after a tier: the set's monthly after it (today's less what the tier nets)
- * and the change, the way Performance reads its ms. With nothing priced today,
+ * and the change. With nothing priced today,
  * only what the tier adds can be said; a tier with no catalog price waits on a survey.
  */
 const moneyAfter = (before, net, monthly) => (monthly === null || net === null ? null : before === null ? null : before - net);
@@ -190,8 +179,10 @@ function moneyCell(before, net, monthly) {
   const tone = net > 0 ? 'good' : net < 0 ? 'risk' : 'same';
   return { value: `${fmt(before - net)}/mo`, delta: net > 0 ? `saves ${fmt(net)}` : net < 0 ? `adds ${fmt(-net)}` : 'same', tone, dtone: tone };
 }
-const msDelta = (before, after) => (after < before ? { delta: `−${before - after} ms`, dtone: 'good' } : after > before ? { delta: `+${after - before} ms`, dtone: 'bad' } : { delta: 'same', dtone: 'same' });
-const healthWord = (h) => (h === 'slo' ? ' · over SLO' : h === 'risk' ? ' · at risk' : '');
+// The second attribute is what the product can stand behind (2026-10-15, no delay figures: "we can't measure that"): a
+// path's uptime, the catalog's or R.PATHS' figure, where the internet is best effort; a port's use against what is bought.
+const BEST_EFFORT = { value: 'Best effort', tone: 'risk', word: 'Uptime' };
+const uptimeCell = (value, tone = 'good') => ({ value, tone, word: 'Uptime' });
 
 // ---------- the moves ----------
 
@@ -232,10 +223,6 @@ function siteMoves(est, ctx) {
     const egBefore = !att && mode === 'ipsec' && bucket ? bucket.today : null;
     const tunnels = mode === 'ipsec' ? members.filter(x => x.tunnel).reduce((a, x) => a + S.countOf(x.name), 0) || n : 0;
     const dcOnly = cls.length === 1 && cls[0] === 'Data center';
-    // Performance: each site's path to each region, weighted by what it sends (P.path, P.gbps).
-    const pts = members.flatMap(x => est.regionsList.map(r => ({ ms: P.path(x, r).ms, w: P.gbps(est, x, r) * S.countOf(x.name) })));
-    const ms = p95(pts);
-    const hToday = F.healthOf(ms, F.SLO);
     const dest = (behind && behind.pathDst) || andList([...new Set(est.regionsList.map(r => r.cloud))]);
     // The cloud that bills the tunnels is named, the one Cost > By cloud puts them in (R.ipsecCloud, 2026-09-30).
     const tunnelCloud = mode === 'ipsec' ? (att ? andList([...new Set(members.map(x => tunnelOf(x).cloud))]) : R.ipsecCloud(est)) : null;
@@ -268,10 +255,12 @@ function siteMoves(est, ctx) {
           : mode === 'third' ? { value: 'AT&T internet, encrypted', delta: '', tone: 'bad' }
             : { value: `${mode === 'ipsec' ? 'IPsec' : 'SD-WAN'} on AT&T internet`, delta: '', tone: 'risk' };
       const mo = moneyAfter(egBefore, net, t.monthly);
-      return { ...t, fit, covers: cov.map(x => x.name), ms, egress: egAfter, net, mo, modelled: retired > 0,
-        sec, perf: { value: `${ms} ms p95`, delta: 'same', dtone: 'same', tone: TONE_OF_HEALTH[F.healthOf(ms, F.SLO)] },
+      // The first mile's uptime is its product's (the catalog's figure); the internet in the middle is best effort.
+      const up = priv && ids.length ? uptimeOf(ids[0]) : null;
+      return { ...t, fit, covers: cov.map(x => x.name), egress: egAfter, net, mo, modelled: retired > 0,
+        sec, perf: up ? uptimeCell(`${up} uptime`) : BEST_EFFORT,
         cost: moneyCell(egBefore, net, t.monthly),
-        perfTitle: `The first mile moves to AT&T; the clouds these sites reach stay where they are, so the p95 across their paths holds at ${ms} ms against the ${F.SLO} ms SLO`,
+        perfTitle: up ? `The first mile moves to AT&T: ${up} uptime, the catalog's figure` : 'The internet stays in the middle: best effort, no one answers for it',
         costTitle: [egBefore !== null ? `Egress ${fmt(egBefore)} to ${fmt(egAfter)}/mo` : 'No egress priced for these sites', t.monthly !== null ? `${t.breakdown} a site = ${fmt(t.monthly)}/mo` : 'Priced after a site survey', retired ? `${nf(tunnels)} IPsec tunnels retired at the $${R.CSP_VPN.toFixed(2)} cloud VPN list price (modelled)` : '', mo !== null ? `${fmt(mo)}/mo after, ${net >= 0 ? 'saves' : 'adds'} ${fmt(Math.abs(net))}` : ''].filter(Boolean).join(' · '),
         // Sites reach the clouds over AVPN (MPLS) or the internet, or Layer 2 on Switched Ethernet; data centers alone are colocation.
         conn: dcOnly ? 'DataCenter/CoLocation to Cloud' : t.products.length ? t.conn : 'AVPN to Cloud' };
@@ -279,10 +268,10 @@ function siteMoves(est, ctx) {
     return {
       key: 'sites:' + (att ? 'tunnel:' : '') + mode, kind: 'sites', mode, att, title: M.title(n, noun, carrier), reason, finding: f ? f.kind : null,
       sites: members.map(x => x.name), regions: [], n, wl: 0, size: n, need: 'standard',
-      risk: mode === 'third' ? 'none' : hToday === 'slo' ? 'slo' : 'exposed',
-      today: { path: mode === 'ipsec' ? 'ipsec' : mode === 'sdwan' ? 'sdwan' : 'third', pathWord: M.word, ms, egress: egBefore, mo: egBefore,
+      risk: mode === 'third' ? 'none' : 'exposed',
+      today: { path: mode === 'ipsec' ? 'ipsec' : mode === 'sdwan' ? 'sdwan' : 'third', pathWord: M.word, egress: egBefore, mo: egBefore,
         sec: mode === 'third' ? { value: `Private on ${carrier || 'another carrier'}`, tone: 'same' } : att ? { value: `${kindW} tunnel · ${nf(n)} on the internet`, tone: 'risk' } : { value: mode === 'ipsec' ? `IPsec · ${plural(tunnels, 'endpoint', 'endpoints')} public` : `Internet · ${nf(n)} exposed`, tone: 'risk' },
-        perf: { value: `${ms} ms p95${healthWord(hToday)}`, tone: TONE_OF_HEALTH[hToday] },
+        perf: mode === 'third' ? uptimeCell(`${carrier || 'Carrier'} SLA`, 'same') : BEST_EFFORT,
         cost: egBefore !== null ? { value: `${fmt(egBefore)}/mo egress`, tone: 'same' } : { value: 'Not priced today', tone: 'same' } },
       counts: [{ key: 'sites', kind: 'sites', label: `${nf(n)} ${noun}` }],
       tiers,
@@ -322,22 +311,18 @@ function regionMoves(est, ctx) {
     const tags = [...new Set(rs.flatMap(r => r.tags || []))];
     const apps = appsIn(ctx.inv, ids);
     const f = connectFinding(ctx.findings, 'region', (t) => ids.every(id => t.includes(id)));
-    const w = (r) => r.wl || 1;
-    const ms = p95(rs.map(r => ({ ms: r.pub, w: w(r) })));
-    const hToday = F.healthOf(ms, F.SLO);
     const egNow = rs.reduce((a, r) => a + eg[r.region].now, 0);
     // The finding behind it, specific to these regions: an open finding (not a Connect ladder) that names one of them.
     const behind = ctx.findings.find(x => x.tab !== 'connect' && !/^(unmonitored|blindspots|degraded|avoidable|crosscloud|onecloud)$/.test(x.kind) && !/^newcloud-/.test(x.kind) && ids.some(id => textOf(x).includes(id)));
     const arc = (est.arcs || []).find(a => !a.priv && (ids.includes(a.from) || ids.includes(a.to)) && !arcsTold.has(`${a.from}>${a.to}`));
-    const over = rs.filter(r => r.pub > F.SLO).map(r => r.region);
-    const extra = behind ? lowerFirst(behind.head) : over.length ? `${andList(over)} ${over.length === 1 ? 'runs' : 'run'} over the ${F.SLO} ms SLO` : arc ? `${arc.from} to ${arc.to} crosses the internet too` : '';
+    const extra = behind ? lowerFirst(behind.head) : arc ? `${arc.from} to ${arc.to} crosses the internet too` : '';
     if (arc && extra.startsWith(`${arc.from} to ${arc.to}`)) arcsTold.add(`${arc.from}>${arc.to}`);
     // Sites already on AT&T access whose public leg is this cloud side: this move is theirs, so it names them.
     const via = viaAll.filter(v => ids.includes(v.home)).map(v => v.x);
     const viaNames = via.slice(0, 2).map(x => x.name.replace(/\s*\([\d,]+\)\s*$/, '')).concat(via.length > 2 ? [`${via.length - 2} more`] : []);
     const viaMany = via.length > 1 || (via[0] && S.countOf(via[0].name) > 1);
     const viaClause = via.length ? `${andList(viaNames)} ${viaMany ? 'reach' : 'reaches'} ${rs.length === 1 ? 'it' : 'them'} over ${andList([...new Set(via.map(x => S.servicesOf(x)[0].label))])}` : '';
-    const reason = `${plural(wl, 'workload', 'workloads')}${tags.length ? ` (${tags.join(', ')})` : ''} in ${andList(ids)}${apps.length ? ` run ${andList(apps)}` : ''} over the public internet at ${andList([...new Set(rs.map(r => r.pub))].map(String))} ms${[extra, viaClause].filter(Boolean).map(x => `; ${x}`).join('')}.`;
+    const reason = `${plural(wl, 'workload', 'workloads')}${tags.length ? ` (${tags.join(', ')})` : ''} in ${andList(ids)}${apps.length ? ` run ${andList(apps)}` : ''} over the public internet${[extra, viaClause].filter(Boolean).map(x => `; ${x}`).join('')}.`;
     const ctxT = { kind: 'region', regions: rs, all: ids };
     // The ways the 2026-10-06 session recommends for this cloud, in its order of priority: Azure and AWS three
     // (bring your own port, AT&T's port, hosted peering), Google two and the one it cannot have. A cloud the
@@ -355,13 +340,10 @@ function regionMoves(est, ctx) {
       : f ? ladderTiers(f, ctxT) : regionLadder(cloud).map(([ps, label], i) => tierOf(i, ps.map(id => [id, id === 'c2c' ? 1 : rs.length]), { covers: ids, label }));
     const tiers = ladder.map(t => {
       // The way this cloud cannot have holds its column and says why; it is never picked or priced.
-      if (t.unavailable) return { ...t, ms, egress: null, net: null, mo: null, sec: { value: 'Not offered here', tone: 'same' }, perf: { value: '', tone: 'same' }, cost: { value: '', tone: 'same' }, perfTitle: '', costTitle: t.unavailable, setup: '' };
+      if (t.unavailable) return { ...t, egress: null, net: null, mo: null, sec: { value: 'Not offered here', tone: 'same' }, perf: { value: '', tone: 'same' }, cost: { value: '', tone: 'same' }, perfTitle: '', costTitle: t.unavailable, setup: '' };
       const cov = t.covers.length ? rs.filter(r => t.covers.includes(r.region)) : rs;
       const P0 = pathOf(t.path) || pathOf('netbond');
-      const lat = (r) => (cov.includes(r) && t.products.length ? P0.lat(r) : r.pub);
-      const msA = p95(rs.map(r => ({ ms: lat(r), w: w(r) })));
       const allPriv = cov.length === rs.length && t.path !== 'internet' && t.products.length > 0;
-      const hA = F.healthOf(msA, allPriv ? F.SLO_PRIVATE : F.SLO);
       // A private path carries a covered region's egress at the AT&T price Cost shows; the internet keeps today's bill.
       const egA = rs.reduce((a, r) => a + (cov.includes(r) && t.products.length && P0.id !== 'internet' ? eg[r.region].fabric : eg[r.region].now), 0);
       const net = t.monthly === null ? null : egNow - egA - t.monthly;
@@ -380,10 +362,12 @@ function regionMoves(est, ctx) {
           : cov.length < rs.length ? { value: `Private for ${cov.length} of ${rs.length}`, delta: `${rs.length - cov.length} public`, tone: 'risk' }
             : { value: inspect ? 'Private and inspected' : t.path === 'native' ? 'Private, two paths' : 'Private, off the internet', delta: '', tone: 'good' };
       const mo = moneyAfter(egNow, net, t.monthly);
-      return { ...t, fit, covers: cov.map(r => r.region), ms: msA, egress: egA, net, mo, setup: t.way ? W.waySetup(t.way) : '',
-        sec, perf: { value: `${msA} ms p95${healthWord(hA)}`, ...msDelta(ms, msA), tone: TONE_OF_HEALTH[hA] },
+      // Its path's uptime (R.PATHS): the internet is best effort; a private path covering part of the set says how much.
+      const perf = t.path === 'internet' ? BEST_EFFORT : allPriv || !t.products.length ? uptimeCell(`${P0.rel}% uptime`) : uptimeCell(`${P0.rel}% for ${cov.length} of ${rs.length}`, 'risk');
+      return { ...t, fit, covers: cov.map(r => r.region), egress: egA, net, mo, setup: t.way ? W.waySetup(t.way) : '',
+        sec, perf,
         cost: moneyCell(egNow, net, t.monthly),
-        perfTitle: `p95 across ${andList(ids)}, weighted by workloads, ${ms} to ${msA} ms; ${allPriv ? `a private path is held to the ${F.SLO_PRIVATE} ms SLO` : `a public path to the ${F.SLO} ms SLO`}`,
+        perfTitle: t.path === 'internet' ? 'The internet in the middle: best effort, no SLA on the middle' : `${P0.short}: ${P0.relLabel}${allPriv ? '' : `, for ${andList(cov.map(r => r.region))}`}`,
         costTitle: [`Egress ${fmt(egNow)} to ${fmt(egA)}/mo (${t.path === 'internet' || !t.products.length ? 'at public rates' : 'at the AT&T price Cost > By region shows'}, modelled)`, t.monthly !== null ? `${t.breakdown} = ${fmt(t.monthly)}/mo` : 'Priced after survey', mo !== null ? `${fmt(mo)}/mo after, ${net >= 0 ? 'saves' : 'adds'} ${fmt(Math.abs(net))}` : ''].filter(Boolean).join(' · ') };
     });
     return {
@@ -392,10 +376,10 @@ function regionMoves(est, ctx) {
       // The session's first way is its recommendation; a ladder's middle rung is.
       recI: byWays ? 0 : REC, hasSetup: byWays,
       gb: Object.fromEntries(rs.map(r => [r.region, eg[r.region].gb])),
-      risk: rs.some(r => F.regionState(r) === 'slo') ? 'slo' : 'exposed',
-      today: { path: 'internet', pathWord: 'Public internet', ms, msRegion: (rs.find(r => r.pub === ms) || rs[0]).region, egress: egNow, mo: egNow, setup: 'In place',
+      risk: 'exposed',
+      today: { path: 'internet', pathWord: 'Public internet', pathRegion: rs.slice().sort((a, b) => b.wl - a.wl)[0].region, egress: egNow, mo: egNow, setup: 'In place',
         sec: { value: `Public · ${plural(wl, 'workload', 'workloads')}`, tone: 'risk' },
-        perf: { value: `${ms} ms p95${healthWord(hToday)}`, tone: TONE_OF_HEALTH[hToday] },
+        perf: BEST_EFFORT,
         cost: { value: `${fmt(egNow)}/mo egress`, tone: 'same' } },
       counts: [{ key: 'regions', kind: 'regions', label: plural(rs.length, 'region', 'regions') }, { key: 'workloads', kind: 'workloads', label: plural(wl, 'workload', 'workloads') }],
       tiers: tiers.map(t => ({ ...t, conn: t.conn === 'Cloud to Cloud' ? 'Cloud to Cloud' : 'DataCenter/CoLocation to Cloud' })),
@@ -446,7 +430,6 @@ function pathMoves(est, ctx) {
     const tagsC = [...new Set(single[r.region] || [])].map(t => tagWord(t, r));
     const apps = appsIn(ctx.inv, [r.region]);
     const ramp = rampName(r);
-    const ms = r.fab;
     const curPath = R.regionPath(r);
     const relBefore = (pathOf(curPath) || {}).rel;
     const pc = portCost(r, cap);
@@ -473,24 +456,24 @@ function pathMoves(est, ctx) {
         : t.path === 'internet' ? { value: 'Encrypted backup, public', delta: '', tone: 'risk' }
           : { value: !ids.length ? 'Private, two providers' : twoMetro ? 'Private, two metros' : 'Private, two paths', delta: '', tone: 'good' };
       const perf = kind === 'port' && addG
-        ? { value: `${Math.round(cap.peakG / (cap.capG + addG) * 100)}% of ${cap.capG + addG} Gbps`, delta: `+${addG} Gbps`, dtone: 'good', tone: 'good' }
-        : { value: up ? `${ms} ms, backup ${up}` : `${ms} ms, survives a drop`, delta: '', tone: TONE_OF_HEALTH[F.healthOf(ms, F.SLO_PRIVATE)] };
+        ? { value: `${Math.round(cap.peakG / (cap.capG + addG) * 100)}% of ${cap.capG + addG} Gbps`, delta: `+${addG} Gbps`, dtone: 'good', tone: 'good', word: 'Capacity' }
+        : kind === 'port' ? { value: `${cap.peakPct}% of ${cap.capG} Gbps`, delta: '', tone: 'risk', word: 'Capacity' }
+          : uptimeCell(up ? `Backup ${up}` : 'Survives a drop');
       const mo = moneyAfter(before, net, t.monthly);
-      return { ...t, fit, ms, egress: null, net, mo, sec, perf, cost: moneyCell(before, net, t.monthly),
-        perfTitle: kind === 'port' ? `Peak ${cap.peakG} Gbps over ${cap.capG} Gbps today${addG ? `, over ${cap.capG + addG} Gbps with ${addG} more` : ''}` : `${ms} ms on the ${ramp} stays; a second path keeps it up when one drops${up ? ` (${up} uptime, the catalog's figure)` : ''}`,
+      return { ...t, fit, egress: null, net, mo, sec, perf, cost: moneyCell(before, net, t.monthly),
+        perfTitle: kind === 'port' ? `Peak ${cap.peakG} Gbps over ${cap.capG} Gbps today${addG ? `, over ${cap.capG + addG} Gbps with ${addG} more` : ''}` : `The ${ramp} stays; a second path keeps it up when one drops${up ? ` (${up} uptime, the catalog's figure)` : ''}`,
         costTitle: t.monthly !== null ? `${t.breakdown} = ${fmt(t.monthly)}/mo, beside ${pc ? `the ${fmt(pc.v)}/mo ${pc.word}${pc.modelled ? ' (list price, modelled)' : ''}` : `the ${ramp}`}${mo !== null ? ` · ${fmt(mo)}/mo after` : ''}` : 'Priced after survey',
         conn: 'DataCenter/CoLocation to Cloud' };
     });
-    const state = down ? 'down' : F.regionState(r);
     out.push({
       key: kind + ':' + r.region, kind, cloud: r.cloud, title: kind === 'second' ? `Put ${r.cloud} ${r.region} on a second path` : `Add a port to ${r.cloud} ${r.region}`,
       reason, finding: f ? f.kind : null, sites: [], regions: [r.region], n: 0, wl: r.wl, size: r.wl, need: kind === 'second' ? 'maximum' : 'standard',
-      risk: down ? 'down' : state === 'slo' ? 'slo' : full ? 'full' : 'single',
-      today: { path: curPath, pathWord: `${ramp}${one ? ', one path' : `, ${r.paths} paths`}`, ms, msRegion: r.region, egress: null, mo: before,
+      risk: down ? 'down' : full ? 'full' : 'single',
+      today: { path: curPath, pathWord: `${ramp}${one ? ', one path' : `, ${r.paths} paths`}`, pathRegion: r.region, egress: null, mo: before,
         sec: { value: `Private · ${one ? 'one path' : `${r.paths} paths`}`, tone: one ? 'risk' : 'same' },
-        // The region's own health (the one latency rule): Down, over the private SLO, or its path's uptime.
-        perf: kind === 'port' ? { value: `${cap.peakPct}% of ${cap.capG} Gbps`, tone: 'risk' }
-          : { value: `${ms} ms · ${down ? 'Down' : state === 'slo' ? 'over SLO' : `${relBefore}%`}`, tone: down ? 'bad' : state === 'slo' ? 'slo' : 'same' },
+        // The region's own health: a port's use against what is bought, else Down or its path's uptime.
+        perf: kind === 'port' ? { value: `${cap.peakPct}% of ${cap.capG} Gbps`, tone: 'risk', word: 'Capacity' }
+          : { value: down ? 'Down' : `${relBefore}% uptime`, tone: down ? 'bad' : 'same', word: 'Uptime' },
         cost: pc ? { value: `${fmt(before)}/mo ${pc.word === 'NetBond' ? 'NetBond' : cap && cap.ports > 1 ? 'ports' : 'port'}`, tone: 'same', modelled: pc.modelled } : { value: 'Not priced today', tone: 'same' } },
       counts: [{ key: 'workloads', kind: 'workloads', label: plural(r.wl, 'workload', 'workloads') }],
       tiers,
@@ -503,7 +486,7 @@ function pathMoves(est, ctx) {
  * The estate as ranked moves. ctx: { findings (open, non-event), capacity
  * (OD.capacity rows), apps (appsOf), inv (A.inventory), base (the egress base) }.
  * Ranked by what the Recommended tier nets a month (never below zero), then by
- * the risk it closes: Down, Over SLO, near full, exposed or one path.
+ * the risk it closes: Down, near full, exposed or one path.
  */
 export function movesOf(est, ctx = {}) {
   if (!est || est.stage === 'empty' || !(est.regionsList || []).length) return [];

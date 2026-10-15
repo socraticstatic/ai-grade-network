@@ -44,7 +44,7 @@ export function circuits(port, inv) {
   const reg = inv.flatMap(c => c.regions).find(r => r.region === port.region); if (!reg) return [];
   const all = reg.vpcs.flatMap(v => v.gws.filter(g => g.circuits).flatMap(g => g.circuits.map(cx => ({ ...cx, vpc: v.name }))));
   const mine = all.filter((cx, i) => i % Math.max(1, Math.ceil(all.length / Math.max(1, port.ports || 1))) === 0 || all.length <= 2 || i % 2 === port.idx % 2);
-  return (mine.length ? mine : all).slice(0, 8).map(cx => ({ key: 'cx:' + cx.id, name: cx.name, sub: `${cx.pe} · ${cx.bw} · to ${cx.site} (${cx.access}) · ${cx.ms} ms · ${cx.status}`, site: cx.site, pe: cx.pe, bw: cx.bw, status: cx.status, vpc: cx.vpc, state: cx.status === 'Provisioning' ? 'saturating' : 'ok' }));
+  return (mine.length ? mine : all).slice(0, 8).map(cx => ({ key: 'cx:' + cx.id, name: cx.name, sub: `${cx.pe} · ${cx.bw} · to ${cx.site} (${cx.access}) · ${cx.status}`, site: cx.site, pe: cx.pe, bw: cx.bw, status: cx.status, vpc: cx.vpc, state: cx.status === 'Provisioning' ? 'saturating' : 'ok' }));
 }
 
 /** Rows for a fabric drill trail: ['fab'] facilities, ['fab', city] ports, ['fab', city, portKey] circuits. */

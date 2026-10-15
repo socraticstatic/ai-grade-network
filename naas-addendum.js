@@ -22,7 +22,6 @@ export function apportion(total, weights, min = 0) {
  */
 // Addendum 01: inventory tree, station track, Observe at full weight. Pure derivations from an estate.
 import { fmt, pct } from './naas-logic.js';
-import { regionState, healthOf, SLO, SLO_PRIVATE } from './naas-flowmap.js';
 import { rampName } from './naas-things.js';
 
 const CITY = { 'us-east-1': 'N. Virginia', 'us-east-2': 'Ohio', 'us-west-2': 'Oregon', 'eu-central-1': 'Frankfurt', 'eu-west-1': 'Ireland', 'ap-southeast-1': 'Singapore', eastus: 'Virginia', eastus2: 'Virginia', westeurope: 'Netherlands', centralus: 'Iowa', 'uk-south': 'London', 'us-central1': 'Iowa', 'europe-west1': 'Belgium', 'us-east-04': 'Weehawken', 'us-east-04a': 'Weehawken', 'eu-north1': 'Finland', 'us-ashburn-1': 'Ashburn' };
@@ -48,9 +47,9 @@ function lighten(hex) { const n = parseInt(hex.slice(1), 16); const r = (n >> 16
  * WeakMap would never hit.
  *
  * The region signature carries every region field `region()` reads and the
- * app can change: cloud, region, priv, ramp, wl, rel, landed. `r.tags`,
- * `r.fab` and `r.pub` are fixed for an estate id - grepped for every
- * assignment to them across the app; none exists - so they stay out of it.
+ * app can change: cloud, region, priv, ramp, wl, landed. `r.tags` is fixed
+ * for an estate id - grepped for every assignment to it across the app;
+ * none exists - so it stays out of it.
  *
  * `est.sites` is NOT fixed for an estate id: `applyScope`'s `site:` branch
  * rewrites it to a filtered (sometimes one-element) array under the same
@@ -74,7 +73,7 @@ const sitesSig = (est) => {
   const sites = est.sites || [];
   return [sites.length, sites[0] ? sites[0].name : null, sites.length ? sites[sites.length - 1].name : null];
 };
-const invKey = (est) => JSON.stringify([est.id, sitesSig(est), est.regionsList.map(r => [r.cloud, r.region, r.priv, r.ramp, r.wl, r.rel, r.landed])]);
+const invKey = (est) => JSON.stringify([est.id, sitesSig(est), est.regionsList.map(r => [r.cloud, r.region, r.priv, r.ramp, r.wl, r.landed])]);
 
 export function inventory(est) {
   const key = invKey(est);
@@ -169,7 +168,7 @@ const WL_APPS = {
     ];
     return { id: `${pfx}-${i}-${k}`, managed: false, since: r.fresh ? 0 : (i * 47 + k * 31 + 3) % 240, label: pfx.toUpperCase(), name: `${pfx}-${suffix[k]}`, purpose: purposes[k], cidr: `${cidrBase}.0.0/16`, tags: tagsFor(k), azs: azs[k], subnets, routeTables, gws, wl, priv, violations: routeTables.reduce((a, t) => a + t.viol, 0) };
   });
-  return { id: 'r-' + r.cloud + '-' + r.region, cloud: r.cloud, region: r.region, city: CITY[r.region] || '', priv: r.priv, ramp: r.ramp, latency: r.priv ? r.fab : r.pub, wl: r.wl, rel: r.rel, tags: r.tags, vpcs, subnets: vpcs.reduce((a, v) => a + v.subnets.length, 0) };
+  return { id: 'r-' + r.cloud + '-' + r.region, cloud: r.cloud, region: r.region, city: CITY[r.region] || '', priv: r.priv, ramp: r.ramp, wl: r.wl, tags: r.tags, vpcs, subnets: vpcs.reduce((a, v) => a + v.subnets.length, 0) };
 }
 
 function circuitsFor(est, r, i, k, isAzure) {
@@ -177,7 +176,7 @@ function circuitsFor(est, r, i, k, isAzure) {
   const pe = 'PE-' + peCode(r.region) + '-0' + (1 + (i % 2));
   const ramp = r.ramp || (isAzure ? 'ER' : 'NetBond');
   const n = k === 0 ? 2 : 1;
-  return Array.from({ length: n }, (_, c) => { const site = sites[(i + c) % Math.max(1, sites.length)] || { name: 'Ashburn DC', access: 'AVPN (MPLS VPN)', metro: 'Ashburn' }; return { id: `cx-${i}-${k}-${c}`, name: `${ramp.toLowerCase().replace(/\s/g, '')}-${peCode(r.region).toLowerCase()}-${['prod', 'data'][k] || 'dmz'}-0${c + 1}`, ramp, pe, bw: c === 0 ? '10 Gbps' : '5 Gbps', site: site.name, access: site.access, metro: site.metro, status: r.landed ? 'Provisioning' : 'Active', ms: r.fab }; });
+  return Array.from({ length: n }, (_, c) => { const site = sites[(i + c) % Math.max(1, sites.length)] || { name: 'Ashburn DC', access: 'AVPN (MPLS VPN)', metro: 'Ashburn' }; return { id: `cx-${i}-${k}-${c}`, name: `${ramp.toLowerCase().replace(/\s/g, '')}-${peCode(r.region).toLowerCase()}-${['prod', 'data'][k] || 'dmz'}-0${c + 1}`, ramp, pe, bw: c === 0 ? '10 Gbps' : '5 Gbps', site: site.name, access: site.access, metro: site.metro, status: r.landed ? 'Provisioning' : 'Active' }; });
 }
 
 export function inventoryStats(est, clouds) {
@@ -205,7 +204,7 @@ export function observe(est, steered, inv, split) {
     ['AI endpoints', 'object storage', 'public internet'].forEach((d, k) => {
       const id = `f-${i}-${k}`;
       const controlled = r.priv || steered.includes(id);
-      flows.push({ id, name: `${tagGroup} → ${d}`, from: tagGroup, to: d, kind: 'App', gbps: +(total * split[k]).toFixed(1), latency: controlled ? r.fab : r.pub, perGb: controlled ? 0.02 : 0.09, controlled, steerable: !r.priv, steered: steered.includes(id), diverse: controlled && k === 0 && r.wl > 150, region: `${r.cloud} ${r.region}`, path: controlled ? `AT&T mid-mile · ${rampName(r)} · PE-${peCode(r.region)}-02` : 'Hyperscaler-native · public internet', rel: r.rel });
+      flows.push({ id, name: `${tagGroup} → ${d}`, from: tagGroup, to: d, kind: 'App', gbps: +(total * split[k]).toFixed(1), perGb: controlled ? 0.02 : 0.09, controlled, steerable: !r.priv, steered: steered.includes(id), diverse: controlled && k === 0 && r.wl > 150, region: `${r.cloud} ${r.region}`, path: controlled ? `AT&T mid-mile · ${rampName(r)} · PE-${peCode(r.region)}-02` : 'Hyperscaler-native · public internet' });
     });
   });
   (est.arcs || []).forEach((a, i) => {
@@ -213,14 +212,13 @@ export function observe(est, steered, inv, split) {
     if (!A || !B) return;
     const id = `x-${i}`;
     const controlled = a.priv || steered.includes(id);
-    flows.push({ id, name: `${A.cloud} ${A.region} ↔ ${B.cloud} ${B.region}`, from: `${A.cloud} ${A.region}`, to: 'inter-cloud', kind: 'Cloud-to-cloud', gbps: +((A.wl + B.wl) * GBPS_PER_WL * 0.1).toFixed(1), latency: controlled ? Math.max(A.fab, B.fab) + 4 : Math.max(A.pub, B.pub) + 12, perGb: controlled ? 0.02 : 0.09, controlled, steerable: !a.priv, steered: steered.includes(id), diverse: !controlled, region: `${A.cloud} ${A.region}`, path: controlled ? 'AT&T mid-mile · Cloud to Cloud' : 'Public internet · hyperscaler-native peering', rel: 'ok' });
+    flows.push({ id, name: `${A.cloud} ${A.region} ↔ ${B.cloud} ${B.region}`, from: `${A.cloud} ${A.region}`, to: 'inter-cloud', kind: 'Cloud-to-cloud', gbps: +((A.wl + B.wl) * GBPS_PER_WL * 0.1).toFixed(1), perGb: controlled ? 0.02 : 0.09, controlled, steerable: !a.priv, steered: steered.includes(id), diverse: !controlled, region: `${A.cloud} ${A.region}`, path: controlled ? 'AT&T mid-mile · Cloud to Cloud' : 'Public internet · hyperscaler-native peering' });
   });
   const total = flows.reduce((a, f) => a + f.gbps, 0);
   const fab = flows.filter(f => f.controlled).reduce((a, f) => a + f.gbps, 0);
   const pub = total - fab;
   const covPct = total ? Math.round(fab / total * 100) : 0;
   const pubFlows = flows.filter(f => !f.controlled);
-  const p95 = flows.length ? Math.max(...flows.map(f => f.latency)) : 0;
   const loss = +(pubFlows.length ? 0.04 + pubFlows.length * 0.012 : 0.02).toFixed(2);
   const steeredGbps = flows.filter(f => f.steered).reduce((a, f) => a + f.gbps, 0);
   const bucketToday = (est.buckets || []).reduce((a, b) => a + b.today, 0);
@@ -230,8 +228,7 @@ export function observe(est, steered, inv, split) {
   const pubRate = Math.round(egressMo * (pub / (total || 1)));
   const pathsCovered = est.regionsList.filter(r => r.priv).length + steered.filter(s => s.startsWith('f-')).map(s => s.split('-')[1]).filter((v, i, a) => a.indexOf(v) === i).length;
   const blind = est.regionsList.filter(r => !r.priv && !steered.some(s => s.startsWith(`f-${est.regionsList.indexOf(r)}-`)));
-  const worst = pubFlows.slice().sort((a, b) => b.latency - a.latency)[0];
-  const anomaly = est.regionsList.find(r => r.rel === 'warn');
+  const worst = pubFlows.slice().sort((a, b) => b.gbps - a.gbps)[0];
   // Utilization: attached regions each ride a 10 Gbps NetBond port; fabric traffic against that capacity.
   const attachedRs = est.regionsList.filter(r => r.priv);
   const utilRows = attachedRs.map(r => { const i = est.regionsList.indexOf(r); const gbps = +flows.filter(f => f.id.startsWith(`f-${i}-`) && f.controlled).reduce((a, f) => a + f.gbps, 0).toFixed(1); const head = 0.55 + ((i * 7) % 4) * 0.1; const portG = gbps / head <= 1 ? 1 : gbps / head <= 5 ? 5 : 10; const ports = portG < 10 ? 1 : Math.max(1, Math.ceil(gbps / 10 / head)); const cap = ports * portG; /* NetBond sells 1G, 5G and 10G ports (2026-09-29): the port fits what the connection carries. */ return { id: 'u-' + r.region, region: r.region, cloud: r.cloud, ramp: r.ramp || 'NetBond', gbps, ports, portG, cap, bw: `${ports} × ${portG} Gbps`, bwShort: ports > 1 ? `${ports} × ${portG}G` : `${portG}G`, pct: Math.min(99, Math.round(gbps / cap * 100)) }; }).sort((a, b) => b.pct - a.pct);
@@ -239,7 +236,6 @@ export function observe(est, steered, inv, split) {
   const util = capTotal ? Math.min(99, Math.round(utilRows.reduce((a, u) => a + u.gbps, 0) / capTotal * 100)) : 0;
   const kpis = [
     { key: 'thr', l: 'Throughput', v: total.toFixed(1), u: 'Gbps', e: '' },
-    { key: 'p95', l: 'P95 latency', v: String(p95), u: 'ms', e: '' },
     { key: 'loss', l: 'Packet loss', v: loss.toFixed(2), u: '%', e: '' },
     { key: 'egr', l: 'Egress spend', v: short(egressMo), u: '', e: '/mo' },
     { key: 'fab', l: 'All traffic on AT&T', v: String(covPct), u: '%', e: '' },
@@ -250,10 +246,9 @@ export function observe(est, steered, inv, split) {
   const coverage = `${covPct}% of traffic and ${Math.min(pathsCovered, est.regionsList.length)} of ${est.regionsList.length} paths are covered. ${blind.length} ${blind.length === 1 ? 'region is' : 'regions are'} blind.`;
   const subVerdict = { pub: pub.toFixed(1), total: total.toFixed(1), fab: fab.toFixed(1) };
   const briefing = total ? [
-    `${pathsCovered} of ${est.regionsList.length} regions ride the private envelope, ${Math.min(...est.regionsList.filter(r => r.priv).map(r => r.fab), 99)}ms to the on-ramp serving each.`,
-    blind.length ? `${blind.length} still depend on public transit; ${worst ? worst.region.split(' ')[1] : blind[0].region} is the outlier at ${worst ? worst.latency : blind[0].pub}ms on the public path.` : 'Every region is on AT&T; no public transit remains in this window.',
+    `${pathsCovered} of ${est.regionsList.length} regions ride the private envelope.`,
+    blind.length ? `${blind.length} still depend on public transit; ${worst ? `${worst.region.split(' ')[1]} sends the most over it, ${worst.gbps} Gbps` : `${blind[0].region} is one`}.` : 'Every region is on AT&T; no public transit remains in this window.',
     `Egress is running ${short(egressMo)}/mo with ${short(pubRate)} still on public rates; private-path savings hold at ${short(savingsMo)}/mo.`,
-    anomaly ? `One anomaly in the window: a transit-congestion spike on ${anomaly.region}. It remains exposed to that event class until attached.` : 'No anomalies in the window.',
   ].join(' ') : '';
   const denyN = est.regionsList.filter(r => r.priv).length * 7;
   const records = [
@@ -320,9 +315,9 @@ function sankey3(est, flows, split) {
 }
 
 export function trendBand(kind, ob) {
-  const pts = 24; const base = { trend: ob.total, throughput: ob.total, latency: Math.max(...ob.flows.map(f => f.latency), 1), loss: 0.19, egress: ob.egressMo / 1000, control: ob.covPct }[kind] || 10;
-  const unit = { trend: 'Gbps', throughput: 'Gbps', latency: 'ms', loss: '%', egress: '$k/mo', control: '%' }[kind];
-  const vals = Array.from({ length: pts }, (_, i) => base * (0.82 + 0.18 * Math.abs(Math.sin(i * 0.7 + kind.length))) * (kind === 'latency' && i === 17 ? 1.35 : 1));
+  const pts = 24; const base = { trend: ob.total, throughput: ob.total, loss: 0.19, egress: ob.egressMo / 1000, control: ob.covPct }[kind] || 10;
+  const unit = { trend: 'Gbps', throughput: 'Gbps', loss: '%', egress: '$k/mo', control: '%' }[kind];
+  const vals = Array.from({ length: pts }, (_, i) => base * (0.82 + 0.18 * Math.abs(Math.sin(i * 0.7 + kind.length))));
   const max = Math.max(...vals) * 1.15;
   const W = 900, H = 160;
   const path = vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i / (pts - 1) * W).toFixed(1)},${(H - v / max * (H - 20)).toFixed(1)}`).join(' ');
@@ -332,21 +327,12 @@ export function trendBand(kind, ob) {
 export function observeFindings(est, ob) {
   if (!ob.total) return [];
   const out = [];
-  // Blind regions and regions over the latency SLO are Network Engineering's (2026-09-30,
-  // "make sure mock data matches persona"): the owner puts health, latency and capacity
-  // with Network Eng. They read FinOps & SRE, so Signals' Health and Latency cards
-  // linked findings their own persona did not own.
+  // Blind regions are Network Engineering's (2026-09-30, "make sure mock data matches
+  // persona"): the owner puts health and capacity with Network Eng. They read FinOps & SRE,
+  // so Signals' Health card linked findings its own persona did not own.
   // The ends an order from the finding draws on Review (review round 2, 2026-09-30): the one region it names, or how many.
   const oneOr = (names, many) => names.length === 1 && names[0].length <= 22 ? names[0] : many;
   if (ob.covPct < 100 && ob.blind.length) out.push({ kind: 'blindspots', layer: 'cloud', tab: 'observe', pillar: 'Observability', persona: 'Network Engineering', pathSrc: 'Your sites', pathDst: oneOr(ob.blind.map(r => `${r.cloud} ${r.region}`), `${ob.blind.length} unseen regions`), head: `${ob.blind.length} ${ob.blind.length === 1 ? 'region sends' : 'regions send'} no flow logs. ${100 - ob.covPct}% of your traffic is unseen.`, ev: `${ob.blind.map(r => r.region).join(', ')} carry ${ob.pub.toFixed(1)} Gbps with no telemetry. Coverage starts with the first attach.`, priced: false, why: 'The coverage metric turned into a finding. Telemetry, inspection and steering all begin when the region is on AT&T.', ladder: ['Attach the region', 'Hosted VPC in the region', 'Managed NOC'] });
-  // Regions over the SLO of the path they take, by the one rule (2026-09-30), and the regions whose
-  // spike Health calls Over SLO (w2, 2026-09-30: the action read "1 region" under a Latency over SLO
-  // list of two, eu-west-1's spike and westeurope's flows). The spike stays its own event too.
-  const spikeOver = (r) => r.rel === 'warn' && healthOf(r.pub + 40, SLO) === 'slo';
-  const degraded = (est.regionsList || []).filter(r => regionState(r) === 'slo' || spikeOver(r)).map(r => (regionState(r) === 'slo'
-    ? { name: `${r.cloud} ${r.region}`, latency: r.priv ? r.fab : r.pub, slo: r.priv ? SLO_PRIVATE : SLO }
-    : { name: `${r.cloud} ${r.region}`, latency: r.pub + 40, slo: SLO, peak: true }));
-  if (degraded.length) out.push({ kind: 'degraded', layer: 'cloud', tab: 'observe', pillar: 'Observability', persona: 'Network Engineering', pathSrc: 'Your sites', pathDst: oneOr(degraded.map(f => f.name), `${degraded.length} regions over SLO`), head: `${degraded.length} ${degraded.length === 1 ? 'region runs' : 'regions run'} above the latency SLO.`, ev: `${degraded.slice(0, 2).map(f => `${f.name} at ${f.latency} ms${f.peak ? ' at peak' : ''} against ${f.slo} ms`).join('; ')}${degraded.length > 2 ? ` and ${degraded.length - 2} more` : ''}. The SLO is 100 ms on the public internet and 20 ms on the AT&T network.`, priced: false, why: 'Public transit has no latency floor. The AT&T network path to the same region is single digit milliseconds.', ladder: ['Steer the worst path onto the AT&T network', 'Latency SLO policy for the tag', 'Dual-attach for path diversity'] });
   return out;
 }
 

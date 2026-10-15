@@ -2,13 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from '../naas-data.js';
 import * as A from '../naas-addendum.js';
-import { buildMap, perfOf, SLO, SLO_PRIVATE } from '../naas-flowmap.js';
+import * as X from '../naas-connections.js';
+import { buildMap, capOf, NEAR_FULL, RAMP_NAME } from '../naas-flowmap.js';
 
 // "on sankey, cost and performance don't show cost and performance", "the
 // sankey widgets and the sankey graphic doesn't really match", "replay and
 // since are not connected on sankey" (Micah, 2026-09-29). One model under all
 // of it: the map in Gbps, the same map weighed in dollars, and each node's
-// p95 against its SLO.
+// busiest connection at its peak against what was bought (2026-10-15, in place
+// of a delay figure).
 
 const ctx = (id) => { const est = D.ESTATES[id]; const inv = A.inventory(est); return { est, inv, flows: A.observe(est, [], inv).flows }; };
 const sum = (xs) => xs.reduce((a, x) => a + x.v, 0);
@@ -46,46 +48,51 @@ for (const id of ['partial', 'mature', 'trust']) {
     assert.ok(start < end, `the window grows: ${start} -> ${end}`);
   });
 
-  test(`${id}: every node and path has a p95 against its SLO`, () => {
+  test(`${id}: every path a connection carries reads its busiest connection's peak and its state; the rest carry no figure`, () => {
     const { est, inv, flows } = ctx(id);
     const m = buildMap(est, inv, flows, {});
-    const p = perfOf(m, est);
-    for (const x of m.nodes.filter(x => x.kind !== 'rollup' && x.kind !== 'more')) {
+    const conns = X.connections(est, A.observe(est, [], inv));
+    const p = capOf(m, est, conns);
+    for (const x of m.nodes.filter(x => x.side === 'm')) {
       const q = p.nodes[x.key];
-      assert.ok(q && q.ms > 0 && [SLO, SLO_PRIVATE].includes(q.slo) && ['ok', 'risk', 'slo'].includes(q.health), `${x.name}: ${JSON.stringify(q)}`);
+      if (!x.ramp) { assert.equal(q, undefined, `${x.name} has no connection to measure: ${JSON.stringify(q)}`); continue; }
+      const rows = conns.rows.filter(c => (RAMP_NAME[c.ramp] || 'NetBond') === x.ramp);
+      if (!rows.length) continue;
+      assert.equal(q.pct, Math.max(...rows.map(c => c.pct)), `${x.name}: ${q.pct}`);
+      const want = rows.some(c => c.degraded) ? 'down' : rows.some(c => c.pct >= NEAR_FULL) ? 'risk' : 'ok';
+      assert.equal(q.health, want, `${x.name}: ${q.health}`);
     }
     assert.equal(p.ribbons.length, m.ribbons.length);
-    assert.ok(p.p95 > 0);
-    assert.deepEqual(p.over, m.nodes.filter(x => (x.side === 'm' || x.side === 'r') && p.nodes[x.key] && p.nodes[x.key].health === 'slo').map(x => x.key));
+    // A site's own access is not measured: a path it takes being down never makes the site read Down.
+    for (const x of m.nodes.filter(x => x.side === 'l')) assert.equal(p.nodes[x.key], undefined, `${x.name} reads ${JSON.stringify(p.nodes[x.key])}`);
+    assert.deepEqual(p.near, m.nodes.filter(x => (x.side === 'm' || x.side === 'r') && p.nodes[x.key] && p.nodes[x.key].health === 'risk').map(x => x.key));
+    for (const q of Object.values(p.nodes)) assert.ok(['ok', 'risk', 'down'].includes(q.health) && Number.isFinite(q.pct), JSON.stringify(q));
   });
 }
 
-test('mature: the internet path and the clouds it reaches are over SLO; the p95 is the internet\'s', () => {
-  const { est, inv, flows } = ctx('mature');
-  const m = buildMap(est, inv, flows, {});
-  const p = perfOf(m, est);
-  const name = (k) => m.nodes.find(x => x.key === k).name;
-  assert.ok(p.over.map(name).includes('Internet'), p.over.map(name).join(', '));
-  assert.ok(p.over.map(name).includes('AWS'), 'AWS ap-southeast-1 rides the internet at 188 ms');
-  assert.equal(p.p95, 188);
-  const nb = m.nodes.find(x => x.name === 'NetBond');
-  assert.equal(p.nodes[nb.key].health, 'ok');
+test('the map\'s peak is its busiest connection, and the internet carries no figure', () => {
+  for (const id of ['partial', 'mature', 'trust']) {
+    const { est, inv, flows } = ctx(id);
+    const m = buildMap(est, inv, flows, {});
+    const conns = X.connections(est, A.observe(est, [], inv));
+    const p = capOf(m, est, conns);
+    const onMap = new Set(m.nodes.filter(x => x.side === 'm' && x.ramp).map(x => x.ramp));
+    const rows = conns.rows.filter(c => onMap.has(RAMP_NAME[c.ramp] || 'NetBond'));
+    assert.equal(p.peak ? p.peak.pct : null, rows.length ? Math.max(...rows.map(c => c.pct)) : null, id);
+    const inet = m.nodes.find(x => x.name === 'Internet');
+    if (inet) assert.equal(p.nodes[inet.key], undefined, `${id}: the internet reads ${JSON.stringify(p.nodes[inet.key])}`);
+  }
 });
 
-test('an all-AT&T pick reads an all-AT&T p95', () => {
-  const { est, inv, flows } = ctx('mature');
-  const regions = est.regionsList.filter(r => r.priv && (r.tags || []).includes('PCI')).map(r => r.region);
-  if (!regions.length) return;
-  const m = buildMap(est, inv, flows, { rightBy: 'app', filterRegion: regions, tag: 'PCI' });
-  assert.ok(perfOf(m, est).p95 <= SLO_PRIVATE + 5, String(perfOf(m, est).p95));
-});
-
-test('a node\'s p95 is its volume\'s 95th percentile: a slow region shows, it is not averaged away', () => {
+test('a destination reads its own regions\' connections: a full one shows, it is not averaged away', () => {
   const { est, inv, flows } = ctx('mature');
   const m = buildMap(est, inv, flows, {});
-  const p = perfOf(m, est);
-  const azure = m.nodes.find(x => x.name === 'Azure'), aws = m.nodes.find(x => x.name === 'AWS');
-  assert.equal(p.nodes[azure.key].ms, 21, 'westeurope at 21 ms is 39% of Azure');
-  assert.equal(p.nodes[aws.key].ms, 188, 'ap-southeast-1 over the internet is a quarter of AWS');
-  for (const x of m.nodes.filter(n => p.nodes[n.key] && p.nodes[n.key].health === 'slo')) assert.ok(p.nodes[x.key].ms > p.nodes[x.key].slo || x.side !== 'm', x.name);
+  const conns = X.connections(est, A.observe(est, [], inv));
+  const p = capOf(m, est, conns);
+  for (const name of ['AWS', 'Azure']) {
+    const node = m.nodes.find(x => x.name === name);
+    const regs = node.parts.filter(pt => pt.fab > 0).map(pt => pt.r.region);
+    const rows = conns.rows.filter(c => regs.includes(c.region));
+    assert.equal(p.nodes[node.key].pct, Math.max(...rows.map(c => c.pct)), name);
+  }
 });

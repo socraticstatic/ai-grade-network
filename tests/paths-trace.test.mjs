@@ -38,9 +38,10 @@ test('Paths names the on-ramp: no ramp code in any hop line or cell title', () =
   }
 });
 
-test('the Growing finance hop line says ExpressRoute, at the same ms', () => {
+test('the Growing finance hop line says ExpressRoute, and times no hop', () => {
   const v = vals(at('partial', { obPanel: 'paths', pathSel: 'finance|eastus' }));
-  assert.match(v.pathDetail, /AT&T network 13 ms › ExpressRoute on-ramp 14 ms › Azure eastus 15 ms$/);
+  assert.match(v.pathDetail, /AT&T network › ExpressRoute on-ramp › Azure eastus$/);
+  assert.doesNotMatch(v.pathDetail, /\bms\b/);
 });
 
 test('the Observe panel names the connection, never its code', () => {
@@ -87,7 +88,7 @@ test('Trace lands on a Paths row in the problem\'s own region, on every estate',
       assert.ok(sel, `${view} ${p.key}: ${c.state.pathSel} is not a Paths row`);
       assert.equal(sel.where, p.where, `${view} ${p.key} opened ${sel.label}, ${sel.site} to ${sel.where}`);
       assert.ok(v.pathTimeRows.some(r => r.sel), `${view} ${p.key}: the selected row is on the page`);
-      assert.ok(v.pathDetail.endsWith(`${p.where} ${sel.total} ms`), v.pathDetail);
+      assert.ok(v.pathDetail.endsWith(p.where), v.pathDetail);
       assert.equal(c.state.mapRegion ?? null, null, `${view} ${p.key}: Trace leaves Traffic unfiltered`);
     }
   }
@@ -97,9 +98,9 @@ test('Trace lands on a Paths row in the problem\'s own region, on every estate',
 // internet-facing now sits on the saturated us-west-2 (At risk) instead of a
 // green us-east-1, and the saturation's Trace lands on that default row. The
 // "no default row there" premise this test used to start from was the defect.
-// The pin path stays covered end to end by the ap-southeast-1 spike: both its
-// apps ride the Down eu-central-1 first, so Trace pins a row and shows it first.
-test('Established us-west-2 saturation traces to its own default row; the ap-southeast-1 spike pins one first', () => {
+// The ap-southeast-1 spike that covered the pin end to end left with the delay
+// figures (2026-10-15); the pin is covered by the two tests below.
+test('Established us-west-2 saturation traces to its own default row', () => {
   const c = at('mature', { obPanel: 'health' });
   const v0 = vals(c);
   const i = v0.problemRows.findIndex(p => p.where === 'AWS us-west-2');
@@ -111,20 +112,9 @@ test('Established us-west-2 saturation traces to its own default row; the ap-sou
   assert.equal(c.state.pathSel, own.key);
   assert.ok(v.pathTimeRows.find(r => r.key === own.key).sel);
   assert.equal(c.state.pathsPage, 0);
-  // Health pages three to a page; ap-southeast-1 sits on its second since westeurope's latency joined it (w2 second pass, 2026-09-30).
-  const c2 = at('mature', { obPanel: 'health' });
-  let v2 = vals(c2);
-  while (!v2.problemRows.some(p => p.where === 'AWS ap-southeast-1') && v2.probPager.nextOp === 1) { v2.probPager.next(); v2 = vals(c2); }
-  const j = v2.problemRows.findIndex(p => p.where === 'AWS ap-southeast-1');
-  assert.ok(j >= 0);
-  assert.ok(!v2.pathTimeAll.some(r => r.region === 'ap-southeast-1'), 'no default row sits on ap-southeast-1');
-  v2.problemRows[j].trace();
-  v = vals(c2);
-  assert.equal(v.pathTimeAll[0].region, 'ap-southeast-1');
-  assert.equal(v.pathTimeAll[0].key, c2.state.pathSel);
-  assert.ok(v.pathTimeAll[0].pinned);
-  assert.ok(v.pathTimeRows[0].sel);
-  assert.equal(c2.state.pathsPage, 0);
+  // The row reads the link it rides at its peak, its connection near full.
+  assert.equal(own.linkF, `${own.link.pct}%`);
+  assert.ok(own.link.near, 'the us-west-2 port is near full');
 });
 
 test('a pinned row is computed on demand with the same hop mapping, and shown first', () => {
@@ -137,9 +127,9 @@ test('a pinned row is computed on demand with the same hop mapping, and shown fi
   const r = rows[0];
   assert.equal(r.key, `${pin.tag}|us-west-2`);
   assert.equal(r.region, 'us-west-2');
-  assert.equal(r.cells.reduce((a, c) => a + (c.ms || 0), 0), r.total);
   const reg = ctx.est.regionsList.find(x => x.region === 'us-west-2');
-  assert.equal(r.total, P.path(P.allSites(ctx.est).find(x => x.name === r.site), reg).ms);
+  assert.deepEqual(r.hops.map(h => h.name), P.path(P.allSites(ctx.est).find(x => x.name === r.site), reg).hops.map(h => h.name));
+  assert.ok(r.cells.some(c => c.on), 'the hops land in the stations');
   assert.deepEqual(rows.slice(1).map(x => x.key), base.map(x => x.key), 'the default rows keep their order');
   // A pin that is already a default row adds nothing.
   assert.deepEqual(G.pathTimes(ctx, { pins: [{ tag: base[2].tag, region: base[2].region }] }).map(x => x.key), base.map(x => x.key));
@@ -158,5 +148,5 @@ test('a problem\'s own apps win the pin; a region with no apps pins the region a
   assert.equal(r.key, '|us-west-2');
   assert.equal(r.label, 'AWS us-west-2');
   assert.equal(r.region, 'us-west-2');
-  assert.equal(r.cells.reduce((a, c) => a + (c.ms || 0), 0), r.total);
+  assert.ok(r.cells.some(c => c.on), 'the hops land in the stations');
 });

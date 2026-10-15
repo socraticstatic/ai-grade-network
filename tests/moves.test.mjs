@@ -175,7 +175,8 @@ test('each tier\'s after-values follow its product\'s path', () => {
       for (const t of m.tiers.filter(x => x.covers.length === rs.length && x.monthly !== null)) {
         const path = R.PATHS.find(p => p.id === t.path);
         assert.ok(path, `${view} ${m.title} ${t.tier}: ${t.path} is not a path`);
-        assert.ok(rs.some(r => path.lat(r) === t.ms), `${view} ${m.title} ${t.tier}: ${t.ms} ms is not ${t.path}'s latency`);
+        // Its Uptime cell is its path's catalog uptime (R.PATHS); the internet is best effort (no delay figure since 2026-10-15).
+        assert.ok(t.perf.value.startsWith(path.id === 'internet' ? 'Best effort' : `${path.rel}%`), `${view} ${m.title} ${t.tier}: ${t.perf.value} is not ${t.path}'s uptime`);
         // Re-pinned (2026-09-30, Cost v2: one figure, one value): a region's egress is Cost > By region's row
         // (R.arbitrage, off the buckets); a private path carries it at the AT&T price that row shows, the internet at today's.
         const arb = Object.fromEntries(R.arbitrage(est).map(a => [a.regionId, a]));
@@ -277,7 +278,7 @@ test('every count on a move is a button that lands on its set', () => {
   }
 });
 
-test('Today\'s figures are doors: latency opens the path it reports, cost opens Cost, security the set', () => {
+test('Today\'s figures are doors: uptime opens the path of the region it reads, cost opens Cost, security the set', () => {
   for (const view of ['partial', 'mature']) {
     for (const m of listOf(view).filter(x => x.kind !== 'sites')) {
       const c = on(view);
@@ -286,9 +287,9 @@ test('Today\'s figures are doors: latency opens the path it reports, cost opens 
       assert.equal(c.state.obPanel, 'paths');
       const row = vals(c).pathTimeRows.find(r => r.sel);
       assert.ok(row, `${view} ${m.title}: no path row selected`);
-      // The row is the path of the region the p95 names (Paths adds the busiest site's own access hops to it).
-      assert.equal(row.key, '|' + m.today.msRegion, `${view} ${m.title}: ${row.key}`);
-      assert.ok(m.regions.includes(m.today.msRegion));
+      // The row is the path of the set's busiest region (Paths adds the busiest site's own access hops to it).
+      assert.equal(row.key, '|' + m.today.pathRegion, `${view} ${m.title}: ${row.key}`);
+      assert.ok(m.regions.includes(m.today.pathRegion));
     }
   }
   const c = on('partial');
@@ -476,13 +477,13 @@ test('a second path\'s Today reads its region\'s own health', () => {
     const est = D.ESTATES[view];
     for (const m of listOf(view).filter(x => x.kind === 'second')) {
       const r = est.regionsList.find(x => x.region === m.regions[0]);
-      if (m.risk === 'down') assert.match(m.today.perf.value, /· Down$/, `${view} ${m.title}`);
-      else if (F.regionState(r) === 'slo') assert.match(m.today.perf.value, /· over SLO$/, `${view} ${m.title}`);
-      else assert.doesNotMatch(m.today.perf.value, /SLO|Down/, `${view} ${m.title}`);
+      // A link that is down reads Down; else the path's uptime (no delay figure since 2026-10-15).
+      if (m.risk === 'down') assert.equal(m.today.perf.value, 'Down', `${view} ${m.title}`);
+      else assert.match(m.today.perf.value, /^\d+(\.\d+)?% uptime$/, `${view} ${m.title}`);
+      assert.equal(m.risk === 'down', F.regionState(r) === 'down', `${view} ${m.title}`);
     }
   }
-  // Established's westeurope runs 21 ms against the 20 ms private SLO.
-  assert.equal(listOf('mature').find(m => m.key === 'second:westeurope').today.perf.value, '21 ms · over SLO');
+  assert.equal(listOf('partial').find(m => m.key === 'second:eastus').today.perf.value, 'Down', 'the eastus link flaps');
 });
 
 test('the compose screen reads the sets: regions bring their on-ramp metros, sites come as sites', () => {

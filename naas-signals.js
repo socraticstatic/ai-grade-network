@@ -2,9 +2,10 @@
 // previous insights in the last one yesterday were really good"; "all need to be
 // useful and action oriented"; "make sure mock data matches persona").
 //
-// Nine cards. Yesterday's six (Top talkers, New destinations, Shadow SaaS,
-// Egress growth, Cloud-to-cloud paths, Latency over SLO) and three beside them
-// (Health, Capacity, Spend). The persona picks which three lead, and each row
+// Eight cards. Yesterday's five (Top talkers, New destinations, Shadow SaaS,
+// Egress growth, Cloud-to-cloud paths) and three beside them (Health, Capacity,
+// Spend); the delay card left with every delay figure (2026-10-15: "we can't
+// measure that"). The persona picks which three lead, and each row
 // carries its move. Pure: the rows in, the words and the kinds of move out;
 // naas-app.js binds each kind to where it lands.
 //
@@ -14,26 +15,26 @@
 
 import { HEALTH_INK, HEALTH_WORD, healthRadius, RAMP_NAME } from './naas-flowmap.js';
 
-export const CARDS = ['talkers', 'newdest', 'shadow', 'growth', 'multi', 'slo', 'health', 'capacity', 'spend'];
+export const CARDS = ['talkers', 'newdest', 'shadow', 'growth', 'multi', 'health', 'capacity', 'spend'];
 /** How many cards lead for a persona, and how many a page holds (two rows of three). */
 export const LEAD_N = 3;
 export const PAGE_N = 6;
 /** The cards whose figures are traffic, the only ones a figure may open Logs from. */
-export const TRAFFIC = new Set(['talkers', 'newdest', 'shadow', 'growth', 'multi', 'slo']);
+export const TRAFFIC = new Set(['talkers', 'newdest', 'shadow', 'growth', 'multi']);
 
 // The owner's concerns lead (2026-09-30): Security new destinations, shadow SaaS
 // and exposure; FinOps egress growth, spend and talkers by egress; Network Eng
-// health, latency and capacity; Architect cloud to cloud and coverage (and the
+// health and capacity; Architect cloud to cloud and coverage (and the
 // capacity it plans); Executive spend, health and how much rides AT&T.
 const ORDER = {
-  architect: ['multi', 'talkers', 'capacity', 'spend', 'health', 'growth', 'slo', 'newdest', 'shadow'],
-  neteng: ['health', 'slo', 'capacity', 'talkers', 'multi', 'growth', 'newdest', 'shadow', 'spend'],
-  security: ['newdest', 'shadow', 'talkers', 'multi', 'growth', 'health', 'slo', 'spend', 'capacity'],
-  finops: ['spend', 'growth', 'talkers', 'multi', 'capacity', 'health', 'slo', 'newdest', 'shadow'],
-  exec: ['spend', 'health', 'talkers', 'growth', 'multi', 'capacity', 'slo', 'newdest', 'shadow'],
+  architect: ['multi', 'talkers', 'capacity', 'spend', 'health', 'growth', 'newdest', 'shadow'],
+  neteng: ['health', 'capacity', 'talkers', 'multi', 'growth', 'newdest', 'shadow', 'spend'],
+  security: ['newdest', 'shadow', 'talkers', 'multi', 'growth', 'health', 'spend', 'capacity'],
+  finops: ['spend', 'growth', 'talkers', 'multi', 'capacity', 'health', 'newdest', 'shadow'],
+  exec: ['spend', 'health', 'talkers', 'growth', 'multi', 'capacity', 'newdest', 'shadow'],
 };
 /**
- * The nine cards in the persona's order; an unknown persona reads as Network
+ * The eight cards in the persona's order; an unknown persona reads as Network
  * Eng, as roleKeyOf does. A card with nothing to show never leads (second
  * round, 2026-09-30): the empty ones go last, in the same order.
  */
@@ -54,9 +55,8 @@ export const lensOf = (persona) => LENS[persona] || 'share';
 // is clicked. A lead card opens only its persona's own work (second round,
 // 2026-09-30): coverage and topology are the Architect's (onecloud, single,
 // nothub, crosscloud, the Oracle regions discovery finds), IPsec sites and
-// what is unseen are Network Eng's, egress is FinOps'. A latency spike counts
-// on Latency over SLO only when the one rule calls it over (ctx.spikesOver);
-// every link and full port is Health's or Capacity's.
+// what is unseen are Network Eng's, egress is FinOps'. Every link and full
+// port is Health's or Capacity's.
 const TALKER_FINDS = {
   share: ['ipsec'],
   egress: ['avoidable', 'ipsecegress'],
@@ -83,10 +83,8 @@ const ARCH_FINDS = {
 };
 const isIncident = (k) => /^an-/.test(k) && !['an-dest', 'an-egress'].includes(k);
 export function findsOf(card, lens = 'share', ctx = {}) {
-  const over = ctx.spikesOver instanceof Set ? ctx.spikesOver : new Set();
   if (ctx.persona === 'architect' && ARCH_FINDS[card]) return ARCH_FINDS[card];
   if (card === 'talkers') { const l = TALKER_FINDS[lens] || TALKER_FINDS.share; return (k) => l.includes(k); }
-  if (card === 'slo') return (k) => k === 'degraded' || over.has(k);
   if (card === 'capacity') return (k) => /^an-sat-/.test(k);
   if (card === 'health') return (k) => (isIncident(k) && !/^an-sat-/.test(k)) || ['unmonitored', 'blindspots'].includes(k);
   const l = FINDS[card] || [];
@@ -229,31 +227,8 @@ const flowAct = (f) => (f.controlled ? { act: 'Ask Andi', actKind: 'andi-flow' }
 /** Every cloud-to-cloud flow, the Gbps it carries and the path it takes. */
 export function multi(rows, { privN = 0, totalN = rows.length } = {}) {
   return { key: 'multi', title: 'Cloud-to-cloud paths', head: totalN ? `${privN || 'None'} of ${totalN} on AT&T` : 'No cloud-to-cloud traffic',
-    rows: rows.map(f => ({ key: f.key, id: f.id, region: f.region, label: f.label || f.name, sub: f.clouds ? `${f.clouds} · ${f.path}` : f.path, v: f.v, v2: `${f.ms} ms`, segs: [{ key: 's', fill: f.fill, w: f.w }], fig: 'map-state', ...flowAct(f) })),
+    rows: rows.map(f => ({ key: f.key, id: f.id, region: f.region, label: f.label || f.name, sub: f.clouds ? `${f.clouds} · ${f.path}` : f.path, v: f.v, v2: '', segs: [{ key: 's', fill: f.fill, w: f.w }], fig: 'map-state', ...flowAct(f) })),
     legend: [AT, PUB], empty: 'Nothing crosses between clouds in this window.' };
-}
-
-/**
- * Latency over SLO by the one rule Health uses (second round, 2026-09-30):
- * a flow is over when healthOf calls it over against its path's SLO (20 ms on
- * AT&T, 100 ms outside), and a latency spike Health calls Over SLO is here too,
- * at its peak. Worst first, in the Over SLO ink.
- * rows: { key, id, region, name, where, path, ms, slo, gbps, controlled, steerable }.
- * spikes: { key, region, where, ms }.
- */
-export function slo(rows, { total = 0, spikes = [], closest = null } = {}) {
-  const all = [
-    ...spikes.map(p => ({ key: p.key, region: p.region, label: 'Latency spike', sub: `${p.where} · internet`, ms: p.ms, v: `${p.ms} ms`, v2: 'p95 at peak', fig: 'finding', act: 'Trace', actKind: 'trace' })),
-    ...rows.map(f => ({ key: f.key, id: f.id, region: f.region, label: f.label || f.name, sub: `${f.where} · ${f.path}`, ms: f.ms, v: `${f.ms} ms`, v2: gb(f.gbps), fig: 'map-slo', ...flowAct(f) })),
-  ].sort((a, b) => b.ms - a.ms);
-  const max = Math.max(0, ...all.map(r => r.ms));
-  const n = rows.length, sp = spikes.length;
-  const head = n || sp ? `${n ? `${n} of ${total} flows` : `None of ${total} flows`} over SLO${sp ? ` · ${plural(sp, 'spike', 'spikes')}` : ''}` : `None of ${total} flows over SLO`;
-  // With nothing over, the card still says how close the closest flow runs.
-  const empty = `No flow runs over its SLO in this window.${closest ? ` The closest, ${closest.name}${closest.where && !closest.name.includes(closest.where) ? ` in ${closest.where}` : ''}, takes ${closest.ms} ms against ${closest.slo} ms.` : ''}`;
-  return { key: 'slo', title: 'Latency over SLO', head, empty,
-    rows: all.map(({ ms, ...r }) => ({ ...r, segs: [{ key: 's', fill: HEALTH_INK.slo, w: pctW(ms, max) }] })),
-    legend: [{ key: 'slo', label: 'Over SLO · 20 ms on AT&T, 100 outside', ink: HEALTH_INK.slo }] };
 }
 
 /**
@@ -318,20 +293,20 @@ export function capacity(cap) {
 /**
  * Health: the open problems ranked by apps affected, then severity, then
  * workloads; each in the one health ink and word, and each traced. The figure
- * that makes it a problem sits beside the word (2026-09-30: "p95 1…" hid it).
+ * that makes it a problem sits beside the word (2026-09-30: a clipped figure hid it).
  * A port near full gets the move Capacity gives the same connection, Add a port
  * (third round, 2026-09-30: Health said Trace and Capacity Add a port for one
  * connection, on one page); a Down link is traced on both.
  * P: { key, kind?, state, where, thing, what, short?, fig?, appsN, wlN, apps? }.
  */
 export function health(P) {
-  const SEV = { down: 0, slo: 1, risk: 2 };
+  const SEV = { down: 0, risk: 1 };
   const all = P.slice().sort((a, b) => b.appsN - a.appsN || (SEV[a.state] ?? 3) - (SEV[b.state] ?? 3) || (b.wlN || 0) - (a.wlN || 0));
   const aMax = Math.max(0, ...all.map(p => p.appsN));
   const rows = all.map(p => ({ key: p.key, region: p.region, label: `${p.where} · ${p.thing}`, sub: `${HEALTH_WORD[p.state] || ''} · ${p.short || p.what}`, v: `${p.appsN} ${p.appsN === 1 ? 'app' : 'apps'}`, v2: p.fig || '',
     segs: [{ key: 's', fill: HEALTH_INK[p.state] || HEALTH_INK.risk, w: pctW(p.appsN, aMax), rad: healthRadius(p.state) }], rad: healthRadius(p.state), ...(p.kind === 'sat' ? { act: 'Add a port', actKind: 'port' } : { act: 'Trace', actKind: 'trace' }), fig: 'finding' }));
   // Apps count once however many problems they sit behind.
   const apps = all.every(p => Array.isArray(p.apps)) ? new Set(all.flatMap(p => p.apps)).size : all.reduce((a, p) => a + p.appsN, 0);
-  const legend = ['down', 'slo', 'risk'].filter(st => all.some(p => p.state === st)).map(st => ({ key: st, label: HEALTH_WORD[st], ink: HEALTH_INK[st], rad: healthRadius(st) }));
-  return { key: 'health', title: 'Health', head: all.length ? `${all.length} ${all.length === 1 ? 'problem' : 'problems'} · ${apps} ${apps === 1 ? 'app' : 'apps'} affected` : 'No problems open', rows, legend, empty: 'Nothing is down or over SLO in this window.' };
+  const legend = ['down', 'risk'].filter(st => all.some(p => p.state === st)).map(st => ({ key: st, label: HEALTH_WORD[st], ink: HEALTH_INK[st], rad: healthRadius(st) }));
+  return { key: 'health', title: 'Health', head: all.length ? `${all.length} ${all.length === 1 ? 'problem' : 'problems'} · ${apps} ${apps === 1 ? 'app' : 'apps'} affected` : 'No problems open', rows, legend, empty: 'Nothing is down or at risk in this window.' };
 }

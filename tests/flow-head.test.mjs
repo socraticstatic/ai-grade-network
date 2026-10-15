@@ -8,7 +8,8 @@ import { mkC } from './harness.mjs';
 // enough visual filters and rollups"; "don't describe 'health right now', show
 // it"; "subtext for the headers really should be widgets"; "observability
 // filters should be view control". The head is a title, six rollup tiles that
-// double as filters, and one Traffic · Cost · Performance control.
+// double as filters, and one Traffic · Cost · Utilization control (Performance read
+// a delay until 2026-10-15; it reads the links against what was bought now).
 
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0 };
 const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url), 'utf8');
@@ -17,10 +18,11 @@ const card = () => { const a = HTML.indexOf('<div id="sec-flow"'); return HTML.s
 
 test('six rollups head the map, each a number with its unit', () => {
   const t = vals(obs()).flowTiles;
-  // One tile row since the no-scroll ruling (2026-09-28): Saving lives in the headline, latency joins.
+  // One tile row since the no-scroll ruling (2026-09-28): Saving lives in the headline. The latency tiles left on
+  // 2026-10-15: the busiest link at its peak and the links near full stand where P95 latency and Over SLO stood.
   // Egress became Cost (2026-09-29): the tile is the map's own dollars, on AT&T and outside.
   // Sites could save (w2 second pass, 2026-09-30): Could save is Spend's figure, the page head's, everywhere else.
-  assert.deepEqual(t.map(x => x.l), ['Traffic', 'P95 latency', 'Sites on AT&T', 'Cost', 'Sites could save', 'Over SLO']);
+  assert.deepEqual(t.map(x => x.l), ['Traffic', 'Busiest link', 'Sites on AT&T', 'Cost', 'Sites could save', 'Near full']);
   for (const x of t) assert.ok(x.v && x.v.length <= 12, `${x.l}: ${x.v}`);
   // Sites on AT&T counts sites (2026-09-29 audit), not a traffic share.
   assert.equal(t.find(x => x.l === 'Sites on AT&T').v, '20 of 25');
@@ -34,8 +36,9 @@ test('a tile is a filter: it switches the view it belongs to', () => {
   const c = obs();
   vals(c).flowTiles.find(x => x.l === 'Cost').go();
   assert.equal(c.state.mapMode, 'cost');
-  vals(c).flowTiles.find(x => x.l === 'Over SLO').go();
-  assert.equal(c.state.mapMode, 'slo');
+  vals(c).flowTiles.find(x => x.l === 'Near full').go();
+  assert.equal(c.state.mapMode, 'util');
+  assert.equal(c.state.mapHealth, 'risk', 'Near full lights the At risk links');
   vals(c).flowTiles.find(x => x.l === 'Sites could save').go();
   assert.equal(c.state.mapMode, 'cost');
   assert.equal(c.state.mapPath, 'out');
@@ -44,7 +47,7 @@ test('a tile is a filter: it switches the view it belongs to', () => {
 
 test('one view control and one path filter replace the pattern and colour blocks', () => {
   const v = vals(obs());
-  assert.deepEqual(v.flowViews.map(x => x.label), ['Traffic', 'Cost', 'Performance']);
+  assert.deepEqual(v.flowViews.map(x => x.label), ['Traffic', 'Cost', 'Utilization']);
   assert.deepEqual(v.flowPaths.map(x => x.label), ['All paths', 'On AT&T', 'Outside AT&T']);
   const c = obs(); vals(c).flowPaths.find(x => x.key === 'att').go();
   const r = vals(c).mapRibbons;

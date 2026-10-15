@@ -25,8 +25,10 @@ export const SIGNALS = [
   { key: 'net', label: 'Network', unit: 'TX/RX', icon: 'cloud-transfer', what: 'transmit and receive, as a share of the link' },
 ];
 
-// The estates' own signals where the story needs them, each on an app whose path is already not healthy, so the
-// default counts read as before and only your thresholds move them. Growing's finance app is the session's example.
+// The estates' own signals where the story needs them, each set on an app whose path was not healthy then, so the
+// default counts read as before and only your thresholds moved them. Since the delay figures left (2026-10-15) some of
+// those paths read Healthy, so their apps read At risk or Over on these signals alone, and Health's row says which.
+// Growing's finance app is the session's example.
 const DESIGNED = {
   partial: { finance: { vm: 95, db: 91, leak: true, net: 80 }, 'internet-facing': { vm: 74, db: 58, net: 71 }, 'shared-services': { vm: 79, db: 52, net: 47 } },
   mature: { analytics: { vm: 64, db: 93, leak: true, net: 58 }, prod: { vm: 91, db: 66, net: 82 }, finance: { vm: 71, db: 80, net: 79 }, 'internet-facing': { vm: 78, db: 49, net: 61 } },
@@ -43,7 +45,7 @@ export function thresholdsOf(t) {
   for (const k of Object.keys(THRESHOLDS)) if (t && Number.isFinite(+t[k])) out[k] = Math.max(MIN, Math.min(MAX, Math.round(+t[k])));
   return out;
 }
-const RANK = { ok: 0, risk: 1, slo: 2, down: 3 };
+const RANK = { ok: 0, risk: 1, over: 2, down: 3 };
 const worst = (xs) => xs.reduce((w, s) => (RANK[s] > RANK[w] ? s : w), 'ok');
 
 /** One app's three signals against the thresholds, and their worst. */
@@ -52,8 +54,8 @@ export function signalsOf(est, tag, t) {
   const sig = SIGNALS.map(s => {
     const value = Number.isFinite(d[s.key]) ? d[s.key] : steady((est && est.id) || '', tag, s.key);
     const leak = s.key === 'db' && !!d.leak;
-    const state = value >= th[s.key] ? 'slo' : value >= th[s.key] - RISK_BAND || leak ? 'risk' : 'ok';
-    const why = state === 'slo' ? `${s.label} ${value}% ${s.unit}, over your ${th[s.key]}%` : leak ? `${s.label} memory climbs and is never released (${value}%)` : state === 'risk' ? `${s.label} ${value}% ${s.unit}, near your ${th[s.key]}%` : '';
+    const state = value >= th[s.key] ? 'over' : value >= th[s.key] - RISK_BAND || leak ? 'risk' : 'ok';
+    const why = state === 'over' ? `${s.label} ${value}% ${s.unit}, over your ${th[s.key]}%` : leak ? `${s.label} memory climbs and is never released (${value}%)` : state === 'risk' ? `${s.label} ${value}% ${s.unit}, near your ${th[s.key]}%` : '';
     return { ...s, value, threshold: th[s.key], leak, state, why };
   });
   return { signals: sig, state: worst(sig.map(x => x.state)), reasons: sig.filter(x => x.state !== 'ok').map(x => x.why) };

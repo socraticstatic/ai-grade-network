@@ -114,11 +114,12 @@ test('the recommendation says why: reasons on each card, the deck\'s Why line an
 
 test('the intent shapes the policy deck: one intent card leads, a real policy the engine reads; a lab drops the production card', () => {
   const card = J.intentCard({ purpose: 'critical', traffic: 'priority', security: 'inspected' }, { cloud: 'Azure', regions: [{ region: 'eastus' }, { region: 'westeurope' }] }, []);
-  assert.equal(card.req, 'Two paths, diverse metros and Latency SLO 20 ms and Inline security inspection');
-  assert.equal(card.short, 'Two paths · 20 ms SLO · Inspected');
+  // Priority traffic asks for a class of service (it asked for a 20 ms SLO until 2026-10-15: "we can't measure that").
+  assert.equal(card.req, 'Two paths, diverse metros and Priority traffic and Inline security inspection');
+  assert.equal(card.short, 'Two paths · Priority · Inspected');
   assert.equal(card.match, 'region eastus,westeurope');
   // NetBond Advanced's sheet for it (corrected 2026-10-09): the second path prefers by community and inspection tags CVs
-  // for a symmetric return; the SLO is a class of service, so nothing is prepended.
+  // for a symmetric return; priority traffic is a class of service, so nothing is prepended.
   const rt = routeRulesOf({ req: card.req });
   assert.ok(rt['manip:selective-cv-tagging'] && rt['manip:community-value-tag'] && !rt['manip:prepend-advertisements']);
   // The comma list matches both regions in the engine, and nothing else.
@@ -135,14 +136,14 @@ test('the intent shapes the policy deck: one intent card leads, a real policy th
   assert.equal(c.state.jStep, B.protect);
   // A workload not tagged yet reads its suggested tags, so every tag the cloud's workloads carry has its card.
   assert.deepEqual(v.jDeck.map(d => d.tag), ['Intent', 'PCI', 'Finance', 'Internet-facing', 'Prod']);
-  assert.deepEqual([v.jDeck[0].headIcon, v.jDeck[0].reqWord], ['target', '20 ms SLO']);
-  // An SLO pushes no NetBond row: the card shows where it compiles, the site's DSCP and the core's class of service.
-  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'DSCP, app-aware path', '→'], ['Manipulate', 'SLA class', '⇄']]);
+  assert.deepEqual([v.jDeck[0].headIcon, v.jDeck[0].reqWord], ['target', 'Priority']);
+  // Priority traffic pushes no NetBond row: the card shows where it compiles, the site's DSCP and the core's class of service.
+  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'DSCP, app-aware path', '→'], ['Manipulate', 'Priority class', '⇄']]);
   v.jDeck[0].enter(); v = vals(c);
-  assert.equal(v.jLine, 'Intent is held to 20 ms.');
+  assert.equal(v.jLine, 'Intent rides a priority class.');
   assert.ok(v.jRegions.flatMap(r => r.apps).every(a => a.hl === 'on'), 'the intent covers every workload on the cloud');
   v.jDeck[0].go(); v = vals(c);
-  assert.ok(c.state.customPolicies.some(p => p.journey && p.tag === 'Intent' && p.match === 'region eastus,westeurope' && p.req === 'Latency SLO 20 ms'));
+  assert.ok(c.state.customPolicies.some(p => p.journey && p.tag === 'Intent' && p.match === 'region eastus,westeurope' && p.req === 'Priority traffic'));
   const lab = vals(run({ purpose: 'lab' }));
   assert.deepEqual(lab.jDeck.map(d => d.tag), ['PCI', 'Finance', 'Internet-facing'], 'a lab keeps compliance and inspection, and drops the production policy');
 });

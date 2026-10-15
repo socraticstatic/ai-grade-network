@@ -54,11 +54,12 @@ test('each private wire runs Core, its on-ramp, the provider\'s gateway', () => 
   assert.equal(route('GCP', 'ce:netbond').nodes[1], nb.nodes[1], 'NetBond is drawn twice');
 });
 
-test('a wire carries its regions\' numbers, so the lenses still read', () => {
+test('a wire carries its regions\' numbers, so the lenses still read, and no delay', () => {
   const dx = root().edges.find(e => e.region && e.region.card && e.region.cloud === 'AWS').region;
   const regs = M.regionsList.filter(r => r.cloud === 'AWS' && r.priv);
   assert.equal(dx.wl, regs.reduce((a, r) => a + r.wl, 0));
-  for (const k of ['fab', 'pub']) assert.ok(Number.isFinite(dx[k]), `${k} is ${dx[k]}`);
+  // The lenses read security, reliability and cost (Performance read a delay until 2026-10-15).
+  for (const k of ['fab', 'pub']) assert.equal(dx[k], undefined, `${k} is ${dx[k]}`);
   assert.equal(dx.link, 'degraded', 'eu-central-1 is degraded and its card wire hides it');
 });
 

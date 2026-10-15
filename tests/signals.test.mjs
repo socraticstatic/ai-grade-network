@@ -46,7 +46,7 @@ test('the new state keys start in defaults() and in the markup constructor alike
   }
 });
 
-test('nine cards, each with rows, and every row carries its action', () => {
+test('eight cards, each with rows, and every row carries its action', () => {
   for (const view of ['partial', 'mature']) {
     const v = vals(ins(view));
     assert.deepEqual(v.sigAll.map(x => x.key).sort(), SG.CARDS.slice().sort(), view);
@@ -69,14 +69,12 @@ test('nine cards, each with rows, and every row carries its action', () => {
 });
 
 test('a card with nothing to show says so, and an estate with no traffic gets a first step', () => {
-  const t = vals(ins('trust'));
-  const slo = card(t, 'slo');
-  assert.equal(slo.rows.length, 0);
-  assert.equal(slo.noRows, true);
-  assert.match(slo.empty, /No flow/);
-  // The closest flow still reads, so an empty card says how close it runs, against its own SLO (2026-09-30).
-  assert.match(slo.empty, /The closest, .+, takes \d+ ms against \d+ ms\.$/);
-  assert.deepEqual(slo.legend, [], 'no bars, no key to them');
+  // Small has nothing down and nothing near full (2026-10-15): Health says so, and draws no key.
+  const h = card(vals(ins('small')), 'health');
+  assert.equal(h.rows.length, 0);
+  assert.equal(h.noRows, true);
+  assert.match(h.empty, /Nothing is down or at risk/);
+  assert.deepEqual(h.legend, [], 'no bars, no key to them');
   const sm = card(vals(ins('small')), 'capacity');
   assert.equal(sm.noRows, true);
   assert.match(sm.empty, /No connection/);
@@ -113,7 +111,7 @@ test('the persona chips pick which three lead; the grid pages at six', () => {
     const v = vals(c);
     assert.deepEqual(v.sigAll.map(x => x.key), SG.orderOf(p), p);
     assert.deepEqual(v.sigCards.map(x => x.key), SG.orderOf(p).slice(0, 6), `${p} page one`);
-    assert.equal(v.sigPager.label, '1–6 of 9');
+    assert.equal(v.sigPager.label, '1–6 of 8');
     v.sigPager.next();
     assert.deepEqual(vals(c).sigCards.map(x => x.key), SG.orderOf(p).slice(6), `${p} page two`);
   }
@@ -192,10 +190,8 @@ test('each title and headline opens its full list; a card\'s list holds every ro
   const c0 = ins('partial');
   const v0 = vals(c0);
   const iw = v0.iw;
-  // Latency over SLO holds the spikes Health calls Over SLO beside the flows, and Egress growth its twelve weeks (2026-09-30).
-  // A region over its SLO is a Health problem too (w2 second pass, 2026-09-30); its flows are already the card's rows.
-  const spikes = (v0.problemRows || []).filter(p => /^an-(?!link-|sat-|slo-)/.test(p.key) && p.state === 'slo').length;
-  const full = { talkers: iw.talkersAll.length, newdest: iw.newDestN, shadow: iw.shadowAll.length, multi: iw.multi.totalN, slo: iw.sloN + spikes, growth: 12 };
+  // Egress growth holds its twelve weeks (2026-09-30).
+  const full = { talkers: iw.talkersAll.length, newdest: iw.newDestN, shadow: iw.shadowAll.length, multi: iw.multi.totalN, growth: 12 };
   for (const [k, n] of Object.entries(full)) {
     const c = ins('partial');
     card(vals(c), k).open();
@@ -212,14 +208,11 @@ test('each title and headline opens its full list; a card\'s list holds every ro
   // The lists that already have a page open it.
   const lands = { health: (st) => st.obPage === 'perf' && st.obPanel === 'health', capacity: (st) => st.obPage === 'perf' && st.obPanel === 'conn', spend: (st) => st.tab === 'cost' && st.costPanel === 'bucket' };
   for (const [k, ok] of Object.entries(lands)) { const c = ins('partial'); card(vals(c), k).open(); assert.ok(ok(c.state), `${k} title`); }
-  // Latency over SLO counts every flow over, not the five it draws (it undercounted past five).
-  const t = vals(ins('trust'));
-  assert.equal(t.iw.sloN, t.iw.sloAll.length);
 });
 
 test('each row\'s figure opens the one thing it counts', () => {
   const at = (k, i = 0, view = 'partial', patch = {}) => { const c = ins(view, patch); const r = card(vals(c), k).rows[i]; r.figGo(); return { st: c.state, r, v: vals(c) }; };
-  // w2 (2026-09-30): a region's traffic, a pair's and a flow's latency open their records with
+  // w2 (2026-09-30): a region's traffic and a pair's open their records with
   // the row's figure on the landing; the Traffic map scoped to the region drew the sites' traffic to it.
   let x = at('talkers');
   // w2 second pass (2026-09-30): a region's figure counts what it sends, so its records are the ones from it (src).
@@ -229,12 +222,6 @@ test('each row\'s figure opens the one thing it counts', () => {
   assert.ok(x.v.hasLogs, 'the destination\'s records page is empty');
   x = at('shadow');
   assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.label, x.r.label); assert.ok(x.v.hasLogs);
-  // A flow opens its records with its latency named; a spike opens its problem, as Health's row does.
-  const sloRows = card(vals(ins('partial')), 'slo').rows;
-  x = at('slo', sloRows.findIndex(r => r.id));
-  assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.value, x.r.v); assert.ok(x.v.hasLogs);
-  x = at('slo', sloRows.findIndex(r => !r.id));
-  assert.equal(x.st.fdKey, x.r.key); assert.equal(x.v.fdOpen, true);
   x = at('multi');
   assert.equal(x.st.obPage, 'logs'); assert.equal(x.st.explain.pattern, 'clouds'); assert.equal(x.st.explain.value, x.r.v); assert.ok(x.v.hasLogs);
   x = at('health');
@@ -278,9 +265,9 @@ test('each card\'s count opens its findings, and the lead cards\' findings belon
       }
     }
   }
-  // Blind regions and regions over SLO are Network Engineering's (they were FinOps & SRE's).
+  // Blind regions are Network Engineering's (they were FinOps & SRE's).
   const all = vals(ins('partial')).findAll;
-  for (const k of ['blindspots', 'degraded']) assert.equal(all.find(f => f.key === k).persona, 'Network Engineering', k);
+  for (const k of ['blindspots']) assert.equal(all.find(f => f.key === k).persona, 'Network Engineering', k);
 });
 
 test('the rows speak to the persona that leads with them', () => {
