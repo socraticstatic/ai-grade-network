@@ -241,8 +241,12 @@ export function recommendedFor(cloud) {
   return [];
 }
 
-/** A score as five segments, lit up to the score; null reads as unscored. */
-export const segs = (n) => [1, 2, 3, 4, 5].map(i => ({ key: 's' + i, on: n !== null && n !== undefined && i <= n }));
+/**
+ * A score in a word, higher always better (2026-10-15, Micah: "hard to tell what one dash is saying from another"): five
+ * dashes read alike on every row, and on Cost more meant cheaper. The cheapest is Best, the dearest Poor; unscored is ''.
+ */
+export const GRADES = ['', 'Poor', 'Weak', 'Fair', 'Good', 'Best'];
+export const gradeOf = (n) => (n === null || n === undefined ? '' : GRADES[n] || '');
 
 /** A way's five criteria for a cloud and zone, [score, value] each: cost from its monthly, the rest the deck's. */
 export function wayScores(key, cloud = 'AWS', zone = 'inter') {
@@ -269,7 +273,7 @@ export function wayCards(zone = 'intra', answers = {}) {
     const z = zoneOf(w, 'AWS', zone);
     const monthly = wayMonthly(w.key, 'AWS', zone), score = wayScores(w.key, 'AWS', zone), misses = wayWhy(w.key, 'AWS', it, z ? z.key : zone).filter(x => x.miss);
     return { ...w, monthly, zone: z ? z.key : null, zoneLabel: z ? z.label : '', points: wayScoreFor(w.key, 'AWS', it, z ? z.key : zone), misses: misses.length, missWords: misses.map(x => x.words).join('; '), answers: it, strip: wayStrip(w.key), rows: CRITERIA.map(c => { const sc = score[c.key] || [null, ''];
-      return { ...c, score: sc[0], value: sc[1], segs: segs(sc[0]), title: `${c.label}: ${sc[1] || 'not scored yet'}${sc[0] ? ` (${sc[0]} of 5, weighs ${c.weight})` : ''}${c.key === 'cost' && w.hosted ? '. Cloud pass-through at 1 Gbps; the hub\'s vSRX, compute and AT&T margin are priced at review' : ''}${c.key === 'setup' ? `. ${waySetup(w.key)}` : ''}` }; }) };
+      return { ...c, score: sc[0], value: sc[1], grade: gradeOf(sc[0]), title: `${c.label}: ${sc[1] || 'not scored yet'}${sc[0] ? `, ${gradeOf(sc[0])} (${sc[0]} of 5, weighs ${c.weight})` : ''}${c.key === 'cost' && w.hosted ? '. Cloud pass-through at 1 Gbps; the hub\'s vSRX, compute and AT&T margin are priced at review' : ''}${c.key === 'setup' ? `. ${waySetup(w.key)}` : ''}` }; }) };
   });
 }
 

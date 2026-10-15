@@ -24,12 +24,31 @@ test('Ways to connect draws the six ways, each scored on the five criteria, with
   assert.deepEqual(v.wayCards.map(w => w.key), ['byo', 'att', 'peer', 'transit', 'cloudwan', 'privatelink']);
   for (const w of v.wayCards) {
     assert.equal(w.rows.length, 5, w.key);
-    for (const r of w.rows) { assert.equal(r.segs.length, 5); assert.ok(r.segs.every(g => g.bg), `${w.key} ${r.key}`); }
+    // The grade in a word (2026-10-15, Micah: "the dashes on the cards for options are hard to understand. hard to tell
+    // what one dash is saying from another"): five identical dashes read the same on every row, and on Cost more meant
+    // cheaper, so one dash beside the dearest price looked like a low one. Each row now says its grade.
+    for (const r of w.rows) { assert.equal(r.segs, undefined, `${w.key} ${r.key} still draws dashes`); assert.match(r.grade, /^(Best|Good|Fair|Weak|Poor)$/, `${w.key} ${r.key}`); assert.ok(r.gradeInk, `${w.key} ${r.key}`); }
     for (const l of w.logos) assert.match(l.src, /^brand\/providers\/[a-z-]+\.svg$/, `${w.key} ${l.key}`);
   }
   assert.ok(v.wayCards.every(w => w.notSoon && w.hasPts && /^\d+$/.test(w.pts)), 'every way is live and scored');
   assert.ok(v.wayFoot.includes('proof-of-concept'), 'the footnote says which times are targets');
   assert.ok(v.wayFoot.includes('Decision Matrix'), 'and where the figures come from');
+});
+
+// The grade reads one way on every row (2026-10-15): higher is better, so on Cost the cheapest is Best and the dearest
+// Poor, never the reverse. Best wears the link ink as the lit dashes did; every other grade is body ink.
+test('each row grades its way in a word, Best for the cheapest and Poor for the dearest', () => {
+  const v = vals(ways());
+  const g = (key, crit) => v.wayCards.find(w => w.key === key).rows.find(r => r.key === crit);
+  assert.equal(g('byo', 'cost').grade, 'Best');
+  assert.equal(g('privatelink', 'cost').grade, 'Poor');
+  assert.equal(g('att', 'setup').grade, 'Good');
+  assert.equal(g('cloudwan', 'setup').grade, 'Fair');
+  assert.equal(g('privatelink', 'scale').grade, 'Weak');
+  assert.equal(g('byo', 'cost').gradeInk, 'var(--link)');
+  assert.equal(g('privatelink', 'cost').gradeInk, 'var(--text-body)');
+  assert.match(g('privatelink', 'cost').title, /Poor/, 'the row title names its grade');
+  assert.equal(W.gradeOf(null), '', 'an unscored row shows no grade');
 });
 
 // Micah, 2026-10-13: "ways to connect is way too crowded and shoved in!" One filled Start on the page, on the best way
@@ -181,7 +200,8 @@ test('the markup binds the six ways, their meters and marks, and loops inside no
   const a = HTML.indexOf('<sc-if value="{{ cnIsWays }}"'), b = HTML.indexOf('<!-- Orders (2026-09-30', a);
   assert.ok(a > 0 && b > a);
   const blk = HTML.slice(a, b);
-  for (const k of ['<sc-for list="{{ wg.cards }}"', '<sc-for list="{{ wc.rows }}"', '<sc-for list="{{ cr.segs }}"', '<sc-for list="{{ wc.logos }}"', '{{ wc.start }}', '{{ wayFoot }}', '{{ goRecommended }}']) assert.ok(blk.includes(k), k);
+  for (const k of ['<sc-for list="{{ wg.cards }}"', '<sc-for list="{{ wc.rows }}"', '{{ cr.grade }}', '<sc-for list="{{ wc.logos }}"', '{{ wc.start }}', '{{ wayFoot }}', '{{ goRecommended }}']) assert.ok(blk.includes(k), k);
+  assert.ok(!blk.includes('cr.segs') && !blk.includes('way-meter'), 'the five-dash meters are back');
   assert.doesNotMatch(blk, /<(svg|table|select)\b/);
   // Uncrowded (2026-10-13): Sites, Edge and Core were the same three stations on all six cards; the tile is the way's
   // mark, so the strip goes. The ring sits by the name at a size that holds 100; clouds, zones and Start share a foot.

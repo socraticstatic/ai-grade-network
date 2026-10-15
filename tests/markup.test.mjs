@@ -652,7 +652,9 @@ test('every container the markup opens, it closes', () => {
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 815], // - delay figures (2026-10-15), told at the div pin
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 466], // + Orders/Help (2026-10-13)
+    // Ways to connect grades in a word (2026-10-15, "hard to tell what one dash is saying from another"): each row's
+    // five-dash meter (its span and the sc-for over cr.segs) gives way to one grade span. span +0, sc-for 466 -> 465.
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 465], // - the ways' dash meters (2026-10-15)
     ['section', /<section\b/g, /<\/section>/g, 17], // + Orders/Help (2026-10-13)
     ['button', /<button\b/g, /<\/button>/g, 715], // + Orders/Help (2026-10-13)
     ['aside', /<aside\b/g, /<\/aside>/g, 10], // + Orders/Help (2026-10-13)

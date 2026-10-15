@@ -371,9 +371,10 @@ a{color:#0057b8}a:hover{color:#00388f}
 .way-zones{display:inline-flex;margin-left:6px;padding:2px;border:1px solid var(--border-secondary);border-radius:9999px}
 .way-zones button{height:20px;padding:0 9px;border:0;border-radius:9999px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .way-rows{display:grid;gap:8px;align-content:start;padding-top:14px;border-top:1px solid var(--border-secondary)}
-.way-row{display:grid;grid-template-columns:16px 56px minmax(0,1fr);align-items:center;gap:10px;min-width:0;color:var(--text-body)}
-.way-meter{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}.way-meter i{display:block;height:6px;border-radius:3px}
-.way-val{font-size:12px;line-height:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The grade in a word (2026-10-15, "hard to tell what one dash is saying from another"): glyph, value, then its grade at the right edge, so the grades read down as one column. */
+.way-row{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:center;gap:10px;min-width:0;color:var(--text-body)}
+.way-val{font-size:13px;line-height:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.way-grade{font-size:13px;line-height:18px;font-weight:700;white-space:nowrap}
 .way-start{flex:1;justify-content:center;height:36px;padding:0 16px;border:1px solid var(--cta);border-radius:9999px;background:transparent;color:var(--link);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 .way-start[data-primary="true"]{background:var(--cta);color:#fff}
 .way-start:hover{background:var(--cta-hover);border-color:var(--cta-hover);color:#fff}

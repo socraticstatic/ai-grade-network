@@ -5358,7 +5358,8 @@ function flowVals(s, set, est, c) {
     // The journey's ring here too (2026-10-09): scored by the estate's answers, a way a hard rule removes shows the cross.
     pts: w.points === null ? '' : String(w.points), hasPts: w.points !== null, out: !!w.misses, ptsPct: w.points === null || w.misses ? '0%' : `${w.points}%`, ptsShown: w.misses ? '✕' : w.points === null ? '' : String(w.points),
     ptsTitle: w.misses ? `Removed by what you said: ${w.missWords}` : `Scores ${w.points} of 100 for this estate's answers: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${W.intentWeights(w.answers)[c.key]}`).join(', ')}`,
-    rows: w.rows.map(r => ({ ...r, segs: r.segs.map(g => ({ ...g, bg: g.on ? 'var(--link)' : 'var(--bg-neutral)' })), valueInk: r.score === null ? 'var(--text-disabled)' : 'var(--text-heading)' })) }));
+    // The grade in a word (2026-10-15): Best wears the link ink the lit dashes wore; every other grade is body ink.
+    rows: w.rows.map(r => ({ ...r, gradeInk: r.grade === 'Best' ? 'var(--link)' : 'var(--text-body)', valueInk: r.score === null ? 'var(--text-disabled)' : 'var(--text-heading)' })) }));
   // One filled Start on the page (2026-10-13, "way too crowded and shoved in"): the best way still standing, as
   // Recommended fills only its pick. Six filled buttons were six things shouting at once.
   const wayTop = wayCards.filter(w => !w.soon && !w.out && w.hasPts).reduce((a, w) => (!a || w.points > a.points ? w : a), null);
