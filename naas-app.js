@@ -193,6 +193,8 @@ export function init(c) {
   // A link straight into the existing customer's journey (2026-10-08): ?journey=existing.
   if (q.get('journey') === 'existing') Object.assign(patch, { journey: 'existing', view: J.JOURNEY_ESTATE, estateParam: null, screen: 'sj', jStep: 0 });
   if (q.get('category')) { patch.screen = 's7'; patch.browseCat = q.get('category'); }
+  // The onboarding tour's Andi option lands here with Andi's dock open (2026-10-16): ?estate=lastmile&andi=1.
+  if (q.get('andi') === '1') patch.andiOpen = true;
   if (SCREENS[hash[0]]) patch.screen = hash[0];
   // A load with no hash stays on the NaaS home, where the NaaS rail item goes (2026-09-30).
   if (hash[1] && D.LAYERS.find(l => l.id === hash[1])) patch.layer = hash[1];
