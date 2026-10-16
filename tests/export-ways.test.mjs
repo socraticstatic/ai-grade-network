@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync, mkdtempSync } from 'node:fs';
+import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -24,9 +24,11 @@ test('the export carries every way with a monthly per cloud, the four questions,
 
 test('running the script writes ways.json where it is told and it parses to the same export', () => {
   const out = mkdtempSync(join(tmpdir(), 'ways-'));
-  execFileSync('node', ['scripts/export-ways.mjs', out], { cwd: new URL('..', import.meta.url).pathname });
-  const p = join(out, 'ways.json');
-  assert.ok(existsSync(p));
-  const j = JSON.parse(readFileSync(p, 'utf8'));
-  assert.equal(j.ways.length, W.WAYS.length); assert.ok(j.generated);
+  try {
+    execFileSync('node', ['scripts/export-ways.mjs', out], { cwd: new URL('..', import.meta.url).pathname });
+    const p = join(out, 'ways.json');
+    assert.ok(existsSync(p));
+    const j = JSON.parse(readFileSync(p, 'utf8'));
+    assert.equal(j.ways.length, W.WAYS.length); assert.ok(j.generated);
+  } finally { rmSync(out, { recursive: true, force: true }); }   // never leave a temp folder behind
 });

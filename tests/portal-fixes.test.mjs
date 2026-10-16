@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, existsSync } from 'node:fs';
+import { readFileSync, mkdtempSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -41,9 +41,13 @@ test('an action cell is compact so a row with a button stays 42px, and the picke
 });
 
 test('the deploy stamp cache-busts storefront.css on both pages', () => {
+  // The stamp copies the whole working tree (about 530MB): remove it, or every test run leaves one behind
+  // (2026-10-16: 57 runs had filled 28GB of the temp folder and the disk).
   const out = mkdtempSync(join(tmpdir(), 'stamp-'));
-  execFileSync('bash', ['scripts/stamp-version.sh', out], { cwd: ROOT, stdio: 'ignore' });
-  for (const f of ['portal.dc.html', 'NaaS Storefront.dc.html']) { const t = readFileSync(join(out, f), 'utf8'); assert.match(t, /href="\.\/storefront\.css\?v=[0-9a-f]+"/, f); assert.ok(!/storefront\.css\?v=[0-9a-f]+\?v=/.test(t)); }
+  try {
+    execFileSync('bash', ['scripts/stamp-version.sh', out], { cwd: ROOT, stdio: 'ignore' });
+    for (const f of ['portal.dc.html', 'NaaS Storefront.dc.html']) { const t = readFileSync(join(out, f), 'utf8'); assert.match(t, /href="\.\/storefront\.css\?v=[0-9a-f]+"/, f); assert.ok(!/storefront\.css\?v=[0-9a-f]+\?v=/.test(t)); }
+  } finally { rmSync(out, { recursive: true, force: true }); }
 });
 
 test('useData keeps the page up on bad rows and says what it skipped; a failed fetch says so; the select shows Your data', async () => {
@@ -60,8 +64,10 @@ test('useData keeps the page up on bad rows and says what it skipped; a failed f
 
 test('the export writes where it is told, so a test run never dirties the handoff files', () => {
   const out = mkdtempSync(join(tmpdir(), 'ways-'));
-  execFileSync('node', ['scripts/export-ways.mjs', out], { cwd: ROOT, stdio: 'ignore' });
-  assert.ok(existsSync(join(out, 'ways.json')) && existsSync(join(out, 'pop-regions.json')));
+  try {
+    execFileSync('node', ['scripts/export-ways.mjs', out], { cwd: ROOT, stdio: 'ignore' });
+    assert.ok(existsSync(join(out, 'ways.json')) && existsSync(join(out, 'pop-regions.json')));
+  } finally { rmSync(out, { recursive: true, force: true }); }
   const status = execFileSync('git', ['status', '--porcelain', 'docs/portal/ways.json', 'docs/portal/pop-regions.json'], { cwd: ROOT }).toString().trim();
   assert.equal(status, '', `the tracked files moved: ${status}`);
 });
