@@ -16,7 +16,8 @@ const STATES = [
   [0, '', 'Onboarding 01 Welcome v3'], [1, '', 'Onboarding 02 Scan permissions v3'], [2, '', 'Onboarding 03 Discover v3'],
   [3, '', 'Onboarding 04 Connect v3'], [4, '', 'Onboarding 05 Observe v3'], [5, '', 'Onboarding 06 Govern v3'],
   [6, '', 'Onboarding 07 Cost v3'], [7, '', 'Onboarding 08 Ready v3'],
-  [7, '[data-journey]', 'Onboarding 09 Guided opens v3'], [7, '[data-api]', 'Onboarding 10 API opens v3'], [7, '[data-dash]', 'Onboarding 11 Dashboard v3']];
+  // Guided and Dashboard leave the tour for the real pages (2026-10-16), so only the API ending is a tour state.
+  [7, '[data-api]', 'Onboarding 10 API opens v3']];
 const b = await chromium.launch();
 const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, reducedMotion: 'reduce' });
 await ctx.route('**/*', async r => { const u = new URL(r.request().url()); if (u.origin !== ORIGIN) return r.abort();
@@ -38,6 +39,7 @@ for (const [step, click, title] of STATES) {
     await p.evaluate((i) => { const e = document.querySelector(`[data-raster="${i}"]`); for (const k of e.children) { k.dataset.vis = k.style.visibility; k.style.visibility = 'hidden'; } }, r.i);
     shots[r.i] = 'data:image/png;base64,' + (await p.screenshot({ clip: { x: r.x, y: r.y, width: r.w, height: r.h } })).toString('base64');
     await p.evaluate((i) => { const e = document.querySelector(`[data-raster="${i}"]`); for (const k of e.children) { k.style.visibility = k.dataset.vis || ''; delete k.dataset.vis; } }, r.i);
+    await p.waitForTimeout(200);   // a restored visibility lingers a frame; never photograph the next one inside it
   }
   await p.waitForTimeout(200);   // let the restored visibility settle before anything is read
   const html = await p.evaluate(({ shots, title, FONTS }) => {
@@ -52,6 +54,9 @@ for (const [step, click, title] of STATES) {
     // Rasterised rings.
     for (const e of document.querySelectorAll('[data-raster]')) { const src = shots[e.getAttribute('data-raster')]; if (!src) continue;
       e.style.setProperty('background', `url(${src}) 0 0 / 100% 100% no-repeat`, 'important'); e.style.setProperty('-webkit-mask', 'none', 'important'); e.style.setProperty('mask', 'none', 'important');
+      // The photo is opaque where the live gradient had a hole (a ring's centre): whatever sat on it, like a ring's
+      // score, goes above it, or the positioned photo paints over it (2026-10-16, the "100" Micah could not see).
+      for (let k = e.nextElementSibling; k; k = k.nextElementSibling) { const ks = getComputedStyle(k); if (ks.position === 'static') { k.style.position = 'relative'; k.style.zIndex = '1'; } }
       e.removeAttribute('data-raster'); }
     // Human layer names (html.to.design reads aria-label).
     const txt = (e) => (e && e.textContent ? e.textContent : '').replace(/\s+/g, ' ').trim().slice(0, 48);
