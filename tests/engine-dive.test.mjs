@@ -52,7 +52,8 @@ test('Advanced Settings dives into the engine on this order, its picks read in a
 });
 
 test('the journey\'s Protect beat dives in with its cards not yet enforced, and Back returns to the beat', () => {
-  const c = mkC({ view: 'lastmile', estateParam: null, journey: 'existing', screen: 'sj', addedSources: AZURE, jStep: B.connect, jPick: 0, jTags: { 'eastus:dispatch-svc': ['Prod'], 'westeurope:payments-api': ['PCI', 'Prod'] } });
+  // West Europe's pass (a region at a time since 2026-10-15): its PCI card leads the deck.
+  const c = mkC({ view: 'lastmile', estateParam: null, journey: 'existing', screen: 'sj', addedSources: AZURE, jStep: B.connect, jPick: 0, jRegion: 'westeurope', jTags: { 'eastus:dispatch-svc': ['Prod'], 'westeurope:payments-api': ['PCI', 'Prod'] } });
   vals(c).jActGo(); vals(c).jActGo(); vals(c).jActGo(); vals(c).jActGo();
   assert.equal(c.state.jStep, B.protect);
   const deck = vals(c).jDeck.map(d => d.name);

@@ -336,7 +336,9 @@ export function vals(c) {
   const regs0 = estRaw.regionsList.map(r => { const r1 = W.landingOf(s, estRaw.id, r.region) ? W.landedRegion(r, W.landingOrder(s, estRaw.id, r.region)) : r;
     return { ...r1, way: W.regionWay(r1, s, estRaw.id).cls }; });
   // Only a region a landing made private counts as newly attached (landedRegion never re-stamps an attached one).
-  const est0 = { ...estRaw, regionsList: regs0, attachedRegions: estRaw.attachedRegions + regs0.filter(r => r.landed).length };
+  // A landed region takes its share of its cloud's egress with it, at your AT&T rate (2026-10-15, LC.afterLandings): the
+  // regions still public keep only theirs, so every Cost page, Recommended and the home read the bill as it now stands.
+  const est0 = { ...estRaw, regionsList: regs0, attachedRegions: estRaw.attachedRegions + regs0.filter(r => r.landed).length, ...LC.afterLandings(estRaw, regs0) };
   // Every policy counts by Govern's one rule (w2-govern, 2026-09-30), off this estate as it stands:
   // a region attached or a source added this session moves its figures, and every page reads them.
   est0.policies = GV.figured(est0, A.inventory(est0), { siteTags: ((s.siteTags || {})[est0.id]) || {} });
@@ -5708,7 +5710,7 @@ function ordersStory(out, s, set, { go, est, openF, obAll, conns }) {
     { key: 'recommended', icon: 'bullseye', title: 'Recommended', n: mv.length, unit: mv.length === 1 ? 'move' : 'moves', go: () => set({ cnPage: 'options' }), headTitle: 'Moves ranked for this estate by what they save. Open Recommended',
       cta: empty ? { label: 'Add a source', icon: 'plus-circle', go: go('s1', { discoverView: 'sources' }) } : { label: 'See moves', icon: 'arrow-right', go: () => set({ cnPage: 'options' }) },
       rows: mv.length ? mv.slice(0, ORD_DOOR_ROWS).map((m, i) => ({ key: m.key, hasMark: !!m.hasMarkSrc, markSrc: m.markSrc || '', hasIcon: !m.hasMarkSrc, icon: m.kindIcon || 'cloud', label: m.short && m.short !== m.cloud ? m.short : (m.regions || []).length > 1 ? `${m.regions.length} ${m.cloud} regions` : m.short || m.title, title: m.title,
-        fig: m.impact > 0 ? `${fmt(m.impact)}/mo` : '', figKind: 'save', hasFig: m.impact > 0, figTitle: m.impact > 0 ? `Saves ${fmt(m.impact)} a month, modelled` : '', go: () => set({ cnPage: 'options', movePage: i }) }))
+        fig: m.impact > 0 ? `${fmt(m.impact)}/mo` : '', figKind: 'save', hasFig: m.impact > 0, figTitle: m.impact > 0 ? `Saves ${fmt(m.impact)} a month, modelled` : '', go: () => set({ cnPage: 'options', movePage: i, moveFocus: null }) }))
         : empty ? calm('search', 'Nothing discovered yet', 'Recommended ranks what discovery finds. Add a source', go('s1', { discoverView: 'sources' })) : calm('check-circle', 'Nothing left to move', 'Everything discovered is on the AT&T network', () => set({ cnPage: 'options' })) },
     { key: 'ways', icon: 'cable', title: 'Ways to connect', n: ways.length, unit: 'ways', go: startWays, headTitle: 'The six ways into a cloud, each scored for cost, performance, security, effort and scale',
       cta: { label: 'Pick a way', icon: 'arrow-right', go: startWays },
@@ -6282,8 +6284,15 @@ function journeyVals(out, s, set, est) {
   // The move for the cloud the source found, its three ways, and the one you pick (Recommended until you pick another).
   // Once the order lands, the move leaves the ranked list (it is done), so beats 7 to 9 read the figures the order
   // snapshotted at Place: the way, its monthly and its saving. Before that, the live move.
-  const placed = (s.orders || []).find(o => o.journey && o.snap && o.snap.move.cloud === found.cloud) || null;
-  const liveMove0 = (out.moveList || []).find(m => m.kind === 'region' && m.cloud === found.cloud) || null;
+  // A region is its own choice (Micah, 2026-10-15: "what if i don't want to do western europe or us east? what if it's an
+  // or?"): the pass is about the region picked, else the first with no order yet. Its order, its move, its landing; the
+  // other regions stay where they are until you take them, or never.
+  const jOrders = (s.orders || []).filter(o => o.journey && o.snap && o.snap.move.cloud === found.cloud);
+  const orderFor = (id) => jOrders.find(o => (o.regions || [o.region]).includes(id)) || null;
+  const regionKey = found.has && found.regions.length ? (found.regions.some(r => r.region === s.jRegion) ? s.jRegion : (found.regions.find(r => !orderFor(r.region)) || found.regions[0]).region) : null;
+  const landedHere = W.landedIdsOn(s, est.id);
+  const placed = regionKey ? orderFor(regionKey) : null;
+  const liveMove0 = (out.moveList || []).find(m => m.kind === 'region' && m.cloud === found.cloud && m.regions.includes(regionKey)) || null;
   const move = liveMove0 || (placed && placed.snap ? placed.snap.move : null);
   const pickI = Number.isInteger(s.jPick) ? s.jPick : move ? (move.recI || 0) : null;
   const tier = placed && placed.snap ? placed.snap.tier : move && pickI !== null ? move.tiers[pickI] : null;
@@ -6292,7 +6301,8 @@ function journeyVals(out, s, set, est) {
     .concat(tier.way && W.wayHosted(tier.way) ? [{ key: 'hub', name: W.EXTRA['hub-att'].name, n: 1, v: 'At review' }] : []) : [];
   const total = tier && tier.monthly !== null ? `${fmt(tier.monthly)}/mo${tier.way && W.wayHosted(tier.way) ? ' + hub' : ''}` : 'Priced at review';
   const place = () => { if (!tier || placed) return; const at = new Date(SCH.nowOf(s)); const n = (s.orders || []).length + 1;
-    set({ jPick: pickI, orders: [...(s.orders || []), { id: `o${n}`, title: `${tier.label} · ${move.short}`, way: tier.way || null, what: [tier.label, move.regions.join(', '), tier.way ? W.waySetup(tier.way) : ''].filter(Boolean).join(' · '),
+    // The pass keeps its region once ordered: unpicked, the default would slide to the next region with no order.
+    set({ jPick: pickI, jRegion: regionKey, orders: [...(s.orders || []), { id: `o${n}`, title: `${tier.label} · ${move.short}`, way: tier.way || null, what: [tier.label, move.regions.join(', '), tier.way ? W.waySetup(tier.way) : ''].filter(Boolean).join(' · '),
       monthly: total, at: `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`,
       stage: CF.ORDER_STAGE, region: move.regions[0], regions: move.regions.slice(), cloud: move.cloud, est: est.id, fromFlow: true, moveKeys: [move.key], moveTitles: { [move.key]: move.title }, journey: true,
       // What the picture reads after the move is done (2026-10-08): plain data, no functions, so the order stays serialisable.
@@ -6303,24 +6313,27 @@ function journeyVals(out, s, set, est) {
   // The figures on the picture (2026-10-08, "storytelling without more text"): the monthly before and after above the
   // cloud, and the traffic itself, as dots that ride the internet path until the order moves them. No wire is timed.
   const beforeMo = move ? move.today.mo : null, afterMo = tier && tier.mo !== null && tier.mo !== undefined ? tier.mo : null;
-  const iNow = journeyIntent(s);
+  const iNow = journeyIntent(s, regionKey);
   // One sentence a beat: the story, not the screen.
   // Act three. Live: the journey's regions land at once (a presenter cannot wait ten days), so every page reads them
   // private. Protect: one policy from the tags you applied, a real one Govern lists. Save: the saving over a year, then
   // the fork: attach another cloud (the stage keeps this one and asks for the next) or open the dashboard.
-  const live = !!s.jLive;
-  const goLive = () => { if (!placed || live) return; set({ jLive: true, landed: landWith(s, move ? move.regions : [], est.id, placed.id) }); };
+  const live = !!placed && W.landedIdsFor(s, est.id, placed.id).includes(regionKey);
+  const goLive = () => { if (!placed || live) return; set({ jLive: true, landed: landWith(s, placed.regions || (move ? move.regions : []), est.id, placed.id) }); };
   // The policy deck: one card per tag, each a real intent; the engine says what it does to a flow to the cloud and to
   // the internet before you enforce it. Enforced ones are real policies Govern lists and the engine's ladder reads.
   const mine = (s.customPolicies || []).filter(p => p.journey && p.cloud === found.cloud);
-  const regionKey = found.has && found.regions.length ? (found.regions.some(r => r.region === s.jRegion) ? s.jRegion : found.regions[0].region) : null;
-  const intent = journeyIntent(s, regionKey), iCard = J.intentCard(intent, found, rows);
-  const deck0 = [...(iCard ? [iCard] : []), ...J.policyDeck(rows, intent)], fromSite = `Private cloud · Equinix DC2, Ashburn`, toRegion = found.regions[0] ? `${found.cloud} ${found.regions[0].region}` : '';
+  // The deck is for the region connected: its workloads, and an intent policy that matches it alone (2026-10-15).
+  const rowsHere = rows.filter(r => r.region === regionKey);
+  const intent = journeyIntent(s, regionKey), iCard = J.intentCard(intent, { ...found, regions: found.regions.filter(r => r.region === regionKey) }, rowsHere);
+  const deck0 = [...(iCard ? [iCard] : []), ...J.policyDeck(rowsHere, intent)], fromSite = `Private cloud · Equinix DC2, Ashburn`, toRegion = regionKey ? `${found.cloud} ${regionKey}` : '';
+  // An intent policy is the region's own; a tag's reaches the tag wherever it runs, as Govern reads it.
+  const isOn = (d) => mine.some(p => p.tag === d.tag && (!d.intent || p.match === d.match));
   const mkPol = (d) => ({ name: d.name, match: d.match, scope: 'any cloud', req: d.req, path: [], state: 'enforced', custom: true, journey: true, cloud: found.cloud, tag: d.tag });
   const verdictOf = (d, to) => (toRegion ? PM.decide(est, [mkPol(d)], { from: fromSite, to, tag: d.tag }).verdict : 'Allowed');
-  const enforceOne = (d) => { if (mine.some(p => p.tag === d.tag)) return; const pol0 = mkPol(d); const fig = GV.policyFigures(est, A.inventory(est), pol0) || {};
+  const enforceOne = (d) => { if (isOn(d)) return; const pol0 = mkPol(d); const fig = GV.policyFigures(est, A.inventory(est), pol0) || {};
     set({ customPolicies: [...(s.customPolicies || []), { ...pol0, matched: fig.matched ?? null, viol: 0, unit: fig.unit || 'workloads' }], jPolHover: null }); };
-  const enforceAll = () => { const add = deck0.filter(d => !mine.some(p => p.tag === d.tag)).map(d => { const pol0 = mkPol(d); const fig = GV.policyFigures(est, A.inventory(est), pol0) || {}; return { ...pol0, matched: fig.matched ?? null, viol: 0, unit: fig.unit || 'workloads' }; });
+  const enforceAll = () => { const add = deck0.filter(d => !isOn(d)).map(d => { const pol0 = mkPol(d); const fig = GV.policyFigures(est, A.inventory(est), pol0) || {}; return { ...pol0, matched: fig.matched ?? null, viol: 0, unit: fig.unit || 'workloads' }; });
     if (add.length) set({ customPolicies: [...(s.customPolicies || []), ...add], jPolHover: null }); };
   // A card speaks NetBond Advanced's grammar (Micah, 2026-10-08: "is it on prem to partner, partner to on prem? allow,
   // deny, manipulate? Advertise?"): the route rules the intent pushes, each with its verb and its direction.
@@ -6343,7 +6356,7 @@ function journeyVals(out, s, set, est) {
     const CV = { manip: ['Manipulate', 'manip'], allow: ['Allow', 'allow'], deny: ['Deny', 'deny'], adv: ['Advertise', 'adv'] };
     return PC.compilePolicy(mkPol(d), ROUTE_RULES).filter(r => !['netbond', 'vsrx'].includes(r.pep)).slice(0, 2).map((r, i) => ({ key: `${r.pep}:${i}`, verb: (CV[r.verb] || ['Apply', ''])[0], cls: (CV[r.verb] || ['', ''])[1], label: r.text,
       dir: r.dir === 'both' ? '⇄' : r.dir === 'o2p' ? '→' : '←', dirWord: r.dir === 'both' ? 'both ways' : r.dir === 'o2p' ? 'on prem to partner' : 'partner to on prem', title: `${(CV[r.verb] || ['Apply'])[0]} ${r.text.toLowerCase()}, on the ${(PC.PEPS[r.pep] || {}).word || r.pep}` })); };
-  const deck = deck0.map(d => { const on = mine.some(p => p.tag === d.tag), vc = verdictOf(d, toRegion), vi = verdictOf(d, 'the Internet');
+  const deck = deck0.map(d => { const on = isOn(d), vc = verdictOf(d, toRegion), vi = verdictOf(d, 'the Internet');
     return { key: d.tag, ...d, on, off: !on, n: String(d.apps.length), wlF: String(d.wl), appsWord: d.apps.join(', '), hover: s.jPolHover === d.tag, rules: rulesOf(d),
       // The intent card wears the Intent beat's mark and its parts in short; a tag card, the tag and its requirement.
       headIcon: d.intent ? 'target' : 'tag', reqWord: d.intent ? d.short : (REQ_WORD[d.req] || d.req),
@@ -6352,7 +6365,7 @@ function journeyVals(out, s, set, est) {
       title: `${d.name}: ${d.req} for ${d.apps.join(', ')}. To the cloud: ${vc}. To the internet: ${vi}.${on ? ' Enforced.' : ' Click to enforce.'}`,
       go: () => enforceOne(d), enter: () => set({ jPolHover: d.tag }), leave: () => set({ jPolHover: null }) }; });
   const enforcedN = deck.filter(d => d.on).length, deckN = deck.length;
-  const protectedBy = enforcedN > 0 ? mine[0] : null;
+  const protectedBy = enforcedN > 0 ? mine.find(p => deck.some(d => d.on && d.tag === p.tag)) || mine[0] : null;
   const hov = deck.find(d => d.hover) || null, shown = hov || (enforcedN ? deck.filter(d => d.on) : null);
   const prop = deck[0] ? { tag: deck[0].tag, word: deck[0].word } : null;
   // Each app counts once, however many denying policies cover it.
@@ -6361,16 +6374,19 @@ function journeyVals(out, s, set, est) {
   const yearSave = saving && tier ? tier.net * 12 : 0;
   const months = Array.from({ length: 12 }, (_, i) => ({ key: 'm' + i, h: `${Math.round((i + 1) / 12 * 100)}%`, d: `${i * 60}ms` }));
   const nextProv = J.PROVIDERS.find(p => p.live && !(s.addedSources || []).some(a => a.estId === J.JOURNEY_ESTATE && a.provider === p.key)) || null;
+  const nextRegion = found.regions.find(r => r.region !== regionKey && !orderFor(r.region)) || null;
+  const nextRegionGo = () => { if (nextRegion) set({ jRegion: nextRegion.region, jStep: JI.intent, jScan: null, jPick: null, jDetail: false, jPolHover: null, jFlip: (s.jFlip || 0) + 1 }); };
   const attachMore = () => { if (!nextProv) return; set({ jStep: JI.source, jScan: null, jProv: nextProv.key, jPick: null, jLive: false, jIntent: null, jTags: s.jTags, jDone: [...(s.jDone || []), found.cloud], orders: (s.orders || []).map(o => (o.journey ? { ...o, journey: false, journeyDone: true } : o)) }); };
   const openHome = () => { set({ journey: null, screen: 's0' }); syncHash('s0'); };
+  const where = regionKey ? `${cloudName} ${regionKey}` : cloudName;
   const LINE = {
     today: `AT&T already carries your ${today.sites} sites.`,
     source: scanning ? `Reading your ${prov.name} subscription.` : 'Connect a cloud account. Read only.',
     found: `${cloudName} runs ${found.wl} workloads outside the AT&T network.`,
     intent: `What does ${regionKey || ('your ' + cloudName + ' connection')} need?`,
-    recommend: saving ? `Move ${cloudName} onto AT&T. Save ${saving} a month.` : `Move ${cloudName} onto AT&T.`,
-    connect: placed ? 'Ordered. AT&T is provisioning it.' : `Connect ${cloudName} with ${tier ? tier.label : 'AT&T'}.`,
-    watch: live ? `${cloudName} is live on AT&T.` : 'Provisioning.',
+    recommend: saving ? `Move ${where} onto AT&T. Save ${saving} a month.` : `Move ${where} onto AT&T.`,
+    connect: placed ? 'Ordered. AT&T is provisioning it.' : `Connect ${where} with ${tier ? tier.label : 'AT&T'}.`,
+    watch: live ? `${where} is live on AT&T.` : 'Provisioning.',
     protect: hov ? `${hov.tag} ${hov.word}.` : enforcedN === deckN && deckN ? (keptOff ? `All ${deckN} enforced. ${keptOff} workloads never touch the internet.` : `All ${deckN} enforced.`) : enforcedN ? `${enforcedN} of ${deckN} enforced.${keptOff ? ` ${keptOff} workloads never touch the internet.` : ''}` : deckN ? `${deckN} ${deckN === 1 ? 'policy' : 'policies'} from your tags. Enforce them.` : 'Nothing to protect yet.',
     save: yearSave ? `${saving} a month. ${fmt(yearSave)} a year.` : 'Nothing saved yet.',
   }[beat.key];
@@ -6380,11 +6396,11 @@ function journeyVals(out, s, set, est) {
   // Ordered is not live (the critic, 2026-10-08: "the Watch beat has nothing to watch"): while AT&T provisions, the way stays
   // proposed and the traffic stays on the internet; Go live moves it, and that is the beat's picture.
   const link = live ? 'connected' : step >= JI.intent && tier ? 'proposed' : 'none';
-  const net = !found.has || step < JI.found ? 'off' : live ? 'gone' : 'public';
+  const net = !found.has || step < JI.found ? 'off' : live && found.regions.every(r => landedHere.includes(r.region)) ? 'gone' : 'public';
   const ACT = {
     today: { label: 'Find your clouds', go: to(JI.source), off: false },
     source: { label: pr.source ? 'See what it found' : scanning ? 'Scanning' : `Scan ${prov.name === 'Microsoft Azure' ? 'Azure' : prov.name}`, go: pr.source ? to(JI.found) : connectSource, off: scanning },
-    found: { label: 'Say what it needs', go: to(JI.intent), off: !pr.source },
+    found: { label: `Say what ${regionKey || 'it'} needs`, go: to(JI.intent), off: !pr.source },
     intent: { label: 'See the recommendation', go: to(JI.recommend), off: !tier },
     recommend: { label: tier ? `Choose ${tier.label}` : 'Nothing to connect', go: () => { if (tier) set({ jPick: pickI, jStep: JI.connect }); }, off: !tier },
     connect: placed ? { label: 'Watch it go live', go: () => { set({ jStep: JI.watch }); }, off: false } : { label: 'Place order', go: place, off: !tier },
@@ -6392,6 +6408,9 @@ function journeyVals(out, s, set, est) {
     protect: enforcedN ? { label: 'See what it saves', go: to(JI.save), off: false } : { label: deckN > 1 ? 'Enforce them all' : 'Enforce', go: enforceAll, off: !deckN },
     save: { label: 'Open the dashboard', go: openHome, off: false },
   }[beat.key];
+  const nexts = [
+    ...(nextRegion ? [{ key: 'r:' + nextRegion.region, has: true, kind: 'region', name: nextRegion.region, word: `Connect ${nextRegion.region}`, mark: W.markFor(found.cloud, s.theme), go: nextRegionGo }] : []),
+    ...(nextProv ? [{ key: 'c:' + nextProv.key, has: true, kind: 'cloud', name: nextProv.name === 'Microsoft Azure' ? 'Azure' : nextProv.name, word: `Attach ${nextProv.name === 'Microsoft Azure' ? 'Azure' : nextProv.name}`, mark: W.markFor(nextProv.key, s.theme) || nextProv.mark, go: attachMore }] : [])];
   const need = { found: pr.source, intent: pr.source, recommend: pr.source, connect: pr.source, watch: !!placed, protect: !!placed, save: !!placed };
   return { ...base, jStep: step, jBeat: beat, jBeatKey: beat.key, jLine: LINE, jIsIntent: step === JI.intent, jIsRec: step === JI.recommend, jIsConnect: step === JI.connect,
     jSteps: J.BEATS.map((b, i) => { const open = need[b.key] === undefined || !!need[b.key], done = i < step || (i === step && b.key === 'connect' && !!placed);
@@ -6420,11 +6439,16 @@ function journeyVals(out, s, set, est) {
     jScanSteps: SCAN.map((w, i) => ({ key: 's' + i, word: w, state: s.jScan === null || s.jScan === undefined ? 'next' : i < s.jScan ? 'done' : i === s.jScan ? 'cur' : 'next' })),
     jScanPct: `${Math.round(((s.jScan || 0) + (scanning ? 0.5 : 0)) / 4 * 100)}%`,
     jConnectSource: connectSource,
+    // Each region says where it stands: live, ordered, this pass, or out of it (left on the internet, by choice).
     jRegions: found.regions.map(r => ({ key: r.region, region: r.region, wlF: String(r.wl),
+      ...(() => { const st = landedHere.includes(r.region) && orderFor(r.region) ? 'live' : orderFor(r.region) ? 'ordered' : r.region === regionKey ? (step >= JI.found ? 'here' : '') : step >= JI.intent ? 'out' : '';
+        const g = { live: ['verified', `${r.region}: live on AT&T`], ordered: ['shopping-bag', `${r.region}: ordered`], out: ['internet', `${r.region}: not in this connection; stays on the internet`] }[st];
+        // The pass's region keeps its workloads; from Needs on, any other folds to its head line (the fold, and the OR at a glance).
+        return { state: st, pass: r.region === regionKey ? (step >= JI.found ? 'here' : '') : step >= JI.intent ? 'other' : '', hasGlyph: !!g, glyph: g ? g[0] : '', glyphTitle: g ? g[1] : '' }; })(),
       apps: r.apps.map(a => { const row = rows.find(x => x.key === a.key) || { suggested: [], applied: [] };
         return { key: a.key, name: a.name, icon: KIND_ICON[a.kind] || 'apps', title: a.purpose, hasTags: step >= JI.found, dotDelay: `${rows.findIndex(x => x.key === a.key) * 140}ms`,
           // The intent card covers every workload on the cloud; a tag card, the ones it tags.
-          hl: step === JI.protect && s.jPolHover ? (s.jPolHover === 'Intent' || (row.applied.length ? row.applied : row.suggested).includes(s.jPolHover) ? 'on' : 'off') : '',
+          hl: step === JI.protect && s.jPolHover ? ((s.jPolHover === 'Intent' ? r.region === regionKey : (row.applied.length ? row.applied : row.suggested).includes(s.jPolHover)) ? 'on' : 'off') : '',
           // Tags show where they do work: on Tag, on Intent (they suggest the answers) and on Protect (cards light what they
           // cover); elsewhere the card carries the intent glyphs alone (2026-10-08: "lots of words still").
           chips: [...new Set(step === JI.found ? [...row.suggested, ...row.applied] : TAG_BEATS.has(step) ? row.applied : [])].sort((x, y) => TAG_SLOT.indexOf(x) - TAG_SLOT.indexOf(y)).map(t => { const has = row.applied.includes(t); return { key: t, t, on: has, title: has ? `${t}: tagged${step === JI.found ? '. Remove it' : ''}` : `${t}: suggested. Tag it`, go: () => { if (step === JI.found) putTags(a.key, has ? row.applied.filter(x => x !== t) : [...row.applied, t]); } }; }),
@@ -6434,8 +6458,10 @@ function journeyVals(out, s, set, est) {
     // and the money pair move with it). Your tags suggest the first answers. Once ordered, the answers stand.
     // One connection serves the cloud's regions, so the questions are about the connection and the hint names every region it carries.
     // The region you are doing things to (2026-10-13): a picker in the cloud node from Needs on; answers and the ranking follow it.
-    jRegionPick: found.regions.map(r => ({ key: r.region, label: r.region, on: r.region === regionKey, go: () => set({ jRegion: r.region, jPick: null, jDetail: false, jFlip: (s.jFlip || 0) + 1 }) })),
-    jHasRegionPick: step >= JI.intent && found.has && found.regions.length > 1,
+    // From Found on (2026-10-15): the region is chosen where it is found; a region with no order, picked past the
+    // recommendation, opens its own Needs.
+    jRegionPick: found.regions.map(r => ({ key: r.region, label: r.region, on: r.region === regionKey, go: () => set({ jRegion: r.region, jPick: null, jDetail: false, jFlip: (s.jFlip || 0) + 1, ...(step > JI.recommend && !orderFor(r.region) ? { jStep: JI.intent, jPolHover: null } : {}) }) })),
+    jHasRegionPick: step >= JI.found && found.has && found.regions.length > 1,
     jNeeds: { scope: regionKey || '', hint: placed ? 'Ordered; the answers stand.' : `${(s.jIntents || {})[regionKey] && Object.keys(s.jIntents[regionKey]).length ? 'Your answers' : tagsOn ? 'Defaults from your tags' : 'Defaults'}; applies to ${regionKey}.` },
     jIntentQs: W.INTENT.map(q => ({ key: q.key, label: q.label, stem: q.key === 'purpose' ? 'This connection is' : W.INTENT_SENTENCE[q.key].stem, icon: q.icon, opts: q.opts.map(o => ({ ...o, verb: W.INTENT_SENTENCE[q.key].verbs[o.key], on: intent[q.key] === o.key, off: !!placed,
       go: () => { if (!placed) set({ jRegion: regionKey, jIntents: { ...(s.jIntents || {}), [regionKey]: { ...((s.jIntents || {})[regionKey] || {}), [q.key]: o.key } }, jPick: null, jDetail: false, jFlip: (s.jFlip || 0) + 1 }); } })) })),
@@ -6474,9 +6500,10 @@ function journeyVals(out, s, set, est) {
     jIsWatch: step === JI.watch, jIsProtect: step === JI.protect, jIsSave: step === JI.save, jLive: live, jNotLive: !live,
     jHealth: found.regions.flatMap(r => r.apps).map((a, i) => ({ key: a.key, d: `${i * 140}ms` })),
     // Into the policy engine on the journey's flow, its cards not yet enforced read in as staged, and back to this beat.
-    jEngineGo: () => { const preview = deck0.filter(d => !mine.some(p => p.tag === d.tag)).map(d => ({ ...mkPol(d), state: 'simulated' }));
+    jEngineGo: () => { const preview = deck0.filter(d => !isOn(d)).map(d => ({ ...mkPol(d), state: 'simulated' }));
       // It opens on the first tag card's own workloads: the region they sit in, so the flow is real, never a what-if.
-      const card = deck0.find(d => !d.intent) || null, home = card && (card.appKeys || [])[0] ? String(card.appKeys[0]).split(':')[0] : null;
+      // A tag the customer applied before one only suggested (2026-10-15): a suggestion is still a what-if to the engine.
+      const card = deck0.find(d => !d.intent && rowsHere.some(r => r.applied.includes(d.tag))) || deck0.find(d => !d.intent) || null, home = card && (card.appKeys || [])[0] ? String(card.appKeys[0]).split(':')[0] : null;
       diveToEngine({ state: s, setState: set }, { label: 'Back to the journey', screen: 'sj', restore: { journey: 'existing' } },
         { from: fromSite, to: home ? `${found.cloud} ${home}` : toRegion || 'the Internet', tag: card ? card.tag : '' }, preview); },
     jEngineTitle: 'Open the policy engine on this flow: what each layer does with these policies, before you enforce them. Back returns here',
@@ -6486,7 +6513,7 @@ function journeyVals(out, s, set, est) {
     jStampCloud: shown ? (Array.isArray(shown) ? (shown.some(d => d.cloudV === 'Denied') ? 'Denied' : 'Allowed') : shown.cloudV) : '', jStampNet: shown ? (Array.isArray(shown) ? (shown.some(d => d.netV === 'Denied') ? 'Denied' : 'Allowed') : shown.netV) : '',
     jStampCloudCls: shown && (Array.isArray(shown) ? shown.some(d => d.cloudV === 'Denied') : shown.cloudV === 'Denied') ? 'deny' : 'allow', jStampNetCls: shown && (Array.isArray(shown) ? shown.some(d => d.netV === 'Denied') : shown.netV === 'Denied') ? 'deny' : 'allow',
     jSave: { month: saving, year: yearSave ? fmt(yearSave) : '', has: !!yearSave, months, before: beforeMo !== null ? fmt(beforeMo) : '', after: afterMo !== null ? fmt(afterMo) : '' },
-    jNext: nextProv ? { has: true, name: nextProv.name === 'Microsoft Azure' ? 'Azure' : nextProv.name, mark: W.markFor(nextProv.key, s.theme) || nextProv.mark, go: attachMore } : { has: false, name: '', mark: '', go: () => {} },
+    jNext: nexts[0] || { has: false, kind: '', name: '', word: '', mark: '', go: () => {} }, jNexts: nexts,
     jDoneClouds: (s.jDone || []).map(c => ({ key: c, mark: W.markFor(c, s.theme), name: c })), jHasDone: (s.jDone || []).length > 0 };
 }
 function movesVals(s, set, go, est, { openF, obAll, conns }) {
@@ -6522,8 +6549,9 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
     // One recommendation at a time, open and spacious (Micah, 2026-10-07: "make the page more beautiful, open, spacious.
     // It can be the only option"): the hero is the move, a stepper walks the rest in rank order.
     const size = 1;
-    const pg = pageRows(all, size, s.movePage, (n) => set({ movePage: n, moveOpen: null }));
-    const heroAt = all.length ? Math.min(Math.max(0, s.movePage || 0), all.length - 1) : 0;
+    const focusAt = s.moveFocus ? all.findIndex(m => m.key === s.moveFocus) : -1, page = focusAt >= 0 ? Math.floor(focusAt / size) : s.movePage;
+    const pg = pageRows(all, size, page, (n) => set({ movePage: n, moveOpen: null, moveFocus: null }));
+    const heroAt = all.length ? Math.min(Math.max(0, page || 0), all.length - 1) : 0;
     const picked = all.filter(m => m.sel);
     const rows = pg.rows;
     return { connectSummary: summary, hasConnectSummary: summary.length > 0, moveList: all, moves: rows, movesPager: { ...pg.pager, label: all.length ? `${heroAt + 1} of ${all.length}` : '' }, movesPageSize: size, hasMoves: all.length > 0 || done.length > 0, noMoves: !all.length && !done.length, doneMoves: done, hasDone: done.length > 0,
@@ -6541,15 +6569,20 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
   const inv = A.inventory(est);
   // The journey's intent ranks the ways of its own estate's moves (2026-10-08); the dashboard keeps the session's order.
   const intent = intentOf(s, est);
-  const model = M.movesOf(est, { findings: openF.filter(f => !f.event), capacity: OD.capacity(conns, s.obWindow || '30d'), apps: appsOf(est, inv, obAll.flows || []), inv, base: egressBaseFor(est, obAll), intent });
+  // The journey's estate keeps its answers per region, so each region is its own move (2026-10-15, "what if it's an or?").
+  const split = est.id === J.JOURNEY_ESTATE ? { split: true, intentFor: (id) => journeyIntent(s, id) } : {};
+  const model = M.movesOf(est, { findings: openF.filter(f => !f.event), capacity: OD.capacity(conns, s.obWindow || '30d'), apps: appsOf(est, inv, obAll.flows || []), inv, base: egressBaseFor(est, obAll), intent, ...split });
   // Picks are kept per estate, so the demo picker never carries a tick from one estate to another.
   const sel = (s.moveSel || {})[est.id] || {}, tierPick = (s.moveTier || {})[est.id] || {};
   const keep = (k, v) => ({ ...(s[k] || {}), [est.id]: v });
   // An answer on the dashboard writes the one store (2026-10-09): the journey's own for its estate, so its Intent beat and
   // Recommended edit one object; this estate's otherwise. Picks were indices into the old ranking, so they clear.
-  const setIntentFor = (q, o) => (est.id === J.JOURNEY_ESTATE
-    ? set({ jIntents: { ...(s.jIntents || {}), [jRegionKeyOf(s) || '*']: { ...((s.jIntents || {})[jRegionKeyOf(s) || '*'] || {}), [q]: o } }, jPick: null, jFlip: (s.jFlip || 0) + 1, moveTier: keep('moveTier', {}), recWhy: keep('recWhy', null) })
-    : set({ intents: { ...(s.intents || {}), [est.id]: { ...((s.intents || {})[est.id] || {}), [q]: o } }, moveTier: keep('moveTier', {}), recWhy: keep('recWhy', null) }));
+  // A region's move writes that region's answers (2026-10-15: a move a region on the journey's estate).
+  const rkOf = (m) => (m && m.regions && m.regions.length === 1 ? m.regions[0] : jRegionKeyOf(s)) || '*';
+  // An answer re-ranks the moves; the one answered keeps the front (moveFocus) until the pager moves on (2026-10-15).
+  const setIntentFor = (q, o, m) => (est.id === J.JOURNEY_ESTATE
+    ? set({ jIntents: { ...(s.jIntents || {}), [rkOf(m)]: { ...((s.jIntents || {})[rkOf(m)] || {}), [q]: o } }, jPick: null, jFlip: (s.jFlip || 0) + 1, moveTier: keep('moveTier', {}), recWhy: keep('recWhy', null), moveFocus: m ? m.key : null })
+    : set({ intents: { ...(s.intents || {}), [est.id]: { ...((s.intents || {})[est.id] || {}), [q]: o } }, moveTier: keep('moveTier', {}), recWhy: keep('recWhy', null), moveFocus: m ? m.key : null }));
   // A move preselects its recommendation: the session's first way on a cloud region, a ladder's middle rung elsewhere.
   const tierOfMove = (m) => (Number.isInteger(tierPick[m.key]) ? tierPick[m.key] : Number.isInteger(m.recI) ? m.recI : 1);
   const labelOf = (m) => m.title.replace(/^(Move|Bring|Put|Add) /, '').replace(/ onto AT&T( access)?$| on the AT&T network$/, '');
@@ -6656,7 +6689,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
       intentChips: W.INTENT.map(q => { const o = q.opts.find(x => x.key === answers[q.key]) || q.opts[0]; return { key: q.key, icon: o.icon, title: `${q.label}: ${o.label}` }; }),
       intentTitle: `What it needs: ${W.INTENT.map(q => (q.opts.find(x => x.key === answers[q.key]) || q.opts[0]).label).join(', ')}`,
       intentOpen, intentToggle: () => set({ recIntent: keep('recIntent', intentOpen ? null : m.key) }),
-      intentQs: W.INTENT.map(q => ({ key: q.key, label: q.label, icon: q.icon, opts: q.opts.map(o => ({ ...o, on: answers[q.key] === o.key, off: hasTaskM, go: () => { if (!hasTaskM) setIntentFor(q.key, o.key); } })) })),
+      intentQs: W.INTENT.map(q => ({ key: q.key, label: q.label, icon: q.icon, opts: q.opts.map(o => ({ ...o, on: answers[q.key] === o.key, off: hasTaskM, go: () => { if (!hasTaskM) setIntentFor(q.key, o.key, m); } })) })),
       // Why, as the journey tells it, over the cards.
       whyOpen: !!whyT, why: whyT ? whyPanelOf(whyT, answers) : null, whyClose: () => set({ recWhy: keep('recWhy', null) }) };
   });
@@ -6938,13 +6971,17 @@ function costVals(s, set, est, invAll, ob, go, c) {
       // counted "3 open moves" where Optimize shows two priced rows).
       const pricedOpt = optBase.filter(r => r.key !== 'resiliency' && r.key !== 'capacity' && r.figure > 0);
       const couldSave = pricedOpt.reduce((a, r) => a + r.figure, 0);
-      const st = R.spendStory({ base, moveSave: couldSave, series: bankSeries });
+      // This month's landings (LC.afterLandings): what they took off the bill, and what of it now bills on AT&T.
+      const landedBks = (est.buckets || []).filter(b => b.landed), landedOff = landedBks.reduce((a, b) => a + (b.carries || 0), 0), landedAtt = landedBks.reduce((a, b) => a + b.today, 0);
+      const st = R.spendStory({ base, moveSave: couldSave, series: bankSeries, landed: landedOff });
       const last = st.past[st.past.length - 1] || { spend: base, saved: 0 };
       const n3 = st.next[st.next.length - 1];
       const bks = est.buckets || [];
       // This month by the buckets: On AT&T only where it is (CV.bucketInk), or outside AT&T. Earlier months keep the same split (modelled).
       const attNow = bks.filter(b => CV.bucketInk(est, b) === 'att').reduce((a, b) => a + b.today, 0), outNow = bks.filter(b => CV.bucketInk(est, b) === 'public').reduce((a, b) => a + b.today, 0);
       const attShare = base > 0 ? Math.min(1, attNow / base) : 0;
+      // Months before a landing keep the split they had: its share was outside AT&T then.
+      const attShare0 = base + landedOff > 0 ? Math.min(1, Math.max(0, attNow - landedAtt) / (base + landedOff)) : 0;
       const cols = st.past.length + st.next.length;
       const mx = Math.max(1, ...st.past.map(p => p.spend + p.saved), ...st.next.map(n => n.asIs)) * 1.04;
       const pct = (v) => (v / mx * 100).toFixed(2) + '%';
@@ -6995,7 +7032,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
         ].map(cstTile),
         spendActGo: toMoves, spendChartGo: toBuckets,
         spendCols: [
-          ...st.past.map((p, i) => { const attN = Math.round(p.spend * attShare), outN = p.spend - attN;
+          ...st.past.map((p, i) => { const attN = Math.round(p.spend * (i === st.past.length - 1 ? attShare : attShare0)), outN = p.spend - attN;
             return { key: p.key, d: i, kind: 'past', label: colLabel(monthName(p.month), i), spendN: p.spend, attN, outN, topN: p.saved, baseN: p.spend,
               attH: pct(attN), outH: pct(outN), topH: pct(p.saved), attFill: I.att.color, outFill: I.public.color, topFill: I.saved.color, bg: 'transparent', weight: i === st.past.length - 1 ? 700 : 500,
               go: toBuckets, title: `${monthName(p.month)} · spent ${fmt(p.spend)} · banked ${fmt(p.saved)} by acting` }; }),
@@ -7058,7 +7095,7 @@ function costVals(s, set, est, invAll, ob, go, c) {
         ? rows.filter(r => (r.bySource[one.key] || 0) > 0).sort((a, b) => b.bySource[one.key] - a.bySource[one.key] || a.label.localeCompare(b.label))
           .map(r => bankRow('p:' + r.key, 'place', r.label, r.bySource[one.key], one, toScope(r)))
         : src.map(x => bankRow(x.key, x.kind, x.label, sc ? (sc.bySource[x.key] || 0) : x.perMo, x,
-          sc || x.kind === 'network' ? toSource(x) : go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'closed', findPage: 0, fdKey: x.finding })))
+          sc || x.kind !== 'finding' ? toSource(x) : go('s3', { layer: 'cloud', tab: 'observe', obPage: 'insights', insPanel: 'findings', findFilter: 'closed', findPage: 0, fdKey: x.finding })))
           .filter(r => r.moN > 0);
       const listBanked = s.spendList === 'banked';
       return { saveGroupValue: dim, setSaveGroup: (e) => set({ saveGroup: e.target.value, bankScope: null, bankSource: null }), saveRows, hasSaveList: rows.length > 0 && (bankTo.saved + stillOpen) > 0,

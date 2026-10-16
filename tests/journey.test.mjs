@@ -48,7 +48,8 @@ test('the Customer switch opens the journey on its first beat, clean; the steppe
 test('one sentence a beat tells the story', () => {
   const lines = [0, 1, 2, 3, 4, 5].map(i => vals(journey({ jStep: i, addedSources: i >= 2 ? AZURE : [] })).jLine);
   assert.deepEqual(lines, ['AT&T already carries your 20 sites.', 'Connect a cloud account. Read only.', 'Azure runs 68 workloads outside the AT&T network.',
-    'What does eastus need?', 'Move Azure onto AT&T. Save $3,600 a month.', 'Connect Azure with Your ExpressRoute.']);
+    // A region at a time since 2026-10-15 ("what if it's an or?"): the lines name the region the pass is about.
+    'What does eastus need?', 'Move Azure eastus onto AT&T. Save $4,688 a month.', 'Connect Azure eastus with Your ExpressRoute.']);
   for (const l of lines) assert.ok(l.split(' ').length <= 9, l);
 });
 
@@ -100,10 +101,10 @@ test('Found: tags suggested by what a workload is, there to confirm or add, neve
   assert.deepEqual(chips('payments-api'), ['PCI', 'Finance', 'Prod'], 'a tag keeps its slot: PCI, Finance, Internet-facing, then Prod beside the +');
   assert.deepEqual(chips('customer-portal'), ['Internet-facing', 'Prod']);
   assert.deepEqual(chips('dispatch-svc'), ['Prod']);
-  assert.equal(v.jAct, 'Say what it needs', 'the primary moves on; tagging is optional');
+  assert.equal(v.jAct, 'Say what eastus needs', 'the primary moves on, naming the region picked; tagging is optional');
   assert.equal(v.jTagRest.has, true); v.jTagRest.go();
   v = vals(c);
-  assert.equal(v.jTagRest.has, false, 'every suggestion is on'); assert.equal(v.jAct, 'Say what it needs');
+  assert.equal(v.jTagRest.has, false, 'every suggestion is on'); assert.equal(v.jAct, 'Say what eastus needs');
   assert.deepEqual(chips('dispatch-svc'), ['Prod'], 'the portal\'s Internet-facing stays the portal\'s');
   const est = estateFor({ view: 'lastmile', estateParam: null, addedSources: AZURE, jTags: c.state.jTags });
   assert.ok(est.regionsList.find(r => r.region === 'westeurope').tags.includes('PCI'));
@@ -115,12 +116,14 @@ test('beat 6: the three ways as one choice, Recommended first; the AT&T line is 
   // The default intent (production, standard, private, your BGP) ranks the deck's way: NetBond Advanced on your port,
   // on AT&T's, then the hosted transit gateway (the deck's own example card: NetBond Advanced, Transit Gateway, peering).
   assert.deepEqual(v.jOptions.map(o => [o.label, o.on]), [['Your ExpressRoute', true], ["AT&T's ExpressRoute", false], ['Hosted transit gateway', false]]);
-  assert.deepEqual(v.jOptions.map(o => o.delta), ['saves $3,600', 'saves $3,000', 'adds $1,068']);
+  // East US alone (2026-10-15): $9,882 today against $3,294 at the AT&T rate, less one port a way. The cloud's finding once
+  // took the ports off too, so they came off twice ($2,453, $2,153, $119); it now saves the bucket's premium (landed-egress).
+  assert.deepEqual(v.jOptions.map(o => o.delta), ['saves $4,688', 'saves $4,388', 'saves $2,354']);
   assert.ok(v.jOptions.every(o => o.hasPts));
   assert.equal(v.jLink, 'proposed'); assert.equal(v.jLinkWord, 'Your ExpressRoute');
   v.jOptions[1].go();
   v = vals(c);
-  assert.equal(v.jLine, 'Move Azure onto AT&T. Save $3,000 a month.');
+  assert.equal(v.jLine, 'Move Azure eastus onto AT&T. Save $4,388 a month.');
   assert.equal(v.jAct, "Choose AT&T's ExpressRoute");
   v.jActGo();
   assert.equal(c.state.jStep, B.connect); assert.equal(c.state.jPick, 1);
@@ -129,8 +132,9 @@ test('beat 6: the three ways as one choice, Recommended first; the AT&T line is 
 test('beat 7: one line of the order, Place order; then the line is AT&T\'s, the internet path fades, and the phases follow', () => {
   const c = journey({ jStep: B.connect, jPick: 1, addedSources: AZURE });
   let v = vals(c);
-  assert.deepEqual(v.jLines.map(l => [l.name, l.n, l.v]), [['NetBond Advanced', 2, '$3,800/mo'], ['Cloud port, AT&T-provided', 2, '$600/mo']]);
-  assert.equal(v.jTotal, '$4,400/mo'); assert.equal(v.jRegionsWord, 'eastus · westeurope');
+  // One region, one port of each (2026-10-15: the order is for the region picked, not the cloud).
+  assert.deepEqual(v.jLines.map(l => [l.name, l.n, l.v]), [['NetBond Advanced', 1, '$1,900/mo'], ['Cloud port, AT&T-provided', 1, '$300/mo']]);
+  assert.equal(v.jTotal, '$2,200/mo'); assert.equal(v.jRegionsWord, 'eastus');
   assert.equal(v.jAct, 'Place order');
   v.jActGo();
   v = vals(c);
@@ -139,7 +143,7 @@ test('beat 7: one line of the order, Place order; then the line is AT&T\'s, the 
   // Ordered is not live: the way stays proposed and the traffic on the internet until Go live (the Watch beat's picture).
   assert.equal(v.jLink, 'proposed'); assert.equal(v.jNet, 'public'); assert.equal(v.jFlow, 'net');
   const o = c.state.orders.find(x => x.journey);
-  assert.equal(o.stage, 'Submitted for approval'); assert.deepEqual(o.moveKeys, ['region:Azure']); assert.equal(o.way, 'att');
+  assert.equal(o.stage, 'Submitted for approval'); assert.deepEqual(o.moveKeys, ['region:Azure:eastus']); assert.deepEqual(o.regions, ['eastus']); assert.equal(o.way, 'att');
   assert.deepEqual(v.jPhases.map(p => [p.label, p.state]), [['Ordered', 'done'], ['Provision', 'set'], ['Live', 'any'], ['Insight', 'any']]);
   assert.equal(v.jAct, 'Watch it go live');
   assert.ok(vals(mkC({ ...c.state, journey: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' })).ordRows.some(r => /AT&T's ExpressRoute/.test(r.title)), 'Orders lists it in the dashboard');
@@ -187,8 +191,11 @@ test('the picture carries the figures (2026-10-08): the monthly before and after
   const rec = vals(journey({ jStep: B.recommend, addedSources: AZURE }));
   for (const k of ['jLinkMs', 'jLinkDrop', 'jLinkHasDrop', 'jLinkHasMs']) assert.equal(rec[k], undefined, k);
   assert.doesNotMatch(HTML, /jLinkMs|jLinkDrop|jLinkHasMs|js-ms/);
-  assert.deepEqual([rec.jMoney.has, rec.jMoney.before, rec.jMoney.after, rec.jMoney.up], [true, '$16,800/mo', '$13,200/mo', false]);
-  const hosted = vals(journey({ jStep: B.recommend, jPick: 2, addedSources: AZURE }));
+  assert.deepEqual([rec.jMoney.has, rec.jMoney.before, rec.jMoney.after, rec.jMoney.up], [true, '$9,882/mo', '$5,194/mo', false], 'East US\'s own egress at the AT&T rate plus its port (2026-10-15)');
+  // AWS eu-west-1's hosted way costs more than its $3,800 of egress (2026-10-15: each region priced alone, the ports counted
+  // once; no Azure way is dearer than today any more).
+  const hosted = vals(journey({ jStep: B.recommend, jPick: 2, jProv: 'AWS', jRegion: 'eu-west-1', addedSources: [{ provider: 'AWS', estId: 'lastmile', name: 'AWS account', cadence: 'daily', at: 1 }] }));
+  assert.deepEqual([hosted.jMoney.before, hosted.jMoney.after], ['$3,800/mo', '$5,534/mo']);
   assert.equal(hosted.jMoney.up, true, 'a dearer way reads in heading ink, never green');
   const c = journey({ jStep: B.connect, jPick: 1, addedSources: AZURE });
   vals(c).jActGo();
@@ -203,89 +210,99 @@ test('the picture carries the figures (2026-10-08): the monthly before and after
 // ---- Act three (2026-10-08): live, protected, saved, and attach more ----
 const placedAzure = () => { const c = journey({ jStep: B.connect, jPick: 1, addedSources: AZURE }); vals(c).jActGo(); vals(c).jActGo(); return c; };
 
-test('beat 7: Go live lands both regions at once; every app blinks green; the internet path is gone; every page reads them private', () => {
+// Go live lands the region ordered, never the cloud (2026-10-15, "what if it's an or?"): West Europe stays on the internet.
+test('beat 7: Go live lands the region ordered; its apps blink green; the internet path stays for the region left on it; every page reads it private', () => {
   const c = placedAzure();
   let v = vals(c);
   assert.equal(c.state.jStep, B.watch); assert.equal(v.jLine, 'Provisioning.'); assert.equal(v.jAct, 'Go live');
   v.jActGo();
   v = vals(c);
-  assert.deepEqual(c.state.landed.map(e => [e.est, e.region, e.order]), [['lastmile', 'eastus', 'o1'], ['lastmile', 'westeurope', 'o1']], 'landed on the journey estate, for its order');
-  assert.equal(v.jLine, 'Azure is live on AT&T.'); assert.equal(v.jNet, 'gone'); assert.equal(v.jLink, 'connected'); assert.equal(v.jLive, true);
+  assert.deepEqual(c.state.landed.map(e => [e.est, e.region, e.order]), [['lastmile', 'eastus', 'o1']], 'landed on the journey estate, for its order, East US alone');
+  assert.equal(v.jLine, 'Azure eastus is live on AT&T.'); assert.equal(v.jNet, 'public', 'westeurope still crosses the internet'); assert.equal(v.jLink, 'connected'); assert.equal(v.jLive, true);
+  assert.deepEqual(v.jRegions.map(r => r.state), ['live', 'out']);
   assert.deepEqual(v.jPhases.map(p => p.state), ['done', 'done', 'done', 'set'], 'one lifecycle: finished phases are done, the stepper\'s blue');
   assert.match(HTML, /<sc-if value="\{\{ jIsWatch \}\}"[^>]*><div class="js-order"><div class="ps big js-phases"/, 'the phases tick on the Watch beat itself');
   assert.match(HTML, /\.ps \[data-state="done"\] i\{border-color:var\(--cta\)/, 'done reads blue, as the stepper does, on every phase strip');
   assert.match(HTML, /\.ps \[data-state="ok"\] i\{border-color:var\(--success\)/, 'health keeps its green');
   assert.equal(v.jHealth.length, 4);
   // The figures survive the move leaving the ranked list: the order snapshotted them at Place.
-  assert.equal(v.jMoney.after, '$13,800/mo');
+  assert.equal(v.jMoney.after, '$5,494/mo', 'East US with AT&T\'s ExpressRoute: $3,294 + $2,200');
   // One lifecycle (2026-10-09): Orders reads the journey's Go live; it once still said Submitted for approval.
   const ord = vals(mkC({ ...c.state, journey: null, screen: 's3', layer: 'cloud', tab: 'connect', cnPage: 'orders' })).ordRows.find(r => r.journey);
   assert.equal(ord.stage, 'Live'); assert.equal(ord.canGoLive, false);
   const home = vals(mkC({ ...c.state, journey: null, screen: 's0' }));
-  assert.ok(home.homeCards.find(x => x.key === 'onatt').big === '2', 'the home counts both regions private');
+  assert.ok(home.homeCards.find(x => x.key === 'onatt').big === '1', 'the home counts the one region private');
 });
 
-test('beat 8: a deck of policies from the tags, each a real intent with the engine\'s verdicts; hover previews, click enforces, all at once or one by one', () => {
+// The deck is the region's (2026-10-15, "what if it's an or?"): East US's workloads carry Internet-facing and Prod, West
+// Europe's PCI, Finance and Prod; a pass never proposes a policy for a region it did not connect.
+test('beat 8: a deck of policies from the region\'s tags, each a real intent with the engine\'s verdicts; hover previews, click enforces, all at once or one by one', () => {
   const c = placedAzure(); vals(c).jActGo(); vals(c).jActGo();
   let v = vals(c);
   assert.equal(c.state.jStep, B.protect);
-  assert.deepEqual(v.jDeck.map(d => [d.tag, d.req, d.cloudV, d.netV]), [['PCI', 'Private path required', 'Allowed', 'Denied'], ['Finance', 'Private path required', 'Allowed', 'Denied'], ['Internet-facing', 'Inline security inspection', 'Allowed', 'Allowed'], ['Prod', 'No direct internet path', 'Allowed', 'Denied']]);
-  assert.deepEqual(v.jDeck.map(d => d.apps), [['payments-api'], ['payments-api', 'fin-ledger'], ['customer-portal'], ['dispatch-svc', 'customer-portal', 'payments-api', 'fin-ledger']]);
-  assert.equal(v.jLine, '4 policies from your tags. Enforce them.'); assert.equal(v.jAct, 'Enforce them all'); assert.equal(v.jVerdict, 'none');
-  // Each card is NetBond's sheet for its intent: the verb, the rule, the direction (2026-10-08). A private path allows the
-  // matching routes both ways; blocking the default route is NetBond's own baseline, not the card's (2026-10-09).
-  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Allow', 'Matching routes', '⇄']]);
-  assert.deepEqual(v.jDeck[2].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'CV tagging', '→'], ['Manipulate', 'Tag by CV', '←']]);
-  assert.equal(v.jDeck[0].rules[0].dirWord, 'both ways');
-  // Short on the card, NetBond's whole name in the title (2026-10-08: "making text more concise").
-  assert.match(v.jDeck[0].rules[0].title, /^Allow matching routes, both ways$/);
+  assert.deepEqual(v.jDeck.map(d => [d.tag, d.req, d.cloudV, d.netV]), [['Internet-facing', 'Inline security inspection', 'Allowed', 'Allowed'], ['Prod', 'No direct internet path', 'Allowed', 'Denied']]);
+  assert.deepEqual(v.jDeck.map(d => d.apps), [['customer-portal'], ['dispatch-svc', 'customer-portal']]);
+  assert.equal(v.jLine, '2 policies from your tags. Enforce them.'); assert.equal(v.jAct, 'Enforce them all'); assert.equal(v.jVerdict, 'none');
+  // Each card is NetBond's sheet for its intent: the verb, the rule, the direction (2026-10-08).
+  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'CV tagging', '→'], ['Manipulate', 'Tag by CV', '←']]);
   // Short on the deck, the whole of it in the title (2026-10-08: "lots of words still").
   assert.equal(v.jDeckWhere, 'NetBond Advanced route policy'); assert.match(v.jDeckWhereTitle, /^Enforced as route policy on NetBond Advanced/); assert.equal(v.jDeckNba, true);
-  assert.deepEqual(v.jDeck.map(d => d.reqWord), ['Private', 'Private', 'Inspected', 'No internet']);
-  // A hosted pick enforces on the vSRX in AT&T's hub and the cloud's route tables (the deck, slide 5), not as BGP route rules.
-  const h = journey({ jStep: B.connect, jPick: 2, addedSources: AZURE }); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo();
-  const hv = vals(h);
+  assert.deepEqual(v.jDeck.map(d => d.reqWord), ['Inspected', 'No internet']);
   // On a NetBond way, no card lists a vSRX: a card NetBond carries no rule for shows the site and the cloud (2026-10-09).
   assert.ok(v.jDeck.every(d => d.rules.every(r => !/vSRX/i.test(r.title))), 'no hosted hub is invented under the NetBond header');
   assert.deepEqual(v.jDeck.find(d => d.tag === 'Prod').rules.map(r => [r.verb, r.label]), [['Deny', 'Local breakout'], ['Allow', '0/0 via AT&T']]);
+  // A hosted pick enforces on the vSRX in AT&T's hub and the cloud's route tables (the deck, slide 5), not as BGP route rules.
+  const h = journey({ jStep: B.connect, jPick: 2, addedSources: AZURE }); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo(); vals(h).jActGo();
+  const hv = vals(h);
   assert.equal(hv.jDeckHosted, true); assert.equal(hv.jDeckWhere, 'vSRX and your route tables'); assert.match(hv.jDeckWhereTitle, /^Enforced on the vSRX in AT&T's hub/);
   assert.deepEqual(hv.jDeck[0].rules.map(r => [r.verb, r.label]), [['Inspect', 'vSRX, L3 to L7'], ['Route', 'Route tables']]);
   assert.match(HTML, /<span class="js-rule" title="\{\{ rr\.title \}\}"><span class="fw-badge \{\{ rr\.cls \}\}">\{\{ rr\.verb \}\}<\/span>/);
   assert.match(HTML, /<div class="js-deckkey"/);
   // Hover previews: the stamps take that card's verdicts, dashed; the apps it covers light, the rest dim.
-  v.jDeck[2].enter();
+  v.jDeck[0].enter();
   v = vals(c);
   assert.equal(v.jVerdict, 'preview'); assert.deepEqual([v.jStampCloud, v.jStampNet], ['Allowed', 'Allowed']);
   assert.deepEqual(v.jRegions[0].apps.map(a => [a.name, a.hl]), [['dispatch-svc', 'off'], ['customer-portal', 'on']]);
   assert.equal(v.jLine, 'Internet-facing is inspected in path.');
-  v.jDeck[2].leave();
+  v.jDeck[0].leave();
+  // West Europe's own pass: its PCI, Finance and Prod cards.
+  const w = journey({ jStep: B.connect, jPick: 1, jRegion: 'westeurope', addedSources: AZURE }); vals(w).jActGo(); vals(w).jActGo(); vals(w).jActGo(); vals(w).jActGo();
+  v = vals(w);
+  assert.equal(w.state.jStep, B.protect);
+  assert.deepEqual(v.jDeck.map(d => [d.tag, d.req, d.cloudV, d.netV]), [['PCI', 'Private path required', 'Allowed', 'Denied'], ['Finance', 'Private path required', 'Allowed', 'Denied'], ['Prod', 'No direct internet path', 'Allowed', 'Denied']]);
+  assert.deepEqual(v.jDeck.map(d => d.apps), [['payments-api'], ['payments-api', 'fin-ledger'], ['payments-api', 'fin-ledger']]);
+  // A private path allows the matching routes both ways; blocking the default route is NetBond's own baseline (2026-10-09).
+  assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Allow', 'Matching routes', '⇄']]);
+  assert.equal(v.jDeck[0].rules[0].dirWord, 'both ways');
+  assert.match(v.jDeck[0].rules[0].title, /^Allow matching routes, both ways$/);
   // One at a time.
-  vals(c).jDeck[0].go();
-  v = vals(c);
-  assert.deepEqual(v.jDeck.map(d => d.on), [true, false, false, false]);
-  assert.equal(v.jLine, '1 of 4 enforced. 14 workloads never touch the internet.');
+  vals(w).jDeck[0].go();
+  v = vals(w);
+  assert.deepEqual(v.jDeck.map(d => d.on), [true, false, false]);
+  assert.equal(v.jLine, '1 of 3 enforced. 14 workloads never touch the internet.');
   assert.equal(v.jVerdict, 'enforced'); assert.deepEqual([v.jStampCloud, v.jStampNet], ['Allowed', 'Denied']);
-  assert.deepEqual([v.jDeckRest.has, v.jDeckRest.n, v.jAct], [true, '3', 'See what it saves']);
-  const pol = c.state.customPolicies.find(p => p.journey);
+  assert.deepEqual([v.jDeckRest.has, v.jDeckRest.n, v.jAct], [true, '2', 'See what it saves']);
+  const pol = w.state.customPolicies.find(p => p.journey);
   assert.deepEqual([pol.name, pol.match, pol.req, pol.state, pol.cloud, pol.tag], ['PCI private path', 'tag PCI', 'Private path required', 'enforced', 'Azure', 'PCI']);
-  assert.ok(vals(mkC({ ...c.state, journey: null, screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies' })).polRows.some(r => r.name === 'PCI private path'), 'Govern lists it');
+  assert.ok(vals(mkC({ ...w.state, journey: null, screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies' })).polRows.some(r => r.name === 'PCI private path'), 'Govern lists it');
   // The rest at once.
   v.jDeckRest.go();
-  v = vals(c);
+  v = vals(w);
   assert.ok(v.jDeck.every(d => d.on)); assert.equal(v.jDeckRest.has, false);
-  assert.equal(v.jLine, 'All 4 enforced. 68 workloads never touch the internet.');
-  assert.equal(c.state.customPolicies.filter(p => p.journey).length, 4);
+  assert.equal(v.jLine, 'All 3 enforced. 28 workloads never touch the internet.');
+  assert.equal(w.state.customPolicies.filter(p => p.journey).length, 3);
   assert.match(HTML, /<button role="listitem" class="js-pcard" data-on="\{\{ pd\.on \}\}" data-hover="\{\{ pd\.hover \}\}" onClick="\{\{ pd\.go \}\}" onMouseEnter="\{\{ pd\.enter \}\}" onMouseLeave="\{\{ pd\.leave \}\}"/);
 });
 
-test('beat 9: the saving a month and a year; Attach AWS loops to the source with Azure done; Open the dashboard lands home', async () => {
+// Save offers both doors (2026-10-15): the cloud's region not yet ordered, and the next cloud. Neither is forced.
+test('beat 9: the saving a month and a year; Connect westeurope and Attach AWS beside it; Attach AWS loops to the source with Azure done; Open the dashboard lands home', async () => {
   const c = placedAzure(); vals(c).jActGo(); vals(c).jActGo(); vals(c).jActGo(); vals(c).jActGo();
   let v = vals(c);
   assert.equal(c.state.jStep, B.save);
-  assert.equal(v.jLine, '$3,000 a month. $36,000 a year.');
-  assert.deepEqual([v.jSave.month, v.jSave.year, v.jSave.months.length], ['$3,000', '$36,000', 12]);
-  assert.deepEqual([v.jNext.has, v.jNext.name], [true, 'AWS']);
-  v.jNext.go();
+  assert.equal(v.jLine, '$4,388 a month. $52,656 a year.');
+  assert.deepEqual([v.jSave.month, v.jSave.year, v.jSave.months.length], ['$4,388', '$52,656', 12]);
+  assert.deepEqual(v.jNexts.map(n => [n.kind, n.word]), [['region', 'Connect westeurope'], ['cloud', 'Attach AWS']]);
+  v.jNexts[1].go();
   v = vals(c);
   assert.equal(c.state.jStep, B.source); assert.deepEqual(c.state.jDone, ['Azure']); assert.equal(c.state.jLive, false);
   assert.equal(v.jAct, 'Scan AWS'); assert.equal(v.jCloud.state, 'picking'); assert.equal(v.jHasDone, true);
@@ -328,8 +345,8 @@ test('Found again (2026-10-08, moved 2026-10-12): any known tag from a palette, 
   assert.equal(w.jDetailOpen, true);
   assert.equal(w.jDetail.label, 'Your ExpressRoute');
   assert.deepEqual(w.jDetail.metrics.map(m => m.key), ['sec', 'perf', 'cost', 'setup', 'you']);
-  assert.match(w.jDetail.metrics[2].words, /^Egress \$16,800 to/);
-  assert.deepEqual(w.jDetail.products.map(p => [p.name, p.n]), [['NetBond Advanced', '2']]);
+  assert.match(w.jDetail.metrics[2].words, /^Egress \$9,882 to/, 'East US\'s egress');
+  assert.deepEqual(w.jDetail.products.map(p => [p.name, p.n]), [['NetBond Advanced', '1']]);
   assert.match(w.jDetail.youDo, /^Accept the connection/);
   assert.match(HTML, /<button class="js-more js-deeper" onClick="\{\{ toggleDetail \}\}" aria-expanded="\{\{ jDetailOpen \}\}">/);
   assert.match(HTML, /<sc-if value="\{\{ ap\.picking \}\}"[^>]*><div class="js-palette" role="group" aria-label="Tags for \{\{ ap\.name \}\}">/, 'the palette opens in the row it edits');

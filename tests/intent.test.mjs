@@ -129,23 +129,26 @@ test('the intent shapes the policy deck: one intent card leads, a real policy th
   assert.notEqual(decide(est, [pol], { from: 'HQ', to: 'Azure northeurope' }).decidedBy, 'x');
   assert.equal(J.intentCard({}, { cloud: 'Azure', regions: [{ region: 'eastus' }] }, []), null, 'the default intent asks nothing more of the path');
   // In the journey: placed, live, on Protect.
-  const run = (jIntent) => { const c = journey({ jStep: B.connect, jPick: 0, jIntent, jTags: { 'eastus:dispatch-svc': ['Prod'], 'westeurope:payments-api': ['PCI', 'Prod'] } });
+  const run = (jIntent, jRegion) => { const c = journey({ jStep: B.connect, jPick: 0, jIntent, jRegion, jTags: { 'eastus:dispatch-svc': ['Prod'], 'westeurope:payments-api': ['PCI', 'Prod'] } });
     vals(c).jActGo(); vals(c).jActGo(); vals(c).jActGo(); vals(c).jActGo(); return c; };
   const c = run({ traffic: 'priority' });
   let v = vals(c);
   assert.equal(c.state.jStep, B.protect);
-  // A workload not tagged yet reads its suggested tags, so every tag the cloud's workloads carry has its card.
-  assert.deepEqual(v.jDeck.map(d => d.tag), ['Intent', 'PCI', 'Finance', 'Internet-facing', 'Prod']);
+  // A workload not tagged yet reads its suggested tags, so every tag the region's workloads carry has its card (a region
+  // at a time since 2026-10-15: East US runs dispatch-svc and customer-portal; West Europe's PCI and Finance wait for its own pass).
+  assert.deepEqual(v.jDeck.map(d => d.tag), ['Intent', 'Internet-facing', 'Prod']);
   assert.deepEqual([v.jDeck[0].headIcon, v.jDeck[0].reqWord], ['target', 'Priority']);
   // Priority traffic pushes no NetBond row: the card shows where it compiles, the site's DSCP and the core's class of service.
   assert.deepEqual(v.jDeck[0].rules.map(r => [r.verb, r.label, r.dir]), [['Manipulate', 'DSCP, app-aware path', '→'], ['Manipulate', 'Priority class', '⇄']]);
   v.jDeck[0].enter(); v = vals(c);
   assert.equal(v.jLine, 'Intent rides a priority class.');
-  assert.ok(v.jRegions.flatMap(r => r.apps).every(a => a.hl === 'on'), 'the intent covers every workload on the cloud');
+  assert.ok(v.jRegions[0].apps.every(a => a.hl === 'on') && v.jRegions[1].apps.every(a => a.hl === 'off'), 'the intent covers every workload in the region connected');
   v.jDeck[0].go(); v = vals(c);
-  assert.ok(c.state.customPolicies.some(p => p.journey && p.tag === 'Intent' && p.match === 'region eastus,westeurope' && p.req === 'Priority traffic'));
+  assert.ok(c.state.customPolicies.some(p => p.journey && p.tag === 'Intent' && p.match === 'region eastus' && p.req === 'Priority traffic'));
   const lab = vals(run({ purpose: 'lab' }));
-  assert.deepEqual(lab.jDeck.map(d => d.tag), ['PCI', 'Finance', 'Internet-facing'], 'a lab keeps compliance and inspection, and drops the production policy');
+  assert.deepEqual(lab.jDeck.map(d => d.tag), ['Internet-facing'], 'a lab keeps inspection, and drops the production policy');
+  const labWest = vals(run({ purpose: 'lab' }, 'westeurope'));
+  assert.deepEqual(labWest.jDeck.map(d => d.tag), ['PCI', 'Finance'], 'and keeps compliance on its own pass');
 });
 
 test('once ordered, the answers stand; the dashboard ranks by the same model', () => {

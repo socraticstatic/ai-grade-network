@@ -46,7 +46,8 @@ test('the journey\'s estate shares one store: its Intent beat and its Recommende
   const c = on('lastmile', { addedSources: [{ provider: 'Azure', estId: 'lastmile', name: 'x', cadence: 'daily', at: 1 }] });
   const mv = vals(c).moves[0];
   mv.intentQs.find(q => q.key === 'routing').opts.find(o => o.key === 'hub').go();
-  // Answers live per region since 2026-10-13 (the journey's region picker); the dashboard writes the picked region's, the first when none is picked.
+  // Answers live per region since 2026-10-13 (the journey's region picker); the journey's estate has a move a region since
+  // 2026-10-15, and an answer on a move is that region's.
   assert.deepEqual(Object.values(c.state.jIntents)[0], { routing: 'hub' });
   assert.ok(vals(c).moves[0].tiers.every(t => ['transit', 'peer', 'cloudwan', 'privatelink'].includes(t.way)), 'AT&T\'s hub: hosted ways only');
 });

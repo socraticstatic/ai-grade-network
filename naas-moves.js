@@ -305,8 +305,12 @@ function regionMoves(est, ctx) {
   // An internet arc between two regions is told once, by the first move that touches it.
   const arcsTold = new Set();
   const policyTags = new Set((est.policies || []).filter(p => p.state === 'enforced' && /^tag /.test(p.match || '')).map(p => p.match.slice(4).toLowerCase()));
-  return clouds.map(cloud => {
-    const rs = pubRs.filter(r => r.cloud === cloud), ids = rs.map(r => r.region);
+  // A region is its own choice where its answers are kept per region (the journey's estate, Micah 2026-10-15: "what if
+  // i don't want to do western europe or us east? what if it's an or?"): one move a region, ranked by its own answers.
+  // Elsewhere one move a cloud, as the 2026-10-06 session drew it; the wizard there drops a region it is not taking.
+  const groups = ctx.split ? pubRs.map(r => ({ cloud: r.cloud, rs: [r] })) : clouds.map(cloud => ({ cloud, rs: pubRs.filter(r => r.cloud === cloud) }));
+  return groups.map(({ cloud, rs }) => {
+    const ids = rs.map(r => r.region);
     const wl = rs.reduce((a, r) => a + r.wl, 0);
     const tags = [...new Set(rs.flatMap(r => r.tags || []))];
     const apps = appsIn(ctx.inv, ids);
@@ -331,7 +335,7 @@ function regionMoves(est, ctx) {
     // top pick and two alternatives, each with why. Without one, the session's order.
     // One ranking for the site (2026-10-09, "integrate into the rest of the site"): the deck's step on every estate, the
     // region's own tags answering what the estate has not; a way the cloud cannot have keeps its rung, said as such.
-    const it = { ...W.intentFromTags(tags), ...(ctx.intent || {}) };
+    const it = { ...W.intentFromTags(tags), ...((ctx.split && ctx.intentFor ? ctx.intentFor(ids[0]) : ctx.intent) || {}) };
     const recs = [...W.rankWays(cloud, it), ...W.recommendedFor(cloud).filter(r => r.unavailable)], byWays = recs.length >= 2;
     const ladder = byWays ? recs.map((r, i) => { const word = i === 0 ? 'Recommended' : `Option ${i + 1}`;
         return r.unavailable ? { i, tier: word, label: W.wayLabel(r.key, cloud), way: r.key, unavailable: r.unavailable, products: [], path: 'netbond', conn: 'DataCenter/CoLocation to Cloud', monthly: null, price: '', intro: '', breakdown: '', fit: '', covers: [] }
@@ -371,7 +375,7 @@ function regionMoves(est, ctx) {
         costTitle: [`Egress ${fmt(egNow)} to ${fmt(egA)}/mo (${t.path === 'internet' || !t.products.length ? 'at public rates' : 'at the AT&T price Cost > By region shows'}, modelled)`, t.monthly !== null ? `${t.breakdown} = ${fmt(t.monthly)}/mo` : 'Priced after survey', mo !== null ? `${fmt(mo)}/mo after, ${net >= 0 ? 'saves' : 'adds'} ${fmt(Math.abs(net))}` : ''].filter(Boolean).join(' · ') };
     });
     return {
-      key: 'region:' + cloud, kind: 'region', cloud, title: rs.length === 1 ? `Put ${cloud} ${ids[0]} on the AT&T network` : `Put ${rs.length} ${cloud} regions on the AT&T network`,
+      key: ctx.split ? `region:${cloud}:${ids[0]}` : 'region:' + cloud, kind: 'region', cloud, title: rs.length === 1 ? `Put ${cloud} ${ids[0]} on the AT&T network` : `Put ${rs.length} ${cloud} regions on the AT&T network`,
       reason, finding: f ? f.kind : null, sites: [], regions: ids, n: 0, wl, size: wl, need: 'standard',
       // The session's first way is its recommendation; a ladder's middle rung is.
       recI: byWays ? 0 : REC, hasSetup: byWays,
@@ -492,7 +496,7 @@ export function movesOf(est, ctx = {}) {
   if (!est || est.stage === 'empty' || !(est.regionsList || []).length) return [];
   const findings = (ctx.findings || est.findings || []).filter(f => !f.event);
   // The open findings price the egress after, as Cost's Still open does.
-  const c = { findings, capacity: ctx.capacity || [], apps: ctx.apps || [], inv: ctx.inv || [], egress: egressOf(est, ctx.base, findings.filter(f => f.priced)), intent: ctx.intent || null };
+  const c = { findings, capacity: ctx.capacity || [], apps: ctx.apps || [], inv: ctx.inv || [], egress: egressOf(est, ctx.base, findings.filter(f => f.priced)), intent: ctx.intent || null, split: !!ctx.split, intentFor: ctx.intentFor || null };
   const moves = [...regionMoves(est, c), ...pathMoves(est, c), ...siteMoves(est, c)]
     .map(m => { const recI = Number.isInteger(m.recI) ? m.recI : REC; return { ...m, recI, impact: m.tiers[recI].net, tiers: m.tiers.map(t => ({ ...t, rec: t.i === recI })) }; });
   moves.sort((a, b) => Math.max(0, b.impact || 0) - Math.max(0, a.impact || 0) || RISK[b.risk] - RISK[a.risk] || b.size - a.size || a.title.localeCompare(b.title));

@@ -111,6 +111,8 @@ a{color:#0057b8}a:hover{color:#00388f}
 /* Each region animates in, so each is its own layer: the one whose palette is open rises over the rest. */
 .js-region{position:relative}.js-region:has(.js-palette){z-index:7}
 .js-rhead{display:flex;align-items:center;gap:12px}.js-rhead>b{font-size:15px;color:var(--text-heading);margin-right:auto}
+/* A region out of this pass reads quiet; live, ordered or left on the internet, it says so in one glyph (2026-10-15, "what if it's an or?"). The children dim, not the card: the card's entry animation holds its own opacity. */
+.js-region[data-state="out"]>*{opacity:.5}.js-region[data-pass="other"] .js-app{display:none}.js-rstate{color:var(--link)}.js-region[data-state="out"] .js-rstate{color:var(--text-light)}
 .js-app{position:relative;display:flex;align-items:center;gap:8px;min-height:28px;font-size:13px;line-height:18px;color:var(--text-body)}.js-app>.ic{color:var(--text-light)}
 .js-tags{margin-left:auto;display:flex;gap:6px}
 .js-tag{height:24px;padding:0 10px;border:1px dashed var(--border-primary);border-radius:9999px;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--text-light);cursor:pointer;transition:all .2s}
@@ -188,7 +190,7 @@ a{color:#0057b8}a:hover{color:#00388f}
 /* Act three (2026-10-08): live, protected, saving. The internet path goes; health dots blink on; verdicts stamp the wires; the saving grows across a year. */
 .js-net[data-state="gone"]{opacity:0}
 .js-dot{display:none;width:8px;height:8px;border-radius:50%;background:var(--text-disabled);flex:none}
-.js-stage[data-live="true"] .js-dot{display:block;position:absolute;left:11px;top:3px;width:7px;height:7px;box-shadow:0 0 0 2px var(--bg-base);animation:js-blink .5s ease-out both}
+.js-region[data-state="live"] .js-dot{display:block;position:absolute;left:11px;top:3px;width:7px;height:7px;box-shadow:0 0 0 2px var(--bg-base);animation:js-blink .5s ease-out both}
 @keyframes js-blink{0%{background:var(--text-disabled);transform:scale(.6)}60%{transform:scale(1.4)}100%{background:var(--link);transform:scale(1)}}
 .js-verdict{position:absolute;left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;border-radius:9999px;font-size:11px;line-height:22px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;animation:js-stamp .4s cubic-bezier(.22,1,.36,1) both}
 .js-wire .js-verdict{top:calc(100% + 46px)}
@@ -263,7 +265,7 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js:is([data-beat="connect"],[data-beat="watch"],[data-beat="save"]) .js-tag[aria-pressed="true"]{border-color:var(--border-secondary);background:transparent;color:var(--text-body);cursor:default}
 /* A. the primary action sits on the page's axis on every beat; Back hangs left of it, a second action right. */
 .js-act{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;column-gap:18px;width:min(1180px,100%)}
-.js-act>.js-back{grid-area:1 / 1;justify-self:end}.js-go:disabled .ic{display:none}.js-act>.js-go{grid-area:1 / 2}.js-act>.js-more{grid-area:1 / 3;justify-self:start}
+.js-act>.js-back{grid-area:1 / 1;justify-self:end}.js-go:disabled .ic{display:none}.js-act>.js-go{grid-area:1 / 2}.js-act>.js-more{grid-area:1 / 3;justify-self:start}.js-act>.js-doors{grid-area:1 / 3;justify-self:start;display:flex;gap:12px}
 .js-back{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 14px;border:0;background:transparent;font:inherit;font-size:14px;font-weight:600;color:var(--text-light);cursor:pointer}.js-back:hover{color:var(--link)}
 .js-go{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 30px;border:0;border-radius:9999px;background:var(--cta);color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px color-mix(in srgb,var(--cta) 30%,transparent);transition:background .2s,transform .2s}
 .js-go:hover{background:var(--cta-hover);transform:translateY(-1px)}.js-go:disabled{background:var(--bg-neutral);color:var(--text-light);box-shadow:inset 0 0 0 1px var(--border-secondary);cursor:not-allowed;transform:none}

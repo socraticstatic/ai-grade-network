@@ -119,10 +119,13 @@ export function banked(est, life, now) {
   const since = first ? (end.getUTCFullYear() - +first.slice(0, 4)) * 12 + end.getUTCMonth() - (+first.slice(5, 7) - 1) + 1 : 0;
   const n = Math.max(12, since);
   const months = Array.from({ length: n }, (_, i) => ym(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - (n - 1) + i, 1)));
+  // A landing this session banks what it carries from the month it landed, this one (2026-10-15).
+  const landedMo = (est.buckets || []).reduce((a, b) => a + (b.carries || 0), 0), nowYm = ym(end);
   let cumulative = 0;
   return months.map(month => {
     const saved = (first && month >= first ? base : 0)
-      + [...closed, ...resolvedNow].filter(x => x.resolvedAt.slice(0, 7) <= month).reduce((a, x) => a + x.save, 0);
+      + [...closed, ...resolvedNow].filter(x => x.resolvedAt.slice(0, 7) <= month).reduce((a, x) => a + x.save, 0)
+      + (month >= nowYm ? landedMo : 0);
     cumulative += saved;
     return { month, saved, cumulative };
   }).slice(-12);
@@ -145,6 +148,8 @@ export function bankedSources(est, life, now) {
   const rows = [];
   if (first && base > 0) rows.push({ key: 'network', kind: 'network', label: 'Your connections on AT&T', since: first, perMo: base, months: monthsFrom(first), toDate: base * monthsFrom(first) });
   for (const f of [...closed, ...resolvedNow]) { const m = String(f.resolvedAt).slice(0, 7), n = monthsFrom(m); if (!n) continue; rows.push({ key: 'f:' + f.kind, kind: 'finding', finding: f.kind, label: f.head, since: m, perMo: f.save, months: n, toDate: f.save * n }); }
+  // Each landing this session, from this month, as its bucket on AT&T (2026-10-15).
+  for (const b of (est.buckets || []).filter(x => x.carries > 0)) rows.push({ key: 'l:' + b.id, kind: 'landing', bucket: b.id, label: b.name, since: endYm, perMo: b.carries, months: 1, toDate: b.carries });
   return rows;
 }
 
@@ -206,6 +211,39 @@ export function spread(est, items) {
 export function egressByRegion(est, ink) {
   return spread(est, (est.buckets || []).filter(b => bucketInk(est, b) === ink).map(b => ({ v: b.today, w: bucketWeights(est, b) })));
 }
+/**
+ * The estate's money after this session's landings (2026-10-15: West Europe landed and East US took all of Azure's
+ * $16,800). A region a landing made private takes its share of each public bucket of its cloud, by that bucket's own
+ * weights, and bills it at your AT&T rate; the regions still public keep only theirs. The finding that prices a bucket
+ * keeps only the share still public. A bucket with no premium bills the same either way and stays whole.
+ * `regs` is est.regionsList as it stands, index for index. Returns { buckets, findings }.
+ */
+export function afterLandings(est, regs) {
+  const raw = est.regionsList || [];
+  const landed = new Set((regs || []).map((r, i) => (r && r.landed && raw[i] && !raw[i].priv ? i : -1)).filter(i => i >= 0));
+  if (!landed.size) return { buckets: est.buckets || [], findings: est.findings || [] };
+  const buckets = [], kept = new Map();
+  for (const b of est.buckets || []) {
+    if (bucketInk(est, b) !== 'public' || !(b.today > b.fabric)) { buckets.push(b); continue; }
+    const w = bucketWeights(est, b), wL = w.reduce((a, x, i) => a + (landed.has(i) ? x : 0), 0), wP = w.reduce((a, x) => a + x, 0) - wL;
+    if (!wL) { buckets.push(b); continue; }
+    const [todayP, todayL] = split(b.today, [wP, wL]), [fabricP, fabricL] = split(b.fabric, [wP, wL]);
+    if (todayP > 0) buckets.push({ ...b, today: todayP, fabric: fabricP });
+    // `carries`: what the landing took off the bill, its share today less its share at your AT&T rate (Saved on AT&T).
+    buckets.push({ id: `${b.id}:landed`, name: `${b.name} on AT&T`, cloud: b.cloud, today: fabricL, fabric: fabricL, landed: true, carries: todayL - fabricL,
+      regions: [...landed].filter(i => w[i] > 0).map(i => raw[i].region) });
+    kept.set(b.id, [wP, wL]);
+  }
+  // A finding's saving splits over its buckets by premium (openByBucket's rule); a split bucket keeps its public share.
+  const findings = (est.findings || []).map(f => {
+    if (!f.priced || !(f.save > 0)) return f;
+    const mine = (est.buckets || []).filter(b => b.finding === f.kind && b.today > b.fabric);
+    if (!mine.some(b => kept.has(b.id))) return f;
+    const parts = split(Math.round(f.save), mine.map(b => b.today - b.fabric));
+    return { ...f, save: mine.reduce((a, b, i) => a + (kept.has(b.id) ? split(parts[i], kept.get(b.id))[0] : parts[i]), 0) };
+  });
+  return { buckets, findings };
+}
 // A finding that prices no bucket lands in the public regions by workloads, or every region where none is public.
 const pubWeights = (est) => { const regs = est.regionsList || [], w = regs.map(r => (r.priv ? 0 : (r.wl || 1))); return w.some(x => x > 0) ? w : regs.map(r => r.wl || 1); };
 /** What each open priced finding saves, bucket by bucket: its saving across the buckets it prices, by their premium. */
@@ -236,6 +274,7 @@ export function sourceWeights(est, src) {
   const regs = est.regionsList || [];
   const attachedWl = regs.map(r => (r.priv ? (r.wl || 1) : 0));
   if (src.kind === 'network') return attachedWl;
+  if (src.kind === 'landing') { const b = (est.buckets || []).find(x => x.id === src.bucket), on = new Set((b && b.regions) || []); return regs.map(r => (on.has(r.region) ? (r.wl || 1) : 0)); }
   const mine = (est.buckets || []).filter(b => b.finding === src.finding && b.today > b.fabric);
   if (mine.length) {
     const w = regs.map(() => 0);

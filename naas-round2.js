@@ -256,9 +256,11 @@ export function forecast(ob, arb) {
  *  and grew at 40% of the rate, so its $51,100 matched nothing on the page; now
  *  the gap between the two lines is Could save, grown with the bytes. */
 export const SPEND_GROWTH = 0.06;
-export function spendStory({ base, moveSave, series }) {
+// `landed`: what this month's landings took off the bill (2026-10-15); months before it are the bill as it stood then.
+export function spendStory({ base, moveSave, series, landed = 0 }) {
   const g = SPEND_GROWTH, left = Math.max(0, base - Math.max(0, moveSave || 0));
-  const past = (series || []).map((b, i, a) => ({ key: b.month, month: b.month, kind: 'past', spend: Math.round(base / Math.pow(1 + g, a.length - 1 - i)), saved: Math.round(b.saved || 0) }));
+  const past = (series || []).map((b, i, a) => { const k = a.length - 1 - i;
+    return { key: b.month, month: b.month, kind: 'past', spend: Math.round((k ? base + landed : base) / Math.pow(1 + g, k)), saved: Math.round(b.saved || 0) }; });
   const next = [1, 2, 3].map(m => { const f = Math.pow(1 + g, m); return { key: 'next' + m, kind: 'next', m, asIs: Math.round(base * f), moved: Math.round(left * f) }; });
   return { past, next };
 }

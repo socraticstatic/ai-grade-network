@@ -67,6 +67,8 @@ const AWS_APPS = {
   inventory: ['inventory-db', '15.3', '5432/tcp', 'stock levels by depot', 'db'],
   tracking: ['tracking-web', '2.0.7', '443/tcp', 'shipment tracking site', 'web'],
 };
+// A found source's finding saves its bucket's premium over your AT&T rate, as every seed estate's does (2026-10-15:
+// Azure's and AWS's once took the NetBond ports off here, and every move took them off again).
 export const FOUND_SOURCES = {
   // The second cloud the journey attaches (2026-10-08, "attach more"): AWS, on the public internet too.
   AWS: {
@@ -75,7 +77,7 @@ export const FOUND_SOURCES = {
       { ...REG('AWS', 'eu-west-1', 18, false, null, ['Internet-facing']), apps: [AWS_APPS.tracking] },
     ],
     bucket: { id: 'awsr', name: 'AWS egress', cloud: 'AWS', today: 11400, fabric: 3900, finding: 'newcloud-aws' },
-    finding: { kind: 'newcloud-aws', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your sites', pathDst: '2 AWS regions', head: '2 AWS regions found on the public internet', ev: 'us-east-1 and eu-west-1 carry 54 workloads, orders among them, over public egress.', priced: true, save: 5600, why: 'NetBond reaches AWS Direct Connect in Ashburn and Dublin.', ladder: ['Your Direct Connect', "AT&T's Direct Connect", 'Hosted VPC peering'] },
+    finding: { kind: 'newcloud-aws', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your sites', pathDst: '2 AWS regions', head: '2 AWS regions found on the public internet', ev: 'us-east-1 and eu-west-1 carry 54 workloads, orders among them, over public egress.', priced: true, save: 7500, why: 'NetBond reaches AWS Direct Connect in Ashburn and Dublin.', ladder: ['Your Direct Connect', "AT&T's Direct Connect", 'Hosted VPC peering'] },
   },
   Azure: {
     regions: [
@@ -83,7 +85,7 @@ export const FOUND_SOURCES = {
       { ...REG('Azure', 'westeurope', 28, false, null, ['Finance']), apps: [AZ_APPS.payments, AZ_APPS.ledger] },
     ],
     bucket: { id: 'azr', name: 'Azure egress', cloud: 'Azure', today: 16800, fabric: 5600, finding: 'newcloud-azure' },
-    finding: { kind: 'newcloud-azure', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your sites', pathDst: '2 Azure regions', head: '2 Azure regions found on the public internet', ev: 'eastus and westeurope carry 68 workloads, payments among them, over public egress.', priced: true, save: 7400, why: 'NetBond reaches Azure ExpressRoute in Ashburn and Amsterdam.', ladder: ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted VNet peering'] },
+    finding: { kind: 'newcloud-azure', layer: 'cloud', tab: 'connect', pillar: 'Private reach', persona: 'Cloud & Platform Architect', pathSrc: 'Your sites', pathDst: '2 Azure regions', head: '2 Azure regions found on the public internet', ev: 'eastus and westeurope carry 68 workloads, payments among them, over public egress.', priced: true, save: 11200, why: 'NetBond reaches Azure ExpressRoute in Ashburn and Amsterdam.', ladder: ['Your ExpressRoute', "AT&T's ExpressRoute", 'Hosted VNet peering'] },
   },
   Oracle: {
     regions: [

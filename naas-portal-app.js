@@ -19,7 +19,7 @@ export const PAGES = [
   { key: 'recommended', label: 'Recommended', icon: 'lightbulb' },
 ];
 export function defaults() {
-  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, intents: {}, jCopy: true, rtags: {}, jTagPick: null, requests: [], region: null, dataNote: '', dataError: '', journey: false, jStep: 0, jProv: null, jScan: null, jRegion: null, jPick: null, jFrom: null };
+  return { page: 'lastmile', fixture: 'calloway', stateB: false, theme: 'light', drawer: null, trail: [], lmPage: 0, clPage: 0, dtrail: [], dPage: 0, rcPage: 0, pick: null, intents: {}, jCopy: false, rtags: {}, jTagPick: null, requests: [], region: null, dataNote: '', dataError: '', journey: false, jStep: 0, jProv: null, jScan: null, jRegion: null, jPick: null, jFrom: null };
 }
 /** URL to state: ?fixture=calloway|scale, ?state=a|b, ?page=<key>, ?theme=light|dark. `search` is for tests. */
 export function init(c, search) {
@@ -243,10 +243,12 @@ export function journey(d, s, set) {
   const request = () => { if (!region || !picked) return;
     if (requested) { set({ jStep: JB.request }); return; }
     set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: region.csp, region: region.region, option: picked.key, answers: effective, defaulted: Object.keys(answers).length === 0 }], jStep: JB.request, region: { csp: region.csp, region: region.region } }); };
-  // The other regions of this cloud: the copy toggle names them, and Request loops to the next one not yet requested.
+  // The other regions of this cloud: the copy toggle names them, and Request offers the next one not yet requested.
+  // A region is its own choice (Micah, 2026-10-15: "what if it's an or?"): answers stay with their region unless the
+  // customer copies them, and after a request the journey can end; the next region is a door beside it, never the way out.
   const others = found.regions.filter(r => r.key !== regionKey);
   const unanswered = others.filter(r => !Object.keys(intents[r.key] || {}).length);
-  const copyOn = s.jCopy !== false;
+  const copyOn = s.jCopy === true;
   const toRecommend = () => { clearInterval(scanTimer);
     const next = { ...intents }; if (copyOn && Object.keys(answers).length) for (const r of unanswered) next[r.key] = { ...answers };
     set({ jStep: JB.recommend, intents: next }); };
@@ -255,10 +257,10 @@ export function journey(d, s, set) {
   const ACT = {
     today: { label: 'Find your clouds', go: to(JB.source), off: false },
     source: { label: 'Read it', go: startScan, off: scanning, busy: scanning },
-    found: found.has ? { label: 'Say what it needs', go: to(JB.intent), off: !region } : { label: 'Read another cloud', go: to(JB.source), off: false },
+    found: found.has ? { label: region ? `Say what ${region.label} needs` : 'Say what it needs', go: to(JB.intent), off: !region } : { label: 'Read another cloud', go: to(JB.source), off: false },
     intent: { label: 'Recommend', go: toRecommend, off: !region },
     recommend: requested ? { label: 'See the request', go: to(JB.request), off: false } : { label: 'Request this', go: request, off: !picked },
-    request: nextRegion ? { label: `Next: ${nextRegion.label}`, go: () => { clearInterval(scanTimer); set({ jRegion: nextRegion.key, jPick: null, jStep: JB.intent }); }, off: false } : { label: 'Open Cloud discovery', go: exitTo('discovery'), off: false },
+    request: { label: 'Open Cloud discovery', go: exitTo('discovery'), off: false },
   }[beat.key];
   const open = (i) => i <= JB.source || (read && found.has && (i <= JB.recommend || (i === JB.request && !!requested)));
   const steps = PJ.BEATS.map((b, i) => { const done = i < step; return { key: b.key, n: String(i + 1), label: b.short, title: b.title, state: i === step ? 'cur' : done ? 'done' : 'next', cur: i === step, off: !open(i), hasIcon: done, noIcon: !done, go: () => { if (open(i)) to(i)(); } }; });
@@ -289,6 +291,7 @@ export function journey(d, s, set) {
     region, link, linkWord: link === 'proposed' ? way : '', net, netWord: 'Not on AT&T network', flow: net === 'public' ? 'net' : 'none', wide: step >= JB.found && found.has,
     isIntent: step === JB.intent, isRec: step === JB.recommend, isRequest: step === JB.request, needs, options,
     act: { label: ACT.label, go: ACT.go, off: !!ACT.off, busy: !!ACT.busy }, hasBack: true, back, exit,
+    also: step === JB.request && requested && nextRegion ? { has: true, label: `${nextRegion.label} too`, go: () => { clearInterval(scanTimer); set({ jRegion: nextRegion.key, jPick: null, jStep: JB.intent }); } } : { has: false, label: '', go: () => {} },
     requestedLine: requested ? `Requested ${W.wayLabel(requested.option, cloud)} for ${region ? region.label : ''}. Cloud discovery and Recommended carry it.` : '' };
 }
 /** The picture band (drop 2, "No visuals"): the path strip with this page's station lit and the counts under the

@@ -224,7 +224,8 @@ export function observe(est, steered, inv, split) {
   const bucketToday = (est.buckets || []).reduce((a, b) => a + b.today, 0);
   const egressMo = Math.max(0, Math.round((bucketToday || pub * 900) - steeredGbps * 190));
   // What private connectivity already saves counts wherever something is attached, not only on a mature estate (2026-09-28).
-  const savingsMo = Math.round((est.attachedRegions ? est.savedMo || 0 : 0) + steeredGbps * 190 + est.regionsList.filter(r => r.landed).reduce((a, r) => a + r.wl * GBPS_PER_WL * 190, 0));
+  // A landing saves what it took off the bill (2026-10-15, LC.afterLandings' `carries`), not workloads × Gbps × $190.
+  const savingsMo = Math.round((est.attachedRegions ? est.savedMo || 0 : 0) + steeredGbps * 190 + (est.buckets || []).reduce((a, b) => a + (b.carries || 0), 0));
   const pubRate = Math.round(egressMo * (pub / (total || 1)));
   const pathsCovered = est.regionsList.filter(r => r.priv).length + steered.filter(s => s.startsWith('f-')).map(s => s.split('-')[1]).filter((v, i, a) => a.indexOf(v) === i).length;
   const blind = est.regionsList.filter(r => !r.priv && !steered.some(s => s.startsWith(`f-${est.regionsList.indexOf(r)}-`)));

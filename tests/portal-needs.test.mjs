@@ -6,7 +6,8 @@ import * as PJ from '../naas-portal-journey.js';
 import * as W from '../naas-ways.js';
 
 // One kind of choice, made where it applies (Micah, 2026-10-12 18:23): intent is asked per region inside the cloud
-// node, in sentences; the other region gets the same answers through one explicit toggle; Request loops regions.
+// node, in sentences; the other region gets the same answers through one explicit toggle, off until asked; after a request
+// the next region is a door beside done (2026-10-15).
 if (typeof globalThis.window === 'undefined') globalThis.window = { scrollTo: () => {}, scrollY: 0, location: { search: '' } };
 const HTML = readFileSync(new URL('../portal.dc.html', import.meta.url), 'utf8');
 const mkC = (extra = {}) => { const state = { ...defaults(), ...extra }; return { state, setState: (p) => Object.assign(state, typeof p === 'function' ? p(state) : p) }; };
@@ -32,26 +33,32 @@ test('the questions sit under the picked region; defaults show as chosen until c
   assert.equal(w.jr.regions.find(r => r.key === EAST).needs, true); assert.equal(w.jr.regions.find(r => r.key === WEST).needs, false, 'only the picked region carries the questions');
 });
 
-test('the copy toggle: on by default, names the other region, copies only into regions without answers; absent with one region', () => {
+// A region is its own choice (Micah, 2026-10-15: "what if it's an or?"): the copy is off until asked, and after a request
+// the journey can end; the next region is a door beside Open Cloud discovery, never the only way out.
+test('the copy toggle: off by default, names the other region, copies only into regions without answers once on; absent with one region', () => {
   const c = at({ intents: { [EAST]: { purpose: 'critical' } } }); let v = vals(c);
-  assert.deepEqual([v.jr.needs.copy.has, v.jr.needs.copy.on, v.jr.needs.copy.other], [true, true, 'West Europe']);
-  v.jr.act.go(); assert.equal(c.state.jStep, B.recommend); assert.deepEqual(c.state.intents[WEST], { purpose: 'critical' }, 'copied');
-  const d = at({ intents: { [EAST]: { purpose: 'critical' }, [WEST]: { purpose: 'lab' } } }); v = vals(d); v.jr.act.go();
+  assert.deepEqual([v.jr.needs.copy.has, v.jr.needs.copy.on, v.jr.needs.copy.other], [true, false, 'West Europe']);
+  v.jr.act.go(); assert.equal(c.state.jStep, B.recommend); assert.equal(c.state.intents[WEST], undefined, 'not copied unless asked');
+  const on = at({ intents: { [EAST]: { purpose: 'critical' } } }); vals(on).jr.needs.copy.toggle(); assert.equal(on.state.jCopy, true); vals(on).jr.act.go();
+  assert.deepEqual(on.state.intents[WEST], { purpose: 'critical' }, 'copied once asked');
+  const d = at({ jCopy: true, intents: { [EAST]: { purpose: 'critical' }, [WEST]: { purpose: 'lab' } } }); v = vals(d); v.jr.act.go();
   assert.deepEqual(d.state.intents[WEST], { purpose: 'lab' }, 'never overwrites an answered region');
-  const e = at({ intents: { [EAST]: { purpose: 'critical' } } }); vals(e).jr.needs.copy.toggle(); assert.equal(e.state.jCopy, false); vals(e).jr.act.go(); assert.equal(e.state.intents[WEST], undefined);
   const one = mkC({ journey: true, jStep: B.intent, jProv: 'Azure', jScan: 4, jRegion: 'Azure/eastus' });
   useData(one, { circuits: [], cloudLinks: [], discovery: [{ csp: 'Azure', region: 'eastus', vpcs: [] }] }); Object.assign(one.state, { journey: true, jStep: B.intent, jProv: 'Azure', jScan: 4, jRegion: 'Azure/eastus' });
   const o = vals(one); assert.equal(o.jr.needs.copy.has, false, 'one region, no toggle');
-  one.setState({ jStep: B.request, requests: [{ csp: 'Azure', region: 'eastus', option: 'byo', answers: {}, defaulted: true }] }); assert.equal(vals(one).jr.act.label, 'Open Cloud discovery', 'one region, no loop');
+  one.setState({ jStep: B.request, requests: [{ csp: 'Azure', region: 'eastus', option: 'byo', answers: {}, defaulted: true }] });
+  assert.equal(vals(one).jr.act.label, 'Open Cloud discovery'); assert.equal(vals(one).jr.also.has, false, 'one region, no other door');
 });
 
-test('Request loops: after East US the act reads Next: West Europe and lands on its Needs with the copied answers; after the last, Open Cloud discovery', () => {
+test('Request: after East US the journey can end; West Europe too is beside it and lands on its own Needs; after the last, no door', () => {
   const c = at({ jStep: B.recommend, intents: { [EAST]: { purpose: 'critical' }, [WEST]: { purpose: 'critical' } } });
   vals(c).jr.act.go(); assert.equal(c.state.jStep, B.request); assert.equal(c.state.requests.length, 1);
-  let v = vals(c); assert.equal(v.jr.act.label, 'Next: West Europe'); v.jr.act.go();
+  let v = vals(c); assert.equal(v.jr.act.label, 'Open Cloud discovery'); assert.equal(v.jr.also.label, 'West Europe too'); v.jr.also.go();
   assert.equal(c.state.jRegion, WEST); assert.equal(c.state.jStep, B.intent); v = vals(c); assert.equal(v.jr.needs.region, 'West Europe'); assert.equal(v.jr.needs.questions[0].opts[0].on, true);
-  v.jr.act.go(); vals(c).jr.act.go(); assert.equal(c.state.requests.length, 2); assert.equal(vals(c).jr.act.label, 'Open Cloud discovery');
+  v.jr.act.go(); vals(c).jr.act.go(); assert.equal(c.state.requests.length, 2);
+  v = vals(c); assert.equal(v.jr.act.label, 'Open Cloud discovery'); assert.equal(v.jr.also.has, false, 'every region requested');
   assert.deepEqual(c.state.requests.map(r => r.answers.purpose), ['critical', 'critical']);
+  v.jr.act.go(); assert.equal(c.state.journey, false); assert.equal(c.state.page, 'discovery');
 });
 
 test('Recommended reads the region\'s answers the journey wrote, and writes to the same store', () => {

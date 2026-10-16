@@ -36,7 +36,7 @@ test('Source: pick a live cloud, read it; the scan ticks four steps and lands on
   assert.equal(c.state.jStep, B.found); assert.equal(c.state.jScan, 4);
   v = vals(c); assert.equal(v.jr.cloud.found, true); assert.equal(v.jr.line, 'Azure: 2 regions, 5 VNets, 12 subnets.');
   assert.deepEqual(v.jr.regions.map(r => [r.label, r.on, r.picked]), [['East US', false, true], ['West Europe', false, false]], 'the first region not on AT&T is picked');
-  assert.equal(v.jr.net, 'public', 'regions off AT&T ride the public internet'); assert.equal(v.jr.act.label, 'Say what it needs');
+  assert.equal(v.jr.net, 'public', 'regions off AT&T ride the public internet'); assert.equal(v.jr.act.label, 'Say what East US needs', 'the action names the region picked (2026-10-15)');
 });
 
 test('a cloud with nothing discovered ends the scan on Nothing found and offers another cloud; never a blank node', () => {
@@ -57,7 +57,8 @@ test('Needs writes the region\'s answers; Recommend shows the top three with rin
   v = vals(c); assert.equal(v.jr.act.label, 'Request this'); v.jr.act.go();
   assert.equal(c.state.requests.length, 1); assert.deepEqual([c.state.requests[0].csp, c.state.requests[0].region, c.state.requests[0].option], ['Azure', 'eastus', v.jr.options[1].key]);
   assert.equal(c.state.jStep, B.request); v = vals(c);
-  assert.match(v.jr.line, /^Requested .+ for East US\.$/); assert.equal(v.jr.link, 'proposed'); assert.equal(v.jr.act.label, 'Next: West Europe', 'the loop offers the other region');
+  assert.match(v.jr.line, /^Requested .+ for East US\.$/); assert.equal(v.jr.link, 'proposed'); assert.equal(v.jr.act.label, 'Open Cloud discovery', 'a region is its own choice (2026-10-15): done is the primary');
+  assert.deepEqual([v.jr.also.has, v.jr.also.label], [true, 'West Europe too'], 'the other region is a door beside it');
   v.jr.exit(); assert.equal(c.state.journey, false);
   const rc = vals(mkC({ fixture: 'calloway', page: 'recommended', region: { csp: 'Azure', region: 'eastus' }, requests: c.state.requests })).rc;
   assert.equal(rc.requested, true, 'Recommended reads the same record');

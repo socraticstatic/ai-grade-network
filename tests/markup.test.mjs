@@ -642,7 +642,11 @@ test('every container the markup opens, it closes', () => {
   // Jump on the picture (2026-10-13, "immediately go to an asset deep down"): the flow map's button and search box in the
   // filter row, its glyph, the match it names and the count (span +3, sc-if +3, button +1, label +1):
   // span 1514 -> 1517, sc-if 680 -> 683, button 536 -> 537, label 31 -> 32.
-    ['span', /<span\b/g, /<\/span>/g, 2163], // - delay figures (2026-10-15), told at the div pin
+  // A region at a time (2026-10-15, "what if it's an or?"): each journey region card's state glyph (span +1, sc-if +1), and
+  // Save's two doors, the next region and the next cloud, as one sc-for in place of the one cloud's sc-if (sc-if -1,
+  // sc-for +1), in one span so the two sit side by side in the act row's third cell (span +1): span 2163 -> 2165,
+  // sc-for 465 -> 466, sc-if stays 815.
+    ['span', /<span\b/g, /<\/span>/g, 2165], // + region state glyph, Save's doors (2026-10-15)
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
@@ -654,7 +658,7 @@ test('every container the markup opens, it closes', () => {
     ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 815], // - delay figures (2026-10-15), told at the div pin
     // Ways to connect grades in a word (2026-10-15, "hard to tell what one dash is saying from another"): each row's
     // five-dash meter (its span and the sc-for over cr.segs) gives way to one grade span. span +0, sc-for 466 -> 465.
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 465], // - the ways' dash meters (2026-10-15)
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 466], // - the ways' dash meters, + Save's doors (2026-10-15)
     ['section', /<section\b/g, /<\/section>/g, 17], // + Orders/Help (2026-10-13)
     ['button', /<button\b/g, /<\/button>/g, 715], // + Orders/Help (2026-10-13)
     ['aside', /<aside\b/g, /<\/aside>/g, 10], // + Orders/Help (2026-10-13)
