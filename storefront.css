@@ -81,7 +81,9 @@ a{color:#0057b8}a:hover{color:#00388f}
 .js-att b{font-size:18px;line-height:22px;color:var(--text-heading)}
 .js-hub{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--cta);color:#fff}.js-hub .ic{width:28px;height:28px}
 /* The AT&T node is the globe itself (2026-10-16): no fill, no ring, nothing recolours a logo. */
-.js-att .js-hub.js-globe{background:none;color:inherit}.js-globe-mark{width:52px;height:52px;display:block}
+.js-att .js-hub.js-globe{background:none;color:inherit}.js-globe-mark{width:52px;height:52px;display:block;background:url('brand/att-globe.svg') center/contain no-repeat}
+/* Dark: the globe in white (Micah, 2026-10-16). The logo is one path with its stripes as gaps, so it masks a white fill cleanly. */
+[data-theme="dark"] .js-globe-mark{background:#fff;-webkit-mask:url('brand/att-globe.svg') center/contain no-repeat;mask:url('brand/att-globe.svg') center/contain no-repeat}
 .js-wire{position:relative;align-self:center;height:28px;display:grid;align-items:center}
 .js-wire i{display:block;height:4px;border-radius:2px;background:var(--cta)}
 .js-stage[data-wide="true"] .js-sites{padding-left:12px;padding-right:12px}.js-stage[data-wide="true"] .js-svc{column-gap:8px}
