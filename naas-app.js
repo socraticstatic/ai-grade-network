@@ -5468,26 +5468,34 @@ function flowVals(s, set, est, c) {
   // The order reads the policy engine (2026-10-16, NetBond Advanced's Connection > Policies): the flow from the order's
   // site to its region, every policy of the estate read in precedence (the skips counted, not listed), this order's own
   // requirements staged among them, and the rules NetBond pushes; All N opens the engine's full sheet in place.
-  const engSite = (CF.orderSites(f, est)[0] || {}).name || '', engTo = f.regions[0] || '';
-  const engOn = !!engSite && !!engTo && !CF.isHosted(f) && !CF.isColo(f) && !CF.isLmcc(f);
+  // A hosted order's flow starts at AT&T's hub (the storyboards, slides 6 and 13 ask the route policies on it): no site of yours, so only region-scoped policies and the order's own apply.
+  const engSite = (CF.orderSites(f, est)[0] || {}).name || '', engTo = f.regions[0] || '', engHosted = CF.isHosted(f);
+  const engOn = !!engTo && !CF.isColo(f) && !CF.isLmcc(f) && (!!engSite || engHosted);
   const cfEng = (() => {
     const none = { has: false, none: true, line: '', flow: '', ladder: [], chips: [], hasChips: false, noChips: true, matchN: 0, policyN: 0, skipN: 0, skipLine: '', pushed: [], pushedN: 0, hasPushed: false, noPushed: false, sheet: [], all: false, showPushed: false, allLabel: '', allTitle: '', toggleAll: () => {} };
     if (!engOn) return none;
     const mine = f.policy.map(k => CF.POLICY_FOR_CONTROL[k]).filter(Boolean).map(pc => ({ name: `This order: ${pc.req}`, match: engSite, scope: engTo, req: pc.req, state: 'authored' }));
     const all = [...layerPolicies({ ...s, layer: 'cloud' }, est, 'all'), ...(s.customPolicies || []), ...mine];
     const eo = { inv: A.inventory(est), staged: true, match: { siteTags: ((s.siteTags || {})[est.id]) || {} } };
-    const ef = { from: engSite, to: engTo, tag: '' };
+    const ef = { from: engSite, to: engTo, tag: '' }, engFrom = engSite || "AT&T's hub";
     const r = PM.decide(est, all, ef, eo);
     const polByName = new Map(all.map(p => [p.name, p]));
     const openPol = (name) => () => { if (/^This order/.test(name)) return; c.setState({ screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies', polOpen: name, polFilter: null, polPage: 0 }); scrollTop(); syncHash('s3', 'cloud', 'govern'); };
     const rungs = engineLadderRows(r, polByName, openPol), ladder = rungs.filter(x => x.state !== 'skip'), skips = rungs.length - ladder.length;
-    const { sheet, pushed, ruleN } = engineSheetRows(est, all, ef, eo, r, (by) => (by && polByName.has(by) ? openPol(by) : () => {}));
+    const rows0 = engineSheetRows(est, all, ef, eo, r, (by) => (by && polByName.has(by) ? openPol(by) : () => {}));
+    // A hosted flow starts at AT&T's hub, not at a site of yours, so the engine's path crosses nothing: the rules the
+    // order's own requirement pushes (the same compile the plain list read) lie over the sheet, by This order.
+    const reqPushed = {}; f.policy.forEach(k => { const pc = CF.POLICY_FOR_CONTROL[k]; if (pc) for (const [rk, rv] of Object.entries(routeRulesOf({ req: pc.req }))) reqPushed[rk] = { ...(reqPushed[rk] || {}), ...rv }; });
+    const sheet = engHosted ? rows0.sheet.map(sec => ({ ...sec, rules: sec.rules.map(x => { const rv = reqPushed[x.key]; if (!rv || !(rv.o2p || rv.p2o)) return x;
+      const dirs = ENG_DIRS.filter(([d]) => !x[d + 'Off']).map(([d, w]) => ({ key: d, word: w, on: !!rv[d], title: rv[d] ? `${w}: pushed by this order` : `${w}: nothing pushes it on this flow` }));
+      return { ...x, on: true, o2pOn: !!rv.o2p && !x.o2pOff, p2oOn: !!rv.p2o && !x.p2oOff, by: 'This order', hasBy: true, ink: ENG_VERB[sec.key][2], dirs }; }) })) : rows0.sheet;
+    const pushedRows = engHosted ? sheet.flatMap(sec => sec.rules.filter(x => x.on)) : rows0.pushed, ruleN = rows0.ruleN;
     const allOn = !!s.cfEngAll;
     // The default line reads the ladder and the pushed rules as chips; the All view draws the engine's rungs and sheet.
     const chips = [...ladder.map(l => ({ key: 'p:' + l.key, kind: 'policy', label: l.name.replace(/^This order: /, 'This order · '), glyph: l.glyph, ink: l.ink, title: l.title, go: l.go })),
-      ...pushed.map(x => ({ key: 'r:' + x.key, kind: 'rule', label: x.label, verb: x.verb, cls: x.cls, glyph: x.icon, ink: x.ink, title: `${x.verb} ${x.label}: ${x.dirs.filter(d => d.on).map(d => d.word).join(', ')}, pushed by ${x.by}`, go: x.byGo, dirs: x.dirs.filter(d => d.on).map(d => d.key === 'o2p' ? 'Out' : 'In').join(' + ') }))];
-    return { has: true, none: false, line: `${ladder.length} of ${rungs.length} ${rungs.length === 1 ? 'policy applies' : 'policies apply'} · ${engSite} → ${engTo}`, flow: `${engSite} → ${engTo}`, ladder, chips, hasChips: chips.length > 0, noChips: chips.length === 0, matchN: ladder.length, policyN: rungs.length, skipN: skips, skipLine: skips ? `${skips} other ${skips === 1 ? 'policy does' : 'policies do'} not match this flow` : '',
-      pushed, pushedN: pushed.length, hasPushed: pushed.length > 0 && !allOn, noPushed: !pushed.length && !allOn, sheet, all: allOn, showPushed: !allOn,
+      ...pushedRows.map(x => ({ key: 'r:' + x.key, kind: 'rule', label: x.label, verb: x.verb, cls: x.cls, glyph: x.icon, ink: x.ink, title: `${x.verb} ${x.label}: ${x.dirs.filter(d => d.on).map(d => d.word).join(', ')}, pushed by ${x.by}`, go: x.byGo, dirs: x.dirs.filter(d => d.on).map(d => d.key === 'o2p' ? 'Out' : 'In').join(' + ') }))];
+    return { has: true, none: false, line: `${ladder.length} of ${rungs.length} ${rungs.length === 1 ? 'policy applies' : 'policies apply'} · ${engFrom} → ${engTo}`, flow: `${engFrom} → ${engTo}`, ladder, chips, hasChips: chips.length > 0, noChips: chips.length === 0, matchN: ladder.length, policyN: rungs.length, skipN: skips, skipLine: skips ? `${skips} other ${skips === 1 ? 'policy does' : 'policies do'} not match this flow` : '',
+      pushed: pushedRows, pushedN: pushedRows.length, hasPushed: pushedRows.length > 0 && !allOn, noPushed: !pushedRows.length && !allOn, sheet, all: allOn, showPushed: !allOn,
       allLabel: allOn ? 'Pushed only' : `All ${ruleN}`, allTitle: allOn ? 'Show only the rules NetBond pushes for this connection' : `Show every rule on NetBond's sheet, ${ruleN} in all`, toggleAll: () => set({ cfEngAll: !allOn }) };
   })();
   // Last Mile reaches a metro, not a region (BasicSettingsStep: "the portal shows metros, not AWS regions"): once its region is set, the section folds.

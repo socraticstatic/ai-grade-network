@@ -65,12 +65,22 @@ test('All N opens the full route sheet, the engine\'s own rows, and the requirem
   assert.equal(v.cfAdvShowReqs, true);
 });
 
-test('an order with no site of yours, or a hosted way, keeps the plain pushed list: the engine reads flows from your sites', () => {
+test('an order with no site of yours keeps the plain pushed list; a hosted order reads the engine from AT&T\'s hub to its region (the storyboards, slides 6 and 13)', () => {
   const i2c = toAdvanced('Internet to Cloud');
   assert.equal(vals(i2c).cfEng.has, false);
   assert.equal(vals(i2c).cfAdvShowReqs, true);
   const c = ways(); vals(c).wayCards.find(w => w.key === 'peer').start();
-  assert.equal(vals(c).cfEng.has, false, 'a hosted order is AT&T\'s to route');
+  vals(c).cfTypes.find(t => t.label === 'AVPN to Cloud').pick(); vals(c).cfNext();
+  vals(c).cfCloudTiles.find(t => t.cloud === 'Azure').pick(); vals(c).cfNext();
+  vals(c).cfRegionGroups.flatMap(g => g.regions).find(r => r.name === 'Azure eastus').pick();
+  let v = vals(c);
+  assert.equal(v.cfEng.has, true);
+  assert.equal(v.cfEng.flow, "AT&T's hub → Azure eastus");
+  v.cfPolicyRouting.find(p => p.key === 'Private path required').pick(); v = vals(c);
+  assert.ok(v.cfEng.ladder.some(l => /^This order/.test(l.name)), 'the order\'s requirement is a policy on this flow');
+  assert.ok(v.cfEng.pushedN > 0);
+  v.cfEng.toggleAll(); v = vals(c);
+  assert.equal(v.cfEng.sheet.length, 4, 'the full suite, both directions');
 });
 
 test('the markup draws the engine\'s block from the engine\'s rows, and keeps the pushed list for orders the engine cannot read', () => {
