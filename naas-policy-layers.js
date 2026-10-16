@@ -59,6 +59,8 @@ export const ROUTE_RULES = [
   { section: 'deny', id: 'community-value-filter-customer', label: 'Community value filter, your BGP CVs', nb: 'Community Value Filter with Customer-Provided BGP CVs', o2p: true, p2o: true },
   { section: 'deny', id: 'community-value-filter-att', label: 'Community value filter, AT&T BGP CVs', nb: 'Community Value Filter with AT&T-Provided BGP CVs', o2p: false, p2o: true },
   { section: 'manip', id: 'prepend-advertisements', label: 'Prepend extra BGP ASNs', nb: 'Prepend Advertisements With Extra BGP ASNs', o2p: true, p2o: true },
+  // DNI's RMTK table (the storyboards, 2026-10-16, slide 7): MED is set on premise to partner only.
+  { section: 'manip', id: 'med', label: 'Multiple Exit Discriminator (MED)', nb: 'Multiple Exit Discriminator (MED)', o2p: true, p2o: false },
   { section: 'manip', id: 'selective-cv-tagging', label: 'Selective CV tagging', nb: 'Selective CV Tagging to Routes/Prefixes', o2p: true, p2o: true },
   { section: 'manip', id: 'community-value-tag', label: 'Community value to tag routes', nb: 'Community Value to Tag Routes', o2p: false, p2o: true },
   { section: 'allow', id: 'matching-routes', label: 'Matching routes', nb: 'Matching routes', o2p: true, p2o: true },

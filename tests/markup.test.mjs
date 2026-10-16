@@ -631,7 +631,48 @@ test('every container the markup opens, it closes', () => {
   // latency chip (span -2), the facilities card's ms line (div -1), the outcome's today and after ms (span -2), the Paths
   // key's SLO swatches (span -4) and its total (span -1), a hop strip's ms, a channel's latency (span -1, sc-if -1).
   // Recounted from the file: div 1348 -> 1347, span 2173 -> 2163, sc-if 818 -> 815.
-    ['div', /<div\b/g, /<\/div>/g, 1347], // - delay figures (2026-10-15)
+  // A hosted order's own steps (the storyboards, 2026-10-16): cloud tiles on Choose Provider (div +1, span +3, sc-if +3,
+  // sc-for +1, button +1), the tiers behind a gate (sc-if +1), the hub-gated region (div +3, span +4, sc-if +1, sc-for +1,
+  // button +1), the intake and the grant (div +4, span +6, sc-if +3, sc-for +1, button +1, label +1).
+  // Recounted from the file: div 1347 -> 1355, span 2164 -> 2176, sc-if 814 -> 822, sc-for 465 -> 468, button 714 -> 717, label 33 -> 34.
+  // The wizard in NetBond Advanced's shape (2026-10-16, "open up the design"): the vertical tab group, the panel aside
+  // and its rows, the two-column grid and the inline chip rows give way to the stepper across the top, one centred
+  // column, a price pill, the order so far as chips, cards and pill grids, and the floating action bar with the strip in
+  // it. Fewer wrappers and far fewer inline spans (the cards' icon tiles and the pills' two lines are CSS now); the
+  // bar's Cancel is one button more (button +1); the panel's aside goes (aside -1).
+  // Recounted from the file: div 1355 -> 1344, span 2176 -> 2145, sc-if 822, sc-for 468, button 717 -> 718, aside 10 -> 9, label 34.
+  // Review's rows one line each in a card, the order summary the same shape, the price line inside its pill (div -1, span +2):
+  // div 1344 -> 1343, span 2145 -> 2147.
+  // The strip left the bar (Micah, 2026-10-16: "The floating bar is silly. You shoved those icons and words in there."):
+  // its four stations and their two caption buttons go, with the hidden span that kept cfDiagram bound (div -1, span -9,
+  // button -2): div 1343 -> 1342, span 2147 -> 2138, button 718 -> 716.
+  // The page's title row back, Connect beside the way pill (div +1); the ghost button's arrow glyph goes (span -1):
+  // div 1342 -> 1343, span 2138 -> 2137.
+  // The flow matches the storyboards (Micah, 2026-10-16: "The flow and the pdfs need to match."): Choose Provider is the
+  // cloud tiles alone, the region groups with their head cells and region buttons go (div -2, span -6, sc-for -2,
+  // button -1); Connection Profile's region block serves every order, its cloud heads under one more sc-for and the
+  // tile's tag and check in two spans (span +2, sc-for +1): div 1343 -> 1341, span 2137 -> 2133, sc-for 468 -> 467,
+  // button 716 -> 715.
+  // NetBond Advanced's branches (2026-10-16, "assess and match"): the key fork with its pasted-key field, the EVC and
+  // APN-VPN inventories, the Bandwidth gate with the transport line, the AWS account, the service access rows and the
+  // subnets on Advanced, the routed networks on Terms, the picked count in the head; the empty price pill goes
+  // (div +12, span +11, sc-if +9, sc-for +3, button +4, label +5).
+  // Recounted from the file: div 1341 -> 1353, span 2133 -> 2148, sc-if 822 -> 831, sc-for 467 -> 470, button 715 -> 719, label 34 -> 39.
+  // Fitting the fold (2026-10-16): the fork row carries the account and the key fields (the account section goes, div -3),
+  // the service access rides the QoS row (sc-for -1, div -1, span -2), the subnets and the confirm policy head are one
+  // line each (div -2, span -3), Last Mile's region folds behind a gate (sc-if +1).
+  // Recounted from the file: div 1353 -> 1347, span 2148 -> 2142, sc-if 831 -> 832, sc-for 470 -> 469.
+  // The order reads the policy engine (2026-10-16, "RMTK is a policy engine"): Advanced Settings draws the engine's own
+  // ladder, pushed rules and sheet for the order's flow (div +13, span +23, sc-if +6, sc-for +5, button +5), and the
+  // settings step aside behind one gate while the full sheet is open. The default line is one row of chips (the policies
+  // that apply, the rules pushed); the rungs and the sheet are the All view.
+  // Recounted from the file: div 1347 -> 1355, span 2142 -> 2163, sc-if 832 -> 838, sc-for 469 -> 473, button 719 -> 724.
+  // Advanced Settings in the step grammar (2026-10-16, "make the complex simple to look at"): three sections, the
+  // requirements as cards, the routing settings as a field row, the sentence inside the heading (div -3, span -7,
+  // sc-if -1, sc-for -1, button +1): div 1355 -> 1352, span 2163 -> 2156, sc-if 839 -> 838, sc-for 473 -> 472, button 724 -> 725.
+  // The way pill left the title row (2026-10-16, "really?"); the way is the order's first chip (div -1, span -6, sc-if -3, button -1).
+  // Recounted from the file: div 1352 -> 1351, span 2158 -> 2152, sc-if 838 -> 835, button 725 -> 724.
+    ['div', /<div\b/g, /<\/div>/g, 1351], // the way as a chip (2026-10-16)
   // and the weights' legend is glyph and number, its swatch gone (span +1): span 1446 -> 1447.
   // Estate's Sites legend shows each access's glyph in its ink (span +1, sc-if +2): span 1483 -> 1484, sc-if 663 -> 665.
   // Govern's rows speak the journey's grammar: verb badges carry their directions, the Action column goes (span -2,
@@ -646,7 +687,10 @@ test('every container the markup opens, it closes', () => {
   // Save's two doors, the next region and the next cloud, as one sc-for in place of the one cloud's sc-if (sc-if -1,
   // sc-for +1), in one span so the two sit side by side in the act row's third cell (span +1): span 2163 -> 2165,
   // sc-for 465 -> 466, sc-if stays 815.
-    ['span', /<span\b/g, /<\/span>/g, 2165], // + region state glyph, Save's doors (2026-10-15)
+  // Zones are not a dimension (the storyboards, 2026-10-16): the Ways card's Same AZ / Across AZs chip group goes
+  // (span -1, sc-if -1, sc-for -1, button -1); the banner's zone word became the hub note, same shape.
+  // Recounted from the file: span 2165 -> 2164, sc-if 815 -> 814, sc-for 466 -> 465, button 715 -> 714.
+    ['span', /<span\b/g, /<\/span>/g, 2154], // the way as a chip (2026-10-16), told at the div pin; Cancel's long and short words (+2)
   // The second beauty pass ("there is overlapping text in places, and lots of words still"): the Why tiles keep a label
   // only where the value needs one (sc-if +1): sc-if 656 -> 657.
   // The journey's public path is named, never timed (2026-10-09, "remove the 102 ms as we won't know that"): sc-if 678 -> 677.
@@ -655,14 +699,14 @@ test('every container the markup opens, it closes', () => {
   // both hero buttons in one flex row (div +1), and Persona and Estate on one row in the rail foot so Spend ends inside
   // 900 again (div +1): div 1336 -> 1338, sc-if 677 -> 679, button 533 -> 535.
   // The portal MVP link beside Reset demo in the rail foot (2026-10-12), the two in one flex row: div 1338 -> 1339.
-    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 815], // - delay figures (2026-10-15), told at the div pin
+    ['sc-if', /<sc-if\b/g, /<\/sc-if>/g, 835], // the way as a chip (2026-10-16), told at the div pin
     // Ways to connect grades in a word (2026-10-15, "hard to tell what one dash is saying from another"): each row's
     // five-dash meter (its span and the sc-for over cr.segs) gives way to one grade span. span +0, sc-for 466 -> 465.
-    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 466], // - the ways' dash meters, + Save's doors (2026-10-15)
+    ['sc-for', /<sc-for\b/g, /<\/sc-for>/g, 472], // Advanced Settings in the step grammar (2026-10-16), told at the div pin
     ['section', /<section\b/g, /<\/section>/g, 17], // + Orders/Help (2026-10-13)
-    ['button', /<button\b/g, /<\/button>/g, 715], // + Orders/Help (2026-10-13)
-    ['aside', /<aside\b/g, /<\/aside>/g, 10], // + Orders/Help (2026-10-13)
-    ['label', /<label\b/g, /<\/label>/g, 33], // Sources' cadence for every account (2026-10-13), told at the div pin
+    ['button', /<button\b/g, /<\/button>/g, 724], // the way as a chip (2026-10-16), told at the div pin
+    ['aside', /<aside\b/g, /<\/aside>/g, 9], // the wizard's panel went (2026-10-16), told at the div pin
+    ['label', /<label\b/g, /<\/label>/g, 39], // NetBond Advanced's branches (2026-10-16), told at the div pin
   ];
   for (const [name, open, close, expected] of pairs) {
     assert.equal(count(open), count(close), `${name} is unbalanced`);

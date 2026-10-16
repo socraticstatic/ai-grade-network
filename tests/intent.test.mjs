@@ -19,7 +19,7 @@ const HTML = readFileSync(new URL('../NaaS Storefront.dc.html', import.meta.url)
 const B = Object.fromEntries(J.BEATS.map((b, i) => [b.key, i]));
 const AZURE = [{ provider: 'Azure', estId: 'lastmile', name: 'Microsoft Azure subscription', cadence: 'daily', at: 1 }];
 const journey = (extra = {}) => mkC({ view: 'lastmile', estateParam: null, journey: 'existing', screen: 'sj', addedSources: AZURE, jTags: { 'eastus:dispatch-svc': ['Prod'] }, ...extra });
-const ranked = (cloud, intent) => W.rankWays(cloud, intent).map(r => r.key + (r.zone === 'intra' ? ':intra' : ''));
+const ranked = (cloud, intent) => W.rankWays(cloud, intent).map(r => r.key);
 
 test('four questions, the user\'s own: purpose, traffic, security, routing at L3; the defaults read the deck as it stands', () => {
   assert.deepEqual(W.INTENT.map(q => [q.label, q.opts.map(o => o.label)]), [['Purpose', ['Critical', 'Production', 'Lab']], ['Traffic', ['Priority', 'Standard']],
@@ -38,19 +38,19 @@ test('four questions, the user\'s own: purpose, traffic, security, routing at L3
 test('the answers re-rank the ways by the deck\'s own rules', () => {
   assert.deepEqual(ranked('Azure', {}), ['byo', 'att', 'transit'], 'NetBond Advanced, then the hosted transit gateway (the deck\'s example card)');
   // "More than 5-10 VPCs, or inspection required -> Transit Gateway": no NetBond way inspects in path today.
-  assert.deepEqual(ranked('Azure', { security: 'inspected' }), ['transit', 'peer', 'cloudwan']);
+  // Re-pinned 2026-10-16 (the storyboards, slide 2): peering's data is $3,240 a month at 1 Gbps, so Cloud WAN now ranks above it.
+  assert.deepEqual(ranked('Azure', { security: 'inspected' }), ['transit', 'cloudwan', 'peer']);
   // "Customer will not run a gateway in its VPC -> AT&T-hosted options".
   assert.ok(ranked('Azure', { routing: 'hub' }).every(k => W.wayHosted(k)));
   // A few named services across a trust boundary -> PrivateLink; the routed ways behind it, each saying what it misses.
   const svc = W.rankWays('Azure', { security: 'service' });
   assert.equal(svc[0].key, 'privatelink'); assert.equal(svc[0].misses, 0);
   assert.ok(svc.slice(1).every(r => r.misses === 1 && r.why.some(x => x.miss && x.short === 'Routed, not per service')));
-  // "AWS, same AZ ID, single-AZ accepted -> Offer Intra-AZ peering": a lab on AWS that lets AT&T run the routing.
-  assert.deepEqual(ranked('AWS', { purpose: 'lab', routing: 'hub' })[0], 'peer:intra');
-  assert.equal(W.wayLabel('peer', 'AWS', 'intra'), 'Hosted VPC peering, same AZ');
-  // Business critical never takes one zone; Azure has no same-AZ rung at all.
-  assert.ok(!ranked('AWS', { purpose: 'critical', routing: 'hub' }).includes('peer:intra'));
-  assert.ok(!ranked('Azure', { purpose: 'lab', routing: 'hub' }).includes('peer:intra'));
+  // A lab that lets AT&T run the routing: priced by the reviewer's ladder (2026-10-16, peering $3,240 a month of data at 1 Gbps),
+  // the hosted transit gateway is the cheaper hosted way and ranks first; zones are no longer a rung.
+  assert.equal(ranked('AWS', { purpose: 'lab', routing: 'hub' })[0], 'transit');
+  assert.equal(W.wayLabel('peer', 'AWS'), 'Hosted VPC peering');
+  for (const r of W.rankWays('AWS', { purpose: 'critical', routing: 'hub' })) assert.equal(r.zone, undefined);
 });
 
 test('every way says why, in the deck\'s words: what fits, what to watch, what it misses', () => {
@@ -76,7 +76,7 @@ test('the Intent beat sits before the recommendation; an answer re-ranks at once
   v.jActGo();
   v = vals(c);
   assert.equal(c.state.jStep, B.recommend);
-  assert.deepEqual(v.jOptions.map(o => o.label), ['Hosted transit gateway', 'Hosted VNet peering', 'Hosted Cloud WAN']);
+  assert.deepEqual(v.jOptions.map(o => o.label), ['Hosted transit gateway', 'Hosted Cloud WAN', 'Hosted VNet peering']); // peering priced by the reviewer's ladder, 2026-10-16
   // The intent rides the cloud's head from here on, as glyphs.
   assert.equal(v.jHasIntentChips, true); assert.deepEqual(v.jIntentChips.map(x => x.icon), ['apps', 'smart-meter', 'firewall', 'router']);
 });

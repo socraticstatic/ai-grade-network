@@ -37,13 +37,24 @@ test('prices are the deck\'s at 1 Gbps: NetBond $1,900; the on-ramp $2,190 plus 
   assert.equal(CATALOG.find(p => p.id === 'netbond').price, 1900);
   assert.equal(W.wayMonthly('byo', 'Azure'), 1900);
   assert.equal(W.wayMonthly('att', 'Azure'), 2200, 'the AT&T-provided port stays the session\'s $300 estimate');
-  assert.equal(W.wayMonthly('peer', 'AWS', 'intra'), 2190, 'same-AZ: the last hop is free');
-  assert.equal(W.wayMonthly('peer', 'AWS', 'inter'), 4161);
-  assert.equal(W.wayMonthly('peer', 'Azure', 'intra'), 4161, 'Azure has no same-AZ rung, so it peers across AZs');
+  // Regional peering (the storyboards, 2026-10-16, slide 2): the on-ramp plus the peering data, $0.01/GB each way at 50%
+  // utilization: $3,240 at 1 Gbps, $16,200 at 5, $32,400 at 10. PrivateLink (slide 9): $5,564 / $26,607 / $48,023, formula not shared.
+  assert.equal(W.wayMonthly('peer', 'AWS'), 5430);
+  assert.equal(W.wayMonthly('peer', 'Azure'), 5430);
   assert.equal(W.wayMonthly('transit', 'AWS'), 4234);
   assert.equal(W.wayMonthly('cloudwan', 'AWS'), 4599);
-  assert.equal(W.wayMonthly('privatelink', 'AWS'), 4708);
-  assert.deepEqual(W.wayProducts('peer', 'Azure', 2), [['onramp-att', 2], ['lh-cross', 2]]);
+  assert.equal(W.wayMonthly('privatelink', 'AWS'), 7754);
+  assert.deepEqual(W.HOSTED_BANDWIDTHS, ['1 Gbps', '5 Gbps', '10 Gbps'], 'the reviewer priced three sizes; a hosted order offers those');
+  assert.equal(W.hopPrice('lh-peer', '5 Gbps'), 16200);
+  assert.equal(W.hopPrice('lh-pl', '10 Gbps'), 48023);
+  assert.equal(W.hopPrice('lh-tgw', '5 Gbps'), 2044, 'a hop with no ladder keeps its one figure');
+  assert.deepEqual(W.hostedLines('peer', '5 Gbps').map(p => [p.id, p.price]), [['onramp-att', null], ['lh-peer', 16200], ['hub-att', null]], 'above 1 Gbps the on-ramp is AT&T\'s to price');
+  assert.deepEqual(W.hostedLines('privatelink', '1 Gbps').map(p => [p.id, p.price]), [['onramp-att', 2190], ['lh-pl', 5564], ['hub-att', null]]);
+  // The reviewer's call on PrivateLink (the storyboards, slide 9): weak on every attribute, no per-service framing.
+  const pl = W.WAYS.find(w => w.key === 'privatelink');
+  assert.deepEqual(Object.values(pl.score).map(s => s[0]), [2, 2, 2, 2]);
+  assert.ok(!JSON.stringify(pl).includes('svc') && !JSON.stringify(pl).includes('per AZ'));
+  assert.deepEqual(W.wayProducts('peer', 'Azure', 2), [['onramp-att', 2], ['lh-peer', 2]]);
   assert.deepEqual(W.wayExtras('att', 'Azure').map(p => p.id), ['port-att']);
   assert.deepEqual(W.wayExtras('byo', 'Azure'), []);
   assert.deepEqual(W.wayExtras('transit', 'AWS').map(p => [p.id, p.price]), [['onramp-att', 2190], ['lh-tgw', 2044], ['hub-att', null]], 'the hub is a line priced at review');
@@ -58,12 +69,30 @@ test('each way draws its path and says who sets it up, at the deck\'s level and 
   assert.equal(W.wayWho('peer').level, 'Click + approve');
   assert.match(W.waySetup('byo'), /^Guided reconfig · <15 min on AT&T's side/);
   assert.match(W.waySetup('transit'), /30-60 min, a proof-of-concept target$/);
-  assert.equal(W.wayYouDo('peer').words, 'Accept the peering and add one route');
+  assert.match(W.wayYouDo('peer').words, /grant AT&T access.*address space.*accept the peering in your console/i);
+  assert.match(W.wayYouDo('privatelink').words, /grant AT&T access.*destination/i, 'AT&T builds the endpoints after the grant');
+});
+
+// The storyboards (2026-10-16): a hosted way is a managed service; peering takes 15-20 min, Private Link 30-45; no row
+// says Inspected (question 1 to AT&T), Per service, One AZ or One zone.
+test('hosted ways read AT&T-managed, with the storyboards\' times and words', () => {
+  for (const w of W.WAYS.filter(x => x.hosted)) assert.equal(w.kicker, 'AT&T-managed', w.key);
+  assert.equal(W.wayOf('peer').time, '15-20 min');
+  assert.equal(W.wayOf('privatelink').time, '30-45 min');
+  assert.match(W.waySetup('peer'), /15-20 min/);
+  const rows = (k) => Object.fromEntries(W.wayCards().find(c => c.key === k).rows.map(r => [r.key, r.value]));
+  assert.equal(rows('peer').setup, 'Approve · 15-20 min');
+  assert.equal(rows('privatelink').setup, 'Approve · 30-45 min');
+  assert.equal(rows('privatelink').sec, 'One endpoint per destination');
+  assert.equal(rows('privatelink').scale, 'Per destination');
+  assert.equal(rows('peer').sec, "Private in AT&T's hub");
+  // The two ways the storyboards reviewed; Transit gateway's 'Inspected' shares question 1 and waits on the same answer.
+  for (const c of W.wayCards().filter(x => ['peer', 'privatelink'].includes(x.key))) for (const r of c.rows) assert.ok(!/Inspected|Per service|One AZ|One zone/.test(r.value), `${c.key} ${r.key}: ${r.value}`);
 });
 
 test('every card scores the deck\'s five criteria and a weighted score out of 100; cost runs cheapest 5 to dearest 1', () => {
   assert.deepEqual(W.CRITERIA.map(c => [c.key, c.weight]), [['cost', 30], ['perf', 20], ['sec', 20], ['setup', 15], ['scale', 15]]);
-  const cards = W.wayCards('inter');
+  const cards = W.wayCards();
   for (const c of cards) {
     assert.deepEqual(c.rows.map(r => r.key), ['cost', 'perf', 'sec', 'setup', 'scale'], c.key);
     c.rows.forEach(r => { assert.ok(r.score >= 1 && r.score <= 5, `${c.key} ${r.key}`); assert.equal(r.grade, W.GRADES[r.score], `${c.key} ${r.key}`); });
@@ -71,15 +100,22 @@ test('every card scores the deck\'s five criteria and a weighted score out of 10
     assert.equal(c.points, Math.min(100, Math.round(c.rows.reduce((a, r) => a + r.weight * r.score / 5, 0)) + (W.wayHosted(c.key) ? 0 : 5)), c.key);
   }
   const cost = Object.fromEntries(cards.map(c => [c.key, c.rows[0].score]));
-  assert.ok(cost.byo > cost.att && cost.att > cost.peer && cost.peer > cost.transit && cost.transit > cost.privatelink, JSON.stringify(cost));
+  // The reviewer's figures (2026-10-16): peering $5,430 and PrivateLink $7,754 at 1 Gbps are the dearest, below the transit gateway.
+  assert.ok(cost.byo > cost.att && cost.att > cost.transit && cost.transit > cost.peer && cost.peer >= cost.privatelink, JSON.stringify(cost));
   assert.ok(cards.filter(c => c.hosted).every(c => / \+ hub$/.test(c.rows[0].value)), 'a hosted way says its hub is extra');
   assert.match(cards.find(c => c.key === 'peer').rows[0].title, /pass-through/);
 });
 
-test('peering\'s zones are the deck\'s: same AZ free and AWS only, across AZs zone-redundant at $0.01/GB each way', () => {
-  const intra = W.wayCards('intra').find(c => c.key === 'peer'), inter = W.wayCards('inter').find(c => c.key === 'peer');
-  assert.equal(intra.monthly, 2190); assert.equal(inter.monthly, 4161);
-  assert.ok(intra.rows[0].score > inter.rows[0].score, 'same AZ is cheaper');
-  assert.ok(intra.rows.find(r => r.key === 'scale').score < inter.rows.find(r => r.key === 'scale').score, 'and gives up a zone');
-  assert.equal(intra.zoneLabel, 'Same AZ');
+// Zones are not a dimension (the storyboards, 2026-10-16: "vNETs are regional constructs and span across multiple
+// zones as is"). The constraint is the hub: a hosted way reaches only a region where AT&T has deployed one.
+test('peering has no zones; hosted ways are gated by where AT&T has a hub', () => {
+  assert.equal(W.wayOf('peer').zones, undefined);
+  for (const c of W.wayCards()) { assert.equal(c.zoneLabel, undefined, c.key); assert.equal(c.zone, undefined, c.key); }
+  assert.equal(W.wayLabel('peer', 'AWS'), 'Hosted VPC peering');
+  assert.equal(W.wayLabel('peer', 'Azure'), 'Hosted VNet peering');
+  assert.equal(W.wayCards().find(c => c.key === 'peer').rows.find(r => r.key === 'perf').value, 'Regional');
+  assert.ok(Array.isArray(W.HUB_REGIONS.AWS) && Array.isArray(W.HUB_REGIONS.Azure));
+  assert.equal(W.hubIn('Azure', 'eastus'), true);
+  assert.equal(W.hubIn('Azure', 'australiaeast'), false);
+  assert.equal(W.hubIn('GCP', 'us-central1'), false, 'no Google hub until AT&T says so');
 });

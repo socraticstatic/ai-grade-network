@@ -22,26 +22,7 @@ test('the steps carry a category head and a glyph, the head on the first step of
   assert.equal(v.cfSteps[0].mark, '✓'); assert.equal(v.cfSteps[0].state, 'done');
 });
 
-test('the strip fills in as the order does: nothing, then the cloud, then the first mile and the core', () => {
-  const c = flow({ ctype: DC, from: { ctype: 'you' }, passed: ['type'], fk: 'provider' });
-  let v = vals(c);
-  assert.deepEqual([v.cfStrip.site, v.cfStrip.edge, v.cfStrip.core, v.cfStrip.cloud], ['any', 'any', 'any', 'any']);
-  assert.equal(v.cfStrip.coreText, 'Standard until you pick');
-  for (const n of [v.cfStrip.siteIcon, v.cfStrip.edgeIcon, v.cfStrip.cloudIcon]) assert.ok(onDisk(n), n);
-  v.cfClouds.flatMap(cl => cl.regions).find(r => r.name === 'AWS us-east-1').pick();
-  v = vals(c);
-  assert.equal(v.cfStrip.cloud, 'set'); assert.equal(v.cfDiagram.right, 'AWS us-east-1');
-  v.cfNext(); v = vals(c);
-  v.cfTiers.find(t => t.tier === 'Maximum').pick(); v = vals(c);
-  assert.equal(v.cfStrip.core, 'set'); assert.equal(v.cfStrip.coreText, 'Maximum · 2 paths');
-  v.cfBandwidths.find(b => b.label === '10 Gbps').pick(); v = vals(c);
-  assert.equal(v.cfStrip.edge, 'set'); assert.match(v.cfStrip.edgeText, /10 Gbps/);
-});
-
-test('an end the estate filled is dashed, not solid', () => {
-  const v = vals(flow({ ctype: DC, regions: ['AWS us-west-2'], from: { ctype: 'you', regions: 'estate' }, passed: ['type'], fk: 'provider' }));
-  assert.equal(v.cfStrip.cloud, 'filled');
-});
+// The strip tests left with the strip (2026-10-16): the wizard's bar is buttons only; Orders' rows draw their own path.
 
 test('Review opens with today against the order, the price and when it stands up', () => {
   const v = vals(flow({ ctype: DC, regions: ['AWS us-west-2'], metros: ['Seattle'], bandwidth: '10 Gbps', resiliency: 'Standard', term: 12, from: { ctype: 'you', regions: 'you', loc: 'you', bandwidth: 'you', tier: 'you', term: 'you' }, passed: ['type', 'provider', 'basic', 'advanced', 'terms'], fk: 'review' }));
@@ -57,9 +38,11 @@ test('Review opens with today against the order, the price and when it stands up
   assert.match(v.cfOutcome.priceBig, /^\$[\d,]+\/mo$/);
 });
 
-test('the S4 markup draws the vertical tabs, the strip and the outcome, and the old stepper and svg are gone', () => {
-  assert.match(S4, /<nav class="fw-vtabs" aria-label="Steps"/);
-  assert.match(S4, /<div class="ps mid" role="img" aria-label="The path, as it fills in"/);
+test('the S4 markup draws the stepper and the outcome, and the strip, the old vertical tabs and the svg are gone', () => {
+  // The steps ran down the left from 2026-10-02; since 2026-10-16 they run across the top in NetBond Advanced's shape.
+  assert.match(S4, /<nav class="cw-steps" aria-label="Steps"/);
+  assert.ok(!S4.includes('<nav class="fw-vtabs"'), 'the vertical tab group left');
+  assert.ok(!S4.includes('<div class="ps mid"'), 'the strip is in the wizard; it left on 2026-10-16, the bar is buttons only');
   assert.ok(S4.includes('{{ cfOutcome.todayPath }}') && S4.includes('{{ cfOutcome.priceBig }}'));
   assert.ok(!S4.includes('<ol aria-label="Steps"'), 'the horizontal stepper left');
   assert.ok(!S4.includes('viewBox="0 0 284 92"'), 'the three-box svg left');

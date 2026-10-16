@@ -66,10 +66,10 @@ test('only the best way left standing wears the filled Start', () => {
 
 // Micah, 2026-10-13, second pass: "still too busy - space out if needed, like products". The ways sit as the Marketplace
 // sits its products: a section per family under a kicker and a title, four to a row, and the page may scroll.
-test('the ways sit in two sections, NetBond Advanced and AT&T-hosted, in the deck\'s order', () => {
+test('the ways sit in two sections, NetBond Advanced and AT&T-managed, in the deck\'s order', () => {
   const v = vals(ways());
   assert.deepEqual(v.wayGroups.map(g => [g.kicker, g.title, g.cards.map(w => w.key)]),
-    [['2 ways', 'NetBond Advanced', ['byo', 'att']], ['4 ways', 'AT&T-hosted', ['peer', 'transit', 'cloudwan', 'privatelink']]]);
+    [['2 ways', 'NetBond Advanced', ['byo', 'att']], ['4 ways', 'AT&T-managed', ['peer', 'transit', 'cloudwan', 'privatelink']]]);
   assert.equal(v.wayGroups.flatMap(g => g.cards).filter(w => w.top).length, 1, 'still one filled Start across both sections');
 });
 
@@ -97,22 +97,24 @@ test('the flow\'s way banner keeps the name whole and the setup short', () => {
   const v = vals(c);
   assert.equal(v.cfWay.setup, 'Guided reconfig · <15 min');
   assert.match(v.cfWay.setupTitle, /first time needs your cloud gateway/);
-  const i = HTML.indexOf('aria-label="Way to connect"');
-  const banner = HTML.slice(i, HTML.indexOf('{{ cfWay.changeLabel }}', i));
-  assert.match(banner, /<b style="flex:none;[^"]*">\{\{ cfWay\.title \}\}<\/b>/, 'the name can still shrink');
-  assert.ok(banner.includes('title="{{ cfWay.setupTitle }}"'), 'the setup sentence is not in the title');
+  // The way is the order's first chip since 2026-10-16 (the pill beside the title went: "really?"); its whole title in the chip, its words in the tooltip.
+  const chip = HTML.slice(HTML.indexOf('<button class="cw-chip"'), HTML.indexOf('</button>', HTML.indexOf('<button class="cw-chip"')));
+  assert.ok(chip.includes('{{ w.label }} <b>{{ w.value }}</b>') && chip.includes('title="{{ w.title }}"'), 'the chip lost its label, value or words');
+  assert.ok(!/text-overflow:\s*ellipsis/.test(chip), 'the chip clips');
 });
 
-test('peering\'s zone chips switch its scores between one zone and across zones', () => {
+// The storyboards (2026-10-16): no zones on the card or in the banner; the banner says what the constraint is.
+test('peering has no zone chips; the way banner says same region as the hub', () => {
   const c = ways();
   const peer = () => vals(c).wayCards.find(w => w.key === 'peer');
-  assert.deepEqual(peer().zoneChips.map(z => [z.key, z.on]), [['intra', true], ['inter', false]]);
-  const before = peer().monthly;
-  peer().zoneChips.find(z => z.key === 'inter').go();
-  assert.equal(c.state.wayZone, 'inter');
-  // Across AZs (the deck): zone-redundant, and the last hop bills $0.01/GB each way.
-  assert.ok(peer().monthly > before);
-  assert.match(peer().zoneChips.find(z => z.key === 'intra').title, /AWS$/, 'same AZ is AWS only');
+  assert.equal(peer().hasZones, undefined);
+  assert.equal(peer().zoneChips, undefined);
+  assert.equal(c.state.wayZone, undefined, 'the zone state is gone');
+  peer().start();
+  const v = vals(c);
+  assert.equal(v.cfWay.title, 'Hosted peering');
+  assert.equal(v.cfWay.hubNote, "Same region as AT&T's hub");
+  assert.equal(v.cfWay.zone, undefined);
 });
 
 test('Start carries the way into the flow, which asks next what you connect from; Back returns to Ways to connect', () => {
@@ -140,24 +142,24 @@ test('a way a cloud cannot carry dims that cloud on Choose Provider: AT&T cannot
   vals(c).cfNext();
   const v = vals(c);
   assert.equal(v.cfKey, 'provider');
-  const g = v.cfClouds.find(x => x.cloud === 'GCP'), az = v.cfClouds.find(x => x.cloud === 'Azure');
+  const g = v.cfCloudTiles.find(x => x.cloud === 'GCP'), az = v.cfCloudTiles.find(x => x.cloud === 'Azure');
   assert.equal(g.cant, true);
   assert.match(g.cantWord, /^Not with AT&T provides the port$/);
   assert.equal(az.can, true);
   assert.ok(az.hasMark && az.mark.endsWith('azure.svg'));
-  g.regions[0].pick();
-  assert.deepEqual(vals(c).cfClouds.flatMap(x => x.regions).filter(r => r.on), [], 'a dimmed cloud never takes the pick');
-  az.regions[0].pick();
+  g.pick();
+  assert.deepEqual(vals(c).cfCloudTiles.filter(t => t.on), [], 'a dimmed cloud never takes the pick');
+  az.pick();
   const v2 = vals(c);
   assert.equal(v2.cfWay.title, "AT&T's ExpressRoute", 'once the cloud is chosen, the way reads as that cloud names its port');
 });
 
 test('the order prices the way: AT&T\'s port beside NetBond; a hosted way the on-ramp, its last hop and the hub in place of NetBond', () => {
-  const lineIds = (way) => { const c = ways(); vals(c).wayCards.find(w => w.key === way).start(); vals(c).cfTypes.find(t => t.label === 'DataCenter / CoLocation to Cloud').pick(); vals(c).cfNext(); vals(c).cfClouds.find(x => x.cloud === 'Azure').regions[0].pick(); return vals(c).cfOrder.lines.map(l => l.product); };
+  const lineIds = (way) => { const c = ways(); vals(c).wayCards.find(w => w.key === way).start(); vals(c).cfTypes.find(t => t.label === 'DataCenter / CoLocation to Cloud').pick(); vals(c).cfNext(); vals(c).cfCloudTiles.find(x => x.cloud === 'Azure').pick(); vals(c).cfNext(); vals(c).cfRegionGroups[0].regions[0].pick(); return vals(c).cfOrder.lines.map(l => l.product); };
   assert.ok(lineIds('att').some(p => /^Cloud port, AT&T-provided/.test(p)), lineIds('att').join(' | '));
-  // Re-pinned (2026-10-08, the deck): a hosted way rides AT&T's on-ramp into its hub, not NetBond; Azure peers across AZs.
+  // Re-pinned (2026-10-16, the storyboards): a hosted way rides AT&T's on-ramp into its hub, not NetBond; the peering is regional.
   const peer = lineIds('peer');
-  assert.deepEqual(peer.slice(0, 3), ['AT&T cloud on-ramp into the hosted hub, 1 Gbps', 'Cross-AZ peering into your VPC or VNet', 'AT&T hosted hub: vSRX and compute'], peer.join(' | '));
+  assert.deepEqual(peer.slice(0, 3), ['AT&T cloud on-ramp into the hosted hub, 1 Gbps', 'VNet or VPC peering data, $0.01/GB each way at 50% use, 1 Gbps', 'AT&T hosted hub: vSRX and compute'], peer.join(' | '));
   assert.ok(!peer.some(p => /^NetBond Advanced/.test(p)), peer.join(' | '));
   assert.ok(!lineIds('byo').some(p => /Cloud port|hosted/i.test(p)), lineIds('byo').join(' | '));
 });
@@ -210,8 +212,9 @@ test('the markup binds the six ways, their meters and marks, and loops inside no
   // Like products (2026-10-13): a section per family, four cards to a row, the root marked as a page that may scroll.
   assert.match(blk, /<sc-for list="\{\{ wayGroups \}\}" as="wg"[\s\S]*?\{\{ wg\.kicker \}\}[\s\S]*?\{\{ wg\.title \}\}[\s\S]*?<sc-for list="\{\{ wg\.cards \}\}" as="wc"/, 'the sections are gone');
   assert.match(blk, /id="sec-paths"[^>]*data-fold="scrolls"/, 'the page is not marked as one that may scroll');
-  assert.match(blk, /class="way-marks"[\s\S]*?wc\.logos[\s\S]*?wc\.zoneChips/, 'the clouds and zones do not sit under the name');
+  assert.match(blk, /class="way-marks"[\s\S]*?wc\.logos/, 'the clouds do not sit under the name');
+  assert.ok(!blk.includes('zoneChips'), 'the zone chips are back');
   assert.match(blk, /class="way-start" data-primary="\{\{ wc\.top \}\}"/, 'Start lost its one-primary binding');
   for (const w of W.WAYS) for (const ic of [w.icon]) assert.ok(readFileSync(new URL(`../brand/icons/${ic}.svg`, import.meta.url)), ic);
-  assert.ok(HTML.includes('{{ cfBackLabel }}') && HTML.includes('{{ cfWay.title }}') && HTML.includes('{{ cg.cantWord }}'));
+  assert.ok(HTML.includes('{{ cfBackLabel }}') && HTML.includes('{{ cfCancelLabel }}') && HTML.includes('{{ ht.cantWord }}'));
 });

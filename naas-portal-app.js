@@ -192,7 +192,7 @@ export function recommended(d, s, set) {
   const full = { ...W.INTENT_DEFAULT, ...answers };
   const requested = (s.requests || []).find(r => r.csp === reg.csp && r.region === reg.region) || null;
   const options = W.rankWays(cloud, answers, 99).map((r, i) => { const w = W.wayOf(r.key), who = W.wayWho(r.key) || { who: '', level: '', time: '' }, oks = r.why.filter(x => x.ok).map(x => x.short);
-    return { key: r.key, rank: String(i + 1), label: W.wayLabel(r.key, cloud, r.zone), kicker: w.kicker, monthly: money(r.monthly), setup: `${who.level} · ${who.time}`, who: who.who, fit: oks.slice(0, 2).join(' · '),
+    return { key: r.key, rank: String(i + 1), label: W.wayLabel(r.key, cloud), kicker: w.kicker, monthly: money(r.monthly), setup: `${who.level} · ${who.time}`, who: who.who, fit: oks.slice(0, 2).join(' · '),
       misses: r.misses, missWords: r.why.filter(x => x.miss).map(x => x.short).join('; '), score: String(r.pts), recommended: i === 0 && r.misses === 0, isRequested: !!requested && requested.option === r.key,
       request: () => set({ requests: [...(s.requests || []), { at: new Date().toISOString(), csp: reg.csp, region: reg.region, option: r.key, answers: full, defaulted: Object.keys(answers).length === 0 }] }) }; });
   const cols = [{ key: 'label', label: 'Option', present: true, cls: 'dt-name', w: '30%' }, { key: 'monthly', label: 'Monthly', present: true, cls: 'num', w: '9%' }, { key: 'setup', label: 'Setup', present: true, w: '17%' }, { key: 'who', label: 'Who', present: true, w: '6%' }, { key: 'fit', label: 'Fit', present: true, w: '21%' }, { key: 'score', label: 'Score', present: true, cls: 'num', w: '6%' }, { key: 'act', label: '', present: true, cls: 'num', w: '11%' }];
@@ -266,7 +266,7 @@ export function journey(d, s, set) {
   const steps = PJ.BEATS.map((b, i) => { const done = i < step; return { key: b.key, n: String(i + 1), label: b.short, title: b.title, state: i === step ? 'cur' : done ? 'done' : 'next', cur: i === step, off: !open(i), hasIcon: done, noIcon: !done, go: () => { if (open(i)) to(i)(); } }; });
   const link = (step >= JB.recommend && picked) ? 'proposed' : 'none';
   const net = step >= JB.found && found.has && found.notOn > 0 ? 'public' : 'off';
-  const way = picked ? W.wayLabel(picked.key, cloud, picked.zone) : '';
+  const way = picked ? W.wayLabel(picked.key, cloud) : '';
   const wayWord = requested ? W.wayLabel(requested.option, cloud) : way;
   // The questions as sentences under the picked region: the deck's default reads as chosen until changed; a click sets, never toggles off.
   const needs = { region: region ? region.label : '', defaulted: !Object.keys(answers).length, hint: Object.keys(answers).length ? 'Your answers' : tagged ? 'Defaults from your tags; change what differs' : 'Defaults; change what differs',
@@ -274,7 +274,7 @@ export function journey(d, s, set) {
       go: () => { if (!regionKey) return; set({ intents: { ...intents, [regionKey]: { ...answers, [q.key]: o.key } }, jPick: null }); } })) })),
     copy: { has: others.length > 0, on: copyOn, other: others.map(r => r.label).join(' and '), toggle: () => set({ jCopy: !copyOn }) } };
   const options = ranked.map((r, i) => { const w = W.wayOf(r.key), oks = r.why.filter(x => x.ok).slice(0, 2), miss = r.why.find(x => x.miss);
-    return { key: r.key, label: W.wayLabel(r.key, cloud, r.zone), kicker: w.kicker, icon: w.icon, price: money(r.monthly), pts: r.pts, ptsPct: `${r.pts}%`, ptsShown: r.misses ? '✕' : String(r.pts), out: r.misses > 0, ptsTitle: r.misses ? `${miss.short}: ${miss.words}` : `${r.pts} of 100 for what you said`,
+    return { key: r.key, label: W.wayLabel(r.key, cloud), kicker: w.kicker, icon: w.icon, price: money(r.monthly), pts: r.pts, ptsPct: `${r.pts}%`, ptsShown: r.misses ? '✕' : String(r.pts), out: r.misses > 0, ptsTitle: r.misses ? `${miss.short}: ${miss.words}` : `${r.pts} of 100 for what you said`,
       why: (r.misses ? [miss] : oks).map(x => ({ key: x.key, icon: x.icon, short: x.short, title: `${x.short}: ${x.words}`, ink: x.miss ? 'var(--error)' : 'var(--link)' })), on: r.key === pickKey, go: () => set({ jPick: r.key }), setupTitle: W.waySetup(r.key) }; });
   const back = step === 0 ? exit : (s.jFrom && step === JB.found) ? exitTo(s.jFrom) : to(step - 1);
   return { beat: beat.key, step, steps, line: PJ.lineOf(beat.key, { today, found, region, cloud: prov, way: wayWord }),

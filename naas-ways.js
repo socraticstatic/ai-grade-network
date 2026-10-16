@@ -40,14 +40,27 @@ export const CLOUD_NAME = { AWS: 'AWS', Azure: 'Microsoft Azure', GCP: 'Google C
 export const EXTRA = {
   'port-att': { id: 'port-att', name: 'Cloud port, AT&T-provided', price: 300 },
   'onramp-att': { id: 'onramp-att', name: 'AT&T cloud on-ramp into the hosted hub, 1 Gbps', price: 2190 },
-  'lh-intra': { id: 'lh-intra', name: 'Same-AZ peering into your VPC', price: 0 },
-  'lh-cross': { id: 'lh-cross', name: 'Cross-AZ peering into your VPC or VNet', price: 1971 },
+  // Regional peering (the storyboards, 2026-10-16, slide 2): the cloud's $0.01/GB each way at 50% utilization, $3,240 a
+  // month at 1 Gbps; HOP_LADDER carries the reviewer's 5 and 10 Gbps figures.
+  'lh-peer': { id: 'lh-peer', name: 'VNet or VPC peering data, $0.01/GB each way at 50% use', price: 3240 },
   'lh-tgw': { id: 'lh-tgw', name: 'Shared transit gateway attachment', price: 2044 },
   'lh-cwan': { id: 'lh-cwan', name: 'Cloud WAN or Virtual WAN attachment', price: 2409 },
-  'lh-pl': { id: 'lh-pl', name: 'PrivateLink endpoints, 40 services', price: 2518 },
+  // PrivateLink (slide 9): the reviewer's $5,564 at 1 Gbps, formula not shared, taken as the service on top of the on-ramp.
+  'lh-pl': { id: 'lh-pl', name: 'Private endpoint and link service, both directions', price: 5564 },
   'hub-att': { id: 'hub-att', name: 'AT&T hosted hub: vSRX and compute', price: null },
 };
 export const productOf = (id) => CATALOG.find(p => p.id === id) || EXTRA[id] || null;
+// The reviewer priced the hosted ways at three sizes (the storyboards, 2026-10-16): a hosted order offers those, and its
+// hop is priced from the ladder. Peering is $0.01/GB each way at 50% utilization; PrivateLink's formula was not shared.
+export const HOSTED_BANDWIDTHS = ['1 Gbps', '5 Gbps', '10 Gbps'];
+export const HOP_LADDER = { 'lh-peer': { 1: 3240, 5: 16200, 10: 32400 }, 'lh-pl': { 1: 5564, 5: 26607, 10: 48023 } };
+const gbpsOf = (bw) => { const m = /^(\d+(?:\.\d+)?) (M|G)bps$/.exec(String(bw || '')); return m ? (m[2] === 'G' ? +m[1] : +m[1] / 1000) : 1; };
+/** A hop's monthly at a bandwidth: the reviewer's ladder where there is one, else the hop's one figure. */
+export const hopPrice = (hop, bw) => { const l = HOP_LADDER[hop]; if (!l) return (productOf(hop) || {}).price ?? null; const v = l[gbpsOf(bw)]; return v === undefined ? null : v; };
+/** A hosted order's lines at a bandwidth: the on-ramp (its figure is 1 Gbps; above that AT&T prices it), the hop from the ladder, the hub at review. */
+export const hostedLines = (key, bw) => { const w = wayOf(key); if (!w || !w.hosted) return []; const size = bw || '1 Gbps', g = gbpsOf(size);
+  const onramp = productOf('onramp-att'), hop = productOf(w.hop);
+  return [{ ...onramp, price: g <= 1 ? onramp.price : null, name: g <= 1 ? onramp.name : onramp.name.replace('1 Gbps', size) }, { ...hop, price: hopPrice(w.hop, size), name: `${hop.name}, ${size}` }, productOf('hub-att')]; };
 
 /** The deck's five criteria and their weights (slide "From Discovery to the Right Connection"), each with its glyph. */
 export const CRITERIA = [
@@ -65,9 +78,11 @@ export const SETUP_LEVEL = {
 };
 
 /**
- * The ways, the deck's columns plus the session's AT&T-provided port. `products` are one region's order; `zones` is
- * peering's choice of last hop (same AZ, AWS only and free; across AZs, zone-redundant). `youDo` is the deck's
- * "Customer does", `level` its setup level, `time` its estimate (`proven` only for NetBond Advanced).
+ * The ways, the deck's columns plus the session's AT&T-provided port. `products` are one region's order; a hosted way's
+ * `hop` is its last hop out of AT&T's hub. Zones are not a dimension (the storyboards, 2026-10-16: "vNETs are regional
+ * constructs and span across multiple zones as is"); a hosted way needs AT&T's hub in the region (HUB_REGIONS). `youDo`
+ * is the deck's "Customer does", `level` its setup level, `time` its estimate (`proven` only for NetBond Advanced).
+ * The hosted ways read AT&T-managed: a managed service, AT&T provisions after you grant it access.
  */
 export const WAYS = [
   { key: 'byo', title: 'Bring your own port', kicker: 'NetBond Advanced', icon: 'cable', path: 'netbond',
@@ -82,32 +97,35 @@ export const WAYS = [
     youDo: ['Accept + gateway', 'Accept the hosted connection, attach your cloud gateway, confirm BGP'],
     clouds: ['AWS', 'Azure'], products: ['netbond', 'port-att'],
     score: { perf: [5, '99.99% SLA'], sec: [5, 'Never internet'], setup: [4, 'Guided · <15 min'], scale: [5, 'By tier'] } },
-  { key: 'peer', title: 'Hosted peering', kicker: 'AT&T-hosted', icon: 'check-shield', path: 'netbond', inspect: true, hosted: true,
-    line: "AT&T's hub VPC or VNet, with the vSRX in path, peered to yours. L3 to L7 policy in AT&T's hub.",
-    join: ['check-shield', 'Peering', 'set', "AT&T's hub peered to your VPC or VNet, the vSRX in path"], who: 'att', level: 'approve', time: '15-30 min',
-    youDo: ['Accept + route', 'Accept the peering and add one route'],
+  // Whether the hub inspects traffic (a vSRX, L3 to L7) is AT&T's to answer (the storyboards' reviewer did not know the
+  // word); until then the card says what is certain: a private path in AT&T's hub, in your region.
+  { key: 'peer', title: 'Hosted peering', kicker: 'AT&T-managed', icon: 'check-shield', path: 'netbond', inspect: true, hosted: true, hop: 'lh-peer',
+    line: "AT&T's hub VPC or VNet, in your region, peered to yours. A managed service: AT&T provisions it after you grant access.",
+    join: ['check-shield', 'Peering', 'set', "AT&T's hub, in your region, peered to your VPC or VNet"], who: 'att', level: 'approve', time: '15-20 min',
+    youDo: ['Grant + accept', 'Grant AT&T access, enter your VNet or VPC and its address space, then accept the peering in your console'],
     clouds: ['AWS', 'Azure'],
-    zones: { intra: { label: 'Same AZ', clouds: ['AWS'], hop: 'lh-intra', perf: [4, 'One zone'], scale: [1, 'One AZ'] },
-      inter: { label: 'Across AZs', clouds: ['AWS', 'Azure'], hop: 'lh-cross', perf: [4, 'Zone-redundant'], scale: [2, 'Per VPC'], costNote: '' } },
-    score: { perf: [4, 'Zone-redundant'], sec: [5, 'Inspected'], setup: [4, 'Approve · 15-30 min'], scale: [2, 'Per VPC'] } },
-  { key: 'transit', title: 'Transit gateway', kicker: 'AT&T-hosted', icon: 'merge', path: 'netbond', inspect: true, hosted: true, hop: 'lh-tgw',
+    score: { perf: [4, 'Regional'], sec: [5, "Private in AT&T's hub"], setup: [4, 'Approve · 15-20 min'], scale: [2, 'Per VPC'] } },
+  { key: 'transit', title: 'Transit gateway', kicker: 'AT&T-managed', icon: 'merge', path: 'netbond', inspect: true, hosted: true, hop: 'lh-tgw',
     line: 'AT&T runs a transit gateway in its hub and shares it; your VPCs attach. Transitive routing, central inspection.',
     join: ['merge', 'TGW', 'set', "AT&T's transit gateway, shared with you"], who: 'att', level: 'approve', time: '30-60 min',
     youDo: ['Attach + routes', 'Accept the share, attach your VPC and update its route table'],
     clouds: ['AWS', 'Azure'],
     score: { perf: [4, 'Transitive'], sec: [5, 'Inspected'], setup: [4, 'Approve · 30-60 min'], scale: [5, 'Many VPCs'] } },
-  { key: 'cloudwan', title: 'Cloud WAN', kicker: 'AT&T-hosted', icon: 'global-network', path: 'netbond', inspect: true, hosted: true, hop: 'lh-cwan',
+  { key: 'cloudwan', title: 'Cloud WAN', kicker: 'AT&T-managed', icon: 'global-network', path: 'netbond', inspect: true, hosted: true, hop: 'lh-cwan',
     line: "AT&T runs the core network across regions; your VPC attaches to its edge and joins a segment.",
     join: ['global-network', 'Cloud WAN', 'set', "AT&T's core network edge, segments decide reach"], who: 'att', level: 'guided', time: '1-2 hrs',
     youDo: ['Attach + segment', 'Attach your VPC to the edge and join a segment'],
     clouds: ['AWS', 'Azure'],
     score: { perf: [5, 'Multi-region'], sec: [5, 'Segments'], setup: [3, 'Guided · 1-2 hrs'], scale: [5, 'Multi-region'] } },
-  { key: 'privatelink', title: 'PrivateLink', kicker: 'AT&T-hosted', icon: 'padlock', path: 'netbond', inspect: true, hosted: true, hop: 'lh-pl', perService: true,
-    line: 'AT&T publishes each service; you create one private endpoint per service. Overlapping CIDRs are fine.',
-    join: ['padlock', 'Endpoint', 'set', 'A private endpoint per service'], who: 'att', level: 'approve', time: '15-30 min each',
-    youDo: ['Endpoint + DNS', 'Create an endpoint per service, approve it, set up DNS'],
+  // Private Link Service as the storyboards describe it (2026-10-16): an endpoint and a link service on each side, both
+  // built by AT&T after the grant; three objects a connection, 30-45 min.
+  // The reviewer's call on this card (the storyboards, slide 9): weak on every attribute, and no per-service framing.
+  { key: 'privatelink', title: 'PrivateLink', kicker: 'AT&T-managed', icon: 'padlock', path: 'netbond', inspect: true, hosted: true, hop: 'lh-pl',
+    line: 'AT&T builds a private endpoint and link service on each side after you grant access. Overlapping CIDRs are fine.',
+    join: ['padlock', 'Endpoint', 'set', 'A private endpoint per destination, built by AT&T'], who: 'att', level: 'approve', time: '30-45 min',
+    youDo: ['Grant + IPs', 'Grant AT&T access to your resource group and give the destination on the AT&T network and your workload IP'],
     clouds: ['AWS', 'Azure', 'GCP'],
-    score: { perf: [4, '10 Gbps per AZ'], sec: [5, 'Per service'], setup: [3, 'Approve · per service'], scale: [2, 'Per service'] } },
+    score: { perf: [2, 'Per destination'], sec: [2, 'One endpoint per destination'], setup: [2, 'Approve · 30-45 min'], scale: [2, 'Per destination'] } },
 ];
 /**
  * A way's path, as Govern draws a policy's (2026-10-07, Micah: "less words, more icons"): your sites, AT&T's edge and
@@ -118,26 +136,34 @@ export const wayStrip = (key) => { const w = wayOf(key); if (!w) return [];
   return [node('site', 'large-building', 'Sites', 'set', 'Your sites'), node('edge', 'router', 'Edge', 'set', "AT&T's edge"), node('core', 'hub', 'Core', 'set', "AT&T's core"),
     node('join', w.join[0], w.join[1], w.join[2], w.join[3]), node('cloud', 'cloud', 'Cloud', w.soon ? 'none' : 'set', 'Your cloud')]; };
 export const wayOf = (key) => WAYS.find(w => w.key === key) || null;
-/** One region's products for a way: NetBond's own, or for a hosted way the shared on-ramp and its last hop (peering's
- *  by zone; Azure has no same-AZ rung, so it peers across AZs). */
-const zoneOf = (w, cloud, zone) => { if (!w.zones) return null; const z = w.zones[zone] && w.zones[zone].clouds.includes(isGoogle(cloud) ? 'GCP' : cloud) ? zone : 'inter'; return { key: z, ...w.zones[z] }; };
-const productIds = (w, cloud, zone) => (w.hosted ? ['onramp-att', w.hop || (zoneOf(w, cloud, zone || 'inter') || {}).hop] : w.products.slice());
+/** One region's products for a way: NetBond's own, or for a hosted way the shared on-ramp and its last hop. */
+const productIds = (w) => (w.hosted ? ['onramp-att', w.hop] : w.products.slice());
+
+/**
+ * Where AT&T has deployed a hub (the storyboards, 2026-10-16: "Assumes AT&T Hub has been deployed in respective Cloud
+ * regions"). A hosted way reaches only these. AT&T's own list is pending; until it comes, the regions the demo estates
+ * reach privately today, and no Google hub until AT&T says so.
+ */
+export const HUB_REGIONS = { AWS: ['us-east-1', 'us-west-2', 'eu-west-1'], Azure: ['eastus', 'westeurope'], GCP: [], 'Google Cloud': [], Oracle: [] };
+export const hubIn = (cloud, region) => (HUB_REGIONS[isGoogle(cloud) ? 'GCP' : cloud] || []).includes(region);
+/** Each hub's own address space ("AT&T would have to maintain an IPAM for each cloud"): placeholder ranges until AT&T's. */
+export const HUB_CIDR = { 'AWS us-east-1': '10.240.0.0/16', 'AWS us-west-2': '10.241.0.0/16', 'AWS eu-west-1': '10.242.0.0/16', 'Azure eastus': '10.250.0.0/16', 'Azure westeurope': '10.251.0.0/16' };
 
 /** One region's monthly for a way on a cloud: the sum of its products, null when any waits on a survey. */
-export function wayMonthly(key, cloud, zone) {
+export function wayMonthly(key, cloud) {
   const w = wayOf(key);
   if (!w || w.soon) return null;
-  const ps = productIds(w, cloud, zone).map(productOf);
+  const ps = productIds(w).map(productOf);
   return ps.every(p => p && typeof p.price === 'number') ? ps.reduce((a, p) => a + p.price, 0) : null;
 }
 /** Cost's score: the cheapest 5, the dearest 1, by the monthly at 1 Gbps on the deck's reference rates. */
 const costScoreOf = (m) => (m === null ? null : m <= 2000 ? 5 : m <= 2500 ? 4 : m <= 4200 ? 3 : m <= 4500 ? 2 : 1);
 /** A way's products, named for a cloud and a quantity of regions: [[id, n]] for the moves model. */
-export const wayProducts = (key, cloud, n = 1, zone) => { const w = wayOf(key); return w ? productIds(w, cloud, zone).map(id => [id, n]) : []; };
+export const wayProducts = (key, cloud, n = 1) => { const w = wayOf(key); return w ? productIds(w).map(id => [id, n]) : []; };
 /** The order lines a way adds beyond the connection the type already prices (NetBond is that connection). A hosted
  *  way replaces NetBond: its lines are the on-ramp, the last hop and the hub, priced at review. */
-export const wayExtras = (key, cloud, zone) => { const w = wayOf(key); if (!w) return [];
-  return w.hosted ? [...productIds(w, cloud, zone), 'hub-att'].map(productOf).filter(Boolean) : productIds(w, cloud, zone).filter(id => id !== 'netbond').map(productOf).filter(Boolean); };
+export const wayExtras = (key, cloud) => { const w = wayOf(key); if (!w) return [];
+  return w.hosted ? [...productIds(w), 'hub-att'].map(productOf).filter(Boolean) : productIds(w).filter(id => id !== 'netbond').map(productOf).filter(Boolean); };
 export const wayHosted = (key) => !!(wayOf(key) || {}).hosted;
 
 // ---- Landings, per estate (2026-10-09: "Make landed regions honest per estate") ----
@@ -216,9 +242,9 @@ export function regionWay(r, s = {}, estId = null) {
 }
 
 /** A way's label for one cloud: the port named as that cloud names it. */
-export function wayLabel(key, cloud, zone) {
+export function wayLabel(key, cloud) {
   const port = PORT_NAME[cloud] || 'port';
-  return ({ byo: `Your ${port}`, att: `AT&T's ${port}`, peer: `Hosted ${hostedWord(cloud)} peering${zone === 'intra' ? ', same AZ' : ''}`, privatelink: 'Hosted PrivateLink', cloudwan: 'Hosted Cloud WAN', transit: 'Hosted transit gateway' })[key] || '';
+  return ({ byo: `Your ${port}`, att: `AT&T's ${port}`, peer: `Hosted ${hostedWord(cloud)} peering`, privatelink: 'Hosted PrivateLink', cloudwan: 'Hosted Cloud WAN', transit: 'Hosted transit gateway' })[key] || '';
 }
 /** The setup level and time, in words (the flow's banner, a card's title); an unproven time says it is a target. */
 export const waySetup = (key) => { const w = wayOf(key); if (!w) return ''; const lv = SETUP_LEVEL[w.level] || ['', ''];
@@ -248,31 +274,30 @@ export function recommendedFor(cloud) {
 export const GRADES = ['', 'Poor', 'Weak', 'Fair', 'Good', 'Best'];
 export const gradeOf = (n) => (n === null || n === undefined ? '' : GRADES[n] || '');
 
-/** A way's five criteria for a cloud and zone, [score, value] each: cost from its monthly, the rest the deck's. */
-export function wayScores(key, cloud = 'AWS', zone = 'inter') {
+/** A way's five criteria for a cloud, [score, value] each: cost from its monthly, the rest the deck's. */
+export function wayScores(key, cloud = 'AWS') {
   const w = wayOf(key); if (!w) return {};
-  const z = zoneOf(w, cloud, zone), m = wayMonthly(key, cloud, zone);
-  return { cost: [costScoreOf(m), m === null ? 'By survey' : `${fmt(m)}${w.perService ? ' · 40 svc' : ''}${w.hosted ? ' + hub' : ''}`], ...w.score, ...(z ? { perf: z.perf, scale: z.scale } : {}) };
+  const m = wayMonthly(key, cloud);
+  return { cost: [costScoreOf(m), m === null ? 'By survey' : `${fmt(m)}${w.hosted ? ' + hub' : ''}`], ...w.score };
 }
 /** The weighted score out of 100 (Cost 30 · Performance 20 · Security 20 · Effort and time 15 · Scale 15). */
-export function wayScore(key, cloud = 'AWS', zone = 'inter') {
-  const sc = wayScores(key, cloud, zone);
+export function wayScore(key, cloud = 'AWS') {
+  const sc = wayScores(key, cloud);
   if (CRITERIA.some(c => !sc[c.key] || sc[c.key][0] === null || sc[c.key][0] === undefined)) return null;
   return Math.round(CRITERIA.reduce((a, c) => a + c.weight * sc[c.key][0] / 5, 0));
 }
 
 /**
  * The ways as Ways to connect draws them: each with its five criteria scored, its clouds, its price and its score, on
- * the deck's reference rates (us-east-1). zone picks peering's last hop ('intra' or 'inter').
+ * the deck's reference rates (us-east-1).
  */
-export function wayCards(zone = 'intra', answers = {}) {
+export function wayCards(answers = {}) {
   // Scored as Recommended scores them (2026-10-09): the deck's criteria re-weighted by the estate's answers, the hard rules
   // marking a way that cannot do what was asked. With no answers, the defaults: the deck's weights and your BGP.
   const it = { ...INTENT_DEFAULT, ...answers };
   return WAYS.map(w => {
-    const z = zoneOf(w, 'AWS', zone);
-    const monthly = wayMonthly(w.key, 'AWS', zone), score = wayScores(w.key, 'AWS', zone), misses = wayWhy(w.key, 'AWS', it, z ? z.key : zone).filter(x => x.miss);
-    return { ...w, monthly, zone: z ? z.key : null, zoneLabel: z ? z.label : '', points: wayScoreFor(w.key, 'AWS', it, z ? z.key : zone), misses: misses.length, missWords: misses.map(x => x.words).join('; '), answers: it, strip: wayStrip(w.key), rows: CRITERIA.map(c => { const sc = score[c.key] || [null, ''];
+    const monthly = wayMonthly(w.key, 'AWS'), score = wayScores(w.key, 'AWS'), misses = wayWhy(w.key, 'AWS', it).filter(x => x.miss);
+    return { ...w, monthly, points: wayScoreFor(w.key, 'AWS', it), misses: misses.length, missWords: misses.map(x => x.words).join('; '), answers: it, strip: wayStrip(w.key), rows: CRITERIA.map(c => { const sc = score[c.key] || [null, ''];
       return { ...c, score: sc[0], value: sc[1], grade: gradeOf(sc[0]), title: `${c.label}: ${sc[1] || 'not scored yet'}${sc[0] ? `, ${gradeOf(sc[0])} (${sc[0]} of 5, weighs ${c.weight})` : ''}${c.key === 'cost' && w.hosted ? '. Cloud pass-through at 1 Gbps; the hub\'s vSRX, compute and AT&T margin are priced at review' : ''}${c.key === 'setup' ? `. ${waySetup(w.key)}` : ''}` }; }) };
   });
 }
@@ -287,9 +312,9 @@ export function wayCards(zone = 'intra', answers = {}) {
  */
 export const INTENT = [
   { key: 'purpose', label: 'Purpose', icon: 'target', opts: [
-    ['critical', 'Critical', 'verified', 'Business critical: zone-redundant, SLA-backed, two paths'],
+    ['critical', 'Critical', 'verified', 'Business critical: SLA-backed, redundant paths'],
     ['prod', 'Production', 'apps', 'Production: the deck\'s weights as they stand'],
-    ['lab', 'Lab', 'gear', 'A lab: cost and speed first; one zone is fine'] ] },
+    ['lab', 'Lab', 'gear', 'A lab: cost and speed first'] ] },
   { key: 'traffic', label: 'Traffic', icon: 'arrows-horizontal', opts: [
     ['priority', 'Priority', 'high-meter', 'Priority traffic: its own class of service on the AT&T core'],
     ['standard', 'Standard', 'smart-meter', 'Standard traffic: best path, no class of its own'] ] },
@@ -319,7 +344,7 @@ export function intentFromTags(tags = []) {
 /** Each answer as the deck's rules: weight deltas on the five criteria, a hard rule with its miss, a soft preference. */
 /** The answers' rules (exported 2026-10-12 so the portal export can write them in words). */
 export const RULE = {
-  critical: { w: { perf: 10, sec: 5, cost: -10, scale: 5 }, must: (w, z) => z !== 'intra', miss: ['One zone only', 'an outage takes it down'] },
+  critical: { w: { perf: 10, sec: 5, cost: -10, scale: 5 } },
   lab: { w: { cost: 20, setup: 10, perf: -10, sec: -10, scale: -10 } },
   priority: { w: { perf: 15, cost: -5, setup: -5 } },
   inspected: { w: { sec: 10, cost: -5 }, must: (w) => !!w.inspect, miss: ['No inspection in path', 'L3 route policy only'] },
@@ -340,17 +365,15 @@ export function intentWeights(intent) {
   const top = Object.keys(out).sort((a, b) => out[b] - out[a])[0]; out[top] += drift;
   return out;
 }
-/** Peering's last hop for an intent: a lab on AWS accepts one zone, so its free same-AZ rung is on offer. */
-export const intentZone = (key, cloud, intent) => (key === 'peer' && cloud === 'AWS' && answersOf(intent)[0] === 'lab' ? 'intra' : 'inter');
 /** Why a way, for an intent: each answer's reason in the deck's words, ok, a caution (warn) or a hard rule it misses. */
-export function wayWhy(key, cloud, intent, zone) {
+export function wayWhy(key, cloud, intent) {
   const w = wayOf(key); if (!w) return [];
-  const z = zone || intentZone(key, cloud, intent), sc = wayScores(key, cloud, z), out = [];
+  const sc = wayScores(key, cloud), out = [];
   // Each reason names the question that asked for it (q), so the Why can pair every answer with what it got.
   const r = (kind, icon, short, words, q = '') => out.push({ key: `${kind}:${short}`, kind, icon, short, words, q, ok: kind === 'ok', warn: kind === 'warn', miss: kind === 'miss' });
   const [purpose, traffic, security, routing] = answersOf(intent);
-  if (purpose === 'critical') { if (!w.hosted) r('ok', 'verified', '99.99% SLA', 'redundancy included', 'purpose'); else if (z !== 'intra') r('ok', 'merge', 'Zone-redundant', 'across AZs', 'purpose'); }
-  if (purpose === 'lab') { if (z === 'intra') r('ok', 'bill', '$0 last hop', 'free inside one AZ', 'purpose'); else if ((sc.cost || [])[0] >= 5) r('ok', 'bill', 'Lowest monthly', 'at 1 Gbps', 'purpose'); if (w.level === 'approve') r('ok', 'clock', 'Click + approve', `one action, ${w.time}`, 'purpose'); }
+  if (purpose === 'critical') { if (!w.hosted) r('ok', 'verified', '99.99% SLA', 'redundancy included', 'purpose'); else r('ok', 'merge', 'Regional', 'spans every zone', 'purpose'); }
+  if (purpose === 'lab') { if ((sc.cost || [])[0] >= 5) r('ok', 'bill', 'Lowest monthly', 'at 1 Gbps', 'purpose'); if (w.level === 'approve') r('ok', 'clock', 'Click + approve', `one action, ${w.time}`, 'purpose'); }
   if (traffic === 'priority') { if ((sc.perf || [])[0] >= 5) r('ok', 'high-meter', w.hosted ? 'Multi-region' : 'Priority class', w.hosted ? 'policy-driven' : 'private MPLS path', 'traffic'); else r('warn', 'high-meter', 'One more hop', 'through AT&T\'s hub', 'traffic'); }
   if (security === 'private') r('ok', 'padlock', w.hosted ? 'Private IP' : 'Never the internet', w.hosted ? 'end to end' : 'private, end to end', 'security');
   if (security === 'inspected' && w.inspect) r('ok', 'firewall', 'L3 to L7', 'vSRX in AT&T\'s hub', 'security');
@@ -364,15 +387,15 @@ export function wayWhy(key, cloud, intent, zone) {
     transit: ['merge', 'Many VPCs', 'inspected centrally'], cloudwan: ['global-network', 'Multi-region', 'policy-driven routing'],
     privatelink: ['restricted', 'Overlap is fine', 'NAT on both sides'] }[key];
   if (FIT && !out.some(x => x.short === FIT[1])) r('ok', FIT[0], FIT[1], FIT[2]);
-  answersOf(intent).forEach((a, i) => { const R = RULE[a]; if (R && R.must && !R.must(w, z)) r('miss', 'not-available', R.miss[0], R.miss[1], INTENT[i].key); });
+  answersOf(intent).forEach((a, i) => { const R = RULE[a]; if (R && R.must && !R.must(w)) r('miss', 'not-available', R.miss[0], R.miss[1], INTENT[i].key); });
   return out;
 }
 /** A way's score for an intent: the re-weighted criteria out of 100, five more for each soft preference it meets. */
-export function wayScoreFor(key, cloud, intent, zone) {
-  const z = zone || intentZone(key, cloud, intent), sc = wayScores(key, cloud, z), wt = intentWeights(intent);
+export function wayScoreFor(key, cloud, intent) {
+  const sc = wayScores(key, cloud), wt = intentWeights(intent);
   if (CRITERIA.some(c => !sc[c.key] || sc[c.key][0] === null || sc[c.key][0] === undefined)) return null;
   const base = CRITERIA.reduce((a, c) => a + wt[c.key] * sc[c.key][0] / 5, 0);
-  const pref = answersOf(intent).filter(a => RULE[a] && RULE[a].prefer && RULE[a].prefer(wayOf(key), z)).length * 5;
+  const pref = answersOf(intent).filter(a => RULE[a] && RULE[a].prefer && RULE[a].prefer(wayOf(key))).length * 5;
   return Math.min(100, Math.round(base + pref));
 }
 /**
@@ -380,7 +403,7 @@ export function wayScoreFor(key, cloud, intent, zone) {
  * (fewest misses first, so a conflict still shows the closest), then by score, then the cheaper. Top pick and two more.
  */
 export function rankWays(cloud, intent, n = 3) {
-  const all = WAYS.filter(w => wayAvailable(w.key, cloud)).map(w => { const zone = intentZone(w.key, cloud, intent), why = wayWhy(w.key, cloud, intent, zone);
-    return { key: w.key, zone, pts: wayScoreFor(w.key, cloud, intent, zone), why, misses: why.filter(x => x.miss).length, monthly: wayMonthly(w.key, cloud, zone) }; });
+  const all = WAYS.filter(w => wayAvailable(w.key, cloud)).map(w => { const why = wayWhy(w.key, cloud, intent);
+    return { key: w.key, pts: wayScoreFor(w.key, cloud, intent), why, misses: why.filter(x => x.miss).length, monthly: wayMonthly(w.key, cloud) }; });
   return all.filter(x => x.pts !== null).sort((a, b) => a.misses - b.misses || b.pts - a.pts || (a.monthly ?? 1e9) - (b.monthly ?? 1e9)).slice(0, n);
 }

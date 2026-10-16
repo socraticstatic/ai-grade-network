@@ -218,7 +218,7 @@ export function defaults() {
     drill: [], sub: null, regionDrill: null, hoverRegion: null, hoverNode: null, bandOpen: false, picked: [], scanStep: 0, treeOrMap: 'tree', openWorkload: null, treeOpen: {}, chips: [],
     compose: { outcome: null, source: [], dest: [], regionTab: 'US East', metros: [], resiliency: 'Standard', control: [] }, freeText: '',
     // The connect flow (2026-09-30): the set a Ways to connect figure opened, the orders placed this session, the location area shown.
-    waySet: null, waySetPage: 0, wayZone: 'intra', appThresh: null, orders: [], ordersPage: 0, ordStage: null, cfArea: null, wipList: null, wipListPage: 0,
+    waySet: null, waySetPage: 0, appThresh: null, orders: [], ordersPage: 0, ordStage: null, cfArea: null, wipList: null, wipListPage: 0,
     order: null, submitted: false, pendingDismissed: false, browseQuery: '', browseCat: null, browseSort: 'popular', filtersOpen: false, filterProviders: [], priceCeil: 0, product: null,
     simulated: false, enforced: false, whyOpen: null, levelSort: 'largest', levelQuery: '', intakeOrg: '', intakeSource: 'credential', intakeProvider: 'AWS', approver: null, term: 36,
     // Modify bandwidth (2026-09-30): the connection it is open on, the size picked ({ id, ports, mbps }),
@@ -325,8 +325,13 @@ export const ORDER_PHASES = [['ordered', 'Ordered', 'shopping-bag'], ['provision
 export function orderPhases(o, landed = []) {
   const regions = (o && (o.regions || [o.region])) || [], isLive = regions.length > 0 && regions.every(r => r && landed.includes(r));
   const state = (i) => (isLive ? (i < 3 ? 'done' : 'set') : i === 0 ? 'done' : i === 1 ? 'set' : 'any');
-  const words = isLive ? ['placed', 'done', 'validated, live', 'first flow logs are in'] : ['placed', 'in progress', 'not yet', 'not yet'];
-  return { landed: isLive, word: isLive ? 'Live' : (o && o.stage) || '', phases: ORDER_PHASES.map(([key, label, icon], i) => ({ key, label, icon, state: state(i), title: `${label}: ${words[i]}` })) };
+  // A hosted order's Provision phase says who does what (the storyboards, 2026-10-16): AT&T builds it; a peering you accept
+  // in your console; a link service AT&T builds end to end.
+  const hosted = !!(o && o.way && W.wayHosted(o.way));
+  const build = !hosted ? '' : o.way === 'peer' ? 'AT&T builds the peering; you accept it in your console' : o.way === 'privatelink' ? 'AT&T builds the endpoints and the link service' : 'AT&T builds it in its hub';
+  const words = isLive ? ['placed', 'done', 'validated, live', 'first flow logs are in'] : ['placed', build || 'in progress', 'not yet', 'not yet'];
+  return { landed: isLive, word: isLive ? 'Live' : (o && o.stage) || '', youDo: hosted && o.way === 'peer' && !isLive ? 'Accept the peering in your console' : '',
+    phases: ORDER_PHASES.map(([key, label, icon], i) => ({ key, label, icon, state: state(i), title: `${label}: ${words[i]}` })) };
 }
 export function vals(c) {
   const s = c.state, set = (p) => c.setState(p), estRaw = estateFor(s);
@@ -4962,7 +4967,7 @@ const REGION_GEO = CF.REGION_GEO;
 // The connect flow's own fields (2026-09-30) are the person's choices on an
 // order, so a NEW order drops them with the rest: nothing picked for one order
 // is ever shown as picked on the next.
-const FLOW_FIELDS = { ctype: null, regions: null, sites: null, loc: null, bandwidth: null, tier: null, policy: null, term: null, name: '', qos: null, colo: null, passed: [], fk: null, from: {}, prefillSets: null, noteKey: null, lmccExpress: false, byText: false, way: null, wayZone: null, origin: null };
+const FLOW_FIELDS = { ctype: null, regions: null, sites: null, loc: null, bandwidth: null, tier: null, policy: null, term: null, name: '', qos: null, colo: null, passed: [], fk: null, from: {}, prefillSets: null, noteKey: null, lmccExpress: false, byText: false, way: null, origin: null, cloud: null, clouds: null, intake: null, grant: false, awsAccount: '', keySource: 'att', actKey: '', routed: '', apn: null, evc: null, subnets: '', access: null };
 const cleanCompose = (cp) => ({ ...cp, sourceLabel: null, bulk: null, qty: 1, noteStep: 0, note: null, ...FLOW_FIELDS });
 
 /**
@@ -5139,16 +5144,8 @@ function wizardVals(s, est, set, c) {
           // The ladder: every live policy in the order the engine reads them. The first that matches decides (it wears the
           // light); a later match adds its own demand or agrees with an earlier one, never "overridden"; a staged policy
           // says what it would do; one that misses says which side missed.
-          const MISS = { Tag: 'Not this tag', From: 'Not from here', To: 'Not to here' };
           const decider = r ? r.decidedBy : '';
-          const engLadder = r ? r.rungs.map((g, i) => { const st = g.state, R0 = PM.RUNG[st], p = polByName.get(g.name) || {}, asks = g.n.intents.map(x => x.word.toLowerCase()).join(', ') || 'its route rules';
-            const word = st === 'skip' ? (MISS[g.missed] || R0.word) : R0.word;
-            const title = st === 'skip' ? `${g.name} does not match this flow: ${g.missed === 'Tag' ? `it asks for tag ${String(p.match || '').slice(4)}` : `its ${g.missed.toLowerCase()} side (${p.match || 'any'} to ${p.scope || 'any cloud'}) misses`}`
-              : st === 'decides' ? `${g.name} decides this flow: ${asks}` : st === 'adds' ? `${g.name} adds ${asks}` : st === 'agrees' ? `${g.name} asks what ${g.with} already asks`
-              : `${g.name} is ${p.state}: once enforced it would ${g.rel === 'agrees' ? `agree with ${g.with}` : `add ${asks}`}`;
-            return { key: 'lad' + i, prio: String(i + 1), name: g.name, icon: assetIcon(p.match || ''), state: st, lit: st === 'decides', glyph: R0.icon, word, ink: R0.ink, op: st === 'skip' ? 0.5 : 1, title, go: openPol(g.name),
-              // A skip is quiet: its reason is the glyph, the words in the title (2026-10-13, "all crunched up").
-              showWord: st !== 'skip' }; }) : [];
+          const engLadder = engineLadderRows(r, polByName, openPol);
           const denied = !!r && r.verdict === 'Denied';
           // The stations: the stamp each layer earns on the path this flow takes, its reason code, and the policy that asks.
           const CODED = new Set(['violated', 'unenforceable', 'blocks']);
@@ -5162,19 +5159,7 @@ function wizardVals(s, est, set, c) {
                 ? (l.rule.byDefault ? ` Decided by its default: ${l.rule.verb} ${l.rule.text.toLowerCase()}${l.rule.audit ? ', in Audit' : ''}.` : ` Decided by ${l.rule.policy}, ${l.rule.tierLabel} ${l.rule.priority}: ${l.rule.verb} ${l.rule.text.toLowerCase()}.`) : ''}` }; }) : [];
           const comp = r ? PM.COMPLIANCE[r.compliance] : PM.COMPLIANCE.None;
           // NetBond Advanced's sheet for this flow (2026-10-05): each section wears its verb badge, each row the policy that sets it.
-          const VERB = { deny: ['Deny', 'deny', 'var(--error)'], manip: ['Manipulate', 'manip', 'var(--warning)'], allow: ['Allow', 'allow', 'var(--link)'], advanced: ['Advertise', 'adv', 'var(--link)'] };
-          const RULE_ICON = { 'matching-routes': 'merge', 'block-default-routes': 'stop-sign', 'community-value-filter-customer': 'filter', 'community-value-filter-att': 'filter', 'prepend-advertisements': 'plus-circle', 'selective-cv-tagging': 'tag', 'community-value-tag': 'tag', 'advertise-static-routes': 'export' };
-          const DIRS = [['o2p', 'On prem → Partner'], ['p2o', 'Partner → On prem']];
-          const sheet = r ? PM.flowSheet(est, all, ef, eo).map(sec => { const on = sec.rules.filter(x => x.o2p.on || x.p2o.on).length;
-            return { key: sec.key, label: sec.label, verb: VERB[sec.key][0], cls: VERB[sec.key][1], ink: VERB[sec.key][2], icon: ROUTE_ICON[sec.key], count: `${on} of ${sec.rules.length}`, n: on,
-              rules: sec.rules.map(x => { const by = x.o2p.by || x.p2o.by, isOn = x.o2p.on || x.p2o.on;
-                return { key: x.key, label: x.label, on: isOn, verb: VERB[sec.key][0], cls: VERB[sec.key][1], icon: RULE_ICON[x.id] || 'gear', ink: isOn ? VERB[sec.key][2] : 'var(--text-disabled)', by, hasBy: !!by,
-                  // NetBond's own baseline row is no policy of yours: its door is the Layers tab, where it sits in the Baseline tier.
-                  byGo: by && polByName.has(by) ? openPol(by) : by ? () => set({ govPanel: 'layers', layLit: by, layDir: 'o2p', layPage: 'lit' }) : () => {},
-                  o2pOn: x.o2p.on, p2oOn: x.p2o.on, o2pOff: !x.can.o2p, p2oOff: !x.can.p2o,
-                  // NetBond's row: a toggle per direction it offers, the direction beside it.
-                  dirs: DIRS.filter(([d]) => x.can[d]).map(([d, w]) => ({ key: d, word: w, on: x[d].on, title: x[d].on ? `${w}: pushed by ${x[d].by}` : `${w}: nothing pushes it on this flow` })) }; }) }; }) : [];
-          const pushed = sheet.flatMap(sec => sec.rules.filter(x => x.on)), ruleN = sheet.reduce((a, sec) => a + sec.rules.length, 0);
+          const { sheet, pushed, ruleN } = engineSheetRows(est, all, ef, eo, r, (by) => (by && polByName.has(by) ? openPol(by) : by ? () => set({ govPanel: 'layers', layLit: by, layDir: 'o2p', layPage: 'lit' }) : () => {}));
           const all12 = !!s.engAll;
           const pl = (n, a, b) => `${n} ${n === 1 ? a : b}`;
           // The head: what the engine holds, as glyph chips; a count that is zero stays silent. Clean only when the engine
@@ -5290,11 +5275,47 @@ const pickInk = (on) => ({ border: on ? 'var(--cta)' : 'var(--border-secondary)'
 // A step's category head and glyph in the vertical tab group (2026-10-02).
 const STEP_CAT = { type: 'What', provider: 'Where', endpoints: 'Where', basic: 'How', advanced: 'How', terms: 'Terms', review: 'Review', confirm: 'Review' };
 const STEP_ICON = { type: 'cable', provider: 'cloud', endpoints: 'large-building', basic: 'high-meter', advanced: 'check-shield', terms: 'time-money', review: 'checklist', confirm: 'checklist' };
+
+// The engine's ladder and sheet as rows (2026-10-16): Govern's engine and an order's Advanced Settings draw the same
+// rows from the same decide, so an order reads the policy engine rather than carrying a sheet of its own.
+const ENG_MISS = { Tag: 'Not this tag', From: 'Not from here', To: 'Not to here' };
+const ENG_VERB = { deny: ['Deny', 'deny', 'var(--error)'], manip: ['Manipulate', 'manip', 'var(--warning)'], allow: ['Allow', 'allow', 'var(--link)'], advanced: ['Advertise', 'adv', 'var(--link)'] };
+const ENG_RULE_ICON = { 'matching-routes': 'merge', 'block-default-routes': 'stop-sign', 'community-value-filter-customer': 'filter', 'community-value-filter-att': 'filter', 'prepend-advertisements': 'plus-circle', 'med': 'shuffle', 'selective-cv-tagging': 'tag', 'community-value-tag': 'tag', 'advertise-static-routes': 'export' };
+const ENG_DIRS = [['o2p', 'On prem → Partner'], ['p2o', 'Partner → On prem']];
+/** The ladder: every live policy in the order the engine reads them. The first that matches decides (it wears the light);
+ *  a later match adds its own demand or agrees with an earlier one; a staged policy says what it would do; a miss says which side missed. */
+function engineLadderRows(r, polByName, openPol) {
+  return r ? r.rungs.map((g, i) => { const st = g.state, R0 = PM.RUNG[st], p = polByName.get(g.name) || {}, asks = g.n.intents.map(x => x.word.toLowerCase()).join(', ') || 'its route rules';
+    const word = st === 'skip' ? (ENG_MISS[g.missed] || R0.word) : R0.word;
+    const title = st === 'skip' ? `${g.name} does not match this flow: ${g.missed === 'Tag' ? `it asks for tag ${String(p.match || '').slice(4)}` : `its ${g.missed.toLowerCase()} side (${p.match || 'any'} to ${p.scope || 'any cloud'}) misses`}`
+      : st === 'decides' ? `${g.name} decides this flow: ${asks}` : st === 'adds' ? `${g.name} adds ${asks}` : st === 'agrees' ? `${g.name} asks what ${g.with} already asks`
+      : `${g.name} is ${p.state}: once enforced it would ${g.rel === 'agrees' ? `agree with ${g.with}` : `add ${asks}`}`;
+    return { key: 'lad' + i, prio: String(i + 1), name: g.name, icon: assetIcon(p.match || ''), state: st, lit: st === 'decides', glyph: R0.icon, word, ink: R0.ink, op: st === 'skip' ? 0.5 : 1, title, go: openPol(g.name),
+      // A skip is quiet: its reason is the glyph, the words in the title (2026-10-13, "all crunched up").
+      showWord: st !== 'skip' }; }) : [];
+}
+/** NetBond Advanced's sheet for this flow (2026-10-05): each section wears its verb badge, each row the policy that sets it. */
+function engineSheetRows(est, all, ef, eo, r, byGo) {
+  const sheet = r ? PM.flowSheet(est, all, ef, eo).map(sec => { const on = sec.rules.filter(x => x.o2p.on || x.p2o.on).length;
+    return { key: sec.key, label: sec.label, verb: ENG_VERB[sec.key][0], cls: ENG_VERB[sec.key][1], ink: ENG_VERB[sec.key][2], icon: ROUTE_ICON[sec.key], count: `${on} of ${sec.rules.length}`, n: on,
+      rules: sec.rules.map(x => { const by = x.o2p.by || x.p2o.by, isOn = x.o2p.on || x.p2o.on;
+        return { key: x.key, label: x.label, on: isOn, verb: ENG_VERB[sec.key][0], cls: ENG_VERB[sec.key][1], icon: ENG_RULE_ICON[x.id] || 'gear', ink: isOn ? ENG_VERB[sec.key][2] : 'var(--text-disabled)', by, hasBy: !!by,
+          // NetBond's own baseline row is no policy of yours: its door is the Layers tab, where it sits in the Baseline tier.
+          byGo: byGo(by),
+          o2pOn: x.o2p.on, p2oOn: x.p2o.on, o2pOff: !x.can.o2p, p2oOff: !x.can.p2o,
+          // NetBond's row: a toggle per direction it offers, the direction beside it.
+          dirs: ENG_DIRS.filter(([d]) => x.can[d]).map(([d, w]) => ({ key: d, word: w, on: x[d].on, title: x[d].on ? `${w}: pushed by ${x[d].by}` : `${w}: nothing pushes it on this flow` })) }; }) }; }) : [];
+  const pushed = sheet.flatMap(sec => sec.rules.filter(x => x.on)), ruleN = sheet.reduce((a, sec) => a + sec.rules.length, 0);
+  return { sheet, pushed, ruleN };
+}
+
+// Last Mile stands up on its activation key (BasicSettingsStep's fork): AT&T creates it at order, you add it in the AWS console.
+const LMCC_STAND_UP = 'AT&T creates the activation key at order; add it in the AWS console to finish';
 const STEP_HEAD = {
   type: ['Choose your connection type', 'Each type says which of your sites or clouds it applies to.'],
-  provider: ['Select your cloud provider', 'Pick the region this connection reaches, from the clouds discovery found.'],
+  provider: ['Select your cloud provider', 'Pick the cloud this connection reaches, from the clouds discovery found. The region comes next.'],
   endpoints: ['Choose your two colo endpoints', 'Select the data center for each side, and what its cage connects through. AT&T bridges them with an on-demand virtual connection.'],
-  basic: ['Connection profile', 'Set resiliency, bandwidth, and location.'],
+  basic: ['Connection profile', 'Pick the region, then resiliency, location and bandwidth.'],
   advanced: ['Advanced Settings', 'Configure network settings, and what must always be true.'],
   terms: ['Choose your contract term', 'Longer commitments discount the monthly rate. Billing starts when the connection becomes Active.'],
   review: ['Review', 'Review your selections. Name it if you like, then place your order.'],
@@ -5312,11 +5333,12 @@ function flowVals(s, set, est, c) {
   const scrollTop = () => { try { window.scrollTo(0, 0); } catch (e) { } };
   // What a type applies to here, and the tile that shows it. On Connection
   // Type, a type that applies to what the order already carries says so.
+  const TYPE_ICON = { internet: 'globe', c2c: 'cloud-transfer', dc: 'large-building', vpn: 'router', iot: 'hub', layer2: 'ethernet', colo: 'large-building', site: 'apps', lmcc: 'cable' };
   const tile = (t) => {
     const a = CF.appliesTo(est, t.key);
     const on = f.ctype === t.label;
     const fits = t.disabled ? '' : CF.fitsOf(est, t.key, f);
-    return { ...t, n: a.n, phrase: a.phrase, none: a.none, hasCount: a.n > 0, noCount: a.n === 0, soon: !!t.disabled, notSoon: !t.disabled, disabled: !!t.disabled,
+    return { ...t, icon: TYPE_ICON[t.key] || 'cable', n: a.n, phrase: a.phrase, none: a.none, hasCount: a.n > 0, noCount: a.n === 0, soon: !!t.disabled, notSoon: !t.disabled, disabled: !!t.disabled,
       isProduct: !!t.category, kicker: t.category || '', on, ...pickInk(on), op: t.disabled ? 0.6 : 1, setOn: s.waySet === t.key, fits, hasFits: !!fits,
       openSet: () => set({ waySet: s.waySet === t.key ? null : t.key, waySetPage: 0 }) };
   };
@@ -5336,10 +5358,12 @@ function flowVals(s, set, est, c) {
     // wizardDoor.ts normalizeArmed: a type change prunes what the new type cannot carry.
     const nf = { ...f, ctype: t.label, tier: t.key === 'lmcc' ? 'Maximum' : f.tier };
     const patch = {};
-    const clouds = CF.cloudsOf(f);
-    if (t.key === 'lmcc' && clouds.some(x => x !== 'AWS')) patch.regions = f.regions.filter(r => CF.cloudOfName(r) === 'AWS');
-    else if (t.key !== 'c2c' && clouds.length > 1) patch.regions = [];
+    // providerConnectionTypes.ts: the clouds the new type cannot carry are stranded and dropped; one cloud on the wire outside Cloud to Cloud.
+    const kept = CF.cloudsOf(f).filter(c => CF.cloudCarries(c, t.label)).slice(0, t.key === 'c2c' ? undefined : 1);
+    if (kept.length !== CF.cloudsOf(f).length) { patch.clouds = kept; patch.cloud = kept[0] || null; patch.regions = f.regions.filter(r => kept.includes(CF.cloudOfName(r))); }
     if (t.key !== 'colo' && cp.colo) patch.colo = null;
+    if (t.key !== 'iot') patch.apn = null;
+    if (t.key !== 'layer2') patch.evc = null;
     if (t.key === 'colo' && f.tier === 'Geodiversity') patch.tier = null;
     const after = { ...nf, ...patch, regions: patch.regions || f.regions };
     if (f.bandwidth && !CF.bandwidthsFor(after).includes(f.bandwidth)) patch.bandwidth = null;
@@ -5352,13 +5376,12 @@ function flowVals(s, set, est, c) {
   // which asks next what you connect from ("do you want to connect your VPN site, what cloud region").
   const startWay = (w) => () => {
     if (w.soon) return;
-    c.setState({ screen: 's4', ...newOrder({ ...BLANK_COMPOSE(), way: w.key, wayZone: w.zones ? (s.wayZone || 'intra') : null, from: { way: 'you' }, origin: 'ways' }), waySet: null, waySetPage: 0, wipList: null, wipListPage: 0, cfArea: null, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [] });
+    c.setState({ screen: 's4', ...newOrder({ ...BLANK_COMPOSE(), way: w.key, from: { way: 'you' }, origin: 'ways' }), waySet: null, waySetPage: 0, wipList: null, wipListPage: 0, cfArea: null, hoverRegion: null, andiScope: null, drill: [], cloudDrill: [], cloudPick: null, fabDrill: [] });
     scrollTop(); syncHash('s4');
   };
-  const wayCards = W.wayCards(s.wayZone || 'intra', intentOf(s, est)).map(w => ({ ...w, start: startWay(w), notSoon: !w.soon, op: w.soon ? 0.62 : 1,
+  const wayCards = W.wayCards(intentOf(s, est)).map(w => ({ ...w, start: startWay(w), notSoon: !w.soon, op: w.soon ? 0.62 : 1,
     tileBg: w.soon ? 'var(--bg-neutral)' : 'var(--bg-accent)', tileInk: w.soon ? 'var(--text-light)' : 'var(--link)',
     logos: w.clouds.map(cl => ({ key: cl, src: W.markFor(cl, s.theme), name: W.CLOUD_NAME[cl] || cl })), hasLogos: w.clouds.length > 0,
-    hasZones: !!w.zones, zoneChips: w.zones ? Object.entries(w.zones).map(([k, z]) => { const on = (s.wayZone || 'intra') === k; return { key: k, label: z.label, title: `${z.label}: ${z.clouds.join(' and ')}`, on, go: () => set({ wayZone: k }), bg: on ? 'var(--cta)' : 'transparent', ink: on ? '#fff' : 'var(--text-light)' }; }) : [],
     // The journey's ring here too (2026-10-09): scored by the estate's answers, a way a hard rule removes shows the cross.
     pts: w.points === null ? '' : String(w.points), hasPts: w.points !== null, out: !!w.misses, ptsPct: w.points === null || w.misses ? '0%' : `${w.points}%`, ptsShown: w.misses ? '✕' : w.points === null ? '' : String(w.points),
     ptsTitle: w.misses ? `Removed by what you said: ${w.missWords}` : `Scores ${w.points} of 100 for this estate's answers: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${W.intentWeights(w.answers)[c.key]}`).join(', ')}`,
@@ -5372,7 +5395,7 @@ function flowVals(s, set, est, c) {
   // Marketplace shelves its products, in the deck's order; the family names the section, so a card no longer repeats it.
   const wayGroups = [...new Set(wayCards.map(w => w.kicker))].map(k => { const cards = wayCards.filter(w => w.kicker === k);
     return { key: k, title: k, kicker: `${cards.length} way${cards.length === 1 ? '' : 's'}`, cards }; });
-  const cfTypes = CF.ALL_TYPES.map(t => ({ ...tile(t), pick: pickType(t) }));
+  const cfTypes = CF.typesFor(f).map(t => ({ ...tile(t), pick: pickType(t) }));
   // The set a count opens: exactly what it counted, as a list on the page, paged.
   const setT = CF.ALL_TYPES.find(t => t.key === s.waySet) || null;
   const setA = setT ? CF.appliesTo(est, setT.key) : null;
@@ -5384,23 +5407,29 @@ function flowVals(s, set, est, c) {
   // Choose Provider: this estate's clouds, each with its regions.
   const lmccOnly = f.ctype === CF.LAST_MILE.label;
   const cloudNames = [...new Set((est.regionsList || []).map(r => r.cloud))].filter(x => !lmccOnly || x === 'AWS');
+  // Choose Provider picks the cloud, Connection Profile the region (the storyboards, 2026-10-16): one cloud, two for
+  // Cloud to Cloud; a cloud unpicked drops its region. A region pick keeps one per cloud.
+  const pickCloud = (cloud) => () => {
+    const multi = f.ctype === 'Cloud to Cloud', has = CF.cloudsOf(f).includes(cloud);
+    const next = has ? CF.cloudsOf(f).filter(x => x !== cloud) : multi ? [...CF.cloudsOf(f), cloud] : [cloud];
+    const regions = f.regions.filter(r => next.includes(CF.cloudOfName(r)));
+    const after = { ...f, clouds: next, regions };
+    const patch = { regions, cloud: next[0] || null };
+    if (f.bandwidth && !CF.bandwidthsFor(after).includes(f.bandwidth)) patch.bandwidth = null;
+    choose('clouds', next, { patch });
+  };
   const pickRegion = (name) => () => {
-    const has = f.regions.includes(name), cl = CF.cloudOfName(name);
-    const multi = f.ctype === 'Cloud to Cloud';
-    const next = has ? f.regions.filter(r => r !== name) : multi || CF.cloudsOf(f).every(x => x === cl) ? [...f.regions, name] : [name];
+    const cl = CF.cloudOfName(name), has = f.regions.includes(name);
+    const next = has ? f.regions.filter(r => r !== name) : [...f.regions.filter(r => CF.cloudOfName(r) !== cl), name];
     const after = { ...f, regions: next };
     const patch = {};
     if (f.bandwidth && !CF.bandwidthsFor(after).includes(f.bandwidth)) patch.bandwidth = null;
     choose('regions', next, { patch });
   };
-  const cfClouds = cloudNames.map(cloud => { const can = !f.way || W.wayAvailable(f.way, cloud), wayT = f.way ? (W.wayOf(f.way) || {}).title : '';
-    return { key: cloud, cloud, mark: W.markFor(cloud, s.theme), hasMark: !!W.MARK[cloud], can, cant: !can, op: can ? 1 : 0.45, cantWord: can ? '' : `Not with ${wayT}`,
-      regions: (est.regionsList || []).filter(r => r.cloud === cloud).map(r => { const name = CF.regionName(r), on = f.regions.includes(name);
-        return { key: name, name, region: r.region, sub: r.priv ? `${rampName(r)} today` : 'Public internet today', on, ...pickInk(on), pick: can ? pickRegion(name) : () => {}, off: !can, cursor: can ? 'pointer' : 'not-allowed' }; }) }; });
   // Connection Profile: the tiers and what each gets you, location and bandwidth.
   const soon = CF.maximumSoon(f);
   const cfTiers = CF.tiersFor(f).map(t => { const g = CF.tierGets(f, est, t), on = CF.tierOf(f) === t && (!!f.tier || t === 'Standard'), isSoon = t === 'Maximum' && soon;
-    return { ...g, key: t, on, chosen: f.tier === t, soon: isSoon, notSoon: !isSoon, locked: lmccOnly, ...pickInk(on), op: isSoon ? 0.6 : 1, pick: () => { if (isSoon || lmccOnly) return; const after = { ...f, tier: t }; const patch = {};
+    return { ...g, protects: isSoon ? 'Live for AWS and Azure. Coming soon for this provider.' : g.protects, becomes: CF.isLmcc(f) ? '' : g.becomes, key: t, on, chosen: f.tier === t, soon: isSoon, notSoon: !isSoon, locked: lmccOnly, ...pickInk(on), op: isSoon ? 0.6 : 1, pick: () => { if (isSoon || lmccOnly) return; const after = { ...f, tier: t }; const patch = {};
       if (f.bandwidth && !CF.bandwidthsFor(after).includes(f.bandwidth)) patch.bandwidth = null;
       if (CF.isLmcc(after) && f.loc.some(m => !CF.LMCC_METROS.includes(m))) patch.loc = [];
       if (t !== 'Geodiversity' && f.loc.length > 1) patch.loc = f.loc.slice(0, 1);
@@ -5410,13 +5439,63 @@ function flowVals(s, set, est, c) {
   const areaNow = areas.includes(s.cfArea) ? s.cfArea : (metros.find(m => f.loc.includes(m.metro)) || metros.find(m => m.near) || metros[0] || {}).area;
   const geo = CF.tierOf(f) === 'Geodiversity';
   const cfAreas = areas.map(a => { const on = a === areaNow; return { key: a, label: a, on, go: () => set({ cfArea: a }), line: on ? 'var(--cta)' : 'transparent', ink: on ? 'var(--text-heading)' : 'var(--text-light)', weight: on ? 700 : 500 }; });
-  const cfMetros = metros.filter(m => m.area === areaNow).map(m => { const on = f.loc.includes(m.metro);
+  const cfMetros = metros.filter(m => CF.isLmcc(f) || m.area === areaNow).map(m => { const on = f.loc.includes(m.metro);
     return { key: m.metro, metro: m.metro, near: m.near || 'No site here yet', nearAll: m.nearAll || 'No site here yet', on, pickable: true, ...pickInk(on), pick: () => choose('loc', geo ? (on ? f.loc.filter(x => x !== m.metro) : [...f.loc, m.metro]) : [m.metro]) }; });
   // What you'd get, path by path: the comparison that left Ways to connect, read for this order's region.
   const cfPaths = CF.pathTable(f, est).map(p => ({ ...p, weight: p.rides ? 700 : 600, rideLine: p.rides ? 'This order rides it' : '', bg: p.rides ? 'var(--bg-accent)' : 'transparent' }));
-  const cfBandwidths = CF.bandwidthsFor(f).map(b => { const on = f.bandwidth === b; return { key: b, label: b, on, ...pickInk(on), pick: () => choose('bandwidth', b) }; });
+  // Layer 2: the EVC's committed rate caps the bandwidth (BasicSettingsStep cirCapMbps); an over-CIR size is shown, not pickable.
+  const cir = CF.cirOf(f);
+  const cfBandwidths = CF.bandwidthsFor(f).map(b => { const on = f.bandwidth === b, off = CF.bwMbps(b) > cir; return { key: b, label: b, on, off, ...pickInk(on), op: off ? 0.5 : 1, pick: off ? () => {} : () => choose('bandwidth', b) }; });
+  // NetBond Advanced's branches (2026-10-16): Last Mile's key fork and account, IoT's APN-VPN, Layer 2's EVC, Colo's transport,
+  // Geodiversity's count, the subnets and service access of Advanced Settings.
+  const lmcc = CF.isLmcc(f), pasted = CF.keyPasted(f), iot = CF.isIot(f), l2 = CF.isL2(f);
+  const cfKeyFork = { has: lmcc, att: { on: !pasted, pick: () => put({ keySource: 'att', actKey: '' }) }, aws: { on: pasted, pick: () => put({ keySource: 'aws' }) } };
+  const cfAccount = { has: lmcc && !pasted, value: f.awsAccount, ok: CF.isValidAwsAccount(f.awsAccount), bad: !!f.awsAccount.trim() && !CF.isValidAwsAccount(f.awsAccount), set: (e) => put({ awsAccount: e.target.value }) };
+  const cfActKey = { has: pasted, value: f.actKey, set: (e) => put({ actKey: e.target.value }) };
+  const cfRouted = { has: lmcc, value: f.routed, set: (e) => put({ routed: e.target.value }) };
+  const cfApns = CF.APN_VPN.map(m => { const on = f.apn === m.id, off = m.status === 'Provisioning';
+    return { key: m.id, id: m.id, label: CF.apnWords(m), sub: `${m.region} · ${m.devices.toLocaleString('en-US')} devices${off ? ' · Provisioning' : ''}`, on, off, ...pickInk(on), op: off ? 0.5 : 1, pick: off ? () => {} : () => choose('apn', m.id) }; });
+  const cfEvcs = CF.EVCS.map(e => { const on = f.evc === e.id, off = e.status === 'Provisioning';
+    return { key: e.id, id: e.id, label: e.id, sub: `${e.uni} · CIR ${CF.cirWords(e.cir)}${off ? ' · Provisioning' : ''}`, on, off, ...pickInk(on), op: off ? 0.5 : 1,
+      pick: off ? () => {} : () => choose('evc', e.id, { patch: f.bandwidth && CF.bwMbps(f.bandwidth) > e.cir ? { bandwidth: null } : {} }) }; });
+  const coloMetros = [f.colo.a.site, f.colo.b.site].map(n => (CF.resolveSite ? (CF.resolveSite(est, n) || {}).metro : ((est.sites || []).find(x => x.name === n) || {}).metro));
+  const cfColoTransport = { has: CF.isColo(f) && !!f.bandwidth, label: f.bandwidth ? CF.coloTransport(CF.bwMbps(f.bandwidth), !!coloMetros[0] && coloMetros[0] === coloMetros[1]) : '', line: 'Derived from bandwidth and metro pair, provisioned by AT&T.' };
+  const cfGeoLine = CF.tierOf(f) === 'Geodiversity' && !lmcc ? `${f.loc.length} selected${f.loc.length < 2 ? `, ${2 - f.loc.length} more needed` : ''}` : '';
+  const cfSubnets = { has: CF.showSubnets(f), value: f.subnets, set: (e) => put({ subnets: e.target.value }) };
+  const cfAccess = CF.cloudsOf(f).map(cl => { const value = iot ? 'L3VPN' : f.access[cl] || 'L3VPN';
+    return { key: cl, cloud: cl, value, pinned: iot, note: iot ? 'IoT rides the private APN into your enterprise VPN - fixed for this connection type.' : '', options: CF.SERVICE_ACCESS.map(v => ({ key: v, value: v, label: v, selected: v === value })), set: iot ? () => {} : (e) => put({ access: { ...f.access, [cl]: e.target.value } }) }; });
+  const cfPickedLine = key === 'provider' && f.ctype === 'Cloud to Cloud' && CF.cloudsOf(f).length ? `${CF.cloudsOf(f).length} selected` : '';
+  // The order reads the policy engine (2026-10-16, NetBond Advanced's Connection > Policies): the flow from the order's
+  // site to its region, every policy of the estate read in precedence (the skips counted, not listed), this order's own
+  // requirements staged among them, and the rules NetBond pushes; All N opens the engine's full sheet in place.
+  const engSite = (CF.orderSites(f, est)[0] || {}).name || '', engTo = f.regions[0] || '';
+  const engOn = !!engSite && !!engTo && !CF.isHosted(f) && !CF.isColo(f) && !CF.isLmcc(f);
+  const cfEng = (() => {
+    const none = { has: false, none: true, line: '', flow: '', ladder: [], chips: [], hasChips: false, noChips: true, matchN: 0, policyN: 0, skipN: 0, skipLine: '', pushed: [], pushedN: 0, hasPushed: false, noPushed: false, sheet: [], all: false, showPushed: false, allLabel: '', allTitle: '', toggleAll: () => {} };
+    if (!engOn) return none;
+    const mine = f.policy.map(k => CF.POLICY_FOR_CONTROL[k]).filter(Boolean).map(pc => ({ name: `This order: ${pc.req}`, match: engSite, scope: engTo, req: pc.req, state: 'authored' }));
+    const all = [...layerPolicies({ ...s, layer: 'cloud' }, est, 'all'), ...(s.customPolicies || []), ...mine];
+    const eo = { inv: A.inventory(est), staged: true, match: { siteTags: ((s.siteTags || {})[est.id]) || {} } };
+    const ef = { from: engSite, to: engTo, tag: '' };
+    const r = PM.decide(est, all, ef, eo);
+    const polByName = new Map(all.map(p => [p.name, p]));
+    const openPol = (name) => () => { if (/^This order/.test(name)) return; c.setState({ screen: 's3', layer: 'cloud', tab: 'govern', govPanel: 'policies', polOpen: name, polFilter: null, polPage: 0 }); scrollTop(); syncHash('s3', 'cloud', 'govern'); };
+    const rungs = engineLadderRows(r, polByName, openPol), ladder = rungs.filter(x => x.state !== 'skip'), skips = rungs.length - ladder.length;
+    const { sheet, pushed, ruleN } = engineSheetRows(est, all, ef, eo, r, (by) => (by && polByName.has(by) ? openPol(by) : () => {}));
+    const allOn = !!s.cfEngAll;
+    // The default line reads the ladder and the pushed rules as chips; the All view draws the engine's rungs and sheet.
+    const chips = [...ladder.map(l => ({ key: 'p:' + l.key, kind: 'policy', label: l.name.replace(/^This order: /, 'This order · '), glyph: l.glyph, ink: l.ink, title: l.title, go: l.go })),
+      ...pushed.map(x => ({ key: 'r:' + x.key, kind: 'rule', label: x.label, verb: x.verb, cls: x.cls, glyph: x.icon, ink: x.ink, title: `${x.verb} ${x.label}: ${x.dirs.filter(d => d.on).map(d => d.word).join(', ')}, pushed by ${x.by}`, go: x.byGo, dirs: x.dirs.filter(d => d.on).map(d => d.key === 'o2p' ? 'Out' : 'In').join(' + ') }))];
+    return { has: true, none: false, line: `${ladder.length} of ${rungs.length} ${rungs.length === 1 ? 'policy applies' : 'policies apply'} · ${engSite} → ${engTo}`, flow: `${engSite} → ${engTo}`, ladder, chips, hasChips: chips.length > 0, noChips: chips.length === 0, matchN: ladder.length, policyN: rungs.length, skipN: skips, skipLine: skips ? `${skips} other ${skips === 1 ? 'policy does' : 'policies do'} not match this flow` : '',
+      pushed, pushedN: pushed.length, hasPushed: pushed.length > 0 && !allOn, noPushed: !pushed.length && !allOn, sheet, all: allOn, showPushed: !allOn,
+      allLabel: allOn ? 'Pushed only' : `All ${ruleN}`, allTitle: allOn ? 'Show only the rules NetBond pushes for this connection' : `Show every rule on NetBond's sheet, ${ruleN} in all`, toggleAll: () => set({ cfEngAll: !allOn }) };
+  })();
+  // Last Mile reaches a metro, not a region (BasicSettingsStep: "the portal shows metros, not AWS regions"): once its region is set, the section folds.
+  const cfShowRegion = !(lmcc && f.regions.length > 0);
   // Advanced Settings: the QoS classifier per cloud, and the policy the order ships with.
   const cfQos = CF.cloudsOf(f).map(cl => ({ key: cl, cloud: cl, value: f.qos[cl] || 'Standard', set: (e) => put({ qos: { ...f.qos, [cl]: e.target.value } }) }));
+  // The service access type rides the same row as the QoS classifier (AdvancedSettingsStep's provider card).
+  for (const q of cfQos) { const a = cfAccess.find(x => x.cloud === q.cloud); Object.assign(q, { accessValue: a.value, accessSet: a.set, accessPinned: a.pinned, accessNote: a.note, hasAccessNote: !!a.note }); }
   const cfPolicy = D.COMPOSE_CHIPS.control.map(k => { const on = f.policy.includes(k); return { key: k, label: k, desc: CARD_DESC.control[k] || '', on, ...pickInk(on), pick: () => choose('policy', on ? f.policy.filter(x => x !== k) : [...f.policy, k]) }; });
   const cfPolicySent = CF.policySentence(f, est);
   // Advanced Settings in two sections (2026-10-06 session: "just do routing and security ... have a header, and maybe
@@ -5489,7 +5568,7 @@ function flowVals(s, set, est, c) {
   // Your order, in progress. "All N sites" and "All N regions" open exactly
   // those, in the panel, where the picture was.
   const openList = (kind) => () => set({ wipList: s.wipList === kind ? null : kind, wipListPage: 0 });
-  const wip = CF.wipRows(f, est).map(r => ({ ...r, ...WIP_INK[r.state], go: CF.reachable(r.step, f) ? () => goStep(r.step) : () => {}, cursor: CF.reachable(r.step, f) ? 'pointer' : 'default', openMore: r.more ? openList(r.more) : () => {}, moreOn: !!r.more && s.wipList === r.more }));
+  const wip = CF.wipRows(f, est).map(r => ({ ...r, ...WIP_INK[r.state], chipDisplay: r.state === 'none' || (r.step === key && r.key !== 'way') ? 'none' : 'inline-flex', go: CF.reachable(r.step, f) ? () => goStep(r.step) : () => {}, cursor: CF.reachable(r.step, f) ? 'pointer' : 'default', openMore: r.more ? openList(r.more) : () => {}, moreOn: !!r.more && s.wipList === r.more }));
   const listKind = ['sites', 'regions', 'others'].includes(s.wipList) ? s.wipList : null;
   const wl = listKind ? CF.wipList(f, est, listKind) : { all: [], title: '' };
   const wlPg = pageRows(wl.all, 5, s.wipListPage, (n) => set({ wipListPage: n }));
@@ -5503,11 +5582,7 @@ function flowVals(s, set, est, c) {
   const wrows = CF.wipRows(f, est), wrow = (k) => wrows.find(r => r.key === k) || { state: 'none', value: '' };
   const stOf = (on, ...rows) => !on ? 'any' : rows.some(r => r.state === 'you') ? 'set' : rows.some(r => r.state === 'estate') ? 'filled' : 'set';
   const isC2c = f.ctype === 'Cloud to Cloud', isColoF = CF.isColo(f), endRow = isColoF || isC2c ? wrow('cloud') : wrow('sites');
-  const cfStrip = {
-    site: stOf(dg.leftSet, endRow, wrow('loc')), siteIcon: isColoF ? 'large-building' : isC2c ? 'cloud' : dg.left === 'The internet' ? 'globe' : 'large-building', siteTitle: `${isColoF ? 'Colo A' : isC2c ? 'Cloud region' : 'Your sites'}: ${dg.left}`,
-    edge: stOf(!!(f.loc.length || f.bandwidth || dg.shield), wrow('loc'), wrow('bandwidth')), edgeIcon: dg.shield ? 'check-shield' : 'firewall', edgeText: [f.loc.join(' + '), f.bandwidth, dg.shield ? 'inspected' : ''].filter(Boolean).join(' · ') || 'Location and bandwidth',
-    core: stOf(!!f.tier, wrow('tier')), coreText: f.tier ? `${f.tier} · ${dg.dual ? '2 paths' : '1 path'}` : 'Standard until you pick',
-    cloud: stOf(dg.rightSet, wrow('cloud')), cloudIcon: isColoF ? 'large-building' : 'cloud', cloudTitle: `${isColoF ? 'Colo B' : isC2c ? 'Second cloud' : 'Cloud region'}: ${dg.right}` };
+  // The path strip left the wizard (Micah, 2026-10-16, "The floating bar is silly"): the bar is buttons and the block, the chips say the order so far.
   const price = CF.wipPrice(f, est);
   // Review's total: the order at its term, the same figure the panel shows.
   const hasTerm = f.term !== null && f.term !== undefined;
@@ -5515,8 +5590,9 @@ function flowVals(s, set, est, c) {
   // The outcome before you place it (2026-10-02): today's path for the region this order reaches, the path it rides, the price, when it stands up.
   const cfOutcome = (() => { const r0 = CF.sampleRegion(f, est), rides = CF.pathTable(f, est).find(p => p.rides) || null, has = f.regions.length > 0 && !!r0 && !!rides;
     return { has, none: !has, todayPath: r0 ? (r0.priv ? 'Private on the AT&T network' : 'Public internet') : 'Not measured', todayLine: r0 ? (r0.priv ? 'On the AT&T network today' : 'Best effort, no SLA on the middle') : '',
-      afterPath: rides ? (rides.key === 'internet' ? 'Internet attach' : f.way ? CF.wayWords(f) : 'Private on the AT&T network') : '', afterLine: rides ? `${rides.reliability} · ${rides.security}` : '',
-      priceBig: price.has ? `${price.big}/mo` : PRICE_NOTE, priceSub: price.has ? cfTotal.label : '', standUp: f.way && W.waySetup(f.way) ? W.waySetup(f.way) : rides ? rides.setup : '' }; })();
+      // Last Mile is the product the order became (wizardDoor.ts isLmccPath), whatever way it started on.
+      afterPath: rides ? (CF.isLmcc(f) ? 'AWS Interconnect - Last Mile' : rides.key === 'internet' ? 'Internet attach' : f.way ? CF.wayWords(f) : 'Private on the AT&T network') : '', afterLine: rides ? `${rides.reliability} · ${rides.security}` : '',
+      priceBig: price.has ? `${price.big}/mo` : PRICE_NOTE, priceSub: price.has ? cfTotal.label : '', standUp: CF.isLmcc(f) ? LMCC_STAND_UP : f.way && W.waySetup(f.way) ? W.waySetup(f.way) : rides ? rides.setup : '', standUpLine: `${CF.isLmcc(f) ? LMCC_STAND_UP : f.way && W.waySetup(f.way) ? W.waySetup(f.way) : rides ? rides.setup : ''}. The policy ships with it.` }; })();
   // The review, NetBond Advanced's ReviewStep rows in the storefront's words.
   const reviewRows = CF.wipRows(f, est).map(r => ({ key: r.key, label: r.label, value: r.value, word: r.word, ink: WIP_INK[r.state].ink }));
   const lines = ord.lines.map(l => ({ ...l, key: 'l' + l.line, qtyF: l.qty.toLocaleString('en-US'), monthlyF: l.unpriced ? PRICE_NOTE : l.perSite ? `${fmt(l.unitPrice)}/mo per site` : `${fmt(l.monthly)}/mo`, ink: l.unpriced ? 'var(--text-light)' : 'var(--text-heading)' }));
@@ -5534,22 +5610,59 @@ function flowVals(s, set, est, c) {
   // Newest first; Orders' story (ordersStory, below vals) pages them as cards with the order in progress.
   const ordAll = shown.slice().reverse().map(ordRow);
   const note = f.note;
+  // A hosted order (the storyboards, 2026-10-16): the cloud alone on Choose Provider, then on Connection Profile the
+  // region where AT&T has a hub, the way's intake and the grant. No site Location and no resiliency tiers: a peering is
+  // regional by construction.
+  const hosted = CF.isHosted(f);
+  // Choose Provider's tiles (NetBond Advanced's logo selector): every cloud discovery found, a cloud the way or the type
+  // cannot carry dimmed with the reason.
+  const allClouds = [...new Set((est.regionsList || []).map(r => r.cloud))];
+  const cfCloudTiles = allClouds.map(cloud => { const wayOk = !f.way || W.wayAvailable(f.way, cloud), typeOk = CF.cloudCarries(cloud, f.ctype), can = wayOk && typeOk, on = CF.cloudsOf(f).includes(cloud);
+    const n = (est.regionsList || []).filter(r => r.cloud === cloud).length, hubs = (est.regionsList || []).filter(r => r.cloud === cloud && W.hubIn(cloud, r.region)).length;
+    return { key: cloud, cloud, name: W.CLOUD_NAME[cloud] || cloud, mark: W.markFor(cloud, s.theme), hasMark: !!W.MARK[cloud], can, cant: !can, on, ...pickInk(on), op: can ? 1 : 0.45,
+      cantWord: can ? '' : !typeOk ? (f.ctype === CF.LAST_MILE.label ? 'Interconnect - Last Mile reaches AWS only' : 'Not available for this type') : `Not with ${(W.wayOf(f.way) || {}).title || 'this way'}`,
+      sub: hosted ? `${hubs} region${hubs === 1 ? '' : 's'} with an AT&T hub` : `${n} region${n === 1 ? '' : 's'} discovered`, pick: can ? pickCloud(cloud) : () => {} }; });
+  // Connection Profile's regions, by cloud; a hosted order's are hub-gated.
+  const cfRegionGroups = CF.regionChoicesOf(f, est).map(g => ({ key: g.cloud, cloud: g.cloud, mark: W.markFor(g.cloud, s.theme), hasMark: !!W.MARK[g.cloud],
+    regions: g.regions.map(r => { const on = f.regions.includes(r.name);
+      return { ...r, key: r.name, on, ...pickInk(on), op: r.off ? 0.5 : 1, cursor: r.off ? 'not-allowed' : 'pointer', line: hosted ? r.why : r.sub, pick: r.off ? () => {} : pickRegion(r.name) }; }) }));
+  const it = CF.intakeOf(f);
+  const ov = it && it.overlap && (f.intake.cidrs || '').trim() ? CF.overlapOf(f.intake.cidrs, f.cloud, (f.regions[0] || '').split(' ')[1]) : null;
+  const cfIntake = it ? { has: true, title: it.title, line: it.line, fields: it.fields.map(x => ({ ...x, set: (e) => put({ intake: { ...f.intake, [x.key]: e.target.value } }) })),
+    overlap: ov ? ov.text : '', overlapOk: ov ? ov.ok : !it.overlap, hasOverlap: !!ov, overlapInk: 'var(--text-body)' }
+    : { has: false, title: '', line: '', fields: [], overlap: '', overlapOk: true, hasOverlap: false, overlapInk: '' };
+  const cfGrant = { has: hosted, on: !!f.grant, box: f.grant ? 'var(--cta)' : 'transparent', words: hosted ? CF.grantWords(f) : '', toggle: () => put({ grant: !f.grant }),
+    title: `Allow AT&T to provision in your ${(f.cloud || CF.cloudsOf(f)[0]) === 'AWS' ? 'account' : (f.cloud || CF.cloudsOf(f)[0]) === 'GCP' ? 'project' : 'subscription'}` };
+  // The way, read before the rows so the way chip can carry its door and its words.
+  const cfWayV = (() => { const w = f.way ? W.wayOf(f.way) : null; const cl = CF.cloudsOf(f)[0];
+      // Once the armed fork commits to Maximum the order is AWS Interconnect - Last Mile, whatever way it started on; the pill says so.
+      if (w && CF.isLmcc(f)) return { has: true, none: false, icon: 'cable', title: 'AWS Interconnect - Last Mile', kicker: 'NetBond Advanced', hubNote: '', hasHubNote: false, setup: 'Auto-provisioned · activation key', setupTitle: LMCC_STAND_UP, canChange: !!origin, change: origin ? () => { c.setState({ screen: 's3', layer: 'cloud', tab: 'connect', cnPage: origin }); scrollTop(); syncHash('s3', 'cloud', 'connect'); } : () => {}, changeLabel: origin === 'options' ? 'Change on Recommended' : 'Change' };
+      return { has: !!w, none: !w, icon: w ? w.icon : 'cable', title: w ? (cl ? W.wayLabel(w.key, cl) : w.title) : '', kicker: w ? w.kicker : '', hubNote: w && w.hosted ? "Same region as AT&T's hub" : '', hasHubNote: !!(w && w.hosted),
+        // The setup reads short beside the name, its whole sentence in the title (2026-10-13: the name was cut to fit it).
+        setup: w ? (() => { const wh = W.wayWho(w.key); return wh ? `${wh.level} · ${wh.time}` : W.waySetup(w.key); })() : '', setupTitle: w ? W.waySetup(w.key) : '', canChange: !!origin, change: origin ? () => { c.setState({ screen: 's3', layer: 'cloud', tab: 'connect', cnPage: origin }); scrollTop(); syncHash('s3', 'cloud', 'connect'); } : () => {}, changeLabel: origin === 'options' ? 'Change on Recommended' : 'Change' }; })();
   return {
+    cfIsHosted: hosted, cfShowTiers: !hosted && CF.tiersFor(f).length > 0, cfCloudTiles, cfRegionGroups, cfManyRegionGroups: cfRegionGroups.length > 1, cfIntake, cfGrant,
+    cfIsLmcc: lmcc, cfKeyFork, cfAccount, cfActKey, cfRouted, cfApns, cfShowApn: iot && !hosted, cfEvcs, cfShowEvc: l2 && !hosted, cfColoTransport, cfGeoLine, cfSubnets, cfShowSubnets: cfSubnets.has, cfAccess, hasCfAccess: cfAccess.length > 0, cfPickedLine, cfPickedDisplay: cfPickedLine ? 'inline-flex' : 'none', cfShowBw: !pasted, cfShowRegion, cfBwCols: lmcc ? 'cw-pills w7' : 'cw-pills',
+    cfEng, cfAdvShowReqs: !(cfEng.has && cfEng.all), cfShowPolicyLead: !cfEng.has,
+    cfLocNote: lmcc ? '4 hosted connections per metro · auto-provisioned.' : '',
     wayTypes, wayCards, wayGroups, cfTypes, waySet, wayFoot: 'From the Cloud Connectivity Decision Matrix (October 2026). Each criterion scored 1 to 5, the most favourable 5, and weighted to a score out of 100: cost 30, performance 20, security 20, effort and time 15, scale 15. Cost is one region at 1 Gbps a month on us-east-1 list rates; a hosted way is cloud pass-through, and its hub (vSRX, compute, AT&T margin) is priced at review. Only NetBond Advanced\'s setup time is proven in market; the rest are proof-of-concept targets. Start a way, then pick what it connects.',
     wayCriteria: W.CRITERIA.map(c => ({ key: c.key, label: c.label, icon: c.icon })),
     goRecommended: () => set({ cnPage: 'options' }),
-    cfKey: key, cfSteps, cfTitle: (STEP_HEAD[key] || [])[0] || '', cfDesc: (STEP_HEAD[key] || [])[1] || '',
+    cfKey: key, cfSteps,
+    // The heads NetBond Advanced's branches change: the providers in the plural, Last Mile's billing term, and a profile that says what it asks.
+    cfTitle: key === 'provider' && f.ctype === 'Cloud to Cloud' ? 'Select your cloud providers' : key === 'terms' && lmcc ? 'Billing term & routed networks' : (STEP_HEAD[key] || [])[0] || '',
+    cfDesc: key === 'basic' ? (hosted ? 'Pick the region with an AT&T hub and the bandwidth, then enter your network and grant AT&T access.' : lmcc ? 'Maximum resiliency is AWS Interconnect - Last Mile. Choose your metro, bandwidth, and AWS account.' : iot ? 'Choose the APN-VPN mapping and bandwidth.' : l2 ? 'Choose the EVC, on-ramp metro, and bandwidth.' : CF.isColo(f) ? 'Set resiliency and bandwidth.' : (STEP_HEAD[key] || [])[1] || '') : (STEP_HEAD[key] || [])[1] || '',
     cfIsType: key === 'type', cfIsProvider: key === 'provider', cfIsEndpoints: key === 'endpoints', cfIsBasic: key === 'basic', cfIsAdvanced: key === 'advanced', cfIsTerms: key === 'terms', cfIsReview: isLast,
     // Review carries the policy chips only where the flow has no Advanced Settings (Last Mile, Colo to Colo).
     cfShowPolicy: isLast && !keys.includes('advanced'),
-    cfPolicyRouting, cfPolicySecurity, cfRouteRules, hasCfRouteRules: cfRouteRules.length > 0, noCfRouteRules: cfRouteRules.length === 0, cfSecuritySoon,
+    cfPolicyRouting, cfPolicySecurity, cfRouteRules, hasCfRouteRules: cfRouteRules.length > 0 && !cfEng.has, noCfRouteRules: cfRouteRules.length === 0 && !cfEng.has, cfSecuritySoon, cfSecuritySoonLine: cfSecuritySoon.map(x => x.label.toLowerCase()).join(', '),
     // A requirement NetBond carries no route rule for (no direct internet, priority traffic) says where it is enforced instead (2026-10-09).
     cfRouteNoneText: f.policy.some(k => CF.POLICY_FOR_CONTROL[k]) ? 'NetBond carries no route rule for this: the site and the core enforce it.' : 'Pick a routing requirement and the route rules it pushes show here.',
-    cfClouds, hasCfClouds: cfClouds.length > 0, noCfClouds: cfClouds.length === 0, cfMulti: f.ctype === 'Cloud to Cloud',
+    noCfClouds: cfCloudTiles.length === 0, cfMulti: f.ctype === 'Cloud to Cloud',
     // With no cloud found, the step's door is the one that finds one; the order waits in Orders.
     cfAddSource: () => { c.setState({ screen: 's1', discoverView: 'sources' }); scrollTop(); syncHash('s1'); },
     cfNoCloudsLine: lmccOnly && (est.regionsList || []).length ? 'Add an AWS source and its AWS regions show here.' : 'Add a source and its cloud regions show here.',
-    cfTiers, cfTierProtects: CF.isColo(f) ? 'Colo to Colo is point to point, so its tiers are its own.' : 'Each tier says what it protects against.', cfAreas, cfMetros, hasCfAreas: cfAreas.length > 1, cfBandwidths, cfLocTitle: geo ? 'Location · pick at least 2 metros' : CF.isLmcc(f) ? 'Metro' : 'Location', cfShowLoc: !CF.isColo(f),
+    cfTiers, cfTierProtects: CF.isColo(f) ? 'Colo to Colo is point to point, so its tiers are its own.' : 'Each tier says what it protects against.', cfAreas, cfMetros, hasCfAreas: cfAreas.length > 1 && !CF.isLmcc(f), cfBandwidths, cfLocTitle: geo ? 'Location · pick at least 2 metros' : CF.isLmcc(f) ? 'Metro' : 'Location', cfShowLoc: !CF.isColo(f) && !hosted && !iot && !pasted,
     // The path-by-path table left the profile (2026-10-06): the way you picked already carries cost, security and performance.
     cfPaths, cfPathsFor: CF.pathsFor(f, est), cfShowPaths: false, cfTotal,
     cfQos, hasCfQos: cfQos.length > 0, cfPolicy, cfPolicySent, cfTerms, cfEndpoints,
@@ -5564,17 +5677,16 @@ function flowVals(s, set, est, c) {
       diveToEngine(c, { label: 'Back to your order', screen: 's4', landing }, { from, to, tag: '' }, preview); },
     cfEngineTitle: 'Open the policy engine on this order: what each layer does with your picks, before you place it. Back returns here',
     cfBlock: block, hasCfBlock: !!block, cfNext: next, cfBack: back, cfHasBack: ki > 0 || !!toOrigin, cfBackVis: ki > 0 || toOrigin ? 'visible' : 'hidden', cfNotLast: !isLast,
+    cfStepCount: keys.length, cfChipsDisplay: key === 'review' || key === 'confirm' ? 'none' : 'flex', cfBackIsOrigin: !!toOrigin, cfBackIsStep: !toOrigin, cfCancelVis: origin ? 'visible' : 'hidden', cfCancelLabel: origin === 'options' ? 'Cancel, back to Recommended' : 'Cancel, back to Ways to connect',
     cfBackLabel: toOrigin ? (origin === 'options' ? 'Back to Recommended' : 'Back to Ways to connect') : 'Back',
     // The way this order rides, above the step: its mark, its name for this cloud, and the door back to where it was chosen.
-    cfWay: (() => { const w = f.way ? W.wayOf(f.way) : null; const cl = CF.cloudsOf(f)[0]; const z = w && w.zones && f.zone ? w.zones[f.zone] : null;
-      return { has: !!w, none: !w, icon: w ? w.icon : 'cable', title: w ? (cl ? W.wayLabel(w.key, cl) : w.title) : '', kicker: w ? w.kicker : '', zone: z ? z.label : '', hasZone: !!z,
-        // The setup reads short beside the name, its whole sentence in the title (2026-10-13: the name was cut to fit it).
-        setup: w ? (() => { const wh = W.wayWho(w.key); return wh ? `${wh.level} · ${wh.time}` : W.waySetup(w.key); })() : '', setupTitle: w ? W.waySetup(w.key) : '', canChange: !!origin, change: origin ? () => { c.setState({ screen: 's3', layer: 'cloud', tab: 'connect', cnPage: origin }); scrollTop(); syncHash('s3', 'cloud', 'connect'); } : () => {}, changeLabel: origin === 'options' ? 'Change on Recommended' : 'Change' }; })(),
+    // A hosted way's one constraint, said in the banner (the storyboards, 2026-10-16): the region must be the hub's.
+    cfWay: cfWayV,
     cfNextLabel: isLast ? 'Place order' : `Next: ${CF.STEP_META[keys[ki + 1]].title}`, cfNextDisabled: !!block, cfNextBg: block ? 'var(--bg-neutral)' : 'var(--cta)', cfNextInk: block ? 'var(--text-disabled)' : '#fff',
     cfPlace: place, cfCanPlace: isLast && !block,
     cfName: f.name, cfNamePlaceholder: CF.defaultName(f), cfNameHelp: `Leave it blank and it is named ${CF.defaultName(f)}.`, cfSetName: (e) => put({ name: e.target.value }),
     cfReviewRows: reviewRows, cfLines: lines, cfOrder: ord, cfShield: ord.shield,
-    cfWipTitle: 'Your order, in progress', cfWip: wip, cfWipList, cfDiagram, cfStrip, cfOutcome, cfPrice: price, cfPriced: price.has, cfUnpriced: !price.has,
+    cfWipTitle: 'Your order, in progress', cfWip: wip.map(r => r.key === 'way' ? { ...r, go: cfWayV.canChange ? cfWayV.change : r.go, cursor: cfWayV.canChange ? 'pointer' : r.cursor, title: `${cfWayV.kicker} · ${cfWayV.setupTitle}${cfWayV.canChange ? `. ${cfWayV.changeLabel}` : ''}`, aria: `Way to connect: ${r.value}${cfWayV.canChange ? `. ${cfWayV.changeLabel}` : ''}` } : { ...r, title: `${r.label}: ${r.word}`, aria: `${r.label}: ${r.value}` }), cfWipList, cfDiagram, cfOutcome, cfPrice: price, cfPriced: price.has, cfUnpriced: false,
     hasParsedNote: !!note && key === noteKey, parsedNote: note || '', parsedNoteTitle: f.noteTitle,
     // Orders.
     // The order in progress, as Orders draws it (2026-10-13): its way, the path it has so far, the steps it has walked,
@@ -6650,7 +6762,7 @@ function movesVals(s, set, go, est, { openF, obAll, conns }) {
                 ...(t.way && W.wayYouDo(t.way) ? [{ key: 'you', icon: 'user-access', v: W.wayYouDo(t.way).short, d: '', ink: 'var(--text-body)', dink: 'var(--text-light)', title: `You do: ${W.wayYouDo(t.way).words}` }] : [])],
               // The deck's weighted score out of 100 (Cost 30 · Performance 20 · Security 20 · Effort and time 15 · Scale 15).
               // With an intent, the score is the intent's (the weights it moved, its soft preferences); else the deck's.
-              ...(() => { const pts = Number.isInteger(t.ipts) ? t.ipts : t.way ? W.wayScore(t.way, m.cloud, t.zone || 'inter') : null;
+              ...(() => { const pts = Number.isInteger(t.ipts) ? t.ipts : t.way ? W.wayScore(t.way, m.cloud) : null;
                 const wt = Number.isInteger(t.ipts) ? W.intentWeights(t.answers || intent) : null;
                 return { pts: pts === null ? '' : String(pts), hasPts: pts !== null, ptsTitle: pts === null ? '' : wt ? `Scores ${pts} of 100 for what you said it needs: ${W.CRITERIA.map(c => `${c.label.toLowerCase()} ${wt[c.key]}`).join(', ')}` : `Scores ${pts} of 100: cost 30, performance 20, security 20, effort and time 15, scale 15` }; })(),
               connect: () => { set({ moveTier: keep('moveTier', { ...tierPick, [m.key]: t.i }) }); composeMoves([m], t.i); }, ctaPrimary: tOn, ctaWord: 'Connect' }; })() }; });

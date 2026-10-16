@@ -92,8 +92,7 @@ const PROD = {
   'port-att': { name: 'Cloud port, AT&T-provided', path: 'netbond' },
   // The deck's hosted options (2026-10-08): one AT&T on-ramp into AT&T's hub, the vSRX in path, and a last hop each.
   'onramp-att': { name: 'AT&T on-ramp', path: 'netbond', gbps: 1 },
-  'lh-intra': { name: 'Same-AZ peering', path: 'netbond', inspect: true },
-  'lh-cross': { name: 'Cross-AZ peering', path: 'netbond', inspect: true },
+  'lh-peer': { name: 'Regional peering', path: 'netbond', inspect: true },
   'lh-tgw': { name: 'Transit gateway', path: 'netbond', inspect: true },
   'lh-cwan': { name: 'Cloud WAN', path: 'netbond', inspect: true },
   'lh-pl': { name: 'PrivateLink', path: 'netbond', inspect: true },
@@ -339,8 +338,8 @@ function regionMoves(est, ctx) {
     const recs = [...W.rankWays(cloud, it), ...W.recommendedFor(cloud).filter(r => r.unavailable)], byWays = recs.length >= 2;
     const ladder = byWays ? recs.map((r, i) => { const word = i === 0 ? 'Recommended' : `Option ${i + 1}`;
         return r.unavailable ? { i, tier: word, label: W.wayLabel(r.key, cloud), way: r.key, unavailable: r.unavailable, products: [], path: 'netbond', conn: 'DataCenter/CoLocation to Cloud', monthly: null, price: '', intro: '', breakdown: '', fit: '', covers: [] }
-          : { ...tierOf(i, W.wayProducts(r.key, cloud, rs.length, r.zone), { covers: ids, label: W.wayLabel(r.key, cloud, r.zone), tier: word, way: r.key }),
-            zone: r.zone, why: r.why, misses: r.misses, ipts: r.pts, answers: it }; })
+          : { ...tierOf(i, W.wayProducts(r.key, cloud, rs.length), { covers: ids, label: W.wayLabel(r.key, cloud), tier: word, way: r.key }),
+            why: r.why, misses: r.misses, ipts: r.pts, answers: it }; })
       : f ? ladderTiers(f, ctxT) : regionLadder(cloud).map(([ps, label], i) => tierOf(i, ps.map(id => [id, id === 'c2c' ? 1 : rs.length]), { covers: ids, label }));
     const tiers = ladder.map(t => {
       // The way this cloud cannot have holds its column and says why; it is never picked or priced.

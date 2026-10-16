@@ -146,7 +146,7 @@ test('Colo to Colo and Interconnect - Last Mile walk their own step lists', () =
   assert.deepEqual(v.cfSteps.map(s => s.key), CF.STD_STEP_KEYS_LMCC);
   assert.equal(v.cfKey, 'provider');
   // Only AWS regions are offered; Last Mile is AWS.
-  assert.deepEqual(v.cfClouds.map(g => g.cloud), ['AWS']);
+  assert.deepEqual(v.cfCloudTiles.filter(t => t.can).map(t => t.cloud), ['AWS']);
   // Internet to Cloud on AWS alone at Maximum turns into the Last Mile flow (wizardDoor.ts tierForkArmed).
   assert.deepEqual(CF.stepKeysFor({ ctype: 'Internet to Cloud', regions: ['AWS us-west-2'], tier: 'Maximum', passed: [] }), CF.STD_STEP_KEYS_LMCC);
   assert.deepEqual(CF.stepKeysFor({ ctype: 'Internet to Cloud', regions: ['Azure eastus'], tier: 'Maximum', passed: [] }), CF.STD_STEP_KEYS);
@@ -175,7 +175,9 @@ test('attaching AWS us-west-2 prefills AWS us-west-2 as the cloud and region', (
   assert.equal(row(v, 'cloud').value, 'AWS us-west-2');
   assert.equal(row(v, 'cloud').word, 'From your estate');
   assert.equal(stepOf(v, 'provider').state, 'filled');
-  assert.equal(stepOf(v, 'provider').value, 'AWS us-west-2');
+  // Choose Provider is the cloud, Connection Profile the region (the storyboards, 2026-10-16).
+  assert.equal(stepOf(v, 'provider').value, 'AWS');
+  assert.match(stepOf(v, 'basic').value, /^AWS us-west-2/);
   assert.equal(stepOf(v, 'type').state, 'filled');
   assert.equal(v.cfKey, 'basic', 'the first step that needs a decision');
   assert.equal(v.cfDiagram.right, 'AWS us-west-2');
@@ -208,8 +210,7 @@ test('two sites and a region make one order that names all three, in the banner,
 test('Standard, Maximum and Geodiversity each say what they get you, from the paths and the catalog', () => {
   const c = ways();
   vals(c).wayTypes.find(t => t.label === 'DataCenter / CoLocation to Cloud').start();
-  vals(c).cfClouds.find(g => g.cloud === 'Azure').regions.find(r => r.name === 'Azure eastus').pick();
-  vals(c).cfNext();
+  pickRegion(c, 'Azure eastus');
   const v = vals(c);
   assert.equal(v.cfKey, 'basic');
   assert.deepEqual(v.cfTiers.map(t => t.tier), ['Standard', 'Maximum', 'Geodiversity']);
@@ -233,10 +234,12 @@ test('the panel names the chosen cloud and region at every step after Choose Pro
   let v = vals(c);
   assert.equal(v.cfWipTitle, 'Your order, in progress');
   assert.equal(row(v, 'cloud').value, 'Not chosen yet');
-  v.cfClouds.find(g => g.cloud === 'Azure').regions.find(r => r.name === 'Azure eastus').pick();
+  v.cfCloudTiles.find(t => t.cloud === 'Azure').pick();
   v = vals(c);
   assert.equal(stepOf(v, 'provider').state, 'current', 'picking is not passing');
+  assert.equal(row(v, 'cloud').value, 'Azure, region not chosen yet');
   v.cfNext();
+  vals(c).cfRegionGroups.flatMap(g => g.regions).find(r => r.name === 'Azure eastus').pick();
   for (const key of ['basic', 'advanced', 'terms', 'review']) {
     v = vals(c);
     assert.equal(v.cfKey, key);
@@ -263,17 +266,12 @@ test('a step is done only when you passed it; filled from your estate is its own
 function decide(c, v) {
   const k = v.cfKey;
   if (k === 'type' && v.cfBlock) v.cfTypes.find(t => !t.disabled).pick();
-  if (k === 'provider' && v.cfBlock) {
-    const regions = v.cfClouds.flatMap(g => g.regions.map(r => ({ ...r, cloud: g.cloud })));
-    if (/two clouds|second cloud/.test(v.cfBlock)) { const other = regions.find(r => r.cloud !== (regions.find(x => x.on) || regions[0]).cloud); (regions.find(x => x.on) ? other : regions[0]).pick(); }
-    else if (/carries one cloud/.test(v.cfBlock)) regions.filter(r => r.on).slice(1).forEach(r => vals(c).cfClouds.flatMap(g => g.regions).find(x => x.name === r.name).pick());
-    else regions[0].pick();
-    const w = vals(c);
-    if (w.cfBlock && /two clouds|second cloud/.test(w.cfBlock)) { const rs = w.cfClouds.flatMap(g => g.regions.map(r => ({ ...r, cloud: g.cloud }))); const on = rs.find(x => x.on); rs.find(r => r.cloud !== on.cloud).pick(); }
-  }
+  // Choose Provider picks the cloud, Connection Profile the region (the storyboards, 2026-10-16).
+  if (k === 'provider') { let w = v; while (/cloud/i.test(w.cfBlock || '')) { const t = w.cfCloudTiles.find(x => x.can && !x.on); if (!t) break; t.pick(); w = vals(c); } }
   if (k === 'endpoints') { const e = vals(c).cfEndpoints; if (!e.a.sites.some(x => x.on)) e.a.sites[0].pick(); const e2 = vals(c).cfEndpoints; if (!e2.b.sites.some(x => x.on)) e2.b.sites.find(x => !x.taken).pick(); vals(c).cfEndpoints.a.fabrics[0].pick(); vals(c).cfEndpoints.b.fabrics[0].pick(); }
   if (k === 'basic') {
     let w = vals(c);
+    while (/region/i.test(w.cfBlock || '')) { const g = w.cfRegionGroups.find(x => !x.regions.some(r => r.on)), r = g && g.regions.find(x => !x.off); if (!r) break; r.pick(); w = vals(c); }
     if (/Maximum is live/.test(w.cfBlock)) { w.cfTiers.find(t => t.tier === 'Standard').pick(); w = vals(c); }
     while (/metro|location|two/i.test(w.cfBlock || '') && w.cfMetros.some(m => !m.on)) { if (!w.cfMetros.some(m => !m.on && m.pickable)) { w.cfAreas.find(a => !a.on).go(); w = vals(c); continue; } w.cfMetros.find(m => !m.on && m.pickable).pick(); w = vals(c); }
     if (/bandwidth/.test(w.cfBlock || '')) w.cfBandwidths[0].pick();
@@ -396,7 +394,13 @@ test('the flow is bound: the steps, the panel titled plainly, and nothing drawn 
   assert.ok(S4.includes('Your order, in progress') || S4.includes('{{ cfWipTitle }}'), 'the panel has no plain title');
   assert.ok(!S4.includes('Composed so far'), 'the old summary box is back');
   for (const g of ['cfIsType', 'cfIsProvider', 'cfIsBasic', 'cfIsAdvanced', 'cfIsTerms', 'cfIsReview', 'cfIsEndpoints']) assert.ok(S4.includes(`<sc-if value="{{ ${g} }}"`), `${g} is not a gate in S4`);
-  for (const b of ['{{ cfWip }}', '{{ cfSteps }}', '{{ cfPrice.big }}', '{{ cfDiagram.right }}', '{{ cfPlace }}', '{{ cfNext }}']) assert.ok(S4.includes(b.replace('{{ cfWip }}', 'list="{{ cfWip }}"').replace('{{ cfSteps }}', 'list="{{ cfSteps }}"')) || S4.includes(b), `${b} is not bound in S4`);
+  // The path strip left the wizard (Micah, 2026-10-16: "The floating bar is silly. You shoved those icons and words in
+  // there."); the bar is buttons and the block, as NetBond Advanced's is. The chips name the cloud and region instead.
+  assert.ok(!S4.includes('class="ps mid"'), 'the strip is back in the wizard');
+  assert.ok(!S4.includes('{{ cfStrip.'), 'the strip is back in the wizard');
+  const bar = S4.slice(S4.indexOf('<div class="cw-bar">'), S4.indexOf('</div>', S4.indexOf('<div class="cw-bar">')));
+  assert.ok(!/<(svg|i|img)\b/.test(bar) && !bar.includes('class="ic '), 'the action bar carries icons');
+  for (const b of ['{{ cfWip }}', '{{ cfSteps }}', '{{ cfPrice.big }}', '{{ cfPlace }}', '{{ cfNext }}']) assert.ok(S4.includes(b.replace('{{ cfWip }}', 'list="{{ cfWip }}"').replace('{{ cfSteps }}', 'list="{{ cfSteps }}"')) || S4.includes(b), `${b} is not bound in S4`);
   // The flow's own markup (S4, Ways to connect, Orders): no loop inside an svg, a table or a select.
   const WAYS = HTML.slice(HTML.indexOf('<sc-if value="{{ cnIsWays }}"'), HTML.indexOf('<sc-if value="{{ cnIsOptions }}"'));
   for (const block of [S4, WAYS]) for (const m of block.matchAll(/<(svg|table|select)\b[\s\S]*?<\/\1>/g)) assert.ok(!m[0].includes('<sc-for'), `an sc-for inside a <${m[1]}> never renders`);
@@ -409,7 +413,15 @@ test('the flow is bound: the steps, the panel titled plainly, and nothing drawn 
 // ---------- 9. resumed build (2026-09-30, after the headless walk) ----------
 // Each of these came from looking at the flow as a user, headless, on every estate.
 const startWays = (label, view = 'partial') => { const c = ways(view); vals(c).wayTypes.find(t => t.label === label).start(); return c; };
-const pickRegion = (c, name) => vals(c).cfClouds.flatMap(g => g.regions).find(r => r.name === name).pick();
+// Choose Provider picks the cloud, Connection Profile the region (the storyboards, 2026-10-16): the tile, Next, the region.
+const pickRegion = (c, name) => {
+  const cl = name.split(' ')[0];
+  let v = vals(c);
+  if (v.cfKey === 'provider') { const t = v.cfCloudTiles.find(x => x.cloud === cl); if (!t.on) t.pick(); vals(c).cfNext(); }
+  v = vals(c);
+  assert.equal(v.cfKey, 'basic', `pickRegion: still on ${v.cfKey} (${v.cfBlock})`);
+  v.cfRegionGroups.flatMap(g => g.regions).find(r => r.name === name).pick();
+};
 
 test('a location the flow filled from the region you picked reads From your estate, never You picked', () => {
   const c = startWays('DataCenter / CoLocation to Cloud');
@@ -419,7 +431,6 @@ test('a location the flow filled from the region you picked reads From your esta
   assert.equal(row(v, 'loc').value, 'Ashburn');
   assert.equal(row(v, 'loc').word, 'From your estate', 'you never picked a location');
   assert.equal(row(v, 'sites').word, 'From your estate', 'you never picked a site');
-  vals(c).cfNext();
   vals(c).cfMetros.find(m => m.metro === 'Ashburn').pick();
   assert.equal(row(vals(c), 'loc').word, 'You picked', 'picking it makes it yours');
 });
@@ -427,7 +438,6 @@ test('a location the flow filled from the region you picked reads From your esta
 test('the Sites row says when this type has none at the location, and Cloud to Cloud has no Sites row', () => {
   const c = startWays('DataCenter / CoLocation to Cloud');
   pickRegion(c, 'AWS us-east-1');
-  vals(c).cfNext();
   vals(c).cfMetros.find(m => m.metro === 'Atlanta').pick();
   const v = vals(c);
   assert.equal(row(v, 'sites').value, 'No data centers in Atlanta');
@@ -439,7 +449,6 @@ test('the Sites row says when this type has none at the location, and Cloud to C
 test('the path table in Connection Profile reads the region this order reaches, and the uptime the tiers read', () => {
   const c = startWays('DataCenter / CoLocation to Cloud');
   pickRegion(c, 'Azure eastus');
-  vals(c).cfNext();
   const v = vals(c);
   assert.equal(v.cfPathsFor, 'Azure eastus');
   assert.deepEqual(v.cfPaths.map(p => p.short), R.PATHS.map(p => p.short));
@@ -452,7 +461,6 @@ test('the path table in Connection Profile reads the region this order reaches, 
   for (const p of v.cfPaths) for (const x of [p.security, p.reliability, p.cost, p.setup]) assert.ok(!/of your/.test(x), 'a count of your regions is not what this order gets');
   const i2c = startWays('Internet to Cloud');
   pickRegion(i2c, 'AWS us-west-2');
-  vals(i2c).cfNext();
   assert.equal(vals(i2c).cfPaths.find(p => p.rides).key, 'internet');
 });
 
@@ -466,7 +474,6 @@ test('the policy sentence agrees with what it names, and names sites rather than
   // Four sites at a location the flow filled: named as a group, never counted.
   const dc = startWays('Layer 2 to Cloud');
   pickRegion(dc, 'Azure eastus');
-  vals(dc).cfNext();
   vals(dc).cfMetros.find(m => m.metro === 'New York').pick();
   v = vals(dc);
   assert.ok(!/\d/.test(v.cfPolicySent.match), `the sentence counts: ${v.cfPolicySent.match}`);
@@ -485,7 +492,8 @@ test('the policy sentence agrees with what it names, and names sites rather than
 test('a tier card quotes the price its order will carry once picked, and Maximum on AWS alone says it becomes Last Mile', () => {
   const c = startWays('Internet to Cloud');
   pickRegion(c, 'AWS us-west-2');
-  vals(c).cfNext();
+  // The pill waits for a bandwidth (CostSummaryPill, 2026-10-16); the cards quote at the one picked.
+  vals(c).cfBandwidths.find(b => b.label === '1 Gbps').pick();
   const cards = vals(c).cfTiers;
   for (const t of cards.map(x => x.tier)) {
     const quoted = vals(c).cfTiers.find(x => x.tier === t);
@@ -560,7 +568,9 @@ test('no word in the flow counts what it does not open', () => {
     for (const m of CF.metroOptions({ regions: [], sites: [], ctype: null, loc: [], tier: null }, est)) assert.ok(!/\d+ more/.test(m.near), `${view} ${m.metro}: ${m.near}`);
   }
   const c = startWays('Cloud to Cloud');
-  for (const n of ['AWS us-east-1', 'Azure eastus', 'GCP us-central1']) pickRegion(c, n);
+  for (const cl of ['AWS', 'Azure', 'GCP']) vals(c).cfCloudTiles.find(t => t.cloud === cl).pick();
+  vals(c).cfNext();
+  for (const n of ['AWS us-east-1', 'Azure eastus', 'GCP us-central1']) vals(c).cfRegionGroups.flatMap(g => g.regions).find(r => r.name === n).pick();
   const v = vals(c);
   assert.ok(!/\d+ more/.test(v.cfSteps.find(s => s.key === 'provider').sub), 'the stepper counts regions it does not open');
   const r = row(v, 'cloud');
@@ -609,7 +619,8 @@ test('Or just say it: a sentence on Connection Type fills what it names, the clo
   assert.equal(row(v, 'policy').value, 'No direct internet path');
   assert.equal(v.cfKey, 'basic', 'it lands on the first step still needing you');
   assert.deepEqual(v.cfSteps.slice(0, 2).map(s => s.state), ['filled', 'filled'], 'typed, not passed: filled, never done');
-  assert.match(v.cfSteps[1].sub, /^From what you typed: AWS us-west-2$/);
+  assert.match(v.cfSteps[1].sub, /^From what you typed: AWS$/);
+  assert.match(row(v, 'cloud').value, /^AWS us-west-2$/);
   // The banner is titled for what it is, and the location the region implies is filled from your estate.
   assert.equal(v.parsedNoteTitle, 'From what you typed');
   assert.equal(row(v, 'loc').value, 'Seattle');
@@ -657,16 +668,16 @@ test('the Connect tabs name the destinations: Recommended, Ways to connect, Orde
   assert.deepEqual(vals(ways()).cnPanels.map(p => p.label), ['Recommended', 'Ways to connect', 'Orders']);
 });
 
-test('the stepper and the panel never clip a word', () => {
-  // The steps are the vertical tab group since 2026-10-02; a step's value wraps under its title, never cut with an ellipsis.
-  const stepper = S4.slice(S4.indexOf('<nav class="fw-vtabs" aria-label="Steps"'), S4.indexOf('</nav>'));
+test('the stepper and the chips never clip a word', () => {
+  // The steps run across the top since 2026-10-16 (NetBond Advanced's stepper); a step's title sits under its mark, never cut with an ellipsis.
+  const stepper = S4.slice(S4.indexOf('<nav class="cw-steps" aria-label="Steps"'), S4.indexOf('</nav>'));
   assert.ok(stepper.length > 0);
-  assert.ok(!/text-overflow:\s*ellipsis/.test(stepper), 'a step subtitle is cut off with an ellipsis');
-  assert.ok(!/\.fw-vtab \.lbl>small\{[^}]*ellipsis/.test(HTML), 'the step sub-line clips in CSS');
-  const wip = S4.slice(S4.indexOf('<aside aria-label="Your order, in progress"'), S4.indexOf('</aside>'));
+  assert.ok(!/text-overflow:\s*ellipsis/.test(stepper), 'a step title is cut off with an ellipsis');
+  assert.ok(!/\.cw-step[^{]*\{[^}]*ellipsis/.test(HTML), 'the step title clips in CSS');
+  const wip = S4.slice(S4.indexOf('<div class="cw-sofar" aria-label="{{ cfWipTitle }}"'), S4.indexOf('<div class="cw-body">'));
   assert.ok(wip.length > 0);
-  assert.ok(!/text-overflow:\s*ellipsis/.test(wip), 'the picture cuts a name off');
-  // Lists are the page, never boxed (2026-09-29): what "All N" opens sits in the main column, not in the panel's card.
-  assert.ok(!wip.includes('cfWipList.rows'), 'the order\'s list opens inside the panel card');
+  assert.ok(!/text-overflow:\s*ellipsis/.test(wip), 'a chip cuts a name off');
+  // Lists are the page, never boxed (2026-09-29): what "All N" opens sits in the main column, not among the chips.
+  assert.ok(!wip.includes('cfWipList.rows'), 'the order\'s list opens among the chips');
   assert.ok(S4.includes('<sc-for list="{{ cfWipList.rows }}"'), 'the order\'s list has no page');
 });

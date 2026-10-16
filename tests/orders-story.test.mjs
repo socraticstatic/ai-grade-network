@@ -26,9 +26,10 @@ const station = (v, k) => v.ordRoad.find(x => x.key === k);
 function decide(c, v) {
   const k = v.cfKey;
   if (k === 'type' && v.cfBlock) v.cfTypes.find(t => !t.disabled).pick();
-  if (k === 'provider' && v.cfBlock) v.cfClouds.flatMap(g => g.regions).find(r => !r.off).pick();
+  if (k === 'provider' && v.cfBlock) v.cfCloudTiles.find(t => t.can && !t.on).pick();
   if (k === 'basic') {
     let w = vals(c);
+    while (/region/i.test(w.cfBlock || '')) { const g = w.cfRegionGroups.find(x => !x.regions.some(r => r.on)), r = g && g.regions.find(x => !x.off); if (!r) break; r.pick(); w = vals(c); }
     if (/Maximum is live/.test(w.cfBlock)) { w.cfTiers.find(t => t.tier === 'Standard').pick(); w = vals(c); }
     while (/metro|location|two/i.test(w.cfBlock || '') && w.cfMetros.some(m => !m.on && m.pickable)) { w.cfMetros.find(m => !m.on && m.pickable).pick(); w = vals(c); }
     if (/bandwidth/.test(w.cfBlock || '')) w.cfBandwidths[0].pick();

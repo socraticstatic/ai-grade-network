@@ -571,8 +571,8 @@ test('N1: a new order from Ways to connect always drops the stale Review; a choi
   // A SAME-order edit must leave a live snapshot untouched.
   c.state.order = { lines: [], monthly: 0, title: 'Still live' };
   v = vals(c);
-  v.cfClouds[0].regions[0].pick();
-  assert.equal(c.state.order.title, 'Still live', 'picking a region is the same order and must not touch order');
+  v.cfCloudTiles.find(t => t.can).pick();
+  assert.equal(c.state.order.title, 'Still live', 'picking a cloud is the same order and must not touch order');
 });
 
 // N2: `goCompose`'s fresh branch called `newOrder(...)`, which nulls

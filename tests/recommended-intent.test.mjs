@@ -20,7 +20,7 @@ test('an answer on Recommended re-ranks the estate, as the journey does, and is 
   mv.intentQs.find(q => q.key === 'security').opts.find(o => o.key === 'inspected').go();
   assert.deepEqual(c.state.intents, { partial: { security: 'inspected' } });
   mv = vals(c).moves[0];
-  assert.deepEqual(mv.tiers.map(t => t.way), ['transit', 'peer', 'cloudwan'], 'inspection required: the hosted transit gateway first');
+  assert.deepEqual(mv.tiers.map(t => t.way), ['transit', 'cloudwan', 'peer'], 'inspection required: the hosted transit gateway first; peering priced by the reviewer\'s ladder (2026-10-16) ranks third');
   assert.deepEqual(vals(on('mature')).moves[0].tiers.map(t => t.way).slice(0, 1), ['byo'], 'another estate keeps its own answers');
 });
 
